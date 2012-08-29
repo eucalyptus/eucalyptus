@@ -32,8 +32,6 @@
 *Wed Jul 7 2012 Eucalyptus Systems (support@eucalyptus.com)
     * Version 3.1.0
     * New Features:
-        - FastStart (FastStart is an automated installer for an entry-level
-          Eucalyptus cloud.)
         - New packaged platform support (Added support for CentOS 6.x
           and Ubuntu 12.04 LTS)
         - vSphere 5 support (plugin only).
