@@ -76,6 +76,9 @@
         case 'snapshot':
           this.element.snapshot();
           break;
+        case 'eip':
+          this.element.eip();
+          break;
         case 'logout':
           $.cookie('session-id','');
           location.href = '/';

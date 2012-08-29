@@ -246,6 +246,7 @@
     },
 
     _initAddDialog : function(dfd) { // method should resolve dfd object
+      thisObj = this;
       $.when(
         $.ajax({
           type:"GET",
@@ -256,7 +257,7 @@
           async:false,
           success:
            function(data, textStatus, jqXHR){
-              $azSelector = $('#volume-add-az-selector').html('');
+              $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
               $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
               if ( data.results ) {
                 for( res in data.results) {
@@ -283,7 +284,7 @@
           cache:false,
           success:
             function(data, textStatus, jqXHR){
-              $snapSelector = $('#volume-add-snapshot-selector').html('');
+              $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
               $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
               if ( data.results ) {
                 for( res in data.results) {
@@ -341,9 +342,6 @@
       })
     },
 
-    _getVolumeId : function(rowSelector) {
-      return $(rowSelector).find('td:eq(1)').text();
-    },
 /*
     handleInstanceHover : function(e) {
       switch(e.type) {
@@ -518,14 +516,9 @@
       }
     },
 
-    _deleteAction : function(volumeId) {
+    _deleteAction : function() {
       var thisObj = this;
-      volumesToDelete = [];
-      if ( !volumeId ) {
-        volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      } else {
-        volumesToDelete[0] = volumeId;
-      }
+      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
 
       if ( volumesToDelete.length > 0 ) {
         thisObj.delDialog.eucadialog('setSelectedResources', volumesToDelete);

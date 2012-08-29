@@ -69,6 +69,7 @@
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eip.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
     <script type="text/javascript" language="javascript" src="js/help.js"></script>
@@ -611,8 +612,108 @@
           </div>
         </div>
       </script>
-
       <!-- END Snapshot dialog template -->
+
+      <!-- IPs table -->
+      <script id="eipTblTmpl" type="text/x-jsrender">
+        <div id="eip-wrapper">
+          <div id="eip-table">
+            <table id="eips" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="eips-check-all">
+                  </th>
+                  <th>{{!>eip_tbl_hdr_address}}</th>
+                  <th>{{!>eip_tbl_hdr_instance}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="eip-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END IPs table -->
+
+      <!-- IPs dialog template -->
+      <script id="eipAllocateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-allocate-dialog-wrapper">
+          <div id="eip-allocate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: eip_allocate_dialog_text }}</p>
+              <div class="dialog-field">
+                <span class="label">{{!: eip_allocate_dialog_count_label }}</span>
+                <select id="eip-allocate-count-selector">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="snapshot-create-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: snapshot_create_dialog_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="eipReleaseDlgTmpl" type="text/x-jsrender">
+        <div id="eip-euca-dialog-wrapper">
+          <div id="eip-release-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: eip_release_dialog_text }}
+              <span class="resource-ids"></span>
+              <span style="display:none" id="eips-to-release"/>
+            </div>
+          </div>
+          <div id="eip-release-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: eip_dialog_release_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="eipAssociateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-associate-dialog-wrapper">
+          <div id="eip-associate-dialog" class="euca-dialog">
+            <div class="associate-inner-content">
+              <div class="dialog-field">
+                <span class="label">{{!: eip_associate_dialog_instance_label }}</span>
+                <select id="eip-associate-dialog-instance-selector"/>
+              </div>
+              <span style="display:none" id="eip-to-associate"/>
+            </div>
+          </div>
+          <div id="eip-associate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: eip_dialog_associate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END IPs dialog template -->
 
       <!-- Instance landing table template -->
       <script id="instanceTblTmpl" type="text/x-jsrender">

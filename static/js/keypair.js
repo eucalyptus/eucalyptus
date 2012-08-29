@@ -117,19 +117,9 @@
     _destroy : function() {
     },
 
-    _getKeyId : function(rowSelector) {
-      return $(rowSelector).find('td:eq(1)').text();
-    },
-
     _deleteAction : function(keyId) {
       var thisObj = this;
-      keysToDelete = [];
-      if ( !keyId ) {
-        $tableWrapper = thisObj.tableWrapper;
-        keysToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
-      } else {
-        keysToDelete[0] = keyId;
-      }
+      keysToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
 
       if ( keysToDelete.length > 0 ) {
         thisObj.delDialog.eucadialog('setSelectedResources', keysToDelete);

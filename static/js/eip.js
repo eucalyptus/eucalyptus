@@ -25,6 +25,8 @@
     tableWrapper : null,
     releaseDialog : null,
     allocateDialog : null,
+    associateDialog : null,
+
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #eipTblTmpl').clone();
@@ -51,7 +53,9 @@
             { "mDataProp": "instance_id" },
             {
               "bVisible": false,
-              "fnRender": function(oObj) { return oObj.aData.instance_id != 'nobody' ? 'assigned' : 'unassigned' } 
+              "fnRender": function(oObj) { 
+                return oObj.aData.instance_id ? 'assigned' : 'unassigned' 
+              } 
             }
           ],
         },
@@ -74,47 +78,67 @@
       });
       this.tableWrapper.appendTo(this.element);
 
-      // eip delete dialog start
-      $tmpl = $('html body').find('.templates #eipDelDlgTmpl').clone();
+      // eip release dialog start
+      $tmpl = $('html body').find('.templates #eipReleaseDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $del_dialog = $rendered.children().first();
-      var $del_help = $rendered.children().last();
-      this.releaseDialog = $del_dialog.eucadialog({
-         id: 'eips-delete',
-         title: eip_delete_dialog_title,
+      var $release_dialog = $rendered.children().first();
+      var $release_help = $rendered.children().last();
+      this.releaseDialog = $release_dialog.eucadialog({
+         id: 'eips-release',
+         title: eip_release_dialog_title,
          buttons: {
-           'delete': {text: eip_dialog_del_btn, click: function() { thisObj._deleteListedeips(); $del_dialog.dialog("close");}},
-           'cancel': {text: eip_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.dialog("close");}},
+           'cancel': {text: eip_release_dialog_cancel_btn, focus:true, click: function() { $release_dialog.dialog("close");}} 
          },
-         help: {title: help_volume['dialog_delete_title'], content: $del_help},
+         help: {title: help_volume['dialog_delete_title'], content: $release_help},
        });
-      // eip delete dialog end
-      // create eip dialog end
-      $tmpl = $('html body').find('.templates #eipCreateDlgTmpl').clone();
+      // eip release dialog end
+      // allocate eip dialog end
+      $tmpl = $('html body').find('.templates #eipAllocateDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $eip_dialog = $rendered.children().first();
-      var $eip_dialog_help = $rendered.children().last();
-      this.allocateDialog = $eip_dialog.eucadialog({
-         id: 'eip-create-from-eip',
-         title: eip_create_dialog_title,
+      var $eip_allocate_dialog = $rendered.children().first();
+      var $eip_allocate_dialog_help = $rendered.children().last();
+      this.allocateDialog = $eip_allocate_dialog.eucadialog({
+         id: 'eip-allocate',
+         title: eip_allocate_dialog_title,
          buttons: {
-           'create': { text: eip_create_dialog_create_btn, click: function() { 
-                volumeId = $eip_dialog.find('#eip-create-volume-selector').val();
-                description = $.trim($eip_dialog.find('#eip-create-description').val());
-                thisObj._createeip(volumeId, description);
-                $eip_dialog.dialog("close");
+           'create': { text: eip_allocate_dialog_allocate_btn, click: function() {
+               thisObj._allocateIps($eip_allocate_dialog.find('#eip-allocate-count-selector').val());
+               $eip_allocate_dialog.dialog("close");
               } 
             },
-           'cancel': { text: eip_dialog_cancel_btn, focus:true, click: function() { $eip_dialog.dialog("close"); } }
+           'cancel': { text: eip_allocate_dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.dialog("close"); } }
          },
-         help: {title: help_volume['dialog_eip_create_title'], content: $eip_dialog_help},
+         help: {title: help_volume['dialog_eip_create_title'], content: $eip_allocate_dialog_help},
+       });
+      // allocate eip dialog end
+      // associate eip dialog end
+      $tmpl = $('html body').find('.templates #eipAssociateDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $eip_associate_dialog = $rendered.children().first();
+      var $eip_associate_dialog_help = $rendered.children().last();
+      this.associateDialog = $eip_associate_dialog.eucadialog({
+         id: 'eip-associate',
+         title: eip_associate_dialog_title,
+         buttons: {
+           'associate': { text: eip_associate_dialog_associate_btn, click: function() {
+               thisObj._associateIp(
+                 $eip_associate_dialog.find("#eip-to-associate").html(),
+                 $eip_associate_dialog.find('#eip-associate-dialog-instance-selector').val()
+               );
+               $eip_associate_dialog.dialog("close");
+              } 
+            },
+           'cancel': { text: eip_associate_dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.dialog("close"); } }
+         },
+         help: {title: help_volume['dialog_eip_associate_title'], content: $eip_associate_dialog_help},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
-           thisObj._initallocateDialog(dfd) ; // pulls volumes info from the server
+           thisObj._initAssociateDialog(dfd) ; // pulls instances from the server
            return dfd.promise();
          }},
        });
-      // create eip dialog end
+      // associate eip dialog end
     },
 
     _create : function() { 
@@ -125,122 +149,156 @@
 
     _createMenuActions : function() {
       thisObj = this;
-      selectedeips = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is eip's knowledge)
+      selectedEips = thisObj.baseTable.eucatable('getSelectedRows', 3);
       var itemsList = {};
-      if ( selectedeips.length > 0 ){
-        itemsList['delete'] = { "name": eip_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+      // add associate
+      if ( selectedEips.length == 1 && selectedEips[0] == 'unassigned' ){
+        itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
+      }
+      if ( selectedEips.length > 0 ){
+        itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) { thisObj._releaseAction(); } }
       }
       return itemsList;
     },
 
-    _initallocateDialog : function(dfd) { // method should resolve dfd object
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeVolumes",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:false,
-        cache:false,
-        success:
-          function(data, textStatus, jqXHR){
-            $volSelector = $('#eip-create-volume-selector').html('');
-     //       $volSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
-            if ( data.results ) {
-              for( res in data.results) {
-                volume = data.results[res];
-                if ( volume.status === 'in-use' || volume.status === 'available' ) {
-                  $volSelector.append($('<option>').attr('value', volume.id).text(volume.id));
-                }
-              } 
-              dfd.resolve();
-            } else {
-              notifyError(null, error_loading_volumes_msg);
-              dfd.reject();
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError(null, error_loading_volumes_msg);
-            dfd.reject();
-          }
-      });
-    },
-
-    _geteipId : function(rowSelector) {
-      return $(rowSelector).find('td:eq(1)').text();
-    },
-
-    _deleteListedeips : function () {
+    _releaseListedIps : function () {
       var thisObj = this;
-      $eipsToDelete = this.releaseDialog.find("#eips-to-delete");
+      $eipsToDelete = this.releaseDialog.find("#eips-to-release");
       var rowsToDelete = $eipsToDelete.text().split(ID_SEPARATOR);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var eipId = rowsToDelete[i];
         $.ajax({
           type:"GET",
-          url:"/ec2?Action=Deleteeip&eipId=" + eipId,
+          url:"/ec2?Action=ReleaseAddresse&PublicIp=" + eipId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async:true,
+          async: false,
+          cashed: false,
           success:
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eip_delete_success + ' ' + eipId);
+                notifySuccess(null, eipId + '' + eip_release_success);
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, eip_delete_error + ' ' + eipId);
+                notifyError(null, eip_release_error + ' ' + eipId);
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, eip_delete_error + ' ' + eipId);
+              notifyError(null, eip_release_error + ' ' + eipId);
             }
           })(eipId)
         });
       }
     },
 
-    _createeip : function (volumeId, description) {
+    _allocateIps : function (numberIpsToAllocate) {
+      var thisObj = this;
+      for ( i=0; i<numberIpsToAllocate; i++)
+        $.ajax({
+          type:"GET",
+          url:"/ec2?Action=AllocateAddress",
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          cache:false,
+          async: false,
+          success:
+            function(data, textStatus, jqXHR){
+              if ( data.results ) {
+                notifySuccess(null, eip_allocate_success);
+                thisObj.tableWrapper.eucatable('refreshTable');
+              } else {
+                notifyError(null, eip_allocate_error);
+              }
+            },
+          error:
+            function(jqXHR, textStatus, errorThrown){
+              notifyError(null, eip_allocate_error);
+            }
+        });
+    },
+
+    _associateIp : function (publicIp, instanceId) {
       var thisObj = this;
       $.ajax({
         type:"GET",
-        url:"/ec2?Action=Createeip&VolumeId=" + volumeId + "&Description=" + description,
+        url:"/ec2?Action=AssociateAddress&PublicIp="+publicIp+"&InstanceId="+instanceId,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
-        async:true,
+        cache:false,
+        async: false,
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, eip_create_success + ' ' + volumeId);
+              notifySuccess(null, eip_associate_success);
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, eip_create_error + ' ' + volumeId);
+              notifyError(null, eip_associate_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, eip_create_error + ' ' + volumeId);
+            notifyError(null, eip_allocate_error);
           }
       });
     },
 
-    _deleteAction : function(eipId) {
-      var thisObj = this;
-      eipsToDelete = [];
-      if ( !eipId ) {
-        eipsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      } else {
-        eipsToDelete[0] = eipId;
-      }
+    _initAssociateDialog : function(dfd) {  // should resolve dfd object
+      thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=DescribeInstances",
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:false,
+        cache:false,
+        success:
+          function(data, textStatus, jqXHR){
+            $instanceSelector = thisObj.associateDialog.find('#eip-associate-dialog-instance-selector').html('');
+//            $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
+            if ( data.results ) {
+              for( res in data.results) {
+                instance = data.results[res];
+                if ( instance.state === 'running' ) {
+                  $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+                }
+              }
+              dfd.resolve();
+            } else {
+              notifyError(null, error_loading_instances_msg);
+              dfd.reject();
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError(null, error_loading_instances_msg);
+            dfd.reject();
+          }
+      })
+    },
 
-      if ( eipsToDelete.length > 0 ) {
+    _releaseAction : function() {
+      var thisObj = this;
+      eipsToRelease = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+
+      if ( eipsToRelease.length > 0 ) {
         thisObj.releaseDialog.eucadialog('setSelectedResources', eipsToDelete);
-        $eipsToDelete = thisObj.releaseDialog.find("#eips-to-delete");
-        $eipsToDelete.html(eipsToDelete.join(ID_SEPARATOR));
+        $eipsToRelease = thisObj.releaseDialog.find("#eips-to-release");
+        $eipsToRelease.html(eipsToRelease.join(ID_SEPARATOR));
         thisObj.releaseDialog.dialog('open');
+      }
+    },
+
+    _associateAction : function() {
+      var thisObj = this;
+      eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+
+      if ( eipsToAssociate.length == 1 ) {
+        thisObj.associateDialog.find("#eip-to-associate").html(eipsToAssociate[0]);
+        thisObj.associateDialog.dialog('open');
       }
     },
 
