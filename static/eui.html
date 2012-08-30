@@ -751,7 +751,7 @@
             </div>
             <div class="selected-resources"> </div>
           </div>
-          <div id="volumes-euca-dialog-help" class="dialog-help">
+          <div id="instances-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_terminate_content}}
             </div>
@@ -761,8 +761,77 @@
           </div>
         </div>
       </script>
+      <script id="instanceRebootDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_reboot_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_reboot_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceStopDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_stop_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_stop_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceConnectDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+             <div id="instance-connect-text"> </div> 
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_connect_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceConsoleDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+             <div id="instance-console-output"> </div> 
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_console_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
       <!-- END Instance dialog templates -->
-
     </div> 
     <!-- END of templates --> 
   </body>

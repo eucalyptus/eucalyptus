@@ -23,6 +23,10 @@
     options : { },
     tableWrapper : null,
     termDialog : null,
+    rebootDialog : null,
+    stopDialog : null,
+    connectDialog : null,
+    consoleDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
@@ -126,6 +130,60 @@
         },
         help: {content: $term_help},
       });
+
+      $tmpl = $('html body').find('.templates #instanceRebootDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $reboot_dialog = $rendered.children().first();
+      var $reboot_help = $rendered.children().last();
+      this.rebootDialog = $reboot_dialog.eucadialog({
+        id: 'instances-reboot',
+        title: instance_dialog_term_title,
+        buttons: {
+          'reboot': {text: instance_dialog_reboot_btn, click: function() { thisObj._rebootInstances(); $reboot_dialog.eucadialog("close");}},
+          'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $reboot_dialog.eucadialog("close");}}
+        },
+        help: {content: $reboot_help},
+      });
+      
+      $tmpl = $('html body').find('.templates #instanceStopDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $stop_dialog = $rendered.children().first();
+      var $stop_help = $rendered.children().last();
+      this.stopDialog = $stop_dialog.eucadialog({
+        id: 'instances-stop',
+        title: instance_dialog_stop_title,
+        buttons: {
+          'stop': {text: instance_dialog_stop_btn, click: function() { thisObj._stopInstances(); $stop_dialog.eucadialog("close");}},
+          'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $stop_dialog.eucadialog("close");}}
+        },
+        help: {content: $stop_help},
+      });
+      
+      $tmpl = $('html body').find('.templates #instanceConnectDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $connect_dialog = $rendered.children().first();
+      var $connect_help = $rendered.children().last();
+      this.connectDialog = $connect_dialog.eucadialog({
+        id: 'instances-connect',
+        title: instance_dialog_connect_title,
+        buttons: {
+          'close': {text: dialog_close_btn, focus:true, click: function() { $connect_dialog.eucadialog("close");}}
+        },
+        help: {content: $connect_help},
+      });
+      
+      $tmpl = $('html body').find('.templates #instanceConsoleDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $console_dialog = $rendered.children().first();
+      var $console_help = $rendered.children().last();
+      this.consoleDialog = $console_dialog.eucadialog({
+        id: 'instances-console',
+        title: instance_dialog_console_title,
+        buttons: {
+          'close': {text: dialog_close_btn, focus:true, click: function() { $console_dialog.eucadialog("close");}}
+        },
+        help: {content: $console_help},
+      });
     },
 
     _destroy : function() {
@@ -207,21 +265,21 @@
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
-       menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { ; }}
+       menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { thisObj._connectAction(); }}
      }
 
      if(numSelected >= 1 && 'ebs' in rootTypeMap && !('instance-store' in rootTypeMap) &&
         ('running' in stateMap) && allInArray(instIds, stateMap['running'])){
-       menuItems['stop'] = {"name":instance_action_stop, callback: function(key, opt){ ; }}
+       menuItems['stop'] = {"name":instance_action_stop, callback: function(key, opt){ thisObj._stopAction(); }}
      }
 
      if(numSelected >= 1 && 'ebs' in rootTypeMap && !('instance-store' in rootTypeMap) &&
        ('stopped' in stateMap) && allInArray(instIds, stateMap['stopped'])){
-       menuItems['start'] = {"name":instance_action_start, callback: function(key, opt){ ; }} 
+       menuItems['start'] = {"name":instance_action_start, callback: function(key, opt){ thisObj._startInstances(); }} 
      }
 
      if(numSelected >= 1 && ('running' in stateMap) && allInArray(instIds, stateMap['running'])){
-       menuItems['reboot'] = {"name":instance_action_reboot, callback: function(key, opt){ ; }}
+       menuItems['reboot'] = {"name":instance_action_reboot, callback: function(key, opt){ thisObj._rebootAction(); }}
      }
 
      if(numSelected == 1){
@@ -233,7 +291,7 @@
      }
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
-       menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { ; }}
+       menuItems['console'] = {"name":instance_action_console, callback: function(key, opt) { thisObj._consoleAction(); }}
        menuItems['attach'] = {"name":instance_action_attach, callback: function(key, opt) { ; }}
      }
    
@@ -357,6 +415,140 @@
           error: function(jqXHR, textStatus, errorThrown){
             notifyError(null, instance_terminate_error + ' ' + instances);
           }
+        });
+    },
+    _rebootAction : function(){
+      var thisObj = this;
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      if ( instances.length > 0 ) {
+        var matrix = [];
+        $.each(instances, function(idx,id){
+          matrix.push([id]);
+        });
+        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_dialog_reboot_resource_title], contents: matrix});
+        thisObj.rebootDialog.eucadialog('open');
+       }
+    },
+    _rebootInstances : function(){
+      var thisObj = this;
+      var instances = thisObj.rebootDialog.eucadialog('getSelectedResources',0);
+      instances = instances.join(' ');
+      $.ajax({
+          type:"GET",
+          url:"/ec2?Action=RebootInstances&InstanceId=" + instances,
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          async:true,
+          success: function(data, textStatus, jqXHR){
+            if ( data.results && data.results == true ) {
+              notifySuccess(null, instance_reboot_success + ' ' + instances);
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError(null, instance_reboot_error + ' ' + instances);
+            }
+          },
+          error: function(jqXHR, textStatus, errorThrown){
+            notifyError(null, instance_reboot_error + ' ' + instances);
+          }
+        });
+    },
+    _stopAction : function(){
+      var thisObj = this;
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      if ( instances.length > 0 ) {
+        var matrix = [];
+        $.each(instances, function(idx,id){
+          matrix.push([id]);
+        });
+        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_dialog_stop_resource_title], contents: matrix});
+        thisObj.stopDialog.eucadialog('open');
+       }
+    },
+    _stopInstances : function(){
+      var thisObj = this;
+      var instances = thisObj.stopDialog.eucadialog('getSelectedResources',0);
+      instances = instances.join(' ');
+      $.ajax({
+          type:"GET",
+          url:"/ec2?Action=StopInstances&InstanceId=" + instances,
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          async:true,
+          success: function(data, textStatus, jqXHR){
+            if ( data.results && data.results == true ) {
+              notifySuccess(null, instance_stop_success + ' ' + instances);
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError(null, instance_stop_error + ' ' + instances);
+            }
+          },
+          error: function(jqXHR, textStatus, errorThrown){
+            notifyError(null, instance_stop_error + ' ' + instances);
+          }
+        });
+    },
+    _startInstances : function(){
+      var thisObj = this;
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      instances = instances.join(' ');
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=StartInstances&InstanceId=" + instances,
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:true,
+        success: function(data, textStatus, jqXHR){
+          if ( data.results && data.results == true ) {
+            notifySuccess(null, instance_start_success + ' ' + instances);
+            thisObj.tableWrapper.eucatable('refreshTable');
+          } else {
+            notifyError(null, instance_start_error + ' ' + instances);
+          }
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+          notifyError(null, instance_start_error + ' ' + instances);
+        }
+      });
+    },
+    _connectAction : function(){
+      var thisObj = this;
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var oss = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      if ( instances.length > 0 ) {
+        // connect is for one instance 
+        var instance = instances[0];
+        var os = oss[0]; 
+        if(os === 'windows') 
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_windows_text);
+        else
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_linux_text);
+
+        thisObj.connectDialog.eucadialog('open');
+       }
+    },
+    _consoleAction : function() {
+      var thisObj = this;
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      instances=instances.join(' ');
+
+      $.when( 
+        $.ajax({
+          type:"GET",
+          url:"/ec2?Action=GetConsoleOutput&InstanceId=" + instances,
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          async:true,
+        })).done(function(out){
+          var data = out[0];
+          if(data && data.results){
+            consoleOutput = data.results;   
+            thisObj.consoleDialog.eucadialog('addNote', 'instance-console-output', consoleOutput); 
+            thisObj.consoleDialog.eucadialog('open');
+          }else{
+            notifyError(null, instance_console_error + ' ' + instances);
+          }
+        }).fail(function(out){
+          notifyError(null, instance_console_error + ' ' + instances);
         });
     },
 /**** Public Methods ****/
