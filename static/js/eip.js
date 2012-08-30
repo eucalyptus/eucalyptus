@@ -151,6 +151,12 @@
       thisObj = this;
       selectedEips = thisObj.baseTable.eucatable('getSelectedRows', 3);
       var itemsList = {};
+
+      (function(){
+        itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
+        itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+      })();
+
       // add associate
       if ( selectedEips.length == 1 && selectedEips[0] == 'unassigned' ){
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
@@ -163,8 +169,7 @@
 
     _releaseListedIps : function () {
       var thisObj = this;
-      $eipsToRelease = this.releaseDialog.find("#eips-to-release");
-      var rowsToDelete = $eipsToRelease.text().split(ID_SEPARATOR);
+      var rowsToDelete = this.releaseDialog.eucadialog('getSelectedResources', 0);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var eipId = rowsToDelete[i];
         $.ajax({
@@ -289,8 +294,6 @@
       });
       if ( eipsToRelease.length > 0 ) {
         thisObj.releaseDialog.eucadialog('setSelectedResources', {title:[eip_release_resource_title], contents: matrix});
-        $eipsToRelease = thisObj.releaseDialog.find("#eips-to-release");
-        $eipsToRelease.html(eipsToRelease.join(ID_SEPARATOR));
         thisObj.releaseDialog.dialog('open');
       }
     },

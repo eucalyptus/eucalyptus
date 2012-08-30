@@ -503,15 +503,9 @@
       this.addDialog.eucadialog('open');
     },
 
-    _attachAction : function(volumeId) {
+    _attachAction : function() {
       var thisObj = this;
-      var volumeToAttach = '';
-      if ( !volumeId ) {
-        rows = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-        volumeToAttach = rows[0];
-      } else {
-        volumeToAttach = volumeId;
-      }
+      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
       $volumeSelector.html('');
       $volumeSelector.append($('<option>').attr('value', volumeToAttach).text(volumeToAttach));
@@ -533,14 +527,8 @@
       }
     },
 
-    _createSnapshotAction : function(volumeId) {
-      volumeToUse = '';
-      if ( !volumeId ) {
-        rows = this.tableWrapper.eucatable('getSelectedRows', 1);
-        volumeToUse = rows[0];
-      } else {
-        volumeToUse = volumeId;
-      }
+    _createSnapshotAction : function() {
+      volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
       $volumeSelector = this.createSnapshotDialog.find('#snapshot-create-volume-selector');
       $volumeSelector.html('');
       $volumeSelector.append($('<option>').attr('value', volumeToUse).text(volumeToUse));
