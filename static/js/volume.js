@@ -50,7 +50,7 @@
             { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
-                 return '<div class="table-legend-item" id="legend-volumes-'+oObj.aData.status+'">&nbsp;</div>';
+                 return '<div class="table-status-item status-'+oObj.aData.status+'">&nbsp;</div>';
                },
               "sWidth": "20px",
               "bSearchable": false,

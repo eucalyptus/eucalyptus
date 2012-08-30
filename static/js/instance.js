@@ -22,11 +22,12 @@
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
     options : { },
     tableWrapper : null,
-    delDialog : null,
+    termDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
     instIpMap : {}, // {i-123456: 192.168.0.1}
+
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -111,6 +112,20 @@
       }); // end of done()
     },
     _create : function() { 
+      var thisObj = this;
+      var  $tmpl = $('html body').find('.templates #instanceTermDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $term_dialog = $rendered.children().first();
+      var $term_help = $rendered.children().last();
+      this.termDialog = $term_dialog.eucadialog({
+        id: 'instances-terminate',
+        title: instance_dialog_term_title,
+        buttons: {
+          'terminate': {text: instance_dialog_term_btn, click: function() { thisObj._terminateInstances(); $term_dialog.eucadialog("close");}},
+          'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $term_dialog.eucadialog("close");}}
+        },
+        help: {content: $term_help},
+      });
     },
 
     _destroy : function() {
@@ -214,7 +229,7 @@
      }
   
      if(numSelected >= 1){ // TODO: no state check for terminate?
-       menuItems['terminate'] = {"name":instance_action_terminate, callback: function(key, opt){ ; }}
+       menuItems['terminate'] = {"name":instance_action_terminate, callback: function(key, opt){ thisObj._terminateAction(); }}
      }
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -303,7 +318,47 @@
           ; }
       });
     },
-     
+
+/// Action methods
+    _terminateAction : function(){
+      var thisObj = this;
+      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      var rootType = thisObj.tableWrapper.eucatable('getSelectedRows', 11);
+      if ( instances.length > 0 ) {
+        var matrix = [];
+        $.each(instances, function(idx,id){
+          matrix.push([id]);
+        });
+        if ($.inArray('ebs',rootType)>=0){
+          thisObj.termDialog.eucadialog('addNote','ebs-backed-warning', instance_dialog_ebs_warning); 
+        }
+        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_dialog_term_resource_title], contents: matrix});
+        thisObj.termDialog.eucadialog('open');
+       }
+    },
+    _terminateInstances : function(){
+      var thisObj = this;
+      var instances = thisObj.termDialog.eucadialog('getSelectedResources',0);
+      instances = instances.join(' ');
+      $.ajax({
+          type:"GET",
+          url:"/ec2?Action=TerminateInstances&InstanceId=" + instances,
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          async:true,
+          success: function(data, textStatus, jqXHR){
+            if ( data.results && data.results == true ) {
+              notifySuccess(null, instance_terminate_success + ' ' + instances);
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError(null, instance_terminate_error + ' ' + instances);
+            }
+          },
+          error: function(jqXHR, textStatus, errorThrown){
+            notifyError(null, instance_terminate_error + ' ' + instances);
+          }
+        });
+    },
 /**** Public Methods ****/
     close: function() {
       this._super('close');

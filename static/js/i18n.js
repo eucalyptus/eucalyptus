@@ -73,7 +73,8 @@
         $.i18n.prop('dashboard_eip');
         $.i18n.prop('dashboard_keypair');
 
-
+        // instances
+        $.i18n.prop('instance_dialog_term_text');
         // help
         $.i18n.prop('page_help_backto_page');
       }

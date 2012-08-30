@@ -41,6 +41,7 @@
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
          width: 600,
+         closeOnEscape : false,
          title: thisObj.options.title,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
@@ -173,8 +174,9 @@
     },
     
     close : function() {
-      // this method should clean-up things
+      var thisObj = this;
       this.element.dialog('close');
+      // this method should clean-up things
       this.element.find('input').each(function () { 
         $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
       });
@@ -182,7 +184,12 @@
         this.element.find('.dialog-inner-content').revertFlip();
         $buttonPane.show();
         $titleBar.find('span').text(thisObj.options.title);
-      }  
+      } 
+
+      $.each(thisObj._note_divs, function(idx, id){
+        thisObj.element.find('#'+id).children().detach();
+      });
+      thisObj._note_divs = [];
     },
 
     /// 
@@ -222,6 +229,15 @@
       return array;           
     },
 
+    _note_divs : [],
+    addNote : function(div_id, note){
+      // insert the additional notes in place of the div id=div_id;
+      var $div = this.element.find('#'+div_id);
+      if(!$div) return;
+      $div.html(note);
+      this._note_divs.push(div_id);
+    },
+   
     onChange : function(evt_src_id, button_id, checkFunction) {
       var thisObj = this;
       evt_src_id = evt_src_id.replace('#','');
