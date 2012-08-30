@@ -62,24 +62,25 @@
 
 package com.eucalyptus.entities;
 
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicStampedReference;
 import javax.persistence.Embeddable;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
-import org.apache.commons.collections.ComparatorUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapException;
 import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -88,8 +89,6 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -115,6 +114,47 @@ public class PersistenceContexts {
     public boolean load( ) throws Exception {
       Groovyness.run( "setup_persistence.groovy" );
       return true;
+    }
+  }
+
+  /**
+   * Interface for interception of persistence context lookup.
+   *
+   * <p>The lookup method will be invoked prior to creation of
+   * a persistence context. The lookup method is also invoked
+   * for each subsequent (cached) lookup of the context.</p>
+   */
+  public static interface PersistenceContextLookupInterceptor {
+    void onLookup();
+  }
+
+  public static class PersistenceContextLookupInterceptorDiscovery extends ServiceJarDiscovery {
+    static final List<PersistenceContextLookupInterceptor> interceptors = new CopyOnWriteArrayList<PersistenceContextLookupInterceptor>();
+    static final PersistenceContextLookupInterceptor dispatcher = new PersistenceContextLookupInterceptor() {
+      @Override
+      public void onLookup() {
+        for ( final PersistenceContextLookupInterceptor interceptor : interceptors ) {
+          interceptor.onLookup();
+        }
+      }
+    };
+
+    static PersistenceContextLookupInterceptor dispatcher() {
+      return dispatcher;
+    }
+
+    @Override
+    public boolean processClass( final Class candidate ) throws Exception {
+      if ( PersistenceContextLookupInterceptor.class.isAssignableFrom( candidate ) && Modifier.isPublic(candidate.getModifiers()) ) {
+        interceptors.add( ((Class<PersistenceContextLookupInterceptor>) candidate).newInstance() );
+        return true;
+      }
+      return false;
+    }
+
+    @Override
+    public Double getPriority( ) {
+      return 1.0d;
     }
   }
   
@@ -234,7 +274,7 @@ public class PersistenceContexts {
   
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
-    if ( isHa.get() ) Databases.awaitSynchronized( );
+    PersistenceContextLookupInterceptorDiscovery.dispatcher().onLookup();
     if ( emf.containsKey( persistenceContext ) ) {
       return emf.get( persistenceContext );
     } else {
@@ -256,19 +296,6 @@ public class PersistenceContexts {
     }
     throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + " tries.\n" );
   }
-
-  //TODO cleanly separate out functionality not relevant to non-server users
-  private static final Supplier<Boolean> isHa = Suppliers.memoize( new Supplier<Boolean>(){
-    @Override
-    public Boolean get() {
-      try {
-        Class.forName("net.sf.hajdbc.sql.DriverDatabaseClusterMBean" );
-        return true;
-      } catch ( ClassNotFoundException e ) {
-        return false;
-      }
-    }
-  } );
 
   public static void shutdown( ) {
     for ( String ctx : emf.keySet( ) ) {
