@@ -149,6 +149,7 @@
     },
 
     _initCreateDialog : function(dfd) { // method should resolve dfd object
+      thisObj = this;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=DescribeVolumes",
@@ -158,15 +159,14 @@
         cache:false,
         success:
           function(data, textStatus, jqXHR){
-            $volSelector = $('#snapshot-create-volume-selector').html('');
-     //       $volSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
+            $volSelector = thisObj.createDialog.find('#snapshot-create-volume-selector').html('');
             if ( data.results ) {
               for( res in data.results) {
                 volume = data.results[res];
                 if ( volume.status === 'in-use' || volume.status === 'available' ) {
                   $volSelector.append($('<option>').attr('value', volume.id).text(volume.id));
                 }
-              } 
+              }
               dfd.resolve();
             } else {
               notifyError(null, error_loading_volumes_msg);

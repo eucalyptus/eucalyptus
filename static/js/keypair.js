@@ -117,10 +117,6 @@
     _destroy : function() {
     },
 
-    _getKeyId : function(rowSelector) {
-      return $(rowSelector).find('td:eq(1)').text();
-    },
-
     _deleteAction : function() {
       var thisObj = this;
       var keysToDelete = [];
