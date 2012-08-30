@@ -107,7 +107,8 @@
               var actions = new Array();
 //              actions.push(thisObj._addSecurityGroup(name, desc));
               for (rule in thisObj.rulesList)
-                actions.push(function() {
+                  alert("adding rule for port: "+thisObj.rulesList[rule].port);
+                  actions.push(function() {
                                 thisObj._addIngressRule(name,
                                        thisObj.rulesList[rule].port,
                                        thisObj.rulesList[rule].port,
@@ -122,20 +123,22 @@
 //                 });
 //              });
 
-              $.when(thisObj._addSecurityGroup(name, desc)).then(function(data, textStatus, jqXHR) {
-                                    if (data.results && data.results.status == true) {
-                                        $.when.apply($,actions).done(function() {
-                                            notifySuccess(sgroup_create_success + ' ' + name);
-                                            thisObj.tableWrapper.eucatable('refreshTable');
-                                        });
-                                    } else {
-                                        notifyError(sgroup_create_error + ' ' + name);
-                                    }
-                                 },
-                                 function(jqXHR, textStatus, errorThrown){
-                                    this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
-                                 }
-              );
+              $.when(thisObj._addSecurityGroup(name, desc))
+               .then(function(data) {
+                         if (data.results && data.results.status == true) {
+                             alert("num actions = "+actions.length);
+                             $.when.apply($,actions).done(function() {
+                                 notifySuccess(sgroup_create_success + ' ' + name);
+                                 thisObj.tableWrapper.eucatable('refreshTable');
+                             });
+                         } else {
+                             notifyError(sgroup_create_error + ' ' + name);
+                         }
+                     },
+                     function(jqXHR, textStatus, errorThrown){
+                         this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
+                     }
+               );
               $add_dialog.dialog("close");
             }},
         'cancel': {text: sgroup_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}},
@@ -171,10 +174,12 @@
         $.ajax({
             type: 'GET',
             url: 'http://checkip.amazonaws.com/',
-            crossDomain:'true',
+            contentType: 'text/plain; charset=utf-8',
+            crossDomain: true,
+            dataType: "text",
             success: function(data, textStatus, jqXHR) {
-                        alert(data);
-                         $('#allow-ip').val(data)
+                        alert(jqXHR.responseText);
+                         $('#allow-ip').val(jqXHR.responseText)
                      }
         });
       });
@@ -247,7 +252,7 @@
 
     _addSecurityGroup : function(groupName, groupDesc) {
       var thisObj = this;
-      $.ajax({
+      return $.ajax({
         type:"GET",
         url:"/ec2?Action=CreateSecurityGroup",
         data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
