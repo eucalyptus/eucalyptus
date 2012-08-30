@@ -88,7 +88,7 @@
          title: eip_release_dialog_title,
          buttons: {
            'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.dialog("close");}},
-           'cancel': {text: eip_release_dialog_cancel_btn, focus:true, click: function() { $release_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.dialog("close");}}
          },
          help: {title: help_volume['dialog_delete_title'], content: $release_help},
        });
@@ -107,7 +107,7 @@
                $eip_allocate_dialog.dialog("close");
               } 
             },
-           'cancel': { text: eip_allocate_dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_eip_create_title'], content: $eip_allocate_dialog_help},
        });
@@ -129,7 +129,7 @@
                $eip_associate_dialog.dialog("close");
               } 
             },
-           'cancel': { text: eip_associate_dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_eip_associate_title'], content: $eip_associate_dialog_help},
          on_open: {spin: true, callback: function(args) {
