@@ -104,4 +104,10 @@ var help_instance = {
   dialog_add_content: "",
   dialog_delete_title: "",
   dialog_delete_content: "",
+  dialog_terminate_content: "",
+  dialog_reboot_content: "",
+  dialog_start_content: "",
+  dialog_stop_content: "",
+  dialog_connect_content: "",
+  dialog_console_content: "",
 }

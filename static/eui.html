@@ -69,6 +69,7 @@
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
     <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eip.js"></script>
     <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
     <script type="text/javascript" language="javascript" src="js/notification.js"></script>
     <script type="text/javascript" language="javascript" src="js/help.js"></script>
@@ -279,9 +280,8 @@
           <div id="keys-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
             {{!: keypair_dialog_del_text }}
-            <span class="resource-ids"></span>
-            <span style="display:none" id="keys-to-delete"/>
             </div>
+            <div class="selected-resources"> </div>
           </div>
           <div id="keys-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
@@ -384,7 +384,7 @@
       <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-euca-dialog" class="euca-dialog">
           {{!: sgroup_dialog_del_text }}
-          <span class="resource-ids"></span>
+        <div class="selected-resources"> </div>
         </div>
       </script>
       <!-- END Security Group dialog template -->
@@ -430,9 +430,8 @@
           <div id="volumes-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               {{!: volume_dialog_del_text }}
-              <span class="resource-ids"></span>
-              <span style="display:none" id="volumes-to-delete"/>
             </div>
+            <div class="selected-resources"> </div>
           </div>
           <div id="volumes-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
@@ -450,16 +449,8 @@
           <div id="volumes-detach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               {{!: volume_dialog_detach_text }}
-              <table>
-                <thead>
-                  <tr><th>{{!: volume_dialog_detach_vol_head }}</th><th>{{!: volume_dialog_detach_inst_head }}</th></tr>
-                <thead>
-                <tbody class="resource-ids">
-                </tbody>
-              </table>
-              <span class="resource-ids"></span>
-              <span style="display:none" id="volumes-to-detach"/>
             </div>
+            <div class="selected-resources"> </div>
           </div>
           <div id="volumes-detach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
@@ -597,9 +588,8 @@
           <div id="snapshot-delete-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               {{!: snapshot_delete_dialog_text }}
-              <span class="resource-ids"></span>
-              <span style="display:none" id="snapshots-to-delete"/>
             </div>
+          <div class="selected-resources"> </div>
           </div>
           <div id="snapshot-delete-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
@@ -611,8 +601,107 @@
           </div>
         </div>
       </script>
-
       <!-- END Snapshot dialog template -->
+
+      <!-- IPs table -->
+      <script id="eipTblTmpl" type="text/x-jsrender">
+        <div id="eip-wrapper">
+          <div id="eip-table">
+            <table id="eips" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="eips-check-all">
+                  </th>
+                  <th>{{!>eip_tbl_hdr_address}}</th>
+                  <th>{{!>eip_tbl_hdr_instance}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="eip-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END IPs table -->
+
+      <!-- IPs dialog template -->
+      <script id="eipAllocateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-allocate-dialog-wrapper">
+          <div id="eip-allocate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: eip_allocate_dialog_text }}</p>
+              <div class="dialog-field">
+                <span class="label">{{!: eip_allocate_dialog_count_label }}</span>
+                <select id="eip-allocate-count-selector">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="snapshot-create-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: snapshot_create_dialog_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="eipReleaseDlgTmpl" type="text/x-jsrender">
+        <div id="eip-euca-dialog-wrapper">
+          <div id="eip-release-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: eip_release_dialog_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="eip-release-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: eip_dialog_release_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="eipAssociateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-associate-dialog-wrapper">
+          <div id="eip-associate-dialog" class="euca-dialog">
+            <div class="associate-inner-content">
+              <div class="dialog-field">
+                <span class="label">{{!: eip_associate_dialog_instance_label }}</span>
+                <select id="eip-associate-dialog-instance-selector"/>
+              </div>
+              <span style="display:none" id="eip-to-associate"/>
+            </div>
+          </div>
+          <div id="eip-associate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: eip_dialog_associate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END IPs dialog template -->
 
       <!-- Instance landing table template -->
       <script id="instanceTblTmpl" type="text/x-jsrender">
@@ -652,6 +741,97 @@
       </script>
       <!-- END Instance landing table template -->
 
+      <!-- Instance dialog templates -->
+      <script id="instanceTermDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div id="ebs-backed-warning"> </div>
+              {{!: instance_dialog_term_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_terminate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceRebootDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_reboot_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_reboot_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceStopDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_stop_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_stop_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceConnectDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+             <div id="instance-connect-text"> </div> 
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_connect_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="instanceConsoleDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+             <div id="instance-console-output"> </div> 
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_console_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Instance dialog templates -->
     </div> 
     <!-- END of templates --> 
   </body>

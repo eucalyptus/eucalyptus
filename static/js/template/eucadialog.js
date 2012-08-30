@@ -41,6 +41,7 @@
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
          width: 600,
+         closeOnEscape : false,
          title: thisObj.options.title,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
@@ -110,6 +111,7 @@
       $buttonPane = $dialog.find('.ui-dialog-buttonpane');
       $titleBar = $dialog.find('.ui-dialog-titlebar');
       $contentPane =  this.element.find('.dialog-inner-content');
+      $resourcePane = this.element.find('.selected-resources');
 
       $helpLink = $titleBar.find('.help-link a');
       $helpLink.click(function(evt) {
@@ -133,11 +135,13 @@
                 if(thisObj.options.help.title)
                   $titleBar.find('span').text(thisObj.options.help.title);
                 $buttonPane.hide(); 
+                $resourcePane.hide();
                 thisObj.help_flipped =true;
               } else{
                 $titleBar.find('.help-return').removeClass().addClass('help-link');
                 $helpLink.html('&nbsp;');
                 $buttonPane.show();
+                $resourcePane.show();
                 $titleBar.find('span').text(thisObj.options.title);
                 thisObj.help_flipped=false;
               }
@@ -170,8 +174,9 @@
     },
     
     close : function() {
-      // this method should clean-up things
+      var thisObj = this;
       this.element.dialog('close');
+      // this method should clean-up things
       this.element.find('input').each(function () { 
         $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
       });
@@ -179,17 +184,60 @@
         this.element.find('.dialog-inner-content').revertFlip();
         $buttonPane.show();
         $titleBar.find('span').text(thisObj.options.title);
-      }  
-    },
-    /// TODO: fix    
-    setSelectedResources : function (resources) {
-      $span = this.element.find("span.resource-ids");
-      $span.html('');
-      $.each(resources, function(idx, name){
-        $span.append(name).append('<br/>');
+      } 
+
+      $.each(thisObj._note_divs, function(idx, id){
+        thisObj.element.find('#'+id).children().detach();
       });
+      thisObj._note_divs = [];
     },
 
+    /// 
+    /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]] 
+    setSelectedResources : function (resources) {
+      var thisObj = this;
+      var $div = this.element.find('.selected-resources');
+      if (! $div){ return false; }
+      $div.children().detach();
+      $div.append($('<table>').append($('<thead>'), $('<tbody>')));
+      var $head = $div.find('thead');
+      var $body = $div.find('tbody');
+
+      var $tr = $('<tr>');
+      $.each(resources.title, function(idx, val){
+        $tr.append($('<td>').text(val)); 
+      }); 
+      $head.append($tr);
+      $.each(resources.contents, function(i, row){
+        $tr = $('<tr>');
+        $.each(row, function(j, val){
+          $tr.append($('<td>').text(val)); 
+        });
+        $body.append($tr);
+      });
+      return true; 
+    },
+
+    getSelectedResources : function (column) {
+      var thisObj = this;
+      var $body = thisObj.element.find('tbody');
+      var array = [];
+      $body.find('tr').each( function() {
+        var val = $(this).find('td:eq('+column+')').text();
+        array.push(val);
+      }); 
+      return array;           
+    },
+
+    _note_divs : [],
+    addNote : function(div_id, note){
+      // insert the additional notes in place of the div id=div_id;
+      var $div = this.element.find('#'+div_id);
+      if(!$div) return;
+      $div.html(note);
+      this._note_divs.push(div_id);
+    },
+   
     onChange : function(evt_src_id, button_id, checkFunction) {
       var thisObj = this;
       evt_src_id = evt_src_id.replace('#','');

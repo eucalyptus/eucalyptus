@@ -50,7 +50,7 @@
             { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
-                 return '<div class="table-legend-item" id="legend-volumes-'+oObj.aData.status+'">&nbsp;</div>';
+                 return '<div class="table-status-item status-'+oObj.aData.status+'">&nbsp;</div>';
                },
               "sWidth": "20px",
               "bSearchable": false,
@@ -98,7 +98,7 @@
          title: volume_dialog_del_title,
          buttons: {
            'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.dialog("close");}},
-           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
@@ -113,7 +113,7 @@
          title: volume_dialog_detach_title,
          buttons: {
            'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.dialog("close");}},
-           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $detach_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_detach_title'], content: $detach_help},
        });
@@ -136,7 +136,7 @@
                 $attach_dialog.dialog("close");
               } 
             },
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
          on_open: {spin: true, callback: function(args) {
@@ -175,7 +175,7 @@
                 $snapshot_dialog.dialog("close");
               } 
             },
-           'cancel': { text: volume_dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
          },
          help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
        });
@@ -214,7 +214,7 @@
                 $add_dialog.dialog("close");
               } 
             }},
-           'cancel': {text: volume_dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
          },
          help: {title: help_volume['dialog_add_title'], content: $add_help},
          on_open: {spin: true, callback: function(args) {
@@ -246,6 +246,7 @@
     },
 
     _initAddDialog : function(dfd) { // method should resolve dfd object
+      thisObj = this;
       $.when(
         $.ajax({
           type:"GET",
@@ -256,9 +257,10 @@
           async:false,
           success:
            function(data, textStatus, jqXHR){
-              $azSelector = $('#volume-add-az-selector').html('');
-              $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
+              $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
               if ( data.results ) {
+                if (data.results.length > 1)
+                  $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
                 for( res in data.results) {
                   azName = data.results[res].name;
                   $azSelector.append($('<option>').attr('value', azName).text(azName));
@@ -283,7 +285,7 @@
           cache:false,
           success:
             function(data, textStatus, jqXHR){
-              $snapSelector = $('#volume-add-snapshot-selector').html('');
+              $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
               $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
               if ( data.results ) {
                 for( res in data.results) {
@@ -341,39 +343,11 @@
       })
     },
 
-    _getVolumeId : function(rowSelector) {
-      return $(rowSelector).find('td:eq(1)').text();
-    },
-/*
-    handleInstanceHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-
-    handleSnapshotHover : function(e) {
-      switch(e.type) {
-        case 'mouseleave':
-          $(e.currentTarget).removeClass("hoverCell");
-          $(e.currentTarget).off('click');
-          break;
-        case 'mouseenter':
-          $(e.currentTarget).addClass("hoverCell");
-          break;
-      }
-    },
-*/
     _deleteListedVolumes : function () {
       var thisObj = this;
-      $volumesToDelete = this.delDialog.find("#volumes-to-delete");
-      var rowsToDelete = $volumesToDelete.text().split(ID_SEPARATOR);
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var volumeId = rowsToDelete[i];
+      var $volumesToDelete = this.delDialog.eucadialog('getSelectedResources', 0);
+      for ( i = 0; i<$volumesToDelete.length; i++ ) {
+        var volumeId = $volumesToDelete[i];
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
@@ -478,8 +452,7 @@
     _detachListedVolumes : function (force) {
       var thisObj = this;
       dialogToUse = this.detachDialog; 
-      $volumesToDelete = dialogToUse.find("#volumes-to-detach");
-      var volumes = $volumesToDelete.text().split(ID_SEPARATOR);
+      var volumes =  dialogToUse.eucadialog('getSelectedResources', 0);
       for ( i = 0; i<volumes.length; i++ ) {
         var volumeId = volumes[i];
         $.ajax({
@@ -518,19 +491,11 @@
       }
     },
 
-    _deleteAction : function(volumeId) {
+    _deleteAction : function() {
       var thisObj = this;
-      volumesToDelete = [];
-      if ( !volumeId ) {
-        volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      } else {
-        volumesToDelete[0] = volumeId;
-      }
-
-      if ( volumesToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', volumesToDelete);
-        $volumesToDelete = thisObj.delDialog.find("#volumes-to-delete");
-        $volumesToDelete.html(volumesToDelete.join(ID_SEPARATOR));
+      volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      if( volumesToDelete.length > 0 ) {
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[volume_dialog_del_resource_title], contents: [[volumesToDelete]]});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -539,15 +504,9 @@
       this.addDialog.eucadialog('open');
     },
 
-    _attachAction : function(volumeId) {
+    _attachAction : function() {
       var thisObj = this;
-      var volumeToAttach = '';
-      if ( !volumeId ) {
-        rows = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-        volumeToAttach = rows[0];
-      } else {
-        volumeToAttach = volumeId;
-      }
+      var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
       $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
       $volumeSelector.html('');
       $volumeSelector.append($('<option>').attr('value', volumeToAttach).text(volumeToAttach));
@@ -560,25 +519,17 @@
       var rows = thisObj.tableWrapper.eucatable('getSelectedRows');
       dialogToUse = this.detachDialog;
       if ( rows.length > 0 ) {
-        $detachIds = dialogToUse.find("tbody.resource-ids");
-        $detachIds.html('');
-        $volumesToDetach = dialogToUse.find("#volumes-to-detach");
+        var matrix = [];
         $.each(rows, function(idx, volume){
-          $tr = $('<tr>').append($('<td>').text(volume['id']),$('<td>').text(volume.attach_data['instance_id']));
-          $detachIds.append($tr);
+          matrix.push([volume.id , volume.attach_data.instance_id]); 
         });
+        dialogToUse.eucadialog('setSelectedResources', {title: [volume_dialog_detach_vol_head, volume_dialog_detach_inst_head], contents: matrix});
         dialogToUse.dialog('open');
       }
     },
 
-    _createSnapshotAction : function(volumeId) {
-      volumeToUse = '';
-      if ( !volumeId ) {
-        rows = this.tableWrapper.eucatable('getSelectedRows', 1);
-        volumeToUse = rows[0];
-      } else {
-        volumeToUse = volumeId;
-      }
+    _createSnapshotAction : function() {
+      volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
       $volumeSelector = this.createSnapshotDialog.find('#snapshot-create-volume-selector');
       $volumeSelector.html('');
       $volumeSelector.append($('<option>').attr('value', volumeToUse).text(volumeToUse));
