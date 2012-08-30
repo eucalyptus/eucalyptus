@@ -16,17 +16,27 @@ from .response import Response
 
 class ComputeHandler(server.BaseHandler):
 
-    def get_argument_list(self, name, name_suffix=None):
+    def get_argument_list(self, name, name_suffix=None, another_suffix=None):
         ret = []
         index = 1
+        index2 = 1
         pattern = name+'.%d'
         if name_suffix:
             pattern = pattern+'.'+name_suffix
-        val = self.get_argument(pattern % index, None)
+        if another_suffix:
+            pattern = pattern+'.%d.'+another_suffix
+        val = ''
+        if another_suffix:
+            val = self.get_argument(pattern % (index, index2), None)
+        else:
+            val = self.get_argument(pattern % (index), None)
         while val:
             ret.append(val)
             index = index + 1
-            val = self.get_argument(pattern % index, None)
+            if another_suffix:
+                val = self.get_argument(pattern % (index, index2), None)
+            else:
+                val = self.get_argument(pattern % (index), None)
         return ret
 
     def handleImages(self, action, clc):
@@ -181,19 +191,22 @@ class ComputeHandler(server.BaseHandler):
         elif action == 'AuthorizeSecurityGroupIngress':
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)
-            ip_protocol = self.get_argument('IpPermissions.1.IpProtocol', None)
-            from_port = self.get_argument('IpPermissions.1.FromPort', None)
-            to_port = self.get_argument('IpPermissions.1.ToPort', None)
-            src_security_group_name = self.get_argument('IpPermissions.1.Groups.1.GroupName', None)
-            src_security_group_owner_id = self.get_argument('IpPermissions.1.Groups.1.UserId', None)
-            src_security_group_group_id = self.get_argument('IpPermissions.1.Groups.1.GroupId', None)
-            cidr_ip = self.get_argument_list('IpPermissions.1.IpRanges', 'CidrIp')
-            return clc.authorize_security_group(name,
-                                 src_security_group_name,
-                                 src_security_group_owner_id,
-                                 ip_protocol, from_port, to_port,
-                                 cidr_ip, group_id,
-                                 src_security_group_group_id)
+            ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
+            from_port = self.get_argument_list('IpPermissions', 'FromPort')
+            to_port = self.get_argument_list('IpPermissions', 'ToPort')
+            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
+            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
+            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
+            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
+            ret = False
+            for i in range(len(ip_protocol)):
+                ret = clc.authorize_security_group(name,
+                                 src_security_group_name[i] if src_security_group_name else None,
+                                 src_security_gorup_owner_id[i] if src_security_group_owner_id else None,
+                                 ip_protocol[i], from_port[i], to_port[i],
+                                 cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
+                                 src_security_group_group_id[i] if src_security_group_group_id else None)
+            return ret
         elif action == 'RevokeSecurityGroupIngress':
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)

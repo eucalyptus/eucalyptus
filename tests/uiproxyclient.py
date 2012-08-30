@@ -210,19 +210,19 @@ class UIProxyClient(object):
                                  ip_protocol=None, from_port=None, to_port=None,
                                  cidr_ip=None, group_id=None,
                                  src_security_group_group_id=None):
-        params = {'GroupName': name, 'GroupId': group_id,
-                  'IpPermissions.1.Groups.1.GroupName': src_security_group_name,
-                  'IpPermissions.1.Groups.1.UserId': src_security_group_owner_id,
-                  'IpPermissions.1.Groups.1.GroupId': src_security_group_group_id,
-                  'IpPermissions.1.IpProtocol': ip_protocol,
-                  'IpPermissions.1.FromPort': from_port,
-                  'IpPermissions.1.ToPort': to_port}
-        if cidr_ip:
-            if not isinstance(cidr_ip, list):
-                cidr_ip = [cidr_ip]
-            for i, single_cidr_ip in enumerate(cidr_ip):
-                params['IpPermissions.1.IpRanges.%d.CidrIp' % (i+1)] = \
-                    single_cidr_ip
+        params = {'GroupName': name, 'GroupId': group_id}
+        for i in range(1, len(ip_protocol)+1):
+            if src_security_group_name:
+                params['IpPermissions.%d.Groups.1.GroupName'%i] = src_security_group_name[i-1]
+            if src_security_group_owner_id:
+                params['IpPermissions.%d.Groups.1.UserId'%i] = src_security_group_owner_id[i-1]
+            if src_security_group_group_id:
+                params['IpPermissions.%d.Groups.1.GroupId'%i] = src_security_group_group_id[i-1]
+            params['IpPermissions.%d.IpProtocol'%i] = ip_protocol[i-1]
+            params['IpPermissions.%d.FromPort'%i] = from_port[i-1]
+            params['IpPermissions.%d.ToPort'%i] = to_port[i-1]
+            if cidr_ip:
+                params['IpPermissions.%d.IpRanges.1.CidrIp' % i] = cidr_ip[i-1]
         return self.__make_request__('AuthorizeSecurityGroupIngress', params)
 
     # returns True if successful
