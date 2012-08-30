@@ -81,8 +81,16 @@ import com.eucalyptus.ws.protocol.RequiredQueryParams;
 public class HmacHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( HmacHandler.class );
   private boolean internal = false;
-  public HmacHandler( boolean b ) {
-    this.internal = b;
+  private final boolean allowTemporaryCredentials;
+
+  public HmacHandler( final boolean internal  ) {
+    this( internal, false );
+  }
+
+  public HmacHandler( final boolean internal,
+                      final boolean allowTemporaryCredentials ) {
+    this.internal = internal;
+    this.allowTemporaryCredentials = !internal && allowTemporaryCredentials;
   }
   
   @Override
@@ -104,6 +112,9 @@ public class HmacHandler extends MessageStackHandler {
       if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) {
         throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
       }
+      if ( !allowTemporaryCredentials && parameters.containsKey( SecurityParameter.SecurityToken.toString( ) ) ) {
+        throw new AuthenticationException( "Temporary credentials forbidden for service" );
+      }
       // :: note we remove the sig :://
       String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
       String sigVersion = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );
@@ -117,6 +128,7 @@ public class HmacHandler extends MessageStackHandler {
       parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
       parameters.remove( SecurityParameter.SignatureMethod.toString( ) );
       parameters.remove( SecurityParameter.AWSAccessKeyId.toString( ) );
+      parameters.remove( SecurityParameter.SecurityToken.toString( ) );
     }
   }
   

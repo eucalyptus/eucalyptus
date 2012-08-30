@@ -68,8 +68,9 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.api.BaseLoginModule;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
 
@@ -85,9 +86,10 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
 	@Override
 	public boolean authenticate( WalrusWrappedCredentials credentials ) throws Exception {
 		String signature = credentials.getSignature().replaceAll("=", "");
-		User user = Accounts.lookupUserByAccessKeyId( credentials.getQueryId() );  
-		String queryKey = user.getKey( credentials.getQueryId() ).getSecretKey( );
-		String authSig = checkSignature( queryKey, credentials.getLoginData() );
+    final AccessKey key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
+		final User user = key.getUser();
+		final String queryKey = key.getSecretKey();
+		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
 		if (authSig.equals(signature)) {
 			super.setCredential(credentials.getQueryId());
 			super.setPrincipal(user);

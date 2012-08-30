@@ -63,8 +63,6 @@
 package com.eucalyptus.bootstrap;
 
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.Signatures;
 import com.google.common.base.Joiner;
 
@@ -77,7 +75,11 @@ public class SystemIds {
   public static String tunnelPassword( ) {
     return Signatures.SHA256withRSA.trySign( Eucalyptus.class, "vtunpass".getBytes( ) );
   }
-  
+
+  public static String securityTokenPassword( ) {
+    return Signatures.SHA256withRSA.trySign( Eucalyptus.class, "tokens-service".getBytes( ) );
+  }
+
   public static String createCloudUniqueName( String subName ) {
     return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }

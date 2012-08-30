@@ -70,6 +70,7 @@ core
 postgresql
 wsstack
 euare
+tokens
 component
 cluster-manager
 notifications

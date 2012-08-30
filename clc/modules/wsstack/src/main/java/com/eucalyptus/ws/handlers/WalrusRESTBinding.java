@@ -240,7 +240,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 					HoldMe.canHas.unlock();
 				}
 				byte[] req = byteOut.toByteArray();
-				ChannelBuffer buffer = ChannelBuffers.copiedBuffer( req );
+				ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
 				httpResponse.setContent( buffer );
