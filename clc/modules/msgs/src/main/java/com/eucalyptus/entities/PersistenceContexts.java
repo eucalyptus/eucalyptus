@@ -88,6 +88,8 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -232,7 +234,7 @@ public class PersistenceContexts {
   
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
-    Databases.awaitSynchronized( );
+    if ( isHa.get() ) Databases.awaitSynchronized( );
     if ( emf.containsKey( persistenceContext ) ) {
       return emf.get( persistenceContext );
     } else {
@@ -254,7 +256,20 @@ public class PersistenceContexts {
     }
     throw Exceptions.error( "Failed to lookup persistence context after " + MAX_EMF_RETRIES + " tries.\n" );
   }
-  
+
+  //TODO cleanly separate out functionality not relevant to non-server users
+  private static final Supplier<Boolean> isHa = Suppliers.memoize( new Supplier<Boolean>(){
+    @Override
+    public Boolean get() {
+      try {
+        Class.forName("net.sf.hajdbc.sql.DriverDatabaseClusterMBean" );
+        return true;
+      } catch ( ClassNotFoundException e ) {
+        return false;
+      }
+    }
+  } );
+
   public static void shutdown( ) {
     for ( String ctx : emf.keySet( ) ) {
       EntityManagerFactoryImpl em = emf.remove( ctx );
