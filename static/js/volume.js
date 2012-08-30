@@ -258,8 +258,9 @@
           success:
            function(data, textStatus, jqXHR){
               $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
-              $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
               if ( data.results ) {
+                if (data.results.length > 1)
+                  $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
                 for( res in data.results) {
                   azName = data.results[res].name;
                   $azSelector.append($('<option>').attr('value', azName).text(azName));
