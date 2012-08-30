@@ -71,5 +71,6 @@ public enum SecurityParameter {
   Authorization,
   Date,
   Content_MD5,
-  Content_Type
+  Content_Type,
+  SecurityToken
 }

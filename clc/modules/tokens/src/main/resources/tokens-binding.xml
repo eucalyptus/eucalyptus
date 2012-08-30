@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<binding force-classes="true" add-constructors="true" name="sts_amazonaws_com_doc_2011_06_15">
+    <namespace uri="https://sts.amazonaws.com/doc/2011-06-15/" default="elements"/>
+
+    <format
+            type="java.util.Date"
+            deserializer="org.jibx.runtime.Utility.deserializeDateTime"
+            serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
+
+    <mapping class="com.eucalyptus.tokens.TokenMessage" abstract="true"/>
+    <mapping class="com.eucalyptus.tokens.TokensResponseMetadataType" abstract="true">
+        <value name="RequestId" field="requestId"/>
+    </mapping>
+    <mapping name="Error" class="com.eucalyptus.tokens.TokensErrorType">
+        <value name="Type" field="type" usage="required"/>
+        <value name="Code" field="code" usage="required"/>
+        <value name="Message" field="message" usage="required"/>
+        <structure field="detail" usage="required" map-as="com.eucalyptus.tokens.TokensErrorDetailType"/>
+    </mapping>
+    <mapping name="Detail" class="com.eucalyptus.tokens.TokensErrorDetailType">
+    </mapping>
+    <mapping name="ErrorResponse" class="com.eucalyptus.tokens.TokensErrorResponseType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <collection field="errors">
+            <structure map-as="com.eucalyptus.tokens.TokensErrorType"/>
+        </collection>
+        <value name="RequestId" field="requestId" usage="required"/>
+    </mapping>
+    <mapping class="com.eucalyptus.tokens.CredentialsType" abstract="true">
+        <value name="AccessKeyId" field="accessKeyId"/>
+        <value name="SecretAccessKey" field="secretAccessKey"/>
+        <value name="SessionToken" field="sessionToken"/>
+        <value name="Expiration" field="expiration"/>
+    </mapping>
+    <mapping class="com.eucalyptus.tokens.GetSessionTokenResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+    </mapping>
+    <mapping name="GetSessionToken" class="com.eucalyptus.tokens.GetSessionTokenType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
+    </mapping>
+    <mapping name="GetSessionTokenResponse" class="com.eucalyptus.tokens.GetSessionTokenResponseType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <structure name="GetSessionTokenResult" field="result" type="com.eucalyptus.tokens.GetSessionTokenResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    </mapping>
+
+</binding>

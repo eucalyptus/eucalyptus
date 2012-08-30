@@ -86,6 +86,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.google.common.base.Charsets;
 
 @ComponentPart( Empyrean.class )
 public class LegacyHBPipeline extends FilteredPipeline {
@@ -127,7 +128,7 @@ public class LegacyHBPipeline extends FilteredPipeline {
                                      c.hasLocalService( ),
                                      c.getComponentId( ).isAvailableLocally( ) );
             }
-            ChannelBuffer buf = ChannelBuffers.copiedBuffer( resp.getBytes( ) );
+            ChannelBuffer buf = ChannelBuffers.wrappedBuffer(resp.getBytes(Charsets.UTF_8));
             response.setContent( buf );
             response.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf( buf.readableBytes( ) ) );
             response.addHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=UTF-8" );

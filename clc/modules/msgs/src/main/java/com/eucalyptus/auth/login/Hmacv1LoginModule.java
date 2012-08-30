@@ -98,7 +98,7 @@ public class Hmacv1LoginModule extends HmacLoginModuleSupport {
     if ( !computedSig.equals( sanitize(sig) ) && !computedSig.equals( decodedSig ) && !computedSig.equals( sig ) ) {
       return false;
     }
-    super.setCredential( credentials.getQueryId( ) );
+    super.setCredential( credentials.getQueryIdCredential( ) );
     super.setPrincipal( user );
     //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
