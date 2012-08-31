@@ -43,7 +43,7 @@ if((length($ip) <= 0) || (length($store) <= 0) || length($encrypted_password) <=
 
 if ((length($lun) > 0) && ($lun > -1)) {
   # check if a session corresponding to the store exists
-  if (get_session($ARGV[0]) == 1) {
+  if (get_session($store) == 1) {
     # rescan session
     rescan_target();  
   } else {

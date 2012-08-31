@@ -34,7 +34,7 @@ $KEY_PATH = $euca_home."/var/lib/eucalyptus/keys/node-pk.pem";
 
 if ((length($lun) > 0) && ($lun > -1)) {
   # check if a session corresponding to the store exists
-  if (get_session($ARGV[0]) == 1) {
+  if (get_session($store) == 1) {
     # rescan session
     rescan_target();  
   } else {
