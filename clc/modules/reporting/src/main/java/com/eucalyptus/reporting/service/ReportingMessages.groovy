@@ -24,7 +24,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.id.Reporting
-
+import com.eucalyptus.reporting.export.ReportingExport
 
 @ComponentMessage(Reporting.class)
 class ReportingMessage extends BaseMessage {
@@ -63,9 +63,7 @@ class ReportingErrorResponseType extends ReportingMessage {
 class ExportDataResultType extends EucalyptusData {
   ExportDataResultType(){}
   ExportDataResultType( data ){ this.data = data }
-
-  //TODO:STEVE: data format
-  String data
+  ReportingExport data
 }
 
 
