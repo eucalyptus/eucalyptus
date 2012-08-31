@@ -79,7 +79,8 @@ import com.google.common.collect.Iterables
 import groovy.sql.Sql
 import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
-
+import java.io.FileWriter
+import java.lang.Appendable
 
 import static com.google.common.io.Closeables.closeQuietly
 import static com.google.common.io.Flushables.flushQuietly
@@ -132,14 +133,14 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     private static long   MIN_SHMMAX = 536870912L //512MB
 
     private int runProcess( List<String> args ) {
-        PrintStream outstream = null
-        PrintStream errstream = null
+        Appendable outstream = null
+        Appendable errstream = null
         LOG.debug("Postgres 9.1 command : " + args.toString( ) )
         try {
             ProcessBuilder pb = new ProcessBuilder(args)
             Process p = pb.start()
-            outstream = new PrintStream( BaseDirectory.LOG.getChildFile("db.log") )
-            errstream = new PrintStream( BaseDirectory.LOG.getChildFile("db-err.log") )
+            outstream = new FileWriter( BaseDirectory.LOG.getChildFile("db.log"), true )
+            errstream = new FileWriter( BaseDirectory.LOG.getChildFile("db-err.log"), true )
             p.consumeProcessOutput(outstream, errstream)
             int result = p.waitFor()
             flushQuietly( outstream )
