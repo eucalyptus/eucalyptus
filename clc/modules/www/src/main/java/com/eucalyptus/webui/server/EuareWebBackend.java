@@ -78,6 +78,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.crypto.Crypto;
@@ -289,11 +290,19 @@ public class EuareWebBackend {
     }    
   }
   
-  public static User changeUserPasswordAndEmail( User requestUser, String userId, String oldPass, String newPass, String email ) throws EucalyptusServiceException {
+  public static User changeUserPasswordAndEmail( final User requestUser,
+                                                 final String userId,
+                                                 final String oldPass,
+                                                 final String newPass,
+                                                 final String email ) throws EucalyptusServiceException {
     try {
-      User user = Accounts.lookupUserById( userId );
+      final User user = Accounts.lookupUserById( userId );
       if ( authenticateWithLdap( user ) ) {
         throw new EucalyptusServiceException( "Currently authenticating with LDAP. Can not change password." );
+      }
+      if ( Principals.isSameUser( requestUser, user ) && Strings.nullToEmpty(oldPass).equals( newPass ) ) {
+        // If user is changing their own password then the new value must not be the same as the old value
+        throw new EucalyptusServiceException( "The new password must not be the same as the old password." );
       }
       // Anyone want to change some other people's password must authenticate himself first
       if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !Crypto.verifyPassword( oldPass, requestUser.getPassword( ) ) ) {

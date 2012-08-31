@@ -960,6 +960,89 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
     return response;
 }
 
+adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors_t* ncDescribeSensors, const axutil_env_t *env)
+{
+    int result = ERROR;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncDescribeSensorsType_t * input          = adb_ncDescribeSensors_get_ncDescribeSensors(ncDescribeSensors, env);
+    adb_ncDescribeSensorsResponse_t * response   = adb_ncDescribeSensorsResponse_create(env);
+    adb_ncDescribeSensorsResponseType_t * output = adb_ncDescribeSensorsResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncDescribeSensorsType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncDescribeSensorsType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    int instIdsLen = adb_ncDescribeSensorsType_sizeof_instanceIds(input, env);
+    char ** instIds = malloc (sizeof(char *) * instIdsLen);
+    if (instIds == NULL) {
+        logprintfl (EUCAERROR, "out of memory for 'instIds' in 'ncDescribeSensorsMarshal'\n");
+        goto reply;
+    }
+    for (int i=0; i<instIdsLen; i++) {
+        instIds[i] = adb_ncDescribeSensorsType_get_instanceIds_at(input, env, i);
+    }
+
+    int sensorIdsLen = adb_ncDescribeSensorsType_sizeof_sensorIds(input, env);
+    char ** sensorIds = malloc (sizeof(char *) * sensorIdsLen);
+    if (sensorIds == NULL) {
+        logprintfl (EUCAERROR, "out of memory for 'sensorIds' in 'ncDescribeSensorsMarshal'\n");
+        goto reply;
+    }
+    for (int i=0; i<sensorIdsLen; i++) {
+        sensorIds[i] = adb_ncDescribeSensorsType_get_sensorIds_at(input, env, i);
+    }
+
+    // eventlog("NC", userId, correlationId, "DescribeSensors", "begin");
+    { // do it
+	    ncMetadata meta;
+	    EUCA_MESSAGE_UNMARSHAL(ncDescribeSensorsType, input, (&meta));
+
+        sensorResource **outResources;
+        int outResourcesLen;
+        
+        int error = doDescribeSensors (&meta, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
+
+        } else {
+
+            // set standard fields in output
+            adb_ncDescribeSensorsResponseType_set_correlationId(output, env, correlationId);
+            adb_ncDescribeSensorsResponseType_set_userId(output, env, userId);
+
+            // set operation-specific fields in output                                                                                                                      
+            for (int i=0; i<outResourcesLen; i++) {
+                adb_sensorsResourceType_t * resource = copy_sensor_resource_to_adb (env, outResources[i]);
+                if (outResources[i])
+                    free(outResources[i]);
+                adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);
+            }
+            if (outResourcesLen)
+                free (outResources);
+            
+            result = OK; // success
+        }
+    }
+    // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
+
+ reply:
+    
+    if (result == ERROR) {
+        adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
+    } else {
+        adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
+    }
+    
+    // set response to output
+    adb_ncDescribeSensorsResponse_set_ncDescribeSensorsResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    return response;
+}
+
 /***********************
  template for future ops
  ***********************

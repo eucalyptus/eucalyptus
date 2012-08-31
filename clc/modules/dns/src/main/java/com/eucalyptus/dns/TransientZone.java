@@ -168,7 +168,7 @@ public class TransientZone extends Zone {
   public SetResponse findRecords( Name name, int type ) {
     if( StackConfiguration.USE_INSTANCE_DNS && name.toString( ).matches("euca-.+{3}-.+{3}-.+{3}-.+{3}\\..*") ) {
       try {
-        String[] tryIp = name.toString( ).replaceAll( "euca-", "" ).replaceAll("\\.eucalyptus.*","").split("-");
+        String[] tryIp = name.toString( ).replaceAll( "euca-", "" ).replaceAll(VmInstances.INSTANCE_SUBDOMAIN + ".*", "").split("-");
         if( tryIp.length < 4 ) return super.findRecords( name, type );
         String ipCandidate = new StringBuffer()
           .append(tryIp[0]).append(".")

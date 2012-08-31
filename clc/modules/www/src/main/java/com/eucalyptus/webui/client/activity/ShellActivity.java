@@ -62,10 +62,10 @@
 
 package com.eucalyptus.webui.client.activity;
 
+import static com.eucalyptus.webui.shared.checker.ValueCheckerFactory.ValueSaver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.eucalyptus.webui.client.AppWidget;
@@ -315,7 +315,11 @@ public class ShellActivity extends AbstractActivity
   }
 
   private void showChangePasswordDialog( String subject ) {
-    InputView dialog = this.clientFactory.getInputView( );
+    final ValueSaver newPasswordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, newPasswordSaver );
+    final ValueSaver oldPasswordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordInequalityChecker = ValueCheckerFactory.createInequalityChecker( ValueCheckerFactory.PASSWORD_NOT_CHANGED, oldPasswordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( CHANGE_PASSWORD_CAPTION, subject, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -331,7 +335,7 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return oldPasswordSaver;
       }
       
     }, new InputField( ) {
@@ -348,7 +352,11 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            passwordInequalityChecker,
+            ValueCheckerFactory.createPasswordChecker(),
+            newPasswordSaver
+        );
       }
       
     }, new InputField( ) {
@@ -365,15 +373,19 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );
     
   }
-  
+
   private void showFirstTimeDialog( ) {
-    InputView dialog = this.clientFactory.getInputView( );
+    final ValueSaver newPasswordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, newPasswordSaver );
+    final ValueSaver oldPasswordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordInequalityChecker = ValueCheckerFactory.createInequalityChecker( ValueCheckerFactory.PASSWORD_NOT_CHANGED, oldPasswordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( FIRST_TIME_CAPTION, FIRST_TIME_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -406,7 +418,7 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return oldPasswordSaver;
       }
       
     }, new InputField( ) {
@@ -423,7 +435,11 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            passwordInequalityChecker,
+            ValueCheckerFactory.createPasswordChecker(),
+            newPasswordSaver
+        );
       }
       
     }, new InputField( ) {
@@ -440,7 +456,7 @@ public class ShellActivity extends AbstractActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );
@@ -467,7 +483,7 @@ public class ShellActivity extends AbstractActivity
     final String userId = this.clientFactory.getSessionData( ).getLoginUser( ).getUserId( );
     
     this.clientFactory.getShellView( ).getFooterView( ).showStatus( StatusType.LOADING, "Changing password ...", 0 );
-    
+
     this.clientFactory.getBackendService( ).changePassword( this.clientFactory.getLocalSession( ).getSession( ), userId, oldPass, newPass, email, new AsyncCallback<Void>( ) {
 
       @Override

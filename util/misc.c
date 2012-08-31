@@ -91,6 +91,7 @@
 #include "euca_auth.h"
 #include "diskutil.h"
 #include "vnetwork.h"
+#include "log.h"
 
 // Given an array of pointers to command names (e.g., "ls", "dd", etc.),
 // as well as either an array of NULL pointers or pointers to full paths,
@@ -276,14 +277,6 @@ pid_t timewait (pid_t pid, int *status, int timeout_sec)
     }
     return (rc);
 }
-
-int timelog=0; /* change to 1 for TIMELOG entries */
-
-int logging=0;
-int loglevel=EUCADEBUG;
-int logrollnumber=4;
-FILE *LOGFH=NULL;
-char logFile[MAX_PATH];
 
 int param_check(char *func, ...) {
   int fail;
@@ -852,160 +845,6 @@ from_var_to_char_list(	const char *v) {
 	return tmp;
 }
 
-int logfile(char *file, int in_loglevel, int in_logrollnumber) {
-  logging = 0;
-  if (in_loglevel >= EUCADEBUG2 && in_loglevel <= EUCAFATAL) {
-    loglevel = in_loglevel;
-  } else {
-    loglevel = EUCADEBUG;
-  }
-  if (file == NULL) {
-    LOGFH = NULL;
-  } else {
-    if (LOGFH != NULL) {
-      fclose(LOGFH);
-    }
-    
-    snprintf(logFile, MAX_PATH, "%s", file);
-    LOGFH = fopen(file, "a");
-    if (LOGFH) {
-      logging=1;
-    }
-  }
-  if (in_logrollnumber > 0 && in_logrollnumber < 100) {
-      logrollnumber = in_logrollnumber;
-  }
-  return(1-logging);
-}
-
-void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other) {
-  double ts;
-  struct timeval tv;
-  char hostTagFull[256];
-  char hostName [256];
-  FILE *PH;
-
-  if (!timelog) return;
-
-  hostTagFull[0] = '\0';
-  PH = popen("hostname", "r");
-  if(PH) {
-      fscanf(PH, "%256s", hostName);
-      pclose(PH);
-  
-      snprintf (hostTagFull, 256, "%s/%s", hostName, hostTag);
-  
-      gettimeofday(&tv, NULL);
-      ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
-
-      logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
-  }
-}
-
-int logprintf(const char *format, ...) {
-  va_list ap;
-  int rc;
-  char buf[27], *eol;
-  time_t t;
-  FILE *file;
-  
-  rc = 1;
-  va_start(ap, format);
-  
-  if (logging) {
-    file = LOGFH;
-  } else {
-    file = stdout;
-  }
-  
-  t = time(NULL);
-  if (ctime_r(&t, buf)) {
-    eol = strchr(buf, '\n');
-    if (eol) {
-      *eol = '\0';
-    }
-    fprintf(file, "[%s] ", buf);
-  }
-  rc = vfprintf(file, format, ap);
-  fflush(file);
-  
-  va_end(ap);
-  return(rc);
-}
-
-int logprintfl(int level, const char *format, ...) {
-  va_list ap;
-  int rc, fd;
-  char buf[27], *eol;
-  time_t t;
-  struct stat statbuf;
-  FILE *file;
-  
-  if (level < loglevel) {
-    return(0);
-  }
-  
-  rc = 1;
-  va_start(ap, format);
-  
-  if (logging) {
-    file = LOGFH;
-    fd = fileno(file);
-    if (fd > 0) {
-      rc = fstat(fd, &statbuf);
-      if (!rc && ((int)statbuf.st_size > MAXLOGFILESIZE)) {
-	int i;
-	char oldFile[MAX_PATH], newFile[MAX_PATH];
-	
-	rc = stat(logFile, &statbuf);
-	if (!rc && ((int)statbuf.st_size > MAXLOGFILESIZE)) {
-	  for (i=logrollnumber; i>=0; i--) {
-	    snprintf(oldFile, MAX_PATH, "%s.%d", logFile, i);
-	    snprintf(newFile, MAX_PATH, "%s.%d", logFile, i+1);
-	    rename(oldFile, newFile);
-	  }
-	  snprintf(oldFile, MAX_PATH, "%s", logFile);
-	  snprintf(newFile, MAX_PATH, "%s.%d", logFile, 0);
-	  rename(oldFile, newFile);
-	}
-	fclose(LOGFH);
-	LOGFH = fopen(logFile, "a");
-	if (LOGFH) {
-	  file = LOGFH;
-	} else {
-	  file = stdout;
-	}
-      }
-    }
-  } else {
-    file = stderr;
-  }
-
-  
-  t = time(NULL);
-  if (ctime_r(&t, buf)) {
-    eol = strchr(buf, '\n');
-    if (eol) {
-      *eol = '\0';
-    }
-    fprintf(file, "[%s]", buf);
-  }
-
-  fprintf(file, "[%06d]", getpid());
-  if (level == EUCADEBUG2) {fprintf(file, "[%-10s] ", "EUCADEBUG2");}
-  else if (level == EUCADEBUG) {fprintf(file, "[%-10s] ", "EUCADEBUG");}
-  else if (level == EUCAINFO) {fprintf(file, "[%-10s] ", "EUCAINFO");}
-  else if (level == EUCAWARN) {fprintf(file, "[%-10s] ", "EUCAWARN");}
-  else if (level == EUCAERROR) {fprintf(file, "[%-10s] ", "EUCAERROR");}
-  else if (level == EUCAFATAL) {fprintf(file, "[%-10s] ", "EUCAFATAL");}
-  else {fprintf(file, "[%-10s] ", "EUCADEBUG");}
-  rc = vfprintf(file, format, ap);
-  fflush(file);
-  
-  va_end(ap);
-  return(rc);
-}
-
 /* implements Java's String.hashCode() */
 int hash_code (const char * s)
 {
@@ -1200,29 +1039,6 @@ int cat (const char * file_name)
 	}
 	close (fd);
 	return put;
-}
-
-/* prints contents of a file with logprintf */
-int logcat (int debug_level, const char * file_name)
-{
-	int got = 0;
-	char buf [BUFSIZE];
-	
-	FILE *fp = fopen (file_name, "r");
-	if (!fp) return got;
-    while ( fgets (buf, BUFSIZE, fp) ) {
-        int l = strlen (buf);
-        if ( l<0 ) 
-            break;
-        if ( l+1<BUFSIZE && buf[l-1]!='\n' ) {
-            buf [l++] = '\n';
-            buf [l] = '\0';
-        }
-        logprintfl (debug_level, buf);
-        got += l;
-	}
-    fclose (fp);
-	return got;
 }
 
 /* "touch" a file, creating if necessary */
@@ -2007,6 +1823,12 @@ long long time_usec (void)
     struct timeval tv;
     gettimeofday (&tv, NULL);
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
+}
+
+// time since 1970 in milliseconds
+long long time_ms (void)
+{
+    return time_usec()/1000;
 }
 
 // ensure the temp file is only readable by the user

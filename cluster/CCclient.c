@@ -66,6 +66,7 @@
 #include <euca_axis.h>
 #include <data.h>
 #include <cc-client-marshal.h>
+#include <sensor.h>
 
 #ifndef MODE
 #define MODE 0
@@ -134,9 +135,9 @@ int main(int argc, char **argv) {
   }
   
   if (MODE == 0) {
-    snprintf(endpoint_uri, 256," http://localhost:%d/axis2/services/EucalyptusCC", port);
+    snprintf(endpoint_uri, 256,"http://localhost:%d/axis2/services/EucalyptusCC", port);
   } else {
-    snprintf(endpoint_uri, 256," http://%s/axis2/services/EucalyptusCC", argv[1]);
+    snprintf(endpoint_uri, 256,"http://%s/axis2/services/EucalyptusCC", argv[1]);
   }
   //env =  axutil_env_create_all(NULL, 0);
   env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
@@ -361,6 +362,18 @@ int main(int argc, char **argv) {
 	printf("cc_killallInstances() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "describeSensors")) {
+        sensorResource ** res;
+        int resSize;
+
+	rc = cc_describeSensors(NULL, 0, NULL, 0, &res, &resSize, env, stub);
+        if (rc != 0) {
+	  printf("cc_describeSensors() failed: error=%d\n", rc);
+	  exit(1);
+        }
+        char buf [10240];
+        sensor_res2str (buf, sizeof(buf), res, resSize);
+        printf ("resources: %d\n%s\n", resSize, buf);
     }
   }
   

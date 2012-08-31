@@ -62,6 +62,7 @@
 
 package com.eucalyptus.webui.client.activity;
 
+import static com.eucalyptus.webui.shared.checker.ValueCheckerFactory.ValueSaver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import com.eucalyptus.webui.client.ClientFactory;
@@ -198,7 +199,9 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
   }
 
   private void showApplyUserDialog( ) {
-    InputView dialog = this.clientFactory.getInputView( );
+    final ValueSaver passwordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, passwordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( APPLY_USER_CAPTION, APPLY_USER_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -265,7 +268,9 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            ValueCheckerFactory.createPasswordChecker( ),
+            passwordSaver );
       }
       
     }, new InputField( ) {
@@ -282,14 +287,16 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );
   }
 
   private void showApplyAccountDialog( ) {
-    InputView dialog = this.clientFactory.getInputView( );
+    final ValueSaver passwordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, passwordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( APPLY_ACCOUNT_CAPTION, APPLY_ACCOUNT_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -339,7 +346,9 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            ValueCheckerFactory.createPasswordChecker( ),
+            passwordSaver );
       }
       
     }, new InputField( ) {
@@ -356,7 +365,7 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.webui.client.activity;
 
+import static com.eucalyptus.webui.shared.checker.ValueCheckerFactory.ValueSaver;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Set;
@@ -75,12 +76,10 @@ import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.webui.client.service.SearchResult;
 import com.eucalyptus.webui.client.view.AccountView;
 import com.eucalyptus.webui.client.view.ConfirmationView;
-import com.eucalyptus.webui.client.view.DetailView;
 import com.eucalyptus.webui.client.view.FooterView;
 import com.eucalyptus.webui.client.view.InputField;
 import com.eucalyptus.webui.client.view.InputView;
 import com.eucalyptus.webui.client.view.FooterView.StatusType;
-import com.eucalyptus.webui.client.view.InputField.ValueType;
 import com.eucalyptus.webui.client.view.HasValueWidget;
 import com.eucalyptus.webui.client.view.LogView.LogType;
 import com.eucalyptus.webui.shared.checker.ValueChecker;
@@ -244,7 +243,9 @@ public class AccountActivity extends AbstractSearchActivity
 
   @Override
   public void onCreateAccount( ) {
-    InputView dialog = this.clientFactory.getInputView( );
+    final ValueSaver passwordSaver = ValueCheckerFactory.createValueSaver();
+    final ValueChecker passwordEqualityChecker = ValueCheckerFactory.createEqualityChecker( ValueCheckerFactory.PASSWORDS_NOT_MATCH, passwordSaver );
+    final InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( CREATE_ACCOUNT_CAPTION, CREATE_ACCOUNT_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
 
@@ -277,7 +278,9 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createPasswordChecker( );
+        return ValueCheckerFactory.checkerForAll(
+            ValueCheckerFactory.createPasswordChecker(),
+            passwordSaver );
       }
       
     }, new InputField( ) {
@@ -294,7 +297,7 @@ public class AccountActivity extends AbstractSearchActivity
 
       @Override
       public ValueChecker getChecker( ) {
-        return null;
+        return passwordEqualityChecker;
       }
       
     } ) ) );

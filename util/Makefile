@@ -62,7 +62,9 @@
 
 include ../Makedefs
 
-all: misc.o hash.o data.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+#DEBUGS = -DDEBUG # -DDEBUG1
+CC += -g
+all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
 
 build: all
 
@@ -72,30 +74,44 @@ euca_rootwrap: euca_rootwrap.c
 euca_mountwrap: euca_mountwrap.c
 	$(CC) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
 
-test: test.c ipc.o misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
+test: test.c ipc.o log.o misc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
-test_misc: misc.c ../storage/diskutil.o ipc.o euca_auth.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c ../storage/diskutil.o ipc.o euca_auth.o -lpthread -lcrypto $(LIBS) $(LDFLAGS)
+test_misc: misc.c log.o ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+
+test_wc: wc.c misc.o log.o ../storage/diskutil.o ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -D_UNIT_TEST -o test_wc wc.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+
+test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
+	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o $(LIBS) $(LDFLAGS)
 
 ../storage/diskutil.o:
 	make -C ../storage
 
-.c.o: $@
-	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $<
+%.o: %.c %.h
+	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
 
 clean:
-	rm -rf *~ *.o test test_misc euca_rootwrap euca_mountwrap
+	rm -rf *~ *.o test test_fault test_misc test_wc euca_rootwrap euca_mountwrap
 
 distclean:
-	rm -rf config.h
+	rm -rf eucalyptus-config.h
 
 install:
 	@$(INSTALL) -m 0755 euca_rootwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
 	@$(INSTALL) -m 0755 euca_mountwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
+	@$(INSTALL) -d $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	@$(INSTALL) -m 0644 faults/en_US/common.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	@$(INSTALL) -m 0644 faults/en_US/1234.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	@$(INSTALL) -m 0644 faults/en_US/1235.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	@$(INSTALL) -m 0644 faults/en_US/1236.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	@$(INSTALL) -m 0644 faults/en_US/1237.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/faults/en_US/
 
 deploy:
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_rootwrap
 	@$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_mountwrap
+	@$(RM) -f $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/*.xml

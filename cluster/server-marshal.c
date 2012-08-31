@@ -270,6 +270,88 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
   return(ret);
 }
 
+adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *describeSensors, const axutil_env_t *env) 
+{
+    int result = ERROR;
+
+    adb_describeSensorsType_t * input          = adb_DescribeSensors_get_DescribeSensors(describeSensors, env);
+    adb_describeSensorsResponseType_t * output = adb_describeSensorsResponseType_create(env);
+
+    // get standard fields from input
+    /////axis2_char_t * correlationId = adb_describeSensorsType_get_correlationId(input, env);
+    /////axis2_char_t * userId = adb_describeSensorsType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    int instIdsLen = adb_describeSensorsType_sizeof_instanceIds(input, env);
+    char ** instIds = malloc (sizeof(char *) * instIdsLen);
+    if (instIds == NULL) {
+        logprintfl (EUCAERROR, "out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
+        goto reply;
+    }
+    for (int i=0; i<instIdsLen; i++) {
+        instIds[i] = adb_describeSensorsType_get_instanceIds_at(input, env, i);
+    }
+
+    int sensorIdsLen = adb_describeSensorsType_sizeof_sensorIds(input, env);
+    char ** sensorIds = malloc (sizeof(char *) * sensorIdsLen);
+    if (sensorIds == NULL) {
+        logprintfl (EUCAERROR, "out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
+        goto reply;
+    }
+    for (int i=0; i<sensorIdsLen; i++) {
+        sensorIds[i] = adb_describeSensorsType_get_sensorIds_at(input, env, i);
+    }
+
+    { // do it
+      ncMetadata meta;
+      EUCA_MESSAGE_UNMARSHAL(describeSensorsType, input, (&meta));
+
+        sensorResource **outResources;
+        int outResourcesLen;
+
+	int error = doDescribeSensors (&meta, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
+
+        } else {
+
+            // set standard fields in output
+            adb_describeSensorsResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_describeSensorsResponseType_set_userId(output, env, meta.userId);
+
+            // set operation-specific fields in output                                                                                                                      
+            for (int i=0; i<outResourcesLen; i++) {
+                adb_sensorsResourceType_t * resource = copy_sensor_resource_to_adb (env, outResources[i]);
+                if (outResources[i])
+                    free(outResources[i]);
+                adb_describeSensorsResponseType_add_sensorsResources(output, env, resource);
+            }
+            if (outResourcesLen>0 && outResources!=NULL)
+                free (outResources);
+            
+            result = OK; // success
+
+	    logprintfl (EUCAINFO, "DescribeSensors() yay correlationId=%s userId=%s outResourcesLen=%d\n", meta.correlationId, meta.userId, outResourcesLen);
+        }
+    }
+
+ reply:
+    
+    if (result == ERROR) {
+        adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
+    } else {
+        adb_describeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
+    }
+
+    // set response to output
+    adb_DescribeSensorsResponse_t * response   = adb_DescribeSensorsResponse_create(env);
+    adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
+    logprintfl (EUCAINFO, "DescribeSensors() returning result=%d response=%x / %p\n", result, response, response);
+
+    return response;
+}
+
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t *stopNetwork, const axutil_env_t *env) {
   adb_StopNetworkResponse_t *ret=NULL;
   adb_stopNetworkResponseType_t *snrt=NULL;

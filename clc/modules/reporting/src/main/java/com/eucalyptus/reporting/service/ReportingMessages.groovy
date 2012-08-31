@@ -26,7 +26,6 @@ import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.id.Reporting
 import com.eucalyptus.reporting.export.ReportingExport
 
-
 @ComponentMessage(Reporting.class)
 class ReportingMessage extends BaseMessage {
 }

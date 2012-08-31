@@ -90,6 +90,10 @@ if [ "$EUID" != "0" ]; then
 	exit 1
 fi
 
+# Use the functions script for distributions that support it (e.g., RHEL)
+# This allows Eucalyptus to use correct localization settings
+[ -f /etc/init.d/functions ] && . /etc/init.d/functions
+
 # if we have lsb functions let's source them
 WE_HAVE_LSB="N"
 if [ -e /lib/lsb/init-functions ]; then

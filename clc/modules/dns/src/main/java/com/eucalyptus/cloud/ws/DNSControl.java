@@ -147,7 +147,7 @@ public class DNSControl {
 			initializeUDP();
 			initializeTCP();
 		} catch(Exception ex) {
-			LOG.error("DNS could not be initialized. Is some other srvice running on port 53?");
+			LOG.error("DNS could not be initialized. Is some other service running on port 53?");
 			throw ex;
 		}
 	}

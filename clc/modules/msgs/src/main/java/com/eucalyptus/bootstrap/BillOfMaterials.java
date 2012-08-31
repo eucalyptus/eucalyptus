@@ -145,7 +145,8 @@ public class BillOfMaterials {
     DATE( "date" ),
     BUILD( "build-date" ),
     REVNO( "revno" ),
-    BRANCH( "branch-nick" );
+    BRANCH( "branch-nick" ),
+    EXTRA_VERSION( "extra-version" );
     private final String key;
     
     private RequiredFields( final String key ) {
@@ -172,7 +173,7 @@ public class BillOfMaterials {
     if ( ( loadedProps == null ) || loadedProps.isEmpty( ) ) {
       loadedProps = Maps.newHashMap( );
       try {
-        final List<URL> propFiles = Collections.list( ClassLoader.getSystemResources( "euca-version.properties" ) );
+        final List<URL> propFiles = Collections.list( ClassLoader.getSystemResources( "version.properties" ) );
         for ( final URL u : propFiles ) {
           final Properties temp = new Properties( );
           final InputStream in = Resources.newInputStreamSupplier( u ).getInput( );
@@ -214,5 +215,9 @@ public class BillOfMaterials {
   
   public String getBranchNick( ) {
     return RequiredFields.BRANCH.getValue( );
+  }
+ 
+  public static String getExtraVersion( ) {
+    return RequiredFields.EXTRA_VERSION.getValue( );
   }
 }

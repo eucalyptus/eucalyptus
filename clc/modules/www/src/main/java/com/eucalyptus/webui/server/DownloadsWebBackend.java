@@ -62,6 +62,7 @@
 
 package com.eucalyptus.webui.server;
 
+import com.eucalyptus.bootstrap.BillOfMaterials;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -95,8 +96,9 @@ public class DownloadsWebBackend {
     String osName        = System.getProperty("os.name");
     String osArch        = System.getProperty("os.arch");
     String eucaVersion   = System.getProperty("euca.version");
-    String extraVersion  = System.getProperty("euca.extra_version");
+    String extraVersion  = BillOfMaterials.getExtraVersion();
 
+    LOG.debug("Eucalyptus EXTRA VERSION: " + extraVersion);
     // Jakarta Commons-HttpClient/3.1 (java 1.6.0_24; Linux amd64) Eucalyptus/3.1.0-1.el6
     String userAgent = clientVersion + " (java " + javaVersion + "; " +
                        osName + " " + osArch + ") Eucalyptus/" + eucaVersion;

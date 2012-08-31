@@ -138,3 +138,8 @@ int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *v
 {
     return doCreateImage (meta, instanceId, volumeId, remoteDev);
 }
+
+int ncDescribeSensorsStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+{
+  return doDescribeSensors (meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+}

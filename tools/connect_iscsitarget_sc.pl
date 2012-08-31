@@ -82,7 +82,7 @@ if (!-x $ISCSIADM || !-x $OPENSSL) {
 # check input params
 $dev_string = untaint(shift @ARGV);
 
-($euca_home, $ip, $store, $encrypted_password, $lun, $auth_mode) = parse_devstring($dev_string);
+($euca_home, $ip, $store, $encrypted_password, $lun, $auth_mode, $opt_user) = parse_devstring($dev_string);
 $store =~ s/\.$//g;
 
 if(length($euca_home) <= 0) {
@@ -99,7 +99,9 @@ if((length($ip) <= 0) || (length($store) <= 0) || length($encrypted_password) <=
     do_exit(1);
 }
 
-
+if (length($opt_user) > 0) {
+  $ISCSI_USER = $opt_user;
+}
 if ((length($lun) > 0) && ($lun > -1)) {
   # check if a session corresponding to the store exists
   if (get_session($ARGV[0]) == 1) {
@@ -169,22 +171,21 @@ sub get_storage_pk {
 
 sub login_target {
     my ($ip, $store, $passwd) = @_;
-    if(!open DISCOVERY, "iscsiadm -m discovery -t sendtargets -p $ip |") {
-	print "Could not discover targets";
-	do_exit(1)
+    if(!open STATICTARGET, "iscsiadm -m node -T $store -p $ip -o new |") {
+      print "Could not create static target";
+      do_exit(1)
     }
-
-    while(<DISCOVERY>) {};
+    while(<STATICTARGET>) {};
 
     if($password ne "not_required") {
-      if(!open USERNAME, "iscsiadm -m node -T $store --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
+      if(!open USERNAME, "iscsiadm -m node -T $store -p $ip --op=update --name node.session.auth.username --value=$ISCSI_USER |") {
         print "Could not update target username";
         do_exit(1)
       }
 
       while(<USERNAME>) {};
 
-      if(!open PASSWD, "iscsiadm -m node -T $store --op=update --name node.session.auth.password --value=$passwd |") {
+      if(!open PASSWD, "iscsiadm -m node -T $store -p $ip --op=update --name node.session.auth.password --value=$passwd |") {
         print "Could not update target password";
         do_exit(1)
       }
@@ -193,7 +194,7 @@ sub login_target {
 
     }
 
-    if(!open LOGIN, "iscsiadm -m node -T $store -l |") {
+    if(!open LOGIN, "iscsiadm -m node -T $store -p $ip -l |") {
 	print "Could not login to target";
 	do_exit(1)
     }

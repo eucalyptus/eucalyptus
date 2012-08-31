@@ -368,7 +368,7 @@ static int __update_limit(int resource,long long value) {
 	}
 	return 0;
 }
-static void __limits() {
+static void __limits(void) {
 	__update_limit(RLIMIT_NOFILE,LIMIT_FILENO);
 	__update_limit(RLIMIT_NPROC,LIMIT_NPROC);
 }

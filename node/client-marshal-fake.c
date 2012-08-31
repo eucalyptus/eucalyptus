@@ -539,3 +539,8 @@ int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *v
 {
   return(ncTerminateInstanceStub(stub, meta, instanceId, 0, NULL, NULL));
 }
+
+int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+{
+  return -1; // not supported
+}

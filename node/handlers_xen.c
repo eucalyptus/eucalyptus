@@ -345,5 +345,6 @@ struct handlers xen_libvirt_handlers = {
     .doAssignAddress     = NULL,
     .doPowerDown         = NULL,
     .doAttachVolume      = NULL,
-    .doDetachVolume      = NULL
+    .doDetachVolume      = NULL,
+    .doDescribeSensors   = NULL
 };

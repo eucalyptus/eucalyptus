@@ -83,6 +83,7 @@ import org.apache.commons.httpclient.ProxyHost;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.AddressingConfiguration;
+import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.HttpServerBootstrapper;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.Component;
@@ -747,8 +748,9 @@ public class ConfigurationWebBackend {
 		String osName        = System.getProperty("os.name");
 		String osArch        = System.getProperty("os.arch");
 		String eucaVersion   = System.getProperty("euca.version");
-		String extraVersion  = System.getProperty("euca.extra_version");
+		String extraVersion  = BillOfMaterials.getExtraVersion();
 
+		LOG.debug("Eucalyptus EXTRA VERSION: " + extraVersion);
 		// Jakarta Commons-HttpClient/3.1 (java 1.6.0_24; Linux amd64) Eucalyptus/3.1.0-1.el6
 		String userAgent = clientVersion + " (java " + javaVersion + "; " +
 				   osName + " " + osArch + ") Eucalyptus/" + eucaVersion;

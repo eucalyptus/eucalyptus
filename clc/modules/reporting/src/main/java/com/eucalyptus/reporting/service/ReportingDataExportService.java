@@ -32,8 +32,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
  */
 public class ReportingDataExportService {
 
-  private static final String CREATION_TIMESTAMP = "creationTimestamp";
-
   public ExportDataResponseType exportData( final ExportDataType request ) throws EucalyptusCloudException {
     final ExportDataResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
@@ -49,5 +47,4 @@ public class ReportingDataExportService {
 
     return reply;
   }
-
 }

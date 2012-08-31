@@ -323,9 +323,9 @@ public class InstanceBlockDeviceMapping extends EucalyptusData {
   public InstanceBlockDeviceMapping( String deviceName ) {
     this.deviceName = deviceName;
   }
-  public InstanceBlockDeviceMapping( String deviceName, String volumeId, String status, Date attachTime ) {
+  public InstanceBlockDeviceMapping( String deviceName, String volumeId, String status, Date attachTime, Boolean deleteOnTerminate ) {
     this.deviceName = deviceName;
-    this.ebs = new EbsInstanceBlockDeviceMapping( volumeId, status, attachTime );
+    this.ebs = new EbsInstanceBlockDeviceMapping( volumeId, status, attachTime, deleteOnTerminate );
   }
 }
 
@@ -333,12 +333,13 @@ public class EbsInstanceBlockDeviceMapping extends EucalyptusData {
   String volumeId;
   String status;
   Date attachTime;
-  Boolean deleteOnTermination = Boolean.TRUE;
+  Boolean deleteOnTermination;
   public EbsInstanceBlockDeviceMapping() {}
-  public EbsInstanceBlockDeviceMapping( String volumeId, String status, Date attachTime ) {
+  public EbsInstanceBlockDeviceMapping( String volumeId, String status, Date attachTime, Boolean deleteOnTerminate ) {
     this.volumeId = volumeId;
     this.status = status;
     this.attachTime = attachTime;
+    this.deleteOnTermination = deleteOnTerminate;
   }
 }
 public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  **/

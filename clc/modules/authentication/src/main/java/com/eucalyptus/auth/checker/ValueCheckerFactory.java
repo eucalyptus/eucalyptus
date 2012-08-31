@@ -90,7 +90,56 @@ public class ValueCheckerFactory {
   public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
 
   public static final HashSet<Character> NAME_SEPARATORS = new HashSet<Character>( Arrays.asList( ';' ) );
-  
+
+  public static final String PASSWORDS_NOT_MATCH = "Passwords do not match";
+  public static final String PASSWORD_NOT_CHANGED = "New password must not be the same as old password";
+
+  /**
+   * Value checker that records a value for later checks.
+   */
+  public static class ValueSaver implements ValueChecker {
+    private String value;
+
+    ValueSaver() {      
+    }
+    
+    String getValue() {
+      return value;
+    }
+
+    @Override
+    public String check( final String value ) throws InvalidValueException {
+      return this.value = value;
+    }
+  }
+
+  /**
+   * Value checker support class for checking two fields.
+   */
+  public static abstract class SavedValueChecker implements ValueChecker {
+    private final ValueSaver valueSaver;
+
+    public SavedValueChecker( final ValueSaver valueSaver  ) {
+      this.valueSaver = valueSaver;
+    }
+
+    @Override
+    public final String check( final String value ) throws InvalidValueException {
+      return check( value, valueSaver.getValue() );
+    }
+
+    /**
+     * Override to perform validation of fields.
+     *
+     * @param value The value for the final field
+     * @param savedValue Value for the saved field
+     * @return The value for this checkers field
+     * @throws InvalidValueException If values are invalid
+     */
+    protected abstract String check( String value,
+                                     String savedValue ) throws InvalidValueException;
+  }
+
   public static ValueChecker createNonEmptyValueChecker( ) {
     return new ValueChecker( ) {
 
@@ -101,7 +150,53 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
+    };
+  }
+
+  public static ValueSaver createValueSaver() {
+    return new ValueSaver();
+  }
+
+  /**
+   * Create a checker that validates equality of the fields.
+   *
+   * @param errorMessage The message to display.
+   * @return The checker
+   */
+  public static ValueChecker createEqualityChecker( final String errorMessage,
+                                                    final ValueSaver valueSaver ) {
+    return new SavedValueChecker( valueSaver ) {
+      @Override
+      public String check( final String value,
+                           final String savedValue ) throws InvalidValueException {
+        if ( !Strings.nullToEmpty( savedValue ).equals( value ) ) {
+          throw new InvalidValueException( errorMessage );
+        }
+        return value;
+      }
+
+    };
+  }
+
+  /**
+   * Create a checker that validates inequality of the fields.
+   *
+   * @param errorMessage The message to display.
+   * @return The checker
+   */
+  public static ValueChecker createInequalityChecker( final String errorMessage,
+                                                      final ValueSaver valueSaver ) {
+    return new SavedValueChecker( valueSaver ) {
+      @Override
+      public String check( final String value,
+                           final String savedValue ) throws InvalidValueException {
+        if ( Strings.nullToEmpty( savedValue ).equals( value ) ) {
+          throw new InvalidValueException( errorMessage );
+        }
+        return value;
+      }
+
     };
   }
 
@@ -127,7 +222,7 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
     };
   }
   
@@ -147,7 +242,7 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
     };
   }
 
@@ -167,7 +262,7 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
     };
   }
   
@@ -187,7 +282,7 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
     };
   }
 
@@ -207,7 +302,7 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
     };
   }
   
@@ -290,8 +385,32 @@ public class ValueCheckerFactory {
         }
         return value;
       }
-      
+
     };
   }
-  
+
+  /**
+   * Create a checker that evaluates the given checkers.
+   *
+   * <p>Checking fails fast, so all checkers may not be evaluated.</p>
+   *
+   * @param checkers The checkers to run.
+   * @return The checker.
+   */
+  public static ValueChecker checkerForAll( final ValueChecker... checkers ) {
+    return new ValueChecker() {
+      @Override
+      public String check( final String value ) throws InvalidValueException {
+        String currentValue = value;
+        for ( final ValueChecker checker : checkers ) {
+          currentValue = checker == null ?
+              value :
+              checker.check( value );
+        }
+
+        return currentValue;
+      }
+    };
+  }
+
 }

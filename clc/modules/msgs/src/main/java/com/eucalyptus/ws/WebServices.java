@@ -74,6 +74,7 @@ import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -122,7 +123,22 @@ public class WebServices {
     
     
   }
-  
+
+  @ChannelPipelineCoverage( ChannelPipelineCoverage.ALL )
+  private static class ChannelGroupChannelHandler extends SimpleChannelHandler {
+    private final ChannelGroup serverChannelGroup;
+
+    public ChannelGroupChannelHandler( final ChannelGroup serverChannelGroup ) {
+      this.serverChannelGroup = serverChannelGroup;
+    }
+
+    @Override
+    public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
+      serverChannelGroup.add( ctx.getChannel( ) );
+      super.channelOpen( ctx, e );
+    }
+  }
+
   class RestartWebServicesListener implements PropertyChangeListener<Integer> {
     
     @Override
@@ -194,15 +210,8 @@ public class WebServices {
     final ChannelFactory serverChannelFactory = channelFactory( workerPool );
     final ChannelPipelineFactory serverPipelineFactory = Handlers.serverPipelineFactory( );
     final ChannelGroup serverChannelGroup = channelGroup( );
-    final ChannelHandler channelGroupHandler = new SimpleChannelHandler( ) {
-      @Override
-      public void channelOpen( ChannelHandlerContext ctx, ChannelStateEvent e ) throws Exception {
-        serverChannelGroup.add( ctx.getChannel( ) );
-        super.channelOpen( ctx, e );
-      }
-    };
+    final ChannelHandler channelGroupHandler = new ChannelGroupChannelHandler( serverChannelGroup );
     final ChannelPipelineFactory pipelineFactory = new ChannelPipelineFactory( ) {
-      
       @Override
       public ChannelPipeline getPipeline( ) throws Exception {
         ChannelPipeline pipeline = serverPipelineFactory.getPipeline( );

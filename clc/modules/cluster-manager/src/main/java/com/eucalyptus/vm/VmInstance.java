@@ -1688,13 +1688,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             for ( final VmVolumeAttachment attachedVol : input.getBootRecord( ).getPersistentVolumes( ) ) {
               runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                       attachedVol.getStatus( ),
-                                                                                      attachedVol.getAttachTime( ) ) );
+                                                                                      attachedVol.getAttachTime( ),
+                                                                                      attachedVol.getDeleteOnTerminate( ) ) );
             }
           }
           for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                     attachedVol.getStatus( ),
-                                                                                    attachedVol.getAttachTime( ) ) );
+                                                                                    attachedVol.getAttachTime( ),
+                                                                                    Boolean.TRUE ) );
           }
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {

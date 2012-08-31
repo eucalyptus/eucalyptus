@@ -131,6 +131,9 @@
 /* Define if we have libcap */
 #undef HAVE_LIBCAP
 
+/* Define if we have xmlFirstElementChild */
+#undef HAVE_XMLFIRSTELEMENTCHILD
+
 #ifdef __cplusplus
 }
 #endif
