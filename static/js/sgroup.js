@@ -105,7 +105,6 @@
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
               thisObj._storeRule();    // flush rule from form into array
               var actions = new Array();
-//              actions.push(thisObj._addSecurityGroup(name, desc));
               for (rule in thisObj.rulesList)
                   alert("adding rule for port: "+thisObj.rulesList[rule].port);
                   actions.push(function() {
@@ -122,8 +121,21 @@
 //                     alert("all done");
 //                 });
 //              });
-
+              var dfd = $.Deferred();
               $.when(thisObj._addSecurityGroup(name, desc))
+                  $.ajax({
+                      type:"GET",
+                      url:"/ec2?Action=CreateSecurityGroup",
+                      data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + name + "&GroupDescription=" + desc,
+                      dataType:"json",
+                      async:"false",
+                      success: function (data, textstatus, jqXHR) {
+                      },
+                      error: function (jqXHR, textStatus, errorThrown) {
+                        nofityError(null, error_creating_group_msg);
+                        dfd.reject();
+                      }
+                  });
                .then(function(data) {
                          if (data.results && data.results.status == true) {
                              alert("num actions = "+actions.length);
