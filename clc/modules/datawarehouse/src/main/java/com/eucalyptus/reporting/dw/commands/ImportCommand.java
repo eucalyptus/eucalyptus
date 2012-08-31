@@ -33,7 +33,7 @@ public class ImportCommand extends CommandSupport {
   public ImportCommand(final String[] args) {
     super(argumentsBuilder()
         .withFlag( "r", "replace", "Replace existing reporting data" )
-        .withArg( "e", "export", "File containing exported reporting data for import", true )
+        .withArg( "f", "file", "File containing exported reporting data for import", true )
         .forArgs(args));
   }
 
