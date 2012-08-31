@@ -1,62 +1,65 @@
-/*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
-
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
-if you need additional information or have any questions.
-
-This file may incorporate work covered under the following copyright and
-permission notice:
-
-  Software License Agreement (BSD License)
-
-  Copyright (c) 2008, Regents of the University of California
-  
-
-  Redistribution and use of this software in source and binary forms, with
-  or without modification, are permitted provided that the following
-  conditions are met:
-
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-  ANY SUCH LICENSES OR RIGHTS.
-*/
 #ifndef INCLUDE_HANDLERS_H
 #define INCLUDE_HANDLERS_H
 
@@ -66,6 +69,7 @@ permission notice:
 #include <client-marshal.h>
 #include <vnetwork.h>
 #include <linux/limits.h>
+#include "config.h"
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096
@@ -79,12 +83,7 @@ enum {SHARED_MEM, SHARED_FILE};
 enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
 enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED, NOTREADY, SHUTDOWNCC};
 
-typedef struct configEntry_t {
-  char *key;
-  char *defaultValue;
-} configEntry;
-
-static configEntry configKeysRestart[] = {
+static configEntry configKeysRestartCC[] = {
   {"DISABLE_TUNNELING", "N"},
   {"ENABLE_WS_SECURITY", "Y"},
   {"EUCALYPTUS", "/"},
@@ -114,41 +113,39 @@ static configEntry configKeysRestart[] = {
   {"CC_IMAGE_PROXY", NULL},
   {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
   {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS/var/lib/eucalyptus/dynserv/"},
-  {"LOGLEVEL", "DEBUG"},
-  {"LOGROLLNUMBER", "4"},
   {NULL, NULL}
 };
-static configEntry configKeysNoRestart[] = {
+static configEntry configKeysNoRestartCC[] = {
   {"NODES", NULL},
   {"NC_POLLING_FREQUENCY", "6"},
   {"CLC_POLLING_FREQUENCY", "6"},
   {"CC_ARBITRATORS", NULL},
+  {"LOGLEVEL", "DEBUG"},
+  {"LOGROLLNUMBER", "4"},
+  {"LOGMAXSIZE", "10485760"},
   {NULL, NULL}
 };
-
-static char *configValuesRestart[256], *configValuesNoRestart[256];
-static int configRestartLen=0, configNoRestartLen=0;
 
 typedef struct instance_t {
   char instanceId[16];
   char reservationId[16];
-  
+
   char amiId[16];
   char kernelId[16];
   char ramdiskId[16];
-  
+
   char amiURL[512];
   char kernelURL[512];
   char ramdiskURL[512];
-  
+
   char state[16];
   char ccState[16];
   time_t ts;
-  
+
   char ownerId[48];
   char accountId[48];
   char keyName[1024];
-  
+
   netConfig ccnet, ncnet;
   virtualMachine ccvm;
 
@@ -215,6 +212,10 @@ typedef struct ccInstanceCache_t {
 
 typedef struct ccConfig_t {
   char eucahome[MAX_PATH];
+  char log_file_path[MAX_PATH];
+  long log_max_size_bytes;
+  int log_roll_number;
+  int log_level;
   char proxyPath[MAX_PATH];
   char proxyIp[32];
   int use_proxy;
@@ -225,7 +226,7 @@ typedef struct ccConfig_t {
   int initialized, kick_dhcp;
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
-  time_t configMtime, instanceTimeout, ncPollingFrequency, clcPollingFrequency;
+  time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency;
   int threads[3];
   int ncFanout;
   int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
@@ -266,6 +267,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
 int doFlushNetwork(ncMetadata *ccMeta, char *accountId, char *destName);
 
 int doCreateImage(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+int doDescribeSensors(ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 
 int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);
@@ -298,6 +300,7 @@ void print_resourceCache(void);
 void invalidate_resourceCache(void);
 
 int initialize(ncMetadata *ccMeta);
+int init_log(void);
 int init_thread(void);
 int init_localstate(void);
 int init_config(void);
@@ -334,9 +337,6 @@ int ccChangeState(int newstate);
 int ccCheckState(int clcTimer);
 int ccGetStateString(char *outstr, int n);
 
-int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
-char *configFileValue(char *key);
-
 void *monitor_thread(void *);
 
 int image_cache(char *id, char *url);
@@ -344,4 +344,3 @@ int image_cache_proxykick(ccResource *res, int *numHosts);
 int image_cache_invalidate(void);
 
 #endif
-

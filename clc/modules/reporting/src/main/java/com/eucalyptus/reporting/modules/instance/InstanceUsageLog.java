@@ -1,3 +1,65 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
 package com.eucalyptus.reporting.modules.instance;
 
 import java.util.*;
@@ -23,8 +85,6 @@ import com.eucalyptus.reporting.Period;
  * <p>Very recent information (within the prior five minutes, for example)
  * may not have been acquired yet, in which case, an empty period or a
  * period with incomplete information may be returned.
- * 
- * @author tom.werges
  */
 @ConfigurableClass(root="instanceLog", alias="basic", description="Configuration for instance usage sampling and logging", singleton=true)
 public class InstanceUsageLog
@@ -167,7 +227,8 @@ public class InstanceUsageLog
 					"from InstanceAttributes as ia, InstanceUsageSnapshot as ius"
 					+ " where ia.uuid = ius.uuid"
 					+ " and ius.timestampMs > ?"
-					+ " and ius.timestampMs < ?")
+					+ " and ius.timestampMs < ?"
+					+ " order by ius.timestampMs")
 					.setLong(0, latestSnapshotBeforeMs)
 					.setLong(1, afterEnd)
 					.list();
@@ -177,7 +238,8 @@ public class InstanceUsageLog
 						+ " where ia.uuid = ius.uuid"
 						+ " and ia.accountId = ?"
 						+ " and ius.timestampMs > ?"
-						+ " and ius.timestampMs < ?")
+						+ " and ius.timestampMs < ?"
+						+ " order by ius.timestampMs")
 						.setString(0, accountId)
 						.setLong(1, latestSnapshotBeforeMs)
 						.setLong(2, afterEnd)
@@ -233,6 +295,7 @@ public class InstanceUsageLog
 				ius.addNetworkIoMegs(accumulator.getNetIoMegs());
 				ius.sumFromDurationSecsAndType(accumulator.getDurationSecs(),
 						accumulator.getInstanceAttributes().getInstanceType());
+				log.debug("Instance summary:" + ius);
 			}
 
 			entityWrapper.commit();
@@ -264,28 +327,45 @@ public class InstanceUsageLog
     private class InstanceDataAccumulator
     {
     	private final InstanceAttributes insAttrs;
-    	private InstanceUsageSnapshot firstSnapshot;
     	private InstanceUsageSnapshot lastSnapshot;
+    	private InstanceUsageSnapshot firstSnapshot;
+    	private InstanceUsageSnapshot priorSnapshot;
     	private Period period;
+    	private boolean accumulate = false;
+    	private boolean doneAccumulating = false;
     	
     	public InstanceDataAccumulator(InstanceAttributes insAttrs,
     			InstanceUsageSnapshot snapshot, Period period)
 		{
 			super();
 			this.insAttrs = insAttrs;
-			this.firstSnapshot = snapshot;
 			this.lastSnapshot = snapshot;
+			this.priorSnapshot = snapshot;
+			this.firstSnapshot = snapshot;
 			this.period = period;
 		}
     	
     	public void update(InstanceUsageSnapshot snapshot)
     	{
-    		final long timeMs = snapshot.getTimestampMs().longValue();
-    		if (timeMs > lastSnapshot.getTimestampMs().longValue()) {
-        		this.lastSnapshot = snapshot;    			
-    		} else if (timeMs < firstSnapshot.getTimestampMs().longValue()) {
-    			this.firstSnapshot = snapshot;
+    		log.debug("Update time:" + snapshot.getTimestampMs() + " insId:" + insAttrs.getInstanceId());
+    		if (!accumulate
+    			&& snapshot.getTimestampMs() <= period.getEndingMs()
+    			&& (priorSnapshot.getTimestampMs() >= period.getBeginningMs()
+    				|| snapshot.getTimestampMs() >= period.getBeginningMs()))
+    		{
+    			accumulate = true;
+	    		log.debug("Start accumulating:" + priorSnapshot.getTimestampMs());
     		}
+    		if (accumulate && !doneAccumulating) {
+    	    	accumulateDiskIoMegs(snapshot);
+    	    	accumulateNetIoMegs(snapshot);
+    	    	if (priorSnapshot.getTimestampMs() > period.getEndingMs()) {
+    	    		log.debug("Done accumulating:" + priorSnapshot.getTimestampMs());
+    	    		doneAccumulating = true;
+    	    	}
+    		}
+    		this.lastSnapshot = snapshot;
+    		this.priorSnapshot = snapshot;    				
     	}
 
     	public InstanceAttributes getInstanceAttributes()
@@ -298,62 +378,96 @@ public class InstanceUsageLog
     		/* If report period does not overlap usage at all, then duration is 0 */
     		if (period.getBeginningMs() >= lastSnapshot.getTimestampMs()
     				|| period.getEndingMs() <= firstSnapshot.getTimestampMs()) {
+    			log.debug("duration=0, period does not overlap at all, report:" + period.getBeginningMs()
+    					+ "-" + period.getEndingMs() + ", snaps:" + firstSnapshot.getTimestampMs() + "-"
+    					+ lastSnapshot.getTimestampMs());
     			return 0l;
     		} else {
+    			///This is all wrong; it finds the beginning regardless...
     			long truncatedBeginMs = Math.max(period.getBeginningMs(), firstSnapshot.getTimestampMs());
     			long truncatedEndMs   = Math.min(period.getEndingMs(), lastSnapshot.getTimestampMs());
+    			log.debug("truncated:" + truncatedBeginMs + "-" + truncatedEndMs);
         		return ( truncatedEndMs-truncatedBeginMs ) / 1000;
     		}
+    	}
+
+    	
+    	/**
+    	 * Calculate what fraction of the current reporting period lies within the
+    	 * begin and end of the generated report period.
+    	 * 
+    	 * @returns a double from 0 to 1
+    	 */
+    	private double calcWithinFactor(long timestampMs)
+    	{
+    		final double periodDuration = (double)(timestampMs-priorSnapshot.getTimestampMs());
+    		double result = 0d;
+    		if (periodDuration==0) return 0d;
+    		
+    		final long perBegin = priorSnapshot.getTimestampMs();
+    		final long perEnd = timestampMs;
+    		final long repBegin = period.getBeginningMs();
+    		final long repEnd = period.getEndingMs();
+    		
+    		if (perEnd <= repBegin || perBegin >= repEnd) {
+    			//Period falls completely outside of report, on either end
+    			result = 0d;
+    		} else if (perBegin < repBegin && perEnd <= repEnd) {
+    			//Period begin comes before report begin but period end lies within it
+    			result = ((double)perEnd-repBegin)/periodDuration;
+    		} else if (perBegin >= repBegin && perEnd >= repEnd) {
+    			//Period begin lies within report but period end comes after it
+    			 result = ((double)repEnd-perBegin)/periodDuration;
+    		} else if (perBegin >= repBegin && perEnd <= repEnd) {
+    			//Period falls entirely within report
+    			result = 1d;
+    		} else if (repBegin >= perBegin && repEnd <= perEnd) {
+    			//Report falls entirely within period (<15 second report?)
+    			result = ((double)(repBegin-perBegin)+(perEnd-repEnd))/periodDuration;
+    		} else {
+    			throw new IllegalStateException("impossible boundary condition");
+    		}
+
+    		if (result < 0 || result > 1) throw new IllegalStateException("result<0 || result>1");
+    		
+    		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
+    				repBegin, repEnd, repEnd-repBegin, perBegin, perEnd, perEnd-perBegin, result));
+    		
+    		return result;
+    	}
+
+    	
+    	private long accumulatedDiskIoMegs = 0l;
+    	private long lastCumulativeDiskIoMegs = 0l;
+    	
+    	public void accumulateDiskIoMegs(InstanceUsageSnapshot snapshot)
+    	{
+    		double remainingFactor = calcWithinFactor(snapshot.getTimestampMs());
+       		this.accumulatedDiskIoMegs += (long)(remainingFactor*(snapshot.getCumulativeDiskIoMegs()-lastCumulativeDiskIoMegs));
+    		this.lastCumulativeDiskIoMegs = snapshot.getCumulativeDiskIoMegs();
     	}
     	
     	public long getDiskIoMegs()
     	{
-			double duration = (double)(period.getEndingMs()-period.getBeginningMs());
-			double gap = 0d;
-    		double result =
-    			(double)lastSnapshot.getCumulativeDiskIoMegs() -
-    			(double)firstSnapshot.getCumulativeDiskIoMegs();
-    		
-    		log.debug("Unadjusted disk io megs:" + result);
-			/* Extrapolate fractional usage for snapshots which occurred
-			 * before report beginning or after report end.
-			 */
-    		if (firstSnapshot.getTimestampMs() < period.getBeginningMs()) {
-    			gap = (double)(period.getBeginningMs()-firstSnapshot.getTimestampMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		if (lastSnapshot.getTimestampMs() > period.getEndingMs()) {
-    			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		log.debug("Extrapolated disk io megs:" + result);
-    		return (long) result;
+    		return this.accumulatedDiskIoMegs;
     	}
     	
+
+    	private long accumulatedNetIoMegs = 0l;
+    	private long lastCumulativeNetIoMegs = 0l;
+
     	public long getNetIoMegs()
     	{
-			double duration = (double)(period.getEndingMs()-period.getBeginningMs());
-			double gap = 0d;
-    		double result =
-    			(double)lastSnapshot.getCumulativeNetworkIoMegs() -
-    			(double)firstSnapshot.getCumulativeNetworkIoMegs();
-    		log.debug("Unadjusted net IO megs:" + result);
-			/* Extrapolate fractional usage for snapshots which occurred
-			 * before report beginning or after report end.
-			 */
-    		if (firstSnapshot.getTimestampMs() < period.getBeginningMs()) {
-    			gap = (double)(period.getBeginningMs()-firstSnapshot.getTimestampMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		if (lastSnapshot.getTimestampMs() > period.getEndingMs()) {
-    			gap = (double)(lastSnapshot.getTimestampMs()-period.getEndingMs());
-    			result *= 1d-(gap/duration);
-    		}
-    		log.debug("Extrapolated net IO megs:" + result);
-    		return (long) result;
+    		return this.accumulatedNetIoMegs;
     	}
 
+    	public void accumulateNetIoMegs(InstanceUsageSnapshot snapshot)
+    	{
+    		double remainingFactor = calcWithinFactor(snapshot.getTimestampMs());
+        	this.accumulatedNetIoMegs += (long)(remainingFactor*(snapshot.getCumulativeNetworkIoMegs()-lastCumulativeNetIoMegs));    			
+    		this.lastCumulativeNetIoMegs = snapshot.getCumulativeNetworkIoMegs();
+    	}
+    	
     }
-
 
 }

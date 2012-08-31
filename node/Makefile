@@ -1,6 +1,64 @@
-#
 # Makefile for Eucalyptus Node Controller
 #
+# Copyright 2009-2012 Eucalyptus Systems, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+# Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+# additional information or have any questions.
+#
+# This file may incorporate work covered under the following copyright
+# and permission notice:
+#
+#   Software License Agreement (BSD License)
+#
+#   Copyright (c) 2008, Regents of the University of California
+#   All rights reserved.
+#
+#   Redistribution and use of this software in source and binary forms,
+#   with or without modification, are permitted provided that the
+#   following conditions are met:
+#
+#     Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#
+#     Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer
+#     in the documentation and/or other materials provided with the
+#     distribution.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+#   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+#   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+#   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+#   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+#   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+#   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+#   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+#   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+#   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+#   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+#   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+#   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+#   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+#   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+#   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+#   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+#   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+#   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
 include ../Makedefs
 
@@ -52,22 +110,22 @@ generated/stubs: $(NCWSDL)
 
 server: $(SERVICE_SO)
 
-../storage/backing.o: ../storage/backing.c ../util/misc.o ../util/data.o
+../storage/backing.o: ../storage/backing.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
-../storage/diskutil.o: ../storage/diskutil.c ../util/misc.o ../util/data.o
+../storage/diskutil.o: ../storage/diskutil.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
-../storage/blobstore.o: ../storage/blobstore.c ../util/misc.o ../util/data.o
+../storage/blobstore.o: ../storage/blobstore.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
-../storage/walrus.o: ../storage/walrus.c ../util/misc.o ../util/data.o
+../storage/walrus.o: ../storage/walrus.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
 ../storage/iscsi.o: ../storage/iscsi.c 
 	make -C ../storage
 
-../storage/http.o: ../storage/http.c ../util/misc.o ../util/data.o
+../storage/http.o: ../storage/http.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
 ../storage/vbr.o: ../storage/vbr.c ../util/data.o
@@ -79,16 +137,22 @@ server: $(SERVICE_SO)
 ../util/misc.o: ../util/misc.c ../util/misc.h ../util/eucalyptus.h
 	make -C ../util
 
+../util/log.o: ../util/log.c ../util/eucalyptus.h
+	make -C ../util
+
 ../util/data.o: ../util/data.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
+../util/sensor.o: ../util/sensor.o
+	make -C ../util
+
 ../util/windows-bundle.o: ../util/windows-bundle.c ../util/windows-bundle.h
 	make -C ../util
 
-$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/misc.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o ../util/windows-bundle.o
+$(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o ../util/windows-bundle.o
 	$(CC) -o $(SERVICE_SO) -shared generated/adb_*.o generated/axis2*_skel_*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(NC_LIBS) $(EFENCE)
 
 clientlib: generated/stubs ../util/data.o client-marshal-adb.o
@@ -97,25 +161,25 @@ client: $(CLIENT) $(CLIENT)_local
 
 fake: $(CLIENT)_fake
 
-$(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(NC_LIBS) generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o
+$(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o $(NC_LIBS)
 
-$(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
+$(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
 
-$(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/misc.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
+$(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
 	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
 
-test: test.c ../util/misc.o ../util/data.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/misc.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test: test.c ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
-test_nc: test_nc.c ../util/misc.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
-test_hooks: hooks.c ../util/misc.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_hooks: hooks.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 test_xml: xml.c
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
@@ -148,4 +212,3 @@ uninstall:
 	$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/nc-client-policy.xml
 	$(RM) -f $(DESTDIR)$(sbindir)/euca_test_nc
 	$(RM) -rf $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)
-

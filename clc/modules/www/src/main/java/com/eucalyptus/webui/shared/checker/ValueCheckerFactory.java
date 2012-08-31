@@ -1,3 +1,65 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
 package com.eucalyptus.webui.shared.checker;
 
 import java.util.Arrays;
@@ -9,9 +71,6 @@ import com.google.common.base.Strings;
  * Various minimal input field checkers. Update both of the identical files at the same time!!!
  * {@link com.eucalyptus.auth.checker.ValueCheckerFactory}
  * {@link com.eucalyptus.webui.shared.checker.ValueCheckerFactory}
- * 
- * @author Ye Wen (wenye@eucalyptus.com)
- *
  */
 public class ValueCheckerFactory {
 
@@ -31,7 +90,56 @@ public class ValueCheckerFactory {
   public static final HashSet<Character> PASSWORD_SPECIAL = new HashSet<Character>( Arrays.asList( '`', '~', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '\\', '|', ';', ':', '\'', '"', ',', '.', '<', '>', '/', '?' ) );
 
   public static final HashSet<Character> NAME_SEPARATORS = new HashSet<Character>( Arrays.asList( ';' ) );
-  
+
+  public static final String PASSWORDS_NOT_MATCH = "Passwords do not match";
+  public static final String PASSWORD_NOT_CHANGED = "New password must not be the same as old password";
+
+  /**
+   * Value checker that records a value for later checks.
+   */
+  public static class ValueSaver implements ValueChecker {
+    private String value;
+
+    ValueSaver() {
+    }
+
+    String getValue() {
+      return value;
+    }
+
+    @Override
+    public String check( final String value ) throws InvalidValueException {
+      return this.value = value;
+    }
+  }
+
+  /**
+   * Value checker support class for checking two fields.
+   */
+  public static abstract class SavedValueChecker implements ValueChecker {
+    private final ValueSaver valueSaver;
+
+    public SavedValueChecker( final ValueSaver valueSaver  ) {
+      this.valueSaver = valueSaver;
+    }
+
+    @Override
+    public final String check( final String value ) throws InvalidValueException {
+      return check( value, valueSaver.getValue() );
+    }
+
+    /**
+     * Override to perform validation of fields.
+     *
+     * @param value The value for the final field
+     * @param savedValue Value for the saved field
+     * @return The value for this checkers field
+     * @throws InvalidValueException If values are invalid
+     */
+    protected abstract String check( String value,
+                                     String savedValue ) throws InvalidValueException;
+  }
+
   public static ValueChecker createNonEmptyValueChecker( ) {
     return new ValueChecker( ) {
 
@@ -43,6 +151,52 @@ public class ValueCheckerFactory {
         return value;
       }
       
+    };
+  }
+
+  public static ValueSaver createValueSaver() {
+    return new ValueSaver();
+  }
+
+  /**
+   * Create a checker that validates equality of the fields.
+   *
+   * @param errorMessage The message to display.
+   * @return The checker
+   */
+  public static ValueChecker createEqualityChecker( final String errorMessage,
+                                                    final ValueSaver valueSaver ) {
+    return new SavedValueChecker( valueSaver ) {
+      @Override
+      public String check( final String value,
+                           final String savedValue ) throws InvalidValueException {
+        if ( !Strings.nullToEmpty( savedValue ).equals( value ) ) {
+          throw new InvalidValueException( errorMessage );
+        }
+        return value;
+      }
+
+    };
+  }
+
+  /**
+   * Create a checker that validates inequality of the fields.
+   *
+   * @param errorMessage The message to display.
+   * @return The checker
+   */
+  public static ValueChecker createInequalityChecker( final String errorMessage,
+                                                      final ValueSaver valueSaver ) {
+    return new SavedValueChecker( valueSaver ) {
+      @Override
+      public String check( final String value,
+                           final String savedValue ) throws InvalidValueException {
+        if ( Strings.nullToEmpty( savedValue ).equals( value ) ) {
+          throw new InvalidValueException( errorMessage );
+        }
+        return value;
+      }
+
     };
   }
 
@@ -234,5 +388,29 @@ public class ValueCheckerFactory {
       
     };
   }
-  
+
+  /**
+   * Create a checker that evaluates the given checkers.
+   *
+   * <p>Checking fails fast, so all checkers may not be evaluated.</p>
+   *
+   * @param checkers The checkers to run.
+   * @return The checker.
+   */
+  public static ValueChecker checkerForAll( final ValueChecker... checkers ) {
+    return new ValueChecker() {
+      @Override
+      public String check( final String value ) throws InvalidValueException {
+        String currentValue = value;
+        for ( final ValueChecker checker : checkers ) {
+          currentValue = checker == null ? 
+              value : 
+              checker.check( value );
+        }
+
+        return currentValue;
+      }
+    };
+  }
+
 }

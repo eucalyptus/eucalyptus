@@ -1,65 +1,67 @@
 // -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
-/*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
-
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
-if you need additional information or have any questions.
-
-This file may incorporate work covered under the following copyright and
-permission notice:
-
-  Software License Agreement (BSD License)
-
-  Copyright (c) 2008, Regents of the University of California
-  
-
-  Redistribution and use of this software in source and binary forms, with
-  or without modification, are permitted provided that the following
-  conditions are met:
-
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-  ANY SUCH LICENSES OR RIGHTS.
-*/
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
@@ -97,6 +99,7 @@ permission notice:
 #include "vbr.h"
 #include "iscsi.h"
 #include "hooks.h"
+#include "config.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -125,11 +128,11 @@ extern struct handlers xen_libvirt_handlers;
 extern struct handlers kvm_libvirt_handlers;
 extern struct handlers default_libvirt_handlers;
 
-const int staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
-const int booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
-const int bundling_cleanup_threshold = 60 * 60; /* after this many seconds any BUNDLING domains will be cleaned up */
-const int createImage_cleanup_threshold = 60 * 60; /* after this many seconds any CREATEIMAGE domains will be cleaned up */
-const int teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
+const int default_staging_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any STAGING domains will be cleaned up */
+const int default_booting_cleanup_threshold = 60; /* after this many seconds any BOOTING domains will be cleaned up */
+const int default_bundling_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any BUNDLING domains will be cleaned up */
+const int default_createImage_cleanup_threshold = 60 * 60 * 2; /* after this many seconds any CREATEIMAGE domains will be cleaned up */
+const int default_teardown_state_duration = 180; /* after this many seconds in TEARDOWN state (no resources), we'll forget about the instance */
 
 #define MIN_BLOBSTORE_SIZE_MB 10 // even with boot-from-EBS one will need work space for kernel and ramdisk
 #define FS_BUFFER_PERCENT 0.03 // leave 3% extra when deciding on blobstore sizes automatically
@@ -216,6 +219,13 @@ print_running_domains (void)
 	}
 	sem_v (inst_sem);
 	logprintfl (EUCAINFO, "currently running/booting: %s\n", buf);
+}
+
+static void 
+invalidate_hypervisor_conn()
+{
+    virConnectClose(nc_state.conn);
+    nc_state.conn = NULL;
 }
 
 virConnectPtr *
@@ -337,6 +347,7 @@ refresh_instance_info(	struct nc_state_t *nc,
                    old_state==PAUSED ||
                    old_state==SHUTDOWN) {
             // most likely the user has shut it down from the inside
+            invalidate_hypervisor_conn(); // to rule out libvirt badness, we'll restart the connection
             if (instance->retries) {
                 instance->retries--;
                 logprintfl (EUCAWARN, "[%s] warning: hypervisor failed to find domain, will retry %d more times\n", instance->instanceId, instance->retries);
@@ -462,6 +473,21 @@ void copy_instances (void)
     sem_v (inst_copy_sem);
 }
 
+// helper that is used during initialization and by monitornig thread
+static void 
+update_log_params (void)
+{
+    int log_level;
+    int log_roll_number;
+    long log_max_size_bytes;
+
+    // read log params from config file and update in-memory configuration
+    configReadLogParams (&log_level, &log_roll_number, &log_max_size_bytes);
+
+    // reconfigure the logging subsystem to use the new values, if any
+    log_params_set (log_level, log_roll_number, log_max_size_bytes);
+}
+
 void *
 monitoring_thread (void *arg)
 {
@@ -522,7 +548,7 @@ monitoring_thread (void *arg)
             
             if (instance->state==TEARDOWN) {
                 // it's been long enough, we can forget the instance
-                if ((now - instance->terminationTime)>teardown_state_duration) {
+                if ((now - instance->terminationTime)>nc_state.teardown_state_duration) {
                     remove_instance (&global_instances, instance);
                     logprintfl (EUCAINFO, "[%s] forgetting about instance\n", instance->instanceId);
                     free_instance (&instance);
@@ -533,13 +559,13 @@ monitoring_thread (void *arg)
 
             // time out logic for STAGING or BOOTING or BUNDLING instances
             if (instance->state==STAGING  
-                && (now - instance->launchTime)   < staging_cleanup_threshold) continue; // hasn't been long enough, spare it
+                && (now - instance->launchTime)   < nc_state.staging_cleanup_threshold) continue; // hasn't been long enough, spare it
             if (instance->state==BOOTING  
-                && (now - instance->bootTime)     < booting_cleanup_threshold) continue;
+                && (now - instance->bootTime)     < nc_state.booting_cleanup_threshold) continue;
             if ((instance->state==BUNDLING_SHUTDOWN || instance->state==BUNDLING_SHUTOFF)
-                && (now - instance->bundlingTime) < bundling_cleanup_threshold) continue;
+                && (now - instance->bundlingTime) < nc_state.bundling_cleanup_threshold) continue;
             if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
-                && (now - instance->createImageTime) < createImage_cleanup_threshold) continue;
+                && (now - instance->createImageTime) < nc_state.createImage_cleanup_threshold) continue;
             
             //DAN: need to destroy the domain here, just in case...
             if (instance->state == BOOTING) {
@@ -591,6 +617,24 @@ monitoring_thread (void *arg)
         }
         
         sleep (MONITORING_PERIOD);
+
+        // see if config file has changed and react to those changes
+        int rc = isConfigModified (nc_state.configFiles, 2);
+        if (rc < 0) // error
+            continue;
+        else if (rc > 0) { // config modification time has changed
+            rc = readConfigFile(nc_state.configFiles, 2);
+            if (rc) {
+                // something has changed that can be read in
+                logprintfl(EUCAINFO, "monitoring_thread(): configuration file has been modified, ingressing new options\n");
+
+                // log-related options
+                update_log_params();
+
+                // TODO: pick up other NC options dynamically?
+            }
+        }
+                
     }
     
     return NULL;
@@ -681,6 +725,11 @@ void *startup_thread (void * arg)
         if (i>0) {
             logprintfl (EUCAINFO, "[%s] attempt %d of %d to create the instance\n", instance->instanceId, i+1, MAX_CREATE_TRYS);
         }
+        if (! check_hypervisor_conn ()) { // check again, since we may have invalidated the connection in previous loop iteration
+            logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+            goto shutoff;
+        }
+
         sem_p (hyp_sem);
         sem_p (loop_sem);
 
@@ -727,7 +776,8 @@ void *startup_thread (void * arg)
 
             } else if (WEXITSTATUS(status) != 0) {
                 logprintfl (EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
-
+                invalidate_hypervisor_conn(); // guard against libvirtd connection badness
+                
             } else {
                 created = TRUE;
             }
@@ -873,8 +923,7 @@ static int init (void)
 {
 	static int initialized = 0;
 	int do_warn = 0, i, j;
-	char configFiles[2][MAX_PATH],
-		log[MAX_PATH],
+	char logFile[MAX_PATH],
 		*bridge=NULL,
 		*hypervisor=NULL,
 		*s=NULL,
@@ -902,39 +951,24 @@ static int init (void)
     }
 
 	// set the minimum log for now
-	snprintf(log, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
-	logfile(log, EUCAINFO, 4);
-        logprintfl (EUCAINFO, "{%u} spawning Eucalyptus node controller %s\n", (unsigned int)pthread_self(), compile_timestamp_str);
+	snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
+    log_file_set(logFile);
+    logprintfl (EUCAINFO, "{%u} spawning Eucalyptus node controller %s\n", (unsigned int)pthread_self(), compile_timestamp_str);
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
-
+    
 	// search for the config file
-	snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, nc_state.home);
-	if (stat(configFiles[1], &mystat)) {
-		logprintfl (EUCAFATAL, "could not open configuration file %s\n", configFiles[1]);
+	snprintf(nc_state.configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, nc_state.home);
+	if (stat(nc_state.configFiles[1], &mystat)) {
+		logprintfl (EUCAFATAL, "could not open configuration file %s\n", nc_state.configFiles[1]);
 		return 1;
 	}
-	snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
-	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", configFiles[1], configFiles[0]);
-
-	// reset the log level to the requested value
-	tmp = getConfString(configFiles, 2, "LOGLEVEL");
-	i = EUCADEBUG;
-	if (tmp) {
-		if (!strcmp(tmp,"INFO")) {i=EUCAINFO;}
-		else if (!strcmp(tmp,"WARN")) {i=EUCAWARN;}
-		else if (!strcmp(tmp,"ERROR")) {i=EUCAERROR;}
-		else if (!strcmp(tmp,"FATAL")) {i=EUCAFATAL;}
-        else if (!strcmp(tmp,"DEBUG2")) {i=EUCADEBUG2;}
-		free(tmp);
-	}
-	tmp = getConfString(configFiles, 2, "LOGROLLNUMBER");
-	j = 4;
-	if (tmp) {
-        j = atoi(tmp);
-		free(tmp);
-	}
-	logfile(log, i, j);
+	snprintf(nc_state.configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, nc_state.home);
+	logprintfl (EUCAINFO, "NC is looking for configuration in %s,%s\n", nc_state.configFiles[1], nc_state.configFiles[0]);
+    
+    configInitValues(configKeysRestartNC, configKeysNoRestartNC); // initialize config subsystem
+    readConfigFile(nc_state.configFiles, 2);
+    update_log_params();
 
     { 
         /* Initialize libvirtd.conf, since some buggy versions of libvirt
@@ -991,7 +1025,7 @@ static int init (void)
     }
 
 #define GET_VAR_INT(var,name,def)                   \
-        s = getConfString(configFiles, 2, name); \
+        s = getConfString(nc_state.configFiles, 2, name); \
 	if (s){					\
 		var = atoi(s);\
 		free (s);\
@@ -1005,45 +1039,29 @@ static int init (void)
     int disable_injection; GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0); 
     nc_state.do_inject_key = !disable_injection;
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
+	GET_VAR_INT(nc_state.staging_cleanup_threshold,     CONFIG_NC_STAGING_CLEANUP_THRESHOLD, default_staging_cleanup_threshold);
+	GET_VAR_INT(nc_state.booting_cleanup_threshold,     CONFIG_NC_BOOTING_CLEANUP_THRESHOLD, default_booting_cleanup_threshold);
+	GET_VAR_INT(nc_state.bundling_cleanup_threshold,    CONFIG_NC_BUNDLING_CLEANUP_THRESHOLD, default_bundling_cleanup_threshold);
+	GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
+	GET_VAR_INT(nc_state.teardown_state_duration,       CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
                
     // add three eucalyptus directories with executables to PATH of this process
     add_euca_to_path (nc_state.home); 
 
     // read in .pem files
 	if (euca_init_cert ()) {
-	  logprintfl (EUCAERROR, "init(): failed to find cryptographic certificates\n");
+	  logprintfl (EUCAERROR, "failed to find cryptographic certificates\n");
 	  return ERROR_FATAL;
 	}
 
-	//// from now on we have unrecoverable failure, so no point in retrying to re-init ////
-	initialized = -1;
-
-	hyp_sem = sem_alloc (1, "mutex");
-	inst_sem = sem_alloc (1, "mutex");
-	inst_copy_sem = sem_alloc (1, "mutex");
-	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
-		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
-		return ERROR_FATAL;
-	}
-
-    if (diskutil_init(FALSE) || (loop_sem = diskutil_get_loop_sem())==NULL) { // NC does not need GRUB for now
-        logprintfl (EUCAFATAL, "failed to find all dependencies\n");
+    // check on dependencies (3rd-party programs that NC invokes)
+    if (diskutil_init(FALSE)) { // NC does not need GRUB for now
+        logprintfl (EUCAFATAL, "failed to find all required dependencies\n");
 		return ERROR_FATAL;
     }
 
-    init_iscsi (nc_state.home);
-
-	// set default in the paths. the driver will override
-	nc_state.config_network_path[0] = '\0';
-	nc_state.xm_cmd_path[0] = '\0';
-	nc_state.virsh_cmd_path[0] = '\0';
-	nc_state.get_info_cmd_path[0] = '\0';
-	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
-	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
-
 	// determine the hypervisor to use
-	hypervisor = getConfString(configFiles, 2, CONFIG_HYPERVISOR);
+	hypervisor = getConfString(nc_state.configFiles, 2, CONFIG_HYPERVISOR);
 	if (!hypervisor) {
 		logprintfl (EUCAFATAL, "value %s is not set in the config file\n", CONFIG_HYPERVISOR);
 		return ERROR_FATAL;
@@ -1071,6 +1089,33 @@ static int init (void)
 	}
 	free (hypervisor);
 
+	//// from now on we have unrecoverable failure, so no point in retrying to re-init ////
+	initialized = -1;
+
+	hyp_sem = sem_alloc (1, "mutex");
+	inst_sem = sem_alloc (1, "mutex");
+	inst_copy_sem = sem_alloc (1, "mutex");
+	addkey_sem = sem_alloc (1, "mutex");
+	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
+		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
+		return ERROR_FATAL;
+	}
+
+    if ((loop_sem = diskutil_get_loop_sem())==NULL) { // NC does not need GRUB for now
+        logprintfl (EUCAFATAL, "failed to find all dependencies\n");
+		return ERROR_FATAL;
+    }
+
+    init_iscsi (nc_state.home);
+
+	// set default in the paths. the driver will override
+	nc_state.config_network_path[0] = '\0';
+	nc_state.xm_cmd_path[0] = '\0';
+	nc_state.virsh_cmd_path[0] = '\0';
+	nc_state.get_info_cmd_path[0] = '\0';
+	snprintf (nc_state.libvirt_xslt_path, MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);
+	snprintf (nc_state.rootwrap_cmd_path, MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
+
 	// NOTE: this is the only call which needs to be called on both
 	// the default and the specific handler! All the others will be
 	// either or
@@ -1092,7 +1137,7 @@ static int init (void)
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
     
     { // backing store configuration
-        char * instance_path = getConfString(configFiles, 2, INSTANCE_PATH);
+        char * instance_path = getConfString(nc_state.configFiles, 2, INSTANCE_PATH);
 
         // determine bytes available on the file system to which instance path belongs
         if (instance_path == NULL) {
@@ -1267,7 +1312,7 @@ static int init (void)
 	}
 	snprintf (nc_state.config_network_path, MAX_PATH, NC_NET_PATH_DEFAULT, nc_state.home);
 
-	tmp = getConfString(configFiles, 2, "VNET_MODE");
+	tmp = getConfString(nc_state.configFiles, 2, "VNET_MODE");
     if (!tmp) {
         logprintfl(EUCAWARN,"WARNING: VNET_MODE is not defined, defaulting to 'SYSTEM'\n"); 
         tmp = strdup("SYSTEM"); 
@@ -1279,15 +1324,15 @@ static int init (void)
 
     int initFail = 0;
     if(tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
-        bridge = getConfString(configFiles, 2, "VNET_BRIDGE");
+        bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if(!bridge) {
             logprintfl(EUCAFATAL,"in 'SYSTEM', 'STATIC' or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
     } else if(tmp && !strcmp(tmp, "MANAGED")) {
-        pubinterface = getConfString(configFiles, 2, "VNET_PUBINTERFACE");
+        pubinterface = getConfString(nc_state.configFiles, 2, "VNET_PUBINTERFACE");
         if (!pubinterface) 
-            pubinterface = getConfString(configFiles, 2, "VNET_INTERFACE");
+            pubinterface = getConfString(nc_state.configFiles, 2, "VNET_INTERFACE");
 
         if (!pubinterface) {
             logprintfl(EUCAWARN,"WARNING: VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n"); 
@@ -1328,7 +1373,7 @@ static int init (void)
         return ERROR_FATAL;
     
 	// set NC helper path
-	tmp = getConfString(configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
+	tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_BUNDLE_UPLOAD);
 	if (tmp) {
 	  snprintf (nc_state.ncBundleUploadCmd, MAX_PATH, "%s", tmp);
 	  free(tmp);
@@ -1337,7 +1382,7 @@ static int init (void)
 	}
 
 	// set NC helper path
-	tmp = getConfString(configFiles, 2, CONFIG_NC_CHECK_BUCKET);
+	tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_CHECK_BUCKET);
 	if (tmp) {
 	  snprintf (nc_state.ncCheckBucketCmd, MAX_PATH, "%s", tmp);
 	  free(tmp);
@@ -1346,7 +1391,7 @@ static int init (void)
 	}
 
 	// set NC helper path
-	tmp = getConfString(configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
+	tmp = getConfString(nc_state.configFiles, 2, CONFIG_NC_DELETE_BUNDLE);
 	if (tmp) {
 	  snprintf (nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", tmp);
 	  free(tmp);
@@ -1765,6 +1810,30 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 		ret = nc_state.H->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
 	else 
 		ret = nc_state.D->doCreateImage (&nc_state, meta, instanceId, volumeId, remoteDev);
+    
+	return ret;
+}
+
+int 
+doDescribeSensors (ncMetadata *meta, 
+                   char **instIds,
+                   int instIdsLen,
+                   char **sensorIds,
+                   int sensorIdsLen,
+                   sensorResource ***outResources,
+                   int *outResourcesLen)
+{
+	int ret;
+    
+	if (init())
+		return 1;
+    
+	logprintfl (EUCADEBUG2, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
+    
+	if (nc_state.H->doDescribeSensors)
+		ret = nc_state.H->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+	else 
+		ret = nc_state.D->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     
 	return ret;
 }

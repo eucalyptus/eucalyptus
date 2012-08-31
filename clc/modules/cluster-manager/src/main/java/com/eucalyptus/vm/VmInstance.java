@@ -1,66 +1,64 @@
-/*******************************************************************************
- *Copyright (c) 2009 Eucalyptus Systems, Inc.
- * 
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, only version 3 of the License.
- * 
- * 
- * This file is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
- * for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program. If not, see <http://www.gnu.org/licenses/>.
- * 
- * Please contact Eucalyptus Systems, Inc., 130 Castilian
- * Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
- * if you need additional information or have any questions.
- * 
- * This file may incorporate work covered under the following copyright and
- * permission notice:
- * 
- * Software License Agreement (BSD License)
- * 
- * Copyright (c) 2008, Regents of the University of California
- * All rights reserved.
- * 
- * Redistribution and use of this software in source and binary forms, with
- * or without modification, are permitted provided that the following
- * conditions are met:
- * 
- * Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * 
- * Redistributions in binary form must reproduce the above copyright
- * notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
- * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
- * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
- * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
- * THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
- * LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
- * SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
- * BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
- * THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
- * OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
- * WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
- * ANY SUCH LICENSES OR RIGHTS.
- *******************************************************************************/
-/*
- * @author chris grzegorczyk <grze@eucalyptus.com>
- */
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 
 package com.eucalyptus.vm;
 
@@ -84,7 +82,6 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
@@ -226,7 +223,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return arg0.getRuntimeState( ).isBundling( );
       }
       
-    };
+    }
   }
   
   public enum VmStateSet implements Predicate<VmInstance> {
@@ -472,7 +469,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     private static byte[] restoreUserData( final VmInfo input ) {
-      byte[] userData = null;
+      byte[] userData;
       try {
         userData = Base64.decode( input.getUserData( ) );
       } catch ( final Exception ex ) {
@@ -977,26 +974,28 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void fireUsageEvent( ) {
     if ( VmState.RUNNING.equals( this.getState( ) ) ) {
       try {
-    	final OwnerFullName owner = this.getOwner();
-    	final String userId = owner.getUserId();
-    	final String userName = Accounts.lookupUserById(userId).getName();
-    	final String accountId = owner.getAccountNumber();
-    	final String accountName = Accounts.lookupAccountById(accountId).getName();
-    	final String clusterName = this.placement.getClusterName();
-    	final String zoneName = this.placement.getPartitionName();
-    	final Long networkBytes = this.usageStats.getNetworkBytes();
-    	final Long diskBytes = this.usageStats.getBlockBytes();
-    	final String instanceType = this.bootRecord.getVmType().getName();
-    	
-        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent( this.getInstanceUuid(), this.getDisplayName(),
-                                                                      instanceType, userId, userName, accountId, accountName,
-                                                                      clusterName, zoneName, networkBytes, diskBytes ) );
+        final OwnerFullName owner = this.getOwner();
+        final String userId = owner.getUserId();
+        final String accountId = owner.getAccountNumber();
+
+        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent(
+            getInstanceUuid(),
+            getDisplayName(),
+            this.bootRecord.getVmType().getName(),
+            userId,
+            Accounts.lookupUserById(userId).getName(),
+            accountId,
+            Accounts.lookupAccountById(accountId).getName(),
+            this.placement.getClusterName(),
+            this.placement.getPartitionName(),
+            this.usageStats.getBlockBytes(),
+            0, 0L ,0L ,0L ,0L ,0L ,0L ) ); //TODO Add CPU and network utilization
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
     }
   }
-  
+
   public String getByKey( final String pathArg ) {
     final Map<String, String> m = this.getMetadataMap( );
     String path = ( pathArg != null )
@@ -1308,8 +1307,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param stopping
-   * @param reason
+   *
    */
   public void setState( final VmState stopping, final Reason reason, final String... extra ) {
     
@@ -1329,8 +1327,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param predicate
-   * @return
+   *
    */
   public VmVolumeAttachment lookupVolumeAttachmentByDevice( final String volumeDevice ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1356,14 +1353,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param volumeId
-   * @return
+   *
    */
   public VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
-      VmVolumeAttachment volumeAttachment = null;
+      VmVolumeAttachment volumeAttachment;
       try {
         volumeAttachment = entity.getTransientVolumeState( ).lookupVolumeAttachment( volumeId );
       } catch ( final NoSuchElementException ex ) {
@@ -1378,7 +1374,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param attachVol
+   *
    */
   public void addTransientVolume( final String deviceName, final String remoteDevice, final Volume vol ) {
     final Function<Volume, Volume> attachmentFunction = new Function<Volume, Volume>( ) {
@@ -1421,8 +1417,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param predicate
-   * @return
+   *
    */
   public boolean eachVolumeAttachment( final Predicate<VmVolumeAttachment> predicate ) {
     if ( VmStateSet.DONE.contains( this.getState( ) ) ) {
@@ -1456,8 +1451,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param volumeId
-   * @return
+   *
    */
   public VmVolumeAttachment removeVolumeAttachment( final String volumeId ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1478,29 +1472,28 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return
+   *
    */
   public String getServiceTag( ) {
     return this.getRuntimeState( ).getServiceTag( );
   }
   
   /**
-   * @return
+   *
    */
   public String getReservationId( ) {
     return this.vmId.getReservationId( );
   }
   
   /**
-   * @return
+   *
    */
   public byte[] getUserData( ) {
     return this.bootRecord.getUserData( );
   }
   
   /**
-   * @param volumeId
-   * @param newState
+   *
    */
   public void updateVolumeAttachment( final String volumeId, final AttachmentState newState ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1515,7 +1508,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return
+   *
    */
   public Predicate<VmInfo> doUpdate( ) {
     return new Predicate<VmInfo>( ) {
@@ -1572,14 +1565,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param bundleTaskStateName
+   *
    */
   protected void updateCreateImageTaskState( final String createImageTaskStateName ) {
     this.getRuntimeState( ).setCreateImageTaskState( createImageTaskStateName );
   }
   
   /**
-   * @param volumes
+   *
    */
   private void updateVolumeAttachments( final List<AttachedVolume> volumes ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
@@ -1594,7 +1587,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param serviceTag
+   *
    */
   public void setServiceTag( final String serviceTag ) {
     this.getRuntimeState( ).setServiceTag( serviceTag );
@@ -1695,13 +1688,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             for ( final VmVolumeAttachment attachedVol : input.getBootRecord( ).getPersistentVolumes( ) ) {
               runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                       attachedVol.getStatus( ),
-                                                                                      attachedVol.getAttachTime( ) ) );
+                                                                                      attachedVol.getAttachTime( ),
+                                                                                      attachedVol.getDeleteOnTerminate( ) ) );
             }
           }
           for ( final VmVolumeAttachment attachedVol : input.getTransientVolumeState( ).getAttachments( ) ) {
             runningInstance.getBlockDevices( ).add( new InstanceBlockDeviceMapping( attachedVol.getDevice( ), attachedVol.getVolumeId( ),
                                                                                     attachedVol.getStatus( ),
-                                                                                    attachedVol.getAttachTime( ) ) );
+                                                                                    attachedVol.getAttachTime( ),
+                                                                                    Boolean.TRUE ) );
           }
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {
@@ -1765,7 +1760,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @param exampleWithPrivateIp
+   *
    */
   void setNetworkConfig( final VmNetworkConfig networkConfig ) {
     this.networkConfig = networkConfig;
@@ -1824,7 +1819,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   /**
-   * @return
+   *
    */
   public static VmInstance create( ) {
     return new VmInstance( );

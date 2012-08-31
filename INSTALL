@@ -1,4 +1,4 @@
-These are build instructions for Eucalyptus 3.1 (under development).
+These are build instructions for the development version of Eucalyptus.
 ====================================================================
 
 ***NOTE*** The following install instructions are still under development and may be INCOMPLETE. Contributions encouraged! :)
@@ -48,8 +48,8 @@ Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
 - libcurl4 was replaced by libcurl.
 - apache2 was replaced by httpd.
 - dhcp-server was replaced by dhcp.
+- tgt was replaced by scsi-target-utils.
 - bitstream-vera-fonts is no longer available.
-- tgt is no longer available.
 
 Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh
 

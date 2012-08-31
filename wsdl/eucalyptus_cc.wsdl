@@ -1,4 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+
+  This file may incorporate work covered under the following copyright
+  and permission notice:
+
+    Software License Agreement (BSD License)
+
+    Copyright (c) 2008, Regents of the University of California
+    All rights reserved.
+
+    Redistribution and use of this software in source and binary forms,
+    with or without modification, are permitted provided that the
+    following conditions are met:
+
+      Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+      Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer
+      in the documentation and/or other materials provided with the
+      distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+    THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+    COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+    AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+    SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+    WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+    REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+    IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+    NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+  -->
+
 <wsdl:definitions 
     xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" 
     xmlns:ns1="http://schemas.xmlsoap.org/soap/http" 
@@ -107,6 +169,48 @@
           <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string"/>
         </xs:sequence>
       </xs:complexType>
+
+      <!-- sensor-related data types -->
+
+       <xs:complexType abstract="true" name="sensorsResourceType">
+        <xs:sequence>
+	  <xs:element name="resourceName" type="xs:string" maxOccurs="1" minOccurs="1"/>
+	  <xs:element name="resourceType" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="metrics" type="tns:metricsResourceType" maxOccurs="unbounded" minOccurs="1"/>
+        </xs:sequence>
+       </xs:complexType>
+      
+      <xs:complexType abstract="true" name="metricsResourceType">
+        <xs:sequence>
+          <xs:element name="metricName" type="xs:string" nillable="true" minOccurs="1" maxOccurs="1" />
+          <xs:element name="counters" type="tns:metricCounterType" nillable="true" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+      </xs:complexType>
+      
+       <xs:complexType abstract="true" name="metricCounterType">
+        <xs:sequence>
+	  <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>>
+	  <xs:element name="sequenceNum" type="xs:long" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="dimensions" type="tns:metricDimensionsType" maxOccurs="unbounded" minOccurs="1"/>
+        </xs:sequence>
+       </xs:complexType>
+      
+      <xs:complexType abstract="true" name="metricDimensionsType">
+        <xs:sequence>
+	  <xs:element name="dimensionName" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="values" type="tns:metricDimensionsValuesType" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
+       </xs:complexType>
+
+       <xs:complexType abstract="true" name="metricDimensionsValuesType">
+	 <xs:sequence>
+	   <xs:element name="timestamp" type="xs:dateTime" nillable="true" minOccurs="1" maxOccurs="1" />
+	   <xs:element name="value" type="xs:double" nillable="true" minOccurs="0" maxOccurs="1" />
+	 </xs:sequence>
+       </xs:complexType>
+
+       <!-- end of sensor-related types -->
 
       <xs:complexType name="serviceStatusType">
 	<xs:sequence>
@@ -604,11 +708,33 @@
 	</xs:complexContent>
       </xs:complexType>
 
+ <xs:complexType name="describeSensorsType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorIds" type="xs:string" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+  <xs:complexType name="describeSensorsResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsResources" type="tns:sensorsResourceType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType abstract="true" name="serviceTransitionType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
 	    <xs:sequence>
               <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="serviceIds" type="tns:serviceInfoType" />
+              <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="instancesIds" type="tns:serviceInfoType" />
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
@@ -697,6 +823,9 @@
       <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
       <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
       
+      <xs:element name="DescribeSensors" nillable="true" type="tns:describeSensorsType"/>
+      <xs:element name="DescribeSensorsResponse" nillable="true" type="tns:describeSensorsResponseType"/>
+      
       <xs:element name="StartService" nillable="true" type="tns:startServiceType"/>
       <xs:element name="StartServiceResponse" nillable="true" type="tns:startServiceResponseType"/>
       
@@ -774,33 +903,8 @@
     </wsdl:part>
   </wsdl:message>
   
-  <wsdl:message name="StartServiceResponse">
-    <wsdl:part element="tns:StartServiceResponse" name="StartServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="StopServiceResponse">
-    <wsdl:part element="tns:StopServiceResponse" name="StopServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="EnableServiceResponse">
-    <wsdl:part element="tns:EnableServiceResponse" name="EnableServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="DisableServiceResponse">
-    <wsdl:part element="tns:DisableServiceResponse" name="DisableServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-
-  <wsdl:message name="ShutdownServiceResponse">
-    <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
-    </wsdl:part>
-  </wsdl:message>
-  
-  <wsdl:message name="DescribeServicesResponse">
-    <wsdl:part element="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+  <wsdl:message name="DescribeSensorsResponse">
+    <wsdl:part element="tns:DescribeSensorsResponse" name="DescribeSensorsResponse">
     </wsdl:part>
   </wsdl:message>
   
@@ -921,6 +1025,11 @@
 
   <wsdl:message name="DescribeServices">
     <wsdl:part element="tns:DescribeServices" name="DescribeServices">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="DescribeSensors">
+    <wsdl:part element="tns:DescribeSensors" name="DescribeSensors">
     </wsdl:part>
   </wsdl:message>
   
@@ -1046,12 +1155,19 @@
   </wsdl:message>
 -->
 
-  <wsdl:portType name="EucalyptusCC">
-
+ <wsdl:portType name="EucalyptusCC">
+ 
     <wsdl:operation name="DescribeServices">
       <wsdl:input message="tns:DescribeServices" name="DescribeServices">
       </wsdl:input>
       <wsdl:output message="tns:DescribeServicesResponse" name="DescribeServicesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="DescribeSensors">
+      <wsdl:input message="tns:DescribeSensors" name="DescribeSensors">
+      </wsdl:input>
+      <wsdl:output message="tns:DescribeSensorsResponse" name="DescribeSensorsResponse">
       </wsdl:output>
     </wsdl:operation>
     
@@ -1235,6 +1351,16 @@
 	<soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="DescribeServicesResponse">
+	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+    
+    <wsdl:operation name="DescribeSensors">
+      <soap:operation soapAction="EucalyptusCC#DescribeSensors" style="document"/>
+      <wsdl:input name="DescribeSensors">
+	<soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="DescribeSensorsResponse">
 	<soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

@@ -1,3 +1,65 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
 package com.eucalyptus.auth.policy;
 
 import java.util.Map;
@@ -5,10 +67,11 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.system.Ats;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class PolicySpec {
   
@@ -24,27 +87,26 @@ public class PolicySpec {
   public static final String CONDITION = "Condition";
     
   // Effect
-  public static final Set<String> EFFECTS = Sets.newHashSet( );
-  
-  static {
-    for ( EffectType effect : EffectType.values( ) ) {
-      EFFECTS.add( effect.name( ) );
+  public static final Set<String> EFFECTS = ImmutableSet.copyOf( Iterators.transform( Iterators.forArray(EffectType.values()), new Function<EffectType,String>() {
+    @Override
+    public String apply( final EffectType effect ) {
+      return effect.name( );
     }
-  }
+  }) );
   
   // Vendor (AWS products)
   public static final String VENDOR_IAM = "iam";
   public static final String VENDOR_EC2 = "ec2";
   public static final String VENDOR_S3 = "s3";
-  
-  public static final Set<String> VENDORS = Sets.newHashSet( );
-  
-  static {
-    VENDORS.add( VENDOR_IAM );
-    VENDORS.add( VENDOR_EC2 );
-    VENDORS.add( VENDOR_S3 );
-  }
-  
+  public static final String VENDOR_STS = "sts";
+
+  public static final Set<String> VENDORS = ImmutableSet.of(
+    VENDOR_IAM,
+    VENDOR_EC2,
+    VENDOR_S3,
+    VENDOR_STS
+  );
+
   public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
@@ -95,53 +157,51 @@ public class PolicySpec {
   public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
 
-  public static final Set<String> IAM_ACTIONS = Sets.newHashSet( );
-  
-  static {
-    IAM_ACTIONS.add( IAM_ADDUSERTOGROUP );
-    IAM_ACTIONS.add( IAM_CREATEACCESSKEY );
-    IAM_ACTIONS.add( IAM_CREATEGROUP );
-    IAM_ACTIONS.add( IAM_CREATELOGINPROFILE );
-    IAM_ACTIONS.add( IAM_CREATEUSER );
-    IAM_ACTIONS.add( IAM_DEACTIVATEMFADEVICE );
-    IAM_ACTIONS.add( IAM_DELETEACCESSKEY );
-    IAM_ACTIONS.add( IAM_DELETEGROUP );
-    IAM_ACTIONS.add( IAM_DELETEGROUPPOLICY );
-    IAM_ACTIONS.add( IAM_DELETELOGINPROFILE );
-    IAM_ACTIONS.add( IAM_DELETESERVERCERTIFICATE );
-    IAM_ACTIONS.add( IAM_DELETESIGNINGCERTIFICATE );
-    IAM_ACTIONS.add( IAM_DELETEUSER );
-    IAM_ACTIONS.add( IAM_DELETEUSERPOLICY );
-    IAM_ACTIONS.add( IAM_ENABLEMFADEVICE );
-    IAM_ACTIONS.add( IAM_GETGROUP );
-    IAM_ACTIONS.add( IAM_GETGROUPPOLICY );
-    IAM_ACTIONS.add( IAM_GETLOGINPROFILE );
-    IAM_ACTIONS.add( IAM_GETSERVERCERTIFICATE );
-    IAM_ACTIONS.add( IAM_GETUSER );
-    IAM_ACTIONS.add( IAM_GETUSERPOLICY );
-    IAM_ACTIONS.add( IAM_LISTACCESSKEYS );
-    IAM_ACTIONS.add( IAM_LISTGROUPPOLICIES );
-    IAM_ACTIONS.add( IAM_LISTGROUPS );
-    IAM_ACTIONS.add( IAM_LISTGROUPSFORUSER );
-    IAM_ACTIONS.add( IAM_LISTMFADEVICES );
-    IAM_ACTIONS.add( IAM_LISTSERVERCERTIFICATES );
-    IAM_ACTIONS.add( IAM_LISTSIGNINGCERTIFICATES );
-    IAM_ACTIONS.add( IAM_LISTUSERPOLICIES );
-    IAM_ACTIONS.add( IAM_LISTUSERS );
-    IAM_ACTIONS.add( IAM_PUTGROUPPOLICY );
-    IAM_ACTIONS.add( IAM_PUTUSERPOLICY );
-    IAM_ACTIONS.add( IAM_REMOVEUSERFROMGROUP );
-    IAM_ACTIONS.add( IAM_RESYNCMFADEVICE );
-    IAM_ACTIONS.add( IAM_UPDATEACCESSKEY );
-    IAM_ACTIONS.add( IAM_UPDATEGROUP );
-    IAM_ACTIONS.add( IAM_UPDATELOGINPROFILE );
-    IAM_ACTIONS.add( IAM_UPDATESERVERCERTIFICATE );
-    IAM_ACTIONS.add( IAM_UPDATESIGNINGCERTIFICATE );
-    IAM_ACTIONS.add( IAM_UPDATEUSER );
-    IAM_ACTIONS.add( IAM_UPLOADSERVERCERTIFICATE );
-    IAM_ACTIONS.add( IAM_UPLOADSIGNINGCERTIFICATE );
-  }
-  
+  public static final Set<String> IAM_ACTIONS = new ImmutableSet.Builder<String>( )
+    .add( IAM_ADDUSERTOGROUP )
+    .add( IAM_CREATEACCESSKEY )
+    .add( IAM_CREATEGROUP )
+    .add( IAM_CREATELOGINPROFILE )
+    .add( IAM_CREATEUSER )
+    .add( IAM_DEACTIVATEMFADEVICE )
+    .add( IAM_DELETEACCESSKEY )
+    .add( IAM_DELETEGROUP )
+    .add( IAM_DELETEGROUPPOLICY )
+    .add( IAM_DELETELOGINPROFILE )
+    .add( IAM_DELETESERVERCERTIFICATE )
+    .add( IAM_DELETESIGNINGCERTIFICATE )
+    .add( IAM_DELETEUSER )
+    .add( IAM_DELETEUSERPOLICY )
+    .add( IAM_ENABLEMFADEVICE )
+    .add( IAM_GETGROUP )
+    .add( IAM_GETGROUPPOLICY )
+    .add( IAM_GETLOGINPROFILE )
+    .add( IAM_GETSERVERCERTIFICATE )
+    .add( IAM_GETUSER )
+    .add( IAM_GETUSERPOLICY )
+    .add( IAM_LISTACCESSKEYS )
+    .add( IAM_LISTGROUPPOLICIES )
+    .add( IAM_LISTGROUPS )
+    .add( IAM_LISTGROUPSFORUSER )
+    .add( IAM_LISTMFADEVICES )
+    .add( IAM_LISTSERVERCERTIFICATES )
+    .add( IAM_LISTSIGNINGCERTIFICATES )
+    .add( IAM_LISTUSERPOLICIES )
+    .add( IAM_LISTUSERS )
+    .add( IAM_PUTGROUPPOLICY )
+    .add( IAM_PUTUSERPOLICY )
+    .add( IAM_REMOVEUSERFROMGROUP )
+    .add( IAM_RESYNCMFADEVICE )
+    .add( IAM_UPDATEACCESSKEY )
+    .add( IAM_UPDATEGROUP )
+    .add( IAM_UPDATELOGINPROFILE )
+    .add( IAM_UPDATESERVERCERTIFICATE )
+    .add( IAM_UPDATESIGNINGCERTIFICATE )
+    .add( IAM_UPDATEUSER )
+    .add( IAM_UPLOADSERVERCERTIFICATE )
+    .add( IAM_UPLOADSIGNINGCERTIFICATE )
+    .build();
+
   // EC2 actions, based on API version 2010-08-31
   public static final String EC2_ALLOCATEADDRESS = "allocateaddress";
   public static final String EC2_ASSOCIATEADDRESS = "associateaddress";
@@ -211,78 +271,76 @@ public class PolicySpec {
   public static final String EC2_TERMINATEINSTANCES = "terminateinstances";
   public static final String EC2_UNMONITORINSTANCES = "unmonitorinstances";
 
-  public static final Set<String> EC2_ACTIONS = Sets.newHashSet( );
-  
-  static {
-    EC2_ACTIONS.add( EC2_ALLOCATEADDRESS );
-    EC2_ACTIONS.add( EC2_ASSOCIATEADDRESS );
-    EC2_ACTIONS.add( EC2_ATTACHVOLUME );
-    EC2_ACTIONS.add( EC2_AUTHORIZESECURITYGROUPINGRESS );
-    EC2_ACTIONS.add( EC2_BUNDLEINSTANCE );
-    EC2_ACTIONS.add( EC2_CANCELBUNDLETASK );
-    EC2_ACTIONS.add( EC2_CANCELSPOTINSTANCEREQUESTS );
-    EC2_ACTIONS.add( EC2_CONFIRMPRODUCTINSTANCE );
-    EC2_ACTIONS.add( EC2_CREATEIMAGE );
-    EC2_ACTIONS.add( EC2_CREATEKEYPAIR );
-    EC2_ACTIONS.add( EC2_CREATEPLACEMENTGROUP );
-    EC2_ACTIONS.add( EC2_CREATESECURITYGROUP );
-    EC2_ACTIONS.add( EC2_CREATESNAPSHOT );
-    EC2_ACTIONS.add( EC2_CREATESPOTDATAFEEDSUBSCRIPTION );
-    EC2_ACTIONS.add( EC2_CREATETAGS );
-    EC2_ACTIONS.add( EC2_CREATEVOLUME );
-    EC2_ACTIONS.add( EC2_DELETEKEYPAIR );
-    EC2_ACTIONS.add( EC2_DELETEPLACEMENTGROUP );
-    EC2_ACTIONS.add( EC2_DELETESECURITYGROUP );
-    EC2_ACTIONS.add( EC2_DELETESNAPSHOT );
-    EC2_ACTIONS.add( EC2_DELETESPOTDATAFEEDSUBSCRIPTION );
-    EC2_ACTIONS.add( EC2_DELETETAGS );
-    EC2_ACTIONS.add( EC2_DELETEVOLUME );
-    EC2_ACTIONS.add( EC2_DEREGISTERIMAGE );
-    EC2_ACTIONS.add( EC2_DESCRIBEADDRESSES );
-    EC2_ACTIONS.add( EC2_DESCRIBEAVAILABILITYZONES );
-    EC2_ACTIONS.add( EC2_DESCRIBEBUNDLETASKS );
-    EC2_ACTIONS.add( EC2_DESCRIBEIMAGEATTRIBUTE );
-    EC2_ACTIONS.add( EC2_DESCRIBEIMAGES );
-    EC2_ACTIONS.add( EC2_DESCRIBEINSTANCEATTRIBUTE );
-    EC2_ACTIONS.add( EC2_DESCRIBEINSTANCES );
-    EC2_ACTIONS.add( EC2_DESCRIBEKEYPAIRS );
-    EC2_ACTIONS.add( EC2_DESCRIBEPLACEMENTGROUPS );
-    EC2_ACTIONS.add( EC2_DESCRIBEREGIONS );
-    EC2_ACTIONS.add( EC2_DESCRIBERESERVEDINSTANCES );
-    EC2_ACTIONS.add( EC2_DESCRIBERESERVEDINSTANCESOFFERINGS );
-    EC2_ACTIONS.add( EC2_DESCRIBESECURITYGROUPS );
-    EC2_ACTIONS.add( EC2_DESCRIBESNAPSHOTATTRIBUTE );
-    EC2_ACTIONS.add( EC2_DESCRIBESNAPSHOTS );
-    EC2_ACTIONS.add( EC2_DESCRIBESPOTDATAFEEDSUBSCRIPTION );
-    EC2_ACTIONS.add( EC2_DESCRIBESPOTINSTANCEREQUESTS );
-    EC2_ACTIONS.add( EC2_DESCRIBESPOTPRICEHISTORY );
-    EC2_ACTIONS.add( EC2_DESCRIBETAGS );
-    EC2_ACTIONS.add( EC2_DESCRIBEVOLUMES );
-    EC2_ACTIONS.add( EC2_DETACHVOLUME );
-    EC2_ACTIONS.add( EC2_DISASSOCIATEADDRESS );
-    EC2_ACTIONS.add( EC2_GETCONSOLEOUTPUT );
-    EC2_ACTIONS.add( EC2_GETPASSWORDDATA );
-    EC2_ACTIONS.add( EC2_IMPORTKEYPAIR );
-    EC2_ACTIONS.add( EC2_MODIFYIMAGEATTRIBUTE );
-    EC2_ACTIONS.add( EC2_MODIFYINSTANCEATTRIBUTE );
-    EC2_ACTIONS.add( EC2_MODIFYSNAPSHOTATTRIBUTE );
-    EC2_ACTIONS.add( EC2_MONITORINSTANCES );
-    EC2_ACTIONS.add( EC2_PURCHASERESERVEDINSTANCESOFFERING );
-    EC2_ACTIONS.add( EC2_REBOOTINSTANCES );
-    EC2_ACTIONS.add( EC2_REGISTERIMAGE );
-    EC2_ACTIONS.add( EC2_RELEASEADDRESS );
-    EC2_ACTIONS.add( EC2_REQUESTSPOTINSTANCES );
-    EC2_ACTIONS.add( EC2_RESETIMAGEATTRIBUTE );
-    EC2_ACTIONS.add( EC2_RESETINSTANCEATTRIBUTE );
-    EC2_ACTIONS.add( EC2_RESETSNAPSHOTATTRIBUTE );
-    EC2_ACTIONS.add( EC2_REVOKESECURITYGROUPINGRESS );
-    EC2_ACTIONS.add( EC2_RUNINSTANCES );
-    EC2_ACTIONS.add( EC2_STARTINSTANCES );
-    EC2_ACTIONS.add( EC2_STOPINSTANCES );
-    EC2_ACTIONS.add( EC2_TERMINATEINSTANCES );
-    EC2_ACTIONS.add( EC2_UNMONITORINSTANCES );
-  }
-  
+  public static final Set<String> EC2_ACTIONS = new ImmutableSet.Builder<String>()
+    .add( EC2_ALLOCATEADDRESS )
+    .add( EC2_ASSOCIATEADDRESS )
+    .add( EC2_ATTACHVOLUME )
+    .add( EC2_AUTHORIZESECURITYGROUPINGRESS )
+    .add( EC2_BUNDLEINSTANCE )
+    .add( EC2_CANCELBUNDLETASK )
+    .add( EC2_CANCELSPOTINSTANCEREQUESTS )
+    .add( EC2_CONFIRMPRODUCTINSTANCE )
+    .add( EC2_CREATEIMAGE )
+    .add( EC2_CREATEKEYPAIR )
+    .add( EC2_CREATEPLACEMENTGROUP )
+    .add( EC2_CREATESECURITYGROUP )
+    .add( EC2_CREATESNAPSHOT )
+    .add( EC2_CREATESPOTDATAFEEDSUBSCRIPTION )
+    .add( EC2_CREATETAGS )
+    .add( EC2_CREATEVOLUME )
+    .add( EC2_DELETEKEYPAIR )
+    .add( EC2_DELETEPLACEMENTGROUP )
+    .add( EC2_DELETESECURITYGROUP )
+    .add( EC2_DELETESNAPSHOT )
+    .add( EC2_DELETESPOTDATAFEEDSUBSCRIPTION )
+    .add( EC2_DELETETAGS )
+    .add( EC2_DELETEVOLUME )
+    .add( EC2_DEREGISTERIMAGE )
+    .add( EC2_DESCRIBEADDRESSES )
+    .add( EC2_DESCRIBEAVAILABILITYZONES )
+    .add( EC2_DESCRIBEBUNDLETASKS )
+    .add( EC2_DESCRIBEIMAGEATTRIBUTE )
+    .add( EC2_DESCRIBEIMAGES )
+    .add( EC2_DESCRIBEINSTANCEATTRIBUTE )
+    .add( EC2_DESCRIBEINSTANCES )
+    .add( EC2_DESCRIBEKEYPAIRS )
+    .add( EC2_DESCRIBEPLACEMENTGROUPS )
+    .add( EC2_DESCRIBEREGIONS )
+    .add( EC2_DESCRIBERESERVEDINSTANCES )
+    .add( EC2_DESCRIBERESERVEDINSTANCESOFFERINGS )
+    .add( EC2_DESCRIBESECURITYGROUPS )
+    .add( EC2_DESCRIBESNAPSHOTATTRIBUTE )
+    .add( EC2_DESCRIBESNAPSHOTS )
+    .add( EC2_DESCRIBESPOTDATAFEEDSUBSCRIPTION )
+    .add( EC2_DESCRIBESPOTINSTANCEREQUESTS )
+    .add( EC2_DESCRIBESPOTPRICEHISTORY )
+    .add( EC2_DESCRIBETAGS )
+    .add( EC2_DESCRIBEVOLUMES )
+    .add( EC2_DETACHVOLUME )
+    .add( EC2_DISASSOCIATEADDRESS )
+    .add( EC2_GETCONSOLEOUTPUT )
+    .add( EC2_GETPASSWORDDATA )
+    .add( EC2_IMPORTKEYPAIR )
+    .add( EC2_MODIFYIMAGEATTRIBUTE )
+    .add( EC2_MODIFYINSTANCEATTRIBUTE )
+    .add( EC2_MODIFYSNAPSHOTATTRIBUTE )
+    .add( EC2_MONITORINSTANCES )
+    .add( EC2_PURCHASERESERVEDINSTANCESOFFERING )
+    .add( EC2_REBOOTINSTANCES )
+    .add( EC2_REGISTERIMAGE )
+    .add( EC2_RELEASEADDRESS )
+    .add( EC2_REQUESTSPOTINSTANCES )
+    .add( EC2_RESETIMAGEATTRIBUTE )
+    .add( EC2_RESETINSTANCEATTRIBUTE )
+    .add( EC2_RESETSNAPSHOTATTRIBUTE )
+    .add( EC2_REVOKESECURITYGROUPINGRESS )
+    .add( EC2_RUNINSTANCES )
+    .add( EC2_STARTINSTANCES )
+    .add( EC2_STOPINSTANCES )
+    .add( EC2_TERMINATEINSTANCES )
+    .add( EC2_UNMONITORINSTANCES )
+    .build();
+
   // S3 actions, based on IAM User Guide version 2010-05-08
   public static final String S3_GETOBJECT = "getobject";
   public static final String S3_GETOBJECTVERSION = "getobjectversion";
@@ -306,43 +364,49 @@ public class PolicySpec {
   public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
   public static final String S3_GETBUCKETLOCATION = "getbucketlocation";
 
-  public static final Set<String> S3_ACTIONS = Sets.newHashSet( );
-  
-  static {
-    S3_ACTIONS.add( S3_GETOBJECT );
-    S3_ACTIONS.add( S3_GETOBJECTVERSION );
-    S3_ACTIONS.add( S3_PUTOBJECT );
-    S3_ACTIONS.add( S3_GETOBJECTACL );
-    S3_ACTIONS.add( S3_GETOBJECTVERSIONACL );
-    S3_ACTIONS.add( S3_PUTOBJECTACL );
-    S3_ACTIONS.add( S3_PUTOBJECTACLVERSION );
-    S3_ACTIONS.add( S3_DELETEOBJECT );
-    S3_ACTIONS.add( S3_DELETEOBJECTVERSION );
-    S3_ACTIONS.add( S3_CREATEBUCKET );
-    S3_ACTIONS.add( S3_DELETEBUCKET );
-    S3_ACTIONS.add( S3_LISTBUCKET );
-    S3_ACTIONS.add( S3_LISTBUCKETVERSIONS );
-    S3_ACTIONS.add( S3_LISTALLMYBUCKETS );
-    S3_ACTIONS.add( S3_GETBUCKETACL );
-    S3_ACTIONS.add( S3_PUTBUCKETACL );
-    S3_ACTIONS.add( S3_GETBUCKETVERSIONING );
-    S3_ACTIONS.add( S3_PUTBUCKETVERSIONING );
-    S3_ACTIONS.add( S3_GETBUCKETREQUESTPAYMENT );
-    S3_ACTIONS.add( S3_PUTBUCKETREQUESTPAYMENT );
-    S3_ACTIONS.add( S3_GETBUCKETLOCATION );
-  }
-  
+  public static final Set<String> S3_ACTIONS = new ImmutableSet.Builder<String>()
+    .add( S3_GETOBJECT )
+    .add( S3_GETOBJECTVERSION )
+    .add( S3_PUTOBJECT )
+    .add( S3_GETOBJECTACL )
+    .add( S3_GETOBJECTVERSIONACL )
+    .add( S3_PUTOBJECTACL )
+    .add( S3_PUTOBJECTACLVERSION )
+    .add( S3_DELETEOBJECT )
+    .add( S3_DELETEOBJECTVERSION )
+    .add( S3_CREATEBUCKET )
+    .add( S3_DELETEBUCKET )
+    .add( S3_LISTBUCKET )
+    .add( S3_LISTBUCKETVERSIONS )
+    .add( S3_LISTALLMYBUCKETS )
+    .add( S3_GETBUCKETACL )
+    .add( S3_PUTBUCKETACL )
+    .add( S3_GETBUCKETVERSIONING )
+    .add( S3_PUTBUCKETVERSIONING )
+    .add( S3_GETBUCKETREQUESTPAYMENT )
+    .add( S3_PUTBUCKETREQUESTPAYMENT )
+    .add( S3_GETBUCKETLOCATION )
+    .build();
+
+  // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
+  public static final String STS_GET_FEDERATION_TOKEN = "getfederationtoken";
+  public static final String STS_GET_SESSION_TOKEN = "getsessiontoken";
+
+  public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
+      .add( STS_GET_FEDERATION_TOKEN )
+      .add( STS_GET_SESSION_TOKEN )
+      .build();
+
   // Map vendor to actions
-  public static final Map<String, Set<String>> VENDOR_ACTIONS = Maps.newHashMap( );
-  
-  static {
-    VENDOR_ACTIONS.put( VENDOR_IAM, IAM_ACTIONS );
-    VENDOR_ACTIONS.put( VENDOR_EC2, EC2_ACTIONS );
-    VENDOR_ACTIONS.put( VENDOR_S3, S3_ACTIONS );
-  }
+  public static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
+  .put( VENDOR_IAM, IAM_ACTIONS )
+  .put( VENDOR_EC2, EC2_ACTIONS )
+  .put( VENDOR_S3, S3_ACTIONS )
+  .put( VENDOR_STS, STS_ACTIONS )
+  .build();
   
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";
@@ -362,19 +426,17 @@ public class PolicySpec {
   public static final String EC2_RESOURCE_SNAPSHOT = "snapshot";
   public static final String EC2_RESOURCE_VMTYPE = "vmtype";
   
-  public static final Set<String> EC2_RESOURCES = Sets.newHashSet( );
-  
-  static {
-    EC2_RESOURCES.add( EC2_RESOURCE_IMAGE );
-    EC2_RESOURCES.add( EC2_RESOURCE_SECURITYGROUP );
-    EC2_RESOURCES.add( EC2_RESOURCE_ADDRESS );
-    EC2_RESOURCES.add( EC2_RESOURCE_AVAILABILITYZONE );
-    EC2_RESOURCES.add( EC2_RESOURCE_INSTANCE );
-    EC2_RESOURCES.add( EC2_RESOURCE_KEYPAIR );
-    EC2_RESOURCES.add( EC2_RESOURCE_VOLUME );
-    EC2_RESOURCES.add( EC2_RESOURCE_SNAPSHOT );
-    EC2_RESOURCES.add( EC2_RESOURCE_VMTYPE );
-  }
+  public static final Set<String> EC2_RESOURCES = new ImmutableSet.Builder<String>()
+    .add( EC2_RESOURCE_IMAGE )
+    .add( EC2_RESOURCE_SECURITYGROUP )
+    .add( EC2_RESOURCE_ADDRESS )
+    .add( EC2_RESOURCE_AVAILABILITYZONE )
+    .add( EC2_RESOURCE_INSTANCE )
+    .add( EC2_RESOURCE_KEYPAIR )
+    .add( EC2_RESOURCE_VOLUME )
+    .add( EC2_RESOURCE_SNAPSHOT )
+    .add( EC2_RESOURCE_VMTYPE )
+    .build();
 
   public static final Pattern IPV4_ADDRESS_RANGE_PATTERN = Pattern.compile( "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})(?:-(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3}))?" );
   

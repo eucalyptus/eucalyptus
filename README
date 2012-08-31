@@ -1,11 +1,10 @@
 ********************************************************************
-NOTE: This is Eucalyptus 3.1 under development.
 
 Please see the INSTALL file for build instructions.
 
 ********************************************************************
 
-        EUCALYPTUS: Elastic Utility Computing Architecture 
+        EUCALYPTUS: Elastic Utility Computing Architecture
             for Linking Your Programs To Useful Systems
 
 EUCALYPTUS is an open source service overlay that implements elastic

@@ -1,0 +1,48 @@
+<p>The event_store package provides a <i>persistent log</i> of reporting events. It permanently
+keeps a record of events which occur in the Eucalyptus system, such as volume creations and deletions,
+instance usage, and so on. This log of events is subsequently used to generate visual reports of
+Eucalyptus usage.
+
+<p>This packege contains <i>persistent events</i> for: instance creation, deletion, and usage;
+volume creation, deletion, and usage; elastic ip creation, deletion, attachment, and detachment;
+and s3 bucket and object creation, deletion, and usage.
+
+<p>The events in the event_store package have nothing to do with other event types in the system, and
+are not the same as the events which are used to communicate between Eucalyptus subsystems, or from
+the CLC to the reporting subsystem. In this case an event refers to an occurence within the Eucalyptus
+system (ie volume creation or deletion) which happened at a specific moment, and which should have
+a record of it preserved for subsequent report generation.
+
+<p>All events persisted by this package are immutable. Any change to the system is recorded by
+additional events. Every persistent event refers to something which happened in the past which
+cannot change. This prevents the need to "look up" already existing events as resources are used
+in the Eucalyptus system, thereby minimizing the write time on the CLC. It also allows us to keep
+a record of everything which has occurred, which would be impossible if we modified database
+tuples because previous values would then be lost.  
+
+<p>Although the event types are hibernate objects, this fact should be ignored by anyone
+using this package. All hibernate operations are encapsulated within EventStore classes,
+which provide methods for inserting persistent events into the event log. There is no
+other way to instantiate the event objects (constructors are package access), and no
+hiberante operations should take place outside of the EntityStore classes. For example,
+if you wanted to record that a volume creation occured, you would call:
+
+<p><code>ReportingVolumeEventStore.getInstance().insertVolumeCreateEvent(uuid, timestampMs, sizeGB, ...)</code>
+
+<p>...and similarly with instance usage, bucket creation, etc etc. 
+
+<p>All hibernate operations are encapsulated within EntityStore objects, because this package
+may need to modify objects before they are persisted. This requires that the hibernate operations
+be encapsulated.
+
+<p>External users of this package only need to use the EventStore objects, of which there are
+six (InstanceEventStore, VolumeEventStore, VolumeSnapshotEventStore, ElasticIpEventStore, 
+S3BucketEventStore, and S3ObjectEventStore). All of them are singletons and contain methods for
+inserting events such as creations, deletions, and usage.
+six. All of them are singletons.
+
+<p>Note that usage events for instances are different from all other usage events. Instance
+usage events are persisted at periodic intervals (for example, 4 hours) whereas volume and
+S3Object usage events are written as usage occurs, which may be rarely. Also, instances
+have no delete events; instances are presumed to be destroyed when their usage events
+cease.

@@ -1,62 +1,68 @@
-/*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
-if you need additional information or have any questions.
-
-This file may incorporate work covered under the following copyright and
-permission notice:
-
-  Software License Agreement (BSD License)
-
-  Copyright (c) 2008, Regents of the University of California
-  
-
-  Redistribution and use of this software in source and binary forms, with
-  or without modification, are permitted provided that the following
-  conditions are met:
-
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-  ANY SUCH LICENSES OR RIGHTS.
-*/
 #ifndef INCLUDE_HANDLERS_H
 #define INCLUDE_HANDLERS_H
 
@@ -65,6 +71,8 @@ permission notice:
 
 #include "vnetwork.h"
 #include "data.h"
+#include "config.h"
+#include "sensor.h"
 
 #include <windows-bundle.h>
 
@@ -88,6 +96,11 @@ struct nc_state_t {
 	boolean convert_to_disk;
         boolean do_inject_key;
         int concurrent_disk_ops;
+	int staging_cleanup_threshold;
+	int booting_cleanup_threshold;
+	int bundling_cleanup_threshold;
+	int createImage_cleanup_threshold;
+	int teardown_state_duration;
 	// defined max
 	long long config_max_mem;
 	long long config_max_cores;
@@ -97,8 +110,9 @@ struct nc_state_t {
 	long long cores_max;
 	// paths
 	char home[MAX_PATH];
-	char config_network_path [MAX_PATH];
-        char libvirt_xslt_path[MAX_PATH];
+    char configFiles[2][MAX_PATH];
+    char config_network_path [MAX_PATH];
+    char libvirt_xslt_path[MAX_PATH];
 	char get_info_cmd_path[MAX_PATH];
 	char rootwrap_cmd_path[MAX_PATH];
 	char virsh_cmd_path[MAX_PATH];
@@ -108,12 +122,26 @@ struct nc_state_t {
 	int config_use_virtio_net;	// KVM: use virtio for network
 	int config_use_virtio_disk;	// KVM: use virtio for disk attachment
 	int config_use_virtio_root;	// KVM: use virtio for root partition
-        // windows support
+    // windows support
 	char ncBundleUploadCmd[MAX_PATH];
   	char ncCheckBucketCmd[MAX_PATH];
   	char ncDeleteBundleCmd[MAX_PATH];
 };
 
+static configEntry configKeysRestartNC[] = {
+    {"ENABLE_WS_SECURITY", "Y"},
+    {"EUCALYPTUS", "/"},
+    {"NC_PORT", "8775"},
+    {"NC_SERVICE", "axis2/services/EucalyptusNC"},
+    {NULL, NULL}
+};
+
+static configEntry configKeysNoRestartNC[] = {
+    {"LOGLEVEL", "DEBUG"},
+    {"LOGROLLNUMBER", "4"},
+    {"LOGMAXSIZE", "10485760"},
+    {NULL, NULL}
+};
 
 struct handlers {
     char name [CHAR_BUFFER_SIZE];
@@ -214,6 +242,14 @@ struct handlers {
 					 int instIdsLen,
 					 bundleTask ***outBundleTasks,
 					 int *outBundleTasksLen);
+  int (*doDescribeSensors) (struct nc_state_t *nc,
+			    ncMetadata *meta, 
+			    char **instIds, 
+			    int instIdsLen, 
+			    char **sensorIds, 
+			    int sensorIdsLen, 
+			    sensorResource ***outResources, 
+			    int *outResourcesLen);
 };
 
 #ifdef HANDLERS_FANOUT // only declare for the fanout code, not the actual handlers
@@ -232,7 +268,7 @@ int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, cha
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-
+int doDescribeSensors           (ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
@@ -306,4 +342,3 @@ struct createImage_params_t {
 };
 
 #endif /* INCLUDE */
-

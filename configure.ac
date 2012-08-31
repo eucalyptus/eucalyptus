@@ -15,8 +15,8 @@
 
 AC_PREREQ(2.61)
 AC_INIT(Eucalyptus,
-        m4_esys:cmd([cat VERSION| tr -d '\n']),
-        support@open.eucalyptus.com)
+        esyscmd([cat VERSION | tr -d '\n']),
+        community@lists.eucalyptus.com)
 AC_CONFIG_SRCDIR([wsdl/eucalyptus_nc.wsdl])
 AC_CONFIG_HEADER([util/eucalyptus-config.h])
 AC_PREFIX_DEFAULT([/opt/eucalyptus/])
@@ -272,7 +272,7 @@ AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_STAT
 AC_FUNC_STRNLEN
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup strerror strncasecmp strstr rmdir])
+AC_CHECK_FUNCS([bzero dup2 ftruncate gettimeofday mkdir pow select strchr strdup strerror strncasecmp strstr rmdir xmlFirstElementChild])
 
 # Time to substitute and generate the files
 AC_CONFIG_FILES([Makedefs

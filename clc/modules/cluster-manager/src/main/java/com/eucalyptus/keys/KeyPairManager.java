@@ -1,27 +1,95 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
 package com.eucalyptus.keys;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.math.BigInteger;
+import java.io.StringReader;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
 import java.security.PrivateKey;
-import java.util.List;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.crypto.Certs;
-import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.google.common.io.CharStreams;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateKeyPairType;
 import edu.ucsb.eucalyptus.msgs.DeleteKeyPairResponseType;
@@ -101,31 +169,114 @@ public class KeyPairManager {
     try {
       KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
     } catch ( Exception e1 ) {
-      Supplier<SshKeyPair> allocator = new Supplier<SshKeyPair>() {
-
-        @Override
-        public SshKeyPair get( ) {
-          SshKeyPair newKey = new SshKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
-          newKey.setPublicKey( request.getPublicKeyMaterial( ) );
-          /**
-           * TODO:GRZE:OMGFIXME:RELEASE
-           * Supported formats:
-           * OpenSSH public key format (e.g., the format in ~/.ssh/authorized_keys)
-           * Base64 encoded DER format
-           * SSH public key file format as specified in RFC4716
-           * 
-           * DSA keys are not supported. Make sure your key generator is set up to create RSA keys.
-           * Supported lengths: 1024, 2048, and 4096.
-           */
-          //TODO:GRZE:replace bogus initial impl.
-          byte[] digest = Digest.MD5.get( ).digest( request.getPublicKeyMaterial( ).getBytes( ) );
-          String fingerprint = String.format( "%032X", new BigInteger( digest ) );
-          newKey.setFingerPrint( fingerprint );
-          reply.setKeyName( request.getKeyName( ) );
-          return newKey;
-        }};
-      RestrictedTypes.allocateUnitlessResource( allocator );
+      try {
+        final RSAPublicKey key = decodeKeyMaterial( request.getPublicKeyMaterial( ) );
+        final String keyFingerprint = KeyPairs.getPublicKeyFingerprint( key );
+        if ( keyFingerprint == null ) {
+          throw new GeneralSecurityException( "Error generating fingerprint" );  
+        }
+        final Supplier<SshKeyPair> allocator = new Supplier<SshKeyPair>() {
+          @Override
+          public SshKeyPair get( ) {
+            final SshKeyPair newKey = new SshKeyPair( ctx.getUserFullName( ), request.getKeyName( ) );
+            newKey.setFingerPrint( keyFingerprint );
+            newKey.setPublicKey( KeyPairs.rfc4253Format( ctx.getUserFullName( ), request.getKeyName( ), key ) );
+            try {
+              Transactions.save(newKey);
+              reply.setKeyName( newKey.getDisplayName() );
+              reply.setKeyFingerprint( newKey.getFingerPrint() );
+            } catch ( TransactionException e ) {
+              LOG.warn( "Error saving imported key", e );
+            }
+            return newKey;
+          }};
+        RestrictedTypes.allocateUnitlessResource( allocator );
+      } catch (GeneralSecurityException e) {
+        LOG.warn("Error importing SSH public key", e);
+        reply.set_return(false);
+      }
     }
     return reply;
+  }
+
+  /**
+   * Decode any supported key material.
+   *
+   * Supported formats:
+   * OpenSSH public key format (e.g., the format in ~/.ssh/authorized_keys)  http://tools.ietf.org/html/rfc4253#section-6.6 
+   * Base64 encoded DER format
+   * SSH public key file format as specified in RFC4716
+   *
+   * Supported lengths: 1024, 2048, and 4096.
+   * 
+   * @return The RSA public key
+   */
+  private static RSAPublicKey decodeKeyMaterial( final String b64EncodedKeyMaterial ) throws GeneralSecurityException {
+    final String decoded;
+    try {
+      decoded = B64.standard.decString(b64EncodedKeyMaterial);
+    } catch ( ArrayIndexOutOfBoundsException e ) {
+      throw new GeneralSecurityException( "Invalid key material (expected Base64)" );
+    } catch ( StringIndexOutOfBoundsException e ) {
+      throw new GeneralSecurityException( "Invalid key material (expected Base64)" );
+    }
+    final RSAPublicKey key;
+    if ( decoded.startsWith( "ssh-rsa " ) ) {
+      final String[] keyParts = decoded.split("\\s+");
+      if ( keyParts.length > 1 ) {
+        key = KeyPairs.decodeSshRsaPublicKey(keyParts[1]);
+      } else {
+        throw new GeneralSecurityException( "Invalid SSH key format" );
+      }
+    } else if ( decoded.startsWith("---- BEGIN SSH2 PUBLIC KEY ----") ) {
+      final String keyB64;
+      try {
+        keyB64 = Joiner.on("\n").join(Iterables.filter(CharStreams.readLines(new StringReader(decoded)), new Predicate<String>() {
+          boolean continueLine = false;
+          boolean sawEnd = false;
+
+          @Override
+          public boolean apply(final String line) {
+            // skip start / end lines
+            sawEnd = sawEnd || line.contains("---- END SSH2 PUBLIC KEY ----");
+            if (line.contains("---- BEGIN SSH2 PUBLIC KEY ----") || sawEnd) {
+              continueLine = false;
+              return false;
+            }
+
+            // skip headers and header continuations
+            if (continueLine || line.contains(":")) {
+              continueLine = line.endsWith("\\");
+              return false;
+            }
+
+            return true;
+          }
+        }) );
+      } catch (IOException e) {
+        throw new GeneralSecurityException( "Error reading key data" );
+      }
+      key = KeyPairs.decodeSshRsaPublicKey(keyB64);
+    } else {
+      try {
+        final KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        final X509EncodedKeySpec encodedSpec = new X509EncodedKeySpec( B64.standard.dec( decoded ) );
+        key = (RSAPublicKey) keyFactory.generatePublic( encodedSpec );
+      } catch ( ArrayIndexOutOfBoundsException e ) {
+        throw new GeneralSecurityException( "Invalid key material" );
+      } catch ( StringIndexOutOfBoundsException e ) {
+        throw new GeneralSecurityException( "Invalid key material" );
+      }
+    }
+    
+    // verify key properties
+    final int keySize = key.getModulus().bitLength();
+    if ( keySize != 1024 &&
+         keySize != 2048 &&
+         keySize != 4096 ) {
+      throw new GeneralSecurityException( "Invalid key size: " + keySize );  
+    }
+    
+    return key;
   }
 }

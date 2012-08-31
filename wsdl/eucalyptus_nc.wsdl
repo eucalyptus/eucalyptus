@@ -1,4 +1,67 @@
-<?xml version="1.0" encoding="utf-8"?><wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns1="http://schemas.xmlsoap.org/soap/http" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://eucalyptus.ucsb.edu/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="EucalyptusNC" targetNamespace="http://eucalyptus.ucsb.edu/">
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+
+  This file may incorporate work covered under the following copyright
+  and permission notice:
+
+    Software License Agreement (BSD License)
+
+    Copyright (c) 2008, Regents of the University of California
+    All rights reserved.
+
+    Redistribution and use of this software in source and binary forms,
+    with or without modification, are permitted provided that the
+    following conditions are met:
+
+      Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+      Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer
+      in the documentation and/or other materials provided with the
+      distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+    THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+    COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+    AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+    IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+    SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+    WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+    REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+    IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+    NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+  -->
+
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns1="http://schemas.xmlsoap.org/soap/http" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://eucalyptus.ucsb.edu/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" name="EucalyptusNC" targetNamespace="http://eucalyptus.ucsb.edu/">
   
 <wsdl:types>
   <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" attributeFormDefault="qualified" elementFormDefault="qualified" targetNamespace="http://eucalyptus.ucsb.edu/" xmlns:tns="http://eucalyptus.ucsb.edu/">
@@ -33,6 +96,48 @@
           <xs:element nillable="false" minOccurs="0" maxOccurs="unbounded" name="uris" type="xs:string"/>
         </xs:sequence>
       </xs:complexType>
+
+      <!-- sensor-related data types -->
+
+       <xs:complexType abstract="true" name="sensorsResourceType">
+        <xs:sequence>
+	  <xs:element name="resourceName" type="xs:string" maxOccurs="1" minOccurs="1"/>
+	  <xs:element name="resourceType" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="metrics" type="tns:metricsResourceType" maxOccurs="unbounded" minOccurs="1"/>
+        </xs:sequence>
+       </xs:complexType>
+      
+      <xs:complexType abstract="true" name="metricsResourceType">
+        <xs:sequence>
+          <xs:element name="metricName" type="xs:string" nillable="true" minOccurs="1" maxOccurs="1" />
+          <xs:element name="counters" type="tns:metricCounterType" nillable="true" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+      </xs:complexType>
+      
+       <xs:complexType abstract="true" name="metricCounterType">
+        <xs:sequence>
+	  <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>>
+	  <xs:element name="sequenceNum" type="xs:long" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="dimensions" type="tns:metricDimensionsType" maxOccurs="unbounded" minOccurs="1"/>
+        </xs:sequence>
+       </xs:complexType>
+      
+      <xs:complexType abstract="true" name="metricDimensionsType">
+        <xs:sequence>
+	  <xs:element name="dimensionName" type="xs:string" minOccurs="1" maxOccurs="1" />
+	  <xs:element name="values" type="tns:metricDimensionsValuesType" maxOccurs="unbounded" minOccurs="0"/>
+        </xs:sequence>
+       </xs:complexType>
+
+       <xs:complexType abstract="true" name="metricDimensionsValuesType">
+	 <xs:sequence>
+	   <xs:element name="timestamp" type="xs:dateTime" nillable="true" minOccurs="1" maxOccurs="1" />
+	   <xs:element name="value" type="xs:double" nillable="true" minOccurs="0" maxOccurs="1" />
+	 </xs:sequence>
+       </xs:complexType>
+
+       <!-- end of sensor-related types -->
 
       <xs:complexType name="serviceStatusType">
 	<xs:sequence>
@@ -288,7 +393,25 @@
 	</xs:extension>
       </xs:complexContent>
     </xs:complexType>
-    
+
+    <xs:complexType name="ncPowerDownType">
+      <xs:complexContent>
+      <xs:extension base="tns:eucalyptusMessage">
+        <xs:sequence>
+        </xs:sequence>
+      </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncPowerDownResponseType">
+      <xs:complexContent>
+      <xs:extension base="tns:eucalyptusMessage">
+        <xs:sequence>
+        </xs:sequence>
+      </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncDescribeResourceResponseType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -431,23 +554,26 @@
       </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="ncPowerDownType">
-      <xs:complexContent>
-	<xs:extension base="tns:eucalyptusMessage">
-	  <xs:sequence>
-	  </xs:sequence>
-	</xs:extension>
-      </xs:complexContent>
-    </xs:complexType>
-    
-    <xs:complexType name="ncPowerDownResponseType">
-      <xs:complexContent>
-	<xs:extension base="tns:eucalyptusMessage">
-	  <xs:sequence>
-	  </xs:sequence>
-	</xs:extension>
-      </xs:complexContent>
-    </xs:complexType>
+ <xs:complexType name="ncDescribeSensorsType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string" />
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorIds" type="xs:string" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+  <xs:complexType name="ncDescribeSensorsResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsResources" type="tns:sensorsResourceType" />
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
 
     <xs:complexType name="ncAssignAddressType">
       <xs:complexContent>
@@ -511,6 +637,9 @@
     <xs:element name="ncDescribeResource" nillable="true" type="tns:ncDescribeResourceType"/>
     <xs:element name="ncDescribeResourceResponse" nillable="true" type="tns:ncDescribeResourceResponseType"/>
     
+    <xs:element name="ncDescribeSensors" nillable="true" type="tns:ncDescribeSensorsType"/>
+    <xs:element name="ncDescribeSensorsResponse" nillable="true" type="tns:ncDescribeSensorsResponseType"/>
+
     <xs:element name="ncRunInstance" nillable="true" type="tns:ncRunInstanceType"/>
     <xs:element name="ncRunInstanceResponse" nillable="true" type="tns:ncRunInstanceResponseType"/>
     
@@ -592,6 +721,11 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncDescribeSensorsResponse">
+  <wsdl:part element="tns:ncDescribeSensorsResponse" name="ncDescribeSensorsResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncStartNetwork">
   <wsdl:part element="tns:ncStartNetwork" name="ncStartNetwork">
   </wsdl:part>
@@ -664,6 +798,11 @@
 
 <wsdl:message name="ncDescribeResource">
   <wsdl:part element="tns:ncDescribeResource" name="ncDescribeResource">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncDescribeSensors">
+  <wsdl:part element="tns:ncDescribeSensors" name="ncDescribeSensors">
   </wsdl:part>
 </wsdl:message>
 
@@ -773,6 +912,12 @@
     <wsdl:output message="tns:ncDescribeResourceResponse" name="ncDescribeResourceResponse">
     </wsdl:output>
   </wsdl:operation>
+  <wsdl:operation name="ncDescribeSensors">
+    <wsdl:input message="tns:ncDescribeSensors" name="ncDescribeSensors">
+    </wsdl:input>
+    <wsdl:output message="tns:ncDescribeSensorsResponse" name="ncDescribeSensorsResponse">
+    </wsdl:output>
+  </wsdl:operation> 
     
 </wsdl:portType>
 
@@ -928,9 +1073,18 @@
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
+
+<wsdl:operation name="ncDescribeSensors">
+    <soap:operation soapAction="EucalyptusNC#ncDescribeSensors" style="document"/>
+    <wsdl:input name="ncDescribeSensors">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncDescribeSensorsResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
 </wsdl:binding>
 
-  
 <wsdl:service name="EucalyptusNC">
   <wsdl:port binding="tns:EucalyptusNCSoapBinding" name="EucalyptusNCPort">
     <soap:address location="http://spinner.cs.ucsb.edu:9090/axis2/services/EucalyptusNC"/>

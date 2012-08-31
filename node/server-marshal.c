@@ -1,65 +1,68 @@
 // -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
-/*
-Copyright (c) 2009  Eucalyptus Systems, Inc.	
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by 
-the Free Software Foundation, only version 3 of the License.  
- 
-This file is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.  
-
-You should have received a copy of the GNU General Public License along
-with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
-Please contact Eucalyptus Systems, Inc., 130 Castilian
-Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/> 
-if you need additional information or have any questions.
-
-This file may incorporate work covered under the following copyright and
-permission notice:
-
-  Software License Agreement (BSD License)
-
-  Copyright (c) 2008, Regents of the University of California
-  
-
-  Redistribution and use of this software in source and binary forms, with
-  or without modification, are permitted provided that the following
-  conditions are met:
-
-    Redistributions of source code must retain the above copyright notice,
-    this list of conditions and the following disclaimer.
-
-    Redistributions in binary form must reproduce the above copyright
-    notice, this list of conditions and the following disclaimer in the
-    documentation and/or other materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
-  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
-  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
-  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
-  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
-  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
-  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
-  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
-  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
-  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
-  ANY SUCH LICENSES OR RIGHTS.
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -957,6 +960,89 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
     return response;
 }
 
+adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors_t* ncDescribeSensors, const axutil_env_t *env)
+{
+    int result = ERROR;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    adb_ncDescribeSensorsType_t * input          = adb_ncDescribeSensors_get_ncDescribeSensors(ncDescribeSensors, env);
+    adb_ncDescribeSensorsResponse_t * response   = adb_ncDescribeSensorsResponse_create(env);
+    adb_ncDescribeSensorsResponseType_t * output = adb_ncDescribeSensorsResponseType_create(env);
+
+    // get standard fields from input
+    axis2_char_t * correlationId = adb_ncDescribeSensorsType_get_correlationId(input, env);
+    axis2_char_t * userId = adb_ncDescribeSensorsType_get_userId(input, env);
+
+    // get operation-specific fields from input
+    int instIdsLen = adb_ncDescribeSensorsType_sizeof_instanceIds(input, env);
+    char ** instIds = malloc (sizeof(char *) * instIdsLen);
+    if (instIds == NULL) {
+        logprintfl (EUCAERROR, "out of memory for 'instIds' in 'ncDescribeSensorsMarshal'\n");
+        goto reply;
+    }
+    for (int i=0; i<instIdsLen; i++) {
+        instIds[i] = adb_ncDescribeSensorsType_get_instanceIds_at(input, env, i);
+    }
+
+    int sensorIdsLen = adb_ncDescribeSensorsType_sizeof_sensorIds(input, env);
+    char ** sensorIds = malloc (sizeof(char *) * sensorIdsLen);
+    if (sensorIds == NULL) {
+        logprintfl (EUCAERROR, "out of memory for 'sensorIds' in 'ncDescribeSensorsMarshal'\n");
+        goto reply;
+    }
+    for (int i=0; i<sensorIdsLen; i++) {
+        sensorIds[i] = adb_ncDescribeSensorsType_get_sensorIds_at(input, env, i);
+    }
+
+    // eventlog("NC", userId, correlationId, "DescribeSensors", "begin");
+    { // do it
+	    ncMetadata meta;
+	    EUCA_MESSAGE_UNMARSHAL(ncDescribeSensorsType, input, (&meta));
+
+        sensorResource **outResources;
+        int outResourcesLen;
+        
+        int error = doDescribeSensors (&meta, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
+
+        if (error) {
+            logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
+
+        } else {
+
+            // set standard fields in output
+            adb_ncDescribeSensorsResponseType_set_correlationId(output, env, correlationId);
+            adb_ncDescribeSensorsResponseType_set_userId(output, env, userId);
+
+            // set operation-specific fields in output                                                                                                                      
+            for (int i=0; i<outResourcesLen; i++) {
+                adb_sensorsResourceType_t * resource = copy_sensor_resource_to_adb (env, outResources[i]);
+                if (outResources[i])
+                    free(outResources[i]);
+                adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);
+            }
+            if (outResourcesLen)
+                free (outResources);
+            
+            result = OK; // success
+        }
+    }
+    // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
+
+ reply:
+    
+    if (result == ERROR) {
+        adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
+    } else {
+        adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
+    }
+    
+    // set response to output
+    adb_ncDescribeSensorsResponse_set_ncDescribeSensorsResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    return response;
+}
+
 /***********************
  template for future ops
  ***********************
@@ -978,7 +1064,7 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
         ncMetadata meta = { correlationId, userId };
 
         int error = doOPERATION (&meta, instanceId, ...
-    
+
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doOPERATION() failed error=%d\n", error);
             adb_ncOPERATIONResponseType_set_return(output, env, AXIS2_FALSE);
@@ -995,7 +1081,7 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
     // set response to output
     adb_ncOPERATIONResponse_set_ncOPERATIONResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
-    
+
     eventlog("NC", userId, correlationId, "OPERATION", "end");
     return response;
 */
