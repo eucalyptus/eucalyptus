@@ -271,17 +271,13 @@ public class DescribeSensorsType extends CloudClusterMessage {
  
     def DescribeSensorsType(){}
     
-    def DescribeSensorsType (Integer historySize, Integer collectioIntervalTimeMs, ArrayList<String> sensorIds, ArrayList<String> instanceIds ) {
+    def DescribeSensorsType (Integer historySize, Integer collectionIntervalTimeMs, ArrayList<String> sensorIds, ArrayList<String> instanceIds ) {
 	this.historySize = historySize;
 	this.collectionIntervalTimeMs = collectionIntervalTimeMs;
 	this.sensorIds = sensorIds;
 	this.instanceIds = instanceIds;
     }
 
-    @Override
-    public String toString( ) {
-	return "DescribeSensorsType ${historySize} ${collectionIntervalTimeMs} ${sensorIds} ${instanceIds}";
-      }
 }
 
 public class DescribeSensorsResponseType extends CloudClusterMessage {

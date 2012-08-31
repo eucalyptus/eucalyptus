@@ -28,6 +28,8 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 
 import com.google.common.collect.Lists;
@@ -53,7 +55,7 @@ public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsTyp
 	    DescribeSensorsType msg = new DescribeSensorsType(this.historySize, this.collectionIntervalTimeMs, sensorIds, instanceIds);
 	    
 	    try {
-		msg.setUser(Accounts.lookupUserById(Account.SYSTEM_ACCOUNT));
+		msg.setUser(Accounts.lookupSystemAdmin());
 	    } catch (AuthException e) {
 		LOG.error("Unable to find the system user", e);
 	    }
@@ -77,6 +79,13 @@ public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsTyp
 	return new DescribeSensorCallback(this.historySize, this.collectionIntervalTimeMs, this.sensorIds, this.instanceIds);
     }
 
+    
+    @Override
+    public void fireException( Throwable e ) {
+      LOG.debug( "Request failed: " + LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
+      Logs.extreme( ).error( e, e );
+    }
+    
     @Override
     public void fire(DescribeSensorsResponseType msg) {
 	
