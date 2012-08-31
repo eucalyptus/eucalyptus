@@ -74,11 +74,13 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
+    },
 
-      // attach action
+    _create : function() { 
+      var thisObj = this;
       $("#sgroups-selector").change( function() { thisObj.reDrawTable() } );
 
-      $tmpl = $('html body').find('.templates #sgroupDelDlgTmpl').clone();
+      var $tmpl = $('html body').find('.templates #sgroupDelDlgTmpl').clone();
       $del_dialog = $($tmpl.render($.i18n.map));
 
       this.delDialog = $del_dialog.eucadialog({
@@ -192,9 +194,6 @@
         $('#allow-group').val('');
         thisObj._refreshRulesList();
       });
-    },
-
-    _create : function() { 
     },
 
     _destroy : function() {

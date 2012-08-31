@@ -65,7 +65,10 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
+    },
 
+    _create : function() { 
+      var thisObj = this;
       var $tmpl = $('html body').find('.templates #keypairDelDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       var $del_dialog = $rendered.children().first();
@@ -109,9 +112,6 @@
         help : {title: help_keypair['dialog_add_title'], content: $add_help},
       });
       $add_dialog.eucadialog('onKeypress', 'key-name', createButtonId); 
-    },
-
-    _create : function() { 
     },
 
     _destroy : function() {

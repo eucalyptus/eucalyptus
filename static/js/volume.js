@@ -87,9 +87,12 @@
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+    },
 
+    _create : function() { 
+      var thisObj = this;
       // volume delete dialog start
-      $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
+      var $tmpl = $('html body').find('.templates #volumeDelDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $del_dialog = $rendered.children().first();
       var $del_help = $rendered.children().last();
@@ -239,108 +242,47 @@
        // volume create dialog end
     },
 
-    _create : function() { 
-    },
-
     _destroy : function() {
     },
 
     _initAddDialog : function(dfd) { // method should resolve dfd object
-      thisObj = this;
-      $.when(
-        $.ajax({
-          type:"GET",
-          url:"/ec2?Action=DescribeAvailabilityZones",
-          data:"_xsrf="+$.cookie('_xsrf'),
-          dataType:"json",
-          cache:false,
-          async:false,
-          success:
-           function(data, textStatus, jqXHR){
-              $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
-              if ( data.results ) {
-                if (data.results.length > 1)
-                  $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
-                for( res in data.results) {
-                  azName = data.results[res].name;
-                  $azSelector.append($('<option>').attr('value', azName).text(azName));
-                } 
-              } else {
-                notifyError(null, error_loading_azs_msg);
-                dfd.reject();
-              }
-           },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError(null, error_loading_azs_msg);
-              dfd.reject();
-            }
-      })).then(function (output){
-        $.ajax({
-          type:"GET",
-          url:"/ec2?Action=DescribeSnapshots",
-          data:"_xsrf="+$.cookie('_xsrf'),
-          dataType:"json",
-          async:false,
-          cache:false,
-          success:
-            function(data, textStatus, jqXHR){
-              $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
-              $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
-              if ( data.results ) {
-                for( res in data.results) {
-                  snapshot = data.results[res];
-                  if ( snapshot.status === 'completed' ) {
-                    $snapSelector.append($('<option>').attr('value', snapshot.id).attr('title', snapshot.volume_size).text(
-                      snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
-                  }
-                } 
-                dfd.resolve();
-              } else {
-                notifyError(null, error_loading_snapshots_msg);
-                dfd.reject();
-              }
-           },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError(null, error_loading_snapshots_msg);
-              dfd.reject();
-            }
-        });
-      }, function (output) { dfd.reject(); });
+      var thisObj = this;
+      var results = describe('zone');
+      var $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
+      if (results && results.length > 1)
+        $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
+      for( res in results) {
+        var azName = results[res].name;
+        $azSelector.append($('<option>').attr('value', azName).text(azName));
+      }
+     
+      results = describe('snapshot'); 
+      var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
+      $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
+      if ( results ) {
+        for( res in results) {
+          var snapshot = results[res];
+          if ( snapshot.status === 'completed' ) {
+            $snapSelector.append($('<option>').attr('value', snapshot.id).attr('title', snapshot.volume_size).text(
+               snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
+          }
+        } 
+      }
+      dfd.resolve();
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeInstances",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:false,
-        cache:false,
-        success:
-          function(data, textStatus, jqXHR){
-            $instanceSelector = $('#volume-attach-instance-selector').html('');
-            $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
-            if ( data.results ) {
-              for( res in data.results) {
-                instance = data.results[res];
-                if ( instance.state === 'running' ) {
-                  $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
-                }
-              }
-              dfd.resolve();
-            } else {
-              notifyError(null, error_loading_instances_msg);
-              dfd.reject();
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError(null, error_loading_instances_msg);
-            dfd.reject();
-          }
-      })
+      var $instanceSelector = $('#volume-attach-instance-selector').html('');
+      $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
+      var results = describe('instance');
+      if ( results ) {
+        for( res in results) {
+          var instance = results[res];
+          if ( instance.state === 'running' ) 
+            $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+        }
+      }
+      dfd.resolve();
     },
 
     _deleteListedVolumes : function () {

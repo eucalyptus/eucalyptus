@@ -77,9 +77,12 @@
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}}],
       });
       this.tableWrapper.appendTo(this.element);
+    },
 
+    _create : function() { 
+      var thisObj = this;
       // eip release dialog start
-      $tmpl = $('html body').find('.templates #eipReleaseDlgTmpl').clone();
+      var $tmpl = $('html body').find('.templates #eipReleaseDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $release_dialog = $rendered.children().first();
       var $release_help = $rendered.children().last();
@@ -139,9 +142,6 @@
          }},
        });
       // associate eip dialog end
-    },
-
-    _create : function() { 
     },
 
     _destroy : function() {
@@ -252,37 +252,17 @@
     },
 
     _initAssociateDialog : function(dfd) {  // should resolve dfd object
-      thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeInstances",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:false,
-        cache:false,
-        success:
-          function(data, textStatus, jqXHR){
-            $instanceSelector = thisObj.associateDialog.find('#eip-associate-dialog-instance-selector').html('');
-//            $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
-            if ( data.results ) {
-              for( res in data.results) {
-                instance = data.results[res];
-                if ( instance.state === 'running' ) {
-                  $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
-                }
-              }
-              dfd.resolve();
-            } else {
-              notifyError(null, error_loading_instances_msg);
-              dfd.reject();
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError(null, error_loading_instances_msg);
-            dfd.reject();
-          }
-      })
+      var thisObj = this;
+      var $instanceSelector = thisObj.associateDialog.find('#eip-associate-dialog-instance-selector').html('');
+      var results = describe('instance');
+      if ( results ) {
+        for( res in results) {
+          instance = results[res];
+          if ( instance.state === 'running' ) 
+            $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+        }
+      }
+      dfd.resolve();
     },
 
     _releaseAction : function() {
