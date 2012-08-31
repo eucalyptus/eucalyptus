@@ -35,7 +35,7 @@
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
-          alert("The server is not available");
+          notifyError(null, "The server is not available");
           location.href='/';
         }
       })).done(function(out){

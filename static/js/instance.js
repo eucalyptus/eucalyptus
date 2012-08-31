@@ -40,83 +40,69 @@
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
 
-      this._reloadData();
       this.element.add($instTable);
-       $.when( 
-        (function(){
-          var dfd = $.Deferred();
-          $.when(thisObj._getEmi())
-           .then(function(){thisObj._mapVolumeState()}, function(){ dfd.resolve();})
-           .then(function(){thisObj._mapIp()}, function(){dfd.resolve();})
-           .done(function(){dfd.resolve()})
-           .fail(function(){dfd.resolve()})
-          return dfd.promise(); 
-        })()
-       ).done(function(out){
-          thisObj.tableWrapper = $instTable.eucatable({
-          id : 'instances', // user of this widget should customize these options,
-          dt_arg : {
-            "sAjaxSource": "../ec2?Action=DescribeInstances",
-            "aoColumns": [
-              {
-                "bSortable": false,
-                "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-                "sWidth": "20px",
-              },
-              { // platform
-                "fnRender" : function(oObj) { 
-                   if (thisObj.emiToPlatform[oObj.aData.image_id])
-                     return thisObj.emiToPlatform[oObj.aData.image_id];
-                   else
-                     return "linux";
-                 }
-              },
-              { "mDataProp": "id" },
-              { "mDataProp": "state" },
-              { "mDataProp": "image_id" }, 
-              { "mDataProp": "placement" }, // TODO: placement==zone?
-              { "mDataProp": "ip_address" },
-              { "mDataProp": "private_ip_address" },
-              { "mDataProp": "key_name" },
-              { "mDataProp": "group_name" },
+      this._getEmi();
+      thisObj.tableWrapper = $instTable.eucatable({
+        id : 'instances', // user of this widget should customize these options,
+        dt_arg : {
+          "sAjaxSource": "../ec2?Action=DescribeInstances",
+          "aoColumns": [
+            {
+              "bSortable": false,
+              "fnRender": function(oObj) { return '<input type="checkbox"/>' },
+              "sWidth": "20px",
+            },
+            { // platform
+              "fnRender" : function(oObj) { 
+               if (thisObj.emiToPlatform[oObj.aData.image_id])
+                 return thisObj.emiToPlatform[oObj.aData.image_id];
+               else
+                 return "linux";
+               }
+            },
+            { "mDataProp": "id" },
+            { "mDataProp": "state" },
+            { "mDataProp": "image_id" }, 
+            { "mDataProp": "placement" }, // TODO: placement==zone?
+            { "mDataProp": "ip_address" },
+            { "mDataProp": "private_ip_address" },
+            { "mDataProp": "key_name" },
+            { "mDataProp": "group_name" },
             // output creation time in browser format and timezone
-              { "fnRender": function(oObj) { d = new Date(oObj.aData.launch_time); return d.toLocaleString(); } },
-              {
-                "bVisible": false,
-                "mDataProp": "root_device_type"
-              },
-            ]
-          },
-          text : {
-            header_title : instance_h_title,
-            create_resource : instance_create,
-            resource_found : instance_found,
-          },
-          menu_actions : function(args){
-            return thisObj._createMenuActions(); 
-          },
-          help_click : function(evt) {
-            // TODO: make this a reusable operation
-            thisObj._flipToHelp(evt,$instHelp);
-          },
-          draw_cell_callback : function(row, col, val){
-            if(col===4){
-              if(!thisObj.emiToManifest[val])
-                return val; // in case of error, print EMI
-              else
-                return thisObj.emiToManifest[val];
-            }else
-              return val;
-          },
-        }) //end of eucatable
-        thisObj.tableWrapper.appendTo(thisObj.element);
-
-
-
-      }); // end of done()
+            { "fnRender": function(oObj) { d = new Date(oObj.aData.launch_time); return d.toLocaleString(); } },
+            {
+              "bVisible": false,
+              "mDataProp": "root_device_type"
+            },
+          ]
+        },
+        text : {
+          header_title : instance_h_title,
+          create_resource : instance_create,
+          resource_found : instance_found,
+        },
+        menu_actions : function(args){
+          return thisObj._createMenuActions(); 
+        },
+        help_click : function(evt) {
+          // TODO: make this a reusable operation
+          thisObj._flipToHelp(evt,$instHelp);
+        },
+        draw_cell_callback : function(row, col, val){
+          if(col===4){
+            if(!thisObj.emiToManifest[val])
+              return val; // in case of error, print EMI
+            else
+              return thisObj.emiToManifest[val];
+          }else
+            return val;
+        },
+      }) //end of eucatable
+      thisObj.tableWrapper.appendTo(thisObj.element);
     },
     _create : function() { 
       var thisObj = this;
+      thisObj._reloadData();
       var  $tmpl = $('html body').find('.templates #instanceTermDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $term_dialog = $rendered.children().first();
@@ -186,42 +172,21 @@
       });
     },
 
-    _destroy : function() {
-    },
+    _destroy : function() { },
 
-    descVolRepeat : null,
-    descAddrRepeat : null,  
-    _reloadData : function() {
-      var thisObj = this;
-      thisObj.descVolRepeat = runRepeat(function(){return thisObj._mapVolumeState(); },10000);
-      thisObj.descAddrRepeat = runRepeat(function(){return thisObj._mapIp();}, 10000);
-      /* to cancel later: cancelRepeat(thisObj.descVolRepeat);
-         to clear all repeat: clearRepeat();
-      */
-    },
-    
     _getEmi : function() {
       var thisObj = this;
-      return $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeImages",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:"false",
-        success: function(data, textStatus, jqXHR){
-          if (data.results) {
-            $.each(data.results, function(idx, img){
-               thisObj.emiToManifest[img['name']] = img['location'];
-               thisObj.emiToPlatform[img['name']] = img['platform'];
-            });
-            } else {
-                  ;//TODO: how to notify errors?
-            }
-        },
-        error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-           ;//TODO: how to notify errors?
-        }
+      var results = describe('image');
+      $.each(results, function(idx, img){
+        thisObj.emiToManifest[img['name']] = img['location'];
+        thisObj.emiToPlatform[img['name']] = img['platform'];
       });
+    },
+
+    _reloadData : function() {
+      var thisObj = this;
+      $('html body').eucadata('addCallback', 'volume', 'instance-vol-map', function(){return thisObj._mapVolumeState();});
+      $('html body').eucadata('addCallback', 'eip', 'instance-ip-map', function(){return thisObj._mapIp();});
     },
 
     _createMenuActions : function(args) {
@@ -323,57 +288,31 @@
     // TODO: should be auto-reloaded
     _mapVolumeState : function() {
       var thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeVolumes",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:"false",
-        success: function(data, textStatus, jqXHR){
-          if (data.results) {
-            thisObj.instVolMap = {};
-            $.each(data.results, function(idx, volume){
-              if (volume.attach_data && volume.attach_data['status']){
-                var inst = volume.attach_data['instance_id'].toLowerCase();
-                var state = volume.attach_data['status'];
-                var vol_id = volume.id;
-                if(!(inst in thisObj.instVolMap))
-                  thisObj.instVolMap[inst] = {};
-                var vols = thisObj.instVolMap[inst];
-                $.extend(vols, {vol_id:state})
-              } 
-            });
-          } else { ; }
-        },
-        error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-          ; }
+      var results = describe('volume');
+      $.each(results, function(idx, volume){
+        if (volume.attach_data && volume.attach_data['status']){
+          var inst = volume.attach_data['instance_id'].toLowerCase();
+          var state = volume.attach_data['status'];
+          var vol_id = volume.id;
+          if(!(inst in thisObj.instVolMap))
+            thisObj.instVolMap[inst] = {};
+          var vols = thisObj.instVolMap[inst];
+          $.extend(vols, {vol_id:state})
+        } 
       });
     },
 
     // TODO: should be auto-reloaded
     _mapIp : function() {
       var thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeAddresses",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:"false",
-        success: function(data, textStatus, jqXHR){
-          if (data.results) {
-            thisObj.instIpMap = {};
-            $.each(data.results, function(idx, addr){
-              if (addr['instance_id'] && addr['instance_id'].length > 0){
-                var instId = addr['instance_id'];
-                instId = instId.substring(0, 10); 
-                instId = instId.toLowerCase();
-                thisObj.instIpMap[instId] = addr['public_ip'];
-              }
-            });
-          }else{ ; }
-        },
-        error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-          ; }
+      var results = describe('eip');
+      $.each(results, function(idx, addr){
+        if (addr['instance_id'] && addr['instance_id'].length > 0){
+          var instId = addr['instance_id'];
+          instId = instId.substring(0, 10); 
+          instId = instId.toLowerCase();
+          thisObj.instIpMap[instId] = addr['public_ip'];
+        }
       });
     },
 

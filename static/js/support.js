@@ -62,6 +62,10 @@ function S4() {
   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }
 
+function getRandomInt (min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 function notifySuccess(title, message) {
   $('html body').find(DOM_BINDING['notification']).notification('success', title, message);
 }
@@ -101,15 +105,15 @@ function _delayedExec(cbName, callback){
   }
 }
 
-/****** Public Methods *********/
-function runRepeat(callback, millisec){
+function runRepeat(callback, millisec, startNow){
   var cbName = null; 
   do{
     cbName = 'q-'+S4()+'-'+S4();
   }while(cbName in _rqueue);
   _rqueue[cbName] = millisec;
+  if(startNow)
+    callback.apply(this);
   setTimeout(function(){ return _delayedExec(cbName, callback);}, millisec);
-  
   return cbName;
 }
 
@@ -121,3 +125,7 @@ function clearRepeat() {
   _rqueue = {}; 
 }
     
+function describe(resource){
+  return $('html body').eucadata('get', resource);
+}
+

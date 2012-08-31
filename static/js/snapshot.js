@@ -88,9 +88,12 @@
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
+    },
 
+    _create : function() { 
+      var thisObj = this;
       // snapshot delete dialog start
-      $tmpl = $('html body').find('.templates #snapshotDelDlgTmpl').clone();
+      var $tmpl = $('html body').find('.templates #snapshotDelDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $del_dialog = $rendered.children().first();
       var $del_help = $rendered.children().last();
@@ -129,10 +132,6 @@
            return dfd.promise();
          }},
        });
-      // create snapshot dialog end
-    },
-
-    _create : function() { 
     },
 
     _destroy : function() {
@@ -150,35 +149,16 @@
 
     _initCreateDialog : function(dfd) { // method should resolve dfd object
       thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=DescribeVolumes",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:false,
-        cache:false,
-        success:
-          function(data, textStatus, jqXHR){
-            $volSelector = thisObj.createDialog.find('#snapshot-create-volume-selector').html('');
-            if ( data.results ) {
-              for( res in data.results) {
-                volume = data.results[res];
-                if ( volume.status === 'in-use' || volume.status === 'available' ) {
-                  $volSelector.append($('<option>').attr('value', volume.id).text(volume.id));
-                }
-              }
-              dfd.resolve();
-            } else {
-              notifyError(null, error_loading_volumes_msg);
-              dfd.reject();
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError(null, error_loading_volumes_msg);
-            dfd.reject();
-          }
-      });
+      var $volSelector = thisObj.createDialog.find('#snapshot-create-volume-selector').html('');
+      var results = describe('volume');
+      if ( results ) {
+        for( res in results) {
+           var volume = results[res];
+           if ( volume.status === 'in-use' || volume.status === 'available' ) 
+             $volSelector.append($('<option>').attr('value', volume.id).text(volume.id));
+        }
+      }
+      dfd.resolve();
     },
 
     _getSnapshotId : function(rowSelector) {

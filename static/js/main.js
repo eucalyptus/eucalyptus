@@ -21,17 +21,44 @@
 (function($, eucalyptus) {
   eucalyptus.main= function(args) {
     $('html body').eucaevent();
-    eucalyptus.explorer();
-    $('html body').find(DOM_BINDING['header']).header({select: function(evt, ui){
-                                                                      $container.maincontainer("changeSelected",evt,ui);}, show_logo:true,show_navigation:true,show_user:true,show_help:true});
 
-    $('html body').find(DOM_BINDING['notification']).notification();
-    var $container = $('html body').find(DOM_BINDING['main']);
-    $container.maincontainer();
-    $('html body').find(DOM_BINDING['explorer']).explorer({select: function(evt, ui){ 
+    // TODO: is this the right place to check online status?
+    $('html body').eucadata();
+    $.when( 
+      (function(){ 
+        var dfd = $.Deferred();
+        var waitSec = 10;
+        var numCheck = 0;
+        var token = runRepeat( function (){
+          if($('html body').eucadata('getStatus') === 'online'){
+            cancelRepeat(token);
+            dfd.resolve();
+          }else{
+            if((numCheck++)*100 > waitSec*1000){
+              cancelRepeat(token);
+              dfd.reject();
+            }
+          }
+        }, 100, true);
+        return dfd.promise();
+      })()
+    ).done(function(){
+      eucalyptus.explorer();
+      $('html body').find(DOM_BINDING['header']).header({select: function(evt, ui){
+         $container.maincontainer("changeSelected",evt,ui);}, show_logo:true,show_navigation:true,show_user:true,show_help:true});
+
+      $('html body').find(DOM_BINDING['notification']).notification();
+      var $container = $('html body').find(DOM_BINDING['main']);
+      $container.maincontainer();
+      $('html body').find(DOM_BINDING['explorer']).explorer({select: function(evt, ui){ 
                                                                       $container.maincontainer("changeSelected",evt, ui);
                                                                    }});
-    $('html body').find(DOM_BINDING['footer']).footer();
+      $('html body').find(DOM_BINDING['footer']).footer();}
+    ).fail(function(){
+        //TODO: what's the appropriate error message and the popup?
+        alert("Cannot connect to the server. Contact your administrator");
+      }
+    );
   } // end of main
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
