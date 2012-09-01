@@ -68,7 +68,7 @@ abstract class CommandSupport {
   protected abstract void runCommand( Arguments arguments );
 
   private void setupLogging() {
-    final String threshold = arguments.getArgument( "db-host", null );
+    final String threshold = arguments.getArgument( "log-threshold", null );
     final String log4JThreshold;
     if ( threshold == null ) {
       log4JThreshold = LOGGING_THRESHOLD_DEFAULT;
