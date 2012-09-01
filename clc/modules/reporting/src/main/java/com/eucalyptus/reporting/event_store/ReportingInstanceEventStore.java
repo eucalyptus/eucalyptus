@@ -19,8 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-import javax.annotation.Nonnull;
+import java.util.Iterator;
+import java.util.Map;
 
+import javax.annotation.Nonnull;
+import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.reporting.Period;
 import com.google.common.base.Preconditions;
 
 public class ReportingInstanceEventStore extends EventStoreSupport {
@@ -90,4 +96,60 @@ public class ReportingInstanceEventStore extends EventStoreSupport {
             cumulativeNetOutgoingMegsWithinZone,
             cumulativeNetOutgoingMegsPublicIp ) );
   }
+  
+  public static class InstanceEventTuple
+  {
+	  private final ReportingInstanceAttributeEvent attributeEvent;
+	  private final ReportingInstanceUsageEvent usageEvent;
+	  
+	  public InstanceEventTuple(ReportingInstanceAttributeEvent attributeEvent,
+			  ReportingInstanceUsageEvent usageEvent)
+	  {
+		  this.attributeEvent = attributeEvent;
+		  this.usageEvent = usageEvent;
+	  }
+	  
+	  public ReportingInstanceAttributeEvent getAttributeEvent()
+	  {
+		  return attributeEvent;
+	  }
+	  
+	  public ReportingInstanceUsageEvent getUsageEvent()
+	  {
+		  return usageEvent;
+	  }
+  }
+
+  private static class InstanceEventIterator
+  	implements Iterator<InstanceEventTuple>
+  {
+
+	@Override
+	public boolean hasNext()
+	{
+		return false;
+	}
+
+	@Override
+	public InstanceEventTuple next()
+	{
+		return null;
+	}
+
+	@Override
+	public void remove()
+	{
+	}
+	  
+  }
+  
+  /**
+   * Read through all events, in order, starting from the first event.
+   */
+  public Iterator<InstanceEventTuple> scanEvents()
+  {
+	  //final EntityTransaction db = Entities.get(event);
+	  return null;
+  }
+
 }
