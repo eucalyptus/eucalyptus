@@ -19,35 +19,28 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
-
-import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_usage_events")
 public class ReportingVolumeUsageEvent
-	extends AbstractPersistent 
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false)
 	protected String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	protected Long timestampMs;
 	@Column(name="cumulative_megs_read", nullable=true)
 	protected Long cumulativeMegsRead;
 	@Column(name="cumulative_megs_written", nullable=true)
 	protected Long cumulativeMegsWritten;
 
-
 	protected ReportingVolumeUsageEvent()
 	{
-		//hibernate will override these thru reflection despite finality
-		this.uuid = null;
-		this.timestampMs = null;
-		this.cumulativeMegsRead = null;
-		this.cumulativeMegsWritten = null;
 	}
 
 	ReportingVolumeUsageEvent(String uuid, Long timestampMs,
@@ -68,11 +61,6 @@ public class ReportingVolumeUsageEvent
 		return uuid;
 	}
 	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
-	}
-	
 	/**
 	 * @return Can return null, which indicates unknown usage and not zero usage.
 	 */
@@ -87,6 +75,13 @@ public class ReportingVolumeUsageEvent
 	public Long getCumulativeMegsWritten()
 	{
 		return cumulativeMegsWritten;
+	}
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.relation( ReportingVolumeCreateEvent.class, "uuid", uuid )
+				.set();
 	}
 
 	@Override
