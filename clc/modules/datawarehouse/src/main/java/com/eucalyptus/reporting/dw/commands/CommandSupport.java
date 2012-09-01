@@ -48,19 +48,18 @@ abstract class CommandSupport {
   private static final String LOGGING_THRESHOLD_DEBUG = Level.DEBUG.toString();
 
   private final Arguments arguments;
-  private final Logger logger = Logger.getLogger( this.getClass() );
 
   public CommandSupport( final Arguments arguments ) {
     this.arguments = arguments;
   }
 
   protected final void run() {
-    setupLogging();
-    setupPersistenceContext();
     try {
+      setupLogging();
+      setupPersistenceContext();
       runCommand( arguments );
     } catch ( Exception e ) {
-      logger.error( "Error processing command", e );
+      Logger.getLogger( this.getClass() ).error( "Error processing command", e );
       System.exit(1);
     }
   }
