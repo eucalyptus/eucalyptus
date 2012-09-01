@@ -100,8 +100,8 @@
          id: 'volumes-delete',
          title: volume_dialog_del_title,
          buttons: {
-           'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.dialog("close");}},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
@@ -115,8 +115,8 @@
          id: 'volumes-detach',
          title: volume_dialog_detach_title,
          buttons: {
-           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.dialog("close");}},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.dialog("close");}} 
+           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
          help: {title: help_volume['dialog_detach_title'], content: $detach_help},
        });
@@ -136,10 +136,10 @@
                 instanceId = $attach_dialog.find('#volume-attach-instance-selector').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
                 thisObj._attachVolume(volumeId, instanceId, device);
-                $attach_dialog.dialog("close");
+                $attach_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
          },
          help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
          on_open: {spin: true, callback: function(args) {
@@ -175,10 +175,10 @@
                 volumeId = $snapshot_dialog.find('#snapshot-create-volume-selector').val();
                 description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
                 thisObj._createSnapshot(volumeId, description);
-                $snapshot_dialog.dialog("close");
+                $snapshot_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
          help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
        });
@@ -214,10 +214,10 @@
               }
               if ( isValid ) {
                 thisObj._createVolume(size, az, $snapshot.val());
-                $add_dialog.dialog("close");
+                $add_dialog.eucadialog("close");
               } 
             }},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
          },
          help: {title: help_volume['dialog_add_title'], content: $add_help},
          on_open: {spin: true, callback: function(args) {

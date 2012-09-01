@@ -237,6 +237,17 @@
       $div.html(note);
       this._note_divs.push(div_id);
     },
+
+    buttonOnChange : function(evtSrc, buttonId, check){
+      var thisObj = this;
+      evtSrc.change( function(e){
+        var button = thisObj.element.parent().find('#'+buttonId.replace('#',''));
+        if (isFunction(check) && check.call(evtSrc))
+          button.removeAttr('disabled').removeClass('ui-state-disabled');
+        else
+          button.prop('disabled',true).addClass('ui-state-disabled');
+      });
+    },
    
     onChange : function(evt_src_id, button_id, checkFunction) {
       var thisObj = this;

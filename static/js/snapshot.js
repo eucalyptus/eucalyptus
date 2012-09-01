@@ -101,8 +101,8 @@
          id: 'snapshots-delete',
          title: snapshot_delete_dialog_title,
          buttons: {
-           'delete': {text: snapshot_dialog_del_btn, click: function() { thisObj._deleteListedSnapshots(); $del_dialog.dialog("close");}},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'delete': {text: snapshot_dialog_del_btn, click: function() { thisObj._deleteListedSnapshots(); $del_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: {title: help_volume['dialog_delete_title'], content: $del_help},
        });
@@ -120,10 +120,10 @@
                 volumeId = $snapshot_dialog.find('#snapshot-create-volume-selector').val();
                 description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
                 thisObj._createSnapshot(volumeId, description);
-                $snapshot_dialog.dialog("close");
+                $snapshot_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
          help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
          on_open: {spin: true, callback: function(args) {

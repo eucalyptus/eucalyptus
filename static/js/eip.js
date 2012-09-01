@@ -90,8 +90,8 @@
          id: 'eips-release',
          title: eip_release_dialog_title,
          buttons: {
-           'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.dialog("close");}},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.dialog("close");}}
+           'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.eucadialog("close");}}
          },
          help: {title: help_volume['dialog_delete_title'], content: $release_help},
        });
@@ -107,10 +107,10 @@
          buttons: {
            'create': { text: eip_allocate_dialog_allocate_btn, click: function() {
                thisObj._allocateIps($eip_allocate_dialog.find('#eip-allocate-count-selector').val());
-               $eip_allocate_dialog.dialog("close");
+               $eip_allocate_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
          },
          help: {title: help_volume['dialog_eip_create_title'], content: $eip_allocate_dialog_help},
        });
@@ -129,10 +129,10 @@
                  $eip_associate_dialog.find("#eip-to-associate").html(),
                  $eip_associate_dialog.find('#eip-associate-dialog-instance-selector').val()
                );
-               $eip_associate_dialog.dialog("close");
+               $eip_associate_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.dialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
          help: {title: help_volume['dialog_eip_associate_title'], content: $eip_associate_dialog_help},
          on_open: {spin: true, callback: function(args) {

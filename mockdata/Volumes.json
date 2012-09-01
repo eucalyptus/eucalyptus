@@ -68,8 +68,8 @@
       "connection_cls": null
     },
     "attach_data": {
-      "status": "attaching",
-      "instance_id": "i-1231231",
+      "status": "attached",
+      "instance_id": "i-26A543C6",
       "__obj_name__": "AttachmentSet",
       "attachmentSet": "",
       "attach_time": null,

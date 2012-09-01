@@ -78,8 +78,8 @@
          id: 'keys-delete',
          title: keypair_dialog_del_title,
          buttons: {
-           'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.dialog("close");}},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: {title: help_keypair['dialog_delete_title'], content: $del_help}, 
        });
@@ -99,7 +99,7 @@
                       var keyName = $.trim($add_dialog.find('#key-name').val());
                       var keyPattern = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
                       if (keyPattern.test(keyName)){
-                        $add_dialog.dialog("close"); 
+                        $add_dialog.eucadialog("close"); 
                         thisObj._addKeyPair(keyName);
                       }
                       else{

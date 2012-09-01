@@ -87,8 +87,8 @@
          id: 'sgroups-delete',
          title: sgroup_dialog_del_title,
          buttons: {
-           'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.dialog("close");}},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.dialog("close");}} 
+           'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          }
        });
 
@@ -153,9 +153,9 @@
                          this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
                      }
                );
-              $add_dialog.dialog("close");
+              $add_dialog.eucadialog("close");
             }},
-        'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.dialog("close");}},
+        'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
       });
