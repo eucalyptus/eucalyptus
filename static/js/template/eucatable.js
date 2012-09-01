@@ -51,6 +51,7 @@
       this._decorateActionMenu();
       this._decorateLegendPagination();
       this._addActions();
+ 
     },
 
     _create : function() {
@@ -67,16 +68,8 @@
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
-      try{
-          thisObj._drawCallback(oSettings);
-        }catch(e){
-          // for some reason, dom to look for data is changed between calls (TODO: figure out why) 
-          // exception handler is to catch the case
-          var obj= thisObj.element.children().first().data('eucatable');
-          if(obj)
-            obj._drawCallback(oSettings);
-        }
-      }
+        thisObj._drawCallback(oSettings);
+     }
 
       var sDom = '<"table_'+ this.options.id + '_header">';
       if(thisObj.options.filters){
@@ -100,51 +93,40 @@
     _drawCallback : function(oSettings) {
       var thisObj = this;
       $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
-
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
-        $checkAll.click( function (e) {
-          var checked = $(this).is(':checked');
-          thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
-            if(checked)
-              $(innerTr).addClass('selected-row');
-            else
-              $(innerTr).removeClass('selected-row');
+        if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
+          $checkAll.unbind('click').bind('click', function (e) {
+            var checked = $(this).is(':checked');
+            thisObj.element.find('table tbody tr').each(function(innerIdx, innerTr){
+              if(checked)
+                $(innerTr).addClass('selected-row');
+              else
+                $(innerTr).removeClass('selected-row');
+            });
           });
-        });
+        }
       }); 
+
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
-        $currentRow = $(tr);
-        if (thisObj.options.td_hover_actions) {
-          $.each(thisObj.options.td_hover_actions, function (key, value) {
-            $td = $currentRow.find('td:eq(' + value[0] +')');
-            // first check if there is anything there
-            if ($td.html() != '') {
-              $td.hover( function(e) {
-                value[1].call(this, e);
-              });
-              $td.click( function(e) {
-                e.stopPropagation();
-              });
-            }
-          });
-        };
-        // add generic row handler
-        $currentRow.click( function (e) {
+        var $currentRow = $(tr);
+        if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
+          $currentRow.unbind('click').bind('click', function (e) {
           // checked/uncheck on checkbox
-          var $selectedRow = $(e.target).parents('tr');
-          $selectedRow.toggleClass('selected-row');
-          $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
-          if($selectedRow.hasClass('selected-row'))
-            $rowCheckbox.attr('checked', true);
-          else
-            $rowCheckbox.attr('checked', false);
+            var $selectedRow = $currentRow; //$(e.target).parents('tr');
+            $selectedRow.toggleClass('selected-row');
+            $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
+            if($selectedRow.hasClass('selected-row'))
+              $rowCheckbox.attr('checked', true);
+            else
+              $rowCheckbox.attr('checked', false);
 
-          e.stopPropagation();
-          thisObj._onRowClick();
-          thisObj._trigger('row_click', e);
-        });
+            e.stopPropagation();
+            thisObj._onRowClick();
+            thisObj._trigger('row_click', e);
+          });
+        }
 
         if (thisObj.options.context_menu_actions) {
           rID = 'ri-'+S4()+S4();
@@ -158,10 +140,10 @@
             }
           });
         }
-      });    
-
-      if(thisObj.options.draw_cell_callback){
-        this.element.find('table tbody').find('td').each(function(index, td) { 
+      }); 
+      
+      if(thisObj.options.draw_cell_callback && thisObj.table){
+        thisObj.element.find('table tbody').find('td').each(function(index, td) { 
           var pos = thisObj.table.fnGetPosition(td);
           var oldVal = $(td).html();
           var newVal = thisObj.options.draw_cell_callback(pos[0], pos[1], $(td).html());

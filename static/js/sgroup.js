@@ -107,7 +107,7 @@
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
               thisObj._storeRule();    // flush rule from form into array
               var actions = new Array();
-              for (rule in thisObj.rulesList)
+              for (rule in thisObj.rulesList){
                   alert("adding rule for port: "+thisObj.rulesList[rule].port);
                   actions.push(function() {
                                 thisObj._addIngressRule(name,
@@ -118,13 +118,14 @@
                                        thisObj.rulesList[rule].fromGroup
                                 )
                               });
+              }
 //              $(function() {
 //                 $.when.apply($, actions).done(function() {
 //                     alert("all done");
 //                 });
 //              });
               var dfd = $.Deferred();
-              $.when(thisObj._addSecurityGroup(name, desc))
+ /*
                   $.ajax({
                       type:"GET",
                       url:"/ec2?Action=CreateSecurityGroup",
@@ -137,7 +138,8 @@
                         nofityError(null, error_creating_group_msg);
                         dfd.reject();
                       }
-                  });
+                  });*/
+  /*             $.when(thisObj._addSecurityGroup(name, desc))
                .then(function(data) {
                          if (data.results && data.results.status == true) {
                              alert("num actions = "+actions.length);
@@ -152,7 +154,7 @@
                      function(jqXHR, textStatus, errorThrown){
                          this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
                      }
-               );
+               );*/
               $add_dialog.eucadialog("close");
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
