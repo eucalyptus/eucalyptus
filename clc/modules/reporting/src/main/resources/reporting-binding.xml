@@ -59,5 +59,16 @@
         <structure name="ExportDataResult" field="result" type="com.eucalyptus.reporting.service.ExportDataResultType"/>
         <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
     </mapping>
+    <mapping class="com.eucalyptus.reporting.service.GenerateReportResultType" abstract="true">
+        <value name="Data" field="data" usage="required"/>
+    </mapping>
+    <mapping name="GenerateReport" class="com.eucalyptus.reporting.service.GenerateReportType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+    </mapping>
+    <mapping name="GenerateReportResponse" class="com.eucalyptus.reporting.service.GenerateReportResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <structure name="GenerateReportResult" field="result" type="com.eucalyptus.reporting.service.GenerateReportResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
+    </mapping>
 
 </binding>

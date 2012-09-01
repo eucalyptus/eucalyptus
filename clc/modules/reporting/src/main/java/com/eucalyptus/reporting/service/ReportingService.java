@@ -30,7 +30,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 /**
  *
  */
-public class ReportingDataExportService {
+public class ReportingService {
 
   public ExportDataResponseType exportData( final ExportDataType request ) throws EucalyptusCloudException {
     final ExportDataResponseType reply = request.getReply();
@@ -44,6 +44,22 @@ public class ReportingDataExportService {
 
     final ReportingExport export = Export.export( request.getStartDate(), request.getEndDate() );
     reply.setResult( new ExportDataResultType(export ) );
+
+    return reply;
+  }
+
+  public GenerateReportResponseType generateReport( final GenerateReportType request ) throws EucalyptusCloudException {
+    final GenerateReportResponseType reply = request.getReply();
+    reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup();
+    final User requestUser = ctx.getUser( );
+
+    if ( !requestUser.isSystemAdmin() ) {
+      throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
+    }
+
+    //TODO generate report
+    reply.setResult( new GenerateReportResultType( "REPORT CONTENT HERE" ) );
 
     return reply;
   }
