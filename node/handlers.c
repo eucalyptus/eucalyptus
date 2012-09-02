@@ -218,43 +218,6 @@ print_running_domains (void)
 	logprintfl (EUCAINFO, "currently running/booting: %s\n", buf);
 }
 
-int check_libvirt_runtime() {
-    int rc, ret;
-    char cmd[MAX_PATH], libvirtd_script[MAX_PATH];
-
-    ret=0;
-    if (!check_file("/etc/init.d/libvirtd")) {
-        snprintf(libvirtd_script, MAX_PATH, "/etc/init.d/libvirtd");
-    } else {
-        // cannot perform check, ignore
-        return(0);
-    }
-    
-    snprintf(cmd, MAX_PATH, "%s %s status", nc_state.rootwrap_cmd_path, libvirtd_script);
-    rc = system(cmd);
-    if (rc) {
-        // determined that libvirt is down, try to bring it back
-        logprintfl(EUCAWARN, "check_libvirt_runtime(): determined that libvirtd is down, attempting to restart\n");
-        snprintf(cmd, MAX_PATH, "%s %s restart", nc_state.rootwrap_cmd_path, libvirtd_script);
-        rc = system(cmd);
-        if (rc) {
-            // couldn't bring it up, failure
-            logprintfl(EUCAERROR, "check_libvirt_runtime(): could not restart libvirtd (%s, %d)\n", cmd, rc);
-            ret=1;
-        } else {
-            snprintf(cmd, MAX_PATH, "%s %s status", nc_state.rootwrap_cmd_path, libvirtd_script);
-            rc = system(cmd);
-            if (rc) {
-                // tried to bring it up, but isn't running, failure
-                logprintfl(EUCAERROR, "check_libvirt_runtime(): restarted libvirtd still unavilable (%s, %d)\n", cmd, rc);
-                ret=1;
-            }
-        }
-    }
-
-    return(ret);
-}
-
 virConnectPtr *
 check_hypervisor_conn()
 {
@@ -263,9 +226,11 @@ check_hypervisor_conn()
     char * uri = NULL;
     int rc;
 
-    rc = check_libvirt_runtime();
-    if (rc) {
-        logprintfl(EUCAERROR, "check_hypervisor_conn(): libvirtd is down and this NC cannot restart: please check libvirtd configuration/status\n");
+    logprintfl (EUCADEBUG, "checking on the hypervisor\n");
+
+    if (call_hooks (NC_EVENT_PRE_HYP_CHECK, nc_state.home)) {
+        logprintfl (EUCAFATAL, "hooks prevented check on the hypervisor\n");
+        return NULL;
     }
 
     // we close the connection to hypervisor prophylactically 
@@ -641,13 +606,6 @@ monitoring_thread (void *arg)
             fclose(FP);
             rename (nfile, nfilefinal);
         }
-
-        /*
-        if (check_backing_store(&global_instances)!=OK) { // integrity check, cleanup of unused instances and shrinking of cache
-            logprintfl (EUCAERROR, "monitoring_thread(): error: integrity check of the backing store failed");
-            //            return ERROR_FATAL;
-        }
-        */
 
         copy_instances (); // copy global_instances to global_instances_copy
         sem_v (inst_sem);
@@ -1164,6 +1122,11 @@ static int init (void)
 		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
 		return ERROR_FATAL;
 	}
+
+    if (! check_hypervisor_conn ()) {
+        logprintfl (EUCAFATAL, "unable to contact hypervisor\n");
+        return ERROR_FATAL;
+    }
 
 	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
