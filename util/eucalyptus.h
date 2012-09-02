@@ -139,13 +139,14 @@ permission notice:
 #define MAX_PATH_SIZE 4096 // TODO: remove
 
 // NC hook events
-#define NC_EVENT_PRE_INIT    "euca-nc-pre-init"     // p1: eucalyptusHome
-#define NC_EVENT_POST_INIT   "euca-nc-post-init"    // p1: eucalyptusHome
-#define NC_EVENT_PRE_BOOT    "euca-nc-pre-boot"     // p1: instancePath
-#define NC_EVENT_ADOPTING    "euca-nc-pre-adopt"    // p1: instancePath
-#define NC_EVENT_PRE_CLEAN   "euca-nc-pre-clean"    // p1: instancePath
-#define NC_EVENT_PRE_ATTACH  "euca-nc-pre-attach"   // p1: volumeXmlPath
-#define NC_EVENT_POST_DETACH "euca-nc-post-detach"  // p1: volumeXmlPath
+#define NC_EVENT_PRE_INIT      "euca-nc-pre-init"      // p1: eucalyptusHome
+#define NC_EVENT_POST_INIT     "euca-nc-post-init"     // p1: eucalyptusHome
+#define NC_EVENT_PRE_HYP_CHECK "euca-nc-pre-hyp-check" // p1: eucalyptusHome
+#define NC_EVENT_PRE_BOOT      "euca-nc-pre-boot"      // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_ADOPTING      "euca-nc-pre-adopt"     // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_PRE_CLEAN     "euca-nc-pre-clean"     // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_PRE_ATTACH    "euca-nc-pre-attach"    // p1: eucalyptusHome p2: volumeXmlPath
+#define NC_EVENT_POST_DETACH   "euca-nc-post-detach"   // p1: eucalyptusHome p2: volumeXmlPath
 
 #define MEGABYTE 1048576
 

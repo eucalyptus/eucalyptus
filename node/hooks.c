@@ -126,7 +126,7 @@ int call_hooks (const char * event_name, const char * param1)
             char cmd [MAX_PATH];
             snprintf (cmd, sizeof (cmd), "%s %s %s %s", entry_path, event_name, euca_path, param1?param1:"");
             ret = WEXITSTATUS (system (cmd));
-            logprintfl (EUCAINFO, "executed hook [%s %s%s%s] which returned %d\n", 
+            logprintfl (EUCADEBUG, "executed hook [%s %s%s%s] which returned %d\n", 
                         entry_name, 
                         event_name, 
                         param1?" ":"", 
