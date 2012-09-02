@@ -218,13 +218,6 @@ print_running_domains (void)
 	logprintfl (EUCAINFO, "currently running/booting: %s\n", buf);
 }
 
-static void 
-invalidate_hypervisor_conn()
-{
-    virConnectClose(nc_state.conn);
-    nc_state.conn = NULL;
-}
-
 int check_libvirt_runtime() {
     int rc, ret;
     char cmd[MAX_PATH], libvirtd_script[MAX_PATH];
@@ -275,7 +268,10 @@ check_hypervisor_conn()
         logprintfl(EUCAERROR, "check_hypervisor_conn(): libvirtd is down and this NC cannot restart: please check libvirtd configuration/status\n");
     }
 
-    //	if (nc_state.conn == NULL || (uri = virConnectGetURI(nc_state.conn)) == NULL) {
+    // we close the connection to hypervisor prophylactically 
+    // (experience shows that a connection may enter a bad state
+    // without any outward manifestation of that except libvirt
+    // invocations blocking indefinitely)
     if (nc_state.conn) {
         rc = virConnectClose(nc_state.conn);
         if (rc) {
@@ -283,7 +279,7 @@ check_hypervisor_conn()
         }
     }
     nc_state.conn = virConnectOpen (nc_state.uri);
-        //	}
+
     if (uri!=NULL)
         free (uri);
     sem_v (hyp_sem);
@@ -394,7 +390,6 @@ refresh_instance_info(	struct nc_state_t *nc,
                    old_state==PAUSED ||
                    old_state==SHUTDOWN) {
             // most likely the user has shut it down from the inside
-            invalidate_hypervisor_conn(); // to rule out libvirt badness, we'll restart the connection
             if (instance->retries) {
                 instance->retries--;
                 logprintfl (EUCAWARN, "[%s] warning: hypervisor failed to find domain, will retry %d more times\n", instance->instanceId, instance->retries);
@@ -804,7 +799,6 @@ void *startup_thread (void * arg)
 
             } else if (WEXITSTATUS(status) != 0) {
                 logprintfl (EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
-                invalidate_hypervisor_conn(); // guard against libvirtd connection badness
                 
             } else {
                 created = TRUE;
@@ -968,7 +962,7 @@ static int init (void)
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
 
-    // set up default signal handler for this child process (for SIGTERM)                                                            
+    // set up default signal handler for this child process (for SIGALRM)
     {
         struct sigaction newsigact;
         newsigact.sa_handler = SIG_IGN;
@@ -976,14 +970,6 @@ static int init (void)
         sigemptyset(&newsigact.sa_mask);
         sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
         sigaction(SIGALRM, &newsigact, NULL);
-    }
-    {
-        struct sigaction newsigact;
-        newsigact.sa_handler = SIG_IGN;
-        newsigact.sa_flags = 0;
-        sigemptyset(&newsigact.sa_mask);
-        sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
-        sigaction(SIGABRT, &newsigact, NULL);
     }
 
 	// read in configuration - this should be first!
