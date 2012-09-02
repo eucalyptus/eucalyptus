@@ -287,9 +287,12 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
         }
 #endif
 
-        //        pthread_mutex_unlock(&wreq_mutex); /* unlock for message exchange */
+        // There used to be a 'pthread_mutex_unlock(&wreq_mutex)' before curl invocation
+        // and a 'lock' after it, but under heavy load we were seeing failures inside
+        // libcurl code that would propagate to NC, implying lack of thread safety in
+        // the library. For now, we will serialize all curl operations, but in the future
+        // an approach to parallelizing Walrus downloads is necessary (TODO)
         result = curl_easy_perform (curl); /* do it */
-        //        pthread_mutex_lock(&wreq_mutex); /* relock for curl teardown */
         logprintfl (EUCADEBUG, "{%u} walrus_request: wrote %lld byte(s) in %ld write(s)\n", (unsigned int)pthread_self(), params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
