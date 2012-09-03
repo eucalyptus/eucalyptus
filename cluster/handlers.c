@@ -2639,7 +2639,7 @@ int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionInt
 
   int k = 0;
   * outResources [k] = malloc (sizeof (sensorResource));
-  sensor_set_instance_data ("i-666", sensorIds, sensorIdsLen, * outResources [k]);
+  sensor_get_dummy_instance_data (0L, "i-666", sensorIds, sensorIdsLen, (* outResources) + k, 1);
   k++;
 
   * outResourcesLen = k;

@@ -1547,7 +1547,7 @@ doDescribeSensors (struct nc_state_t *nc,
 		}
         
         * outResources [k] = malloc (sizeof (sensorResource));
-        sensor_set_instance_data (instance->instanceId, sensorIds, sensorIdsLen, * outResources [k]);
+        sensor_get_dummy_instance_data (0L, instance->instanceId, sensorIds, sensorIdsLen, (* outResources) + k, 1);
         k++;
 	}
     
