@@ -517,6 +517,21 @@ body {
   color: #02405f;
 }
 
+.checkbox-row {
+  padding-top: 3px;
+}
+
+.checkbox-row label {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  color: #02405f;
+}
+
+.checkbox-row input[type='checkbox'] {
+  margin: 0 2px 0 108px;
+  width: auto;
+}
+
 .input-field,
 .dataTables_filter input {
   background-color: #f3f6f9;
@@ -545,7 +560,7 @@ body {
 .password-help {
   color: #666;
   font-size: 11px;
-  margin: 20px 225px 25px 0;
+  margin: 15px 225px 30px 0;
   text-align: right;
 }
 
