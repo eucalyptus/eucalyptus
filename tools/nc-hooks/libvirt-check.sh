@@ -1,9 +1,7 @@
 #!/bin/bash
 # 
-# This hook is executed every time NC is about to perform an 
-# invocation to libvirt. Name of the event is:
-#
-#   euca-nc-pre-hyp-check <eucalyptus-home>
+# This hook is executed every time NC is about to perform a
+# request to libvirtd.
 #
 # The hook checks if libvirtd process is running and starts it
 # if it is not. This hook should only be installed on systems 

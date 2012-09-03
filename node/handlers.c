@@ -226,8 +226,6 @@ check_hypervisor_conn()
     char * uri = NULL;
     int rc;
 
-    logprintfl (EUCADEBUG, "checking on the hypervisor\n");
-
     if (call_hooks (NC_EVENT_PRE_HYP_CHECK, nc_state.home)) {
         logprintfl (EUCAFATAL, "hooks prevented check on the hypervisor\n");
         return NULL;
