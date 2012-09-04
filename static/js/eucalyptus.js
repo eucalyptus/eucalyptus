@@ -36,7 +36,7 @@
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
           notifyError(null, "The server is not available");
-          location.href='/';
+          logout();
         }
       })).done(function(out){
         // check cookie
@@ -51,8 +51,7 @@
               eucalyptus.main($.eucaData);
             },
 	    error: function(jqXHR, textStatus, errorThrown){
-              $.cookie('session-id','');
- 	      location.href='/';	   
+              logout();
 	    }
           });
         } else {

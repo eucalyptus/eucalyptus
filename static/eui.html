@@ -299,20 +299,30 @@
       <!-- Secruity Group table -->
       <script id="sgroupTblTmpl" type="text/x-jsrender">
         <div id="sgroups-wrapper">
-        <table id="sgroups" class="display">
-          <thead>
-            <tr>
-              <th>
-                <input type="checkbox" id="keys-check-all">
-              </th>
-              <th>{{!>sgroup_tbl_hdr_name}}</th>
-              <th>{{!>sgroup_tbl_hdr_description}}</th>
-              <th>{{!>sgroup_tbl_hdr_rules}}</th>
-            </tr>
-           </thead>
-           <tbody>
-          </tbody>
-        </table>
+          <div id="sgroups-table">
+            <table id="sgroups" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="keys-check-all">
+                  </th>
+                  <th>{{!>sgroup_tbl_hdr_name}}</th>
+                  <th>{{!>sgroup_tbl_hdr_description}}</th>
+                  <th>{{!>sgroup_tbl_hdr_rules}}</th>
+                </tr>
+               </thead>
+               <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div id="sgroup-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Security Group table -->
@@ -370,17 +380,8 @@
               </div>
               </p>
           </div>
-        </div>
-          <div id="sgroups-add-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: dialog_add_content}}
-            </div>
-            <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
-            </div>
-          </div>
-        </div>
 
+        </div>
       </script>
 
       <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
