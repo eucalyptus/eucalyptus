@@ -196,7 +196,7 @@ public class ConnectionHandler extends Thread {
 			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
 				 return errorMessage(query, rcode);
 
-			 addAdditional(response, flags);
+			 addAdditional(response, type, flags);
 
 			 if (queryOPT != null) {
 				 int optflags = (flags == FLAG_DNSSECOK) ? ExtendedFlags.DO : 0;
@@ -245,28 +245,28 @@ public class ConnectionHandler extends Thread {
 	}
 
 	private void
-	addGlue(Message response, Name name, int flags) {
-		RRset a = findExactMatch(name, Type.A, DClass.IN, true);
+	addGlue(Message response, Name name, int type, int flags) {
+		RRset a = findExactMatch(name, type, DClass.IN, true);
 		if (a == null)
 			return;
 		addRRset(name, response, a, Section.ADDITIONAL, flags);
 	}
 
 	private void
-	addAdditional2(Message response, int section, int flags) {
+	addAdditional2(Message response, int section, int type, int flags) {
 		Record [] records = response.getSectionArray(section);
 		for (int i = 0; i < records.length; i++) {
 			Record r = records[i];
 			Name glueName = r.getAdditionalName();
 			if (glueName != null)
-				addGlue(response, glueName, flags);
+				addGlue(response, glueName, type, flags);
 		}
 	}
 
 	private final void
-	addAdditional(Message response, int flags) {
-		addAdditional2(response, Section.ANSWER, flags);
-		addAdditional2(response, Section.AUTHORITY, flags);
+	addAdditional(Message response, int type, int flags) {
+		addAdditional2(response, Section.ANSWER, type, flags);
+		addAdditional2(response, Section.AUTHORITY, type, flags);
 	}
 
 	byte
