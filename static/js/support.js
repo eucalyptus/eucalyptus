@@ -129,3 +129,8 @@ function describe(resource){
   return $('html body').eucadata('get', resource);
 }
 
+function logout(){
+  $.cookie('session-id',''); 
+  location.href='/';
+}
+

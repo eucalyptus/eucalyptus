@@ -1,5 +1,7 @@
 import boto
 import json
+from boto.ec2.connection import EC2Connection
+from boto.ec2.regioninfo import RegionInfo
 
 from .botojsonencoder import BotoJsonEncoder
 from .clcinterface import ClcInterface
@@ -10,11 +12,12 @@ class BotoClcInterface(ClcInterface):
     conn = None
     saveclcdata = False
 
-    def __init__(self, clc_host, access_id, secret_key):
+    def __init__(self, clc_host, access_id, secret_key, token):
         #boto.set_stream_logger('foo')
-        self.conn = boto.connect_euca(host=clc_host,
-                                aws_access_key_id=access_id,
-                                aws_secret_access_key=secret_key, debug=0)
+        reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
+        self.conn = EC2Connection(access_id, secret_key, region=reg,
+                                  port=8773, path='/services/Eucalyptus',
+                                  is_secure=False, security_token=token, debug=0)
         self.conn.APIVersion = '2012-03-01'
 
     def __save_json__(self, obj, name):

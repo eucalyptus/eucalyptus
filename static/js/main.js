@@ -27,7 +27,7 @@
     $.when( 
       (function(){ 
         var dfd = $.Deferred();
-        var waitSec = 10;
+        var waitSec = 30;
         var numCheck = 0;
         var token = runRepeat( function (){
           if($('html body').eucadata('getStatus') === 'online'){
@@ -56,7 +56,8 @@
       $('html body').find(DOM_BINDING['footer']).footer();}
     ).fail(function(){
         //TODO: what's the appropriate error message and the popup?
-        alert("Cannot connect to the server. Contact your administrator");
+        alert("Cannot connect to the server. Contact your administrator.");
+        logout();
       }
     );
   } // end of main

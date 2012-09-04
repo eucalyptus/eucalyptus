@@ -30,7 +30,7 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.i18n.map));
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
       var $sgroupTable = $wrapper.children().first();
       var $sgroupHelp = $wrapper.children().last();
       this.baseTable = $sgroupTable;
@@ -64,7 +64,7 @@
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
                  "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
-        context_menu : function(state) { 
+        context_menu_actions : function(state) { 
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
                  "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
@@ -119,11 +119,6 @@
                                 )
                               });
               }
-//              $(function() {
-//                 $.when.apply($, actions).done(function() {
-//                     alert("all done");
-//                 });
-//              });
               var dfd = $.Deferred();
  /*
                   $.ajax({
