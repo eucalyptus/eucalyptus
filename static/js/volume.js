@@ -83,7 +83,7 @@
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $volHelp);
         },
-        filters : [{name:"vol_state", options: ['all','attached','detached'], filter_col:8, alias: {'attached':'in-use','detached':'available'}}],
+        filters : [{name:"vol_state", options: ['all','attached','detached'], text: [vol_state_selector_all,vol_state_selector_attached,vol_state_selector_detached], filter_col:8, alias: {'attached':'in-use','detached':'available'}}],
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
       });
       this.tableWrapper.appendTo(this.element);

@@ -77,6 +77,7 @@
           var name = filter['name']+'-filter';
           sDom += '<"#'+name+'">';
         });
+        $.fn.dataTableExt.afnFiltering = [];
       }
       sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
       sDom += 'p<"clear">';
@@ -198,22 +199,26 @@
             $('<span>').addClass('filter-label').html(table_filter_label),
             $('<select>').attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
-          $.each(filter.options, function(idx, option){
-            var fName = filter['name']+'_selector_'+option.replace('-','_');
-            var text = $.i18n.map[fName] ? $.i18n.map[fName] : option; 
+           
+         for (i in filter.options){
+            var option = filter.options[i];
+            var text = (filter.text&&filter.text.length>i) ? filter.text[i] : option; 
             $selector.append($('<option>').val(option).text(text));
-          });
+          }
          
-          if(filter['filter_col'] && filter['alias']){
-            var aliasTbl = filter['alias'];
+          if(filter['filter_col']){
             $.fn.dataTableExt.afnFiltering.push(
 	      function( oSettings, aData, iDataIndex ) {
                 if (oSettings.sInstance !== thisObj.options.id)
                   return true;
                 var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
-                if(aliasTbl[selectorVal])
-                  return aliasTbl[selectorVal] == aData[filter['filter_col']];
-                return true;
+                if(filter['alias'] && filter['alias'][selectorVal]){
+                  var aliasTbl = filter['alias'];
+                  return aliasTbl[selectorVal] === aData[filter['filter_col']];
+                }else if ( selectorVal !== filter['options'][0] ){ // not 'all'
+                    return selectorVal === aData[filter['filter_col']];
+                }else
+                  return true;
             });
           }
           $selector.change( function() { thisObj.table.fnDraw(); } );
