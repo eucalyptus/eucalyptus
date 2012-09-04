@@ -64,7 +64,7 @@
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
                  "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
-        context_menu : function(state) { 
+        context_menu_actions : function(state) { 
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
                  "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
@@ -119,11 +119,6 @@
                                 )
                               });
               }
-//              $(function() {
-//                 $.when.apply($, actions).done(function() {
-//                     alert("all done");
-//                 });
-//              });
               var dfd = $.Deferred();
  /*
                   $.ajax({

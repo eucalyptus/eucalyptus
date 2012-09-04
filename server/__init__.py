@@ -8,6 +8,8 @@ import sys
 import tornado.web
 import traceback
 
+from token import TokenAuthenticator
+
 sessions = {}
 use_mock = True
 config = None
@@ -194,10 +196,21 @@ class LoginProcessor(ProxyProcessor):
         account, user, passwd = auth_decoded.split(':', 3)
         remember = web_req.get_argument("remember")
 
-        #hardcoded temporarily
-        session_token = 'PLACEHOLDER'
-        access_id = config.get('test','accesskey') 
-        secret_key = config.get('test','secretkey')
+        if config.getboolean('eui', 'usemock') == False:
+            auth = TokenAuthenticator(config.get('eui', 'clchost'), 3600)
+            creds = auth.authenticate(account, user, passwd)
+            if creds:
+                session_token = creds.session_token
+                access_id = creds.access_key
+                secret_key = creds.secret_key
+            else:
+                raise EuiException(401, 'Not Authorized')
+        else:
+            # assign bogus values so we never mistake them for the real thing (who knows?)
+            session_token = "Larry"
+            access_id = "Moe"
+            secret_key = "Curly"
+
         # create session and store info there, set session id in cookie
         while True:
             sid = os.urandom(16).encode('hex')
