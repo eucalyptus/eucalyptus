@@ -143,7 +143,7 @@
         }
       }); 
       
-      if(thisObj.options.draw_cell_callback && thisObj.table){
+      if(thisObj.options.draw_cell_callback && thisObj.table && oSettings.fnRecordsDisplay()>0){
         thisObj.element.find('table tbody').find('td').each(function(index, td) { 
           var pos = thisObj.table.fnGetPosition(td);
           var oldVal = $(td).html();
