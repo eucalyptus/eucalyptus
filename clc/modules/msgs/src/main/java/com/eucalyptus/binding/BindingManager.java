@@ -93,7 +93,7 @@ public class BindingManager {
   }
   
   public static String sanitizeNamespace( String namespace ) {
-    return namespace.replaceAll( "(http://)|(/$)", "" ).replaceAll( "[./-]", "_" );
+    return namespace.replaceAll( "(https?://)|(/$)", "" ).replaceAll( "[./-]", "_" );
   }
   
   public static boolean seedBinding( final String bindingName, final Class seedClass ) {

@@ -20,37 +20,26 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-    id="1237"
-    message="ESX(i) host ${hostIp} is not accessible any more"
-    localized="ESX(i) машина ${hostIp} больше не доступна">
+    id="1001"
+    message="Invalid eucalyptus.conf">
 
     <condition
-      message="can't issue requests for host ${hostIp}"
-      localized="запросы на машину ${hostIp} не успешны"/>
+      message="Invalid eucalyptus.conf file."/>
 
-    <cause/> <!-- since 'message' is not set, default value, $unknown, will be used -->
+    <cause
+      message="Nonsense ADDRS_PER_NET settings."/>
 
     <initiator
-      message="eucalyptus"
-      localized="eucalyptus"/>
+      message="${component}"/>
 
     <location
-      message="requests from ${brokerIp} to endpoint ${endpointIp}"
-      localized="запросы от ${brokerIp} на ${endpointIp}"/>
+      message="${hostIp}"/>
 
     <resolution>
       <message>
-        Ensure that:
-        - host ${hostIp} is powered on
-        - host is accessible from ${brokerIp} on port 443
-        - host credentials match those in Broker's configuration
+        1) Correct ADDRS_PER_NET in eucalyptus.conf
+        2) Restart Eucalyptus.
       </message>
-      <localized>
-        Убедитесь, что:
-        - машина ${hostIp} включена
-        - машина доступна на порту 443 с машины ${brokerIp}
-        - логин и пароль соответствуют конфигурации Брокера
-      </localized>
     </resolution>
   </fault>
 </eucafaults>

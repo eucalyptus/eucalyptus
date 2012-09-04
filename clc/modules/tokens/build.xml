@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,29 +18,11 @@
   CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
   additional information or have any questions.
   -->
-<eucafaults version="1" description="Templates for the fault subsystem">
-  <fault
-    id="1236"
-    message="ESX(i) host ${hostIp} is not accessible any more">
+<project name="eucalyptus-tokens" basedir=".">
+    <property name="builder.suffix" value="groovy" />
+    <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
+        <srcfiles dir="${src.dir}" includes="**/*" />
+    </uptodate>
+    <import file="../module-inc.xml"/>
+</project>
 
-    <condition
-      message="can't issue requests for host ${hostIp}"/>
-
-    <cause/> <!-- since 'message' is not set, default value, $unknown, will be used -->
-
-    <initiator
-      message="eucalyptus"/>
-
-    <location
-      message="requests from ${brokerIp} to endpoint ${endpointIp}"/>
-
-    <resolution>
-      <message>
-        Ensure that:
-        - host ${hostIp} is powered on
-        - host is accessible from ${brokerIp} on port 443
-        - host credentials match those in Broker's configuration
-      </message>
-    </resolution>
-  </fault>
-</eucafaults>
