@@ -74,7 +74,7 @@
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $eipHelp);
         },
-        filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}}],
+        filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
       this.tableWrapper.appendTo(this.element);
     },
