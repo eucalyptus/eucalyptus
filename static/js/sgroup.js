@@ -34,8 +34,7 @@
       var $sgroupTable = $wrapper.children().first();
       var $sgroupHelp = $wrapper.children().last();
       this.baseTable = $sgroupTable;
-      this.element.add($wrapper);
-      this.tableWrapper = $wrapper.eucatable({
+      this.tableWrapper = $sgroupTable.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
