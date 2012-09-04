@@ -28,7 +28,7 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #snapshotTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_snapshot)));
       var $snapshotTable = $wrapper.children().first();
       var $snapshotHelp = $wrapper.children().last();
       this.baseTable = $snapshotTable;
@@ -94,7 +94,7 @@
       var thisObj = this;
       // snapshot delete dialog start
       var $tmpl = $('html body').find('.templates #snapshotDelDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_snapshot)));
       var $del_dialog = $rendered.children().first();
       var $del_help = $rendered.children().last();
       this.delDialog = $del_dialog.eucadialog({
@@ -104,12 +104,12 @@
            'delete': {text: snapshot_dialog_del_btn, click: function() { thisObj._deleteListedSnapshots(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: {title: help_volume['dialog_delete_title'], content: $del_help},
+         help: {title: help_snapshot['dialog_delete_title'], content: $del_help},
        });
       // snapshot delete dialog end
       // create snapshot dialog end
       $tmpl = $('html body').find('.templates #snapshotCreateDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_snapshot)));
       var $snapshot_dialog = $rendered.children().first();
       var $snapshot_dialog_help = $rendered.children().last();
       this.createDialog = $snapshot_dialog.eucadialog({
@@ -125,7 +125,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
-         help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
+         help: {title: help_snapshot['dialog_create_title'], content: $snapshot_dialog_help},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initCreateDialog(dfd) ; // pulls volumes info from the server

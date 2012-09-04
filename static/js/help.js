@@ -24,7 +24,9 @@
     help_keypair.load({language:language});
     help_volume.load({language:language});
     help_sgroup.load({language:language}); 
-    help_instance.load({language:language}); 
+    help_instance.load({language:language});
+    help_snapshot.load({language:language}); 
+    help_eip.load({language:language});
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
@@ -41,7 +43,7 @@ function loadHtml(url, handler){
         type:"GET",
         data:"",
         dataType:"html",
-        async:"false", // async option deprecated as of jQuery 1.8
+        async:false, // async option deprecated as of jQuery 1.8
         success: function (data){ 
           handler(data);
         },
@@ -64,6 +66,29 @@ var help_keypair = {
   dialog_add_content: "",
   dialog_delete_title: "Deleting key pair?",
   dialog_delete_content: ""
+};
+
+var help_snapshot = {
+  load : function(arg){
+    loadHtml('help/'+arg.language+'/console_manage_snapshots.html', function(data){help_snapshot.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_snapshot.html', function(data){help_snapshot.dialog_create_content=data})
+    loadHtml('help/'+arg.language+'/console_delete_snapshot.html', function(data){help_snapshot.dialog_delete_content=data})
+  },
+  revert_button: "Back to snapshots",
+  landing_title: "Snapshots -- help", // TODO: deprecate
+  landing_content: "",
+  dialog_delete_title: "Deleting snapshots?",
+  dialog_delete_content: "",
+  dialog_create_title: "Creating new snapshot?",
+  dialog_create_content: ""
+};
+
+var help_eip = {
+  load : function(arg){
+  },
+  revert_button: "Back to IP addresses",
+  landing_title: "IP addresses -- help", // TODO: deprecate
+  landing_content: "",
 };
 
 var help_volume = {
