@@ -28,18 +28,19 @@
       (function(){ 
         var dfd = $.Deferred();
         var waitSec = 30;
+        var intervalMs = 100;
         var numCheck = 0;
         var token = runRepeat( function (){
           if($('html body').eucadata('getStatus') === 'online'){
             cancelRepeat(token);
             dfd.resolve();
           }else{
-            if((numCheck++)*100 > waitSec*1000){
+            if((numCheck++)*intervalMs > waitSec*1000){
               cancelRepeat(token);
               dfd.reject();
             }
           }
-        }, 100, true);
+        }, intervalMs, true);
         return dfd.promise();
       })()
     ).done(function(){

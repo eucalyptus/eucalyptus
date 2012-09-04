@@ -21,7 +21,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.eucadata', $.eucalyptus.eucawidget, {
     options : {  
-      refresh_interval_ms : 10000,
+      refresh_interval_sec : 10,
       endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
                   {name:'image', url: '/ec2?Action=DescribeImages'},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},
@@ -65,9 +65,20 @@
              }
            },
            error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
-             ;//TODO: how to notify errors?
-           }});
-         }, repeat: null};
+             if(thisObj._data[name]){
+               var last = thisObj._data[name]['lastupdated'];
+               var now = new Date();
+               var elapsedSec = Math.round((now-last)/1000);              
+               if(elapsedSec > thisObj.options.refresh_interval_sec*3){
+                 delete thisObj._data[name];
+                 thisObj._data[name] = null;
+               }
+               if(thisObj.getStatus() !== 'online'){
+                 logout();
+               }
+            }
+          }});
+        }, repeat: null};
       });
       this._describe();
     }, 
@@ -77,7 +88,7 @@
       var thisObj = this;
       $.each(thisObj.options.endpoints, function(idx, ep){
         var name = ep.name;
-        var interval = getRandomInt(thisObj.options.refresh_interval_ms/2,thisObj.options.refresh_interval_ms*2);
+        var interval = getRandomInt((thisObj.options.refresh_interval_sec*1000)/2,(thisObj.options.refresh_interval_sec*1000)*2);
         thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
       });
     },
@@ -138,10 +149,14 @@
     getStatus : function(){
       var thisObj = this;
       var status = 'online';
+      var numOff = 0;
       $.each(thisObj._data, function(resource, data){
         if(!data || !data.results)
-          status ='offline';
+          numOff++;
       });
+      if(numOff >= 2) 
+        status='offline';
+
       return status;
     },
 /**************************/ 
