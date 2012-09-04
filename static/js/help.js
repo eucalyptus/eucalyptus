@@ -85,10 +85,20 @@ var help_snapshot = {
 
 var help_eip = {
   load : function(arg){
+    loadHtml('help/'+arg.language+'/console_manage_eips.html', function(data){help_eip.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_allocate_eip.html', function(data){help_eip.dialog_allocate_content=data})
+    loadHtml('help/'+arg.language+'/console_release_eip.html', function(data){help_eip.dialog_release_content=data})
+    loadHtml('help/'+arg.language+'/console_associate_eip.html', function(data){help_eip.dialog_associate_content=data})
   },
   revert_button: "Back to IP addresses",
   landing_title: "IP addresses -- help", // TODO: deprecate
   landing_content: "",
+  dialog_release_title: "Releasing IP Address?",
+  dialog_release_content: "",
+  dialog_allocate_title: "Allocating IP Address?",
+  dialog_allocate_content: "",
+  dialog_associate_title: "Associating IP Address?",
+  dialog_associate_content: ""
 };
 
 var help_volume = {

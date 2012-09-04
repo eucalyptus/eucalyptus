@@ -30,7 +30,7 @@
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #eipTblTmpl').clone();
-      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_eip)));
       var $eipTable = $wrapper.children().first();
       var $eipHelp = $wrapper.children().last();
       this.baseTable = $eipTable;
@@ -83,7 +83,7 @@
       var thisObj = this;
       // eip release dialog start
       var $tmpl = $('html body').find('.templates #eipReleaseDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_eip)));
       var $release_dialog = $rendered.children().first();
       var $release_help = $rendered.children().last();
       this.releaseDialog = $release_dialog.eucadialog({
@@ -93,12 +93,12 @@
            'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.eucadialog("close");}}
          },
-         help: {title: help_volume['dialog_delete_title'], content: $release_help},
+         help: {title: help_eip['dialog_release_title'], content: $release_help},
        });
       // eip release dialog end
       // allocate eip dialog end
       $tmpl = $('html body').find('.templates #eipAllocateDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_eip)));
       var $eip_allocate_dialog = $rendered.children().first();
       var $eip_allocate_dialog_help = $rendered.children().last();
       this.allocateDialog = $eip_allocate_dialog.eucadialog({
@@ -112,12 +112,12 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
          },
-         help: {title: help_volume['dialog_eip_create_title'], content: $eip_allocate_dialog_help},
+         help: {title: help_eip['dialog_allocate_title'], content: $eip_allocate_dialog_help},
        });
       // allocate eip dialog end
       // associate eip dialog end
       $tmpl = $('html body').find('.templates #eipAssociateDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_eip)));
       var $eip_associate_dialog = $rendered.children().first();
       var $eip_associate_dialog_help = $rendered.children().last();
       this.associateDialog = $eip_associate_dialog.eucadialog({
@@ -134,7 +134,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
-         help: {title: help_volume['dialog_eip_associate_title'], content: $eip_associate_dialog_help},
+         help: {title: help_eip['dialog_associate_title'], content: $eip_associate_dialog_help},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAssociateDialog(dfd) ; // pulls instances from the server
