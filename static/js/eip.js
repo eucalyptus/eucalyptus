@@ -26,6 +26,7 @@
     releaseDialog : null,
     allocateDialog : null,
     associateDialog : null,
+    disassociateDialog : null,
 
     _init : function() {
       var thisObj = this;
@@ -142,6 +143,25 @@
          }},
        });
       // associate eip dialog end
+      // disassociate eip dialog start
+      $tmpl = $('html body').find('.templates #eipDisassociateDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_eip)));
+      var $eip_disassociate_dialog = $rendered.children().first();
+      var $eip_disassociate_dialog_help = $rendered.children().last();
+      this.disassociateDialog = $eip_disassociate_dialog.eucadialog({
+         id: 'eip-disassociate',
+         title: eip_disassociate_dialog_title,
+         buttons: {
+           'disassociate': { text: eip_disassociate_dialog_disassociate_btn, click: function() {
+               thisObj._disassociateListedIps();
+               $eip_disassociate_dialog.eucadialog("close");
+              } 
+            },
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_disassociate_dialog.eucadialog("close"); } }
+         },
+         help: {title: help_eip['dialog_disassociate_title'], content: $eip_disassociate_dialog_help},
+       });
+      // disassociate eip dialog end
     },
 
     _destroy : function() {
@@ -155,6 +175,7 @@
       (function(){
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
         itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       // add associate
@@ -162,6 +183,9 @@
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
       }
       if ( selectedEips.length > 0 ){
+        if ( onlyInArray('assigned', selectedEips) )
+        itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) { thisObj._disassociateAction(); } }
+
         itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) { thisObj._releaseAction(); } }
       }
       return itemsList;
@@ -194,6 +218,39 @@
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError(null, eip_release_error + ' ' + eipId);
+            }
+          })(eipId)
+        });
+      }
+    },
+
+    _disassociateListedIps : function () {
+      var thisObj = this;
+      var ipsToDisassociate = this.disassociateDialog.eucadialog('getSelectedResources', 0);
+      for ( i = 0; i<ipsToDisassociate.length; i++ ) {
+        var eipId = ipsToDisassociate[i];
+        $.ajax({
+          type:"GET",
+          url:"/ec2?Action=DisassociateAddress&PublicIp=" + eipId,
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          async: false,
+          cashed: false,
+          success:
+          (function(eipId) {
+            return function(data, textStatus, jqXHR){
+              if ( data.results && data.results == true ) {
+                notifySuccess(null, eipId + '' + eip_disassociate_success);
+                thisObj.tableWrapper.eucatable('refreshTable');
+              } else {
+                notifyError(null, eip_disassociate_error + ' ' + eipId);
+              }
+           }
+          })(eipId),
+          error:
+          (function(eipId) {
+            return function(jqXHR, textStatus, errorThrown){
+              notifyError(null, eip_disassociate_error + ' ' + eipId);
             }
           })(eipId)
         });
@@ -277,6 +334,20 @@
         thisObj.releaseDialog.dialog('open');
       }
     },
+
+    _disassociateAction : function(){
+      var thisObj = this;
+      var rows = thisObj.tableWrapper.eucatable('getSelectedRows');
+      if ( rows.length > 0 ) {
+        var matrix = [];
+        $.each(rows, function(idx, ip){
+          matrix.push([ip.public_ip, ip.instance_id]); 
+        });
+        this.disassociateDialog.eucadialog('setSelectedResources', {title: [eip_disassociate_address_head, eip_disassociate_instance_head], contents: matrix});
+        this.disassociateDialog.dialog('open');
+      }
+    },
+
 
     _associateAction : function() {
       var thisObj = this;

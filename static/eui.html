@@ -704,6 +704,26 @@
           </div>
         </div>
       </script>
+
+      <script id="eipDisassociateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-disassociate-dialog-wrapper">
+          <div id="eip-disassociate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: eip_disassociate_dialog_text }}
+            </div>
+            <div class="selected-resources"> </div>
+          </div>
+          <div id="eip-disassociate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_disassociate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <!-- END IPs dialog template -->
 
       <!-- Instance landing table template -->
