@@ -318,14 +318,14 @@
       if(thisObj.options.legend){
         $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
 
-        $legend.addClass('table-legend');
-        $legend.append($('<span class="table-legend-title">').html(legend_label));
-        var $itemWrapper = $('<div>').attr('id','legend-item-wrapper');
+        $legend.addClass('table-legend clearfix');
+        $legend.append($('<div class="legend-title">').html(legend_label));
+        var $itemWrapper = $('<div>').attr('class','legend-items-wrapper');
         $.each(thisObj.options.legend, function(idx, val){
-          var itemCls = 'legend-'+thisObj.options.id +'-'+val;
+          var itemCls = 'legend-'+val;
           textId = thisObj.options.id+'_legend_'+val.replace('-','_');
           var text = $.i18n.map[textId] ? $.i18n.map[textId] : val;
-          $itemWrapper.append($('<span>').addClass('table-legend-item').addClass(itemCls).html(text));
+          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).html(text));
         });
         $legend.append($itemWrapper);
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);

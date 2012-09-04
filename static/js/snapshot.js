@@ -50,7 +50,7 @@
             { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
-                 $div = $('<div>').addClass('table-legend-item').attr('id', 'legend-snapshots-'+oObj.aData.status);
+                 $div = $('<div>').addClass('table-row-status').addClass('status-'+oObj.aData.status);
                  $div.append(oObj.aData.status=='pending' ?  oObj.aData.progress : '&nbsp;');
                  return asHTML($div);
                },

@@ -50,11 +50,11 @@
             { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
-                 return '<div class="table-status-item status-'+oObj.aData.status+'">&nbsp;</div>';
+                 return '<div class="table-row-status status-'+oObj.aData.status+'">&nbsp;</div>';
                },
               "sWidth": "20px",
               "bSearchable": false,
-              "iDataSort": 8, // sort on hiden status column
+              "iDataSort": 8, // sort on hidden status column
             },
             { "mDataProp": "size" },
             { "mDataProp": "attach_data.instance_id" },

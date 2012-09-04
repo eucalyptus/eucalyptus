@@ -884,7 +884,7 @@ table.display tr.heading2 td {
 }
 
 table.display td {
-  padding: 8px 10px;
+  padding: 5px 10px;
   border-top: 2px solid #dae2e8;
   border-left: 1px solid #dae2e8;
   font-size: 11px;
@@ -1084,82 +1084,92 @@ tr.selected-row td.sorting_1
   float:left;
 }
 
-.table-legend span {
-  display: inline-block;
-}
-
-.table-legend-title {
+.legend-title {
+  float: left;
   padding: 0 15px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 11px;
   color: #455560;
-  line-height: 26px;
+  line-height: 28px;
   text-transform: uppercase;
   border-right: 1px solid #d7d5d5;  
 }
 
-.table-legend-item {
+.legend-items-wrapper {
+  float: left;
+  padding-right: 15px;
+  border-left: 1px solid #fff;
+}
+
+.legend-item {
+  display: inline-block;
   margin-left: 15px;
-  padding-left: 18px;
+  padding-left: 22px;
   font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 11px;
   color: #02405f;
+  line-height: 28px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left 100px;
+}
+
+.table-row-status {
+  height: 26px;
+  width: 18px;
+  margin: 0 auto;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left 100px;
+}
+
+#snapshot-table .table-row-status {
+  width: auto;
   line-height: 26px;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -280px;
-}
-
-.table-legend .table-legend-item:nth-child(2) {
-  /* border-left: 1px solid #fff;
-  margin-left: 0;
-  padding-left: 33px; */
-
-  /* TODO: Add left border after wrapper span has been added */
-}
-
-.table-legend .table-legend-item:last-child {
-  padding-right: 15px;
+  padding: 0px 0 0 25px; 
 }
 
 
-/*  Legend icons - Volume status */
+/*  Legend icons */
 
-#legend-volumes-available {
-  background-position: left -280px;
-}
-
-#legend-volumes-in-use {
+.legend-creating,
+.status-creating {
   background-position: left -310px;
 }
 
-#legend-volumes-error {
+.legend-available,
+.status-available {
+  background-position: left -280px;
+}
+
+.legend-in-use,
+.status-in-use {
   background-position: left -340px;
 }
 
-#legend-volumes-creating {
+.legend-deleting,
+.status-deleting {
   background-position: left -370px;
 }
 
-#legend-volumes-deleting {
-  background-position: left -400px;
+.legend-deleted,
+.status-deleted {
+  background-position: left -430px;
 }
 
-#legend-volumes-deleted {
-  background-position: left -430px;
+.legend-error,
+.status-error {
+  background-position: left -400px;
 }
 
 /*  Legend icons - Snapshot status */
 
-#legend-snapshots-pending {
-  background-position: left -280px;
-}
-
-#legend-snapshots-completed {
+.legend-pending,
+.status-pending {
   background-position: left -310px;
 }
 
-#legend-snapshots-error {
-  background-position: left -340px;
+.legend-completed,
+.status-completed {
+  background-position: left -280px;
 }
+
 
 /* == Pagination == */
 
