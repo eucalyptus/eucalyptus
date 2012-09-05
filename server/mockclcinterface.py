@@ -91,22 +91,54 @@ class MockClcInterface(ClcInterface):
     # returns instance list
     def terminate_instances(self, instance_ids):
         # find instance in local store, then change state
-        return None
+        found = False
+        for id in instance_ids:
+            for res in self.instances:
+                for inst in res['instances']:
+                    if inst['id'] == id:
+                        inst['state'] = 'terminated'
+                        found = True
+                        break
+        return found
 
     # returns instance list
     def stop_instances(self, instance_ids, force=False):
         # find instance in local store, then change state
-        return None
+        found = False
+        for id in instance_ids:
+            for res in self.instances:
+                for inst in res['instances']:
+                    if inst['id'] == id:
+                        inst['state'] = 'stopped'
+                        found = True
+                        break
+        return found
 
     # returns instance list
     def start_instances(self, instance_ids):
         # find instance in local store, then change state
-        return None
+        found = False
+        for id in instance_ids:
+            for res in self.instances:
+                for inst in res['instances']:
+                    if inst['id'] == id:
+                        inst['state'] = 'running'
+                        found = True
+                        break
+        return found
 
     # returns instance status
     def reboot_instances(self, instance_ids):
         # find instance in local store, then change state
-        return None
+        found = False
+        for id in instance_ids:
+            for res in self.instances:
+                for inst in res['instances']:
+                    if inst['id'] == id:
+                        inst['state'] = 'derp'
+                        found = True
+                        break
+        return found
 
     # returns console output
     def get_console_output(self, instance_id):
