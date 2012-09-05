@@ -138,9 +138,9 @@
 
     _createMenuActions : function() {
       thisObj = this;
-      selectedsnapshots = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is snapshot's knowledge)
+      var selectedSnapshots = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is snapshot's knowledge)
       var itemsList = {};
-      if ( selectedsnapshots.length > 0 ){
+      if ( selectedSnapshots.length > 0 && onlyInArray('completed', selectedSnapshots)){
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;
