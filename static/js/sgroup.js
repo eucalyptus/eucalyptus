@@ -105,50 +105,45 @@
               var name = $.trim($add_dialog.find('#sgroup-name').val());
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
               thisObj._storeRule();    // flush rule from form into array
-              var actions = new Array();
+              var fromPort = new Array();
+              var toPort = new Array();
+              var protocol = new Array();
+              var cidr = new Array();
+              var fromGroup = new Array();
               for (rule in thisObj.rulesList){
                   alert("adding rule for port: "+thisObj.rulesList[rule].port);
-                  actions.push(function() {
-                                thisObj._addIngressRule(name,
-                                       thisObj.rulesList[rule].port,
-                                       thisObj.rulesList[rule].port,
-                                       thisObj.rulesList[rule].protocol,
-                                       thisObj.rulesList[rule].ipaddr,
-                                       thisObj.rulesList[rule].fromGroup
-                                )
-                              });
+                  fromPort.push(thisObj.rulesList[rule].port);
+                  toPort.push(thisObj.rulesList[rule].port);
+                  protocol.push(thisObj.rulesList[rule].protocol);
+                  cidr.push(thisObj.rulesList[rule].ipaddr);
+                  fromGroup.push(thisObj.rulesList[rule].fromGroup);
               }
               var dfd = $.Deferred();
- /*
-                  $.ajax({
-                      type:"GET",
-                      url:"/ec2?Action=CreateSecurityGroup",
-                      data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + name + "&GroupDescription=" + desc,
-                      dataType:"json",
-                      async:"false",
-                      success: function (data, textstatus, jqXHR) {
-                      },
-                      error: function (jqXHR, textStatus, errorThrown) {
-                        nofityError(null, error_creating_group_msg);
-                        dfd.reject();
+              $.ajax({
+                  type:"GET",
+                  url:"/ec2?Action=CreateSecurityGroup",
+                  data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + name + "&GroupDescription=" + desc,
+                  dataType:"json",
+                  async:"false",
+                  success: function (data, textstatus, jqXHR) {
+                      if (data.results && data.results.status == true) {
+                          if (fromPort.length > 0) {
+                              alert("going to create rules now");
+                              thisObj._addIngressRule(name, fromPort, toPort, protocol, cidr, fromGroup);
+                          }
+                          else {
+                              notifySuccess(sgroup_create_success + ' ' + name);
+                              thisObj._getTableWrapper().eucatable('refreshTable');
+                          }
+                      } else {
+                          notifyError(sgroup_add_rule_error + ' ' + name);
                       }
-                  });*/
-  /*             $.when(thisObj._addSecurityGroup(name, desc))
-               .then(function(data) {
-                         if (data.results && data.results.status == true) {
-                             alert("num actions = "+actions.length);
-                             $.when.apply($,actions).done(function() {
-                                 notifySuccess(sgroup_create_success + ' ' + name);
-                                 thisObj.tableWrapper.eucatable('refreshTable');
-                             });
-                         } else {
-                             notifyError(sgroup_create_error + ' ' + name);
-                         }
-                     },
-                     function(jqXHR, textStatus, errorThrown){
-                         this.addDialog.eucadialog('showError',sgroup_delete_error + ' ' + name);
-                     }
-               );*/
+                  },
+                  error: function (jqXHR, textStatus, errorThrown) {
+                    nofityError(null, error_creating_group_msg);
+                    dfd.reject();
+                  }
+              });
               $add_dialog.eucadialog("close");
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
@@ -264,21 +259,31 @@
         url:"/ec2?Action=CreateSecurityGroup",
         data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
         dataType:"json",
-        async:"false",
+        async:"true",
+        success: (function(sgroupName) {
+                     return function (data, textstatus, jqXHR) {
+                         notifySuccess(sgroup_rule_add_success + ' ' + name);
+                     }
+                 }),
+        error: (function(sgroupName) {
+                     return function(jqXHR, textStatus, errorThrown){
+                         notifyFailure(sgroup_rule_add_error + ' ' + sgroupName);
+                     }
+                 })
       });
     },
 
     _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {
       var thisObj = this;
-      var req_params = "&GroupName=" + groupName +
-                       "&IpPermissions.1.IpProtocol=" + protocol +
-                       "&IpPermissions.1.FromPort=" + fromPort +
-                       "&IpPermissions.1.ToPort=" + toPort;
-      if (fromGroup) {
-        req_params = req_params + "&IpPermissions.1.Groups.1.GroupName=" + fromGroup;
-      }
-      if (cidr) {
-        req_params = req_params + "&IpPermissions.1.IpRanges.1.CidrIp=" + cidr;
+      var req_params = "&GroupName=" + groupName;
+      for (i=0; i<fromPort.length; i++) {
+          req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
+          req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
+          req_params += "&IpPermissions."+(i+1)+".ToPort=" + toPort[i];
+          if (cidr[i])
+              req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + cidr[i];
+          if (fromGroup[i])
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
       $.ajax({
         type:"GET",
