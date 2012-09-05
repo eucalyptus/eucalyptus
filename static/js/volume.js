@@ -225,6 +225,16 @@
            return dfd.promise();
          }},
        });
+       var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');
+       var $vol_size_edit = thisObj.addDialog.find('#volume-size');
+
+       this.addDialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
+         return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
+       }); 
+       this.addDialog.eucadialog('buttonOnChange', $vol_size_edit,  createButtonId, function(){
+         return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
+       }); 
+/*
        this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
          var az = thisObj.addDialog.find('#volume-add-az-selector').val();
          return az != '';
@@ -237,7 +247,7 @@
            $button.prop("disabled", false).removeClass("ui-state-disabled");
          else
            $button.prop("disabled", false).addClass("ui-state-disabled");
-       });
+       });*/
        // volume create dialog end
     },
 

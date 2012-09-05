@@ -53,13 +53,17 @@
              });
 
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){
-               var $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
-               $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop));
+               var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
+               if (!$btn || $btn.length<=0) {
+                 $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
+                 $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop))
+               };
                $btn.find('span').text(btn_prop.text);
                if(btn_prop.focus !== undefined && btn_prop.focus)
                  $btn.focus();
-               if(btn_prop.disabled !== undefined && btn_prop.disabled)
+               if(btn_prop.disabled !== undefined && btn_prop.disabled){
                  $btn.prop("disabled", true).addClass("ui-state-disabled");
+               }
              });
 
              /* page-level help -- prototype */
@@ -190,6 +194,8 @@
         thisObj.element.find('#'+id).children().detach();
       });
       thisObj._note_divs = [];
+
+      this.$error_div.children().detach();
     },
 
     /// 
@@ -248,7 +254,7 @@
           button.prop('disabled',true).addClass('ui-state-disabled');
       });
     },
-   
+  
     onChange : function(evt_src_id, button_id, checkFunction) {
       var thisObj = this;
       evt_src_id = evt_src_id.replace('#','');
