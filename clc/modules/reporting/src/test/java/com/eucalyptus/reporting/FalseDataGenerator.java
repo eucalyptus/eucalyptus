@@ -32,22 +32,22 @@ import com.eucalyptus.util.ExposedCommand;
 public class FalseDataGenerator
 {
 	private static final long START_TIME       = 1104566400000l; //Jan 1, 2005 12:00AM
-	private static final long PERIOD_DURATION  = 14400000l; //4 hrs in milliseconds
-	private static final int  NUM_PERIODS      = 3000;
+	private static final long PERIOD_DURATION  = 86400000l; //24 hrs in milliseconds
+	private static final int  NUM_PERIODS      = 300;
 
 	private static final int NUM_USERS_PER_ACCOUNT        = 16;
 	private static final int NUM_ACCOUNTS_PER_CLUSTER     = 8;
 	private static final int NUM_CLUSTERS_PER_ZONE        = 4;
 	private static final int NUM_AVAIL_ZONE               = 2;
 	
-	private static final int NUM_PERIODS_PER_OBJECT       = 30;
-	private static final int NUM_PERIODS_PER_BUCKET       = 300;
-	private static final int NUM_PERIODS_PER_SNAPSHOT     = 90;
+	private static final int NUM_PERIODS_PER_OBJECT       = 3;
+	private static final int NUM_PERIODS_PER_BUCKET       = 30;
+	private static final int NUM_PERIODS_PER_SNAPSHOT     = 9;
 	/* NOTE: In this case "entity" refers to an Instance, Volume, or Elastic IP. There are always
 	 *  the same number of instances, volumes, and elastic IPs, because each volume is repeatedly
 	 *  attached and detached from its associated instance and similarly with IPs.
 	 */
-	private static final int NUM_PERIODS_PER_ENTITY       = 30;
+	private static final int NUM_PERIODS_PER_ENTITY       = 3;
 
 	private static final long VOLUME_SIZE   = 2;
 	private static final long SNAPSHOT_SIZE = 2;
@@ -125,7 +125,7 @@ public class FalseDataGenerator
 					String accountName = "account-" + uniqueAccountId;
 					ReportingAccountCrud.getInstance().createOrUpdateAccount(accountId, accountName);
 					for (int userNum=0; userNum<NUM_USERS_PER_ACCOUNT; userNum++) {
-						System.out.printf("Generating usage for user %d\n", userNum);
+						log.debug(String.format("Generating usage for user %d\n", userNum));
 						String user = "user-" + userNum;
 						uniqueUserId++;
 						List<Attachment> attachments = new ArrayList<Attachment>();
@@ -158,7 +158,7 @@ public class FalseDataGenerator
 						String bucketUuid    = "(none)";
 						int createdInstanceNum = 0;
 						for (int periodNum=0; periodNum<NUM_PERIODS; periodNum++) {
-							System.out.printf(" Generating usage for period %d\n", periodNum);
+							log.debug(String.format(" Generating usage for period %d\n", periodNum));
 							long timeMs = START_TIME + (PERIOD_DURATION*periodNum);
 
 							/* Create a fake instance, a fake volume, and a fake elastic IP if they should be created in this period. */
@@ -167,19 +167,19 @@ public class FalseDataGenerator
 								int typeNum = createdInstanceNum%FalseInstanceType.values().length;
 								FalseInstanceType type = FalseInstanceType.values()[typeNum];
 								instanceUuid = String.format(UUID_FORMAT, uniqueUserId, instanceUuidNum++);
-								System.out.printf("  Generating instance uuid %s\n", instanceUuid);
+								log.debug(String.format("  Generating instance uuid %s\n", instanceUuid));
 								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid,
 										timeMs, ("i-" + userNum + "-" + periodNum),
 										type.toString(), user, cluster, availZone);
 								createdInstanceNum++;
 
 								volumeUuid = String.format(UUID_FORMAT, uniqueUserId, volumeUuidNum++);
-								System.out.printf("  Generating volume uuid %s\n", volumeUuid);
+								log.debug(String.format("  Generating volume uuid %s\n", volumeUuid));
 								ReportingVolumeEventStore.getInstance().insertCreateEvent(volumeUuid, ("vol-" + userNum + "-" + periodNum),
 										timeMs, user, availZone, VOLUME_SIZE);
 
 								elasticIpUuid = String.format(UUID_FORMAT, uniqueUserId, elasticIpUuidNum++);
-								System.out.printf("  Generating elastic ip uuid %s\n", elasticIpUuid);
+								log.debug(String.format("  Generating elastic ip uuid %s\n", elasticIpUuid));
 								String ip = String.format("%d.%d.%d.%d",
 										(userNum >> 8) % 256,
 										userNum % 256,
@@ -191,7 +191,7 @@ public class FalseDataGenerator
 							/* Create a fake snapshot if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_SNAPSHOT == 0) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, snapshotUuidNum++);
-								System.out.printf("  Generating snapshot uuid %s\n", uuid);
+								log.debug(String.format("  Generating snapshot uuid %s\n", uuid));
 								ReportingVolumeSnapshotEventStore.getInstance().insertCreateEvent(uuid,
 										("snap-" + userNum + "-" + periodNum),
 										timeMs, user, SNAPSHOT_SIZE);
@@ -200,14 +200,14 @@ public class FalseDataGenerator
 							/* Create a fake bucket if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
-								System.out.printf("  Generating bucket uuid %s\n", bucketUuid);
+								log.debug(String.format("  Generating bucket uuid %s\n", bucketUuid));
 								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, BUCKET_SIZE, user, timeMs);
 							}
 							
 							/* Create a fake object if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
-								System.out.printf("  Generating object uuid %s\n", uuid);
+								log.debug(String.format("  Generating object uuid %s\n", uuid));
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
 										OBJECT_SIZE, timeMs, user);
 							}
@@ -217,7 +217,7 @@ public class FalseDataGenerator
 							/* Generate instance usage in this period for every instance running from before */
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
-								System.out.printf("  Generating instance usage uuid %s\n", uuid);
+								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid, timeMs,
 										INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD,
 										INSTANCE_CPU_UTILIZATION_PER_PERIOD,
@@ -232,7 +232,7 @@ public class FalseDataGenerator
 							/* Generate volume usage in this period for every volume that was created before */
 							for (long i=VOLUME_UUID_START; i<volumeUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
-								System.out.printf("  Generating volume usage uuid %s\n", uuid);
+								log.debug(String.format("  Generating volume usage uuid %s\n", uuid));
 								ReportingVolumeEventStore.getInstance().insertUsageEvent(uuid, timeMs,
 										VOLUME_CUMULATIVE_READ_PER_PERIOD,
 										VOLUME_CUMULATIVE_WRITTEN_PER_PERIOD);
@@ -244,7 +244,7 @@ public class FalseDataGenerator
 								//TODO: divide by zero here
 								long bucketNum = i/(NUM_PERIODS_PER_BUCKET/NUM_PERIODS_PER_OBJECT);
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
-								System.out.printf("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid);
+								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid));
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
 										bucketUuid,	uuid, OBJECT_SIZE, timeMs, user );
 							}
@@ -252,7 +252,7 @@ public class FalseDataGenerator
 							/* Attach Volumes and Elastic IPs to Instances */
 							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, VOLUME_SIZE, timeMs);
 							ReportingElasticIpEventStore.getInstance().insertAttachEvent(elasticIpUuid, instanceUuid, timeMs);
-							System.out.printf("  Attaching volume %s and ip %s to instance %s\n", volumeUuid, elasticIpUuid, instanceUuid);
+							log.debug(String.format("  Attaching volume %s and ip %s to instance %s\n", volumeUuid, elasticIpUuid, instanceUuid));
 							attachments.add(new Attachment(instanceUuid, volumeUuid, elasticIpUuid));
 
 							/* Detach old Volumes and Elastic IPs from old Instances */
@@ -262,8 +262,8 @@ public class FalseDataGenerator
 										attachment.getInstanceUuid(), VOLUME_SIZE, timeMs);
 								ReportingElasticIpEventStore.getInstance().insertDetachEvent(attachment.getElasticIpUuid(),
 										attachment.getInstanceUuid(), timeMs);
-								System.out.printf("  Detaching volume %s and ip %s to instance %s\n",
-										attachment.getVolumeUuid(), attachment.getElasticIpUuid(), attachment.getInstanceUuid());
+								log.debug(String.format("  Detaching volume %s and ip %s to instance %s\n",
+										attachment.getVolumeUuid(), attachment.getElasticIpUuid(), attachment.getInstanceUuid()));
 							}
 							
 						}
@@ -334,7 +334,7 @@ public class FalseDataGenerator
 //			Period period = result.getPeriod();
 //			InstanceUsageData usageData = result.getUsageData();
 //
-//			System.out.printf("instance:%s type:%s user:%s account:%s cluster:%s"
+//			log.debug(String.format(("instance:%s type:%s user:%s account:%s cluster:%s"
 //					+ " zone:%s period:%d-%d netIo:%d diskIo:%d\n",
 //					insAttrs.getInstanceId(), insAttrs.getInstanceType(),
 //					insAttrs.getUserId(), insAttrs.getAccountId(),
