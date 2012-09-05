@@ -87,6 +87,9 @@
         menu_actions : function(args){
           return thisObj._createMenuActions(); 
         },
+        context_menu_actions : function(row) {
+          return thisObj._createMenuActions();
+        },
         help_click : function(evt) {
           // TODO: make this a reusable operation
           thisObj._flipToHelp(evt,$instHelp);
