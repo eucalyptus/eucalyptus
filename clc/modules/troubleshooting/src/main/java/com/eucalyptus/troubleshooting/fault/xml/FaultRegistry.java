@@ -165,9 +165,11 @@ public class FaultRegistry {
 			// Special case, zero length file.  (Turn on or off)
 			int faultId = parseIdFromFileName(faultXMLFile.getName());
 			if (suppressedFaults.contains(faultId) && faultXMLFile.length() != 0) {
+				LOG.debug("Unsupressing fault " + faultId);
 				suppressedFaults.remove(faultId);
 			// Zero length means suppress fault
 			} else if (faultXMLFile.exists() && faultXMLFile.length() == 0) {
+				LOG.debug("Supressing fault " + faultId);
 				faultMap.remove(faultId);
 				suppressedFaults.add(faultId);
 				return;

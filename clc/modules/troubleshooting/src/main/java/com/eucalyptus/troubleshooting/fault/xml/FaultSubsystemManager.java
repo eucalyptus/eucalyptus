@@ -161,32 +161,32 @@ public class FaultSubsystemManager {
 				
 		// first find the actual logger (if it exists). Should be named com.eucalyptus.troubleshooting.fault.${component}.log
 		// Scan the loggers to see if it already exists.  Otherwise add it
-		LOG.info("looking for logger " + targetLoggerName);
+		LOG.debug("looking for logger " + targetLoggerName);
 		Logger logger = null;
 		Enumeration logEnum = LogManager.getCurrentLoggers();
 		while (logEnum.hasMoreElements()) {
 			Logger currentLogger = (Logger) logEnum.nextElement();
 			if (logger == null && currentLogger.getName().equals(targetLoggerName)) {
 				logger = currentLogger;
-				LOG.info("Found logger " + targetLoggerName);
+				LOG.debug("Found logger " + targetLoggerName);
 				break;
 			}
 		}
 		if (logger == null) {
-			LOG.info("Didn't find logger " + targetLoggerName + ", creating it now");
+			LOG.debug("Didn't find logger " + targetLoggerName + ", creating it now");
 			logger = Logger.getLogger(targetLoggerName);
 			logger.setAdditivity(false);
 			logger.setLevel(Level.FATAL);
 		}
 		// Check the log registry for the appender named ${component}-fault-log.  Need to check all loggers (unfortunately)
-		LOG.info("Checking root logger for appender " + targetAppenderName);
+		LOG.debug("Checking root logger for appender " + targetAppenderName);
 		Appender appender = checkAppender(LogManager.getRootLogger(), targetAppenderName);
 		if (appender == null) {
 			logEnum = LogManager.getCurrentLoggers();
 			while (logEnum.hasMoreElements()) {
 				if (appender == null) {
 					Logger currentLogger = (Logger) logEnum.nextElement();
-					LOG.info("Checking " + currentLogger.getName() + " for appender " + targetAppenderName);
+					LOG.debug("Checking " + currentLogger.getName() + " for appender " + targetAppenderName);
 					appender = checkAppender(currentLogger, targetAppenderName);
 				} else {
 					break; // found it
