@@ -840,6 +840,7 @@ format_eucafault (const char *fault_id, const char_map **map)
     }
     // Bottom border.
     fprintf (faultlog, "%s\n\n", STARS);
+    fflush (faultlog);
     return TRUE;
 }
 
