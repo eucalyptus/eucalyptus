@@ -439,7 +439,23 @@ public class Entities {
       }
     }
   }
-  
+
+  /**
+   * Invokes underlying merge implementation per jsr-220
+   *
+   * @param object The object to merge
+   * @param <T> The return type
+   * @return The persistent instance for the object
+   */
+  public static <T> T mergeDirect( final T object ) {
+    try {
+      return getTransaction( object ).getTxState( ).getEntityManager( ).merge( object );
+    } catch ( final RuntimeException ex ) {
+      PersistenceExceptions.throwFiltered( ex );
+      throw ex;
+    }
+  }
+
   public <T> T lookupAndClose( final T example ) throws NoSuchElementException {
     EntityTransaction db;
     T ret = null;

@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
+import java.io.Serializable;
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
@@ -39,8 +40,10 @@ import org.hibernate.annotations.Entity;
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_user")
-public class ReportingUser
+public class ReportingUser implements Serializable
 {
+	private static final long serialVersionUID = 1L;
+
 	@Id @Column(name="id", nullable=false)
 	private String id;
 	@Column(name="account_id", nullable=false)

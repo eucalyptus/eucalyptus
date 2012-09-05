@@ -289,7 +289,7 @@ check_eucafault_suppression (const char *fault_id, const char *fault_file)
             return FALSE;
         }
         if (st.st_size == 0) {
-            logprintfl (EUCADEBUG, "Suppressing fault id %s.\n", fault_id);
+            logprintfl (EUCAINFO, "Suppressing fault id %s.\n", fault_id);
 
             struct suppress_list *new_supp =
                 (struct suppress_list *)malloc (sizeof (struct suppress_list));
@@ -840,6 +840,7 @@ format_eucafault (const char *fault_id, const char_map **map)
     }
     // Bottom border.
     fprintf (faultlog, "%s\n\n", STARS);
+    fflush (faultlog);
     return TRUE;
 }
 
