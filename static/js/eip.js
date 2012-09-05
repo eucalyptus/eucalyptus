@@ -197,16 +197,16 @@
         var eipId = rowsToDelete[i];
         $.ajax({
           type:"GET",
-          url:"/ec2?Action=ReleaseAddresse&PublicIp=" + eipId,
+          url:"/ec2?Action=ReleaseAddress&PublicIp=" + eipId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async: false,
-          cashed: false,
+          async:false,
+          cache:false,
           success:
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eipId + '' + eip_release_success);
+                notifySuccess(null, eipId + ' ' + eip_release_success);
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 notifyError(null, eip_release_error + ' ' + eipId);
@@ -233,8 +233,8 @@
           url:"/ec2?Action=DisassociateAddress&PublicIp=" + eipId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
-          async: false,
-          cashed: false,
+          async:false,
+          cache:false,
           success:
           (function(eipId) {
             return function(data, textStatus, jqXHR){
@@ -265,7 +265,7 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           cache:false,
-          async: false,
+          async:false,
           success:
             function(data, textStatus, jqXHR){
               if ( data.results ) {
