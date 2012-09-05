@@ -171,6 +171,10 @@ class CachingClcInterface(ClcInterface):
     def get_console_output(self, instance_id):
         return self.clc.get_console_output(instance_id)
 
+    # returns password data
+    def get_password_data(self, instance_id):
+        return self.clc.get_password_data(instance_id)
+
     def get_all_addresses(self):
         if (datetime.now() - self.addressUpdate) > timedelta(seconds = self.addressFreq):
             self.addresses = self.clc.get_all_addresses()

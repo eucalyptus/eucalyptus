@@ -1,4 +1,6 @@
+import base64
 import ConfigParser
+from M2Crypto import RSA
 import tornado.web
 import server
 import json
@@ -340,18 +342,29 @@ class ComputeHandler(server.BaseHandler):
     def post(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.clc):
+            if self.should_use_mock():
+                self.user_session.clc = MockClcInterface()
+            else:
+                self.user_session.clc = BotoClcInterface(server.config.get('eui', 'clchost'),
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
+
         try:
+            action = self.get_argument("Action")
             if action == 'GetPassword':
                 instanceid = self.get_argument('InstanceId')
-                data = self.user_session.clc.get_password_data(instanceid)
-                print "data = "+data
-                user_priv_key = RSA.load_key(private_key_path)
-                string_to_decrypt = data.blah
-                if encoded:
-                    string_to_decrypt = base64.b64decode(encrypted_string)
+                passwd_data = self.user_session.clc.get_password_data(instanceid)
+                priv_key_file = self.request.files['priv_key']
+                user_priv_key = RSA.load_key_string(priv_key_file[0].body)
+                string_to_decrypt = base64.b64decode(passwd_data)
                 ret = user_priv_key.private_decrypt(string_to_decrypt, RSA.pkcs1_padding)
-                ret = Response(ret) # wrap all responses in an object for security purposes
+                ret = Response({'password': ret}) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+                self.write(data)
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0])
             self.set_status(err.status);

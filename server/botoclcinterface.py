@@ -104,6 +104,10 @@ class BotoClcInterface(ClcInterface):
     def get_console_output(self, instance_id):
         return self.conn.get_console_output(instance_id)
 
+    # returns password data
+    def get_password_data(self, instance_id):
+        return self.conn.get_password_data(instance_id)
+
     def get_all_addresses(self):
         obj = self.conn.get_all_addresses()
         if self.saveclcdata:

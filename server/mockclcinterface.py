@@ -90,22 +90,30 @@ class MockClcInterface(ClcInterface):
 
     # returns instance list
     def terminate_instances(self, instance_ids):
+        # find instance in local store, then change state
         return None
 
     # returns instance list
     def stop_instances(self, instance_ids, force=False):
+        # find instance in local store, then change state
         return None
 
     # returns instance list
     def start_instances(self, instance_ids):
+        # find instance in local store, then change state
         return None
 
     # returns instance status
     def reboot_instances(self, instance_ids):
+        # find instance in local store, then change state
         return None
 
     # returns console output
     def get_console_output(self, instance_id):
+        return None
+
+    # returns password data
+    def get_password_data(self, instance_id):
         return None
 
     def get_all_addresses(self):

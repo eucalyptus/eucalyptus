@@ -1,5 +1,7 @@
 
 import base64
+from poster.encode import multipart_encode
+from poster.streaminghttp import register_openers
 import urllib
 import urllib2
 import json
@@ -10,19 +12,25 @@ import json
 
 class UIProxyClient(object):
     session_cookie = None
+    xsrf = None
 
     def __init__(self):
         pass
 
-    def login(self, account, username, password):
+    def login(self, host, port, account, username, password):
         # make request, storing cookie
-        req = urllib2.Request("http://localhost:8888/")
+        self.host = host
+        self.port = port
+        req = urllib2.Request("http://%s:%s/"%(host, port))
         data = "action=login&remember=no"
         encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
         req.add_header('Authorization', "Basic %s" % encoded_auth)
         response = urllib2.urlopen(req, data)
         self.session_cookie = response.headers.get('Set-Cookie')
         print self.session_cookie
+        idx = self.session_cookie.find('_xsrf=')+6
+        self.xsrf = self.session_cookie[idx:idx+32]
+        print "_xsrf="+self.xsrf
         print response.read()
 
     def logout(self):
@@ -43,7 +51,7 @@ class UIProxyClient(object):
             if params[param]==None:
                 del params[param]
         params['Action'] = action
-        url = 'http://localhost:8888/ec2?' + urllib.urlencode(params)
+        url = 'http://%s:%s/ec2?'%(self.host, self.port) + urllib.urlencode(params)
         req = urllib2.Request(url)
         self.__check_logged_in__(req)
         response = urllib2.urlopen(req)
@@ -173,6 +181,21 @@ class UIProxyClient(object):
 
     def get_console_output(self, isntanceid):
         return self.__make_request__('DescribeInstances', {'InstanceId': instanceid})
+
+    def get_password(self, instanceid, keypair_file):
+        register_openers()
+        datagen, headers = multipart_encode({
+                                'Action': 'GetPassword',
+                                'InstanceId': instanceid,
+                                '_xsrf': self.xsrf,
+                                'priv_key': open(keypair_file)
+                                })
+
+        url = 'http://%s:%s/ec2?'%(self.host, self.port)
+        req = urllib2.Request(url, datagen, headers)
+        self.__check_logged_in__(req)
+        response = urllib2.urlopen(req)
+        return json.loads(response.read())
 
     ##
     # Keypair methods

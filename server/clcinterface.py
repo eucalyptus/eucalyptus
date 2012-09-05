@@ -69,6 +69,10 @@ class ClcInterface(object):
     def get_console_output(self, instance_id):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    # returns password data
+    def get_password_data(self, instance_id):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     ##
     # Elastic IP methods
     ##
