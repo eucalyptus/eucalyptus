@@ -32,7 +32,6 @@
       var $snapshotTable = $wrapper.children().first();
       var $snapshotHelp = $wrapper.children().last();
       this.baseTable = $snapshotTable;
-      this.element.add($snapshotTable);
       this.tableWrapper = $snapshotTable.eucatable({
         id : 'snapshots', // user of this widget should customize these options,
         dt_arg : {

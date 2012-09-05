@@ -56,12 +56,15 @@
         thisObj._reloadInstSummary($instObj);
       }); 
 
-      // TODO: this is probably not the right place to call describe-instances. instances page should receive the data from server
-      // selector is different for these two because of extra div
       $instObj.find('#dashboard-instance-running div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $instObj.find('#dashboard-instance-stopped div').prepend(
         $('<img>').attr('src','images/dots32.gif'));
+
+      $instObj.find('#dashboard-instance-launch a').click( function(e) {
+        var $container = $('html body').find(DOM_BINDING['main']);
+        $container.maincontainer("changeSelected", e, {selected:'launcher'});
+      });
       thisObj._reloadInstSummary($instObj);
     },
 

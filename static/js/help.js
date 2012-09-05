@@ -27,6 +27,7 @@
     help_instance.load({language:language});
     help_snapshot.load({language:language}); 
     help_eip.load({language:language});
+    help_launcher.load({language:language});
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
@@ -148,4 +149,11 @@ var help_instance = {
   dialog_stop_content: "",
   dialog_connect_content: "",
   dialog_console_content: "",
+}
+
+var help_launcher = {
+  load : function(arg) {
+    loadHtml('help/'+arg.language+'/console_manage_launcher.html', function(data){help_launcher.landing_content=data})
+  },
+  landing_content: "", 
 }

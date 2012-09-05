@@ -277,8 +277,8 @@
       });
 
       // add action to create new
-      this.element.find('#table-' + this.options.id + '-new').click(function() {
-        thisObj._trigger('menu_click_create'); // users of the table should listen to
+      this.element.find('#table-' + this.options.id + '-new').click(function(e) {
+        thisObj._trigger('menu_click_create', e); // users of the table should listen to
       });
       return $tableTop;
     },

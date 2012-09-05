@@ -35,7 +35,6 @@
       var $eipTable = $wrapper.children().first();
       var $eipHelp = $wrapper.children().last();
       this.baseTable = $eipTable;
-      this.element.add($eipTable);
       this.tableWrapper = $eipTable.eucatable({
         id : 'eips', // user of this widget should customize these options,
         dt_arg : {
