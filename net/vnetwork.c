@@ -230,15 +230,26 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to maximum.\n", NUMBER_OF_HOSTS_PER_VLAN);
 	vnetconfig->numaddrs = NUMBER_OF_HOSTS_PER_VLAN;
       } else if (numberofaddrs_i <= NUMBER_OF_CCS) {
-	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET lower than absolute minimum (16) setting to minimum.\n");
+	// FIXME: Why is NUMBER_OF_CCS not hard-coded here, but the absolute
+	// minimum setting of 16 is?
+	// (Note: this 16 also appears hard-coded in the non-power-of-2 case.)
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET lower than absolute minimum (16), setting to minimum.\n");
 	vnetconfig->numaddrs = 16;
       } else if (numberofaddrs_i &&
 		 (!(numberofaddrs_i & (numberofaddrs_i - 1)))) {
+	// Is a legal power of 2.
 	vnetconfig->numaddrs = numberofaddrs_i;
       } else {
+	int bits = 1;
+
+	while (numberofaddrs_i >>= 1) {
+	  bits <<= 1;
+	}
+	// Not a power of 2, so reduce to next power of 2 (but not below 16).
 	// FIXME: Use real address here!
-	log_eucafault_v ("1001", "component", "CC", "hostIp", "127.0.0.1",
-			NULL);
+	vnetconfig->numaddrs = bits < 16 ? 16 : bits;
+	logprintfl(EUCAWARN, "vnetInit(): specified ADDRSPERNET not a power of 2, setting to next lower power of 2 (%d).\n", vnetconfig->numaddrs);
+	log_eucafault_v ("1001", "component", "CC", NULL);
       }
     }
     vnetconfig->addrIndexMin = NUMBER_OF_CCS+1;
