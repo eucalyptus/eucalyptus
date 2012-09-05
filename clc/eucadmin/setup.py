@@ -91,7 +91,8 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-register-vmware-broker",
                  "bin/euca-register-walrus",
                  "bin/euca-reports-export",
-                ]
+                 "bin/euca-reports-generate",
+                 ]
 
 setup(name="eucadmin",
       version=version,
