@@ -19,25 +19,23 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_snapshot_create_events")
 public class ReportingVolumeSnapshotCreateEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
 	@Column(name="volume_snapshot_id", nullable=false)
 	private String volumeSnapshotId;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 	@Column(name="user_id", nullable=false)
 	private String userId;
 	@Column(name="sizeGB", nullable=false)
@@ -49,12 +47,6 @@ public class ReportingVolumeSnapshotCreateEvent
  	 */
 	protected ReportingVolumeSnapshotCreateEvent()
 	{
-		//NOTE: hibernate will overwrite these
-		this.uuid = null;
-		this.volumeSnapshotId = null;
-		this.timestampMs = null;
-		this.userId = null;
-		this.sizeGB = null;
 	}
 
 	/**
@@ -74,22 +66,12 @@ public class ReportingVolumeSnapshotCreateEvent
 	{
 		return this.uuid;
 	}
-	
-	void setUuid(String uuid)
-	{
-		this.uuid = uuid;
-	}
 
 	public String getVolumeSnapshotId()
 	{
 		return this.volumeSnapshotId;
 	}
 	
-	public Long getTimestampMs()
-	{
-		return this.timestampMs;
-	}
-
 	public String getUserId()
 	{
 		return this.userId;
@@ -99,7 +81,19 @@ public class ReportingVolumeSnapshotCreateEvent
 	{
 		return this.sizeGB;
 	}
-	
+
+	@Override
+	public EventDependency asDependency() {
+		return asDependency( "uuid", uuid );
+	}
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( userId )
+				.set();
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;

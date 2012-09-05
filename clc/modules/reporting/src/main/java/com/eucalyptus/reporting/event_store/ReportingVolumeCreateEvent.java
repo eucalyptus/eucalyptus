@@ -19,23 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_create_events")
 public class ReportingVolumeCreateEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 	@Column(name="volume_id", nullable=false)
 	private String volumeId;
 	@Column(name="user_id", nullable=false)
@@ -51,13 +49,6 @@ public class ReportingVolumeCreateEvent
  	 */
 	protected ReportingVolumeCreateEvent()
 	{
-		//NOTE: hibernate will overwrite these
-		this.uuid = null;
-		this.timestampMs = null;
-		this.volumeId = null;
-		this.userId = null;
-		this.availabilityZone = null;
-		this.sizeGB = null;
 	}
 
 	/**
@@ -84,11 +75,6 @@ public class ReportingVolumeCreateEvent
 		this.uuid = uuid;
 	}
 
-	public Long getTimestampMs()
-	{
-		return timestampMs;
-	}
-
 	public String getVolumeId()
 	{
 		return this.volumeId;
@@ -107,6 +93,18 @@ public class ReportingVolumeCreateEvent
 	public Long getSizeGB()
 	{
 		return this.sizeGB;
+	}
+
+	@Override
+	public EventDependency asDependency() {
+		return asDependency( "uuid", uuid );
+	}
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( userId )
+				.set();
 	}
 
 	@Override

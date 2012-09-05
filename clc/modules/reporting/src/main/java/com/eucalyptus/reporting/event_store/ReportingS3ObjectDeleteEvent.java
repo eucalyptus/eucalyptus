@@ -19,21 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_delete_events")
 public class ReportingS3ObjectDeleteEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="s3_bucket_name", nullable=false)
 	private String s3BucketName;
 	@Column(name="s3_object_name", nullable=false)
@@ -42,22 +42,13 @@ public class ReportingS3ObjectDeleteEvent
 	private Long s3ObjectSize;
 	@Column(name="s3_object_owner", nullable=false)
 	private String s3ObjectOwnerId;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 
 	protected ReportingS3ObjectDeleteEvent()
 	{
-		super();
-		this.s3BucketName = null;
-		this.s3ObjectName = null;
-		this.s3ObjectSize = null;
-		this.timestampMs = null;
-		this.s3ObjectOwnerId = null;
-	}	
+	}
 	
 	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String s3ObjectOwnerId)
 	{
-		super();
 		this.s3BucketName = s3BucketName;
 		this.s3ObjectName = s3ObjectName;
 		this.s3ObjectSize = s3ObjectSize;
@@ -84,10 +75,14 @@ public class ReportingS3ObjectDeleteEvent
 	{
 	    	return s3ObjectOwnerId;
 	}
-	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.user( s3ObjectOwnerId )
+				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
+				.relation( ReportingS3ObjectCreateEvent.class, "s3ObjectName", s3ObjectName )
+				.set();
 	}
 
 	@Override

@@ -19,25 +19,23 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_snapshot_delete_events")
 public class ReportingVolumeSnapshotDeleteEvent
-	extends AbstractPersistent
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false)
 	private String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	private Long timestampMs;
 
 	protected ReportingVolumeSnapshotDeleteEvent(String uuid, Long timestampMs)
 	{
@@ -53,10 +51,11 @@ public class ReportingVolumeSnapshotDeleteEvent
 	{
 		return uuid;
 	}
-	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
-	}
 
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.relation( ReportingVolumeSnapshotCreateEvent.class, "uuid", uuid )
+				.set();
+	}
 }
