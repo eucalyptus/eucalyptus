@@ -204,7 +204,7 @@ class ComputeHandler(server.BaseHandler):
             for i in range(len(ip_protocol)):
                 ret = clc.authorize_security_group(name,
                                  src_security_group_name[i] if src_security_group_name else None,
-                                 src_security_gorup_owner_id[i] if src_security_group_owner_id else None,
+                                 src_security_group_owner_id[i] if src_security_group_owner_id else None,
                                  ip_protocol[i], from_port[i], to_port[i],
                                  cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
                                  src_security_group_group_id[i] if src_security_group_group_id else None)
