@@ -97,6 +97,7 @@
        });
       // eip release dialog end
       // allocate eip dialog end
+      var allocateButtonId = 'eip-allocate-btn';
       $tmpl = $('html body').find('.templates #eipAllocateDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_eip)));
       var $eip_allocate_dialog = $rendered.children().first();
@@ -105,15 +106,24 @@
          id: 'eip-allocate',
          title: eip_allocate_dialog_title,
          buttons: {
-           'create': { text: eip_allocate_dialog_allocate_btn, click: function() {
-               thisObj._allocateIps($eip_allocate_dialog.find('#eip-allocate-count-selector').val());
-               $eip_allocate_dialog.eucadialog("close");
+           'create': { domid: allocateButtonId, text: eip_allocate_dialog_allocate_btn, disabled: true, click: function() {
+                var numberOfIps = $eip_allocate_dialog.find('#eip-allocate-count').val();
+                if ( numberOfIps != parseInt(numberOfIps) ) {
+                  $eip_allocate_dialog.eucadialog('showError', eip_allocate_count_error_msg);
+                } else {
+                  thisObj._allocateIps(numberOfIps);
+                  $eip_allocate_dialog.eucadialog("close");
+                }
               } 
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
          },
          help: {title: help_eip['dialog_allocate_title'], content: $eip_allocate_dialog_help},
        });
+      var $ip_count_edit = this.allocateDialog.find('#eip-allocate-count');
+      this.allocateDialog.eucadialog('buttonOnChange', $ip_count_edit,  allocateButtonId, function(){
+        return $ip_count_edit.val() && $ip_count_edit.val().length>0;
+      });
       // allocate eip dialog end
       // associate eip dialog end
       $tmpl = $('html body').find('.templates #eipAssociateDlgTmpl').clone();
