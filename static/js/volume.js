@@ -36,7 +36,6 @@
       var $volTable = $wrapper.children().first();
       var $volHelp = $wrapper.children().last();
       this.baseTable = $volTable;
-      this.element.add($volTable);
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
         dt_arg : {

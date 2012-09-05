@@ -79,6 +79,9 @@
         case 'eip':
           this.element.eip();
           break;
+        case 'launcher':
+          this.element.launcher();
+          break;
         case 'logout':
           logout();
           break;

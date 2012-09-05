@@ -34,15 +34,12 @@
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
     instIpMap : {}, // {i-123456: 192.168.0.1}
 
-    // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #instanceTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
-
-      this.element.add($instTable);
       this._getEmi();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
@@ -82,6 +79,10 @@
           header_title : instance_h_title,
           create_resource : instance_create,
           resource_found : instance_found,
+        },
+        menu_click_create : function(e) {
+          var $container = $('html body').find(DOM_BINDING['main']);
+          $container.maincontainer("changeSelected", e, {selected:'launcher'});
         },
         menu_actions : function(args){
           return thisObj._createMenuActions(); 

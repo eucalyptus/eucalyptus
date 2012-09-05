@@ -32,7 +32,6 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       var $keyTable = $wrapper.children().first();
       var $keyHelp = $wrapper.children().last();
-      this.element.add($keyTable);
       this.baseTable = $keyTable;
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
