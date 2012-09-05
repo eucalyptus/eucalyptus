@@ -1,7 +1,7 @@
 
 import base64
-from poster.encode import multipart_encode
-from poster.streaminghttp import register_openers
+#from poster.encode import multipart_encode
+#from poster.streaminghttp import register_openers
 import urllib
 import urllib2
 import json
@@ -174,28 +174,29 @@ class UIProxyClient(object):
         self.__add_param_list__(params, 'InstanceId', instanceids)
         return self.__make_request__('StartInstances', params)
 
-    def restart_instances(self, instanceids):
+    def reboot_instances(self, instanceids):
         params = {}
         self.__add_param_list__(params, 'InstanceId', instanceids)
-        return self.__make_request__('RestartInstances', params)
+        return self.__make_request__('RebootInstances', params)
 
     def get_console_output(self, isntanceid):
         return self.__make_request__('DescribeInstances', {'InstanceId': instanceid})
 
     def get_password(self, instanceid, keypair_file):
-        register_openers()
-        datagen, headers = multipart_encode({
-                                'Action': 'GetPassword',
-                                'InstanceId': instanceid,
-                                '_xsrf': self.xsrf,
-                                'priv_key': open(keypair_file)
-                                })
-
-        url = 'http://%s:%s/ec2?'%(self.host, self.port)
-        req = urllib2.Request(url, datagen, headers)
-        self.__check_logged_in__(req)
-        response = urllib2.urlopen(req)
-        return json.loads(response.read())
+#        register_openers()
+#        datagen, headers = multipart_encode({
+#                                'Action': 'GetPassword',
+#                                'InstanceId': instanceid,
+#                                '_xsrf': self.xsrf,
+#                                'priv_key': open(keypair_file)
+#                                })
+#
+#        url = 'http://%s:%s/ec2?'%(self.host, self.port)
+#        req = urllib2.Request(url, datagen, headers)
+#        self.__check_logged_in__(req)
+#        response = urllib2.urlopen(req)
+#        return json.loads(response.read())
+        pass
 
     ##
     # Keypair methods
