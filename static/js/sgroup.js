@@ -67,7 +67,7 @@
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
                  "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
         },
-        menu_click_create : function (args) { thisObj.rulesList=null; thisObj.addDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj.rulesList=null; $('#sgroup-rules-list').html(''); thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $sgroupHelp);
         },
@@ -134,17 +134,19 @@
                           else {
                               notifySuccess(sgroup_create_success + ' ' + name);
                               thisObj._getTableWrapper().eucatable('refreshTable');
+                              $add_dialog.eucadialog("close");
                           }
                       } else {
                           notifyError(sgroup_add_rule_error + ' ' + name);
+                          $add_dialog.eucadialog("close");
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
                     nofityError(null, error_creating_group_msg);
                     dfd.reject();
+                    $add_dialog.eucadialog("close");
                   }
               });
-              $add_dialog.eucadialog("close");
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
@@ -285,12 +287,25 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
+      alert("add rules params:"+req_params);
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
         data:"_xsrf="+$.cookie('_xsrf') + req_params,
         dataType:"json",
         async:"false",
+        success: (function(sgroupName) {
+            return function(data, textStatus, jqXHR){
+                notifySuccess(sgroup_add_rule_success + ' ' + sgroupName);
+                $add_dialog.eucadialog("close");
+            }
+        }),
+        error: (function(sgroupName) {
+            return function(jqXHR, textStatus, errorThrown){
+                notifySuccess(sgroup_add_rule_error + ' ' + sgroupName);
+                $add_dialog.eucadialog("close");
+            }
+        }),
       });
     },
 

@@ -49,6 +49,8 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.fileupload.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -850,55 +852,103 @@
         </div>
       </script>
 
+      <script id="instancePasswordDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_password_text }}
+              <div id="instance-password"> </div>
+            </div>
+            <div class="selected-resources"> </div>
+            <div class="file-selector"> {{!:instance_dialog_choose_keyfile_text}} <input id="fileupload" type="file" name="priv_key" data-url="../ec2"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_password_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
       <!-- END Instance dialog templates -->
+      
+      <!-- Launch Wizard & Help --> 
       <script id="launchWizardTmpl" type="text/x-jsrender">
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 
           <div id="launch-wizard" class="launcher_wrapper">
-            <div id="launch-wizard-header" class="box-header"> </div>
-            <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
-            <div id="launch-wizard-image">
-              <div id="launch-wizard-image-header"> </div>
-              <div id="launch-wizard-image-contents">
-                <div id="launch-wizard-image-main-contents">
-                  <div id="launch-wizard-image-filters"> </div>
-                  <div id="launch-wizard-image-table"> </div>
+            <div id="launch-wizard-header" class="box-header"> {{!> launch_instance_header }} </div>
+            
+            <!-- Wizard Wrapper -->
+            <div class="wizard-wrapper clearfix">
+
+              <!-- Launch Wizard Steps -->
+              <div class="wizard-steps">
+
+                <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
+            
+                <div id="launch-wizard-image" class="wizard-step"> 
+                  <div id="launch-wizard-image-header"> </div>
+                  <div id="launch-wizard-image-contents" class="launch-wizard-section">
+                    <div id="launch-wizard-image-main-contents">
+                      <div id="launch-wizard-image-filters"> </div>
+                      <div id="launch-wizard-image-table"> </div>
+                    </div>
+                    <div id="launch-wizard-buttons-image" class="launch-wizard-buttons"> </div>
+                  </div>
                 </div>
-                <div id="launch-wizard-buttons"> </div>
-              </div>
-            </div>
-            <div id="launch-wizard-type"> 
-              <div id="launch-wizard-type-header"> </div>
-              <div id="launch-wizard-type-contents">
-                <div id="launch-wizard-type-main-contents">
-                  <div id="launch-wizard-type-size"> </div>
-                  <div id="launch-wizard-type-options"> </div>
+            
+                <div id="launch-wizard-type" class="wizard-step"> 
+                  <div id="launch-wizard-type-header"> </div>
+                  <div id="launch-wizard-type-contents" class="launch-wizard-section">
+                    <div id="launch-wizard-type-main-contents">
+                      <div id="launch-wizard-type-size"> </div>
+                      <div id="launch-wizard-type-options"> </div>
+                    </div>
+                    <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"></div>
+                  </div>
                 </div>
-                <div id="launch-wizard-buttons"></div>
-              </div>
-            </div>
-            <div id="launch-wizard-security">
-              <div id="launch-wizard-security-header"> </div>
-              <div id="launch-wizard-security-contents">
-                <div id="launch-wizard-security-main-contents">
-                  <div id="launch-wizard-security-keypair"> </div>
-                  <div id="launch-wizard-security-sgoup"> </div>
+            
+                <div id="launch-wizard-security" class="wizard-step">
+                  <div id="launch-wizard-security-header"> </div>
+                  <div id="launch-wizard-security-contents" class="launch-wizard-section">
+                    <div id="launch-wizard-security-main-contents">
+                      <div id="launch-wizard-security-keypair"> </div>
+                      <div id="launch-wizard-security-sgoup"> </div>
+                    </div>
+                    <div id="launch-wizard-buttons-security" class="launch-wizard-buttons"> </div>
+                  </div>
                 </div>
-                <div id="launch-wizard-buttons"> </div>
-              </div>
-            </div>
-            <div id="launch-wizard-advanced">
-              <div id="launch-wizard-advanced-header"> </div>
-              <div id="launch-wizard-advanced-contents">
-                <div id="launch-wizard-advanced-main-contents">
-                  <div id="launch-wizard-advanced-userdata"> </div>
-                  <div id="launch-wizard-advanced-kernelramdisk"> </div>
-                  <div id="launch-wizard-advanced-network"> </div>
-                  <div id="launch-wizard-advanced-storage"> </div>
+            
+                <div id="launch-wizard-advanced" class="wizard-step">
+                  <div id="launch-wizard-advanced-header"> </div>
+                  <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
+                    <div id="launch-wizard-advanced-main-contents">
+                      <div id="launch-wizard-advanced-userdata"> </div>
+                      <div id="launch-wizard-advanced-kernelramdisk"> </div>
+                      <div id="launch-wizard-advanced-network"> </div>
+                      <div id="launch-wizard-advanced-storage"> </div>
+                    </div>
+                    <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> </div>
+                  </div>
                 </div>
-                <div id="launch-wizard-buttons"> </div>
+
               </div>
+              <!-- END Launch Wizard Steps -->
+
+              <!-- Launch Wizard Summary -->
+              <div id="launch-wizard-summary" class="wizard-summary">
+                Summary will go here
+              </div>
+              <!-- END Launch Wizard Summary -->
+
             </div>
-          </div> <!-- end of launch-wizard -->
+            <!-- END Wizard Wrapper -->                  
+
+          </div>
+          <!-- END launch-wizard -->
+          
           <div id="launch-wizard-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -907,9 +957,13 @@
               <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
-    </div> 
+      <!-- END Launch Wizard & Help --> 
+
+    </div>
     <!-- END of templates --> 
+
   </body>
 </html>

@@ -1298,8 +1298,31 @@ tr.selected-row td.sorting_1
   text-decoration: underline;
 }
 
+/* ======= Reusable Wizard styles ======= */
+
+.wizard-wrapper {
+  padding: 15px;
+}
+
+.wizard-steps {
+  float: left;
+  width: 610px;
+  background-color: #eee; /* To temporarily mark the defined area */
+}
+
+.wizard-step {
+  margin: 10px 0;
+  background-color: #d7d7d7; /* To temporarily mark the defined area */
+}
+
+.wizard-summary {
+  float: right;
+  width: 285px;
+  background-color: #eee; /* To temporarily mark the defined area */
+}
 
 /* ===== Instance Launch Wizard ===== */
+
 .launcher_wrapper {
   background-color: #fff;
   border: 1px solid #d7d5d5;
@@ -1314,4 +1337,8 @@ tr.selected-row td.sorting_1
   -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
   -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+}
+
+.launch-wizard-section {
+  display: none;
 }

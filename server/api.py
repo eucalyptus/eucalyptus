@@ -362,7 +362,7 @@ class ComputeHandler(server.BaseHandler):
                 user_priv_key = RSA.load_key_string(priv_key_file[0].body)
                 string_to_decrypt = base64.b64decode(passwd_data)
                 ret = user_priv_key.private_decrypt(string_to_decrypt, RSA.pkcs1_padding)
-                ret = Response({'password': ret}) # wrap all responses in an object for security purposes
+                ret = Response({'instance':instanceid, 'password': ret}) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
                 self.write(data)
         except EC2ResponseError as err:
