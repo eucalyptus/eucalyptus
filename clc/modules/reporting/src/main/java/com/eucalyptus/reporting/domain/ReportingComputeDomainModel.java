@@ -131,7 +131,7 @@ public class ReportingComputeDomainModel
 		this.numPublicIpsAvailable.set( numPublicIpsAvailable );
 	}
 
-  public static final class ReportingComputeZoneDomainModel {
+	public static final class ReportingComputeZoneDomainModel {
 		private final AtomicReference<Integer> ec2ComputeUnitsAvailable = new AtomicReference<Integer>();
 		private final AtomicReference<Integer> ec2MemoryUnitsAvailable  = new AtomicReference<Integer>();
 		private final AtomicReference<Integer> ec2DiskUnitsAvailable    = new AtomicReference<Integer>();
