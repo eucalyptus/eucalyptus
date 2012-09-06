@@ -1298,8 +1298,26 @@ tr.selected-row td.sorting_1
   text-decoration: underline;
 }
 
+/* ======= Reusable Wizard styles ======= */
+
+.wizard-wrapper {
+  padding: 15px;
+}
+
+.wizard-steps {
+  float: left;
+  width: 610px;
+  background-color: #eee; /* To temporarily mark the defined area */
+}
+
+.wizard-summary {
+  float: right;
+  width: 285px;
+  background-color: #eee; /* To temporarily mark the defined area */
+}
 
 /* ===== Instance Launch Wizard ===== */
+
 .launcher_wrapper {
   background-color: #fff;
   border: 1px solid #d7d5d5;
