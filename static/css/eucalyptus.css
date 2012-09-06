@@ -1310,6 +1310,11 @@ tr.selected-row td.sorting_1
   background-color: #eee; /* To temporarily mark the defined area */
 }
 
+.wizard-step {
+  margin: 10px 0;
+  background-color: #d7d7d7; /* To temporarily mark the defined area */
+}
+
 .wizard-summary {
   float: right;
   width: 285px;
