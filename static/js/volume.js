@@ -282,7 +282,7 @@
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
       var $instanceSelector = $('#volume-attach-instance-selector').html('');
-      $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
+      $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['select_an_instance']));
       var results = describe('instance');
       if ( results ) {
         for( res in results) {

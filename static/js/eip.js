@@ -249,7 +249,7 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eipId + '' + eip_disassociate_success);
+                notifySuccess(null, eipId + ' ' + eip_disassociate_success);
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 notifyError(null, eip_disassociate_error + ' ' + eipId);
@@ -312,7 +312,7 @@
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, eip_allocate_error);
+            notifyError(null, eip_associate_error);
           }
       });
     },
@@ -322,6 +322,7 @@
       var $instanceSelector = thisObj.associateDialog.find('#eip-associate-dialog-instance-selector').html('');
       var results = describe('instance');
       if ( results ) {
+        $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['select_an_instance'])); 
         for( res in results) {
           instance = results[res];
           if ( instance.state === 'running' ) 
