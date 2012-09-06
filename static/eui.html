@@ -49,6 +49,8 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.fileupload.js"></script>
 
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -856,6 +858,26 @@
         </div>
       </script>
 
+      <script id="instancePasswordDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_password_text }}
+              <div id="instance-password"> </div>
+            </div>
+            <div class="selected-resources"> </div>
+            <div class="file-selector"> {{!:instance_dialog_choose_keyfile_text}} <input id="fileupload" type="file" name="priv_key" data-url="../ec2"> </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_password_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
       <!-- END Instance dialog templates -->
       <script id="launchWizardTmpl" type="text/x-jsrender">
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 

@@ -149,6 +149,7 @@ var help_instance = {
   dialog_stop_content: "",
   dialog_connect_content: "",
   dialog_console_content: "",
+  dialog_password_content: "",
 }
 
 var help_launcher = {
