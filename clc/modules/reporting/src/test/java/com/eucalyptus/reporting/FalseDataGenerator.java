@@ -71,7 +71,7 @@ public class FalseDataGenerator
 	private static final long OBJECT_CUMULATIVE_GETS_PER_PERIOD    = 4;
 	private static final long OBJECT_CUMULATIVE_PUTS_PER_PERIOD    = 5;
 
-	private static final int ATTACH_PERIODS_DURATION     = 500;
+	private static final int ATTACH_PERIODS_DURATION     = 25;
 
 	
 	private static final long INSTANCE_UUID_START    = 1 * (2<<24);
