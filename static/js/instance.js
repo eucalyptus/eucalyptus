@@ -63,7 +63,7 @@
             },
             { "mDataProp": "id" },
             { "mDataProp": "state" },
-            { "mDataProp": "image_id" }, 
+            { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, // TODO: placement==zone?
             { "mDataProp": "ip_address" },
             { "mDataProp": "private_ip_address" },
@@ -100,8 +100,15 @@
           if(col===4){
             if(!thisObj.emiToManifest[val])
               return val; // in case of error, print EMI
-            else
-              return thisObj.emiToManifest[val];
+            else{
+              var manifest = thisObj.emiToManifest[val];
+              var newManifest = ''; /* hack to deal with overflow */
+              for(i=0; i<manifest.length/25; i++){
+                newManifest += manifest.substring(i*25, Math.min(i*25+25, manifest.length)) + '\n';
+              } 
+              newManifest = $.trim(newManifest);
+              return newManifest;
+            }
           }else
             return val;
         },
