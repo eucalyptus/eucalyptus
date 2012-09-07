@@ -344,7 +344,7 @@
         matrix.push([key]);
       });
       if ( eipsToRelease.length > 0 ) {
-        thisObj.releaseDialog.eucadialog('setSelectedResources', {title:[eip_release_resource_title], contents: matrix});
+        thisObj.releaseDialog.eucadialog('setSelectedResources', {title:[ip_address_label], contents: matrix});
         thisObj.releaseDialog.dialog('open');
       }
     },
@@ -357,7 +357,7 @@
         $.each(rows, function(idx, ip){
           matrix.push([ip.public_ip, ip.instance_id]); 
         });
-        this.disassociateDialog.eucadialog('setSelectedResources', {title: [eip_disassociate_address_head, eip_disassociate_instance_head], contents: matrix});
+        this.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
         this.disassociateDialog.dialog('open');
       }
     },

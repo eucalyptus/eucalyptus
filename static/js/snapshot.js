@@ -228,7 +228,7 @@
         matrix.push([key]);
       });
       if ( snapshotsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources',{title:[snapshot_delete_resource_title], contents: matrix});
+        thisObj.delDialog.eucadialog('setSelectedResources',{title:[snapshot_label], contents: matrix});
         thisObj.delDialog.dialog('open');
       }
     },

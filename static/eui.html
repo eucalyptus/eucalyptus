@@ -467,6 +467,32 @@
         </div>
       </script>
 
+      <script id="volumeInstDetachDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-detach-dialog-wrapper">
+          <div id="volumes-detach-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: volume_dialog_detach_text }}
+              <div class="dialog-field">
+                <span class="label">{{!: instance_label }}</span>
+                <input id="volume-detach-instance-id" disabled='disabled'/ >
+              </div>
+              <div class="dialog-field">
+                <span class="label">{{!: volume_label }}</span>
+                <select id="volume-detach-volume-selector"/>
+              </div>
+            </div>
+          </div>   
+          <div id="volumes-detach-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_detach_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <script id="volumeAddDlgTmpl" type="text/x-jsrender">
         <div id="volumes-add-dialog-wrapper">
           <div id="volumes-add-dialog" class="euca-dialog">
@@ -504,7 +530,7 @@
             <div class="dialog-inner-content">
               <div class="dialog-field">
                 <span class="label">{{!: volume_dialog_attach_volume_label }}</span>
-                <select id="volume-attach-volume-selector"></select>
+                <input type="text" id="volume-attach-volume-id" class="required"/>
               </div>
               <div class="dialog-field">
                 <span class="label">{{!: volume_dialog_attach_instance_label }}</span>
@@ -569,7 +595,7 @@
             <div class="dialog-inner-content">
               <div class="dialog-field">
                 <span class="label">{{!: snapshot_create_dialog_volume_label }}</span>
-                <select id="snapshot-create-volume-selector"></select>
+                <input type="text" id="snapshot-create-volume-id" class="required"/>
               </div>
               <div class="dialog-field">
                 <span class="label">{{!: snapshot_create_dialog_description_label }}</span>
