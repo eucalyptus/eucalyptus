@@ -318,17 +318,21 @@
     },
 
     _initAssociateDialog : function(dfd) {  // should resolve dfd object
-      var thisObj = this;
-      var $instanceSelector = thisObj.associateDialog.find('#eip-associate-dialog-instance-selector').html('');
+      var $instanceSelector = thisObj.associateDialog.find('#eip-associate-instance-id').html('');
       var results = describe('instance');
+      var volume_ids = [];
       if ( results ) {
-        $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['select_an_instance'])); 
         for( res in results) {
           instance = results[res];
           if ( instance.state === 'running' ) 
-            $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+            volume_ids.push(instance.id);
         }
       }
+      if ( volume_ids.length == 0 )
+        this.associateDialog.eucadialog('showError', no_running_instances);
+      $instanceSelector.autocomplete({
+        source: volume_ids
+      });
       dfd.resolve();
     },
 

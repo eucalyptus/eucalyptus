@@ -45,7 +45,6 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.cookies.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.ui.position.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
@@ -510,7 +509,7 @@
               </div>
               <div class="dialog-field">
                 <span class="label">{{!: volume_dialog_attach_instance_label }}</span>
-                <select id="volume-attach-instance-selector"></select>
+                <input type="text" id="volume-attach-instance-id" class="required"/>
               </div>
               <div class="dialog-field">
                 <span class="label">{{!: volume_dialog_attach_device_label }}</span>
@@ -686,7 +685,7 @@
             <div class="dialog-inner-content">
               <div class="dialog-field">
                 <span class="label">{{!: eip_associate_dialog_instance_label }}</span>
-                <select id="eip-associate-dialog-instance-selector"/>
+                <input type="text" id="eip-associate-instance-id" class="required"/>
               </div>
               <span style="display:none" id="eip-to-associate"/>
             </div>

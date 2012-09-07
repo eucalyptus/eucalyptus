@@ -281,16 +281,22 @@
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
-      var $instanceSelector = $('#volume-attach-instance-selector').html('');
-      $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['select_an_instance']));
+      var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id').html('');
+      var volume_ids = [];
       var results = describe('instance');
       if ( results ) {
         for( res in results) {
           var instance = results[res];
-          if ( instance.state === 'running' ) 
-            $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+          if ( instance.state === 'running' )
+            volume_ids.push(instance.id);
         }
       }
+      if ( volume_ids.length == 0 )
+        this.attachDialog.eucadialog('showError', no_running_instances);
+
+      $instanceSelector.autocomplete({
+        source: volume_ids
+      });
       dfd.resolve();
     },
 
