@@ -26,6 +26,8 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.configuration.PropertyConfigurator;
@@ -40,6 +42,11 @@ import com.google.common.collect.Lists;
  * Support class for commands
  */
 abstract class CommandSupport {
+  private static final String PROP_LOGGING_THRESHOLD = "com.eucalyptus.reporting.dw.logThreshold";
+  private static final String LOGGING_THRESHOLD_DEFAULT = Level.ERROR.toString();
+  private static final String LOGGING_THRESHOLD_SILENT = Level.OFF.toString();
+  private static final String LOGGING_THRESHOLD_DEBUG = Level.DEBUG.toString();
+
   private final Arguments arguments;
 
   public CommandSupport( final Arguments arguments ) {
@@ -47,11 +54,32 @@ abstract class CommandSupport {
   }
 
   protected final void run() {
-    setupPersistenceContext();
-    runCommand( arguments );
+    try {
+      setupLogging();
+      setupPersistenceContext();
+      runCommand( arguments );
+    } catch ( Exception e ) {
+      Logger.getLogger( this.getClass() ).error( "Error processing command", e );
+      System.exit(1);
+    }
   }
 
   protected abstract void runCommand( Arguments arguments );
+
+  private void setupLogging() {
+    final String threshold = arguments.getArgument( "log-threshold", null );
+    final String log4JThreshold;
+    if ( threshold == null ) {
+      log4JThreshold = LOGGING_THRESHOLD_DEFAULT;
+    } else if ( "debug".equalsIgnoreCase( threshold ) ) {
+      log4JThreshold = LOGGING_THRESHOLD_DEBUG;
+    } else if ( "silent".equalsIgnoreCase( threshold ) ) {
+      log4JThreshold = LOGGING_THRESHOLD_SILENT;
+    } else {
+      log4JThreshold = threshold;
+    }
+    System.setProperty( PROP_LOGGING_THRESHOLD, log4JThreshold );
+  }
 
   private void setupPersistenceContext() {
     final Properties properties = new Properties();
@@ -109,12 +137,16 @@ abstract class CommandSupport {
     private final Options options = new Options();
 
     private ArgumentsBuilder() {
+      // DB arguments
       withArg( "dbh",  "db-host", "Database hostname", false );
       withArg( "dbpo", "db-port", "Database port", false );
       withArg( "dbn",  "db-name", "Database name", false );
       withArg( "dbu",  "db-user", "Database username", false );
       withArg( "dbp",  "db-pass", "Database password", true );
       withFlag( "dbs", "db-ssl", "Database connection uses SSL" );
+
+      // Logging arguments
+      withArg( "lt", "log-threshold", "Logging threshold", false );
     }
 
     ArgumentsBuilder withFlag( final String argument,

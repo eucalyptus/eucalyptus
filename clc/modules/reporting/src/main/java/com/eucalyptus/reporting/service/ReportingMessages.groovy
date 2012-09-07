@@ -66,5 +66,19 @@ class ExportDataResultType extends EucalyptusData {
   ReportingExport data
 }
 
+class GenerateReportType extends ReportingMessage {
+}
+
+class GenerateReportResponseType extends ReportingMessage  {
+  GenerateReportResultType result
+  ReportingResponseMetadataType responseMetadata = new ReportingResponseMetadataType( );
+}
+
+class GenerateReportResultType extends EucalyptusData {
+  GenerateReportResultType(){}
+  GenerateReportResultType( data ){ this.data = data }
+  String data
+}
+
 
 
