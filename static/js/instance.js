@@ -639,15 +639,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_attach_success + ' ' + volumeId);
+              notifySuccess(null, volume_attach_success(volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, volume_attach_error + ' ' + volumeId);
+              notifyError(null, volume_attach_error(volumeId, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, volume_attach_error + ' ' + volumeId);
+            notifyError(null, volume_attach_error(volumeId, instanceId));
           }
       });
     },
