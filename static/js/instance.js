@@ -691,24 +691,24 @@
           return function(data, textStatus, jqXHR){
             if ( data.results && data.results == 'detaching' ) {
               if (force)
-                notifySuccess(null, volume_force_detach_success + ' ' + volumeId);
+                notifySuccess(null, volume_force_detach_success(volumeId));
               else
-                notifySuccess(null, volume_detach_success + ' ' + volumeId);
+                notifySuccess(null, volume_detach_success(volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               if (force)
-                notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error(volumeId));
               else
-                notifyError(null, volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error(volumeId));
             }
            }
          })(volumeId),
          error: (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error(volumeId));
               else
-                notifyError(null, volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error(volumeId));
             }
           })(volumeId)
       });
