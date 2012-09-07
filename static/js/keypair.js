@@ -127,7 +127,7 @@
       });
 
       if ( keysToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', {title:[keypair_dialog_del_resource_title], contents: matrix});
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[keypair_label], contents: matrix});
         thisObj.delDialog.dialog('open');
       }
     },
