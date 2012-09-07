@@ -116,7 +116,7 @@
          title: snapshot_create_dialog_title,
          buttons: {
            'create': { text: snapshot_create_dialog_create_btn, click: function() { 
-                volumeId = $snapshot_dialog.find('#snapshot-create-volume-selector').val();
+                volumeId = $snapshot_dialog.find('#snapshot-create-volume-id').val();
                 description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
                 thisObj._createSnapshot(volumeId, description);
                 $snapshot_dialog.eucadialog("close");
@@ -148,15 +148,19 @@
 
     _initCreateDialog : function(dfd) { // method should resolve dfd object
       thisObj = this;
-      var $volSelector = thisObj.createDialog.find('#snapshot-create-volume-selector').html('');
+      var $volSelector = thisObj.createDialog.find('#snapshot-create-volume-id').val('');
       var results = describe('volume');
+      var volume_ids = [];
       if ( results ) {
         for( res in results) {
            var volume = results[res];
            if ( volume.status === 'in-use' || volume.status === 'available' ) 
-             $volSelector.append($('<option>').attr('value', volume.id).text(volume.id));
+             volume_ids.push(volume.id);
         }
       }
+      $volSelector.autocomplete({
+        source: volume_ids
+      });
       dfd.resolve();
     },
 
@@ -179,17 +183,17 @@
           (function(snapshotId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, snapshot_delete_success + ' ' + snapshotId);
+                notifySuccess(null, snapshot_delete_success(snapshotId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, snapshot_delete_error + ' ' + snapshotId);
+                notifyError(null, snapshot_delete_error(snapshotId));
               }
            }
           })(snapshotId),
           error:
           (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, snapshot_delete_error + ' ' + snapshotId);
+              notifyError(null, snapshot_delete_error(snapshotId));
             }
           })(snapshotId)
         });
@@ -207,15 +211,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, snapshot_create_success + ' ' + volumeId);
+              notifySuccess(null, snapshot_create_success(volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, snapshot_create_error + ' ' + volumeId);
+              notifyError(null, snapshot_create_error(volumeId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, snapshot_create_error + ' ' + volumeId);
+            notifyError(null, snapshot_create_error(volumeId));
           }
       });
     },
