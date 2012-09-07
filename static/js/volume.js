@@ -291,7 +291,7 @@
             inst_ids.push(instance.id);
         }
       }
-      if ( volume_ids.length == 0 )
+      if ( inst_ids.length == 0 )
         this.attachDialog.eucadialog('showError', no_running_instances);
 
       $instanceSelector.autocomplete({
@@ -315,17 +315,17 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, volume_delete_success + ' ' + volumeId);
+                notifySuccess(null, volume_delete_success(volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, volume_delete_error + ' ' + volumeId);
+                notifyError(null, volume_delete_error(volumeId));
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, volume_delete_error + ' ' + volumeId);
+              notifyError(null, volume_delete_error(volumeId));
             }
           })(volumeId)
         });
@@ -343,15 +343,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, snapshot_create_success + ' ' + volumeId);
+              notifySuccess(null, snapshot_create_success(volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, snapshot_create_error + ' ' + volumeId);
+              notifyError(null, snapshot_create_error(volumeId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, snapshot_create_error + ' ' + volumeId);
+            notifyError(null, snapshot_create_error(volumeId));
           }
       });
 
@@ -368,15 +368,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_attach_success + ' ' + volumeId);
+              notifySuccess(null, volume_attach_success(volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, volume_attach_error + ' ' + volumeId);
+              notifyError(null, volume_attach_error(volumeId, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, volume_attach_error + ' ' + volumeId);
+            notifyError(null, volume_attach_error(volumeId, instanceId));
           }
       });
     },
@@ -393,7 +393,7 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_create_success + ' ' + data.results.id);
+              notifySuccess(null, volume_create_success(data.results.id));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               notifyError(null, volume_create_error);
@@ -423,15 +423,15 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
                 if (force)
-                  notifySuccess(null, volume_force_detach_success + ' ' + volumeId);
+                  notifySuccess(null, volume_force_detach_success(volumeId));
                 else
-                  notifySuccess(null, volume_detach_success + ' ' + volumeId);
+                  notifySuccess(null, volume_detach_success(volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 if (force)
-                  notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                  notifyError(null, volume_force_detach_error(volumeId));
                 else
-                  notifyError(null, volume_detach_error + ' ' + volumeId);
+                  notifyError(null, volume_detach_error(volumeId));
               }
            }
           })(volumeId),
@@ -439,9 +439,9 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error(volumeId));
               else
-                notifyError(null, volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error(volumeId));
             }
           })(volumeId)
         });
