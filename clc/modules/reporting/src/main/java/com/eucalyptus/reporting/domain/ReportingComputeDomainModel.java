@@ -239,18 +239,19 @@ public class ReportingComputeDomainModel
 
 	public static String dump() {
 		final StringBuilder builder = new StringBuilder( 512 );
+		builder.append("Compute capacity:\n");
 
 		// global compute
 		builder.append("IP Addresses: ").append(globalModel.getNumPublicIpsAvailable()).append("\n");
-		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append("GiB\n");
+		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append(" GiB\n");
 
 		// zone compute
 		for ( final Map.Entry<String,ReportingComputeZoneDomainModel> modelEntry : zoneModels.entrySet() ) {
 			builder.append(modelEntry.getKey()).append("\n");
-			builder.append("\t").append("Cores").append(modelEntry.getValue().getEc2ComputeUnitsAvailable()).append("\n");
-			builder.append("\t").append("Disk").append(modelEntry.getValue().getEc2DiskUnitsAvailable()).append("GiB\n");
-			builder.append("\t").append("Memory").append(modelEntry.getValue().getEc2MemoryUnitsAvailable()).append("MiB\n");
-			builder.append("\t").append("EBS Storage").append(modelEntry.getValue().getSizeEbsAvailableGB()).append("GiB\n");
+			builder.append("\t").append("Cores      : ").append(modelEntry.getValue().getEc2ComputeUnitsAvailable()).append("\n");
+			builder.append("\t").append("Disk       : ").append(modelEntry.getValue().getEc2DiskUnitsAvailable()).append(" GiB\n");
+			builder.append("\t").append("Memory     : ").append(modelEntry.getValue().getEc2MemoryUnitsAvailable()).append(" MiB\n");
+			builder.append("\t").append("EBS Storage: ").append(modelEntry.getValue().getSizeEbsAvailableGB()).append(" GiB\n");
 		}
 
 		return builder.toString();

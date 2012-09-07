@@ -172,7 +172,7 @@ public class WalrusUtil {
   }
 
   /**
-   * Return the total size of objects in the Walrus.
+   * Return the total size in bytes of objects in the Walrus.
    *
    * @return The size or -1 if the size could not be determined.
    */
