@@ -542,10 +542,9 @@
         var os = oss[0]; 
         if(os === 'windows'){ 
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_windows_text);
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-uname-password', 
+            ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span> &lt;public_ip&gt;\\Administrator </span></td> <td> <span> <a href="#">'+instance_dialog_connect_getpassword+'</a></span></td> </tr> </tbody> </table>');
           if (!thisObj.instPassword[instance]){
-            thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', 
-              '<span>'+ instance_dialog_choose_keyfile_text+' </span> <input id="fileupload" type="file" name="priv_key" data-url="../ec2"> </div>');
-
             var $fileSelector = thisObj.connectDialog.find('input#fileupload');
             $fileSelector.fileupload( {
               dataType: 'json',
@@ -554,17 +553,21 @@
               done: function (e, data) {
                 $.each(data.result, function (index, result) {
                   thisObj.instPassword[result.instance] = result.password;
-                  thisObj.connectDialog.eucadialog('removeNote', 'instance-connect-password');
-                  thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', '<span>'+ instance_dialog_password_success + '</span>' + result.password); 
+                  thisObj.connectDialog.find('a').last().html(result.password);
+                  thisObj.connectDialog.find('a').unbind('click');
                 });
               },
-              fail : function (e, data) { //notifyError(null, instance_dialog_password_error); 
-                thisObj.connectDialog.eucadialog('removeNote', 'instance-connect-password');
-                thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', '<span class=on-error>'+ instance_dialog_password_error + '</span>'); 
+              fail : function (e, data) {
+                thisObj.connectDialog.find('a').last().html('<span class="on-error">'+instance_dialog_password_error+'</span>');
+                thisObj.connectDialog.find('a').unbind('click');
               },
             });
+            thisObj.connectDialog.find('a').click( function(e) {
+              $fileSelector.trigger('click'); 
+            });
           }else {
-            thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', '<span>'+ instance_dialog_password_success + '</span>' + thisObj.instPassword[instance]); 
+            thisObj.connectDialog.find('a').last().html(thisObj.instPassword[instance]);
+            thisObj.connectDialog.find('a').unbind('click');
           }
         }
         else{

@@ -243,7 +243,6 @@
         var $filter = $section.find('#'+filter['name']+'-filter');
         $filter.addClass('euca-table-filter');
           $filter.append(
-            //$('<span>').addClass('filter-label').html(table_filter_label),
             $('<select>').attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
            

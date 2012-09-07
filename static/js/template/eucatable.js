@@ -195,9 +195,14 @@
         $.each(thisObj.options.filters, function (idx, filter){
           var $filter = thisObj.element.find('#'+filter['name']+'-filter');
           $filter.addClass('euca-table-filter');
-          $filter.append(
-            $('<span>').addClass('filter-label').html(table_filter_label),
-            $('<select>').attr('id',filter['name']+'-selector'));
+          if (idx===0){
+            $filter.append(
+              $('<span>').addClass('filter-label').html(table_filter_label),
+              $('<select>').attr('id',filter['name']+'-selector'));
+          }else{
+            $filter.append(
+              $('<select>').attr('id',filter['name']+'-selector'));
+          }
           var $selector = $filter.find('#'+filter['name']+'-selector');
            
          for (i in filter.options){
@@ -261,7 +266,7 @@
           '&nbsp;|&nbsp;',
           $('<span>').addClass('show').text('50'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('All')));
+          $('<span>').addClass('show').text('100')));
 
       $tableTop.find('span.show').click(function () {
         $(this).parent().children('span').each( function() {

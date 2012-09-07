@@ -136,8 +136,6 @@
         $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
         $('<img>').attr('src','images/dots32.gif'));
-      $storageObj.find('#dashboard-storage-buckets').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
     },
   
     _setNetSecSummary : function($netsecObj) {
