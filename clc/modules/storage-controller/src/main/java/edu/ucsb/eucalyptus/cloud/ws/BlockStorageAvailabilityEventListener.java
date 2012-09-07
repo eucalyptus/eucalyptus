@@ -61,7 +61,7 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
           logger.debug( "Error finding capacity for " + cluster.getPartition(), e );
         }
 
-        resourceAvailability.add( new Availability( total, StorageUtil.getBlockStorageTotalSize(cluster.getPartition()), Lists.<Tag>newArrayList(
+        resourceAvailability.add( new Availability( total, Math.max( total - StorageUtil.getBlockStorageTotalSize(cluster.getPartition()), 0), Lists.<Tag>newArrayList(
             new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
             new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() )
         ) ) );
