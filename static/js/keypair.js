@@ -148,15 +148,15 @@
               content     : data.results.material,
               script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
             });
-            notifySuccess(null, keypair_create_success + ' ' + keyName);
+            notifySuccess(null, keypair_create_success(keyName));
             thisObj.tableWrapper.eucatable('refreshTable');
           } else {
-            notifyError(null, keypair_create_error + ' ' + keyName);
+            notifyError(null, keypair_create_error(keyName));
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          notifyError(null, keypair_delete_error + ' ' + keyName);
+          notifyError(null, keypair_delete_error(keyName));
         }
       });
     },
@@ -177,17 +177,17 @@
           (function(keyName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, keypair_delete_success + ' ' + keyName);
+                notifySuccess(null, keypair_delete_success(keyName));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, keypair_delete_error + ' ' + keyName);
+                notifyError(null, keypair_delete_error(keyName));
               }
            }
           })(keyName),
           error:
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, keypair_delete_error + ' ' + keyName);
+              notifyError(null, keypair_delete_error(keyName));
             }
           })(keyName)
         });
