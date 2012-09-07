@@ -83,7 +83,7 @@
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $snapshotHelp);
         },
-        filters : [{name:"snap_state", options: ['all','in-progress','completed'], filter_col:7, alias: {'in-progress':'pending','completed':'completed'}}],
+        filters : [{name:"snap_state", options: ['all','in-progress','completed'], text: [snap_state_selector_all, snap_state_selector_in_progress, snap_state_selector_completed], filter_col:7, alias: {'in-progress':'pending','completed':'completed'}} ],
         legend : ['pending', 'completed', 'error'],
       });
       this.tableWrapper.appendTo(this.element);
