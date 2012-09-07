@@ -720,7 +720,7 @@ int java_init(euca_opts *args, java_home_t *data) {
 	char* java_class_path = java_library_path(args);
 	__debug("Using classpath:\n%s", java_class_path);
 #define JVM_MAX_OPTS 128
-	int x = -1, i = 0;
+	int x = -1, i = 0, encoding_not_defined_flag = 1;
 	opt = (JavaVMOption *) malloc(JVM_MAX_OPTS * sizeof(JavaVMOption));
 	for (i = 0; i < JVM_MAX_OPTS; i++)
 		opt[i].extraInfo = NULL;
@@ -827,12 +827,18 @@ int java_init(euca_opts *args, java_home_t *data) {
 	}
 	for (i = 0; i < args->jvm_args_given; i++)
 		JVM_ARG(opt[++x], "-X%s", args->jvm_args_arg[i]);
-	for (i = 0; i < args->define_given; i++)
+	for (i = 0; i < args->define_given; i++){
 		JVM_ARG(opt[++x], "-D%s", args->define_arg[i]);
+        if(strncmp( args->define_arg[i],"file.encoding",13) == 0)
+          encoding_not_defined_flag=0;
+	}
 	for (i = 0; i < args->bootstrap_host_given; i++)
 		JVM_ARG(opt[++x], "-Deuca.bootstrap.host.%d=%s", i, args->bootstrap_host_arg[i]);
 	for (i = 0; i < args->bind_addr_given; i++)
 		JVM_ARG(opt[++x], "-Deuca.bind.addr.%d=%s", i, args->bind_addr_arg[i]);
+
+    if(encoding_not_defined_flag)
+    	JVM_ARG(opt[++x], "-Dfile.encoding=UTF-8");
 
 	opt[++x].optionString = java_class_path;
 	opt[x].extraInfo = NULL;
