@@ -234,20 +234,6 @@
        this.addDialog.eucadialog('buttonOnChange', $vol_size_edit,  createButtonId, function(){
          return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
        }); 
-/*
-       this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
-         var az = thisObj.addDialog.find('#volume-add-az-selector').val();
-         return az != '';
-       });
-       this.addDialog.find('#volume-add-az-selector').change( function () {
-         size = $.trim(thisObj.addDialog.find('#volume-size').val());
-         az = thisObj.addDialog.find('#volume-add-az-selector').val();
-         $button = thisObj.addDialog.parent().find('#' + createButtonId);
-         if ( size.length > 0 && az !== '')     
-           $button.prop("disabled", false).removeClass("ui-state-disabled");
-         else
-           $button.prop("disabled", false).addClass("ui-state-disabled");
-       });*/
        // volume create dialog end
     },
 

@@ -56,7 +56,7 @@
                var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
                if (!$btn || $btn.length<=0) {
                  $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
-                 $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop))
+                 $btn.attr('id', thisObj._getButtonId(btn_prop.domid, btn_id))
                };
                $btn.find('span').text(btn_prop.text);
                if(btn_prop.focus !== undefined && btn_prop.focus)
@@ -85,8 +85,8 @@
       });
     },
 
-    _getButtonId : function(btn_id, btn_prop) {
-       return btn_prop.domid !== undefined ? btn_prop.domid : 'btn-' + this.options.id + '-' + btn_id;
+    _getButtonId : function(buttonDomId, buttonId) {
+      return buttonDomId !== undefined ? buttonDomId : 'btn-' + this.options.id + '-' + buttonId;
     },
 
     _create : function() {  
@@ -198,6 +198,15 @@
       this.$error_div.children().detach();
     },
 
+    hideButton : function(buttonDomId, buttonId) {
+      effectiveId = this._getButtonId(buttonDomId, buttonId);
+      this.element.parent().find('#'+effectiveId).hide();
+    },
+
+    showButton : function(buttonDomId, buttonId) {
+      effectiveId = this._getButtonId(buttonDomId, buttonId);
+      this.element.parent().find('#'+effectiveId).show();
+    },
     /// 
     /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]] 
     setSelectedResources : function (resources) {
