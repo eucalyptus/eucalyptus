@@ -244,6 +244,20 @@
       this._note_divs.push(div_id);
     },
 
+    removeNote : function(div_id){
+      var thisObj = this;
+      var idxToDel = -1;
+      $.each(thisObj._note_divs, function(idx, id){
+        if(id === div_id){
+          thisObj.element.find('#'+id).children().detach();
+          idxToDel = idx;
+        }
+      });
+      if(idxToDel >=0){
+        thisObj._note_divs.splice(idxToDel, 1);
+      }
+    },
+
     buttonOnChange : function(evtSrc, buttonId, check){
       var thisObj = this;
       evtSrc.change( function(e){

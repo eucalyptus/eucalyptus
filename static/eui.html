@@ -820,6 +820,7 @@
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
              <div id="instance-connect-text"> </div> 
+             <div id="instance-connect-password"> </div>
             </div>
           </div>
           <div id="instances-euca-dialog-help" class="dialog-help">
@@ -849,27 +850,6 @@
           </div>
         </div>
       </script>
-
-      <script id="instancePasswordDlgTmpl" type="text/x-jsrender">
-        <div id="instances-euca-dialog-wrapper">
-          <div id="instances-euca-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              {{!: instance_dialog_password_text }}
-              <div id="instance-password"> </div>
-            </div>
-            <div class="selected-resources"> </div>
-            <div class="file-selector"> {{!:instance_dialog_choose_keyfile_text}} <input id="fileupload" type="file" name="priv_key" data-url="../ec2"> </div>
-          </div>
-          <div id="instances-euca-dialog-help" class="dialog-help">
-            <div class="dialog-help-content">
-              {{!: dialog_password_content}}
-            </div>
-            <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
-            </div>
-          </div>
-        </div>
-      </script>
       <!-- END Instance dialog templates -->
       
       <!-- Launch Wizard & Help --> 
@@ -883,15 +863,18 @@
 
               <!-- Launch Wizard Steps -->
               <div class="wizard-steps">
-
                 <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
-            
+                <div id="launch-wizard-required"> {{!> launch_instance_required }} </div> 
                 <div id="launch-wizard-image" class="wizard-step"> 
                   <div id="launch-wizard-image-header"> </div>
                   <div id="launch-wizard-image-contents" class="launch-wizard-section">
                     <div id="launch-wizard-image-main-contents">
-                      <div id="launch-wizard-image-filters"> </div>
-                      <div id="launch-wizard-image-table"> </div>
+                      <div id="launch-wizard-image-table">
+                        <table id="launch-images" class="display">
+                          <tbody>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                     <div id="launch-wizard-buttons-image" class="launch-wizard-buttons"> </div>
                   </div>
@@ -937,7 +920,11 @@
 
               <!-- Launch Wizard Summary -->
               <div id="launch-wizard-summary" class="wizard-summary">
-                Summary will go here
+                <span> {{!>launch_instance_summary_header}} </span>
+                <div id="summary-image"> </div>
+                <div id="summary-type"> </div>
+                <div id="summary-security"> </div>
+                <div id="summary-advanced"> </div>
               </div>
               <!-- END Launch Wizard Summary -->
 

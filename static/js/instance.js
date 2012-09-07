@@ -29,7 +29,6 @@
     consoleDialog : null,
     attachDialog : null,
     detachDialog : null,
-    passwordDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
@@ -253,33 +252,6 @@
           $button.prop("disabled", false).addClass("ui-state-disabled");
        });
       // attach dialog end
-
-      $tmpl = $('html body').find('.templates #instancePasswordDlgTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $password_dialog = $rendered.children().first();
-      var $password_help = $rendered.children().last();
-      this.passwordDialog = $password_dialog.eucadialog({
-        id: 'instances-password',
-        title: instance_dialog_password_title,
-        buttons: {
-          'password' : {text: instance_dialog_password_btn, click: function() { thisObj._getPassword(); $password_dialog.eucadialog("close");}},
-          'close': {text: dialog_close_btn, focus:true, click: function() { $password_dialog.eucadialog("close");}}
-        },
-        help: {content: $password_help},
-      });
-      var $fileSelector = thisObj.passwordDialog.find('input#fileupload');
-      $fileSelector.fileupload( {
-        dataType: 'json',
-        url: "../ec2",
-        fileInput: null,
-        done: function (e, data) {
-          $.each(data.result, function (index, result) {
-            thisObj.instPassword[result.instance] = result.password;
-            notifyError(null, instance_dialog_password_success+' : '+ result.password);
-          });
-        },
-        fail : function (e, data) { notifyError(null, instance_dialog_password_error); },
-      });
     },
 
     _destroy : function() { },
@@ -339,7 +311,6 @@
        menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
-       menuItems['getpassword'] = {"name":instance_action_getpassword, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -393,10 +364,6 @@
      // TODO: assuming disassociate-address is for only one selected instance 
      if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}}
-
-     if(numSelected === 1 && ('running' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0)) && (thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0] ==='windows')){
-       menuItems['getpassword'] = {"name":instance_action_getpassword, callback: function(key,opt){ thisObj._getPasswordAction(); }}
-     }
  
      return menuItems;
     },
@@ -573,10 +540,36 @@
         // connect is for one instance 
         var instance = instances[0];
         var os = oss[0]; 
-        if(os === 'windows') 
+        if(os === 'windows'){ 
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_windows_text);
-        else
+          if (!thisObj.instPassword[instance]){
+            thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', 
+              '<span>'+ instance_dialog_choose_keyfile_text+' </span> <input id="fileupload" type="file" name="priv_key" data-url="../ec2"> </div>');
+
+            var $fileSelector = thisObj.connectDialog.find('input#fileupload');
+            $fileSelector.fileupload( {
+              dataType: 'json',
+              url: "../ec2",
+              formData: [{name: 'Action', value: 'GetPassword'}, {name:'InstanceId', value:instance}, {name:'_xsrf', value:$.cookie('_xsrf')}],  
+              done: function (e, data) {
+                $.each(data.result, function (index, result) {
+                  thisObj.instPassword[result.instance] = result.password;
+                  thisObj.connectDialog.eucadialog('removeNote', 'instance-connect-password');
+                  thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', '<span>'+ instance_dialog_password_success + '</span>' + result.password); 
+                });
+              },
+              fail : function (e, data) { //notifyError(null, instance_dialog_password_error); 
+                thisObj.connectDialog.eucadialog('removeNote', 'instance-connect-password');
+                thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', '<span class=on-error>'+ instance_dialog_password_error + '</span>'); 
+              },
+            });
+          }else {
+            thisObj.connectDialog.eucadialog('addNote', 'instance-connect-password', '<span>'+ instance_dialog_password_success + '</span>' + thisObj.instPassword[instance]); 
+          }
+        }
+        else{
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_linux_text);
+        }
 
         thisObj.connectDialog.eucadialog('open');
        }
@@ -709,33 +702,6 @@
                 notifyError(null, volume_detach_error + ' ' + volumeId);
             }
           })(volumeId)
-      });
-    },
-    _getPasswordAction : function() {
-      var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      var keynames = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
-      if ( instances.length > 0 ) {
-        if(thisObj.instPassword[instances[0]]){
-          notifyError(null, instance_dialog_password_success+' : '+ thisObj.instPassword[instances[0]]);
-        }else{
-          // connect is for one instance 
-          var instance = instances[0];
-          var keyname = keynames[0];
-          var matrix = [[instance, keyname]];
-          thisObj.passwordDialog.eucadialog('setSelectedResources', {title: [instance_dialog_password_resource_label_instance,instance_dialog_password_resource_label_keyname], contents: matrix});
-          thisObj.passwordDialog.eucadialog('open');
-        }
-      }
-    },
-    _getPassword : function() {
-      var thisObj = this; 
-      var $fileSelector = thisObj.passwordDialog.find('input#fileupload');
-      var instanceId = thisObj.passwordDialog.eucadialog('getSelectedResources',0).join(' ');
-      $fileSelector.fileupload( "add", {
-        files: $fileSelector.files,
-        fileInput: $fileSelector,
-        formData: [{name: 'Action', value: 'GetPassword'}, {name:'InstanceId', value:instanceId}, {name:'_xsrf', value:$.cookie('_xsrf')}],  
       });
     },
 /**** Public Methods ****/

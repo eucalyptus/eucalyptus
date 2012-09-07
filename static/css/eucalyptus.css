@@ -1321,6 +1321,11 @@ tr.selected-row td.sorting_1
   background-color: #eee; /* To temporarily mark the defined area */
 }
 
+/* ==== When error reason is displayed on dialog ==== */
+span.on-error {
+  color : red;
+}
+
 /* ===== Instance Launch Wizard ===== */
 
 .launcher_wrapper {
@@ -1341,4 +1346,30 @@ tr.selected-row td.sorting_1
 
 .launch-wizard-section {
   display: none;
+}
+
+.wizard-step #filter-wrapper {
+  float: left;
+  width : 150px;
+}
+.wizard-step #table-wrapper {
+  float: left;
+  width : 250px;
+}
+.wizard-step .dataTables_filter input {
+  background-color: #f3f6f9;
+  border-radius: 4px;
+  border: 1px solid #9eb1c3;
+  color: #666;
+  font-size: 12px;
+  padding: 6px;
+  width: 120px;
+  outline: none;
+
+  -moz-box-shadow: inset 0 0 3px #a8b9c8;
+  -webkit-box-shadow: inset 0 0 3px #a8b9c8;
+  box-shadow: inset 0 0 3px #a8b9c8;
+}
+.wizard-step .dataTables_wrapper table thead{
+    display:none;
 }
