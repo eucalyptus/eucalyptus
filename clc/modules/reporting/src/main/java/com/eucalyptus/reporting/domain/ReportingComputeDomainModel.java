@@ -247,7 +247,7 @@ public class ReportingComputeDomainModel
 
 		// zone compute
 		for ( final Map.Entry<String,ReportingComputeZoneDomainModel> modelEntry : zoneModels.entrySet() ) {
-			builder.append(modelEntry.getKey()).append("\n");
+			builder.append(modelEntry.getKey()).append(":\n");
 			builder.append("\t").append("Cores      : ").append(modelEntry.getValue().getEc2ComputeUnitsAvailable()).append("\n");
 			builder.append("\t").append("Disk       : ").append(modelEntry.getValue().getEc2DiskUnitsAvailable()).append(" GiB\n");
 			builder.append("\t").append("Memory     : ").append(modelEntry.getValue().getEc2MemoryUnitsAvailable()).append(" MiB\n");
