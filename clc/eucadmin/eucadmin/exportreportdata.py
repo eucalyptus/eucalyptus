@@ -27,7 +27,7 @@ from boto.roboto.param import Param
 from eucadmin.reportsrequest import ReportsRequest
 import os
 
-class ReportsExport(ReportsRequest):
+class ExportReportData(ReportsRequest):
     Description = 'Export reporting data'
 
     Params = [Param(name='force',
@@ -37,9 +37,6 @@ class ReportsExport(ReportsRequest):
     Args = [Param(name='file', long_name='file',
         ptype='string', optional=True, request_param=False,
         doc='optional path to the resulting reporting data export file')]
-
-    def name(self):
-        return 'ExportData'
 
     def check_export_file(self):
         if self.file is not None and os.path.exists(self.file) and not self.force:
@@ -60,7 +57,7 @@ class ReportsExport(ReportsRequest):
             print export
 
     def process_args(self, **args):
-        super(ReportsExport, self).process_args( **args )
+        super(ExportReportData, self).process_args( **args )
         self.file = self.args['file']
         self.force = self.args['force']
         self.check_export_file()

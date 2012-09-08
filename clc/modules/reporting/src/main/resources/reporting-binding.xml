@@ -49,12 +49,12 @@
     <mapping class="com.eucalyptus.reporting.service.ExportDataResultType" abstract="true">
         <value name="Data" field="data" usage="required"/>
     </mapping>
-    <mapping name="ExportData" class="com.eucalyptus.reporting.service.ExportDataType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+    <mapping name="ExportReportData" class="com.eucalyptus.reporting.service.ExportReportDataType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
         <value name="Start" field="startDate"/>
         <value name="End" field="endDate" usage="required"/>
     </mapping>
-    <mapping name="ExportDataResponse" class="com.eucalyptus.reporting.service.ExportDataResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+    <mapping name="ExportReportDataResponse" class="com.eucalyptus.reporting.service.ExportReportDataResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
         <structure name="ExportDataResult" field="result" type="com.eucalyptus.reporting.service.ExportDataResultType"/>
         <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
