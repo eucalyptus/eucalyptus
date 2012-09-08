@@ -30,15 +30,16 @@ import os
 class ReportsExport(ReportsRequest):
     Description = 'Export reporting data'
 
-    Args = [Param(name='file', long_name='file',
-        ptype='string', optional=False, request_param=False,
-        doc='The path to the resulting reporting data export file')]
+    Params = [Param(name='file',
+        short_name='f', long_name='file',
+        ptype='string', request_param=False,
+        doc='the path to the resulting reporting data export file')]
 
     def name(self):
         return 'ExportData'
 
     def check_export_file(self):
-        if os.path.exists(self.file):
+        if self.file is not None and os.path.exists(self.file):
             msg = 'file %s already exists, ' % self.file
             msg += 'please remove and try again'
             raise IOError(msg)
@@ -47,10 +48,13 @@ class ReportsExport(ReportsRequest):
         export = getattr( data, 'Data', None )
         if export is None:
             raise IOError('Error reading export response')
-        f = open( self.file, 'w')
-        f.write( export )
-        f.close()
-        print 'Exported data to ' + self.file
+        if self.file is not None:
+            f = open( self.file, 'w')
+            f.write( export )
+            f.close()
+            print 'Exported data to ' + self.file
+        else:
+            print export
 
     def process_args(self, **args):
         super(ReportsExport, self).process_args( **args )
