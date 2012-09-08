@@ -30,16 +30,19 @@ import os
 class ReportsExport(ReportsRequest):
     Description = 'Export reporting data'
 
-    Params = [Param(name='file',
-        short_name='f', long_name='file',
-        ptype='string', request_param=False,
-        doc='the path to the resulting reporting data export file')]
+    Params = [Param(name='force',
+        short_name='f', long_name='force',
+        ptype='boolean', request_param=False,
+        doc='overwrite output file if it exists')]
+    Args = [Param(name='file', long_name='file',
+        ptype='string', optional=True, request_param=False,
+        doc='optional path to the resulting reporting data export file')]
 
     def name(self):
         return 'ExportData'
 
     def check_export_file(self):
-        if self.file is not None and os.path.exists(self.file):
+        if self.file is not None and os.path.exists(self.file) and not self.force:
             msg = 'file %s already exists, ' % self.file
             msg += 'please remove and try again'
             raise IOError(msg)
@@ -59,4 +62,5 @@ class ReportsExport(ReportsRequest):
     def process_args(self, **args):
         super(ReportsExport, self).process_args( **args )
         self.file = self.args['file']
+        self.force = self.args['force']
         self.check_export_file()
