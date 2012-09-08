@@ -204,19 +204,19 @@
               $('<select>').attr('id',filter['name']+'-selector'));
           }
           var $selector = $filter.find('#'+filter['name']+'-selector');
-           
-         for (i in filter.options){
+          $selector.change( function(e) { thisObj.table.fnDraw(); } );
+          for (i in filter.options){
             var option = filter.options[i];
             var text = (filter.text&&filter.text.length>i) ? filter.text[i] : option; 
             $selector.append($('<option>').val(option).text(text));
           }
-         
           if(filter['filter_col']){
             $.fn.dataTableExt.afnFiltering.push(
 	      function( oSettings, aData, iDataIndex ) {
                 if (oSettings.sInstance !== thisObj.options.id)
                   return true;
                 var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
+                //alert('selector val: '+selectorVal);
                 if(filter['alias'] && filter['alias'][selectorVal]){
                   var aliasTbl = filter['alias'];
                   return aliasTbl[selectorVal] === aData[filter['filter_col']];
@@ -224,10 +224,18 @@
                     return selectorVal === aData[filter['filter_col']];
                 }else
                   return true;
-            });
+             });
           }
-          $selector.change( function() { thisObj.table.fnDraw(); } );
-        });
+
+          if(filter.default){
+            $selector.find('option').each(function(){
+              if($(this).val() === filter.default){
+                $(this).attr('selected','selected');
+              }
+            });
+            $selector.trigger('change');
+          }
+        }); // end of filters
       }      
 
       var $searchBar = this.element.find('#'+this.options.id+'_filter');

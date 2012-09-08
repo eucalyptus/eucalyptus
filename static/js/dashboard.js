@@ -94,11 +94,11 @@
 
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-          thisObj._trigger('select', evt, {selected:'instance'});
+          thisObj._trigger('select', evt, {selected:'instance', filter:'running'});
         }));
       $instObj.find('#dashboard-instance-stopped').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-            thisObj._trigger('select', evt, {selected:'instance'});
+            thisObj._trigger('select', evt, {selected:'instance', filter:'stopped'});
       }));
     },
 

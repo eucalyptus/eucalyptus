@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
-    options : { },
+    options : {
+      state_filter : null,
+    },
     tableWrapper : null,
     termDialog : null,
     rebootDialog : null,
@@ -111,7 +113,7 @@
           }else
             return val;
         },
-        filters : [{name:"inst_state", options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:3}, 
+        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:3}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
       }) //end of eucatable
       thisObj.tableWrapper.appendTo(thisObj.element);
