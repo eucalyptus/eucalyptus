@@ -279,7 +279,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         final List<Address> addresses = Addresses.getInstance( ).listValues( );
         final List<Address> disabledAddresses = Addresses.getInstance( ).listDisabledValues( );
         final long total = addresses.size() + disabledAddresses.size();
-        final long available = Iterators.size( Iterators.filter( addresses.iterator(), new Predicate<com.eucalyptus.address.Address>() {
+        final long available = Iterators.size( Iterators.filter( Iterators.concat( addresses.iterator(), disabledAddresses.iterator()), new Predicate<com.eucalyptus.address.Address>() {
           @Override
           public boolean apply( final Address address ) {
             return !address.isAllocated();

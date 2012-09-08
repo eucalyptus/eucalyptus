@@ -21,43 +21,34 @@ package com.eucalyptus.reporting.dw.commands;
 
 import java.io.File;
 import java.io.IOException;
-import com.eucalyptus.reporting.export.Import;
-import com.eucalyptus.reporting.export.ReportingExport;
 import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 
 /**
- * Data warehouse import command, invoked from Python wrapper.
+ * Data warehouse report generation command, invoked from Python wrapper.
  */
-public class ImportCommand extends CommandSupport {
+public class ReportCommand extends CommandSupport {
 
-  public ImportCommand(final String[] args) {
+  public ReportCommand(final String[] args) {
     super(argumentsBuilder()
-        .withFlag( "r", "replace", "Replace existing reporting data" )
-        .withArg( "f", "file", "File containing exported reporting data for import", true )
+        .withArg( "f", "file", "File for generated report", true )
         .forArgs(args));
   }
 
   @Override
   protected void runCommand( final Arguments arguments ) {
-    final boolean replace = arguments.hasArgument( "replace" );
-    final String exportFilename = arguments.getArgument( "export", null );
-    final File exportFile = new File( exportFilename );
-    final ReportingExport reportingExport;
+    final String reportFilename = arguments.getArgument( "file", null );
 
+    //TODO process arguments, generate report and write it out.
     try {
-      reportingExport = new ReportingExport( exportFile );
-    } catch ( IOException e ) {
+      Files.write( "", new File(reportFilename), Charsets.UTF_8);
+    } catch (IOException e) {
       throw Exceptions.toUndeclared( e );
     }
-
-    if ( replace ) {
-      Import.deleteAll();
-    }
-
-    Import.importData( reportingExport );
   }
 
   public static void main( final String[] args ) {
-    new ImportCommand( args ).run();
+    new ReportCommand( args ).run();
   }
 }

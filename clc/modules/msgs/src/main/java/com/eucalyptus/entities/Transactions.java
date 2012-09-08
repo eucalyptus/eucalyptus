@@ -173,13 +173,9 @@ public class Transactions {
       pop( );
     }
   }
-  
+
   public static <T> T find( T search ) throws TransactionException {
-    return one( search, new Callback<T>( ) {
-      
-      @Override
-      public void fire( T t ) {}
-    } );
+    return one( search, Functions.<T>identity() );
   }
   
   public static <T> T one( T search, final Callback<T> c ) throws TransactionException {
@@ -196,7 +192,7 @@ public class Transactions {
       }
     } );
   }
-  
+
   public static <S, T> S one( T search, Function<T, S> f ) throws TransactionException {
     assertThat( search, notNullValue( ) );
     assertThat( f, notNullValue( ) );
