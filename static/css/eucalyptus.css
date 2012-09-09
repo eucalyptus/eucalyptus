@@ -580,7 +580,8 @@ body {
 
 .button,
 .large-button,
-.xlarge-button {
+.xlarge-button,
+.actionmenu span  {
   display: inline-block;
   color: #fff;
   font-family: 'PlayBold', Arial, sans-serif;
@@ -789,8 +790,9 @@ body {
 }
 
 #dashboard-storage-img {
-  background-position: 0 -425px; 
+  background-position: 0 -425px;
 }
+
 #dashboard-netsec-img {
   background-position: -150px -425px;
 }
@@ -1022,16 +1024,74 @@ tr.selected-row td.sorting_1
 }
 
 .actionmenu {
-  font-size: 13px;
-  line-height: 27px;
-  color: #3366CC;
-  height: 30px;
   margin-left: 15px;
 }
 
-.inactive-menu {
-  color: gray;
+.actionmenu span {
+
+  /* These are the differences from the button styles in order to accomodate the arrow */
+  /* If button gradients are changed, they will need to be changed here as well */
+
+  padding: 5px 30px 5px 17px;
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 }
+
+.actionmenu span:hover {
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
+}
+
+.actionmenu span.inactive-menu {
+  border: 1px solid rgba(128,128,128,0.6);
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+}
+
+/* Overrides for jQuery context menu styles */
+
+.context-menu-list {
+  background-color: #fff;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  color: #02405f;
+  border-top: 1px solid #ccc;
+  background-color: #fff;
+  min-width: 125px;
+}
+
+.context-menu-item:first-child {
+  border-top: 0;
+}
+
+.context-menu-item:hover {
+  color: #73a434;
+  background-color: #fff;
+}
+
+.context-menu-item.disabled,
+.context-menu-item.disabled:hover {
+  color: #aaa;
+}
+
 
 /* == Results and table size == */
 
