@@ -110,14 +110,14 @@ public class BootstrapArgs {
   }
   
   static void init( ) {
-    try {
-      InetAddress.getByName( "eucalyptus.com" ).isReachable( NetworkInterface.getByInetAddress(Internets.localHostInetAddress( )), 64, 10000 );//GRZE:attempted hack to allocate raw socket
-    } catch ( Exception ex2 ) {
-      LOG.error( ex2 , ex2 );
-    }
     bindAddrs.addAll( BootstrapArgs.parseMultipleArgs( "euca.bind.addr", BindAddressValidator.INSTANCE ) );
     bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );
     initSystem = System.getProperty( "euca.initialize" ) != null;
+    try {
+        InetAddress.getByName( "eucalyptus.com" ).isReachable( NetworkInterface.getByInetAddress(Internets.localHostInetAddress( )), 64, 10000 );//GRZE:attempted hack to allocate raw socket
+    } catch ( Exception ex2 ) {
+        LOG.error( ex2 , ex2 );
+    }
   }
   
   public static boolean isInitializeSystem( ) {
