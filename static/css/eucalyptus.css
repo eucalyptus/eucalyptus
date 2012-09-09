@@ -663,6 +663,32 @@ body {
   box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
 }
 
+/* This style of container box is used on several classes */
+/* Grouped here to make global changes. Differences are usually just margin and padding */
+
+/* TODO: See if a common class could be used on some of them */
+
+.page-content-box,
+.dataTables_wrapper,
+.help-page-wrapper,
+.launcher_wrapper {
+  position: relative;
+
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+
+  margin: 0 8px 35px;
+  padding: 47px 0 10px 0; 
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+}
+
 /* Ribbon corners */
 
 .box-header::before,
@@ -847,21 +873,11 @@ body {
 
 /* ======= jQuery table style overrides ======= */
 
-.dataTables_wrapper,
-.help-page-wrapper {
-  background-color: #fff;
-  border: 1px solid #d7d5d5;
-
+.dataTables_wrapper {
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
   margin: 0 8px 35px;
   padding: 47px 0 10px 0; 
-
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
-  border-radius: 5px;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 table.display {
@@ -915,11 +931,9 @@ tr.selected-row td.sorting_1
 
 /* ======= Help page related ===== */
 
-
-/* This class gets most of its styles from the dataTables_wrapper class (above) with a few changes */
-
 .help-page-wrapper {
-  position: relative;
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
   margin: 0 8px 35px;
   padding: 47px 0 15px 0; 
 }
@@ -1410,19 +1424,10 @@ span.on-error {
 /* ===== Instance Launch Wizard ===== */
 
 .launcher_wrapper {
-  background-color: #fff;
-  border: 1px solid #d7d5d5;
-
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
   margin: 0 8px 35px;
-  padding: 47px 0 10px 0; 
-
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
-  border-radius: 5px;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  padding: 47px 0 10px 0;
 }
 
 .launch-wizard-section {
