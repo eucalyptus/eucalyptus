@@ -95,6 +95,8 @@ typedef struct {
 
 int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half);
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
+int sensor_get_config (int *new_history_size, long long * new_collection_interval_time_ms);
+int sensor_get_num_resources (void);
 int sensor_str2type (const char * counterType);
 const char * sensor_type2str (int type);
 int sensor_res2str (char * buf, int bufLen, sensorResource **res, int resLen);

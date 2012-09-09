@@ -196,6 +196,30 @@ int sensor_config (int new_history_size, long long new_collection_interval_time_
     return 0;
 }
 
+int sensor_get_config (int *history_size, long long * collection_interval_time_ms)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+
+    sem_p (state_sem);
+    * history_size = sensor_state->history_size;
+    * collection_interval_time_ms = sensor_state->collection_interval_time_ms;
+    sem_v (state_sem);
+
+    return 0;
+}
+
+int sensor_get_num_resources (void)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return -1;
+    
+    int num_resources;
+    sem_p (state_sem);
+    num_resources = sensor_state->used_resources;
+    sem_v (state_sem);
+    
+    return num_resources;
+}
+
 int sensor_str2type (const char * counterType)
 {
     for (int i=0; i<(sizeof (sensorCounterTypeName) / sizeof (char *)); i++) {

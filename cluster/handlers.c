@@ -469,6 +469,35 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  rc = 1;
 	}
       }
+    } else if (!strcmp(ncOp, "ncDescribeSensors")) {
+      int history_size = va_arg(al, int);
+      long long collection_interval_time_ms = va_arg(al, long long);
+      char **instIds = va_arg(al, char **);
+      int instIdsLen = va_arg(al, int);
+      char **sensorIds = va_arg(al, char **);
+      int sensorIdsLen = va_arg(al, int);
+      sensorResource ***srs=va_arg(al, sensorResource ***);
+      int *srsLen= va_arg(al, int *);
+
+      rc = ncDescribeSensorsStub(ncs, localmeta, history_size, collection_interval_time_ms, instIds, instIdsLen, sensorIds, sensorIdsLen, srs, srsLen);
+
+      if (timeout && srs && srsLen) {
+	if (!rc) {
+	  len = *srsLen;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  for (i=0; i<len; i++) {
+	    sensorResource *sr;
+	    sr = (*srs)[i];
+	    rc = write(filedes[1], sr, sizeof(sensorResource));
+	  }
+	  rc = 0;
+	} else {
+	  len = 0;
+	  rc = write(filedes[1], &len, sizeof(int));
+	  rc = 1;
+	}
+      }
+
     } else if (!strcmp(ncOp, "ncBundleInstance")) {
       char *instanceId = va_arg(al, char *);
       char *bucketName = va_arg(al, char *);
@@ -676,6 +705,44 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	  if (rbytes <= 0) {
 	    kill(pid, SIGKILL);
 	    opFail=1;
+	  }
+	}
+      }
+    } else if (!strcmp(ncOp, "ncDescribeSensors")) {
+      int history_size = va_arg(al, int);
+      long long collection_interval_time_ms = va_arg(al, long long);
+      char **instIds = va_arg(al, char **);
+      int instIdsLen = va_arg(al, int);
+      char **sensorIds = va_arg(al, char **);
+      int sensorIdsLen = va_arg(al, int);
+      sensorResource ***srs=va_arg(al, sensorResource ***);
+      int *srsLen= va_arg(al, int *);
+
+      if (srs && srsLen) {
+	* srs = NULL;
+	* srsLen = 0;
+      }
+      if (timeout && srs && srsLen) {
+	rbytes = timeread(filedes[0], &len, sizeof(int), timeout);
+	if (rbytes <= 0) {
+	  kill (pid, SIGKILL);
+	  opFail = 1;
+	} else {
+	  * srs = malloc(sizeof(sensorResource *) * len);
+	  if (* srs == NULL) {
+	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    unlock_exit(1);
+	  }
+	  * srsLen = len;
+	  for (i=0; i<len; i++) {
+	    sensorResource * sr;
+	    sr = malloc (sizeof (sensorResource));
+	    if (sr == NULL) {
+	      logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	      unlock_exit(1);
+	    }
+	    rbytes = timeread(filedes[0], sr, sizeof (sensorResource), timeout);
+	    (* srs)[i] = sr;
 	  }
 	}
       }
@@ -1646,6 +1713,100 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
   if (pids) free(pids);
 
   logprintfl(EUCADEBUG,"refresh_instances(): done\n");
+  return(0);
+}
+
+int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
+
+  time_t op_start = time(NULL);
+  logprintfl(EUCAINFO,"refresh_sensors(): called\n");
+
+  int history_size;
+  long long collection_interval_time_ms;
+  if ((sensor_get_config (&history_size, &collection_interval_time_ms) != 0) ||
+      history_size < 1 ||
+      collection_interval_time_ms == 0)
+    return 0; // sensor system not configured yet
+
+  // critical NC call section
+  sem_mywait(RESCACHE);
+  memcpy(resourceCacheStage, resourceCache, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
+
+  sem_close(locks[REFRESHLOCK]);
+  locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
+
+  int * pids = malloc(sizeof(int) * resourceCacheStage->numResources);
+  if (!pids) {
+    logprintfl(EUCAFATAL, "refresh_sensors(): out of memory!\n");
+    unlock_exit(1);
+  }
+  
+  for (int i=0; i<resourceCacheStage->numResources; i++) {
+    
+    sem_mywait(REFRESHLOCK);
+    pid_t pid = fork();
+    if (!pid) {
+      if (resourceCacheStage->resources[i].state == RESUP) {
+	int nctimeout = ncGetTimeout(op_start, timeout, 1, 1);
+	
+	sensorResource ** srs;
+	int srsLen;
+	int rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncDescribeSensors", history_size, collection_interval_time_ms, NULL, 0, NULL, 0, &srs, &srsLen);
+	
+	if (!rc) {	  
+	  // update our cache
+	  if (sensor_merge_records (srs, srsLen, TRUE) != OK) {
+	    logprintfl (EUCAWARN, "failed to store all sensor data due to lack of spacen");
+	  }
+
+	  if (srsLen > 0) {
+	    for (int j=0; j<srsLen; j++) {
+	      free (srs[j]);
+	    }
+	    free (srs);
+	  }
+	}
+      }
+      sem_mypost(REFRESHLOCK);
+      exit(0);
+    } else {
+      pids[i] = pid;
+    }
+  }
+  
+  for (int i=0; i<resourceCacheStage->numResources; i++) {
+    int status;
+    
+    int rc = timewait(pids[i], &status, 120);
+    if (!rc) {
+      // timed out, really bad failure (reset REFRESHLOCK semaphore)
+      sem_close(locks[REFRESHLOCK]);
+      locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
+      rc = 1;
+    } else if (rc > 0) {
+      // process exited, and wait picked it up.
+      if (WIFEXITED(status)) {
+        rc = WEXITSTATUS(status);
+      } else {
+	rc = 1;
+      }
+    } else {
+      // process no longer exists, and someone else reaped it
+      rc = 0;
+    }
+    if (rc) {
+      logprintfl(EUCAWARN, "refresh_sensors(): error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
+    }
+  }
+  
+  sem_mywait(RESCACHE);
+  memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
+  sem_mypost(RESCACHE);
+  
+  if (pids) free(pids);
+  
+  logprintfl(EUCADEBUG,"refresh_sensors(): done\n");
   return(0);
 }
 
@@ -2631,21 +2792,35 @@ int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionInt
   if (err != 0)
     logprintfl (EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
 
-  int total = 1;
-  * outResources = malloc (total * sizeof (sensorResource *));
-  if ((*outResources) == NULL) {
-    return OUT_OF_MEMORY;
+  int num_resources = sensor_get_num_resources();
+  if (num_resources < 0) {
+    logprintfl (EUCAERROR, "failed to determine number of available sensors\n");
+    return 1;
   }
 
-  int k = 0;
-  * outResources [k] = malloc (sizeof (sensorResource));
-  sensor_get_instance_data (NULL, NULL, 0, (* outResources) + k, 1);
-  k++;
+  * outResources = NULL;
+  * outResourcesLen = 0;
 
-  * outResourcesLen = k;
+  if (num_resources > 0) {
 
-    //  * outResources = NULL;
-    //  * outResourcesLen = 0;
+    * outResources = malloc (num_resources * sizeof (sensorResource *));
+    if ((*outResources) == NULL) {
+      return OUT_OF_MEMORY;
+    }    
+    for (int i = 0; i < num_resources; i++) {
+      (* outResources) [i] = calloc (1, sizeof (sensorResource));
+      if (((* outResources) [i]) == NULL) {
+	return OUT_OF_MEMORY;
+      }
+    }
+    
+    // if number of resources has changed since the call to sensor_get_num_resources(),
+    // then either we won't report on everything (ok, since we'll get it next time)
+    // or we'll have fewer records in outResrouces[] (ok, since empty ones will be ignored)
+    sensor_get_instance_data (NULL, NULL, 0, * outResources, num_resources);
+    * outResourcesLen = num_resources;
+  }
+
   return 0;
 }
 
@@ -3111,6 +3286,11 @@ void *monitor_thread(void *in) {
 	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
 	}
 
+	rc = refresh_sensors(&ccMeta, 60, 1); // TODO3.2: change this to use sensorTimer instead of ncTimer
+	if (rc) {
+	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_sensors() failed in monitor thread\n");
+	}
+
 	rc = refresh_instances(&ccMeta, 60, 1);
 	if (rc) {
 	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
@@ -3222,25 +3402,6 @@ int init_pthreads() {
     return(1);
   }
   sem_mywait(CONFIG);
-  if (config->threads[MONITOR] == 0 || check_process(config->threads[MONITOR], "httpd-cc.conf")) {
-    int pid;
-    pid = fork();
-    if (!pid) {
-      // set up default signal handler for this child process (for SIGTERM)
-      struct sigaction newsigact = { { NULL } };
-      newsigact.sa_handler = SIG_DFL;
-      newsigact.sa_flags = 0;
-      sigemptyset(&newsigact.sa_mask);
-      sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
-      sigaction(SIGTERM, &newsigact, NULL);
-      config->kick_dhcp = 1;
-      config->kick_network = 1;
-      monitor_thread(NULL);
-      exit(0);
-    } else {
-      config->threads[MONITOR] = pid;
-    }
-  }
 
   if (sensor_initd==0) {
     sem * s = sem_alloc_posix (locks[SENSORCACHE]);
@@ -3270,7 +3431,30 @@ int init_pthreads() {
       sensor_initd = 1;
     }
   }
+
+  // sensor initialization should preceed monitor thread creation so 
+  // that monitor thread has its sensor subsystem initialized
   
+  if (config->threads[MONITOR] == 0 || check_process(config->threads[MONITOR], "httpd-cc.conf")) {
+    int pid;
+    pid = fork();
+    if (!pid) {
+      // set up default signal handler for this child process (for SIGTERM)
+      struct sigaction newsigact = { { NULL } };
+      newsigact.sa_handler = SIG_DFL;
+      newsigact.sa_flags = 0;
+      sigemptyset(&newsigact.sa_mask);
+      sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+      sigaction(SIGTERM, &newsigact, NULL);
+      config->kick_dhcp = 1;
+      config->kick_network = 1;
+      monitor_thread(NULL);
+      exit(0);
+    } else {
+      config->threads[MONITOR] = pid;
+    }
+  }
+
   sem_mypost(CONFIG);
 
   return(0);
