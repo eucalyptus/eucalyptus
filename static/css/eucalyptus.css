@@ -847,7 +847,8 @@ body {
 
 /* ======= jQuery table style overrides ======= */
 
-.dataTables_wrapper {
+.dataTables_wrapper,
+.help-page-wrapper {
   background-color: #fff;
   border: 1px solid #d7d5d5;
 
@@ -914,6 +915,26 @@ tr.selected-row td.sorting_1
 
 /* ======= Help page related ===== */
 
+
+/* This class gets most of its styles from the dataTables_wrapper class (above) with a few changes */
+
+.help-page-wrapper {
+  position: relative;
+  margin: 0 8px 35px;
+  padding: 47px 0 15px 0; 
+}
+
+/* To override the background-color inline style added by the jQuery Flip */
+
+#volumes-table,
+#keys-table,
+#eip-table,
+#sgroups-table,
+#instances-table,
+#snapshot-table {
+  background-color: transparent !important;
+}
+
 .help-link,
 .help-return {
   float: right;
@@ -925,7 +946,7 @@ tr.selected-row td.sorting_1
 .help-return a
  {
   display: inline-block;
-  height: 16px;
+  height: 18px; /* To match the height of the optional header text */
   width: 16px;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
   text-indent: 100%;
@@ -938,12 +959,12 @@ tr.selected-row td.sorting_1
 }
 
 .help-content {
-  padding: 10px;
+  padding: 10px 20px 20px;
 }
 
 .help-revert-button {
   float: right;
-  margin-top: 10px;
+  padding-right: 20px;
 }
 
 /* Hide close X button in UI dialogs */
