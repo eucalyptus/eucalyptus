@@ -106,6 +106,7 @@
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 15
 #define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
+#define MAX_SENSOR_RESOURCES MAXINSTANCES 
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -494,7 +495,7 @@ monitoring_thread (void *arg)
 	int i;
 	struct nc_state_t *nc;
 
-        logprintfl (EUCADEBUG, "{%u} spawning monitoring thread\n", (unsigned int)pthread_self());
+    logprintfl (EUCADEBUG, "spawning monitoring thread\n");
 	if (arg == NULL) {
 		logprintfl (EUCAFATAL, "NULL parameter!\n");
 		return NULL;
@@ -647,7 +648,7 @@ void *startup_thread (void * arg)
     char *brname=NULL;
     int error, i;
     
-    logprintfl (EUCADEBUG, "{%u} spawning startup thread\n", (unsigned int)pthread_self());
+    logprintfl (EUCADEBUG, "spawning startup thread\n");
     if (! check_hypervisor_conn ()) {
         logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
         goto shutoff;
@@ -953,7 +954,7 @@ static int init (void)
 	// set the minimum log for now
 	snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
     log_file_set(logFile);
-    logprintfl (EUCAINFO, "{%u} spawning Eucalyptus node controller %s\n", (unsigned int)pthread_self(), compile_timestamp_str);
+    logprintfl (EUCAINFO, "spawning Eucalyptus node controller %s\n", compile_timestamp_str);
 	if (do_warn) 
 		logprintfl (EUCAWARN, "env variable %s not set, using /\n", EUCALYPTUS_ENV_VAR_NAME);
     
@@ -1088,6 +1089,11 @@ static int init (void)
 		GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);
 	}
 	free (hypervisor);
+    
+    if (sensor_init (NULL, NULL, MAX_SENSOR_RESOURCES, FALSE)==ERROR) {
+        logprintfl (EUCAERROR, "failed to initialize sensor subsystem in this process\n");
+        return ERROR_FATAL;
+    }
 
 	//// from now on we have unrecoverable failure, so no point in retrying to re-init ////
 	initialized = -1;
@@ -1816,6 +1822,8 @@ int doCreateImage (ncMetadata *meta, char *instanceId, char *volumeId, char *rem
 
 int 
 doDescribeSensors (ncMetadata *meta, 
+                   int historySize,
+                   long long collectionIntervalTimeMs,
                    char **instIds,
                    int instIdsLen,
                    char **sensorIds,
@@ -1831,9 +1839,9 @@ doDescribeSensors (ncMetadata *meta,
 	logprintfl (EUCADEBUG2, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
     
 	if (nc_state.H->doDescribeSensors)
-		ret = nc_state.H->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+		ret = nc_state.H->doDescribeSensors (&nc_state, meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
 	else 
-		ret = nc_state.D->doDescribeSensors (&nc_state, meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+		ret = nc_state.D->doDescribeSensors (&nc_state, meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     
 	return ret;
 }
