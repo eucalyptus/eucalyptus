@@ -21,12 +21,26 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
     _options : { },
+    errorDialog : null,
     _init : function() { },
     _create : function() { 
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #loginTmpl').clone(); 
       var $login = $($tmpl.render($.i18n.map));
       
+      var  $tmpl = $('html body').find('.templates #loginErrorDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+      var $err_dialog = $rendered.children().first();
+      var $err_help = $rendered.children().last();
+      this.errorDialog = $err_dialog.eucadialog({
+        id: 'login-failure',
+        title: login_failure_title,
+        buttons: {
+          'Close': {text: dialog_close_btn, focus:true, click: function() { $err_dialog.eucadialog("close");}}
+        },
+        help: {content: $err_help},
+      });
+
       var $form = $login.find('form');
       // set the login event handler
       $form.find('input[type=text]').change( function(evt) {
@@ -46,8 +60,7 @@
             eucalyptus.main($.eucaData);
    	      },
           onError: function(args){
-             // TODO: need an error notification screen for login failure
-    	     alert("login failed: "+args);
+            thisObj.errorDialog.eucadialog('open');
           }		     
         });
         return false;

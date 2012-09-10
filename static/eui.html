@@ -155,6 +155,24 @@
           </form>        
         </div>
       </script>
+
+      <script id="loginErrorDlgTmpl" type="text/x-jsrender">
+        <div id="login-euca-dialog-wrapper">
+          <div id="login-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: login_failure }}
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_login_failure_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
       <!-- END Login template -->
 
       <!-- Footer template -->
