@@ -1267,6 +1267,12 @@ tr.selected-row td.sorting_1
   background-position: left -280px;
 }
 
+/* Legend icons - Images status */
+
+.legend-failed,
+.status-failed {
+  background-position: left -400px;
+}
 
 /* == Pagination == */
 

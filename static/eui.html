@@ -65,6 +65,7 @@
     <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
     <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
     <script type="text/javascript" language="javascript" src="js/instance.js"></script>
+    <script type="text/javascript" language="javascript" src="js/image.js"></script>
     <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
     <script type="text/javascript" language="javascript" src="js/volume.js"></script>
     <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
@@ -901,6 +902,36 @@
       </script>
       <!-- END Instance dialog templates -->
       
+      <!-- Image landing table template -->
+      <script id="imageTblTmpl" type="text/x-jsrender">
+        <div id="images-wrapper">
+          <div id="images-table">
+            <table id="images" class="display">
+              <thead>
+                <tr>
+                  <th>&nbsp;</th>
+                  <th>{{!>img_tbl_hdr_name}}</th>
+                  <th>{{!>img_tbl_hdr_status}}</th>
+                  <th>{{!>img_tbl_hdr_architecture}}</th>
+                  <th>{{!>img_tbl_hdr_description}}</th>
+                  <th>{{!>img_tbl_hdr_root}}</th>
+                </tr>
+               </thead>
+               <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div id="instance-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <!-- Launch Wizard & Help --> 
       <script id="launchWizardTmpl" type="text/x-jsrender">
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 

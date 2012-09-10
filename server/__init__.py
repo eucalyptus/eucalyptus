@@ -221,6 +221,11 @@ class LoginProcessor(ProxyProcessor):
         if remember == 'yes':
             web_req.set_cookie("account", account)
             web_req.set_cookie("username", user)
+            web_req.set_cookie("remember", 'true' if remember else 'false')
+        else:
+            web_req.clear_cookie("account")
+            web_req.clear_cookie("username")
+            web_req.clear_cookie("remember")
         sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
 
         return LoginResponse(sessions[sid])

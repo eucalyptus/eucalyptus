@@ -25,7 +25,8 @@
     help_volume.load({language:language});
     help_sgroup.load({language:language}); 
     help_instance.load({language:language});
-    help_snapshot.load({language:language}); 
+    help_snapshot.load({language:language});
+    help_image.load({language:language}); 
     help_eip.load({language:language});
     help_launcher.load({language:language});
   }
@@ -67,6 +68,15 @@ var help_keypair = {
   dialog_add_content: "",
   dialog_delete_title: "Deleting key pair?",
   dialog_delete_content: ""
+};
+
+var help_image = {
+  load : function(arg){
+    loadHtml('help/'+arg.language+'/console_manage_images.html', function(data){help_image.landing_content=data})
+  },
+  revert_button: "Back to images",
+  landing_title: "Images -- help", // TODO: deprecate
+  landing_content: "",
 };
 
 var help_snapshot = {

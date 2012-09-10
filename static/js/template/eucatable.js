@@ -35,7 +35,8 @@
       draw_cell_callback : null,  // if we want to customize how the cell is drawn (e.g., map EMI to manifest)
                                   // {column: 3, callback: function(){ } }
       filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
-      legend : null, // e.g., ['available', 'attaching', 'attached', ...] 
+      legend : null, // e.g., ['available', 'attaching', 'attached', ...]
+      show_only : null, // e.g, {filter_value: 'machine', filter_col: 7}
     },
 
     table : null, // jQuery object to the table
@@ -51,7 +52,14 @@
       this._decorateActionMenu();
       this._decorateLegendPagination();
       this._addActions();
- 
+      if ( thisObj.options.show_only ) {
+        $.fn.dataTableExt.afnFiltering.push(
+	  function( oSettings, aData, iDataIndex ) {
+            if (oSettings.sInstance !== thisObj.options.id)
+              return true;
+            return thisObj.options.show_only.filter_value === aData[thisObj.options.show_only.filter_col];
+          });
+      }
     },
 
     _create : function() {
@@ -260,9 +268,12 @@
       var thisObj = this; // ref to widget instance
       $tableTop = this.element.find('.table_' + this.options.id + '_top');
       $tableTop.addClass('euca-table-length clearfix');
+      $createResourceDiv =  $('<div>').addClass('euca-table-add');
+      if ( thisObj.options.text.create_resource )
+        $createResourceDiv.append(
+          $('<a>').attr('id','table-'+this.options.id+'-new').addClass('button').attr('href','#').text(thisObj.options.text.create_resource));
       $tableTop.append(
-        $('<div>').addClass('euca-table-add').append(
-          $('<a>').attr('id','table-'+this.options.id+'-new').addClass('button').attr('href','#').text(thisObj.options.text.create_resource)),
+        $createResourceDiv,
         $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
@@ -280,11 +291,7 @@
         $(this).parent().children('span').each( function() {
           $(this).removeClass('selected');
         });
-        
-        if ($(this).text() == 'All')
-          thisObj.table.fnSettings()._iDisplayLength = -1;
-        else
-          thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
+        thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
         thisObj.table.fnDraw();
         $(this).addClass('selected');
       });
