@@ -224,7 +224,7 @@
 
       var $tr = $('<tr>');
       $.each(resources.title, function(idx, val){
-        $tr.append($('<td>').text(val.toUpperCase())); 
+        $tr.append($('<th>').text(val.toUpperCase())); 
       }); 
       $head.append($tr);
       $.each(resources.contents, function(i, row){

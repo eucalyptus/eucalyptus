@@ -480,11 +480,6 @@ body {
   float: right;
 }
 
-.dialog-error {
-  color: red;
-  padding: 5px;
-}
-
 
 /* ======== Login styles ======= */
 
@@ -630,7 +625,8 @@ body {
 
 /* ======== Content styles ======= */
 
-.content-box {
+.content-box,
+.euca-dialog-container {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
@@ -648,15 +644,17 @@ body {
 }
 
 .box-header,
-.euca-table-header {
+.euca-table-header,
+.euca-dialog-container .ui-dialog-titlebar {
   background-color: #eaf2f5;
   border-top: 1px solid #e7e5e5;
   color: #02405f;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 18px;
+  font-weight: normal;
   margin: 0 0 20px;
   position: absolute;
-  top: 12px;
+  top: 14px;
   left: -8px;
   padding: 6px 8px;
   width: 100%;
@@ -697,7 +695,9 @@ body {
 .box-header::before,
 .box-header::after,
 .euca-table-header::before,
-.euca-table-header::after {
+.euca-table-header::after,
+.euca-dialog-container .ui-dialog-titlebar::before,
+.euca-dialog-container .ui-dialog-titlebar::after {
   content: '';
   display: block;
   width: 8px;
@@ -711,11 +711,13 @@ body {
   background: transparent url(../images/css-sprites-small.png) no-repeat left -130px;   
 }
 .box-header::before,
-.euca-table-header::before {
+.euca-table-header::before,
+.euca-dialog-container .ui-dialog-titlebar::before {
     left: 0;
 }
 .box-header::after,
-.euca-table-header::after {
+.euca-table-header::after,
+.euca-dialog-container .ui-dialog-titlebar::after {
   right: 0;
   background-position: right -130px;
 }
@@ -1356,26 +1358,75 @@ tr.selected-row td.sorting_1
 
 /* ======= Overrides for jQuery UI dialog boxes ======= */
 
+.ui-widget-overlay {
+  background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
+  opacity: 0.6;
+}
+
 .euca-dialog-container {
   /* Class added to each jQuery dialog, so we can target elements */
+  margin: 0 8px;
+  padding: 47px 0 5px 0;
+  overflow: visible;
+  min-height: 50px;
+}
+
+.euca-dialog-container .ui-dialog-titlebar {
+  padding: 4px 8px;
+  border-radius: 0;
+  background-image: none;
+  font-size: 15px;
+  left: -9px;
+}
+
+.euca-dialog-container .ui-dialog-title {
+  margin-left: 30px;
 }
 
 .ui-dialog-titlebar-close {
-  visibility: hidden;
+  display: none;
 }
 
-.ui-widget-overlay {
-    background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
-    opacity: 0.6;
+.euca-dialog {
+  /* This doesn't appear on every dialog */
+}
+
+.dialog-inner-content {
+  padding: 0 15px 5px;
+  font-size: 11px;
+  color: #444;
+}
+
+.selected-resources {
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  text-align: center;
+}
+
+.selected-resources table {
+  width: 100%;
+}
+
+.selected-resources th {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-weight: normal;
+}
+
+.dialog-error {
+  color: red;
+  padding: 5px 15px;
 }
 
 .ui-dialog .ui-dialog-buttonpane {
-  padding: 0;
+  margin: 0;
+  padding: 0 5px 5px 0;
   border: 0;
 }
 
 .ui-dialog .ui-dialog-buttonpane button {
     margin: 0.5em 0.7em 0.5em 0;
+    outline: 0;
 }    
 
 .ui-button-text-only .ui-button-text  {
