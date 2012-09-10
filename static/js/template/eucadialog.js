@@ -41,6 +41,10 @@
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
          width: 600,
+         dialogClass: 'euca-dialog-container',
+         show: 'fade',
+         hide: 'fade',
+         resizable: false,
          closeOnEscape : false,
          title: thisObj.options.title,
          open: function(event, ui) {

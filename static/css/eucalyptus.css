@@ -981,12 +981,6 @@ tr.selected-row td.sorting_1
   padding-right: 20px;
 }
 
-/* Hide close X button in UI dialogs */
-
-.ui-dialog-titlebar-close {
-  visibility: hidden;
-}
-
 /* ==== Search and optional filters will appear before the table ==== */
 
 /* == Optional filters == */
@@ -1273,7 +1267,7 @@ tr.selected-row td.sorting_1
   text-align: center;
 }
 
-/* Override the jquery-table default styling */
+/* Override the jQuery-table default pagination styling */
 
 .paging_full_numbers {
   font-family: 'PlayBold', Arial, sans-serif;
@@ -1334,7 +1328,6 @@ tr.selected-row td.sorting_1
 }
 .paging_full_numbers span.next.paginate_button_disabled {
   background-position: -85px -630px;
-
 }
 
 .paging_full_numbers span.last  {
@@ -1355,11 +1348,19 @@ tr.selected-row td.sorting_1
   cursor: default;
 }
 
+/* ======= Overrides for jQuery UI dialog boxes ======= */
 
-/* Not sure what this is supposed to be doing */
+.euca-dialog-container {
+  /* Class added to each jQuery dialog, so we can target elements */
+}
 
-.hoverCell {
-  color: green;
+.ui-dialog-titlebar-close {
+  visibility: hidden;
+}
+
+.ui-widget-overlay {
+    background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
+    opacity: 0.6;
 }
 
 
