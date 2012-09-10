@@ -141,7 +141,7 @@
       var $reboot_help = $rendered.children().last();
       this.rebootDialog = $reboot_dialog.eucadialog({
         id: 'instances-reboot',
-        title: instance_dialog_term_title,
+        title: instance_dialog_reboot_title,
         buttons: {
           'reboot': {text: instance_dialog_reboot_btn, click: function() { thisObj._rebootInstances(); $reboot_dialog.eucadialog("close");}},
           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $reboot_dialog.eucadialog("close");}}

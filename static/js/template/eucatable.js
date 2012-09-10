@@ -224,7 +224,6 @@
                 if (oSettings.sInstance !== thisObj.options.id)
                   return true;
                 var selectorVal = thisObj.element.find('select#'+filter['name']+'-selector').val();
-                //alert('selector val: '+selectorVal);
                 if(filter['alias'] && filter['alias'][selectorVal]){
                   var aliasTbl = filter['alias'];
                   return aliasTbl[selectorVal] === aData[filter['filter_col']];
