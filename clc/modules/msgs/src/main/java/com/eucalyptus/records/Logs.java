@@ -2,6 +2,7 @@ package com.eucalyptus.records;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URL;
@@ -132,6 +133,12 @@ public class Logs {
       arg1.getRootLogger( ).addAppender( console );
     }
     
+    // Log4j 1.2.17 introduced this: 
+    // https://issues.apache.org/bugzilla/show_bug.cgi?id=52913
+    // @Override
+    public void doConfigure( final InputStream arg0, final LoggerRepository arg1 ) {
+      arg1.getRootLogger( ).addAppender( console );
+    }
   }
   
   private static final Logger nullLogger = new Logger( "/dev/null" ) {
