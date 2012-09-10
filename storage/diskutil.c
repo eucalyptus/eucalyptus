@@ -180,7 +180,7 @@ int diskutil_init (int require_grub) // 0 = not required, 1 = required
         // flag missing handlers
         if (missing_handlers) {
             for (int i=0; i<LASTHELPER; i++) {
-                if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP) {
+                if (helpers_path [i] == NULL && i!=GRUB && i!=GRUB_SETUP && i!=GRUB_INSTALL) {
                     logprintfl (EUCAERROR, "ERROR: missing a required handler: %s\n", helpers[i]);
                     ret = 1;
                 }
