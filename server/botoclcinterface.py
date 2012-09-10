@@ -124,7 +124,7 @@ class BotoClcInterface(ClcInterface):
 
     # returns True if successful
     def associate_address(self, publicip, instanceid):
-        return self.conn.associate_address(publicip, instanceid)
+        return self.conn.associate_address(instanceid, publicip)
 
     # returns True if successful
     def disassociate_address(self, publicip):

@@ -39,8 +39,10 @@
     _help_flipped : false,
     _flipToHelp : function(evt, helpContent ) {
        var thisObj  = this;
-       var $helpWrapper = $('<div>').addClass('help-page-wrapper');
-       $helpWrapper.append(getLandingHelpHeader(), helpContent);
+       var $helpWrapper = $('<div>'); // this one gets stripped off
+       var $helpContainer = $('<div>').addClass('help-page-wrapper clearfix').append(getLandingHelpHeader(), helpContent);
+       $helpWrapper.append($helpContainer);
+
        thisObj.element.children().flip({
          direction : 'lr',
          speed : 300,

@@ -94,11 +94,11 @@
 
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-          thisObj._trigger('select', evt, {selected:'instance'});
+          thisObj._trigger('select', evt, {selected:'instance', filter:'running'});
         }));
       $instObj.find('#dashboard-instance-stopped').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-            thisObj._trigger('select', evt, {selected:'instance'});
+            thisObj._trigger('select', evt, {selected:'instance', filter:'stopped'});
       }));
     },
 
@@ -135,8 +135,6 @@
       $storageObj.find('#dashboard-storage-volume').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
-        $('<img>').attr('src','images/dots32.gif'));
-      $storageObj.find('#dashboard-storage-buckets').prepend(
         $('<img>').attr('src','images/dots32.gif'));
     },
   

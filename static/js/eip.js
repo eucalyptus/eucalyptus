@@ -137,7 +137,7 @@
            'associate': { text: eip_associate_dialog_associate_btn, click: function() {
                thisObj._associateIp(
                  $eip_associate_dialog.find("#eip-to-associate").html(),
-                 $eip_associate_dialog.find('#eip-associate-dialog-instance-selector').val()
+                 $eip_associate_dialog.find('#eip-associate-instance-id').val()
                );
                $eip_associate_dialog.eucadialog("close");
               } 
@@ -216,17 +216,17 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eipId + ' ' + eip_release_success);
+                notifySuccess(null, eip_release_success(eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, eip_release_error + ' ' + eipId);
+                notifyError(null, eip_release_error(eipId));
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, eip_release_error + ' ' + eipId);
+              notifyError(null, eip_release_error(eipId));
             }
           })(eipId)
         });
@@ -249,17 +249,17 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eipId + '' + eip_disassociate_success);
+                notifySuccess(null, eip_disassociate_success(eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, eip_disassociate_error + ' ' + eipId);
+                notifyError(null, eip_disassociate_error(eipId));
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, eip_disassociate_error + ' ' + eipId);
+              notifyError(null, eip_disassociate_error(eipId));
             }
           })(eipId)
         });
@@ -279,7 +279,7 @@
           success:
             function(data, textStatus, jqXHR){
               if ( data.results ) {
-                notifySuccess(null, eip_allocate_success);
+                notifySuccess(null, eip_allocate_success(data.results.public_ip));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 notifyError(null, eip_allocate_error);
@@ -304,30 +304,35 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, eip_associate_success);
+              notifySuccess(null, eip_associate_success(publicIp, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, eip_associate_error);
+              notifyError(null, eip_associate_error(publicIp, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, eip_allocate_error);
+            notifyError(null, eip_associate_error(publicIp, instanceId));
           }
       });
     },
 
     _initAssociateDialog : function(dfd) {  // should resolve dfd object
-      var thisObj = this;
-      var $instanceSelector = thisObj.associateDialog.find('#eip-associate-dialog-instance-selector').html('');
+      var $instanceSelector = thisObj.associateDialog.find('#eip-associate-instance-id').html('');
       var results = describe('instance');
+      var volume_ids = [];
       if ( results ) {
         for( res in results) {
           instance = results[res];
           if ( instance.state === 'running' ) 
-            $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+            volume_ids.push(instance.id);
         }
       }
+      if ( volume_ids.length == 0 )
+        this.associateDialog.eucadialog('showError', no_running_instances);
+      $instanceSelector.autocomplete({
+        source: volume_ids
+      });
       dfd.resolve();
     },
 
@@ -339,7 +344,7 @@
         matrix.push([key]);
       });
       if ( eipsToRelease.length > 0 ) {
-        thisObj.releaseDialog.eucadialog('setSelectedResources', {title:[eip_release_resource_title], contents: matrix});
+        thisObj.releaseDialog.eucadialog('setSelectedResources', {title:[ip_address_label], contents: matrix});
         thisObj.releaseDialog.dialog('open');
       }
     },
@@ -352,7 +357,7 @@
         $.each(rows, function(idx, ip){
           matrix.push([ip.public_ip, ip.instance_id]); 
         });
-        this.disassociateDialog.eucadialog('setSelectedResources', {title: [eip_disassociate_address_head, eip_disassociate_instance_head], contents: matrix});
+        this.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
         this.disassociateDialog.dialog('open');
       }
     },

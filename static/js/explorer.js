@@ -27,7 +27,7 @@
                 {key:'instance', text:menu_instances},
                 {key:'storage', text:menu_storage},
                 {key:'netsec', text:menu_netsec}],
-        submenus : { storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots},{key:'bucket',text:menu_storage_buckets}],
+        submenus : { storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots}],
                   netsec: [{key:'sgroup',text:menu_netsec_sgroup},{key:'keypair',text:menu_netsec_keypair},{key:'eip',text:menu_netsec_eip}]},
       },
 

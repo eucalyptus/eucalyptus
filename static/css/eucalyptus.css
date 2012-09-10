@@ -480,11 +480,6 @@ body {
   float: right;
 }
 
-.dialog-error {
-  color: red;
-  padding: 5px;
-}
-
 
 /* ======== Login styles ======= */
 
@@ -580,7 +575,9 @@ body {
 
 .button,
 .large-button,
-.xlarge-button {
+.xlarge-button,
+.actionmenu span,
+.ui-widget-content .ui-state-default {
   display: inline-block;
   color: #fff;
   font-family: 'PlayBold', Arial, sans-serif;
@@ -603,8 +600,9 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
-.large-button {
-  /* Used on Login page */
+.large-button,
+.ui-widget-content .ui-state-default {
+  /* Used on Login page and jQuery dialogs */
   padding: 10px 24px;
 }
 
@@ -615,7 +613,8 @@ body {
 
 .button:hover,
 .large-button:hover,
-.xlarge-button:hover {
+.xlarge-button:hover,
+.ui-widget-content .ui-state-default:hover {
   background-image: -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
@@ -626,7 +625,8 @@ body {
 
 /* ======== Content styles ======= */
 
-.content-box {
+.content-box,
+.euca-dialog-container {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
@@ -644,15 +644,17 @@ body {
 }
 
 .box-header,
-.euca-table-header {
+.euca-table-header,
+.euca-dialog-container .ui-dialog-titlebar {
   background-color: #eaf2f5;
   border-top: 1px solid #e7e5e5;
   color: #02405f;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 18px;
+  font-weight: normal;
   margin: 0 0 20px;
   position: absolute;
-  top: 12px;
+  top: 14px;
   left: -8px;
   padding: 6px 8px;
   width: 100%;
@@ -662,12 +664,40 @@ body {
   box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
 }
 
+/* This style of container box is used on several classes */
+/* Grouped here to make global changes. Differences are usually just margin and padding */
+
+/* TODO: See if a common class could be used on some of them */
+
+.page-content-box,
+.dataTables_wrapper,
+.help-page-wrapper,
+.launcher_wrapper {
+  position: relative;
+
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+
+  margin: 0 8px 35px;
+  padding: 47px 0 10px 0; 
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+}
+
 /* Ribbon corners */
 
 .box-header::before,
 .box-header::after,
 .euca-table-header::before,
-.euca-table-header::after {
+.euca-table-header::after,
+.euca-dialog-container .ui-dialog-titlebar::before,
+.euca-dialog-container .ui-dialog-titlebar::after {
   content: '';
   display: block;
   width: 8px;
@@ -681,11 +711,13 @@ body {
   background: transparent url(../images/css-sprites-small.png) no-repeat left -130px;   
 }
 .box-header::before,
-.euca-table-header::before {
+.euca-table-header::before,
+.euca-dialog-container .ui-dialog-titlebar::before {
     left: 0;
 }
 .box-header::after,
-.euca-table-header::after {
+.euca-table-header::after,
+.euca-dialog-container .ui-dialog-titlebar::after {
   right: 0;
   background-position: right -130px;
 }
@@ -789,8 +821,9 @@ body {
 }
 
 #dashboard-storage-img {
-  background-position: 0 -425px; 
+  background-position: 0 -425px;
 }
+
 #dashboard-netsec-img {
   background-position: -150px -425px;
 }
@@ -846,19 +879,10 @@ body {
 /* ======= jQuery table style overrides ======= */
 
 .dataTables_wrapper {
-  background-color: #fff;
-  border: 1px solid #d7d5d5;
-
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
   margin: 0 8px 35px;
   padding: 47px 0 10px 0; 
-
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
-  border-radius: 5px;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 table.display {
@@ -912,6 +936,24 @@ tr.selected-row td.sorting_1
 
 /* ======= Help page related ===== */
 
+.help-page-wrapper {
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
+  margin: 0 8px 35px;
+  padding: 47px 0 15px 0; 
+}
+
+/* To override the background-color inline style added by the jQuery Flip */
+
+#volumes-table,
+#keys-table,
+#eip-table,
+#sgroups-table,
+#instances-table,
+#snapshot-table {
+  background-color: transparent !important;
+}
+
 .help-link,
 .help-return {
   float: right;
@@ -923,7 +965,7 @@ tr.selected-row td.sorting_1
 .help-return a
  {
   display: inline-block;
-  height: 16px;
+  height: 18px; /* To match the height of the optional header text */
   width: 16px;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
   text-indent: 100%;
@@ -936,18 +978,12 @@ tr.selected-row td.sorting_1
 }
 
 .help-content {
-  padding: 10px;
+  padding: 10px 20px 20px;
 }
 
 .help-revert-button {
   float: right;
-  margin-top: 10px;
-}
-
-/* Hide close X button in UI dialogs */
-
-.ui-dialog-titlebar-close {
-  visibility: hidden;
+  padding-right: 20px;
 }
 
 /* ==== Search and optional filters will appear before the table ==== */
@@ -1022,16 +1058,77 @@ tr.selected-row td.sorting_1
 }
 
 .actionmenu {
-  font-size: 13px;
-  line-height: 27px;
-  color: #3366CC;
-  height: 30px;
   margin-left: 15px;
 }
 
-.inactive-menu {
-  color: gray;
+.actionmenu span {
+
+  /* These are the differences from the button styles in order to accomodate the arrow */
+  /* If button gradients are changed, they will need to be changed here as well */
+
+  cursor: default;
+  padding: 5px 30px 5px 17px;
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 }
+
+.actionmenu span:hover {
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
+}
+
+.actionmenu span.inactive-menu {
+  border: 1px solid rgba(128, 128, 128, 0.4);
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Overrides for jQuery context menu styles */
+
+.context-menu-list {
+  background-color: #fff;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  color: #02405f;
+  border-top: 1px solid #ccc;
+  background-color: #fff;
+  min-width: 125px;
+}
+
+.context-menu-item:first-child {
+  border-top: 0;
+}
+
+.context-menu-item:hover {
+  color: #73a434;
+  background-color: #fff;
+}
+
+.context-menu-item.disabled,
+.context-menu-item.disabled:hover {
+  color: #aaa;
+}
+
 
 /* == Results and table size == */
 
@@ -1178,7 +1275,7 @@ tr.selected-row td.sorting_1
   text-align: center;
 }
 
-/* Override the jquery-table default styling */
+/* Override the jQuery-table default pagination styling */
 
 .paging_full_numbers {
   font-family: 'PlayBold', Arial, sans-serif;
@@ -1195,10 +1292,10 @@ tr.selected-row td.sorting_1
   background-color: transparent;
   border: 0;
   height: 23px;
+  line-height: 23px;
   width: 30px;
   border-left: 1px solid #fff;
   border-right: 1px solid #d7d5d5;
-
   border-radius: 0;
 
 }
@@ -1239,7 +1336,6 @@ tr.selected-row td.sorting_1
 }
 .paging_full_numbers span.next.paginate_button_disabled {
   background-position: -85px -630px;
-
 }
 
 .paging_full_numbers span.last  {
@@ -1260,11 +1356,100 @@ tr.selected-row td.sorting_1
   cursor: default;
 }
 
+/* ======= Overrides for jQuery UI dialog boxes ======= */
 
-/* Not sure what this is supposed to be doing */
+.ui-widget-overlay {
+  background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
+  opacity: 0.6;
+}
 
-.hoverCell {
-  color: green;
+.euca-dialog-container {
+  /* Class added to each jQuery dialog, so we can target elements */
+  margin: 0 8px;
+  padding: 47px 0 5px 0;
+  overflow: visible;
+  min-height: 50px;
+}
+
+.euca-dialog-container .ui-dialog-titlebar {
+  padding: 4px 8px;
+  border-radius: 0;
+  background-image: none;
+  font-size: 15px;
+  left: -9px;
+}
+
+.euca-dialog-container .ui-dialog-title {
+  margin-left: 30px;
+}
+
+.ui-dialog-titlebar-close {
+  display: none;
+}
+
+.euca-dialog {
+  /* This doesn't appear on every dialog */
+}
+
+.dialog-inner-content {
+  padding: 0 15px 5px;
+  font-size: 11px;
+  color: #444;
+}
+
+.selected-resources {
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  text-align: center;
+}
+
+.selected-resources table {
+  width: 100%;
+}
+
+.selected-resources th {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-weight: normal;
+}
+
+.dialog-error {
+  color: red;
+  padding: 5px 15px;
+}
+
+.ui-dialog .ui-dialog-buttonpane {
+  margin: 0;
+  padding: 0 5px 5px 0;
+  border: 0;
+}
+
+.ui-dialog .ui-dialog-buttonpane button {
+    margin: 0.5em 0.7em 0.5em 0;
+    outline: 0;
+}    
+
+.ui-button-text-only .ui-button-text  {
+  padding: 0;
+  line-height: 1;  
+}
+
+.ui-widget-content .ui-state-disabled,
+.ui-widget-content .ui-state-disabled:hover {
+
+/* Uses the same gradient as the 'actionmenu span.inactive-menu' */
+
+  cursor: default;
+  opacity: 1.00;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+
+  background-image: -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 
@@ -1321,24 +1506,46 @@ tr.selected-row td.sorting_1
   background-color: #eee; /* To temporarily mark the defined area */
 }
 
+/* ==== When error reason is displayed on dialog ==== */
+span.on-error {
+  color : red;
+}
+
 /* ===== Instance Launch Wizard ===== */
 
 .launcher_wrapper {
-  background-color: #fff;
-  border: 1px solid #d7d5d5;
-
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
   margin: 0 8px 35px;
-  padding: 47px 0 10px 0; 
-
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
-  border-radius: 5px;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  padding: 47px 0 10px 0;
 }
 
 .launch-wizard-section {
   display: none;
+}
+
+.wizard-step #filter-wrapper {
+  float: left;
+  width : 150px;
+}
+.wizard-step #table-wrapper {
+  float: left;
+  width : 250px;
+}
+.wizard-step .dataTables_filter input {
+  background-color: #f3f6f9;
+  border-radius: 4px;
+  border: 1px solid #9eb1c3;
+  color: #666;
+  font-size: 12px;
+  padding: 6px;
+  width: 120px;
+  outline: none;
+
+  -moz-box-shadow: inset 0 0 3px #a8b9c8;
+  -webkit-box-shadow: inset 0 0 3px #a8b9c8;
+  box-shadow: inset 0 0 3px #a8b9c8;
+}
+.wizard-step .dataTables_wrapper table thead{
+    display:none;
 }

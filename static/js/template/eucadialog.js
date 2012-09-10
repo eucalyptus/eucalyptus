@@ -41,6 +41,10 @@
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
          width: 600,
+         dialogClass: 'euca-dialog-container',
+         show: 'fade',
+         hide: 'fade',
+         resizable: false,
          closeOnEscape : false,
          title: thisObj.options.title,
          open: function(event, ui) {
@@ -56,7 +60,7 @@
                var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
                if (!$btn || $btn.length<=0) {
                  $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
-                 $btn.attr('id', thisObj._getButtonId(btn_id, btn_prop))
+                 $btn.attr('id', thisObj._getButtonId(btn_prop.domid, btn_id))
                };
                $btn.find('span').text(btn_prop.text);
                if(btn_prop.focus !== undefined && btn_prop.focus)
@@ -85,8 +89,8 @@
       });
     },
 
-    _getButtonId : function(btn_id, btn_prop) {
-       return btn_prop.domid !== undefined ? btn_prop.domid : 'btn-' + this.options.id + '-' + btn_id;
+    _getButtonId : function(buttonDomId, buttonId) {
+      return buttonDomId !== undefined ? buttonDomId : 'btn-' + this.options.id + '-' + buttonId;
     },
 
     _create : function() {  
@@ -198,6 +202,15 @@
       this.$error_div.children().detach();
     },
 
+    hideButton : function(buttonDomId, buttonId) {
+      effectiveId = this._getButtonId(buttonDomId, buttonId);
+      this.element.parent().find('#'+effectiveId).hide();
+    },
+
+    showButton : function(buttonDomId, buttonId) {
+      effectiveId = this._getButtonId(buttonDomId, buttonId);
+      this.element.parent().find('#'+effectiveId).show();
+    },
     /// 
     /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]] 
     setSelectedResources : function (resources) {
@@ -211,7 +224,7 @@
 
       var $tr = $('<tr>');
       $.each(resources.title, function(idx, val){
-        $tr.append($('<td>').text(val)); 
+        $tr.append($('<th>').text(val.toUpperCase())); 
       }); 
       $head.append($tr);
       $.each(resources.contents, function(i, row){
@@ -242,6 +255,20 @@
       if(!$div) return;
       $div.html(note);
       this._note_divs.push(div_id);
+    },
+
+    removeNote : function(div_id){
+      var thisObj = this;
+      var idxToDel = -1;
+      $.each(thisObj._note_divs, function(idx, id){
+        if(id === div_id){
+          thisObj.element.find('#'+id).children().detach();
+          idxToDel = idx;
+        }
+      });
+      if(idxToDel >=0){
+        thisObj._note_divs.splice(idxToDel, 1);
+      }
     },
 
     buttonOnChange : function(evtSrc, buttonId, check){

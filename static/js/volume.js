@@ -131,8 +131,8 @@
          title: volume_dialog_attach_title,
          buttons: {
            'attach': { domid: attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
-                volumeId = $attach_dialog.find('#volume-attach-volume-selector').val();
-                instanceId = $attach_dialog.find('#volume-attach-instance-selector').val()
+                volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
+                instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
                 thisObj._attachVolume(volumeId, instanceId, device);
                 $attach_dialog.eucadialog("close");
@@ -171,7 +171,7 @@
          title: snapshot_create_dialog_title,
          buttons: {
            'create': { text: snapshot_create_dialog_create_btn, click: function() { 
-                volumeId = $snapshot_dialog.find('#snapshot-create-volume-selector').val();
+                volumeId = $snapshot_dialog.find('#snapshot-create-volume-id').val();
                 description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
                 thisObj._createSnapshot(volumeId, description);
                 $snapshot_dialog.eucadialog("close");
@@ -234,20 +234,6 @@
        this.addDialog.eucadialog('buttonOnChange', $vol_size_edit,  createButtonId, function(){
          return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
        }); 
-/*
-       this.addDialog.eucadialog('onKeypress', 'volume-size', createButtonId, function () {
-         var az = thisObj.addDialog.find('#volume-add-az-selector').val();
-         return az != '';
-       });
-       this.addDialog.find('#volume-add-az-selector').change( function () {
-         size = $.trim(thisObj.addDialog.find('#volume-size').val());
-         az = thisObj.addDialog.find('#volume-add-az-selector').val();
-         $button = thisObj.addDialog.parent().find('#' + createButtonId);
-         if ( size.length > 0 && az !== '')     
-           $button.prop("disabled", false).removeClass("ui-state-disabled");
-         else
-           $button.prop("disabled", false).addClass("ui-state-disabled");
-       });*/
        // volume create dialog end
     },
 
@@ -281,16 +267,22 @@
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
-      var $instanceSelector = $('#volume-attach-instance-selector').html('');
-      $instanceSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_instance']));
+      var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id').val('');
+      var inst_ids = [];
       var results = describe('instance');
       if ( results ) {
         for( res in results) {
           var instance = results[res];
-          if ( instance.state === 'running' ) 
-            $instanceSelector.append($('<option>').attr('value', instance.id).text(instance.id));
+          if ( instance.state === 'running' )
+            inst_ids.push(instance.id);
         }
       }
+      if ( inst_ids.length == 0 )
+        this.attachDialog.eucadialog('showError', no_running_instances);
+
+      $instanceSelector.autocomplete({
+        source: inst_ids
+      });
       dfd.resolve();
     },
 
@@ -309,17 +301,17 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, volume_delete_success + ' ' + volumeId);
+                notifySuccess(null, volume_delete_success(volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, volume_delete_error + ' ' + volumeId);
+                notifyError(null, volume_delete_error(volumeId));
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, volume_delete_error + ' ' + volumeId);
+              notifyError(null, volume_delete_error(volumeId));
             }
           })(volumeId)
         });
@@ -337,15 +329,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, snapshot_create_success + ' ' + volumeId);
+              notifySuccess(null, snapshot_create_success(volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, snapshot_create_error + ' ' + volumeId);
+              notifyError(null, snapshot_create_error(volumeId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, snapshot_create_error + ' ' + volumeId);
+            notifyError(null, snapshot_create_error(volumeId));
           }
       });
 
@@ -362,15 +354,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_attach_success + ' ' + volumeId);
+              notifySuccess(null, volume_attach_success(volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, volume_attach_error + ' ' + volumeId);
+              notifyError(null, volume_attach_error(volumeId, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, volume_attach_error + ' ' + volumeId);
+            notifyError(null, volume_attach_error(volumeId, instanceId));
           }
       });
     },
@@ -387,7 +379,7 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_create_success + ' ' + data.results.id);
+              notifySuccess(null, volume_create_success(data.results.id));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               notifyError(null, volume_create_error);
@@ -417,15 +409,15 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
                 if (force)
-                  notifySuccess(null, volume_force_detach_success + ' ' + volumeId);
+                  notifySuccess(null, volume_force_detach_success(volumeId));
                 else
-                  notifySuccess(null, volume_detach_success + ' ' + volumeId);
+                  notifySuccess(null, volume_detach_success(volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 if (force)
-                  notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                  notifyError(null, volume_force_detach_error(volumeId));
                 else
-                  notifyError(null, volume_detach_error + ' ' + volumeId);
+                  notifyError(null, volume_detach_error(volumeId));
               }
            }
           })(volumeId),
@@ -433,9 +425,9 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error(volumeId));
               else
-                notifyError(null, volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error(volumeId));
             }
           })(volumeId)
         });
@@ -446,7 +438,11 @@
       var thisObj = this;
       volumesToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       if( volumesToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', {title:[volume_dialog_del_resource_title], contents: [[volumesToDelete]]});
+        var matrix = [];
+        $.each(volumesToDelete, function(idx, volume){
+          matrix.push([volume]); 
+        });
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[volume_label], contents: matrix});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -458,10 +454,9 @@
     _attachAction : function() {
       var thisObj = this;
       var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
-      $volumeSelector = this.attachDialog.find('#volume-attach-volume-selector');
-      $volumeSelector.html('');
-      $volumeSelector.append($('<option>').attr('value', volumeToAttach).text(volumeToAttach));
-      $volumeSelector.attr('disabled', 'disabled');
+      $volumeId = this.attachDialog.find('#volume-attach-volume-id');
+      $volumeId.val(volumeToAttach);
+      $volumeId.attr('disabled', 'disabled');
       this.attachDialog.eucadialog('open');
     },
 
@@ -472,19 +467,18 @@
       if ( rows.length > 0 ) {
         var matrix = [];
         $.each(rows, function(idx, volume){
-          matrix.push([volume.id , volume.attach_data.instance_id]); 
+          matrix.push([volume.id, volume.attach_data.instance_id]); 
         });
-        dialogToUse.eucadialog('setSelectedResources', {title: [volume_dialog_detach_vol_head, volume_dialog_detach_inst_head], contents: matrix});
+        dialogToUse.eucadialog('setSelectedResources', {title: [volume_label,instance_label], contents: matrix});
         dialogToUse.dialog('open');
       }
     },
 
     _createSnapshotAction : function() {
       volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
-      $volumeSelector = this.createSnapshotDialog.find('#snapshot-create-volume-selector');
-      $volumeSelector.html('');
-      $volumeSelector.append($('<option>').attr('value', volumeToUse).text(volumeToUse));
-      $volumeSelector.attr('disabled', 'disabled');
+      $volumeId = this.createSnapshotDialog.find('#snapshot-create-volume-id');
+      $volumeId.val(volumeToUse);
+      $volumeId.attr('disabled', 'disabled');
       this.createSnapshotDialog.dialog('open');
     },
 

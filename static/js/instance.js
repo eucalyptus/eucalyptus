@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.instance', $.eucalyptus.eucawidget, {
-    options : { },
+    options : {
+      state_filter : null,
+    },
     tableWrapper : null,
     termDialog : null,
     rebootDialog : null,
@@ -29,7 +31,6 @@
     consoleDialog : null,
     attachDialog : null,
     detachDialog : null,
-    passwordDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
@@ -112,7 +113,7 @@
           }else
             return val;
         },
-        filters : [{name:"inst_state", options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:3}, 
+        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:3}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
       }) //end of eucatable
       thisObj.tableWrapper.appendTo(thisObj.element);
@@ -189,15 +190,10 @@
       });
 
       // volume detach dialog start
-      $tmpl = $('html body').find('.templates #volumeDetachDlgTmpl').clone();
+      $tmpl = $('html body').find('.templates #volumeInstDetachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $detach_dialog = $rendered.children().first();
       var $detach_help = $rendered.children().last();
-  
-      $detach_dialog.append(
-        $('<div>').addClass('dialog-field').append(
-          $('<span>').addClass('label').text(volume_dialog_detach_volume_label),
-          $('<select>').attr('id','volume-detach-volume-selector')));
 
       this.detachDialog = $detach_dialog.eucadialog({
          id: 'volumes-detach',
@@ -207,8 +203,13 @@
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
          help: {title: help_volume['dialog_detach_title'], content: $detach_help},
+         on_open: {spin: true, callback: function(args) {
+           var dfd = $.Deferred();
+           thisObj._initDetachDialog(dfd); // pulls instance info from server
+           return dfd.promise();
+         }},
        });
-      var $volSelector =$detach_dialog.find('#volume-detach-volume-selector'); 
+      var $volSelector = $detach_dialog.find('#volume-detach-volume-selector'); 
       this.detachDialog.eucadialog('buttonOnChange',$volSelector, '#btn-vol-detach', function() { return $volSelector.val() ? true : false; });
       
       // volume detach dialog end
@@ -223,8 +224,8 @@
          title: volume_dialog_attach_title,
          buttons: {
            'attach': { domid: attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
-                volumeId = $attach_dialog.find('#volume-attach-volume-selector').val();
-                instanceId = $attach_dialog.find('#volume-attach-instance-selector').val()
+                volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
+                instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
                 thisObj._attachVolume(volumeId, instanceId, device);
                 $attach_dialog.eucadialog("close");
@@ -240,11 +241,11 @@
          }},
        });
       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
-         var inst = thisObj.attachDialog.find('#volume-attach-instance-selector').val();
+         var inst = thisObj.attachDialog.find('#volume-attach-instance-id').val();
          return inst != '';
         });
-      this.attachDialog.find('#volume-attach-instance-selector').change( function () {
-        instanceId = thisObj.attachDialog.find('#volume-attach-instance-selector').val()
+      this.attachDialog.find('#volume-attach-instance-id').change( function () {
+        instanceId = thisObj.attachDialog.find('#volume-attach-instance-id').val()
         device = thisObj.attachDialog.find('#volume-attach-device-name').val();
         $button = thisObj.attachDialog.parent().find('#' + attachButtonId);
         if ( device.length > 0 && instanceId !== '')
@@ -253,33 +254,6 @@
           $button.prop("disabled", false).addClass("ui-state-disabled");
        });
       // attach dialog end
-
-      $tmpl = $('html body').find('.templates #instancePasswordDlgTmpl').clone();
-      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $password_dialog = $rendered.children().first();
-      var $password_help = $rendered.children().last();
-      this.passwordDialog = $password_dialog.eucadialog({
-        id: 'instances-password',
-        title: instance_dialog_password_title,
-        buttons: {
-          'password' : {text: instance_dialog_password_btn, click: function() { thisObj._getPassword(); $password_dialog.eucadialog("close");}},
-          'close': {text: dialog_close_btn, focus:true, click: function() { $password_dialog.eucadialog("close");}}
-        },
-        help: {content: $password_help},
-      });
-      var $fileSelector = thisObj.passwordDialog.find('input#fileupload');
-      $fileSelector.fileupload( {
-        dataType: 'json',
-        url: "../ec2",
-        fileInput: null,
-        done: function (e, data) {
-          $.each(data.result, function (index, result) {
-            thisObj.instPassword[result.instance] = result.password;
-            notifyError(null, instance_dialog_password_success+' : '+ result.password);
-          });
-        },
-        fail : function (e, data) { notifyError(null, instance_dialog_password_error); },
-      });
     },
 
     _destroy : function() { },
@@ -339,7 +313,6 @@
        menuItems['detach'] = {"name":instance_action_detach, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
        menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }, disabled: function(){ return true; }};
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}, disabled: function(){ return true; }};
-       menuItems['getpassword'] = {"name":instance_action_getpassword, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
      })();
 
      if(numSelected === 1 && 'running' in stateMap && $.inArray(instIds[0], stateMap['running']>=0)){
@@ -393,10 +366,6 @@
      // TODO: assuming disassociate-address is for only one selected instance 
      if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
        menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}}
-
-     if(numSelected === 1 && ('running' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0)) && (thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0] ==='windows')){
-       menuItems['getpassword'] = {"name":instance_action_getpassword, callback: function(key,opt){ thisObj._getPasswordAction(); }}
-     }
  
      return menuItems;
     },
@@ -445,7 +414,7 @@
         if ($.inArray('ebs',rootType)>=0){
           thisObj.termDialog.eucadialog('addNote','ebs-backed-warning', instance_dialog_ebs_warning); 
         }
-        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_dialog_term_resource_title], contents: matrix});
+        thisObj.termDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
         thisObj.termDialog.eucadialog('open');
        }
     },
@@ -480,7 +449,7 @@
         $.each(instances, function(idx,id){
           matrix.push([id]);
         });
-        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_dialog_reboot_resource_title], contents: matrix});
+        thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
         thisObj.rebootDialog.eucadialog('open');
        }
     },
@@ -515,7 +484,7 @@
         $.each(instances, function(idx,id){
           matrix.push([id]);
         });
-        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_dialog_stop_resource_title], contents: matrix});
+        thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
         thisObj.stopDialog.eucadialog('open');
        }
     },
@@ -573,10 +542,39 @@
         // connect is for one instance 
         var instance = instances[0];
         var os = oss[0]; 
-        if(os === 'windows') 
+        if(os === 'windows'){ 
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_windows_text);
-        else
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-uname-password', 
+            ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span> &lt;public_ip&gt;\\Administrator </span></td> <td> <span> <a href="#">'+instance_dialog_connect_getpassword+'</a></span></td> </tr> </tbody> </table>');
+          if (!thisObj.instPassword[instance]){
+            var $fileSelector = thisObj.connectDialog.find('input#fileupload');
+            $fileSelector.fileupload( {
+              dataType: 'json',
+              url: "../ec2",
+              formData: [{name: 'Action', value: 'GetPassword'}, {name:'InstanceId', value:instance}, {name:'_xsrf', value:$.cookie('_xsrf')}],  
+              done: function (e, data) {
+                $.each(data.result, function (index, result) {
+                  thisObj.instPassword[result.instance] = result.password;
+                  thisObj.connectDialog.find('a').last().html(result.password);
+                  thisObj.connectDialog.find('a').unbind('click');
+                });
+              },
+              fail : function (e, data) {
+                thisObj.connectDialog.find('a').last().html('<span class="on-error">'+instance_dialog_password_error+'</span>');
+                thisObj.connectDialog.find('a').unbind('click');
+              },
+            });
+            thisObj.connectDialog.find('a').click( function(e) {
+              $fileSelector.trigger('click'); 
+            });
+          }else {
+            thisObj.connectDialog.find('a').last().html(thisObj.instPassword[instance]);
+            thisObj.connectDialog.find('a').unbind('click');
+          }
+        }
+        else{
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_linux_text);
+        }
 
         thisObj.connectDialog.eucadialog('open');
        }
@@ -608,26 +606,28 @@
     },
     _initAttachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
-      var $volumeSelector = $('#volume-attach-volume-selector').html('');
-      $volumeSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_attach_select_volume']));
+      var $volumeSelector = $('#volume-attach-volume-id').val('');
       var results = describe('volume');
+      var volume_ids = [];
       if ( results ) {
         for( res in results) {
           var volume = results[res];
           if ( volume.status === 'available' ) 
-            $volumeSelector.append($('<option>').attr('value', volume.id).text(volume.id));
+            volume_ids.push(volume.id);
         }
       }
+      $volumeSelector.autocomplete({
+        source: volume_ids
+      });
       thisObj.attachDialog.find('#volume-attach-device-name').val('');
       dfd.resolve();
     },
     _attachAction : function() {
       var thisObj = this;
       var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      var $instanceSelector = this.attachDialog.find('#volume-attach-instance-selector');
-      $instanceSelector.html('');
-      $instanceSelector.append($('<option>').attr('value', instanceToAttach).text(instanceToAttach));
-      $instanceSelector.attr('disabled', 'disabled');
+      var $instanceId = this.attachDialog.find('#volume-attach-instance-id');
+      $instanceId.val(instanceToAttach);
+      $instanceId.attr('disabled', 'disabled');
       this.attachDialog.eucadialog('open');
     },
     _attachVolume : function (volumeId, instanceId, device) {
@@ -641,26 +641,23 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_attach_success + ' ' + volumeId);
+              notifySuccess(null, volume_attach_success(volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, volume_attach_error + ' ' + volumeId);
+              notifyError(null, volume_attach_error(volumeId, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, volume_attach_error + ' ' + volumeId);
+            notifyError(null, volume_attach_error(volumeId, instanceId));
           }
       });
     },
-    _detachAction : function(){
-      var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      thisObj.detachDialog.eucadialog('setSelectedResources', {title: [volume_dialog_detach_resource_label], contents: [[instance]]});
-     
+    _initDetachDialog : function(dfd) {  // should resolve dfd object
       var results = describe('volume');
-      var $volumeSelector = thisObj.detachDialog.find('#volume-detach-volume-selector').html('');
-      $volumeSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_detach_select_volume']));
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var $volumeSelector = this.detachDialog.find('#volume-detach-volume-selector').html('');
+      $volumeSelector.append($('<option>').attr('value', '').text($.i18n.map['select_a_volume']));
       $.each(results, function(idx, volume){
         if (volume.attach_data && volume.attach_data['status']){
           var inst = volume.attach_data['instance_id'];
@@ -671,7 +668,14 @@
           }
         } 
       });
-      thisObj.detachDialog.eucadialog('open');
+      dfd.resolve();
+    },
+
+    _detachAction : function(){
+      var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      $instId = this.detachDialog.find('#volume-detach-instance-id');
+      $instId.val(instance);
+      this.detachDialog.eucadialog('open');
     },
 
     _detachVolume : function (force) {
@@ -689,53 +693,26 @@
           return function(data, textStatus, jqXHR){
             if ( data.results && data.results == 'detaching' ) {
               if (force)
-                notifySuccess(null, volume_force_detach_success + ' ' + volumeId);
+                notifySuccess(null, volume_force_detach_success(volumeId));
               else
-                notifySuccess(null, volume_detach_success + ' ' + volumeId);
+                notifySuccess(null, volume_detach_success(volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               if (force)
-                notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error(volumeId));
               else
-                notifyError(null, volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error(volumeId));
             }
            }
          })(volumeId),
          error: (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, volume_force_detach_error + ' ' + volumeId);
+                notifyError(null, volume_force_detach_error(volumeId));
               else
-                notifyError(null, volume_detach_error + ' ' + volumeId);
+                notifyError(null, volume_detach_error(volumeId));
             }
           })(volumeId)
-      });
-    },
-    _getPasswordAction : function() {
-      var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      var keynames = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
-      if ( instances.length > 0 ) {
-        if(thisObj.instPassword[instances[0]]){
-          notifyError(null, instance_dialog_password_success+' : '+ thisObj.instPassword[instances[0]]);
-        }else{
-          // connect is for one instance 
-          var instance = instances[0];
-          var keyname = keynames[0];
-          var matrix = [[instance, keyname]];
-          thisObj.passwordDialog.eucadialog('setSelectedResources', {title: [instance_dialog_password_resource_label_instance,instance_dialog_password_resource_label_keyname], contents: matrix});
-          thisObj.passwordDialog.eucadialog('open');
-        }
-      }
-    },
-    _getPassword : function() {
-      var thisObj = this; 
-      var $fileSelector = thisObj.passwordDialog.find('input#fileupload');
-      var instanceId = thisObj.passwordDialog.eucadialog('getSelectedResources',0).join(' ');
-      $fileSelector.fileupload( "add", {
-        files: $fileSelector.files,
-        fileInput: $fileSelector,
-        formData: [{name: 'Action', value: 'GetPassword'}, {name:'InstanceId', value:instanceId}, {name:'_xsrf', value:$.cookie('_xsrf')}],  
       });
     },
 /**** Public Methods ****/

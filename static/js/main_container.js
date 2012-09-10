@@ -39,10 +39,10 @@
 
     // event receiver for menu selection
     changeSelected : function (evt, ui) { 
-        this.updateSelected(ui.selected);
+        this.updateSelected(ui.selected, ui.filter);
     },
 
-    updateSelected : function (selected) {
+    updateSelected : function (selected, filter) {
       if(this._curSelected === selected){
         $('html body').trigger('click');
         return;
@@ -54,7 +54,6 @@
           $curInstance.close();
         }
       }
-
       $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
       switch(selected){
         case 'dashboard':
@@ -62,7 +61,7 @@
           this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
           break;
         case 'instance':
-          this.element.instance();
+          this.element.instance({'state_filter': filter});
           break;
         case 'keypair':
           this.element.keypair();
