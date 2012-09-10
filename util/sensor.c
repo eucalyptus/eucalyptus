@@ -50,10 +50,14 @@ static void sensor_bottom_half (void)
 {        
     assert(sensor_state!=NULL && state_sem!=NULL);
 
-    double val = 11.0;
+    char resourceNames [MAX_SENSOR_RESOURCES][MAX_SENSOR_NAME_LEN];
+    for (int i=0; i<MAX_SENSOR_RESOURCES; i++)
+        resourceNames [i][0]='\0';
+    
     long long sn = 0L;
-    char name [32];
-    snprintf (name, sizeof(name), "i-%08x", rand());
+    char fake_name [32];
+    double fake_val = 11.0;
+    snprintf (fake_name, sizeof(fake_name), "i-%08x", rand());
     
     for (;;) {
         usleep (next_sleep_duration_usec);
@@ -68,12 +72,36 @@ static void sensor_bottom_half (void)
         
         if (skip)
             continue;
-
+        
         logprintfl (EUCADEBUG, "sensor bottom half polling sensors...\n");
 
+        // refresh local copy of resource names
+        sem_p (state_sem);
+        for (int i=0; i<sensor_state->max_resources && i<MAX_SENSOR_RESOURCES; i++)
+            strncpy (resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
+        sem_v (state_sem);
+        
         // TODO: remove this temporary fake data generation
         long long ts = time_usec() / 1000;
-        sensor_add_value (name, "CPUUtilization", SENSOR_AVERAGE, "default", sn++, ts, TRUE, val++);
+        sensor_add_value (fake_name, "CPUUtilization", SENSOR_AVERAGE, "default", sn, ts, TRUE, fake_val++);
+
+        for (int i=0; i<MAX_SENSOR_RESOURCES; i++) {
+            char * name = resourceNames [i];
+            if (name [0] == '\0')
+                continue;
+            if (strcmp (name, fake_name) == 0) // skip the fake resource
+                continue;
+            
+            double net_in_bytes=0;
+            double net_out_bytes=0;
+            
+            // refresh network values
+            ts = time_usec() / 1000;
+            sensor_add_value (name, "NetworkIn",  SENSOR_SUMMATION, "total", sn, ts, TRUE, net_in_bytes);
+            sensor_add_value (name, "NetworkOut", SENSOR_SUMMATION, "total", sn, ts, TRUE, net_out_bytes);
+        }
+        
+        sn++;
     }
 }
 
@@ -393,15 +421,21 @@ static sensorResource * find_or_alloc_sr (const boolean do_alloc, const char * r
         }
         
         // we have a match
-        if ((strcmp (sr->resourceName, resourceName) == 0) &&
-            (strcmp (sr->resourceType, resourceType) == 0)) {
+        if (strcmp (sr->resourceName, resourceName) == 0) {
+            if (resourceType) {
+                if (strcmp (sr->resourceType, resourceType) == 0) {
+                    return sr;
+                }
+            }
             return sr;
         }
     }
     
     if (! do_alloc)
         return NULL;
-    
+    if (resourceType==NULL) // must be set for allocation
+        return NULL;
+
     // fill out the new slot
     if (unused_sr != NULL) {
         bzero (unused_sr, sizeof (sensorResource));
@@ -799,6 +833,35 @@ int sensor_get_instance_data (const char * instanceId, const char ** sensorIds, 
  bail:
     
     sem_v (state_sem);
+    return ret;
+}
+
+int sensor_add_resource (const char * resourceName, const char * resourceType)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+    
+    int ret = 1;
+    sem_p (state_sem);
+    if (find_or_alloc_sr (TRUE, resourceName, resourceType) != NULL)
+        ret = 0;
+    sem_v (state_sem);
+
+    return ret;
+}
+
+int sensor_remove_resource (const char * resourceName)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+    
+    int ret = 1;
+    sem_p (state_sem);
+    sensorResource * sr = find_or_alloc_sr (FALSE, resourceName, NULL);
+    if (sr != NULL) {
+        sr->resourceName [0] = '\0'; // marks the slot as empty
+        ret = 0;
+    }
+    sem_v (state_sem);
+
     return ret;
 }
 

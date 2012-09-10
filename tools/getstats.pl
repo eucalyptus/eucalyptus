@@ -63,7 +63,11 @@
 use Getopt::Std;
 
 my $blkbytes = 0;
+my $blkbytesr = 0;
+my $blkbytesw = 0;
 my $ifbytes = 0;
+my $ifbytesr = 0;
+my $ifbytesw = 0;
 
 getopts('i:b:n:', \%opts);
 my $id = $opts{'i'};
@@ -82,8 +86,13 @@ foreach $blkdev (keys((%blks))) {
     while(<RFH>) {
 	chomp;
 	my $line = $_;
-	if ($line =~ /rd_bytes (.*)/ || $line =~ /wr_bytes (.*)/) {
+	if ($line =~ /rd_bytes (.*)/) {
 	    $blkbytes += $1;
+	    $blkbytesr += $1;
+	}
+	if ($line =~ /wr_bytes (.*)/) {
+	    $blkbytes += $1;
+	    $blkbytesw += $1;
 	}
     }
     close(RFH);
@@ -94,8 +103,13 @@ foreach $iface (@ifaces) {
     while(<RFH>) {
 	chomp;
 	my $line = $_;
-	if ($line =~ /rx_bytes (.*)/ || $line =~ /tx_bytes (.*)/) {
+	if ($line =~ /rx_bytes (.*)/) {
 	    $ifbytes += $1;
+	    $ifbytesr += $1;
+	}
+	if ($line =~ /tx_bytes (.*)/) {
+	    $ifbytes += $1;
+	    $ifbytesw += $1;
 	}
     }
     close(RFH);
@@ -111,4 +125,4 @@ if ($ifbytes) {
 } else {
     $ifmbytes = 0;
 }
-print "OUTPUT $blkmbytes $ifmbytes\n";
+print "OUTPUT $blkmbytes $ifmbytes $blkbytesr $blkbytesw $ifbytesr $ifbytesw\n";
