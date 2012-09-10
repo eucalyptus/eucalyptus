@@ -1555,3 +1555,8 @@ span.on-error {
 .wizard-step .dataTables_wrapper table thead{
     display:none;
 }
+
+.label_required:after {
+  content: " *";
+}
+

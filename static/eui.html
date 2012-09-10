@@ -278,8 +278,11 @@
           <div id="keys-add-dialog" class="add-dialog">
             <div class="dialog-inner-content">
               {{!: keypair_dialog_add_text }}
-              <p>
-              <span class="field">{{!>keypair_dialog_add_name}}</span><input type="text" id="key-name" class="required"/>
+              <p>{{!: required_fields }}</p>
+              <div class="dialog-field">
+                <span class="label_required">{{!>keypair_dialog_add_name}}</span>
+                <input type="text" id="key-name" class="required"/>
+              </div>
             </p>
             </div>
           </div>
@@ -347,7 +350,7 @@
       <!-- Security Group dialog template -->
       <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-add-wrapper">
-        <div id="sgroups-add-dialog" class="add-dialog">
+        <div id="sgroups-add-dialog" class="euca-dialog">
           {{!: required_fields }}
           <div class="group inner-box clearfix">
               <h3>Group *</h3>
@@ -517,17 +520,18 @@
           <div id="volumes-add-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: volume_dialog_add_text }}</p>
+              <p>{{!: required_fields }}</p>
               <div class="dialog-field">
                 <span class="label">{{!: volume_dialog_snapshot_label }}</span>
                 <select id="volume-add-snapshot-selector"></select>
               </div>
               <div class="dialog-field">
-                <span class="label">{{!: volume_dialog_size_label }}</span>
+                <span class="label_required">{{!: volume_dialog_size_label }}</span>
                 <input type="text" id="volume-size" class="required"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
               <div class="dialog-field">
-                <span class="label">{{!: volume_dialog_az_label }}</span>
+                <span class="label_required">{{!: volume_dialog_az_label }}</span>
                 <select id="volume-add-az-selector"></select>
               </div>
             </div>
@@ -547,16 +551,17 @@
         <div id="volumes-attach-dialog-wrapper">
           <div id="volumes-attach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
+              <p>{{!: required_fields }}</p>
               <div class="dialog-field">
-                <span class="label">{{!: volume_dialog_attach_volume_label }}</span>
+                <span class="label_required">{{!: volume_dialog_attach_volume_label }}</span>
                 <input type="text" id="volume-attach-volume-id" class="required"/>
               </div>
               <div class="dialog-field">
-                <span class="label">{{!: volume_dialog_attach_instance_label }}</span>
+                <span class="label_required">{{!: volume_dialog_attach_instance_label }}</span>
                 <input type="text" id="volume-attach-instance-id" class="required"/>
               </div>
               <div class="dialog-field">
-                <span class="label">{{!: volume_dialog_attach_device_label }}</span>
+                <span class="label_required">{{!: volume_dialog_attach_device_label }}</span>
                 <input type="text" id="volume-attach-device-name" class="required"/>
               </div>
             </div>
@@ -612,8 +617,10 @@
         <div id="snapshot-create-dialog-wrapper">
           <div id="snapshot-create-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
+              {{!: snapshot_create_dialog_text }}
+              <p>{{!: required_fields }}</p>
               <div class="dialog-field" id="snapshot-create-dialog-vol-id">
-                <span class="label">{{!: snapshot_create_dialog_volume_label }}</span>
+                <span class="label_required">{{!: snapshot_create_dialog_volume_label }}</span>
                 <input type="text" id="snapshot-create-volume-id" class="required"/>
               </div>
               <div class="dialog-field" id="snapshot-create-dialog-desc">
@@ -692,8 +699,9 @@
           <div id="eip-allocate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: eip_allocate_dialog_text }}</p>
+              <p>{{!: required_fields }}</p>
               <div class="dialog-field">
-                <span class="label">{{!: eip_allocate_dialog_count_label }}</span>
+                <span class="label_required">{{!: eip_allocate_dialog_count_label }}</span>
                 <input type="text" id="eip-allocate-count" class="required" maxlength="3" size="4"/>
               </div>
             </div>
@@ -731,8 +739,9 @@
         <div id="eip-associate-dialog-wrapper">
           <div id="eip-associate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
+              <p>{{!: required_fields }}</p>
               <div class="dialog-field">
-                <span class="label">{{!: eip_associate_dialog_instance_label }}</span>
+                <span class="label_required">{{!: eip_associate_dialog_instance_label }}</span>
                 <input type="text" id="eip-associate-instance-id" class="required"/>
               </div>
               <span style="display:none" id="eip-to-associate"/>
