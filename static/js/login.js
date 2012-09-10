@@ -52,7 +52,7 @@
           account:$form.find('input[id=account]').val(),
           username:$form.find('input[id=username]').val(),
           password:$form.find('input[id=password]').val(),
-          remember:$form.find('input[id=remember]').val() 
+          remember:$form.find('input[id=remember]').attr('checked') 
         };
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
@@ -67,9 +67,13 @@
       });
       last_account = $.cookie('account');
       last_username = $.cookie('username');
+      last_remember = $.cookie('remember');
       if (last_account != null) {
         $form.find('input[id=account]').val(last_account);
         $form.find('input[id=username]').val(last_username);
+        if (last_remember = 'true') {
+            $form.find('input[id=remember]').attr('checked', '');
+        }
         $form.find('input[name=login]').removeAttr('disabled');
       }
       //rendered = $login.render($.i18n.map);
