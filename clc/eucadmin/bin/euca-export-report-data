@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Copyright 2011-2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
@@ -23,36 +25,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from boto.roboto.param import Param
-from eucadmin.reportsrequest import ReportsRequest
-import os
+from eucadmin.exportreportdata import ExportReportData
 
-class ReportsExport(ReportsRequest):
-    Description = 'Export reporting data'
-
-    Args = [Param(name='file', long_name='file',
-        ptype='string', optional=False, request_param=False,
-        doc='The path to the resulting reporting data export file')]
-
-    def name(self):
-        return 'ExportData'
-
-    def check_export_file(self):
-        if os.path.exists(self.file):
-            msg = 'file %s already exists, ' % self.file
-            msg += 'please remove and try again'
-            raise IOError(msg)
-
-    def cli_formatter(self, data):
-        export = getattr( data, 'Data', None )
-        if export is None:
-            raise IOError('Error reading export response')
-        f = open( self.file, 'w')
-        f.write( export )
-        f.close()
-        print 'Exported data to ' + self.file
-
-    def process_args(self, **args):
-        super(ReportsExport, self).process_args( **args )
-        self.file = self.args['file']
-        self.check_export_file()
+if __name__ == "__main__":
+    r = ExportReportData()
+    r.main_cli()

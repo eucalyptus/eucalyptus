@@ -32,8 +32,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
  */
 public class ReportingService {
 
-  public ExportDataResponseType exportData( final ExportDataType request ) throws EucalyptusCloudException {
-    final ExportDataResponseType reply = request.getReply();
+  public ExportReportDataResponseType exportData( final ExportReportDataType request ) throws EucalyptusCloudException {
+    final ExportReportDataResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup();
     final User requestUser = ctx.getUser( );

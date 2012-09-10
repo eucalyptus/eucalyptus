@@ -30,12 +30,12 @@ import com.eucalyptus.reporting.export.ReportingExport
 class ReportingMessage extends BaseMessage {
 }
 
-class ExportDataType extends ReportingMessage {
+class ExportReportDataType extends ReportingMessage {
   Date startDate
   Date endDate
 }
 
-class ExportDataResponseType extends ReportingMessage  {
+class ExportReportDataResponseType extends ReportingMessage  {
   ExportDataResultType result
   ReportingResponseMetadataType responseMetadata = new ReportingResponseMetadataType( );
 }
