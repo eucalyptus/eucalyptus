@@ -183,8 +183,8 @@
 
       (function(){
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
-        itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) {;}, disabled: function(){ return true;} }
         itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
 
       // add associate
