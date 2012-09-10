@@ -581,7 +581,8 @@ body {
 .button,
 .large-button,
 .xlarge-button,
-.actionmenu span  {
+.actionmenu span,
+.ui-widget-content .ui-state-default {
   display: inline-block;
   color: #fff;
   font-family: 'PlayBold', Arial, sans-serif;
@@ -604,8 +605,9 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
 }
 
-.large-button {
-  /* Used on Login page */
+.large-button,
+.ui-widget-content .ui-state-default {
+  /* Used on Login page and jQuery dialogs */
   padding: 10px 24px;
 }
 
@@ -616,7 +618,8 @@ body {
 
 .button:hover,
 .large-button:hover,
-.xlarge-button:hover {
+.xlarge-button:hover,
+.ui-widget-content .ui-state-default:hover {
   background-image: -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
@@ -1061,6 +1064,7 @@ tr.selected-row td.sorting_1
   /* These are the differences from the button styles in order to accomodate the arrow */
   /* If button gradients are changed, they will need to be changed here as well */
 
+  cursor: default;
   padding: 5px 30px 5px 17px;
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -1079,13 +1083,15 @@ tr.selected-row td.sorting_1
 }
 
 .actionmenu span.inactive-menu {
-  border: 1px solid rgba(128,128,128,0.6);
+  border: 1px solid rgba(128, 128, 128, 0.4);
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 /* Overrides for jQuery context menu styles */
@@ -1361,6 +1367,38 @@ tr.selected-row td.sorting_1
 .ui-widget-overlay {
     background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
     opacity: 0.6;
+}
+
+.ui-dialog .ui-dialog-buttonpane {
+  padding: 0;
+  border: 0;
+}
+
+.ui-dialog .ui-dialog-buttonpane button {
+    margin: 0.5em 0.7em 0.5em 0;
+}    
+
+.ui-button-text-only .ui-button-text  {
+  padding: 0;
+  line-height: 1;  
+}
+
+.ui-widget-content .ui-state-disabled,
+.ui-widget-content .ui-state-disabled:hover {
+
+/* Uses the same gradient as the 'actionmenu span.inactive-menu' */
+
+  cursor: default;
+  opacity: 1.00;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+
+  background-image: -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 
