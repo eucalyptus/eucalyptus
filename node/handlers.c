@@ -101,7 +101,7 @@ permission notice:
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
 #define MAX_CREATE_TRYS 5
-#define CREATE_TIMEOUT_SEC 15
+#define CREATE_TIMEOUT_SEC 60
 #define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
@@ -224,9 +224,25 @@ check_hypervisor_conn()
 
     sem_p (hyp_sem);
     char * uri = NULL;
-	if (nc_state.conn == NULL || (uri = virConnectGetURI(nc_state.conn)) == NULL) {
-		nc_state.conn = virConnectOpen (nc_state.uri);
-	}
+    int rc;
+
+    if (call_hooks (NC_EVENT_PRE_HYP_CHECK, nc_state.home)) {
+        logprintfl (EUCAFATAL, "hooks prevented check on the hypervisor\n");
+        return NULL;
+    }
+
+    // we close the connection to hypervisor prophylactically 
+    // (experience shows that a connection may enter a bad state
+    // without any outward manifestation of that except libvirt
+    // invocations blocking indefinitely)
+    if (nc_state.conn) {
+        rc = virConnectClose(nc_state.conn);
+        if (rc) {
+            logprintfl(EUCADEBUG, "check_hypervisor_conn(): refcount on close was non-zero: %d\n", rc);
+        }
+    }
+    nc_state.conn = virConnectOpen (nc_state.uri);
+
     if (uri!=NULL)
         free (uri);
     sem_v (hyp_sem);
@@ -349,10 +365,13 @@ refresh_instance_info(	struct nc_state_t *nc,
         return;
     }
     
-    int rc;
-    rc = get_instance_stats (dom, instance);
-    if (rc) {
-        logprintfl (EUCAWARN, "[%s] refresh_instances(): cannot get instance stats (block, network)\n", instance->instanceId);
+    if ( (time(NULL) - instance->last_stat) > 300 ) {
+        int rc;
+        rc = get_instance_stats (dom, instance);
+        if (rc) {
+            logprintfl (EUCAWARN, "[%s] refresh_instances(): cannot get instance stats (block, network)\n", instance->instanceId);
+        }
+        instance->last_stat = time(NULL);
     }
     
     virDomainInfo info;
@@ -465,7 +484,7 @@ void copy_instances (void)
 void *
 monitoring_thread (void *arg)
 {
-	int i;
+	int i, cleaned_up;
 	struct nc_state_t *nc;
 
         logprintfl (EUCADEBUG, "{%u} spawning monitoring thread\n", (unsigned int)pthread_self());
@@ -490,6 +509,7 @@ monitoring_thread (void *arg)
             logprintfl(EUCAWARN, "monitoring_thread(): could not open file %s for writing\n", nfile);
         }
         
+        cleaned_up = 0;
         for ( head = global_instances; head; head = head->next ) {
             ncInstance * instance = head->instance;
             
@@ -547,41 +567,44 @@ monitoring_thread (void *arg)
                 logprintfl(EUCADEBUG, "[%s] finding and terminating BOOTING instance (%d)\n", instance->instanceId, find_and_terminate_instance (nc, NULL, instance->instanceId, 1, &tmpInstance, 1));
             }
 
-            // ok, it's been condemned => destroy the files
-            int destroy_files = !nc_state.save_instance_files;
-            if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
-                if (destroy_files) {
-                    logprintfl (EUCAERROR, "[%s] cancelled instance cleanup via hooks\n", instance->instanceId);
-                    destroy_files = 0;
+            if (cleaned_up < nc_state.concurrent_cleanup_ops) {
+                // ok, it's been condemned => destroy the files
+                cleaned_up++;
+                int destroy_files = !nc_state.save_instance_files;
+                if (call_hooks (NC_EVENT_PRE_CLEAN, instance->instancePath)) {
+                    if (destroy_files) {
+                        logprintfl (EUCAERROR, "[%s] cancelled instance cleanup via hooks\n", instance->instanceId);
+                        destroy_files = 0;
+                    }
                 }
-            }
-            logprintfl (EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
-            if (destroy_instance_backing (instance, destroy_files)) {
-                logprintfl (EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
-            }
-            
-            // check to see if this is the last instance running on vlan, handle local networking information drop
-            int left = 0;
-            bunchOfInstances * vnhead;
-            for (vnhead = global_instances; vnhead; vnhead = vnhead->next ) {
-                ncInstance * vninstance = vnhead->instance;
-                if (vninstance->ncnet.vlan == (instance->ncnet).vlan 
-                    && strcmp(instance->instanceId, vninstance->instanceId)) {
-                    left++;
+                logprintfl (EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId, (destroy_files)?(""):(" (but keeping the files)"));
+                if (destroy_instance_backing (instance, destroy_files)) {
+                    logprintfl (EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
                 }
+                
+                // check to see if this is the last instance running on vlan, handle local networking information drop
+                int left = 0;
+                bunchOfInstances * vnhead;
+                for (vnhead = global_instances; vnhead; vnhead = vnhead->next ) {
+                    ncInstance * vninstance = vnhead->instance;
+                    if (vninstance->ncnet.vlan == (instance->ncnet).vlan 
+                        && strcmp(instance->instanceId, vninstance->instanceId)) {
+                        left++;
+                    }
+                }
+                if (left==0) {
+                    logprintfl (EUCAINFO, "[%s] stopping the network (vlan=%d)\n", instance->instanceId, (instance->ncnet).vlan);
+                    vnetStopNetwork (nc_state.vnetconfig, (instance->ncnet).vlan, NULL, NULL);
+                }
+                change_state (instance, TEARDOWN); // TEARDOWN = no more resources
+                instance->terminationTime = time (NULL);
             }
-            if (left==0) {
-                logprintfl (EUCAINFO, "[%s] stopping the network (vlan=%d)\n", instance->instanceId, (instance->ncnet).vlan);
-                vnetStopNetwork (nc_state.vnetconfig, (instance->ncnet).vlan, NULL, NULL);
-            }
-            change_state (instance, TEARDOWN); // TEARDOWN = no more resources
-            instance->terminationTime = time (NULL);
         }
         if (FP) {
             fclose(FP);
             rename (nfile, nfilefinal);
         }
-        
+
         copy_instances (); // copy global_instances to global_instances_copy
         sem_v (inst_sem);
         
@@ -681,6 +704,11 @@ void *startup_thread (void * arg)
         if (i>0) {
             logprintfl (EUCAINFO, "[%s] attempt %d of %d to create the instance\n", instance->instanceId, i+1, MAX_CREATE_TRYS);
         }
+        if (! check_hypervisor_conn ()) { // check again, since we may have invalidated the connection in previous loop iteration
+            logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+            goto shutoff;
+        }
+
         sem_p (hyp_sem);
         sem_p (loop_sem);
 
@@ -727,7 +755,7 @@ void *startup_thread (void * arg)
 
             } else if (WEXITSTATUS(status) != 0) {
                 logprintfl (EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
-
+                
             } else {
                 created = TRUE;
             }
@@ -890,6 +918,16 @@ static int init (void)
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
 
+    // set up default signal handler for this child process (for SIGALRM)
+    {
+        struct sigaction newsigact;
+        newsigact.sa_handler = SIG_IGN;
+        newsigact.sa_flags = 0;
+        sigemptyset(&newsigact.sa_mask);
+        sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
+        sigaction(SIGALRM, &newsigact, NULL);
+    }
+
 	// read in configuration - this should be first!
 
     // determine home ($EUCALYPTUS)
@@ -1002,6 +1040,7 @@ static int init (void)
 	GET_VAR_INT(nc_state.config_max_cores,    CONFIG_MAX_CORES, 0);
 	GET_VAR_INT(nc_state.save_instance_files, CONFIG_SAVE_INSTANCES, 0);
     GET_VAR_INT(nc_state.concurrent_disk_ops, CONFIG_CONCURRENT_DISK_OPS, 4);
+    GET_VAR_INT(nc_state.concurrent_cleanup_ops, CONFIG_CONCURRENT_CLEANUP_OPS, 30);
     int disable_injection; GET_VAR_INT(disable_injection, CONFIG_DISABLE_KEY_INJECTION, 0); 
     nc_state.do_inject_key = !disable_injection;
     strcpy(nc_state.admin_user_id, EUCALYPTUS_ADMIN);
@@ -1081,6 +1120,11 @@ static int init (void)
 		logprintfl(EUCAFATAL, "ERROR: failed to initialized hypervisor driver!\n");
 		return ERROR_FATAL;
 	}
+
+    if (! check_hypervisor_conn ()) {
+        logprintfl (EUCAFATAL, "unable to contact hypervisor\n");
+        return ERROR_FATAL;
+    }
 
 	// now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
@@ -1823,7 +1867,9 @@ int get_instance_stats(virDomainPtr dom, ncInstance *instance)
     char cmd[MAX_PATH], *output;
     snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", 
              nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
+    sem_p(hyp_sem);
     output = system_output (cmd);
+    sem_v(hyp_sem);
     if (output) {
         sscanf(output, "OUTPUT %lld %lld", &b, &i);
         free(output);

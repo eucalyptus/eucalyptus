@@ -228,8 +228,9 @@ isSuccessful() {
 /** If the query was successful, return the answers */
 public RRset []
 answers() {
-	if (type != SUCCESSFUL)
+	if ((type != SUCCESSFUL) || (data == null))
 		return null;
+	
 	List l = (List) data;
 	return (RRset []) l.toArray(new RRset[l.size()]);
 }
