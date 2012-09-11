@@ -180,7 +180,7 @@ class UIProxyClient(object):
         return self.__make_request__('RebootInstances', params)
 
     def get_console_output(self, instanceid):
-        return self.__make_request__('DescribeInstances', {'InstanceId': instanceid})
+        return self.__make_request__('GetConsoleOutput', {'InstanceId': instanceid})
 
     def get_password(self, instanceid, keypair_file):
 #        register_openers()
