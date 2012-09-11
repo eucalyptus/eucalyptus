@@ -30,4 +30,3 @@ from eucadmin.exportreportdata import ExportReportData
 if __name__ == "__main__":
     r = ExportReportData()
     r.main_cli()
-
