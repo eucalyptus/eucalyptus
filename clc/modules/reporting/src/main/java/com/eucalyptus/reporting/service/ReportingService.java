@@ -19,21 +19,29 @@
  ************************************************************************/
 package com.eucalyptus.reporting.service;
 
+import java.io.ByteArrayOutputStream;
+import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.reporting.ReportGenerator;
 import com.eucalyptus.reporting.export.Export;
 import com.eucalyptus.reporting.export.ReportingExport;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Charsets;
 
 /**
  *
  */
 public class ReportingService {
 
-  public ExportDataResponseType exportData( final ExportDataType request ) throws EucalyptusCloudException {
-    final ExportDataResponseType reply = request.getReply();
+  private static final Logger logger = Logger.getLogger( ReportingService.class );
+
+  public ExportReportDataResponseType exportData( final ExportReportDataType request ) throws EucalyptusCloudException {
+    final ExportReportDataResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup();
     final User requestUser = ctx.getUser( );
@@ -58,9 +66,41 @@ public class ReportingService {
       throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
 
-    //TODO generate report
-    reply.setResult( new GenerateReportResultType( "REPORT CONTENT HERE" ) );
+    long startTime = yesterday();
+    long endTime = startTime + TimeUnit.DAYS.toMillis( 1L );
+    if ( request.getStartDate() != null ) {
+      startTime = request.getStartDate().getTime();
+    }
+    if ( request.getEndDate() != null ) {
+      endTime = request.getStartDate().getTime();
+    }
+    if ( endTime <= startTime ) {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
+    }
+
+    final ReportGenerator generator = ReportGenerator.getInstance();
+    final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
+    try {
+      //TODO:STEVE: generate report
+      //generator.generateReport( ... );
+      reportOutput.write( ("REPORT CONTENT HERE\n type:" + request.getTypes() + ", start=" + startTime + ", end=" + endTime).getBytes(Charsets.UTF_8) );
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+      throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error generating report");
+    }
+
+    reply.setResult( new GenerateReportResultType( new String( reportOutput.toByteArray(), Charsets.UTF_8 ) ) );
 
     return reply;
+  }
+
+  private static long yesterday() {
+    final Calendar calendar = Calendar.getInstance();
+    calendar.add( Calendar.DAY_OF_MONTH, -1 );
+    calendar.set( Calendar.HOUR_OF_DAY, 0 );
+    calendar.set( Calendar.MINUTE, 0 );
+    calendar.set( Calendar.SECOND, 0 );
+    calendar.set( Calendar.MILLISECOND, 0 );
+    return calendar.getTimeInMillis();
   }
 }

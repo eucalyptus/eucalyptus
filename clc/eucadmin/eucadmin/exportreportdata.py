@@ -27,18 +27,23 @@ from boto.roboto.param import Param
 from eucadmin.reportsrequest import ReportsRequest
 import os
 
-class ReportsExport(ReportsRequest):
+class ExportReportData(ReportsRequest):
     Description = 'Export reporting data'
 
-    Args = [Param(name='file', long_name='file',
-        ptype='string', optional=False, request_param=False,
-        doc='The path to the resulting reporting data export file')]
-
-    def name(self):
-        return 'ExportData'
+    Params = [
+        Param(name='Force',
+            short_name='f', long_name='force',
+            ptype='boolean', request_param=False,
+            doc='overwrite output file if it exists'),
+        ]
+    Args = [
+        Param(name='File', long_name='file',
+            ptype='string', optional=True, request_param=False,
+            doc='optional path to the resulting reporting data export file'),
+        ]
 
     def check_export_file(self):
-        if os.path.exists(self.file):
+        if self.file is not None and os.path.exists(self.file) and not self.force:
             msg = 'file %s already exists, ' % self.file
             msg += 'please remove and try again'
             raise IOError(msg)
@@ -47,12 +52,16 @@ class ReportsExport(ReportsRequest):
         export = getattr( data, 'Data', None )
         if export is None:
             raise IOError('Error reading export response')
-        f = open( self.file, 'w')
-        f.write( export )
-        f.close()
-        print 'Exported data to ' + self.file
+        if self.file is not None:
+            f = open( self.file, 'w')
+            f.write( export )
+            f.close()
+            print 'Exported data to ' + self.file
+        else:
+            print export
 
     def process_args(self, **args):
-        super(ReportsExport, self).process_args( **args )
+        super(ExportReportData, self).process_args( **args )
         self.file = self.args['file']
+        self.force = self.args['force']
         self.check_export_file()

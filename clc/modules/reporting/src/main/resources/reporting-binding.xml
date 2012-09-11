@@ -64,6 +64,8 @@
     </mapping>
     <mapping name="GenerateReport" class="com.eucalyptus.reporting.service.GenerateReportType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <value name="Start" field="startDate"/>
+        <value name="End" field="endDate"/>
     </mapping>
     <mapping name="GenerateReportResponse" class="com.eucalyptus.reporting.service.GenerateReportResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
