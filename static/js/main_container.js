@@ -81,6 +81,9 @@
         case 'launcher':
           this.element.launcher();
           break;
+        case 'image':
+          this.element.image();
+          break;
         case 'logout':
           logout();
           break;

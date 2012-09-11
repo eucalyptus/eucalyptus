@@ -78,10 +78,26 @@ class GlobalSession(object):
     def language(self):
         return self.get_value('locale', 'language')
 
+    @property
+    def instance_type(self):
+        '''
+        m1.small:1 128 2
+        c1.medium: 2 128 5 74
+        ... 
+        '''
+        m1_small = [self.get_value('instance_type','m1.small.cpu'),self.get_value('instance_type','m1.small.mem'),self.get_value('instance_type','m1.small.disk')]; 
+        c1_medium = [self.get_value('instance_type','c1.medium.cpu'),self.get_value('instance_type','c1.medium.mem'),self.get_value('instance_type','c1.medium.disk')]; 
+        m1_large = [self.get_value('instance_type','m1.large.cpu'),self.get_value('instance_type','m1.large.mem'),self.get_value('instance_type','m1.large.disk')];
+        m1_xlarge = [self.get_value('instance_type','m1.xlarge.cpu'),self.get_value('instance_type','m1.xlarge.mem'),self.get_value('instance_type','m1.xlarge.disk')]; 
+        c1_xlarge = [self.get_value('instance_type','c1.xlarge.cpu'),self.get_value('instance_type','c1.xlarge.mem'),self.get_value('instance_type','c1.xlarge.disk')]; 
+        return {'m1.small':m1_small, 'c1.medium':c1_medium, 'm1.large':m1_large, 'm1.xlarge':m1_xlarge, 'c1.xlarge':c1_xlarge};
+
     # return the collection of global session info
     def get_session(self):
         return {'timezone': self.timezone,
-                'language': self.language}
+                'language': self.language,
+                'instance_type': self.instance_type 
+               }
 
 class EuiException(BaseException):
     def __init__(self, status_code, message):

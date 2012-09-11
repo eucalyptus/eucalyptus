@@ -19,6 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
+  // global variable
   if (! $.eucaData){
 	$.eucaData = {};
   }

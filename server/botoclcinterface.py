@@ -32,7 +32,7 @@ class BotoClcInterface(ClcInterface):
         return obj
 
     def get_all_images(self):
-        obj = self.conn.get_all_images()
+        obj = self.conn.get_all_images(None, None, ['self'], None)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Images.json")
         return obj
