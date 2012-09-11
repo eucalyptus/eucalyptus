@@ -21,10 +21,27 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.launcher', $.eucalyptus.eucawidget, {
     options : { },
+    launchParam : {
+      emi : null,
+      type : null,
+      number : null,
+      zone : null,
+      keypair : null,
+      sgroup: null, // this and above are the required fields
+      kernel: null,
+      ramdisk: null,
+      data: null,
+      private_addressing: false,
+      device_map : [],
+    },
     _create : function() { },
     _init : function() {
       // read template and attach to the widget element
       var thisObj = this;
+      $.each(thisObj.launchParam, function(k,v){
+        thisObj.launchParam[k] = null;
+      });
+
       var $tmpl = $('html body').find('.templates #launchWizardTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
       var $launcher = $wrapper.children().first();
@@ -42,6 +59,11 @@
       thisObj._makeTypeSection($launcher.find('#launch-wizard-type'));
       thisObj._makeSecuritySection($launcher.find('#launch-wizard-security'));
       thisObj._makeAdvancedSection($launcher.find('#launch-wizard-advanced'));
+
+      $launcher.find('#launch-wizard-cancel').find('a').click( function(e){
+        var $container = $('html body').find(DOM_BINDING['main']);
+        $container.maincontainer("changeSelected", e, {selected:'instance'});
+      });
       $launcher.appendTo(thisObj.element);
      },
     _destroy : function() { },
@@ -161,6 +183,8 @@
 
               var imgClass = $selectedRow.find('td div').attr('class');
               var imgName = $selectedRow.find('.image-name').first().html();
+              var emi = $selectedRow.find('.image-id-arch').children().first().text();
+              thisObj.launchParam['emi'] = emi;
               $summary =  $('<div>').addClass(imgClass).addClass('summary').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(imgName));
             });
           }
@@ -206,7 +230,7 @@
                    name = nameMap[imgKey];
                  var $cell = $('<div>').addClass(imgKey).append(
                                $('<div>').addClass('image-name').text(name), // should be linux, windows, or distros
-                               $('<div>').addClass('image-id-arch').html(emi+'&nbsp;&nbsp;'+arch),
+                               $('<div>').addClass('image-id-arch').append($('<span>').text(emi), $('<span>').text(arch)),
                                $('<div>').addClass('image-description').text(desc)); 
                  
                  return $cell.wrap($('<div>')).parent().html();
@@ -347,15 +371,18 @@
 
       $section.find('#launch-wizard-buttons-type-next').click(function(e) {
         var $summary = $('<div>').addClass(selectedType).addClass('summary').append(
-           $('<div>').text(launch_instance_summary_type),
-           $('<div>').attr('id','summary-type-insttype').text(selectedType),
-           $('<div>').attr('id','summary-type-numinst').text(launch_instance_summary_instances+' '+numInstances),
-           $('<div>').attr('id','summary-type-zone').text(launch_instance_summary_zone+' '+selectedZone));
+          $('<div>').attr('id','summary-type-insttype').append($('<span>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
+          $('<div>').attr('id','summary-type-numinst').append($('<span>').text(launch_instance_summary_instances), $('<span>').text(numInstances)),
+          $('<div>').attr('id','summary-type-zone').append($('<span>').text(launch_instance_summary_zone), $('<span>').text(selectedZone)));
+        thisObj.launchParam['type'] = selectedType;
+        thisObj.launchParam['number'] = numInstances;
+        thisObj.launchParam['zone'] = selectedZone;
         thisObj._setSummary('type', $summary); 
       });
     },
 
     _makeSecuritySection : function($section) {
+      var thisObj = this;
       var $content = $section.find('#launch-wizard-security-main-contents');
       $content.prepend($('<span>').html(launch_instance_security_header));
       var $keypair = $content.find('#launch-wizard-security-keypair');
@@ -391,7 +418,29 @@
         if($(this).val() ==='default')
           $(this).attr('selected','selected');
       });
+    
+      var summarize = function(){
+        var selectedKp = $kp_selector.val();
+        var selectedSg = $sg_selector.val();
+        thisObj.launchParam['keypair'] = selectedKp;
+        thisObj.launchParam['sgroup'] = selectedSg;
+        return $('<div>').append(
+          $('<div>').attr('id','summary-security-keypair').text(launch_instance_summary_keypair+' '+selectedKp),
+          $('<div>').attr('id','summary-security-sg').text(launch_instance_summary_sg+' '+selectedSg));
+      }
+
+      $section.find('#launch-wizard-buttons-security').find('ul a').click(function(e) {
+        var $summary = summarize(); 
+        thisObj._setSummary('security', $summary.clone().children()); 
+      });
+      $section.find('#launch-wizard-buttons-security').find('ul button').click(function(e){
+        var $summary = summarize(); 
+        thisObj._setSummary('security', $summary.clone().children()); 
+        thisObj._launch();
+        // and launch
+      });
     },
+
     _makeAdvancedSection : function($section) { 
       var $content = $section.find('#launch-wizard-advanced-main-contents');
       $.each($content.children(), function(idx, child){
@@ -403,8 +452,92 @@
       var thisObj = this;
       var $summary = thisObj.element.find('#launch-wizard-summary');
       var $section = $summary.find('#summary-'+section);
+      $section.removeClass('required-missing');
       $section.children().detach(); 
       $section.append(content);
+    },
+
+    _launch : function(){
+      // validate
+      var thisObj = this;
+      var param = thisObj.launchParam;
+
+      if(!param['emi'])
+        return thisObj._showError('image');
+      if(!param['type'])
+        return thisObj._showError('type');
+      if(!param['number'])
+        return thisObj._showError('type');
+      if(!param['zone'])
+        return thisObj._showError('type');
+      if(!param['keypair'])
+        return thisObj._showError('security');
+      if(!param['sgroup'])
+        return thisObj._showError('security'); 
+   
+      //prepare for the actual request parameters
+      var reqParam = 'ImageId='+param['emi'];
+      reqParam += '&InstanceType='+param['type'];
+      reqParam += '&MinCount='+param['number'];
+      reqParam += '&MaxCount='+param['number'];
+      if(param['zone'].toLowerCase() !== 'any')
+        reqParam += '&Placement.AvailabilityZone='+param['zone'];
+      reqParam += '&Placement.GroupName='+param['sgroup'];
+      reqParam += '&KeyName='+param['keypair'];
+
+      $.ajax({
+          type:"GET",
+          url:"/ec2?Action=RunInstances&" + reqParam,
+          data:"_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          async:true,
+          success: function(data, textStatus, jqXHR){
+            if ( data.results ){
+              var instances ='';
+              $.each(data.results, function(idx, instance){
+                instances += instance+' ';
+              });
+              instances = $.trim(instances);
+              notifySuccess(null, instance_run_success + ' ' + instances);
+              //TODO: move to instance page?
+              var $container = $('html body').find(DOM_BINDING['main']);
+              $container.maincontainer("changeSelected",null, {selected:'instance'});
+
+            } else {
+              notifyError(null, instance_run_error);
+              //TODO: clear launch-instance wizard?
+              var $container = $('html body').find(DOM_BINDING['main']);
+              $container.maincontainer("clearSelected");
+              $container.maincontainer("changeSelected",null, {selected:'launcher'});
+
+            }
+          },
+          error: function(jqXHR, textStatus, errorThrown){
+            notifyError(null, instance_run_error);
+            var $container = $('html body').find(DOM_BINDING['main']);
+            $container.maincontainer("clearSelected");
+            $container.maincontainer("changeSelected",null, {selected:'launcher'});
+          }
+        });
+    },
+ 
+    _showError : function(step){
+      var thisObj = this;
+      var $summary = thisObj.element.find('#launch-wizard-summary');
+      var $step = $summary.find('#summary-'+step);
+      $step.addClass('required-missing');
+      var header = '';
+      if(step==='image')
+        header = launch_instance_section_header_image+':';
+      else if(step==='type')
+        header = launch_instance_section_header_type+':';
+      else if(step==='security')
+        header = launch_instance_section_header_security+':';
+      else if(step==='advanced')
+        header = launch_instance_section_header_advanced+':';
+      $step.find('.required-missing-message').remove();
+      $step.append($('<div>').addClass('required-missing-message').append($('<span>').html(header), $('<span>').html(launch_instance_required_missing)));
+      return false;
     }
   });
 })(jQuery,
