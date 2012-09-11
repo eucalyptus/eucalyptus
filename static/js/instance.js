@@ -582,7 +582,7 @@
     _consoleAction : function() {
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      instances=instances.join(' ');
+      instances=instances[0];
 
       $.when( 
         $.ajax({
@@ -591,10 +591,9 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:true,
-        })).done(function(out){
-          var data = out[0];
+        })).done(function(data){
           if(data && data.results){
-            consoleOutput = data.results;   
+            consoleOutput = data.results.output;   
             thisObj.consoleDialog.eucadialog('addNote', 'instance-console-output', consoleOutput); 
             thisObj.consoleDialog.eucadialog('open');
           }else{
