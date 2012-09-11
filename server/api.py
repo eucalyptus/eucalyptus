@@ -18,6 +18,26 @@ from .response import Response
 
 class ComputeHandler(server.BaseHandler):
 
+    def __normalize_instances__(self, instances):
+        ret = []
+        for res in instances:
+            if issubclass(res.__class__, EC2Object):
+                for inst in res.instances:
+                    inst.reservation_id = res.id
+                    inst.owner_id = res.owner_id
+                    inst.groups = res.groups
+                    if res.groups:
+                        inst.group_name = res.groups[0].id
+                    ret.append(inst)
+            else:
+                for inst in res['instances']:
+                    inst['reservation_id'] = res['id']
+                    inst['owner_id'] = res['owner_id']
+                    inst['groups'] = res['groups']
+                    inst['group_name'] = res['groups'][0]['id']
+                    ret.append(inst)
+        return ret
+
     def get_argument_list(self, name, name_suffix=None, another_suffix=None):
         ret = []
         index = 1
@@ -64,24 +84,7 @@ class ComputeHandler(server.BaseHandler):
         if action == 'DescribeInstances':
             # apply transformation of data to normalize instances
             instances = clc.get_all_instances()
-            ret = []
-            for res in instances:
-                if issubclass(res.__class__, EC2Object):
-                    for inst in res.instances:
-                        inst.reservation_id = res.id
-                        inst.owner_id = res.owner_id
-                        inst.groups = res.groups
-                        if res.groups:
-                            inst.group_name = res.groups[0].id
-                        ret.append(inst)
-                else:
-                    for inst in res['instances']:
-                        inst['reservation_id'] = res['id']
-                        inst['owner_id'] = res['owner_id']
-                        inst['groups'] = res['groups']
-                        inst['group_name'] = res['groups'][0]['id']
-                        ret.append(inst)
-            return ret
+            return self.__normalize_instances__(instances)
         elif action == 'RunInstances':
             image_id = self.get_argument('ImageId');
             min = self.get_argument('MinCount', '1');
@@ -137,7 +140,7 @@ class ComputeHandler(server.BaseHandler):
             instance_profile_name = self.get_argument('IamInstanceProfile.Name', None);
             instance_profile_arn = self.get_argument('IamInstanceProfile.Arn', None);
 
-            return clc.run_instances(image_id, min_count=min, max_count=max,
+            return self.__normalize_instances__([clc.run_instances(image_id, min_count=min, max_count=max,
                                 key_name=key, security_groups=groups,
                                 user_data=user_data, addressing_type=addr_type,
                                 instance_type=vm_type, placement=placement,
@@ -152,7 +155,7 @@ class ComputeHandler(server.BaseHandler):
                                 additional_info=addition_info,
                                 instance_profile_name=instance_profile_name,
                                 instance_profile_arn=instance_profile_arn,
-                                tenancy=tenancy)
+                                tenancy=tenancy)])
         elif action == 'TerminateInstances':
             instance_ids = self.get_argument_list('InstanceId')
             return clc.terminate_instances(instance_ids)
