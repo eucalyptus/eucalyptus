@@ -112,7 +112,10 @@
     },
     _selectedSection : null,
     _imageTable : null,
-    _inferImageName : function(manifest, desc){
+    _inferImageName : function(manifest, desc, platform){
+      if(!platform)
+        platform='linux';
+      var name = platform;
      // Regex '$distro[seperator]$version' 
       var inferMap = 
         {'rhel5':new RegExp('(rhel|redhat).5','ig'),
@@ -128,7 +131,6 @@
          'linux' : new RegExp('linux','ig'),
          'windows' :new RegExp('windows','ig'),
         };
-      var name = '';
       for (key in inferMap){
         var reg = inferMap[key];
         if(reg.test(manifest) || reg.test(desc)){
@@ -143,6 +145,7 @@
       var $content = $section.find('#launch-wizard-image-main-contents');
 
       var $table = $content.find('table');
+      var $summary = '';
       var drawCallback = function(oSettings){
         $section.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
@@ -155,11 +158,19 @@
               });
               $(this).toggleClass('selected-row');
               e.stopPropagation();
-              thisObj._setSummary('image', $currentRow.find('div').first().clone());
+
+              var imgClass = $selectedRow.find('td div').attr('class');
+              var imgName = $selectedRow.find('.image-name').first().html();
+              $summary =  $('<div>').addClass(imgClass).addClass('summary').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(imgName));
             });
           }
         });
       };
+
+      $section.find('#launch-wizard-buttons-image-next').click( function(e){
+        thisObj._setSummary('image', $summary);
+      });
+      
       var dtArg = { 
           "sAjaxSource": "../ec2?Action=DescribeImages",
           "bSortClasses" : false,
@@ -184,13 +195,21 @@
                    'windows' : 'WINDOWS' ,
                  };
                  var emi = oObj.aData.id;
-                 var desc = oObj.aData.description ? oObj.aData.description : '';
-                 var name = 'Machine Image';
-                 var imgKey = thisObj._inferImageName(oObj.aData.location, desc);
-                 if (imgKey)
+                 var desc = oObj.aData.description ? oObj.aData.description : oObj.aData.location;
+                 var arch = oObj.aData.architecture;
+                 arch=arch.replace('i386', '32 bit')
+                 arch=arch.replace('x86_64', '64 bit');
+
+                 var name = '';
+                 var imgKey = thisObj._inferImageName(oObj.aData.location, desc, oObj.aData.platform);
+                 if(imgKey)
                    name = nameMap[imgKey];
-                 var cell = '<div class="'+imgKey+'"><div class="image-id">'+emi+'</div> <div class="image-name">'+name+'</div> <div class="image-description">'+desc+'</div></div>';
-                 return cell;
+                 var $cell = $('<div>').addClass(imgKey).append(
+                               $('<div>').addClass('image-name').text(name), // should be linux, windows, or distros
+                               $('<div>').addClass('image-id-arch').html(emi+'&nbsp;&nbsp;'+arch),
+                               $('<div>').addClass('image-description').text(desc)); 
+                 
+                 return $cell.wrap($('<div>')).parent().html();
                }
              },
              {
@@ -222,10 +241,12 @@
            "bAutoWidth" : false,
            "fnDrawCallback" : function( oSettings ) {
               drawCallback(oSettings);
+              if($section.find('table tbody').find('tr.selected-row').length === 0)
+                $section.find('table tbody').find('tr').first().trigger('click'); 
             }
           };
       this._imageTable = $table.dataTable(dtArg);
- 
+    
       $section.find('#filter-wrapper').prepend($('<span>').html(launch_instance_image_table_refine));
       $section.find('#table-wrapper').prepend($('<span>').html(launch_instance_image_table_header));
 
@@ -275,19 +296,102 @@
     },
    
     _makeTypeSection : function($section){
+      var thisObj = this;
       var $content = $section.find('#launch-wizard-type-main-contents');
-      $.each($content.children(), function(idx, child){
-        $(child).html('type-contents'); 
+      var $size = $content.find('#launch-wizard-type-size');
+      var $option = $content.find('#launch-wizard-type-options');
+    
+      var $list = $('<ul>').addClass('launch-wizard-type-size').html(launch_instance_type_size_header);
+      var $legend = $('<div>').attr('id','launch-wizard-type-size-legend');
+      var selectedType = 'm1.small';
+      var instType ={};
+      instType['m1.small'] = $.eucaData.g_session['instance_type']['m1.small'];
+      instType['c1.medium'] = $.eucaData.g_session['instance_type']['c1.medium'];
+      instType['m1.large'] = $.eucaData.g_session['instance_type']['m1.large'];
+      instType['m1.xlarge'] = $.eucaData.g_session['instance_type']['m1.xlarge'];
+      instType['c1.xlarge'] = $.eucaData.g_session['instance_type']['c1.xlarge'];
+
+      $.each(instType, function(type, size){
+        $list.append(
+          $('<li>').addClass('instance-type-'+type.replace('.','_')).append(
+            $('<a>').attr('href','#').text(type).click( function(){
+              selectedType = type;
+              var legend = type +' defaults: ' + size[0] + ' CPUs, '+size[1]+' memory(MB), '+size[2]+' disk(GB,root device)';  
+              $size.find('#launch-wizard-type-size-legend').html(legend); 
+            })));
+      });
+      $size.append($list, $legend); 
+      $list.find('a').first().trigger('click');
+      var numInstances = 1;
+      var selectedZone = 'Any'
+      $list = $('<ul>').addClass('launch-wizard-type-option').html(launch_instance_type_option_header);
+      $list.append(
+        $('<li>').append(
+          launch_instance_type_option_numinstance,$('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').change( function(e) {
+            numInstances = $(this).val(); 
+           })));
+      $list.append($('<li>').append(launch_instance_type_option_az,$('<select>').attr('id','launch-instance-type-az')));
+
+      $list.find('#launch-instance-type-num-instance').val('1');
+      var $az = $list.find('#launch-instance-type-az');
+      $az.append($('<option>').attr('value', 'Any').text(launch_instance_type_option_az_any));
+      $az.change(function(e){
+        selectedZone = $(this).val();
+      });
+      var results = describe('zone');
+      for( res in results) {
+        var azName = results[res].name;
+        $az.append($('<option>').attr('value', azName).text(azName));
+      }
+      $option.append($list);
+
+      $section.find('#launch-wizard-buttons-type-next').click(function(e) {
+        var $summary = $('<div>').addClass(selectedType).addClass('summary').append(
+           $('<div>').text(launch_instance_summary_type),
+           $('<div>').attr('id','summary-type-insttype').text(selectedType),
+           $('<div>').attr('id','summary-type-numinst').text(launch_instance_summary_instances+' '+numInstances),
+           $('<div>').attr('id','summary-type-zone').text(launch_instance_summary_zone+' '+selectedZone));
+        thisObj._setSummary('type', $summary); 
       });
     },
 
     _makeSecuritySection : function($section) {
       var $content = $section.find('#launch-wizard-security-main-contents');
-      $.each($content.children(), function(idx, child){
-        $(child).html('security-contents'); 
+      $content.prepend($('<span>').html(launch_instance_security_header));
+      var $keypair = $content.find('#launch-wizard-security-keypair');
+      var $sgroup = $content.find('#launch-wizard-security-sgroup');
+
+      $keypair.append(
+        $('<div>').append(
+          $('<span>').text(launch_instance_security_keypair),
+          $('<select>').attr('id','launch-wizard-security-keypair-selector')),
+        $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
+        })));
+      $sgroup.append(
+        $('<div>').append(
+          $('<span>').text(launch_instance_security_sgroup),
+          $('<select>').attr('id','launch-wizard-security-sg-selector')),
+        $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
+        })),
+        $('<div>').attr('id','launch-wizard-security-sg-detail'));
+     
+      var $kp_selector = $keypair.find('select');
+      var results = describe('keypair');
+      for( res in results) {
+        var kpName = results[res].name;
+        $kp_selector.append($('<option>').attr('value', kpName).text(kpName));
+      }
+      var $sg_selector = $sgroup.find('select');
+      results = describe('sgroup');
+      for(res in results){
+        var sgName = results[res].name;
+        $sg_selector.append($('<option>').attr('value',sgName).text(sgName)); 
+      }
+      $sg_selector.find('option').each(function(){
+        if($(this).val() ==='default')
+          $(this).attr('selected','selected');
       });
     },
-
     _makeAdvancedSection : function($section) { 
       var $content = $section.find('#launch-wizard-advanced-main-contents');
       $.each($content.children(), function(idx, child){
