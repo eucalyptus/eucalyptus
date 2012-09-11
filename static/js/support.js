@@ -32,6 +32,9 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    footer:'.euca-container .euca-footer-container .inner-container',
                   };
 
+var KEY_PATTERN = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
+var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
+
 function escapeHTML(input) {
   return $('<div/>').text(input).html();
 }

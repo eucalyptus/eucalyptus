@@ -207,9 +207,12 @@
       this.element.parent().find('#'+effectiveId).hide();
     },
 
-    showButton : function(buttonDomId, buttonId) {
+    showButton : function(buttonDomId, buttonId, disabled) {
       effectiveId = this._getButtonId(buttonDomId, buttonId);
-      this.element.parent().find('#'+effectiveId).show();
+      $button = this.element.parent().find('#'+effectiveId);
+      $button.show();
+      if ( disabled )
+        $button.prop("disabled", true).addClass("ui-state-disabled");
     },
     /// 
     /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]] 
@@ -274,6 +277,17 @@
     buttonOnChange : function(evtSrc, buttonId, check){
       var thisObj = this;
       evtSrc.change( function(e){
+        var button = thisObj.element.parent().find('#'+buttonId.replace('#',''));
+        if (isFunction(check) && check.call(evtSrc))
+          button.removeAttr('disabled').removeClass('ui-state-disabled');
+        else
+          button.prop('disabled',true).addClass('ui-state-disabled');
+      });
+    },
+
+    buttonOnFocus : function(evtSrc, buttonId, check){
+      var thisObj = this;
+      evtSrc.focusout( function(e){
         var button = thisObj.element.parent().find('#'+buttonId.replace('#',''));
         if (isFunction(check) && check.call(evtSrc))
           button.removeAttr('disabled').removeClass('ui-state-disabled');
