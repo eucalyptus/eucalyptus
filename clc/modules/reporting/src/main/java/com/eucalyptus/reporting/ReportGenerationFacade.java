@@ -27,6 +27,7 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.eucalyptus.reporting.export.Export;
 import com.eucalyptus.reporting.export.ReportingExport;
+import com.eucalyptus.ws.util.SerializationUtils;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 
@@ -65,16 +66,17 @@ public class ReportGenerationFacade {
           }
           if ( item instanceof ReportingInstanceUsageEvent) {
             final ReportingInstanceUsageEvent event = (ReportingInstanceUsageEvent) item;
+            builder.append( SerializationUtils.serializeDateTime( new Date( event.getTimestampMs() ) ) ).append(", ");
             builder.append( event.getUuid() ).append( ", ");
             builder.append( uuidToInstanceIdMap.get(event.getUuid()) ).append( ", ");
             builder.append( event.getCpuUtilizationPercent() ).append( ", ");
             builder.append( event.getCumulativeDiskIoMegs() ).append( ", ");
             builder.append( event.getCumulativeNetIncomingMegsPublic() ).append( ", ");
-            builder.append( event.getCumulativeNetIncomingMegsBetweenZones() ).append( ", ");
+            builder.append( event.getCumulativeNetIncomingMegsBetweenZones() ).append(", ");
             builder.append( event.getCumulativeNetIncomingMegsWithinZone() ).append( ", ");
             builder.append( event.getCumulativeNetOutgoingMegsPublic() ).append( ", ");
-            builder.append( event.getCumulativeNetOutgoingMegsBetweenZones() ).append( ", ");
-            builder.append( event.getCumulativeNetOutgoingMegsWithinZone() ).append( "\n");
+            builder.append( event.getCumulativeNetOutgoingMegsBetweenZones() ).append(", ");
+            builder.append( event.getCumulativeNetOutgoingMegsWithinZone() ).append("\n");
           }
         }
 
