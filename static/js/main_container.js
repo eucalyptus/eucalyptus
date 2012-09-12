@@ -79,7 +79,7 @@
           this.element.eip();
           break;
         case 'launcher':
-          this.element.launcher();
+          this.element.launcher({'image_filter' : filter});
           break;
         case 'image':
           this.element.image();
