@@ -63,23 +63,16 @@
 package com.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 
 import java.net.*;
-import java.util.List;
-import java.util.Collections;
 
 public class WalrusProperties {
 	private static Logger LOG = Logger.getLogger(WalrusProperties.class);
@@ -139,6 +132,8 @@ public class WalrusProperties {
 
 	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
 	public static final String NULL_VERSION_ID = "null";
+
+  public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
 
 	public static final String TRACKER_BINARY = "bttrack";
 	public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";

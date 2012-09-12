@@ -17,34 +17,30 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.reporting.service;
+package com.eucalyptus.auth;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.reporting.export.Export;
-import com.eucalyptus.reporting.export.ReportingExport;
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.crypto.Crypto;
 
 /**
  *
  */
-public class ReportingDataExportService {
+public class PasswordAuthentication {
+  public static final String INVALID_USERNAME_OR_PASSWORD = "Invalid username or password";
 
-  public ExportDataResponseType exportData( final ExportDataType request ) throws EucalyptusCloudException {
-    final ExportDataResponseType reply = request.getReply();
-    reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
-    final Context ctx = Contexts.lookup();
-    final User requestUser = ctx.getUser( );
-
-    if ( !requestUser.isSystemAdmin() ) {
-      throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
+  public static void authenticate( final User user,
+                                   final String password ) throws AuthException {
+    if ( authenticateWithLdap( user ) ) try {
+      LdapSync.authenticate(user, password);
+    } catch ( LdapException e ) {
+      throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
+    } else if ( !Crypto.verifyPassword(password, user.getPassword()) ) {
+      throw new AuthException(INVALID_USERNAME_OR_PASSWORD);
     }
+  }
 
-    final ReportingExport export = Export.export( request.getStartDate(), request.getEndDate() );
-    reply.setResult( new ExportDataResultType(export ) );
-
-    return reply;
+  public static boolean authenticateWithLdap( final User user ) {
+    return LdapSync.enabled( ) && !user.isSystemAdmin( ) && !user.isAccountAdmin( );
   }
 }

@@ -68,13 +68,10 @@ import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 
 public class HmacUserAuthenticationStage implements UnrollableStage {
 
-  private boolean doAdmin = false;
+  private final boolean allowTemporaryCredentials;
 
-  public HmacUserAuthenticationStage( ) {
-  }
-
-  public HmacUserAuthenticationStage( boolean doAdmin ) {
-    this.doAdmin = doAdmin;
+  public HmacUserAuthenticationStage( final boolean allowTemporaryCredentials ) {
+    this.allowTemporaryCredentials = allowTemporaryCredentials;
   }
 
   @Override
@@ -84,7 +81,7 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "hmac-v2-verify", new HmacHandler( false ) );
+    pipeline.addLast( "hmac-v2-verify", new HmacHandler( false, allowTemporaryCredentials ) );
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
 

@@ -75,18 +75,28 @@ public enum Digest {
   RipeMD160,
   RipeMD256,
   RipeMD320,
-  SHA1,
-  SHA224,
-  SHA256,
-  SHA384,
-  SHA512;
+  SHA1("SHA-1"),
+  SHA224("SHA-224"),
+  SHA256("SHA-256"),
+  SHA384("SHA-384"),
+  SHA512("SHA-512");
 
   public MessageDigest get( ) {
     try {
-      return MessageDigest.getInstance( this.name( ) );
+      return MessageDigest.getInstance( algorithm );
     } catch ( Exception e ) {
       e.printStackTrace( );
       return null;
     }
+  }
+
+  private final String algorithm;
+
+  private Digest() {
+    this.algorithm = name();
+  }
+
+  private Digest( final String algorithm ) {
+    this.algorithm = algorithm;
   }
 }

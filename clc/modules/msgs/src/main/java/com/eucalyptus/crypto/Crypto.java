@@ -62,17 +62,25 @@
 
 package com.eucalyptus.crypto;
 
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 /**
  * Facade for helpers and a set of generator methods providing non-trivial random tokens.
  */
 public class Crypto {
-  private static Logger LOG = Logger.getLogger( Crypto.class );
-  private static BaseSecurityProvider DUMMY = new BaseSecurityProvider( ) {};
-  private static ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( );
+  private static final Logger LOG = Logger.getLogger( Crypto.class );
+  private static final BaseSecurityProvider DUMMY = new BaseSecurityProvider( ) {};
+  private static final ConcurrentMap<Class, BaseSecurityProvider> providers = new ConcurrentHashMap<Class, BaseSecurityProvider>( );
   static {
     BaseSecurityProvider provider;
     try {
@@ -86,10 +94,22 @@ public class Crypto {
     providers.put( HmacProvider.class, provider );
     providers.put( CryptoProvider.class, provider );
   }
+  private static final Supplier<SecureRandom> secureRandomSupplier = Suppliers.memoizeWithExpiration( new Supplier<SecureRandom>() {
+    private final String secureRandomAlgorithm = System.getProperty( "euca.crypto.random.algorithm", "SHA1PRNG" );
+    private final String secureRandomProvider = System.getProperty( "euca.crypto.random.provider", "SUN" );
+    @Override
+    public SecureRandom get() {
+      try {
+        return secureRandomProvider.isEmpty() ?
+            SecureRandom.getInstance( secureRandomAlgorithm ) :
+            SecureRandom.getInstance( secureRandomAlgorithm, secureRandomProvider );
+      } catch (GeneralSecurityException e) {
+        throw Exceptions.toUndeclared(e);
+      }
+    }
+  }, 15, TimeUnit.MINUTES );
 
   /**
-   * @param password
-   * @return
    * @see com.eucalyptus.crypto.CryptoProvider#generateHashedPassword(java.lang.String)
    */
   public static String generateHashedPassword( final String password ) {
@@ -155,15 +175,11 @@ public class Crypto {
    * verifyPassword checks if a hashed password matches its clear text form,
    * using Linux-compatible salted password hash;
    * if not match, fall back to original non-salted hash.
-   * 
-   * @param clear
-   * @param hashed
-   * @return
    */
   public static boolean verifyPassword( final String clear, final String hashed ) {
     try {
       // Try salted hash first
-      return Crypto.verifyLinuxSaltedPassword( clear, hashed );
+      return !Strings.isNullOrEmpty(hashed) && Crypto.verifyLinuxSaltedPassword( clear, hashed );
     } catch ( Exception e ) {
       // Fall back to old password hash
       if ( clear != null ) {
@@ -175,12 +191,22 @@ public class Crypto {
   
   /**
    * A gateway for creating the encrypted password.
-   * 
-   * @param password
-   * @return
    */
   public static String generateEncryptedPassword( final String password ) {
     // Use Linux-compatible salted password
     return Crypto.generateLinuxSaltedPassword( password );
+  }
+
+  /**
+   * Get a supplier for secure random.
+   *
+   * <p>The returned supplier may be cached. A secure random instance returned
+   * from the provider should not be cached long periods.</p>
+   *
+   * @return The supplier
+   */
+  @Nonnull
+  public static Supplier<SecureRandom> getSecureRandomSupplier() {
+    return secureRandomSupplier;
   }
 }

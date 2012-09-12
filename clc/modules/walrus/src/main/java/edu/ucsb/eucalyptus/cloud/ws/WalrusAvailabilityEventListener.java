@@ -21,6 +21,7 @@ package edu.ucsb.eucalyptus.cloud.ws;
 
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageWalrus;
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -44,9 +45,13 @@ public class WalrusAvailabilityEventListener implements EventListener<ClockTick>
   public void fireEvent( final ClockTick event ) {
     if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
       try {
-        //TODO:STEVE: Get Walrus storage capacity from somewhere
+        long total = 100; //TODO:STEVE: Get Walrus storage capacity from somewhere
+
         ListenerRegistry.getInstance().fireEvent(
-            new ResourceAvailabilityEvent( StorageWalrus, new Availability( 0, WalrusUtil.countTotalObjectSize() ) )
+            new ResourceAvailabilityEvent( StorageWalrus, new Availability(
+                total,
+                Math.max( 0, total - (long) Math.ceil( (double) WalrusUtil.countTotalObjectSize() / FileUtils.ONE_GB ) )
+            ) )
         );
       } catch ( Exception ex ) {
         logger.error( ex, ex );

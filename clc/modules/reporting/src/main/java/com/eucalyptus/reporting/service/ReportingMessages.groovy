@@ -25,17 +25,18 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.ComponentId.ComponentMessage
 import com.eucalyptus.component.id.Reporting
 import com.eucalyptus.reporting.export.ReportingExport
+import com.eucalyptus.binding.HttpParameterMapping
 
 @ComponentMessage(Reporting.class)
 class ReportingMessage extends BaseMessage {
 }
 
-class ExportDataType extends ReportingMessage {
+class ExportReportDataType extends ReportingMessage {
   Date startDate
   Date endDate
 }
 
-class ExportDataResponseType extends ReportingMessage  {
+class ExportReportDataResponseType extends ReportingMessage  {
   ExportDataResultType result
   ReportingResponseMetadataType responseMetadata = new ReportingResponseMetadataType( );
 }
@@ -64,6 +65,26 @@ class ExportDataResultType extends EucalyptusData {
   ExportDataResultType(){}
   ExportDataResultType( data ){ this.data = data }
   ReportingExport data
+}
+
+class GenerateReportType extends ReportingMessage {
+  @HttpParameterMapping (parameter = "Start")
+  String startDate
+  @HttpParameterMapping (parameter = "End")
+  String endDate
+  @HttpParameterMapping (parameter = "Type")
+  ArrayList<String> types = new ArrayList<String>()
+}
+
+class GenerateReportResponseType extends ReportingMessage  {
+  GenerateReportResultType result
+  ReportingResponseMetadataType responseMetadata = new ReportingResponseMetadataType( );
+}
+
+class GenerateReportResultType extends EucalyptusData {
+  GenerateReportResultType(){}
+  GenerateReportResultType( data ){ this.data = data }
+  String data
 }
 
 

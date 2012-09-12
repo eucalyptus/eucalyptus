@@ -63,11 +63,12 @@
 package com.eucalyptus.auth.login;
 
 import java.net.URLDecoder;
-import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.SecurityParameter;
 import com.google.common.base.Strings;
 
 /**
@@ -91,7 +92,8 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   }
 
   protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
-    return Accounts.lookupAccessKeyById( credentials.getQueryId( ) );
+    final String token = credentials.getParameters().get( SecurityParameter.SecurityToken.toString() );
+    return AccessKeys.lookupAccessKey( credentials.getQueryId( ), token );
   }
 
   protected void checkForReplay( final String signature ) throws AuthenticationException {

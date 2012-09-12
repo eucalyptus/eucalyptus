@@ -2624,20 +2624,20 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
   logprintfl(EUCAINFO, "DescribeSensors(): invoked\n");
-  
+
   int total = 1;
   * outResources = malloc (total * sizeof (sensorResource *));
   if ((*outResources) == NULL) {
     return OUT_OF_MEMORY;
   }
-  
+
   int k = 0;
   * outResources [k] = malloc (sizeof (sensorResource));
   sensor_set_instance_data ("i-666", sensorIds, sensorIdsLen, * outResources [k]);
   k++;
-    
+
   * outResourcesLen = k;
-  
+
     //  * outResources = NULL;
     //  * outResourcesLen = 0;
   return 0;
@@ -2719,8 +2719,7 @@ int initialize(ncMetadata *ccMeta) {
 
   rc = init_eucafaults ("cc");	// Returns # of faults loaded into registry.
   if (!rc) {
-    ret = 1;
-    logprintfl(EUCAERROR, "initialize(): cannot initialize eucafault registry\n");
+    logprintfl(EUCAERROR, "initialize(): cannot initialize eucafault registry at startup--will retry initialization upon detection of any faults.\n");
   }
 
   rc = init_config();
