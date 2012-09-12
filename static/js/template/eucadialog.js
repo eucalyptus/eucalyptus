@@ -43,9 +43,10 @@
          width: 600,
          dialogClass: 'euca-dialog-container',
          show: 'fade',
-         hide: 'fade',
+         // don't add hide: 'fade' here b/c it causes an issue with positioning the dialog next to another dialog
          resizable: false,
          closeOnEscape : false,
+         position: { my: 'center', at: 'center', of: window, collision: 'none'},
          title: thisObj.options.title,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
@@ -203,17 +204,31 @@
     },
 
     hideButton : function(buttonDomId, buttonId) {
-      effectiveId = this._getButtonId(buttonDomId, buttonId);
+      var effectiveId = this._getButtonId(buttonDomId, buttonId);
       this.element.parent().find('#'+effectiveId).hide();
     },
 
     showButton : function(buttonDomId, buttonId, disabled) {
-      effectiveId = this._getButtonId(buttonDomId, buttonId);
-      $button = this.element.parent().find('#'+effectiveId);
+      var effectiveId = this._getButtonId(buttonDomId, buttonId);
+      var $button = this.element.parent().find('#'+effectiveId);
       $button.show();
       if ( disabled )
         $button.prop("disabled", true).addClass("ui-state-disabled");
     },
+
+    enableButton : function(buttonDomId){
+      buttonDomId = buttonDomId.replace('#','');
+      var $button = this.element.parent().find('#'+buttonDomId); 
+      $button.removeAttr("disabled").removeClass("ui-state-disabled");
+    },
+
+    disableButton : function(buttonDomId){
+      buttonDomId = buttonDomId.replace('#','');
+      var $button = this.element.parent().find('#'+buttonDomId); 
+      $button.prop("disabled", true).addClass("ui-state-disabled");
+ 
+    },
+
     /// 
     /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]] 
     setSelectedResources : function (resources) {

@@ -1560,3 +1560,6 @@ span.on-error {
   content: " *";
 }
 
+.euca-hidden-container {
+  display : none;
+}

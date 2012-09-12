@@ -28,7 +28,6 @@
     //forceDetachDialog : null, // forceDetach is not supported
     addDialog : null,
     attachDialog : null,
-    createSnapshotDialog : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -147,41 +146,12 @@
            return dfd.promise();
          }},
        });
-      this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
+       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
          var inst = thisObj.attachDialog.find('#volume-attach-instance-selector').val();
          return inst != '';
-        });
-      this.attachDialog.find('#volume-attach-instance-selector').change( function () {
-        instanceId = thisObj.attachDialog.find('#volume-attach-instance-selector').val()
-        device = thisObj.attachDialog.find('#volume-attach-device-name').val();
-        $button = thisObj.attachDialog.parent().find('#' + attachButtonId);
-        if ( device.length > 0 && instanceId !== '')
-          $button.prop("disabled", false).removeClass("ui-state-disabled");
-        else
-          $button.prop("disabled", false).addClass("ui-state-disabled");
        });
+
       // attach dialog end
-      // create snapshot dialog end
-      $tmpl = $('html body').find('.templates #snapshotCreateDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $snapshot_dialog = $rendered.children().first();
-      var $snapshot_dialog_help = $rendered.children().last();
-      this.createSnapshotDialog = $snapshot_dialog.eucadialog({
-         id: 'snapshot-create-from-volume',
-         title: snapshot_create_dialog_title,
-         buttons: {
-           'create': { text: snapshot_create_dialog_create_btn, click: function() { 
-                volumeId = $snapshot_dialog.find('#snapshot-create-volume-id').val();
-                description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
-                thisObj._createSnapshot(volumeId, description);
-                $snapshot_dialog.eucadialog("close");
-              } 
-            },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
-         },
-         help: {title: help_volume['dialog_snapshot_create_title'], content: $snapshot_dialog_help},
-       });
-      // create snapshot dialog end
       // volume create dialog start
       var createButtonId = 'volumes-add-btn';
       $tmpl = $('html body').find('.templates #volumeAddDlgTmpl').clone();
@@ -267,22 +237,42 @@
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
-      var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id').val('');
-      var inst_ids = [];
-      var results = describe('instance');
-      if ( results ) {
-        for( res in results) {
-          var instance = results[res];
-          if ( instance.state === 'running' )
-            inst_ids.push(instance.id);
-        }
-      }
-      if ( inst_ids.length == 0 )
-        this.attachDialog.eucadialog('showError', no_running_instances);
+      var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id');
+      var $volumeSelector = this.attachDialog.find('#volume-attach-volume-id');
 
-      $instanceSelector.autocomplete({
-        source: inst_ids
-      });
+      if(!$instanceSelector.val()){
+        var inst_ids = [];
+        var results = describe('instance');
+        if ( results ) {
+          for( res in results) {
+            var instance = results[res];
+            if ( instance.state === 'running' )
+              inst_ids.push(instance.id);
+          }
+        }
+        if ( inst_ids.length == 0 )
+          this.attachDialog.eucadialog('showError', no_running_instances);
+
+        $instanceSelector.autocomplete({
+          source: inst_ids
+        });
+      }
+      if(!$volumeSelector.val()){
+        var vol_ids = [];
+        var results = describe('volume');
+        if( results ) {
+          for ( res in results){
+            var volume = results[res];
+            if ( volume.status === 'available' )
+              vol_ids.push(volume.id);
+          }
+        }
+        if (vol_ids.length == 0 )
+          this.attachDialog.eucadialog('showError', no_available_volume);
+        $volumeSelector.autocomplete( {
+          source: vol_ids
+        });
+      }
       dfd.resolve();
     },
 
@@ -316,31 +306,6 @@
           })(volumeId)
         });
       }
-    },
-
-    _createSnapshot : function (volumeId, description) {
-      var thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=CreateSnapshot&VolumeId=" + volumeId + "&Description=" + description,
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:true,
-        success:
-          function(data, textStatus, jqXHR){
-            if ( data.results ) {
-              notifySuccess(null, snapshot_create_success(volumeId));
-              thisObj.tableWrapper.eucatable('refreshTable');
-            } else {
-              notifyError(null, snapshot_create_error(volumeId));
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError(null, snapshot_create_error(volumeId));
-          }
-      });
-
     },
 
     _attachVolume : function (volumeId, instanceId, device) {
@@ -448,16 +413,13 @@
     },
 
     _createAction : function() {
-      this.addDialog.eucadialog('open');
+      this.dialogAddVolume();
     },
 
     _attachAction : function() {
       var thisObj = this;
       var volumeToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 1)[0];
-      $volumeId = this.attachDialog.find('#volume-attach-volume-id');
-      $volumeId.val(volumeToAttach);
-      $volumeId.attr('disabled', 'disabled');
-      this.attachDialog.eucadialog('open');
+      thisObj.dialogAttachVolume(volumeToAttach, null);
     },
 
     _detachAction : function(){
@@ -475,11 +437,8 @@
     },
 
     _createSnapshotAction : function() {
-      volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
-      $volumeId = this.createSnapshotDialog.find('#snapshot-create-volume-id');
-      $volumeId.val(volumeToUse);
-      $volumeId.attr('disabled', 'disabled');
-      this.createSnapshotDialog.dialog('open');
+      var volumeToUse = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      addSnapshot(volumeToUse);
     },
 
     _createMenuActions : function() {
@@ -519,6 +478,25 @@
     close: function() {
       this._super('close');
     },
+
+    dialogAttachVolume : function(volume, instance){
+      var thisObj = this;
+      if(volume){
+        var $volumeId = this.attachDialog.find('#volume-attach-volume-id');
+        $volumeId.val(volume);
+        $volumeId.attr('disabled', 'disabled');
+      } 
+      if(instance){
+        var $instanceId = this.attachDialog.find('#volume-attach-instance-id');
+        $instanceId.val(instance);
+        $instanceId.attr('disabled', 'disabled');
+      }
+      this.attachDialog.eucadialog('open');
+    },
+
+    dialogAddVolume : function(snapshot){
+      this.addDialog.eucadialog('open');
+    }
 /**** End of Public Methods ****/
   });
 })

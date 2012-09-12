@@ -406,12 +406,15 @@
           $('<span>').text(launch_instance_security_keypair),
           $('<select>').attr('id','launch-wizard-security-keypair-selector')),
         $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
+          addKeypair();
         })));
+
       $sgroup.append(
         $('<div>').append(
           $('<span>').text(launch_instance_security_sgroup),
           $('<select>').attr('id','launch-wizard-security-sg-selector')),
         $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
+          addGroup();
         })),
         $('<div>').attr('id','launch-wizard-security-sg-detail'));
      
@@ -456,9 +459,9 @@
 
     _makeAdvancedSection : function($section) { 
       var $content = $section.find('#launch-wizard-advanced-main-contents');
-      $.each($content.children(), function(idx, child){
-        $(child).html('advanced-contents'); 
-      });
+      $content.prepend($('<span>').html(launch_instance_advanced_header));
+      var $keypair = $content.find('#launch-wizard-security-keypair');
+      var $sgroup = $content.find('#launch-wizard-security-sgroup');
     },
 
     _setSummary : function(section, content){
@@ -508,7 +511,7 @@
             if ( data.results ){
               var instances ='';
               $.each(data.results, function(idx, instance){
-                instances += instance+' ';
+                instances += instance.id+' ';
               });
               instances = $.trim(instances);
               notifySuccess(null, instance_run_success + ' ' + instances);
