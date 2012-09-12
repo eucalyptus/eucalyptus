@@ -68,7 +68,6 @@
           key pairs: K, k (75, 107)
           address: A, a (65, 97)          
           launch new instance: L, l (76, 108) 
-        */
         switch(key){
           case 68:
           case 100:
@@ -106,7 +105,7 @@
           case 108:
             $container.maincontainer("changeSelected", e, {selected:'launcher'});
           break;
-        }
+        }*/
       });
     }).fail(function(){
         //TODO: what's the appropriate error message and the popup?
