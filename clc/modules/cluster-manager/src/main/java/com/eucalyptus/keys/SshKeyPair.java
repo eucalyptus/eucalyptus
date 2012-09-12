@@ -79,6 +79,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
 @Entity
 @javax.persistence.Entity
@@ -91,6 +93,7 @@ public class SshKeyPair extends UserMetadata<SshKeyPair.State> implements KeyPai
   }
   
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_keypair_public_key" )
   private String publicKey;
   @Column( name = "metadata_keypair_finger_print" )
