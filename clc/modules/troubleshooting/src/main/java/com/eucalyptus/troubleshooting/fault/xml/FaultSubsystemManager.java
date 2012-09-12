@@ -76,6 +76,7 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.system.BaseDirectory;
 
 public class FaultSubsystemManager {
@@ -228,6 +229,13 @@ public class FaultSubsystemManager {
 
 	public FaultRegistry getFaultRegistry() {
 		return faultRegistry;
+	}
+	public void init() {
+		// preload as many appenders as we can right now...
+		for (ComponentId componentId: ComponentIds.list()) {
+			// TODO: don't forget to bridge the components
+			getFaultLogger(componentId);
+		}
 	}
 
 }

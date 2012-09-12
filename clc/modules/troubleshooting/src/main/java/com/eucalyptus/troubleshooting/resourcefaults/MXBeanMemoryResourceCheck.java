@@ -17,7 +17,7 @@ public class MXBeanMemoryResourceCheck extends Thread {
 	private final static Logger LOG = Logger.getLogger(DiskResourceCheck.class);
 	private final static long POLL_TIME = 60 * 1000; // poll every minute (TODO: configure)
 	private static final int MXBEAN_OUT_OF_MEMORY_FAULT_ID = 1005;
-	private static final long THRESHOLD = 512 * 1024; // 512K, TODO: make this customizable
+	private static final long THRESHOLD = 1;//512 * 1024; // 512K, TODO: make this customizable
 	private Set<String> alreadyFaulted = new HashSet<String>();
 
 	@Override

@@ -67,6 +67,9 @@ import com.eucalyptus.troubleshooting.fault.xml.FaultBuilderImpl;
 
 public class FaultSubsystem {
 	private static final FaultSubsystemManager faultSubsystemManager = new FaultSubsystemManager();
+	public static void init() {
+		faultSubsystemManager.init();
+	}
 	public static FaultBuilder forComponent(ComponentId componentId) {
 		return new FaultBuilderImpl(faultSubsystemManager, componentId);
 	}
