@@ -78,6 +78,8 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-describe-storage-controllers",
                  "bin/euca-describe-vmware-brokers",
                  "bin/euca-describe-walruses",
+                 "bin/euca-export-report-data",
+                 "bin/euca-generate-report",
                  "bin/euca-get-credentials",
                  "bin/euca-modify-cluster",
                  "bin/euca-modify-property",
@@ -90,7 +92,7 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-register-storage-controller",
                  "bin/euca-register-vmware-broker",
                  "bin/euca-register-walrus",
-                ]
+                 ]
 
 setup(name="eucadmin",
       version=version,

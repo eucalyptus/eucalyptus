@@ -17,10 +17,9 @@
 	<mapping name="DescribeSensors" class="edu.ucsb.eucalyptus.msgs.DescribeSensorsType"
 		extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-		<value name="historySize" field="historySize" type="java.lang.Integer"
-			usage="required" />
+		<value name="historySize" field="historySize" type="java.lang.Integer" />
 		<value name="collectionIntervalTimeMs" field="collectionIntervalTimeMs"
-			type="java.lang.Integer" usage="required" />
+			type="java.lang.Integer" />
 		<collection name="instanceIds"
 			factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds"
 			item-type="java.lang.String">
@@ -35,6 +34,11 @@
 				<value name="sensorId" />
 			</structure>
 		</collection>
+		<collection field="clusterControllers"
+			factory="org.jibx.runtime.Utility.arrayListFactory">
+			<value name="clusterControllers" type="java.lang.String" />
+		</collection>
+		<value name="nameServer" field="nameServer" type="java.lang.String" />
 	</mapping>
 
 	<mapping name="DescribeSensorsResponseType"

@@ -107,7 +107,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		Authorization,
 		Date,
 		Content_MD5,
-		Content_Type
+		Content_Type,
+		SecurityToken,
 	}
 
 	@Override
@@ -217,9 +218,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				}
 				String accessKeyId = sigString[0];
 				String signature = sigString[1];
-
+				String securityToken = httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN);
 				try {
-					SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature)).login();
+					SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 				} catch(Exception ex) {
 					LOG.error(ex);
 					throw new AuthenticationException(ex);
@@ -238,8 +239,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 					}
 					if(checkExpires(expires)) {
 						String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + getCanonicalizedAmzHeaders(httpRequest) + addrString;
+						String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
 						try {
-							SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature)).login();
+							SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
 						} catch(Exception ex) {
 							LOG.error(ex);
 							throw new AuthenticationException(ex);
@@ -338,18 +340,19 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
 		String data = httpRequest.getAndRemoveHeader(WalrusProperties.FormField.FormUploadPolicyData.toString());
 		String auth_part = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
+		String securityToken = httpRequest.getHeader(WalrusProperties.X_AMZ_SECURITY_TOKEN);
 		if(auth_part != null) {
 			String sigString[] = getSigInfo(auth_part);
-		        if(sigString.length < 2) {
-			    throw new AuthenticationException("Invalid authentication header");
+		 	if(sigString.length < 2) {
+				throw new AuthenticationException("Invalid authentication header");
 			}
 			String accessKeyId = sigString[0];
 			String signature = sigString[1];
 			try {
-			    SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature)).login();
+				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 			} catch(Exception ex) {
-			    LOG.error(ex);
-			    throw new AuthenticationException(ex);
+				LOG.error(ex);
+				throw new AuthenticationException(ex);
 			}
 		} else {
 			throw new AuthenticationException("User authentication failed. Invalid policy signature.");

@@ -86,5 +86,4 @@ public interface AccessKey extends /*HasId, */Serializable {
   public void setCreateDate( Date createDate ) throws AuthException;
   
   public User getUser( ) throws AuthException;
-  
 }

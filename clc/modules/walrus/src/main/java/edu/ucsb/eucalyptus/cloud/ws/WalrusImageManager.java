@@ -118,6 +118,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
@@ -296,7 +297,7 @@ public class WalrusImageManager {
 					try {
 						PrivateKey pk = SystemCredentials.lookup(
 								Eucalyptus.class ).getPrivateKey();
-						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+						Cipher cipher = Ciphers.RSA_PKCS1.get();
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						String keyString = new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey)));
 						key = Hashes.hexToBytes(keyString);
@@ -422,7 +423,7 @@ public class WalrusImageManager {
 					byte[] iv;
 					try {
 						PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
-						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+						Cipher cipher = Ciphers.RSA_PKCS1.get();
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						key = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey))));
 						iv = Hashes.hexToBytes(new String(cipher.doFinal(Hashes.hexToBytes(encryptedIV))));

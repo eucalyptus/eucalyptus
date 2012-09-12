@@ -99,19 +99,16 @@ distclean:
 	rm -rf eucalyptus-config.h
 
 install:
-	@$(INSTALL) -m 0755 euca_rootwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
-	@$(INSTALL) -m 0755 euca_mountwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
-	@$(INSTALL) -d $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
-	@$(INSTALL) -m 0644 faults/en_US/common.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
-	@$(INSTALL) -m 0644 faults/en_US/1234.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
-	@$(INSTALL) -m 0644 faults/en_US/1235.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
-	@$(INSTALL) -m 0644 faults/en_US/1236.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
-	@$(INSTALL) -m 0644 faults/en_US/1237.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
-	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/faults/en_US/
+	$(INSTALL) -m 0755 euca_rootwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
+	$(INSTALL) -m 0755 euca_mountwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
+	$(INSTALL) -d $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	$(INSTALL) -m 0644 faults/en_US/common.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	$(INSTALL) -m 0644 -v faults/en_US/????.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
+	$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/faults/en_US/
 
 deploy:
 
 uninstall:
-	@$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_rootwrap
-	@$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_mountwrap
-	@$(RM) -f $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/*.xml
+	$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_rootwrap
+	$(RM) -f $(DESTDIR)$(usrdir)/lib/eucalyptus/euca_mountwrap
+	$(RM) -f $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/*.xml

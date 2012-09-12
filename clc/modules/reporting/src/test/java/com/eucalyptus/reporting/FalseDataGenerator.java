@@ -310,7 +310,7 @@ public class FalseDataGenerator
 	@ExposedCommand
 	public static void generateReport()
 	{
-		log.debug(" ----> GENERATING REPORT");
+		log.debug(" ----> GENERATING TEST REPORT");
 
 		Period period = new Period(START_TIME + (PERIOD_DURATION*3), START_TIME + (PERIOD_DURATION * 200));
 		

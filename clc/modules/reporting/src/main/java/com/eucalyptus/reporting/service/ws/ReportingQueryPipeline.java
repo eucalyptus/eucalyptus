@@ -19,79 +19,22 @@
  ************************************************************************/
 package com.eucalyptus.reporting.service.ws;
 
-import java.util.HashMap;
-import java.util.Map;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
-import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Reporting;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
+import com.eucalyptus.ws.server.QueryPipeline;
 
-/**
- * TODO:STEVE: Change hierarchy to extend new QueryPipeline class when Tokens changes merged to testing
- */
 @ComponentId.ComponentPart(Reporting.class)
-public class ReportingQueryPipeline extends FilteredPipeline {
-  private final HmacUserAuthenticationStage auth = new HmacUserAuthenticationStage( );
+public class ReportingQueryPipeline extends QueryPipeline {
+
+  public ReportingQueryPipeline() {
+    super( "reporting-query-pipeline", "/services/Reporting", true );
+  }
 
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
+    super.addHandlers( pipeline );
     pipeline.addLast( "reporting-query-binding", new ReportingQueryBinding( ) );
-    return null;
-  }
-
-  @Override
-  public boolean checkAccepts( HttpRequest message ) {
-    if ( message instanceof MappingHttpRequest) {
-      MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
-      if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
-        Map<String,String> parameters = new HashMap<String,String>( httpRequest.getParameters( ) );
-        ChannelBuffer buffer = httpRequest.getContent( );
-        buffer.markReaderIndex( );
-        byte[] read = new byte[buffer.readableBytes( )];
-        buffer.readBytes( read );
-        String query = new String( read );
-        buffer.resetReaderIndex( );
-        for ( String p : query.split( "&" ) ) {
-          String[] splitParam = p.split( "=" );
-          String lhs = splitParam[0];
-          String rhs = splitParam.length == 2 ? splitParam[1] : null;
-          try {
-            if( lhs != null ) lhs = new URLCodec().decode(lhs);
-          } catch ( DecoderException e ) {}
-          try {
-            if( rhs != null ) rhs = new URLCodec().decode(rhs);
-          } catch ( DecoderException e ) {}
-          parameters.put( lhs, rhs );
-        }
-        for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
-          if ( !parameters.containsKey( p.toString( ) ) ) {
-            return false;
-          }
-        }
-        httpRequest.getParameters( ).putAll( parameters );
-      } else {
-        for ( RequiredQueryParams p : RequiredQueryParams.values( ) ) {
-          if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {
-            return false;
-          }
-        }
-      }
-      return message.getUri( ).startsWith( "/services/Reporting" );
-    }
-    return false;
-  }
-
-  @Override
-  public String getName( ) {
-    return "reporting-query-pipeline";
+    return pipeline;
   }
 }
