@@ -58,6 +58,9 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.ObjectArrays;
@@ -71,8 +74,8 @@ public class SslSetup {
   private static final String PROTOCOL        = "TLS";
   private static SSLContext   SERVER_CONTEXT  = null;
   private static SSLContext   CLIENT_CONTEXT  = null;
-  private static final Map<SslCipherSuiteBuilderParams,String[]> SSL_CIPHER_LOOKUP =
-      new MapMaker().maximumSize(32).makeComputingMap( SslCipherSuiteBuilder.INSTANCE );
+  private static final LoadingCache<SslCipherSuiteBuilderParams,String[]> SSL_CIPHER_LOOKUP =
+	  CacheBuilder.newBuilder().maximumSize(32).build(CacheLoader.from(SslCipherSuiteBuilder.INSTANCE) );
   @ConfigurableField( description = "Alias of the certificate entry in euca.p12 to use for SSL for webservices.",
                       changeListener = SslCertChangeListener.class )
   public static String        SERVER_ALIAS    = ComponentIds.lookup( Eucalyptus.class ).name( );
@@ -172,7 +175,7 @@ public class SslSetup {
   }
 
   public static String[] getEnabledCipherSuites( final String cipherStrings, final String[] supportedCipherSuites ) {
-    return SSL_CIPHER_LOOKUP.get( params(cipherStrings, supportedCipherSuites) );
+    return SSL_CIPHER_LOOKUP.getUnchecked( params(cipherStrings, supportedCipherSuites) );
   }
 
   static class ClientKeyManager extends KeyManagerFactorySpi {

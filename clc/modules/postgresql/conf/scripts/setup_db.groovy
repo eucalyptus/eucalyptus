@@ -626,7 +626,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
     @Override
     public String getServicePath( String... pathParts ) {
-        return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus"
+        return pathParts != null && pathParts.length > 0 ? Joiner.on("/"). join(pathParts.iterator()) : "eucalyptus"
     }
 
     @Override

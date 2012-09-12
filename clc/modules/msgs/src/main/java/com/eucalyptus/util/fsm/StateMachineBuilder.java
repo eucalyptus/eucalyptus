@@ -210,7 +210,7 @@ public class StateMachineBuilder<P extends HasName<P>, S extends Automata.State,
   }
   
   private void doChecks( ) {
-    this.immutableStates = ImmutableList.of( this.startState.asEnum.getEnumConstants( this.startState ) );
+    this.immutableStates = ImmutableList.copyOf( this.startState.asEnum.getEnumConstants( this.startState ) );
     if ( this.transitions.isEmpty( ) ) {
       throw new IllegalStateException( "Started state machine with no registered transitions." );
     }

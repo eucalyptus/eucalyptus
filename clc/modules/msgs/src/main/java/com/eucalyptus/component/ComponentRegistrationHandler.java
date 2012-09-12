@@ -75,6 +75,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.JdkFutureAdapters;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
@@ -141,8 +142,8 @@ public class ComponentRegistrationHandler {
       try {
         Components.lookup( newComponent ).setup( newComponent );
         Future<ServiceConfiguration> res = Topology.start( newComponent );
-        Futures.makeListenable( res ).addListener( new Runnable( ) {
-          
+        JdkFutureAdapters.listenInPoolThread( res ).addListener( new Runnable( ) {
+        
           @Override
           public void run( ) {
             try {

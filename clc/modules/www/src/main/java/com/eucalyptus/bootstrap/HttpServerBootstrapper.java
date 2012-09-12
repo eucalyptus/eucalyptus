@@ -62,6 +62,7 @@ package com.eucalyptus.bootstrap;
 
 import static com.eucalyptus.crypto.util.SslSetup.getEnabledCipherSuites;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import org.apache.log4j.Logger;
@@ -126,6 +127,14 @@ public class HttpServerBootstrapper extends Bootstrapper {
     jettyConfig.configure( jettyServer );
   }
   
+  private static void delete(File f) throws IOException {
+	  if (f.isDirectory( ) ) {
+	    for (File file : f.listFiles( ) )
+	      delete( file );
+	  }
+	  if (!f.delete( ) )
+	    throw new FileNotFoundException("Failed to delete file: " + f);
+  } 
   private static void startJettyServer( ) {
     Threads.lookup( HttpService.class, HttpServerBootstrapper.class ).submit( new Runnable( ) {
       @Override
@@ -135,7 +144,7 @@ public class HttpServerBootstrapper extends Bootstrapper {
           String path = "/var/run/eucalyptus/webapp";
           File dir = new File( BaseDirectory.HOME + path );
           if ( dir.exists( ) ) {
-            Files.deleteDirectoryContents( dir );
+            delete(dir);
             dir.delete( );
           }
           

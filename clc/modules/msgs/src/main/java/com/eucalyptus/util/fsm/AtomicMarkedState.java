@@ -62,7 +62,7 @@ public class AtomicMarkedState<P extends HasName<P>, S extends Automata.State, T
         }
       }
     };
-    this.immutableStates = ImmutableList.of( states );
+    this.immutableStates = ImmutableList.copyOf( states );
     this.state = new AtomicMarkableReference<S>( this.startState, false );
     this.immutableTransitions = ImmutableList.copyOf( transitions );
     for ( TransitionHandler<P, S, T> t : transitions ) {
