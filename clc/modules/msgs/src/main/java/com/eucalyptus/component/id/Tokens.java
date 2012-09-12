@@ -21,6 +21,7 @@ package com.eucalyptus.component.id;
 
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 
 /**
  *
@@ -28,6 +29,7 @@ import com.eucalyptus.component.ComponentId;
 @ComponentId.Partition( Eucalyptus.class )
 @ComponentId.PublicService
 @ComponentId.PolicyVendor( PolicySpec.VENDOR_STS )
+@FaultLogPrefix( "cloud" )
 public class Tokens extends ComponentId {
   public static Tokens INSTANCE = new Tokens( );
 

@@ -64,11 +64,13 @@ package com.eucalyptus.config;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.AdminService;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.id.Eucalyptus;
 
 @Partition( Eucalyptus.class )
 @AdminService
+@FaultLogPrefix( "cloud" )
 public class ConfigurationService extends ComponentId {
   
   public ConfigurationService( ) {
