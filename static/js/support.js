@@ -43,11 +43,9 @@ function asHTML(input) {
   return $('<div/>').append(input).html();
 }
 
-
 function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }
-
 
 /** Add Array.indexOf to IE **/
 if( !Array.prototype.indexOf ) {
@@ -137,3 +135,7 @@ function logout(){
   location.href='/';
 }
 
+function startLaunchWizard(emi) {
+  var $container = $('html body').find(DOM_BINDING['main']);
+  $container.maincontainer("changeSelected", null, { selected:'launcher', filter: emi });
+}

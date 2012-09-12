@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.launcher', $.eucalyptus.eucawidget, {
-    options : { },
+    options : {
+      image_filter : null,
+    },
     launchParam : {
       emi : null,
       type : null,
@@ -41,6 +43,8 @@
       $.each(thisObj.launchParam, function(k,v){
         thisObj.launchParam[k] = null;
       });
+      if ( thisObj.options.image_filter )
+        thisObj.launchParam['emi'] = thisObj.options.image_filter;
 
       var $tmpl = $('html body').find('.templates #launchWizardTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
@@ -66,6 +70,7 @@
       });
       $launcher.appendTo(thisObj.element);
      },
+
     _destroy : function() { },
 
     _makeSectionHeader : function($launcher) {
@@ -189,6 +194,14 @@
             });
           }
         });
+        // let's set emi if it is passed
+        if ( thisObj.options.image_filter ) {
+          $imageFilter = $content.find('#launch-images_filter').find(':input');
+          $imageFilter.val(thisObj.options.image_filter);
+          /* e = jQuery.Event("keydown");
+          e.which = RETURN_KEY_CODE;
+          $imageFilter.trigger(e); */
+        }
       };
 
       $section.find('#launch-wizard-buttons-image-next').click( function(e){
