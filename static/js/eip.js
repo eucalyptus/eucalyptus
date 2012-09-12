@@ -321,6 +321,7 @@
     },
 
     _initAssociateDialog : function(dfd) {  // should resolve dfd object
+      thisObj = this;
       var $instanceSelector = thisObj.associateDialog.find('#eip-associate-instance-id').html('');
       var results = describe('instance');
       var volume_ids = [];
@@ -372,6 +373,7 @@
 
       if ( eipsToAssociate.length == 1 ) {
         thisObj.associateDialog.find("#eip-to-associate").html(eipsToAssociate[0]);
+        thisObj.associateDialog.find('#eip-associate-instance-txt').html(eip_associate_dialog_text(eipsToAssociate[0]));
         thisObj.associateDialog.dialog('open');
       }
     },
