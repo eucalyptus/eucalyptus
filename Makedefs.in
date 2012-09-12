@@ -45,7 +45,7 @@ LIBS		= @LIBS@ -pthread
 INSTALL		= @INSTALL@
 ANT		= @ANT@ -e
 WSDL2C		= @WSDL2C@
-JAVA_HOME       = @JAVA_HOME@
+JAVA_HOME	= @JAVA_HOME@
 RM		= @RM@
 PYTHON		= @PYTHON@
 
