@@ -361,12 +361,6 @@ refresh_instance_info(	struct nc_state_t *nc,
         return;
     }
     
-    int rc;
-    rc = get_instance_stats (dom, instance);
-    if (rc) {
-        logprintfl (EUCAWARN, "[%s] refresh_instances(): cannot get instance stats (block, network)\n", instance->instanceId);
-    }
-    
     virDomainInfo info;
     sem_p(hyp_sem);
     int error = virDomainGetInfo(dom, &info);
@@ -552,6 +546,7 @@ monitoring_thread (void *arg)
                 if ((now - instance->terminationTime)>nc_state.teardown_state_duration) {
                     remove_instance (&global_instances, instance);
                     logprintfl (EUCAINFO, "[%s] forgetting about instance\n", instance->instanceId);
+                    sensor_remove_resource (instance->instanceId);
                     free_instance (&instance);
                     break;	// need to get out since the list changed
                 }
@@ -716,6 +711,7 @@ void *startup_thread (void * arg)
     xml = file2str (instance->libvirtFilePath);
     
     save_instance_struct (instance); // to enable NC recovery
+    sensor_add_resource (instance->instanceId, "instance");
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 
@@ -907,6 +903,7 @@ void adopt_instances()
 			free_instance (&instance);
 			continue;
 		}
+        sensor_add_resource (instance->instanceId, "instance"); // ensure the sensor system monitors this instance
 
 		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId); // TODO: try to re-check IPs?
 
@@ -1844,85 +1841,6 @@ doDescribeSensors (ncMetadata *meta,
 		ret = nc_state.D->doDescribeSensors (&nc_state, meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     
 	return ret;
-}
-
-int get_instance_stats(virDomainPtr dom, ncInstance *instance)
-{
-    char *xml;
-    int ret=0, n;
-    long long b=0, i=0;
-    char bstr[512], istr[512];
-    
-    // get the block device string from VBR
-    bzero(bstr, sizeof (bstr));
-    for (n=0; n<instance->params.virtualBootRecordLen; n++) {
-        const virtualBootRecord * vbr = &(instance->params.virtualBootRecord[n]); 
-        if (strcmp(vbr->guestDeviceName, "none")) { // something other than 'none'
-
-            // TODO: the next section, with a special case for virtio devices,
-            // is replicated in xml.c, so the logic should be unified somehow
-            char devstr[SMALL_CHAR_BUFFER_SIZE];
-            snprintf(devstr, SMALL_CHAR_BUFFER_SIZE, "%s", vbr->guestDeviceName);
-            if (nc_state.config_use_virtio_root) {
-                devstr[0] = 'v';
-            }
-            if (strlen(bstr) < (510 - strlen(devstr))) {
-                strcat(bstr, devstr);
-                strcat(bstr, ",");
-            }
-        }
-    }
-
-    // get the name of the network interface from libvirt
-    sem_p(hyp_sem);
-    xml = virDomainGetXMLDesc(dom, 0);
-    sem_v(hyp_sem);
-    
-    if (xml) {
-        char *el;
-        el = xpath_content(xml, "domain/devices/interface");
-        if (el) {
-            char *start, *end;
-            start = strstr(el, "target dev='");
-            if (start) {
-                start += strlen("target dev='");
-                end = strstr(start, "'");
-                if (end) {
-                    *end = '\0';
-                    snprintf(istr, 512, "%s", start);
-                }
-            }
-            free(el);
-        }
-        free(xml);
-    }
-    
-    char cmd[MAX_PATH], *output;
-    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/getstats.pl -i %s -b '%s' -n '%s'", 
-             nc_state.home, nc_state.home, instance->instanceId, bstr, istr);
-    output = system_output (cmd);
-    if (output) {
-        sscanf(output, "OUTPUT %lld %lld", &b, &i);
-        free(output);
-    } else {
-        logprintfl(EUCAWARN, "[%s] warning: get_instance_stats: empty output from getstats command\n", instance->instanceId);
-        ret = 1;
-    }
-    
-    if (b > 0) {
-        instance->blkbytes = b;
-    } else {
-        instance->blkbytes = 0;
-    }
-    if (i > 0) {
-        instance->netbytes = i;
-    } else {
-        instance->netbytes = 0;
-    }
-    logprintfl(EUCADEBUG, "[%s] get_instance_stats: blkdevs=%s blkMB=%lld netdevs=%s netMB=%lld\n", 
-               instance->instanceId, bstr, instance->blkbytes, istr, instance->netbytes);
-    
-  return(ret);
 }
 
 ncInstance * find_global_instance (const char * instanceId)
