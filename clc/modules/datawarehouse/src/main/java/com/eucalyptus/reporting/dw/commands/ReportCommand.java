@@ -19,10 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.reporting.dw.commands;
 
+import static com.eucalyptus.reporting.ReportGenerationFacade.ReportGenerationException;
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
+import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.ReportGenerationFacade;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Charsets;
+import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 
 /**
@@ -32,20 +42,64 @@ public class ReportCommand extends CommandSupport {
 
   public ReportCommand(final String[] args) {
     super(argumentsBuilder()
-        .withArg( "f", "file", "File for generated report", true )
+        .withArg("t", "type", "Type(s) for generated report", false)
+        .withArg("s", "start", "The inclusive start time for the report period (e.g. 2012-08-19T00:00:00)", false)
+        .withArg("e", "end", "The exclusive end time for the report period (e.g. 2012-08-26T00:00:00)", false)
+        .withArg( "f", "file", "File for generated report", false )
         .forArgs(args));
   }
 
   @Override
   protected void runCommand( final Arguments arguments ) {
+    final Period defaultPeriod = Period.defaultPeriod();
+    final List<String> types = arguments.getArguments( "type" );
+    final String start = arguments.getArgument( "start", formatDate(defaultPeriod.getBeginningMs()) );
+    final String end = arguments.getArgument( "end", formatDate(defaultPeriod.getEndingMs()) );
     final String reportFilename = arguments.getArgument( "file", null );
 
-    //TODO process arguments, generate report and write it out.
+    long startTime = parseDate( start );
+    long endTime = parseDate( end );
+    if ( endTime <= startTime ) {
+      throw new IllegalArgumentException( "Invalid start or end time");
+    }
+
+    final String reportData;
     try {
-      Files.write( "", new File(reportFilename), Charsets.UTF_8);
-    } catch (IOException e) {
+      reportData = ReportGenerationFacade.generateReport( Iterables.get(types, 0, "raw"), startTime, endTime );
+    } catch ( ReportGenerationException e ) {
       throw Exceptions.toUndeclared( e );
     }
+
+    if ( reportFilename != null ) {
+      try {
+        Files.write( reportData, new File(reportFilename), Charsets.UTF_8);
+      } catch ( IOException  e) {
+        throw Exceptions.toUndeclared( e );
+      }
+    } else {
+      System.out.println( reportData );
+    }
+  }
+
+  private String formatDate( final long time ) {
+    return getDateFormat(true).format(new Date(time));
+  }
+
+  private long parseDate( final String date ) {
+    try {
+      return getDateFormat( date.endsWith("Z") ).parse( date ).getTime();
+    } catch (ParseException e) {
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
+  private DateFormat getDateFormat( final boolean utc ) {
+    final String format = "yyyy-MM-dd'T'HH:mm:ss";
+    final SimpleDateFormat dateFormat = new SimpleDateFormat( format + ( utc ? "'Z'" : "")  );
+    if (utc) {
+      dateFormat.setTimeZone( TimeZone.getTimeZone("UTC") );
+    }
+    return dateFormat;
   }
 
   public static void main( final String[] args ) {

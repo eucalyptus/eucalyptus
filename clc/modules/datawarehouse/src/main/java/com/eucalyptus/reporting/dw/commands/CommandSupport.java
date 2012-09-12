@@ -20,6 +20,7 @@
 package com.eucalyptus.reporting.dw.commands;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
@@ -125,7 +126,11 @@ abstract class CommandSupport {
 
     String getArgument( final String name,
                         final String defaultValue ) {
-      return Iterables.get( Lists.newArrayList(Objects.firstNonNull(commandLine.getOptionValues(name), new String[0])), 0, defaultValue );
+      return Iterables.get( getArguments( name ), 0, defaultValue );
+    }
+
+    List<String> getArguments( final String name ) {
+      return Lists.newArrayList(Objects.firstNonNull(commandLine.getOptionValues(name), new String[0]));
     }
 
     boolean hasArgument( final String name ) {

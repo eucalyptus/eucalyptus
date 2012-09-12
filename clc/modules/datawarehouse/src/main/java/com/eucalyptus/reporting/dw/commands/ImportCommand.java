@@ -40,7 +40,7 @@ public class ImportCommand extends CommandSupport {
   @Override
   protected void runCommand( final Arguments arguments ) {
     final boolean replace = arguments.hasArgument( "replace" );
-    final String exportFilename = arguments.getArgument( "export", null );
+    final String exportFilename = arguments.getArgument( "file", null );
     final File exportFile = new File( exportFilename );
     final ReportingExport reportingExport;
 

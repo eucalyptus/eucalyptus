@@ -19,18 +19,28 @@
  ************************************************************************/
 package com.eucalyptus.reporting.service;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.reporting.Period;
+import com.eucalyptus.reporting.ReportGenerationFacade;
 import com.eucalyptus.reporting.export.Export;
 import com.eucalyptus.reporting.export.ReportingExport;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Iterables;
 
 /**
  *
  */
 public class ReportingService {
+
+  private static final Logger logger = Logger.getLogger( ReportingService.class );
 
   public ExportReportDataResponseType exportData( final ExportReportDataType request ) throws EucalyptusCloudException {
     final ExportReportDataResponseType reply = request.getReply();
@@ -58,9 +68,46 @@ public class ReportingService {
       throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
 
-    //TODO generate report
-    reply.setResult( new GenerateReportResultType( "REPORT CONTENT HERE" ) );
+    final Period period = Period.defaultPeriod();
+    long startTime = period.getBeginningMs();
+    long endTime = period.getEndingMs();
+    if ( request.getStartDate() != null ) {
+      startTime = parseDate( request.getStartDate() );
+    }
+    if ( request.getEndDate() != null ) {
+      endTime = parseDate( request.getEndDate() );
+    }
+    if ( endTime <= startTime ) {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
+    }
+
+    final String reportData;
+    try {
+      reportData = ReportGenerationFacade.generateReport(Iterables.get( request.getTypes(), 0, "raw"), startTime, endTime );
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+      throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error generating report");
+    }
+
+    reply.setResult( new GenerateReportResultType( reportData ) );
 
     return reply;
+  }
+
+  private long parseDate( final String date ) throws ReportingException {
+    try {
+      return getDateFormat( date.endsWith("Z") ).parse( date ).getTime();
+    } catch (ParseException e) {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
+    }
+  }
+
+  private DateFormat getDateFormat( final boolean utc ) {
+    final String format = "yyyy-MM-dd'T'HH:mm:ss";
+    final SimpleDateFormat dateFormat = new SimpleDateFormat( format + ( utc ? "'Z'" : "")  );
+    if (utc) {
+      dateFormat.setTimeZone( TimeZone.getTimeZone("UTC") );
+    }
+    return dateFormat;
   }
 }

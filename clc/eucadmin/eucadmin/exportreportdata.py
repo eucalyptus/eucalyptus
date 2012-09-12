@@ -30,13 +30,17 @@ import os
 class ExportReportData(ReportsRequest):
     Description = 'Export reporting data'
 
-    Params = [Param(name='force',
-        short_name='f', long_name='force',
-        ptype='boolean', request_param=False,
-        doc='overwrite output file if it exists')]
-    Args = [Param(name='file', long_name='file',
-        ptype='string', optional=True, request_param=False,
-        doc='optional path to the resulting reporting data export file')]
+    Params = [
+        Param(name='Force',
+            short_name='f', long_name='force',
+            ptype='boolean', request_param=False,
+            doc='overwrite output file if it exists'),
+        ]
+    Args = [
+        Param(name='File', long_name='file',
+            ptype='string', optional=True, request_param=False,
+            doc='optional path to the resulting reporting data export file'),
+        ]
 
     def check_export_file(self):
         if self.file is not None and os.path.exists(self.file) and not self.force:
