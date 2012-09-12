@@ -26,7 +26,6 @@
     delDialog : null,
     addDialog : null,
     rulesList : null,
-    // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
@@ -111,9 +110,8 @@
               var cidr = new Array();
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
-                  alert("adding rule for port: "+thisObj.rulesList[rule].port);
-                  fromPort.push(thisObj.rulesList[rule].port);
-                  toPort.push(thisObj.rulesList[rule].port);
+                  fromPort.push(thisObj.rulesList[rule].from_port);
+                  toPort.push(thisObj.rulesList[rule].to_port);
                   protocol.push(thisObj.rulesList[rule].protocol);
                   cidr.push(thisObj.rulesList[rule].ipaddr);
                   fromGroup.push(thisObj.rulesList[rule].fromGroup);
@@ -128,7 +126,6 @@
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
-                              alert("going to create rules now");
                               thisObj._addIngressRule(name, fromPort, toPort, protocol, cidr, fromGroup);
                           }
                           else {
@@ -214,6 +211,7 @@
          $button.prop("disabled", false).addClass("ui-state-disabled");
     },
 
+    // this function is used to take an ingress rule from the form and move it to the rulesList
     _storeRule : function() {
         if (this.rulesList == null) {
             this.rulesList = new Array();
@@ -223,7 +221,8 @@
             return
         var rule = new Object();
         rule.protocol = 'tcp';
-        rule.port = $('#sgroup-ports').val();
+        rule.from_port = $('#sgroup-ports').val();
+        rule.to_port = $('#sgroup-ports').val();
         if ($("input[@name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = $('#allow-ip').val();
         }
@@ -233,17 +232,42 @@
         this.rulesList.push(rule);
     },
 
+    // this function populates the div where rules are listed based on the rulesList
     _refreshRulesList : function() {
         if (this.rulesList != null) {
             var theDiv = $('#sgroup-rules-list')
             theDiv.html("loading...");
             var msg = "";
-            for (rule in this.rulesList)
-                msg += "<a href='#'>Delete</a> Rule: "+this.rulesList[rule].protocol+" ("+
+            var i=0
+            for (rule in this.rulesList) {
+                msg += "<a href='#' onclick='_deleteRule("+i+")'>Delete</a> Rule: "+this.rulesList[rule].protocol+" ("+
                              this.rulesList[rule].port+"), "+
                              this.rulesList[rule].ipaddr+"<br/>";
+                i += 1;
+            }
             theDiv.html(msg);
         }
+    },
+
+    // this function takes rules returned from an API call and populates the rulesList
+    _fillRulesList : function(groupRecord) {
+        this.rulesList = new Array();
+        rules = groupRecord.rules;
+        for (i=0; i<rules.length; i++) {
+            alert("rule "+i+": "+rules[i].from_port);
+            var rule = new Object();
+            rule.protocol = rules[i].ip_protocol;
+            rule.from_port = rules[i].from_port;
+            rule.to_port = rules[i].to_port;
+            if (rules[i].grants[0].cidr_ip != '')
+                rule.ipaddr = rules[i].grants[0].cidr_ip;
+            if (rules[i].grants[0].group_id != '')
+                rule.group = rules[i].grants[0].group_id;
+        }
+    },
+
+    _deleteRule : function(index) {
+        alert("deleting rule "+index);
     },
 
     _getGroupName : function(rowSelector) {
@@ -360,21 +384,15 @@
       }
     },
 
-    _editAction : function(rowsToEdit) {
+    _editAction : function() {
       //TODO: add hide menu
-
-      if ( rowsToEdit.length > 0 ) {
-        // show edit dialog box
-        /*
-        $deleteNames = this.delDialog.find("span.delete-names")
-        $deleteNames.html('');
-        for ( i = 0; i<rowsToDelete.length; i++ ) {
-          t = escapeHTML(rowsToDelete[i]);
-          $deleteNames.append(t).append("<br/>");
-        }
-        this.delDialog.dialog('open');
-        */
-      }
+      var thisObj = this;
+      var $tableWrapper = this._getTableWrapper();
+      rowsToEdit = $tableWrapper.eucatable('getSelectedRows');
+      firstRow = rowsToEdit[0];
+      thisObj._fillRulesList(firstRow);
+      thisObj.addDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_edit_resource_title], contents: firstRow});
+      thisObj.addDialog.dialog('open');
     },
 
 /**** Public Methods ****/
