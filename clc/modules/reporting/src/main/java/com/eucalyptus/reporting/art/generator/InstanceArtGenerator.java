@@ -83,6 +83,7 @@ public class InstanceArtGenerator
 	
 	public ReportArtEntity generateReportArt(ReportArtEntity report)
 	{
+		log.debug("GENERATING REPORT ART");
 		EntityWrapper wrapper = EntityWrapper.get( ReportingInstanceCreateEvent.class );
 		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
 
@@ -117,6 +118,8 @@ public class InstanceArtGenerator
 			InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
 			instanceEntities.put(createEvent.getUuid(), instance);
 		}
+		
+		log.debug("Super-tree:" + report.prettyPrint(0));
 
 		/* Add all usage to all instances, interpolating usage for partial periods
 		 */
@@ -129,6 +132,7 @@ public class InstanceArtGenerator
 			InstanceArtEntity instance = instanceEntities.get(usageEvent.getUuid());
 			InstanceUsageArtEntity usage = instance.getUsage();
 			
+			log.debug("Usage:" + usage.toString());
 
 			/* Update maximums */
 			if (usageEvent.getTimestampMs() > report.getBeginMs()
@@ -163,6 +167,9 @@ public class InstanceArtGenerator
 							subtract(usageEvent.getCumulativeNetOutgoingMegsPublic(),
 									(lastEvent==null) ? null : lastEvent.getCumulativeNetOutgoingMegsPublic())));
 			}
+			
+			log.debug("Post-max Usage:" + usage.toString());
+
 
 			/* Calculate interpolated meg-secs and add to total, and update average cpu */
 			if (lastEvent != null) {
@@ -233,8 +240,13 @@ public class InstanceArtGenerator
 				usage.addDurationMs(durationMs);
 			}
 
+			log.debug("Post-interpolated Usage:" + usage.toString());
+
 			
 		} //while
+
+		log.debug("Tree:" + report.prettyPrint(0));
+
 		
 		/* Perform totals and summations
 		 */
@@ -261,6 +273,8 @@ public class InstanceArtGenerator
 				}
 			}
 		}
+
+		log.debug("Totals Tree:" + report.prettyPrint(0));
 		
 		return report;
 	}
