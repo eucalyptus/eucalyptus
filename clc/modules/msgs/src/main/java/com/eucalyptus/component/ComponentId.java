@@ -117,7 +117,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   @Target( { ElementType.TYPE } )
   @Retention( RetentionPolicy.RUNTIME )
   public @interface FaultLogPrefix {
-	  String value( );
+	  String value( ) default ""; // null not allowed!
   }  
 
   /**
@@ -412,7 +412,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public final String getFaultLogPrefix( ) {
 	  if ( Ats.from( this ).has( FaultLogPrefix.class ) ) {
 		  String value = Ats.from( this ).get( FaultLogPrefix.class ).value( );
-		  return value != null ? value : this.name( );
+		  return (value != null  && !"".equals(value) ) ? value : this.name( );
 	  } else {
 		  return Ats.from( Empyrean.class ).get( FaultLogPrefix.class ).value( );//this requires that Empyrean.class is annotated as @FaultLogging("cloud")
 	  }
