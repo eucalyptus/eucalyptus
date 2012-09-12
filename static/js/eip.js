@@ -337,6 +337,7 @@
       $instanceSelector.autocomplete({
         source: volume_ids
       });
+      $instanceSelector.watermark(instance_id_msg);
       dfd.resolve();
     },
 

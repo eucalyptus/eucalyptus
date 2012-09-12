@@ -183,6 +183,7 @@
           $volSelector.autocomplete({
             source: volume_ids
           });
+          $volSelector.watermark(volume_id_msg);
         }
       }
       dfd.resolve();
