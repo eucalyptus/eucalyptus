@@ -903,6 +903,7 @@ void adopt_instances()
 			free_instance (&instance);
 			continue;
 		}
+        sensor_add_resource (instance->instanceId, "instance"); // ensure the sensor system monitors this instance
 
 		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId); // TODO: try to re-check IPs?
 

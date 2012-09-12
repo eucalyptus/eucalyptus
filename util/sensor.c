@@ -31,6 +31,7 @@
 #include <unistd.h> // usleep
 #include <pthread.h> 
 #include <assert.h>
+#include <errno.h>
 
 #include "eucalyptus.h"
 #include "misc.h"
@@ -42,6 +43,154 @@
 static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
 static sensorResourceCache * sensor_state = NULL;
 static sem * state_sem = NULL;
+
+static void getstat_free (void)
+{
+    sem_p (state_sem);
+    if (sensor_state->stats) {
+        getstat * gs;
+        for (int i = 0; (gs = sensor_state->stats[i]) != NULL; i++) {
+            getstat * gs_next;
+            for ( ; gs != NULL ; gs = gs_next) {
+                gs_next = gs->next;
+                free (gs);
+            }
+        }
+        free (sensor_state->stats);
+        sensor_state->stats = NULL;
+    }
+    sem_v (state_sem);
+}
+
+static getstat * getstat_find (const char * instanceId)
+{
+    getstat * gs = NULL;
+
+    sem_p (state_sem);
+    if (sensor_state->stats) {
+        for (int i = 0; (gs = sensor_state->stats[i]) != NULL; i++) {
+            if (strncmp (gs->instanceId, instanceId, sizeof (gs->instanceId)) == 0)
+                break;
+        }
+    }
+    sem_v (state_sem);
+
+    return gs;
+}
+
+static int getstat_ninstances (void)
+{
+    int ninstances = 0;
+
+    sem_p (state_sem);
+    if (sensor_state->stats) {
+        for (int i = 0; sensor_state->stats[i] != NULL; i++) {
+            ninstances++;
+        }
+    }
+    sem_v (state_sem);
+    
+    return ninstances;
+}
+
+// obtain stats from the getstats script
+static int getstat_refresh (void)
+{ 
+    assert(sensor_state!=NULL && state_sem!=NULL);
+
+    getstat_free(); // free the old stats, regardless of whether we succeed or not
+
+    char * output = system_output ("euca_rootwrap getstats.pl"); // invoke th Perl script
+    int ret = ERROR;
+
+    if (output) { // output is a string with one line per measurement, with tab-delimited fields
+        char * token, * subtoken;
+        char * saveptr1, * saveptr2;
+        char * str1 = output;
+        getstat ** gss = NULL;
+        int ninst = 0;
+
+        for (int i = 1; ; i++, str1 = NULL) { // iterate over lines in output
+            token = strtok_r(str1, "\n", &saveptr1); // token points to a whole line
+            if (token == NULL)
+                break;
+            getstat * gs = calloc (1, sizeof (getstat)); // new lines means new data record
+            if (gs == NULL)
+                goto bail;
+
+            char * str2 = token;
+            for (int j = 1; ; j++, str2 = NULL) { // iterate over tab-separated entries in the line
+                subtoken = strtok_r(str2, "\t", &saveptr2);
+                if (subtoken == NULL)
+                    break;
+
+                // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
+                switch (j) {
+                case 1: { // first entry is instance ID
+                    getstat * gsp = getstat_find (subtoken);
+                    if (gsp == NULL) { // first record for this instance => expand pointer array
+                        ninst++;
+                        gss = realloc (gss, (ninst + 1) * sizeof (getstat *));
+                        gss [ninst-1] = gs;
+                        gss [ninst] = NULL; // NULL-terminate the array
+                        sem_p (state_sem);
+                        sensor_state->stats = gss;
+                        sem_v (state_sem);
+                    } else { // not first record 
+                        for ( ; gsp->next != NULL; gsp = gsp->next); // walk the linked list to the end
+                        gsp->next = gs; // add the new record
+                    }
+                    strncpy (gs->instanceId, subtoken, sizeof (gs->instanceId)); 
+                    break;
+                }
+                case 2: { 
+                    char * endptr;
+                    errno = 0;
+                    gs->timestamp = strtoll (subtoken, &endptr, 10);
+                    if (errno != 0 && *endptr != '\0') {
+                        logprintfl (EUCAERROR, "unexpected input from getstats.pl (could not convert timestamp with strtoll())\n");
+                        goto bail;
+                    }
+                    break;
+                }
+                case 3: 
+                    strncpy (gs->metricName, subtoken, sizeof (gs->metricName)); 
+                    break;
+                case 4:
+                    gs->counterType = sensor_str2type (subtoken);
+                    break;
+                case 5:
+                    strncpy (gs->dimensionName, subtoken, sizeof (gs->dimensionName));
+                    break;
+                case 6: {
+                    char * endptr;
+                    errno = 0;
+                    gs->value = strtod (subtoken, &endptr);
+                    if (errno != 0 && *endptr != '\0') {
+                        logprintfl (EUCAERROR, "unexpected input from getstats.pl (could not convert value with strtod())\n");
+                        goto bail;
+                    }
+                    break;
+                }
+                default:
+                    logprintfl (EUCAERROR, "unexpected input from getstats.pl (too many fields)\n");
+                    goto bail;
+                }
+            }
+        }
+        ret = 0;
+        goto done;
+
+    bail:
+        getstat_free();
+    done:
+        free (output);
+    } else {
+        logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
+    }
+    
+    return ret;
+}
 
 // Never-returning function that performs polling of sensors and updates 
 // their 'resources' while holding the 'sem'. This may be called from 
@@ -73,17 +222,22 @@ static void sensor_bottom_half (void)
         if (skip)
             continue;
         
-        logprintfl (EUCADEBUG, "sensor bottom half polling sensors...\n");
-
         // refresh local copy of resource names
         sem_p (state_sem);
         for (int i=0; i<sensor_state->max_resources && i<MAX_SENSOR_RESOURCES; i++)
             strncpy (resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
         sem_v (state_sem);
         
-        // TODO: remove this temporary fake data generation
+        // TODO3.2: remove this temporary fake data generation
         long long ts = time_usec() / 1000;
         sensor_add_value (fake_name, "CPUUtilization", SENSOR_AVERAGE, "default", sn, ts, TRUE, fake_val++);
+        
+        if (getstat_refresh() != OK) {
+            logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
+            continue;
+        } else {
+            logprintfl (EUCADEBUG, "sensor bottom half polled statistics for %d instance(s)\n", getstat_ninstances());
+        }
 
         for (int i=0; i<MAX_SENSOR_RESOURCES; i++) {
             char * name = resourceNames [i];
@@ -91,14 +245,14 @@ static void sensor_bottom_half (void)
                 continue;
             if (strcmp (name, fake_name) == 0) // skip the fake resource
                 continue;
-            
-            double net_in_bytes=0;
-            double net_out_bytes=0;
-            
-            // refresh network values
-            ts = time_usec() / 1000;
-            sensor_add_value (name, "NetworkIn",  SENSOR_SUMMATION, "total", sn, ts, TRUE, net_in_bytes);
-            sensor_add_value (name, "NetworkOut", SENSOR_SUMMATION, "total", sn, ts, TRUE, net_out_bytes);
+            getstat * head = getstat_find (name);
+            for (getstat * s = head; s != NULL; s = s->next) {
+                sensor_add_value (name, s->metricName, s->counterType, s->dimensionName, sn, s->timestamp, TRUE, s->value);
+            }
+            if (head == NULL) {
+                logprintfl (EUCAWARN, "unable to get metrics for instance %s\n", name);
+                // TODO3.2: decide what to do when some metrics for an instance aren't available
+            }
         }
         
         sn++;
@@ -904,6 +1058,21 @@ int main (int argc, char ** argv)
     assert (0 == sensor_config (1, 50000));
     assert (0 == sensor_config (3, intervalMs));
 
+    // test the getstat functions
+    assert (getstat_refresh () == OK);
+    logprintfl (EUCADEBUG, "getstat_refresh() found %d instances\n", getstat_ninstances());
+    assert (getstat_refresh () == OK);
+    logprintfl (EUCADEBUG, "getstat_refresh(), 2nd time, found %d instances\n", getstat_ninstances());
+    char * anInstanceId = NULL;
+    sem_p (state_sem);
+    if (sensor_state->stats) {
+        anInstanceId = sensor_state->stats[0]->instanceId;
+    }
+    sem_v (state_sem);
+    if (anInstanceId != NULL)
+        assert (getstat_find (anInstanceId) != NULL);
+
+    // test sensor_add_value and sensor_get_value
     double val = 11.0;
     long long ts = time_usec() / 1000;
     for (int j=0; j<50; j++) {

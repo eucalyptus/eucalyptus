@@ -84,12 +84,23 @@ typedef struct {
     int metricsLen;                            // size of the array
 } sensorResource;
 
+typedef struct getstat_t { // an internal struct for temporary storage of stats
+    char instanceId [100];
+    long long timestamp;
+    char metricName [100];
+    int counterType;
+    char dimensionName [100];
+    double value;
+    struct getstat_t * next;
+} getstat;
+
 typedef struct {
     long long collection_interval_time_ms;
     int history_size;
     boolean initialized;
     int max_resources;
     int used_resources;
+    getstat ** stats;
     sensorResource resources[1]; // if struct should be allocated with extra space after it for additional cache elements
 } sensorResourceCache;
 
