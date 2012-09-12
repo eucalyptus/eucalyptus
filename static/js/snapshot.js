@@ -62,8 +62,7 @@
             { "mDataProp": "volume_size" },
             { "mDataProp": "volume_id" },
             { "mDataProp": "description" },
-            // output start time in browser format and timezone
-            { "fnRender": function(oObj) { d = new Date(oObj.aData.start_time); return d.toLocaleString(); } },
+            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); } },
             {
               "bVisible": false,
               "mDataProp": "status"

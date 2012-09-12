@@ -69,8 +69,7 @@
             { "mDataProp": "private_ip_address" },
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
-            // output creation time in browser format and timezone
-            { "fnRender": function(oObj) { d = new Date(oObj.aData.launch_time); return d.toLocaleString(); } },
+            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) } },
             {
               "bVisible": false,
               "mDataProp": "root_device_type"

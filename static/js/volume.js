@@ -58,8 +58,7 @@
             { "mDataProp": "attach_data.instance_id" },
             { "mDataProp": "snapshot_id" },
             { "mDataProp": "zone" },
-            // output creation time in browser format and timezone
-            { "fnRender": function(oObj) { d = new Date(oObj.aData.create_time); return d.toLocaleString(); } },
+            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); } },
             {
               "bVisible": false,
               "mDataProp": "status"
