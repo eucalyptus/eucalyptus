@@ -86,7 +86,7 @@ public class AOEManager implements StorageExportManager {
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{OverlayManager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "which", "vblade"});
+		returnValue = SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "which", "vblade"});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("vblade not found: Is it installed?");
 		} else {
@@ -98,7 +98,7 @@ public class AOEManager implements StorageExportManager {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{OverlayManager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "kill", String.valueOf(vbladePid)});
+			Process proc = rt.exec(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "kill", String.valueOf(vbladePid)});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();
@@ -114,7 +114,7 @@ public class AOEManager implements StorageExportManager {
 		try
 		{
 			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{OverlayManager.eucaHome + StorageProperties.EUCA_ROOT_WRAPPER, "modprobe", "aoe"});
+			Process proc = rt.exec(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "modprobe", "aoe"});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();

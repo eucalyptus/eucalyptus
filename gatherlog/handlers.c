@@ -74,7 +74,7 @@
 #include <handlers.h>
 #include <euca_auth.h>
 
-
+#include <eucalyptus.h>
 
 int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLog, char **outAxis2Log) {
   char *home, file[MAX_PATH], *buf;
@@ -105,7 +105,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     }
 
     
-    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/cc.log", home);
+    snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -119,7 +119,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
       *outCCLog = NULL;
     }
     
-    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/nc.log", home);
+    snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -134,10 +134,10 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     }
     
     bzero(buf, bufsize);
-    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/httpd-nc_error_log", home);
+    snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/httpd-nc_error_log", home);
     fd = open(file, O_RDONLY);
     if (fd < 0) {
-      snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/httpd-cc_error_log", home);
+      snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/httpd-cc_error_log", home);
       fd = open(file, O_RDONLY);
     }
     if (fd >= 0) {
@@ -152,7 +152,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
     }
     
     bzero(buf, bufsize);
-    snprintf(file, MAX_PATH, "%s/var/log/eucalyptus/axis2c.log", home);
+    snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/axis2c.log", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -275,7 +275,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
       return 1;
     }
     
-    snprintf(file, MAX_PATH, "%s/var/lib/eucalyptus/keys/cluster-cert.pem", home);
+    snprintf(file, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cluster-cert.pem", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);
@@ -290,7 +290,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert) {
     }
     
     bzero(buf, bufsize);
-    snprintf(file, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", home);
+    snprintf(file, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", home);
     fd = open(file, O_RDONLY);
     if (fd >= 0) {
       bzero(buf, bufsize);

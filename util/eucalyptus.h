@@ -63,36 +63,81 @@
 #ifndef INCLUDE_EUCALYPTUS_H
 #define INCLUDE_EUCALYPTUS_H
 
+// Maybe we should have no defaults, but I will put them here for the moment.
+#ifndef LIBDIR
+#define LIBDIR "/usr/lib"
+#endif
+#ifndef SYSCONFDIR
+#define SYSCONFDIR "/etc"
+#endif
+#ifndef DATADIR
+#define DATADIR	"/usr/share"
+#endif
+#ifndef LIBEXECDIR
+#define LIBEXECDIR	"/usr/libexec"
+#endif
+#ifndef SBINDIR
+#define SBINDIR	"/usr/sbin"
+#endif
+#ifndef LOCALSTATEDIR
+#define LOCALSTATEDIR	"/var"
+#endif
+#ifndef HELPERDIR
+#define HELPERDIR	DATADIR
+#endif
+
+
 /* environment variable set at startup */
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
 /* file paths relative to $EUCALYPTUS */
-#define EUCALYPTUS_CONF_LOCATION   "%s/etc/eucalyptus/eucalyptus.conf"
-#define EUCALYPTUS_CONF_OVERRIDE_LOCATION   "%s/etc/eucalyptus/eucalyptus.local.conf"
-#define EUCALYPTUS_LIBVIRT_XSLT    "%s/etc/eucalyptus/libvirt.xsl"
+#define EUCALYPTUS_DATA_DIR        "%s" DATADIR "/eucalyptus"
+#define EUCALYPTUS_CONF_DIR        "%s" SYSCONFDIR "/eucalyptus"
+#define EUCALYPTUS_LIB_DIR         "%s" LIBDIR "/eucalyptus"
+#define EUCALYPTUS_LIBEXEC_DIR     "%s" LIBEXECDIR "/eucalyptus"
+#define EUCALYPTUS_RUN_DIR         "%s" LOCALSTATEDIR "/run/eucalyptus"
+#define EUCALYPTUS_SBIN_DIR        "%s" SBINDIR
+#define EUCALYPTUS_STATE_DIR       "%s" LOCALSTATEDIR "/lib/eucalyptus"
+#define EUCALYPTUS_LOG_DIR         "%s" LOCALSTATEDIR "/log/eucalyptus"
+
+// scripts ... to Fedora / RHEL they are the same as indirectly
+// executed binaries.  We need a separate variable in case people
+// want them in /usr/share, though.
+#define EUCALYPTUS_HELPER_DIR      "%s" HELPERDIR "/eucalyptus"
+
+// Java stuff, oddly named
+#define EUCA_ETC_DIR               EUCALYPTUS_CONF_DIR "/cloud.d"
+#define EUCA_SCRIPT_DIR            EUCA_ETC_DIR "/scripts"
+#define EUCALYPTUS_JAVA_LIB_DIR    EUCALYPTUS_DATA_DIR
+#define EUCA_CLASSCACHE_DIR        EUCALYPTUS_RUN_DIR "/classcache"
+
+#define EUCALYPTUS_KEYS_DIR        EUCALYPTUS_STATE_DIR "/keys"
+#define EUCALYPTUS_CONF_LOCATION   EUCALYPTUS_CONF_DIR "/eucalyptus.conf"
+#define EUCALYPTUS_CONF_OVERRIDE_LOCATION   EUCALYPTUS_CONF_DIR "/eucalyptus.local.conf"
+#define EUCALYPTUS_LIBVIRT_XSLT    EUCALYPTUS_CONF_DIR "/libvirt.xsl"
 #define EUCALYPTUS_VOLUME_XML_PATH_FORMAT "%s/%s.xml"
-#define EUCALYPTUS_ROOTWRAP        "%s/usr/lib/eucalyptus/euca_rootwrap"
-#define EUCALYPTUS_ADD_KEY         "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/add_key.pl %s/usr/lib/eucalyptus/euca_mountwrap"
-#define EUCALYPTUS_GEN_LIBVIRT_XML "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_libvirt_xml"
-#define EUCALYPTUS_GEN_KVM_LIBVIRT_XML "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/gen_kvm_libvirt_xml"
-#define EUCALYPTUS_GET_XEN_INFO    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info"
-#define EUCALYPTUS_GET_KVM_INFO    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info"
-#define EUCALYPTUS_DISK_CONVERT    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/partition2disk"
-#define EUCALYPTUS_VIRSH           "%s/usr/lib/eucalyptus/euca_rootwrap virsh"
-#define EUCALYPTUS_ROOTWRAP           "%s/usr/lib/eucalyptus/euca_rootwrap"
-#define EUCALYPTUS_DETACH           "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/detach.pl"
+#define EUCALYPTUS_ROOTWRAP        EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap"
+#define EUCALYPTUS_ADD_KEY         EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/add_key.pl " EUCALYPTUS_LIBEXEC_DIR "/euca_mountwrap"
+#define EUCALYPTUS_GEN_LIBVIRT_XML EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/gen_libvirt_xml"
+#define EUCALYPTUS_GEN_KVM_LIBVIRT_XML EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/gen_kvm_libvirt_xml"
+#define EUCALYPTUS_GET_XEN_INFO    EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_xen_info"
+#define EUCALYPTUS_GET_KVM_INFO    EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_sys_info"
+#define EUCALYPTUS_DISK_CONVERT    EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/partition2disk"
+#define EUCALYPTUS_VIRSH           EUCALYPTUS_ROOTWRAP " virsh"
+#define EUCALYPTUS_DETACH          EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/detach.pl"
+
 #define EUCALYPTUS_XM           "sudo xm"
 
-#define EUCALYPTUS_CONNECT_ISCSI    "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/connect_iscsitarget.pl"
-#define EUCALYPTUS_DISCONNECT_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/disconnect_iscsitarget.pl"
-#define EUCALYPTUS_GET_ISCSI "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_iscsitarget.pl"
+#define EUCALYPTUS_CONNECT_ISCSI    EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/connect_iscsitarget.pl"
+#define EUCALYPTUS_DISCONNECT_ISCSI EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/disconnect_iscsitarget.pl"
+#define EUCALYPTUS_GET_ISCSI        EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_iscsitarget.pl"
 #define EUCALYPTUS_NC_CHECK_BUCKET "euca-check-bucket" // can be overriden from eucalyptus.conf
 #define EUCALYPTUS_NC_BUNDLE_UPLOAD "euca-bundle-upload" // can be overriden from eucalyptus.conf
 #define EUCALYPTUS_NC_DELETE_BUNDLE "euca-delete-bundle" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_HOOKS_DIR     "%s/etc/eucalyptus/nc-hooks"
+#define EUCALYPTUS_NC_HOOKS_DIR     EUCALYPTUS_CONF_DIR "/nc-hooks"
 
-#define NC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
-#define CC_NET_PATH_DEFAULT        "%s/var/run/eucalyptus/net"
+#define NC_NET_PATH_DEFAULT         EUCALYPTUS_RUN_DIR "/net"
+#define CC_NET_PATH_DEFAULT         EUCALYPTUS_RUN_DIR "/net"
 
 /* various defaults */
 #define NC_NET_PORT_DEFAULT      1976
