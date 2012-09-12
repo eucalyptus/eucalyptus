@@ -8,7 +8,7 @@ from server import support
 from server.configloader import ConfigLoader
 
 settings = {
-  "cookie_secret": "YzRmYThkNzU1NDU2NmE1ZjYxMDZiZDNmMzI4YmMzMmMK",
+  "cookie_secret": "getting-from-config-now",
   "xsrf_cookies": True,
 }
 
@@ -20,6 +20,9 @@ server.config = ConfigLoader.getParser()
 # not a relative path
 if server.config.has_option('eui', 'staticpath'):
     webroot = server.config.get('eui', 'staticpath')
+
+if server.config.has_option('eui', 'cookie.secret'):
+    settings['cookie_secret'] = server.config.get('eui', 'cookie.secret')
 
 application = tornado.web.Application([
         (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
