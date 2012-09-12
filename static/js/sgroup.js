@@ -399,6 +399,13 @@
     close: function() {
       this._super('close');
     },
+
+    dialogAddGroup : function() {
+      var thisObj = this;
+      thisObj.rulesList=null; 
+      $('#sgroup-rules-list').html(''); 
+      thisObj.addDialog.eucadialog('open')
+    },
 /**** End of Public Methods ****/
   });
 })(jQuery,

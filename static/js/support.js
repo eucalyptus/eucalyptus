@@ -30,6 +30,7 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    notification:'.euca-container .euca-notification-container .inner-container #euca-notification',
                    explorer:'.euca-explorer-container .inner-container',
                    footer:'.euca-container .euca-footer-container .inner-container',
+                   hidden:'.euca-hidden-container',
                   };
 
 var KEY_PATTERN = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
@@ -43,11 +44,9 @@ function asHTML(input) {
   return $('<div/>').append(input).html();
 }
 
-
 function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }
-
 
 /** Add Array.indexOf to IE **/
 if( !Array.prototype.indexOf ) {
@@ -132,8 +131,42 @@ function describe(resource){
   return $('html body').eucadata('get', resource);
 }
 
+function addKeypair(){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).keypair();
+  $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair');
+}
+
+function addGroup(){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).sgroup();
+  $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup');
+}
+
+function addSnapshot(volume){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).snapshot();
+  $('html body').find(DOM_BINDING['hidden']).snapshot('dialogAddSnapshot', volume);
+}
+
+function addVolume(snapshot){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume('dialogAddVolume', snapshot);
+}
+
+function attachVolume(volume, instance){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume('dialogAttachVolume', volume, instance);
+}
+
 function logout(){
   $.cookie('session-id',''); 
   location.href='/';
 }
 
+function startLaunchWizard(emi) {
+  var $container = $('html body').find(DOM_BINDING['main']);
+  $container.maincontainer("changeSelected", null, { selected:'launcher', filter: emi });
+}

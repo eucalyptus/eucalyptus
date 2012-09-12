@@ -37,7 +37,7 @@
           "aoColumns": [
             {
               "bSortable": false,
-              "fnRender": function(oObj) { return '<a href="#">' + 'Lunch instance' +'</a>' },
+              "fnRender": function(oObj) { return '<a href="#" onClick="startLaunchWizard(\''+oObj.aData.id+'\');">' + image_launch_btn +'</a>' },
             },
             { "mDataProp": "name" },
             {
@@ -58,7 +58,13 @@
             {
               "bVisible": false,
               "mDataProp": "type"
-            }
+            },
+            {
+              "bVisible": false,
+              "fnRender": function(oObj) {
+                 return oObj.aData.platform ? 'windows' : 'linux';
+               },
+            },
           ],
         },
         text : {
@@ -69,7 +75,14 @@
           thisObj._flipToHelp(evt, $imgHelp);
         },
         legend : ['pending','available','failed'],
-        show_only : {filter_value: 'machine', filter_col: 7}
+        show_only : {filter_value: 'machine', filter_col: 7},
+        filters : [
+          /* {name:"img_ownership", options: ['all','my'], text: ['All images', 'Images owned by me'], filter_col:TBD}, */
+          {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
+launch_instance_image_table_platform_windows, launch_instance_image_table_platform_linux], filter_col:8},
+          {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:3},
+          {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:5},
+          ],
       });
       this.tableWrapper.appendTo(this.element);
     },

@@ -198,6 +198,10 @@
       this._super('close');
     },
 
+    dialogAddKeypair : function() {
+      var thisObj = this;
+      thisObj.addDialog.eucadialog('open')
+    }, 
 /**** End of Public Methods ****/
   });
 })(jQuery,

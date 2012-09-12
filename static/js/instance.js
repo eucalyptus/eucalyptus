@@ -29,7 +29,6 @@
     stopDialog : null,
     connectDialog : null,
     consoleDialog : null,
-    attachDialog : null,
     detachDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
@@ -189,7 +188,7 @@
         help: {content: $console_help},
       });
 
-      // volume detach dialog start
+  // volume detach dialog start
       $tmpl = $('html body').find('.templates #volumeInstDetachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $detach_dialog = $rendered.children().first();
@@ -211,49 +210,8 @@
        });
       var $volSelector = $detach_dialog.find('#volume-detach-volume-selector'); 
       this.detachDialog.eucadialog('buttonOnChange',$volSelector, '#btn-vol-detach', function() { return $volSelector.val() ? true : false; });
-      
       // volume detach dialog end
-      // attach dialog start
-      var attachButtonId = 'volume-attach-btn';
-      $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
-      var $attach_dialog = $rendered.children().first();
-      var $attach_dialog_help = $rendered.children().last();
-      this.attachDialog = $attach_dialog.eucadialog({
-         id: 'volumes-attach',
-         title: volume_dialog_attach_title,
-         buttons: {
-           'attach': { domid: attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
-                volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
-                instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
-                device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
-                thisObj._attachVolume(volumeId, instanceId, device);
-                $attach_dialog.eucadialog("close");
-              } 
-            },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
-         },
-         help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
-         on_open: {spin: true, callback: function(args) {
-           var dfd = $.Deferred();
-           thisObj._initAttachDialog(dfd); // pulls instance info from server
-           return dfd.promise();
-         }},
-       });
-      this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
-         var inst = thisObj.attachDialog.find('#volume-attach-instance-id').val();
-         return inst != '';
-        });
-      this.attachDialog.find('#volume-attach-instance-id').change( function () {
-        instanceId = thisObj.attachDialog.find('#volume-attach-instance-id').val()
-        device = thisObj.attachDialog.find('#volume-attach-device-name').val();
-        $button = thisObj.attachDialog.parent().find('#' + attachButtonId);
-        if ( device.length > 0 && instanceId !== '')
-          $button.prop("disabled", false).removeClass("ui-state-disabled");
-        else
-          $button.prop("disabled", false).addClass("ui-state-disabled");
-       });
-      // attach dialog end
+
     },
 
     _destroy : function() { },
@@ -603,55 +561,12 @@
           notifyError(null, instance_console_error + ' ' + instances);
         });
     },
-    _initAttachDialog : function(dfd) {  // should resolve dfd object
-      var thisObj = this;
-      var $volumeSelector = $('#volume-attach-volume-id').val('');
-      var results = describe('volume');
-      var volume_ids = [];
-      if ( results ) {
-        for( res in results) {
-          var volume = results[res];
-          if ( volume.status === 'available' ) 
-            volume_ids.push(volume.id);
-        }
-      }
-      $volumeSelector.autocomplete({
-        source: volume_ids
-      });
-      thisObj.attachDialog.find('#volume-attach-device-name').val('');
-      dfd.resolve();
-    },
     _attachAction : function() {
       var thisObj = this;
       var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
-      var $instanceId = this.attachDialog.find('#volume-attach-instance-id');
-      $instanceId.val(instanceToAttach);
-      $instanceId.attr('disabled', 'disabled');
-      this.attachDialog.eucadialog('open');
+      attachVolume(null, instanceToAttach);
     },
-    _attachVolume : function (volumeId, instanceId, device) {
-      var thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:true,
-        success:
-          function(data, textStatus, jqXHR){
-            if ( data.results ) {
-              notifySuccess(null, volume_attach_success(volumeId, instanceId));
-              thisObj.tableWrapper.eucatable('refreshTable');
-            } else {
-              notifyError(null, volume_attach_error(volumeId, instanceId));
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            notifyError(null, volume_attach_error(volumeId, instanceId));
-          }
-      });
-    },
+
     _initDetachDialog : function(dfd) {  // should resolve dfd object
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];

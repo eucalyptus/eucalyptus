@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.launcher', $.eucalyptus.eucawidget, {
-    options : { },
+    options : {
+      image_filter : null,
+    },
     launchParam : {
       emi : null,
       type : null,
@@ -41,6 +43,8 @@
       $.each(thisObj.launchParam, function(k,v){
         thisObj.launchParam[k] = null;
       });
+      if ( thisObj.options.image_filter )
+        thisObj.launchParam['emi'] = thisObj.options.image_filter;
 
       var $tmpl = $('html body').find('.templates #launchWizardTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
@@ -66,6 +70,7 @@
       });
       $launcher.appendTo(thisObj.element);
      },
+
     _destroy : function() { },
 
     _makeSectionHeader : function($launcher) {
@@ -189,6 +194,14 @@
             });
           }
         });
+        // let's set emi if it is passed
+        if ( thisObj.options.image_filter ) {
+          $imageFilter = $content.find('#launch-images_filter').find(':input');
+          $imageFilter.val(thisObj.options.image_filter);
+          /* e = jQuery.Event("keydown");
+          e.which = RETURN_KEY_CODE;
+          $imageFilter.trigger(e); */
+        }
       };
 
       $section.find('#launch-wizard-buttons-image-next').click( function(e){
@@ -393,12 +406,15 @@
           $('<span>').text(launch_instance_security_keypair),
           $('<select>').attr('id','launch-wizard-security-keypair-selector')),
         $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
+          addKeypair();
         })));
+
       $sgroup.append(
         $('<div>').append(
           $('<span>').text(launch_instance_security_sgroup),
           $('<select>').attr('id','launch-wizard-security-sg-selector')),
         $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
+          addGroup();
         })),
         $('<div>').attr('id','launch-wizard-security-sg-detail'));
      
@@ -443,9 +459,109 @@
 
     _makeAdvancedSection : function($section) { 
       var $content = $section.find('#launch-wizard-advanced-main-contents');
-      $.each($content.children(), function(idx, child){
-        $(child).html('advanced-contents'); 
+      $content.prepend($('<span>').html(launch_instance_advanced_header));
+      var $userdata = $content.find('#launch-wizard-advanced-userdata');
+      var $kernel = $content.find('#launch-wizard-advanced-kernelramdisk');
+      var $network = $content.find('#launch-wizard-advanced-network');
+      var $storage = $content.find('#launch-wizard-advanced-storage');
+
+      $userdata.append(
+        $('<div>').append(
+          $('<span>').text(launch_instance_advanced_userdata),
+          $('<input>').attr('id','launch-wizard-advanced-input-userdata').attr('type','text')),
+        $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_advanced_attachfile).click(function(e){
+          var $input = $userdata.find('#launch-wizard-advanced-input-userfile'); 
+          $input.trigger('click');
+        })),
+        $('<div>').hide().append(
+          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
+      // needs proxy-side support 
+      var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
+      $input.fileupload({
+        dataType: 'json',
+        url: "../ec2",
+        fileInput: null,
+        formData: [{name: 'Action', value: 'PutInstanceData'}, {name:'InstanceId', value:''}, {name:'_xsrf', value:$.cookie('_xsrf')}],  
       });
+      $input.change(function(e){
+        $input.fileupload('add', {
+          files: e.target.files || [{name: this.value}],
+          fileInput: $(this)
+        });
+      });
+        
+      $kernel.append(
+        $('<div>').attr('id', 'launch-wizard-advanced-kernel').append(
+          $('<span>').text(launch_instance_advanced_kernel),
+          $('<select>').attr('id', 'launch-wizard-advanced-kernel-selector').append(
+            $('<option>').val('default').text(launch_instance_advanced_usedefault)) 
+        ),
+        $('<div>').attr('id', 'launch-wizard-advanced-ramdisk').append(
+          $('<span>').text(launch_instance_advanced_ramdisk),
+          $('<select>').attr('id', 'launch-wizard-advanced-ramdisk-selector').append(
+            $('<option>').val('default').text(launch_instance_advanced_usedefault)) 
+        )
+      );
+      var result = describe('image');
+      var $kernelSelector = $kernel.find('#launch-wizard-advanced-kernel-selector');
+      var $ramdiskSelector = $kernel.find('#launch-wizard-advanced-ramdisk-selector');
+      $.each(result, function(idx, image){
+        if(image.type === 'kernel'){
+          $kernelSelector.append(
+            $('<option>').val(image.id).text(image.id)); 
+        }else if(image.type === 'ramdisk'){
+          $ramdiskSelector.append(
+            $('<option>').val(image.id).text(image.id));
+        } 
+      });
+
+      $network.append(
+        $('<span>').text(launch_instance_advanced_network),
+        $('<input>').attr('id','launch-wizard-advanced-input-network').attr('type','checkbox'),
+        $('<span>').text(launch_instance_advanced_network_desc))
+    
+      var addNewRow = function() {
+        var $tr = $('<tr>').append(
+          $('<td>').append(
+            $('<select>').attr('class','launch-wizard-advanced-storage-root-selector').append(
+              $('<option>').attr('value', 'ebs').text('EBS'),
+              $('<option>').attr('value', 'ephemeral1').text('Ephemeral 1'),
+              $('<option>').attr('value', 'ephemeral2').text('Ephemeral 2'),
+              $('<option>').attr('value', 'ephemeral3').text('Ephemeral 3'),
+              $('<option>').attr('value', 'ephemeral4').text('Ephemeral 4'),
+              $('<option>').attr('value', 'ephemeral5').text('Ephemeral 4'))), // volume
+          $('<td>').text('/dev/').append(
+              $('<input>').attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text')), // mapping
+          $('<td>').append( 
+            $('<select>').attr('class', 'launch-wizard-advanced-storage-snapshot-input').append(
+              $('<option>').attr('value','none').text(launch_instance_advanced_snapshot_none))), // create from snapshot
+          $('<td>').append( 
+            $('<input>').attr('class','launch-wizard-advanced-storage-size-input').attr('type','text')), // size
+          $('<td>').append(
+            $('<input>').attr('class','launch-wizard-advanced-storage-delete-input').attr('type','checkbox')), // delete on terminate
+          $('<td>').append(
+            $('<input>').attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add)) // add another button
+        );
+        return $tr;
+      } 
+      $storage.append(
+        $('<span>').text(launch_instance_advanced_storage),
+        $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
+          $('<table>').append(
+            $('<thead>').append(
+              $('<tr>').append(
+                $('<th>').text(launch_instance_advanced_th_volume),
+                $('<th>').text(launch_instance_advanced_th_mapping),
+                $('<th>').text(launch_instance_advanced_th_create),
+                $('<th>').text(launch_instance_advanced_th_size),
+                $('<th>').text(launch_instance_advanced_th_delete),
+                $('<th>').text('')
+              )
+            ),
+            $('<tbody>')
+        )));
+      var $tbody = $storage.find('table tbody');
+      $tbody.append( addNewRow());
     },
 
     _setSummary : function(section, content){
@@ -495,7 +611,7 @@
             if ( data.results ){
               var instances ='';
               $.each(data.results, function(idx, instance){
-                instances += instance+' ';
+                instances += instance.id+' ';
               });
               instances = $.trim(instances);
               notifySuccess(null, instance_run_success + ' ' + instances);
