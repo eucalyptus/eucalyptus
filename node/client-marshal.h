@@ -98,6 +98,6 @@ int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);
 int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 
 int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
+int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 
 #endif

@@ -86,6 +86,9 @@ test_wc: wc.c misc.o log.o ../storage/diskutil.o ipc.o
 test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
 	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o $(LIBS) $(LDFLAGS)
 
+test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+
 ../storage/diskutil.o:
 	make -C ../storage
 
@@ -93,7 +96,7 @@ test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
 	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
 
 clean:
-	rm -rf *~ *.o test test_fault test_misc test_wc euca_rootwrap euca_mountwrap
+	rm -rf *~ *.o test test_fault test_misc test_wc euca_rootwrap euca_mountwrap test_sensor
 
 distclean:
 	rm -rf eucalyptus-config.h

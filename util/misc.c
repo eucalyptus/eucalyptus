@@ -656,7 +656,6 @@ char * system_output (char * shell_command )
   return buf;
 }
 
-
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key) {
   int rc, i, done;
   char *tmpstr=NULL;

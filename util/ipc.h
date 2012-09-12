@@ -80,6 +80,7 @@ typedef struct sem_struct {
 
 sem * sem_realloc (const int val, const char * name, const int flags);
 sem * sem_alloc (const int val, const char * name);
+sem * sem_alloc_posix (sem_t * external_lock);
 int   sem_p (sem * s);
 int   sem_v (sem * s);
 void  sem_free (sem * s);
