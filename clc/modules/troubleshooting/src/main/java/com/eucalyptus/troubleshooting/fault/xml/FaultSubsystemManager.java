@@ -81,7 +81,7 @@ import com.eucalyptus.system.BaseDirectory;
 
 public class FaultSubsystemManager {
 	private static final Logger LOG = Logger.getLogger(FaultSubsystemManager.class);
-	private Map<ComponentId, FaultLogger> loggerMap = new ConcurrentHashMap<ComponentId, FaultLogger>();
+	private Map<String, FaultLogger> loggerMap = new ConcurrentHashMap<String, FaultLogger>();
 	private FaultRegistry faultRegistry = null;
 	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
 	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
@@ -146,19 +146,22 @@ public class FaultSubsystemManager {
 	
 
 	public synchronized FaultLogger getFaultLogger(ComponentId componentId) {
+
+		
 		if (componentId == null) throw new IllegalArgumentException("componentId is null");
-		FaultLogger logger = loggerMap.get(componentId);
+		String faultLogPrefix = componentId.getFaultLogPrefix();
+		FaultLogger logger = loggerMap.get(faultLogPrefix);
 		if (logger == null) {
-			logger = initLogger(componentId);
-			loggerMap.put(componentId, logger);
+			logger = initLogger(faultLogPrefix);
+			loggerMap.put(faultLogPrefix, logger);
 		}
 		return logger;
 	}
 
-	private FaultLogger initLogger(ComponentId componentId) {
-		final String targetLoggerName = "com.eucalyptus.troubleshooting.fault." + componentId.getName().toLowerCase() + ".log";
-		final String targetAppenderName = componentId.getName().toLowerCase() + "-fault-log";
-		final String targetLogFileName = componentId.getName().toLowerCase() + "-fault.log";
+	private FaultLogger initLogger(String faultLogPrefix) {
+		final String targetLoggerName = "com.eucalyptus.troubleshooting.fault." + faultLogPrefix + ".log";
+		final String targetAppenderName = faultLogPrefix + "-fault-log";
+		final String targetLogFileName = faultLogPrefix + "-fault.log";
 				
 		// first find the actual logger (if it exists). Should be named com.eucalyptus.troubleshooting.fault.${component}.log
 		// Scan the loggers to see if it already exists.  Otherwise add it
