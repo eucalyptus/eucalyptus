@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
@@ -81,6 +82,7 @@ import com.google.common.collect.Lists;
 @GenerateKeys
 @PolicyVendor( "ec2" )
 @Partition( Eucalyptus.class )
+@FaultLogPrefix( "cloud" )
 public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
   private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
@@ -96,6 +98,7 @@ public class Eucalyptus extends ComponentId {
   
   @Partition( Eucalyptus.class )
   @GenerateKeys
+  @FaultLogPrefix( "cloud" )
   public static class Database extends ComponentId {
 
     public Database( ) {

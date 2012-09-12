@@ -107,7 +107,19 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public @interface PolicyVendor {
     String value( );
   }
-  
+  /**
+   * The FaultLogPrefix allows component ids to be specified as the source of a fault, while
+   * still adhering to the <i>component</i>-fault.log syntax.  Components that do not use this
+   * annotation will default to their "name" value as the component names.  Components annotated
+   * with value() will use the "cloud" component.
+   * @author ethomas
+   */
+  @Target( { ElementType.TYPE } )
+  @Retention( RetentionPolicy.RUNTIME )
+  public @interface FaultLogPrefix {
+	  String value( );
+  }  
+
   /**
    * The annotated type provides an implementation of some component specific functionality for the
    * ComponentId indicated.
@@ -396,7 +408,16 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
       return AnonymousMessage.class;
     }
   }
-  
+
+  public final String getFaultLogPrefix( ) {
+	  if ( Ats.from( this ).has( FaultLogPrefix.class ) ) {
+		  String value = Ats.from( this ).get( FaultLogPrefix.class ).value( );
+		  return value != null ? value : this.name( );
+	  } else {
+		  return Ats.from( Empyrean.class ).get( FaultLogPrefix.class ).value( );//this requires that Empyrean.class is annotated as @FaultLogging("cloud")
+	  }
+  }
+
   public Integer getPort( ) {
     return 8773;
   }
