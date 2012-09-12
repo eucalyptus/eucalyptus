@@ -18,7 +18,7 @@ public class MXBeanMemoryResourceCheck extends Thread {
 	private final static long POLL_TIME = 60 * 1000; // poll every minute (TODO: configure)
 	private static final int MXBEAN_OUT_OF_MEMORY_FAULT_ID = 1005;
 	private static final long THRESHOLD = 1;//512 * 1024; // 512K, TODO: make this customizable
-	private Set<String> alreadyFaulted = new HashSet<String>();
+//	private Set<String> alreadyFaulted = new HashSet<String>(); // TODO: de-dup later
 
 	@Override
 	public void run() {
@@ -31,10 +31,10 @@ public class MXBeanMemoryResourceCheck extends Thread {
 			    MemoryUsage usage = item.getUsage();
 			    LOG.debug("Checking memory pool " + name + " of type" + type);
 			    if (usage.getMax() - usage.getUsed() < THRESHOLD) {
-			    	if (!alreadyFaulted.contains(name + ":" + type.toString())) {
+//			    	if (!alreadyFaulted.contains(name + ":" + type.toString())) {
 						FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(MXBEAN_OUT_OF_MEMORY_FAULT_ID).withVar("component", "eucalyptus").withVar("name",  name).log();
-						alreadyFaulted.add(name + ":" + type.toString());
-			    	}
+//						alreadyFaulted.add(name + ":" + type.toString());
+//			    	}
 			    }
 			}
 			try {

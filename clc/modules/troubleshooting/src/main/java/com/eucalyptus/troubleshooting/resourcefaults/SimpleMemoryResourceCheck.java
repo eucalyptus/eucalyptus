@@ -22,16 +22,12 @@ public class SimpleMemoryResourceCheck extends Thread {
 	@Override
 	public void run() {
 		while (true) {
-			List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
-			LOG.debug("num garbage collection beans = " + mxBeans.size());
-			for (GarbageCollectorMXBean bean: mxBeans) {
-				LOG.debug("garbage bean info = [name = " + bean.getName() + ", collectionCount = " + bean.getCollectionCount() + ", collectionTime = " + bean.getCollectionTime());
-			}
+			dumpGCInfo(); // TODO: put this in its own monitor
 			long availableMemory = Runtime.getRuntime().freeMemory();
 			LOG.debug("availableMemory="+availableMemory);
 			if (availableMemory < minimumFreeMemoryBytes) {
-				//FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(OUT_OF_MEMORY_FAULT_ID).withVar("component", "eucalyptus").log();
-				break; // no need to continue monitoring.  This fault can only be logged once.
+				FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(OUT_OF_MEMORY_FAULT_ID).withVar("component", "eucalyptus").log();
+				//break; // no need to continue monitoring.  This fault can only be logged once. (TODO: revisit dedup)
 			}
 			try {
 				Thread.sleep(POLL_TIME);
@@ -41,4 +37,11 @@ public class SimpleMemoryResourceCheck extends Thread {
 		}
 	}
 
+	private void dumpGCInfo() {
+		List<GarbageCollectorMXBean> mxBeans = ManagementFactory.getGarbageCollectorMXBeans();
+		LOG.debug("num garbage collection beans = " + mxBeans.size());
+		for (GarbageCollectorMXBean bean: mxBeans) {
+			LOG.debug("garbage bean info = [name = " + bean.getName() + ", collectionCount = " + bean.getCollectionCount() + ", collectionTime = " + bean.getCollectionTime());
+		}
+	}
 }

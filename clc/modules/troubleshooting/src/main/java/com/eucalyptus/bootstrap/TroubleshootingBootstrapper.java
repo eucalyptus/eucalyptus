@@ -62,6 +62,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -98,10 +99,12 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	  @Override
 	  public boolean start( ) throws Exception {
 	    LOG.info( "Starting troubleshooting interface." );
-	    //DiskResourceCheck check = new DiskResourceCheck();
-	    //check.addLocationInfo(BaseDirectory.HOME.getFile(), 50 * 1024 * 1024); // 50 MB, arbitrary
-	    //check.start();
-	    new SimpleMemoryResourceCheck(1).start();//512 * 1024).start(); // 512K left, also arbitrary
+	    DiskResourceCheck check = new DiskResourceCheck();
+	    // TOOD: we should use a property, but for now use 2% of the log directory
+	    File logFileDir = BaseDirectory.LOG.getFile();
+	    check.addLocationInfo(logFileDir, (long) (0.02 * logFileDir.getTotalSpace()));
+	    check.start();
+//	    new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K left, also arbitrary
 	    //new MXBeanMemoryResourceCheck().start(); // 512K left, also arbitrary
 	    FaultSubsystem.init();
 	    return true;

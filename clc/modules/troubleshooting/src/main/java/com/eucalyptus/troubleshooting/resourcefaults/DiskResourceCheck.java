@@ -13,7 +13,7 @@ import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 
 public class DiskResourceCheck extends Thread {
 	private final static Logger LOG = Logger.getLogger(DiskResourceCheck.class);
-	private final static long POLL_TIME = 60 * 1000; // poll every minute (TODO: configure)
+	private final static long POLL_TIME = 5 * 1000; 
 	private static final int OUT_OF_DISK_SPACE_FAULT_ID = 1003;
 	private boolean started = false;
 	private Set<LocationInfo> alreadyFaulted = new HashSet<LocationInfo>();
@@ -48,11 +48,10 @@ public class DiskResourceCheck extends Thread {
 			for (LocationInfo location: locations) {
 				long usableSpace = location.getFile().getUsableSpace();
 				LOG.debug("Checking disk space for " + location.getFile() + " usableSpace = " + usableSpace);
-				if (!alreadyFaulted.contains(location) && location.getFile().getUsableSpace() < location.getMinimumFreeSpace()) {
-					// TODO: what component? Eucalyptus for now
+//				if (!alreadyFaulted.contains(location) && location.getFile().getUsableSpace() < location.getMinimumFreeSpace()) {
 					FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(OUT_OF_DISK_SPACE_FAULT_ID).withVar("component", "eucalyptus").withVar("file",  location.getFile().getAbsolutePath()).log();
-					alreadyFaulted.add(location);
-				}
+//					alreadyFaulted.add(location);
+//				}
 			}
 			try {
 				Thread.sleep(POLL_TIME);
