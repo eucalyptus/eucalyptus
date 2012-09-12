@@ -19,6 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.reporting.service;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.principal.User;
@@ -68,10 +72,10 @@ public class ReportingService {
     long startTime = period.getBeginningMs();
     long endTime = period.getEndingMs();
     if ( request.getStartDate() != null ) {
-      startTime = request.getStartDate().getTime();
+      startTime = parseDate( request.getStartDate() );
     }
     if ( request.getEndDate() != null ) {
-      endTime = request.getStartDate().getTime();
+      endTime = parseDate( request.getEndDate() );
     }
     if ( endTime <= startTime ) {
       throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
@@ -88,5 +92,22 @@ public class ReportingService {
     reply.setResult( new GenerateReportResultType( reportData ) );
 
     return reply;
+  }
+
+  private long parseDate( final String date ) throws ReportingException {
+    try {
+      return getDateFormat( date.endsWith("Z") ).parse( date ).getTime();
+    } catch (ParseException e) {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
+    }
+  }
+
+  private DateFormat getDateFormat( final boolean utc ) {
+    final String format = "yyyy-MM-dd'T'HH:mm:ss";
+    final SimpleDateFormat dateFormat = new SimpleDateFormat( format + ( utc ? "'Z'" : "")  );
+    if (utc) {
+      dateFormat.setTimeZone( TimeZone.getTimeZone("UTC") );
+    }
+    return dateFormat;
   }
 }

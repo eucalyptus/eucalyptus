@@ -69,9 +69,9 @@ class ExportDataResultType extends EucalyptusData {
 
 class GenerateReportType extends ReportingMessage {
   @HttpParameterMapping (parameter = "Start")
-  Date startDate
+  String startDate
   @HttpParameterMapping (parameter = "End")
-  Date endDate
+  String endDate
   @HttpParameterMapping (parameter = "Type")
   ArrayList<String> types = new ArrayList<String>()
 }
