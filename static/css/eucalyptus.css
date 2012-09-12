@@ -1556,6 +1556,25 @@ span.on-error {
     display:none;
 }
 
+/* Sang-min: temporary styling for launch wizard */
+#launch-wizard-advanced-storage th{
+  font-size: 11px;
+}
+#launch-wizard-advanced-storage td{
+  padding: 5px 10px;
+  border-top: 2px solid #dae2e8;
+  border-left: 1px solid #dae2e8;
+  font-size: 11px;
+  width : auto;
+}
+#launch-wizard-advanced-storage input[type='text']{
+  width: 30px;
+}
+#launch-wizard-advanced-storage input[type='checkbox']{
+  width: 10px;
+}
+/* END Sang-min */
+
 .label_required:after {
   content: " *";
 }
