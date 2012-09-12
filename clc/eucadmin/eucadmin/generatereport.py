@@ -33,9 +33,9 @@ class GenerateReport(ReportsRequest):
     Params = [
         Param(name='Type',
             short_name='t', long_name='type',
-            ptype='enum', cardinality=1, #TODO:STEVE: Fix issue with passing multiple report types (cardinality='*')
+            ptype='enum',
             choices=['instance', 's3', 'volume', 'snapshot', 'raw'],
-            doc='report type(s) to generate. Option may be used multiple times'),
+            doc='the report type to generate'),
         Param(name='Start',
             short_name='s', long_name='start-date',
             ptype='datetime',

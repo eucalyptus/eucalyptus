@@ -33,7 +33,7 @@ import com.eucalyptus.reporting.ReportGenerationFacade;
 import com.eucalyptus.reporting.export.Export;
 import com.eucalyptus.reporting.export.ReportingExport;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -83,7 +83,10 @@ public class ReportingService {
 
     final String reportData;
     try {
-      reportData = ReportGenerationFacade.generateReport(Iterables.get( request.getTypes(), 0, "raw"), startTime, endTime );
+      reportData = ReportGenerationFacade.generateReport(
+          Objects.firstNonNull( request.getType(), "instance" ),
+          startTime,
+          endTime );
     } catch ( final Exception e ) {
       logger.error( e, e );
       throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error generating report");

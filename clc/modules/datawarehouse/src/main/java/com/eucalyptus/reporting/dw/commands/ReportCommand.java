@@ -26,13 +26,11 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.TimeZone;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportGenerationFacade;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Charsets;
-import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 
 /**
@@ -42,7 +40,7 @@ public class ReportCommand extends CommandSupport {
 
   public ReportCommand(final String[] args) {
     super(argumentsBuilder()
-        .withArg("t", "type", "Type(s) for generated report", false)
+        .withArg("t", "type", "The type for the generated report", false)
         .withArg("s", "start", "The inclusive start time for the report period (e.g. 2012-08-19T00:00:00)", false)
         .withArg("e", "end", "The exclusive end time for the report period (e.g. 2012-08-26T00:00:00)", false)
         .withArg( "f", "file", "File for generated report", false )
@@ -52,7 +50,7 @@ public class ReportCommand extends CommandSupport {
   @Override
   protected void runCommand( final Arguments arguments ) {
     final Period defaultPeriod = Period.defaultPeriod();
-    final List<String> types = arguments.getArguments( "type" );
+    final String type = arguments.getArgument( "type", "instance" );
     final String start = arguments.getArgument( "start", formatDate(defaultPeriod.getBeginningMs()) );
     final String end = arguments.getArgument( "end", formatDate(defaultPeriod.getEndingMs()) );
     final String reportFilename = arguments.getArgument( "file", null );
@@ -65,7 +63,7 @@ public class ReportCommand extends CommandSupport {
 
     final String reportData;
     try {
-      reportData = ReportGenerationFacade.generateReport( Iterables.get(types, 0, "raw"), startTime, endTime );
+      reportData = ReportGenerationFacade.generateReport( type, startTime, endTime );
     } catch ( ReportGenerationException e ) {
       throw Exceptions.toUndeclared( e );
     }
