@@ -89,6 +89,8 @@ permission notice:
 #include "diskutil.h"
 #include "vnetwork.h"
 
+#include "eucalyptus.h"
+
 // Given an array of pointers to command names (e.g., "ls", "dd", etc.),
 // as well as either an array of NULL pointers or pointers to full paths,
 // either the full paths are verified or system $PATH is searched for 
@@ -129,19 +131,19 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
             }
 
             { // append some Eucalyptus-specific locations to $PATH
-                char * euca = getenv ("EUCALYPTUS");
+                char * euca = getenv (EUCALYPTUS_ENV_VAR_NAME);
                 if (euca == NULL) {
                     euca = "";
                 }
                 char * locations [] = {
-                    "/usr/lib/eucalyptus",
-                    "/usr/share/eucalyptus",
-                    "/usr/sbin",
+                    ":" EUCALYPTUS_LIBEXEC_DIR,
+                    ":" EUCALYPTUS_HELPER_DIR,
+                    ":" EUCALYPTUS_SBIN_DIR,
                     NULL
                 };
                 for (int i = 0; locations [i]; i++) {
                     char lpath [MAX_PATH];
-                    snprintf (lpath, sizeof (lpath), ":%s%s", euca, locations [i]);
+                    snprintf (lpath, sizeof (lpath), locations [i], euca);
                     char * newpath = strdupcat (path, lpath);
                     if (newpath == NULL) {
                         missing_helpers = -1;
@@ -234,9 +236,9 @@ int add_euca_to_path (const char * euca_home_supplied)
 
     char new_path [4098];
     snprintf (new_path, sizeof (new_path), 
-              "%s/usr/share/eucalyptus:" // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
-              "%s/usr/sbin:" // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
-              "%s/usr/lib/eucalyptus:" // (rootwrap, mountwrap)
+              EUCALYPTUS_DATA_DIR ":" // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
+              EUCALYPTUS_SBIN_DIR ":" // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
+              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
               "%s",
               euca_home, euca_home, euca_home,
               old_path);

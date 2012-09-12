@@ -95,7 +95,7 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
-	private static String ROOT_WRAP = BaseDirectory.HOME.toString() + StorageProperties.EUCA_ROOT_WRAPPER;
+	private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;

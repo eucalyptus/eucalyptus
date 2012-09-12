@@ -170,7 +170,7 @@ public class WalrusControl {
 	public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		// TODO Auto-generated method stub
 		String returnValue;
-		returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
+		returnValue = SystemUtil.run(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
 		if(returnValue.length() == 0) {
 		  Faults.advisory(Components.lookup(Walrus.class).getLocalServiceConfiguration(), 
 		                                      new EucalyptusCloudException("drbdadm not found: Is drbd installed?"));

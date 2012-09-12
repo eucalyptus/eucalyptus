@@ -70,7 +70,8 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 public enum BaseDirectory {
-  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" );
+  HOME( "euca.home" ), VAR( "euca.var.dir" ), CONF( "euca.conf.dir" ), LIB( "euca.lib.dir" ), LOG( "euca.log.dir" ),
+  RUN( "euca.run.dir" ), LIBEXEC( "euca.libexec.dir" ), STATE( "euca.state.dir" ), JNI( "euca.jni.dir" );
   private static Logger LOGG = Logger.getLogger( BaseDirectory.class );
   
   private String        key;

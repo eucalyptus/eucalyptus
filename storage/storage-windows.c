@@ -26,6 +26,8 @@
 #include <euca_auth.h>
 #include <misc.h>
 
+#include <eucalyptus.h>
+
 int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out) {
   FILE *PKFP;
   RSA *pr=NULL;
@@ -181,7 +183,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     return(1);
   }
 
-  snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
+  snprintf(source_path, 1024, EUCALYPTUS_HELPER_DIR "/floppy", euca_home);
   snprintf(dest_path, 1024, "%s/floppy", rundir_path);
   if (!keyName || !strlen(keyName) || !strlen(instName)) {
     char cmd[MAX_PATH];

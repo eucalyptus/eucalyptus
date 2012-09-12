@@ -110,8 +110,7 @@ public class StorageProperties {
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 
-	public static String eucaHome = BaseDirectory.HOME.toString( );
-	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
+	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
 	public static final String blockSize = "1M";
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }

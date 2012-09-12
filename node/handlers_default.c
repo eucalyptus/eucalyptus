@@ -1115,13 +1115,13 @@ static void set_bundling_env(struct bundling_params_t *params) {
   char buf[MAX_PATH];
 
   // set up environment for euca2ools
-  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
   setenv("EC2_CERT", buf, 1);
   
   snprintf(buf, MAX_PATH, "IGNORED");
   setenv("EC2_SECRET_KEY", buf, 1);
   
-  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", params->eucalyptusHomePath);
   setenv("EUCALYPTUS_CERT", buf, 1);
   
   snprintf(buf, MAX_PATH, "%s", params->walrusURL);
@@ -1133,10 +1133,10 @@ static void set_bundling_env(struct bundling_params_t *params) {
   snprintf(buf, MAX_PATH, "123456789012");
   setenv("EC2_USER_ID", buf, 1);
   
-  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
   setenv("EUCA_CERT", buf, 1);
   
-  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
   setenv("EUCA_PRIVATE_KEY", buf, 1);
 }
 
@@ -1176,13 +1176,13 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 		    snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth --clear", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
 		  }
 		  // set up environment for euca2ools
-		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
 		  setenv("EC2_CERT", buf, 1);
 		  
 		  snprintf(buf, MAX_PATH, "IGNORED");
 		  setenv("EC2_SECRET_KEY", buf, 1);
 		  
-		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+		  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", params->eucalyptusHomePath);
 		  setenv("EUCALYPTUS_CERT", buf, 1);
 		  
 		  snprintf(buf, MAX_PATH, "%s", params->walrusURL);
@@ -1194,10 +1194,10 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 		  snprintf(buf, MAX_PATH, "123456789012");
 		  setenv("EC2_USER_ID", buf, 1);
 		  
-		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
 		  setenv("EUCA_CERT", buf, 1);
 		  
-		  snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+		  snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
 		  setenv("EUCA_PRIVATE_KEY", buf, 1);
 		  logprintfl(EUCADEBUG, "cleanup_bundling_task: running cmd '%s'\n", cmd);
 		  rc = system(cmd);
@@ -1268,13 +1268,13 @@ static void * bundling_thread (void *arg)
 	        int pid, status;
 		
 		// set up environment for euca2ools
-		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
 		setenv("EC2_CERT", buf, 1);
 		
 		snprintf(buf, MAX_PATH, "IGNORED");
 		setenv("EC2_SECRET_KEY", buf, 1);
 		
-		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", params->eucalyptusHomePath);
+		snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", params->eucalyptusHomePath);
 		setenv("EUCALYPTUS_CERT", buf, 1);
 		
 		snprintf(buf, MAX_PATH, "%s", params->walrusURL);
@@ -1286,10 +1286,10 @@ static void * bundling_thread (void *arg)
 		snprintf(buf, MAX_PATH, "123456789012");
 		setenv("EC2_USER_ID", buf, 1);
 		
-		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-cert.pem", params->eucalyptusHomePath);
+		snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
 		setenv("EUCA_CERT", buf, 1);
 		
-		snprintf(buf, MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", params->eucalyptusHomePath);
+		snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
 		setenv("EUCA_PRIVATE_KEY", buf, 1);
 
 		// check to see if the bucket exists in advance
