@@ -52,7 +52,7 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
     final long timeInMs = getCurrentTimeMillis();
 
     try {
-      final User user = lookupUser( event.getOwner().getUserId() );
+      final User user = lookupUser( event.getOwner() );
 
       getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
           .getName(), user.getAccount().getAccountNumber());
@@ -62,8 +62,8 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
       final ReportingVolumeSnapshotEventStore eventStore = getReportingVolumeSnapshotEventStore();
       switch (event.getActionInfo().getAction()) {
         case SNAPSHOTCREATE:
-          eventStore.insertCreateEvent(event.getUuid(), event.getSnapshotId(), timeInMs, event.getOwner()
-              .getUserId(), ((CreateActionInfo)event.getActionInfo()).getSize() );
+          eventStore.insertCreateEvent(event.getUuid(), event.getSnapshotId(), timeInMs, event.getOwner(), 
+        	  ((CreateActionInfo)event.getActionInfo()).getSize() );
           break;
         case SNAPSHOTDELETE:
           eventStore.insertDeleteEvent(event.getUuid(), timeInMs);

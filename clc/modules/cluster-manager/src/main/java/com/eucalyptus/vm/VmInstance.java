@@ -948,7 +948,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   void store( ) {
     this.updateTimeStamps( );
-    this.fireUsageEvent( );
+    //this.fireUsageEvent( );
     this.firePersist( );
   }
   
@@ -1540,7 +1540,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else {
               this.updateState( runVm );
             }
-            VmInstance.this.fireUsageEvent( );
+            //VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );

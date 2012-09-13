@@ -20,20 +20,24 @@
 		<value name="historySize" field="historySize" type="java.lang.Integer" />
 		<value name="collectionIntervalTimeMs" field="collectionIntervalTimeMs"
 			type="java.lang.Integer" />
-		<collection name="instanceIds"
-			factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds"
-			item-type="java.lang.String">
-			<structure name="item">
-				<value name="instanceId" />
-			</structure>
-		</collection>
-		<collection name="sensorIds"
-			factory="org.jibx.runtime.Utility.arrayListFactory" field="sensorIds"
-			item-type="java.lang.String">
-			<structure name="item">
-				<value name="sensorId" />
-			</structure>
-		</collection>
+		<structure usage="optional">
+			<collection name="instanceIds"
+				factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds"
+				item-type="java.lang.String">
+				<structure name="item">
+					<value name="instanceId" />
+				</structure>
+			</collection>
+		</structure>
+		<structure usage="optional">
+			<collection name="sensorIds"
+				factory="org.jibx.runtime.Utility.arrayListFactory" field="sensorIds"
+				item-type="java.lang.String">
+				<structure name="item">
+					<value name="sensorId" />
+				</structure>
+			</collection>
+		</structure>
 		<collection field="clusterControllers"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<value name="clusterControllers" type="java.lang.String" />
@@ -41,58 +45,53 @@
 		<value name="nameServer" field="nameServer" type="java.lang.String" />
 	</mapping>
 
-	<mapping name="DescribeSensorsResponseType"
-		class="edu.ucsb.eucalyptus.msgs.DescribeSensorsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+	<mapping name="DescribeSensorsResponse"
+		class="edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-		<collection field="sensorResources"
+		<collection field="sensorsResources"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
-			<structure name="sensorResources"
-				type="edu.ucsb.eucalyptus.msgs.SensorsResourceType" />
+			<structure name="sensorsResources"
+				map-as="edu.ucsb.eucalyptus.msgs.SensorsResourceType" />
 		</collection>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.SensorsResourceType"
 		abstract="true">
-		<value name="resourceType" field="resourceType" type="java.lang.String"
-			usage="required" />
-		<value name="resourceName" field="resourceName" type="java.lang.String"
-			usage="required" />
-		<collection field="metrics"
+		<value name="resourceName" field="resourceName" type="java.lang.String" />
+                <value name="resourceType" field="resourceType" type="java.lang.String" />	
+        	<collection field="metrics"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="metrics"
-				type="edu.ucsb.eucalyptus.msgs.MetricsResourceType" />
+				map-as="edu.ucsb.eucalyptus.msgs.MetricsResourceType" />
 		</collection>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.MetricsResourceType"
 		abstract="true">
-		<value name="metricName" field="metricName" type="java.lang.String"
-			usage="required" />
+		<value name="metricName" field="metricName" type="java.lang.String" />
 		<collection field="counters"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="counters"
-				type="edu.ucsb.eucalyptus.msgs.MetricCounterType" />
+				map-as="edu.ucsb.eucalyptus.msgs.MetricCounterType" />
 		</collection>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.MetricCounterType"
 		abstract="true">
-		<value name="type" field="type" type="java.lang.String" usage="required" />
+		<value name="type" field="type" type="java.lang.String" />
 		<value name="collectionIntervalMs" field="collectionIntervalMs"
-			type="java.lang.Long" usage="required" />
-		<value name="sequenceNum" field="sequenceNum" type="java.lang.Long"
-			usage="required" />
+			type="java.lang.Long" />
+		<value name="sequenceNum" field="sequenceNum" type="java.lang.Long" />
 		<collection field="dimensions"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="dimensions"
-				type="edu.ucsb.eucalyptus.msgs.MetricDimensionsType" />
+				map-as="edu.ucsb.eucalyptus.msgs.MetricDimensionsType" />
 		</collection>
 	</mapping>
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.MetricDimensionsType"
 		abstract="true">
-		<value name="dimensionName" field="dimensionName" type="java.lang.String"
-			usage="required" />
+		<value name="dimensionName" field="dimensionName" type="java.lang.String" />
 		<collection field="values"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="values"
@@ -102,9 +101,7 @@
 
 	<mapping class="edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType"
 		abstract="true">
-		<value name="timestamp" field="timestamp"
-			usage="required" />
-		<value name="value" field="value" type="java.lang.Double" />
+		<value name="timestamp" field="timestamp" />
+		<value name="value" field="value" optional="true" />
 	</mapping>
-		
 </binding>

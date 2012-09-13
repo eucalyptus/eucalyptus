@@ -280,9 +280,9 @@ public class DescribeSensorsType extends CloudClusterMessage {
 
 }
 
-public class DescribeSensorsResponseType extends CloudClusterMessage {
+public class DescribeSensorsResponse extends CloudClusterMessage {
     
-    ArrayList<SensorsResourceType> sensorResources = new ArrayList<SensorsResourceType>();
+    ArrayList<SensorsResourceType> sensorsResources = new ArrayList<SensorsResourceType>();
     
 }
 

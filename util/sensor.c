@@ -112,7 +112,7 @@ int sensor_set_instance_data (const char * instanceId, const char ** sensorIds, 
                                     { .timestampMs = 1344056910424, .value = 33.3, .available = 1 },
                                     { .timestampMs = 1344056930424, .value = 34.7, .available = 1 },
                                     { .timestampMs = 1344056950424, .value = 31.1, .available = 1 },
-                                    { .timestampMs = 1344056970424, .value = -999, .available = 0 },
+                                    { .timestampMs = 1344056970424, .value = 666, .available = 1 },
                                     { .timestampMs = 1344056990424, .value = 39.9, .available = 1 },
                                 }
                             }

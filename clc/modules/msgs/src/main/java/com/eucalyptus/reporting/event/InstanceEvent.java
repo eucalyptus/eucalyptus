@@ -136,12 +136,12 @@ public class InstanceEvent implements Event {
                         final String availabilityZone,
                         final Long cumulativeDiskIoMegs,
                         final Integer cpuUtilizationPercent,
-                        final Long cumulativeNetIncomingMegsBetweenZones,
-                        final Long cumulativeNetIncomingMegsWithinZone,
-                        final Long cumulativeNetIncomingMegsPublicIp,
-                        final Long cumulativeNetOutgoingMegsBetweenZones,
-                        final Long cumulativeNetOutgoingMegsWithinZone,
-                        final Long cumulativeNetOutgoingMegsPublicIp
+                        final Long cumulativeNetIncomingMegsBetweenZones,// internal
+                        final Long cumulativeNetIncomingMegsWithinZone, //internal
+                        final Long cumulativeNetIncomingMegsPublicIp, // total
+                        final Long cumulativeNetOutgoingMegsBetweenZones,// internal
+                        final Long cumulativeNetOutgoingMegsWithinZone, //internal 
+                        final Long cumulativeNetOutgoingMegsPublicIp // total
   ) {
     if (uuid==null) throw new IllegalArgumentException("uuid cant be null");
     if (instanceId==null) throw new IllegalArgumentException("instanceId cant be null");

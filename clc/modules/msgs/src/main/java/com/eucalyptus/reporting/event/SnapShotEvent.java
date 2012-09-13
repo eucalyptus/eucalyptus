@@ -56,7 +56,7 @@ public class SnapShotEvent implements Event {
   }
 
   private final EventActionInfo<SnapShotAction> actionInfo;
-  private final OwnerFullName ownerFullName;
+  private final String userName;
   private final String snapshotId;
   private final String uuid;
 
@@ -79,21 +79,21 @@ public class SnapShotEvent implements Event {
   public static SnapShotEvent with( final EventActionInfo<SnapShotAction> actionInfo,
                                     final String snapShotUUID,
                                     final String snapshotId,
-                                    final OwnerFullName ownerFullName ) {
+                                    final String userName ) {
 
-    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, ownerFullName );
+    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userName );
   }
 
   private SnapShotEvent( final EventActionInfo<SnapShotAction> actionInfo,
                          final String uuid,
                          final String snapshotId,
-                         final OwnerFullName ownerFullName ) {
+                         final String userName ) {
     assertThat(actionInfo, notNullValue());
     assertThat(uuid, notNullValue());
-    assertThat(ownerFullName.getUserId(), notNullValue());
+    assertThat(userName, notNullValue());
     assertThat(snapshotId, notNullValue());
     this.actionInfo = actionInfo;
-    this.ownerFullName = ownerFullName;
+    this.userName = userName;
     this.snapshotId = snapshotId;
     this.uuid = uuid;
   }
@@ -102,8 +102,8 @@ public class SnapShotEvent implements Event {
     return snapshotId;
   }
 
-  public OwnerFullName getOwner() {
-    return ownerFullName;
+  public String getOwner() {
+    return userName;
   }
 
   public EventActionInfo<SnapShotAction> getActionInfo() {
@@ -117,7 +117,7 @@ public class SnapShotEvent implements Event {
   @Override
   public String toString() {
     return "SnapShotEvent [actionInfo=" + actionInfo
-        + ", userName=" + ownerFullName.getUserName() + ", snapshotId="
+        + ", userName=" + userName + ", snapshotId="
         + snapshotId + ", uuid=" + uuid + "]";
   }
 }

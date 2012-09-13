@@ -26,19 +26,24 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.InstanceEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
+import edu.ucsb.eucalyptus.msgs.MetricCounterType;
+import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
+import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
 import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
 
-public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsType, DescribeSensorsResponseType>{
+public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse>{
 
     private static Logger      LOG = Logger.getLogger( DescribeSensorCallback.class );
     private int historySize; 
@@ -75,7 +80,7 @@ public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsTyp
     }
     
     @Override
-    public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponseType> newInstance() {
+    public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> newInstance() {
 	return new DescribeSensorCallback(this.historySize, this.collectionIntervalTimeMs, this.sensorIds, this.instanceIds);
     }
 
@@ -87,14 +92,50 @@ public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsTyp
     }
     
     @Override
-    public void fire(DescribeSensorsResponseType msg) {
+    public void fire(DescribeSensorsResponse msg)  {
+	User admin;
+	try {
+	    admin = Accounts.lookupSystemAdmin();
 	
 	//TODO : Need to fire the correct usage events to the domain model
 	
-	for ( SensorsResourceType sensorData : msg.getSensorResources( ) ){
-	LOG.debug("sensorData.getResourceName() : " + sensorData.getResourceName()); 
+	    for (SensorsResourceType sensorData : msg.getSensorsResources()) {
+		LOG.debug("sensorData.getResourceName() : "
+			+ sensorData.getResourceName());
+
+		for (MetricsResourceType metricType : sensorData.getMetrics()) {
+		    LOG.debug("sensorData.getMetrics() : "
+			    + metricType.getMetricName());
+
+		    for (MetricCounterType counterType : metricType
+			    .getCounters()) {
+			LOG.debug("metricType.getCounters : " + counterType);
+
+			for (MetricDimensionsType dimensionType : counterType
+				.getDimensions()) {
+			    LOG.debug("counterType.getDimensions() : "
+				    + dimensionType);
+			    // fire constructed event to the domain model
+			    ListenerRegistry.getInstance( ).fireEvent( new com.eucalyptus.reporting.event.InstanceEvent( sensorData.getResourceName(),
+				    metricType.getMetricName(),
+				    counterType.toString(),
+			            admin.getName(),
+			            admin.getName(),
+			            admin.getUserId(),
+			            admin.getUserId(),
+			            dimensionType.toString(),
+			            "PARTI00",
+			            0L,
+			            0, 0L ,0L ,0L ,0L ,0L ,0L )); 
+			}
+		    }
+		}
+
+	    }
+	} catch (Exception ex) {
+	    LOG.debug("Unable to fire describe sensors call back", ex);
+	    
 	}
-	
     }
 
 }
