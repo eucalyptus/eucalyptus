@@ -120,6 +120,10 @@ class EuiException(BaseException):
     def message(self, msg):
         self.msg = msg
 
+class CheckIpHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write(self.request.remote_ip)
+
 class BaseHandler(tornado.web.RequestHandler):
     user_session = None
     def should_use_mock(self):

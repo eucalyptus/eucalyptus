@@ -112,11 +112,13 @@
               var cidr = new Array();
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
-                  fromPort.push(thisObj.rulesList[rule].from_port);
-                  toPort.push(thisObj.rulesList[rule].to_port);
-                  protocol.push(thisObj.rulesList[rule].protocol);
-                  cidr.push(thisObj.rulesList[rule].ipaddr);
-                  fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                  if (rule.isnew) {
+                      fromPort.push(thisObj.rulesList[rule].from_port);
+                      toPort.push(thisObj.rulesList[rule].to_port);
+                      protocol.push(thisObj.rulesList[rule].protocol);
+                      cidr.push(thisObj.rulesList[rule].ipaddr);
+                      fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                  }
               }
               var dfd = $.Deferred();
               $.ajax({
@@ -150,6 +152,9 @@
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
+        deleteRule : function(index) {
+                 alert("add: deleting rule "+index);
+        },
       });
       this.addDialog.eucadialog('onKeypress', 'sgroup-name', createButtonId, function () {
          thisObj._validateForm(createButtonId);
@@ -179,13 +184,11 @@
       this.addDialog.find('#sgroup-ip-check').click(function () {
         $.ajax({
             type: 'GET',
-            url: 'http://checkip.amazonaws.com/',
+            url: '/checkip',
             contentType: 'text/plain; charset=utf-8',
-            crossDomain: true,
             dataType: "text",
             success: function(data, textStatus, jqXHR) {
-                        alert(jqXHR.responseText);
-                         $('#allow-ip').val(jqXHR.responseText)
+                         thisObj.addDialog.find('#allow-ip').val(jqXHR.responseText)
                      }
         });
       });
@@ -196,7 +199,7 @@
         $('#sgroup-ports').val('');
         $('#allow-ip').val('');
         $('#allow-group').val('');
-        thisObj._refreshRulesList();
+        thisObj._refreshRulesList(thisObj.addDialog);
       });
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
@@ -207,10 +210,31 @@
         title: sgroup_dialog_edit_title,
         buttons: { 
         'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
+              thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
+              var fromPort = new Array();
+              var toPort = new Array();
+              var protocol = new Array();
+              var cidr = new Array();
+              var fromGroup = new Array();
+              for (rule in thisObj.rulesList){
+                  if (rule.isnew) {
+                      fromPort.push(thisObj.rulesList[rule].from_port);
+                      toPort.push(thisObj.rulesList[rule].to_port);
+                      protocol.push(thisObj.rulesList[rule].protocol);
+                      cidr.push(thisObj.rulesList[rule].ipaddr);
+                      fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                  }
+              }
+              if (fromPort.length > 0) {
+                  thisObj._addIngressRule(name, fromPort, toPort, protocol, cidr, fromGroup);
+              }
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
+        deleteRule : function(index) {
+                alert("edit: deleting rule "+index);
+        },
       });
       this.editDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
          var thediv = thisObj.editDialog.find('#sgroup-morerools');
@@ -238,7 +262,18 @@
         thisObj.editDialog.find('#sgroup-ports').val('');
         thisObj.editDialog.find('#allow-ip').val('');
         thisObj.editDialog.find('#allow-group').val('');
-        thisObj._refreshRulesList();
+        thisObj._refreshRulesList(thisObj.editDialog);
+      });
+      this.editDialog.find('#sgroup-ip-check').click(function () {
+        $.ajax({
+            type: 'GET',
+            url: '/checkip',
+            contentType: 'text/plain; charset=utf-8',
+            dataType: "text",
+            success: function(data, textStatus, jqXHR) {
+                         thisObj.editDialog.find('#allow-ip').val(jqXHR.responseText)
+                     }
+        });
       });
     },
 
@@ -275,26 +310,34 @@
         else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
             rule.group = dialog.find('#allow-group').val();
         }
+        rule.isnew = True;
         this.rulesList.push(rule);
     },
 
     // this function populates the div where rules are listed based on the rulesList
-    _refreshRulesList : function() {
+    _refreshRulesList : function(dialog) {
         if (this.rulesList != null) {
             var msg = "";
-            var i=0
+            var i=0;
             for (rule in this.rulesList) {
                 var ports = this.rulesList[rule].from_port;
                 if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
                     ports += "-"+this.rulesList[rule].to_port;
                 }
-                msg += "<a href='#' onclick='this._deleteRule("+i+")'>Delete</a> Rule: "+this.rulesList[rule].protocol+
+                msg += "<a href='#' id='sgroup-rule-number-"+i+"'>Delete</a> Rule: "+this.rulesList[rule].protocol+
                             " ("+ ports+"), "+
                             this.rulesList[rule].ipaddr+"<br/>";
                 i += 1;
             }
-            $('#sgroup-rules-list').html(msg);
-            $('#sgroup-rules-list2').html(msg);
+            dialog.find('#sgroup-rules-list').html(msg);
+            i=0;
+            for (rule in this.rulesList) {
+                dialog.find('#sgroup-rule-number-'+i).on('click', {index: i, source: dialog}, function(event) {
+                      alert(event.data.source.dialog('option', 'deleteRule'));
+                      event.data.source.dialog('option', 'deleteRule')(event.data.index);
+                });
+                i += 1;
+            }
         }
     },
 
@@ -313,11 +356,6 @@
                 rule.group = rules[i].grants[0].group_id;
             this.rulesList.push(rule);
         }
-    },
-
-    _deleteRule : function(index) {
-        alert("deleting rule "+index);
-        //TODO: need to remove rule from rulesList and/or flag for "unauthorize" call
     },
 
     _getGroupName : function(rowSelector) {
@@ -443,7 +481,7 @@
       thisObj.editDialog.dialog('open');
       thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
       thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
-      thisObj._refreshRulesList();
+      thisObj._refreshRulesList(thisObj.editDialog);
     },
 
 /**** Public Methods ****/

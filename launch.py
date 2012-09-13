@@ -35,6 +35,7 @@ application = tornado.web.Application([
         (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
         (r"/ec2", api.ComputeHandler),
         (r"/support", support.ComputeHandler),
+        (r"/checkip", server.CheckIpHandler),
         (r"/(.*)", server.RootHandler),
     ], **settings)
 
