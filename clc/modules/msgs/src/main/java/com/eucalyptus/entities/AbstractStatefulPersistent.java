@@ -83,8 +83,9 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   @Column( name = "metadata_last_state" )
   @Enumerated( EnumType.STRING )
   STATE                     lastState;
-  @Lob
-  @Column( name = "metadata_state_change_stack" )
+//  @Lob
+//  @Column( name = "metadata_state_change_stack" )
+  @Transient
   protected String          stateChangeStack;
   @Column( name = "metadata_display_name" )
   protected String          displayName;

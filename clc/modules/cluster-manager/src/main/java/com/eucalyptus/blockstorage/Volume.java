@@ -72,6 +72,8 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Type;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.cloud.UserMetadata;
@@ -96,8 +98,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   partition;     //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
-  @Lob
-  @Column( name = "metadata_volume_remotedevice" )
+ 
+  @Transient
   private String   remoteDevice;
   @Column( name = "metadata_volume_localdevice" )
   private String   localDevice;

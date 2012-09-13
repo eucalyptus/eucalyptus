@@ -27,6 +27,10 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -285,23 +289,23 @@ public class Exceptions {
   
   public static class ErrorMessageBuilder {
     private Class              type;
-    private Map<Class, String> map;
+    private LoadingCache<Class, String> map;
     
     public ErrorMessageBuilder( Class input ) {
       this.type = input;
       this.map = classErrorMessages.get( this.type );
     }
     
-    private boolean hasMessage( Class<? extends Throwable> ex ) {
+    private boolean hasMessage( Class<? extends Throwable> ex ) { 
       if ( this.map != null ) {
-        return this.map.containsKey( ex );
+        return this.map.getUnchecked( ex ) != null;
       } else {
         return false;
       }
     }
     
     private String getMessage( Class<? extends Throwable> ex ) {
-      return classErrorMessages.get( this.type ).get( ex );
+      return classErrorMessages.get( this.type ).getUnchecked( ex );
     }
     
     public ExceptionBuilder exception( Throwable ex ) {
@@ -370,7 +374,7 @@ public class Exceptions {
     Class<?> value( );
   }
   
-  private static final Map<Class, Map<Class, String>> classErrorMessages = Maps.newConcurrentMap( );
+  private static final Map<Class, LoadingCache<Class, String>> classErrorMessages = Maps.newConcurrentMap( );
   
   @Discovery( value = { Function.class },
               annotations = { ErrorMessages.class },
@@ -386,7 +390,7 @@ public class Exceptions {
         try {
           ErrorMessages annote = Ats.from( input ).get( ErrorMessages.class );
           Function<Class, String> errorFunction = ( Function<Class, String> ) Classes.builder( input ).newInstance( );
-          ConcurrentMap<Class, String> errorMap = new MapMaker( ).expireAfterAccess( 60, TimeUnit.SECONDS ).makeComputingMap( errorFunction );
+          LoadingCache<Class, String> errorMap =  CacheBuilder.newBuilder().expireAfterAccess( 60, TimeUnit.SECONDS ).build(CacheLoader.from(errorFunction));
           classErrorMessages.put( annote.value( ), errorMap );
           return true;
         } catch ( UndeclaredThrowableException ex ) {

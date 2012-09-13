@@ -187,7 +187,8 @@ public class BindingCache {
         MapDifference<String, String> diffBindings = Maps.difference( oldBindings, newBindings );
         LOG.info( "Binding class cache expired (old,new): \n" + diffBindings.entriesDiffering( ) );
         try {
-          Files.deleteRecursively( SubDirectory.CLASSCACHE.getFile( ) );
+          //Files.deleteRecursively( SubDirectory.CLASSCACHE.getFile( ) );
+          delete( SubDirectory.CLASSCACHE.getFile( ) );
         } catch ( IOException ex ) {
           LOG.error( ex, ex );
         }
@@ -195,7 +196,14 @@ public class BindingCache {
         return false;
       }
     }
-    
+    private void delete(File f) throws IOException {
+	  if (f.isDirectory( ) ) {
+	    for (File file : f.listFiles( ) )
+	      delete( file );
+	  }
+	  if (!f.delete( ) )
+	    throw new FileNotFoundException("Failed to delete file: " + f);
+    } 
     public void store( ) throws IOException {
       Writer propOut = new FileWriter( CACHE_LIST );
       try {
@@ -210,7 +218,8 @@ public class BindingCache {
         for ( File f : SubDirectory.CLASSCACHE.getFile( ).listFiles( ) ) {
           try {
             LOG.info( "Cleaning up class cache: " + f.getCanonicalPath( ) );
-            Files.deleteRecursively( f );
+            //Files.deleteRecursively( f );
+            delete(f);
           } catch ( IOException ex1 ) {
             LOG.error( ex1, ex1 );
           }
