@@ -255,6 +255,7 @@
         $instanceSelector.autocomplete({
           source: inst_ids
         });
+        $instanceSelector.watermark(instance_id_msg);
       }
       if(!$volumeSelector.val()){
         var vol_ids = [];
@@ -271,6 +272,7 @@
         $volumeSelector.autocomplete( {
           source: vol_ids
         });
+        $volumeSelector.watermark(volume_id_msg);
       }
       dfd.resolve();
     },
