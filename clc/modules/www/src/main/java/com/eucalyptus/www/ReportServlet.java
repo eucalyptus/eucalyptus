@@ -132,26 +132,30 @@ public class ReportServlet
 		
 		/* Generate the report and send it thru the OutputStream
 		 */
-		if (user.isSystemAdmin()) {
-			//Generate report of all accounts
-			ReportGenerator.getInstance().generateReport(reportType, format,
-				period, criterion, groupByCriterion, displayUnits,
-				res.getOutputStream(), null);
-		} else if (user.isAccountAdmin()) {
-			String accountId;
-			try {
-				accountId = user.getAccount().getAccountNumber();
-			} catch (AuthException aex) {
-				throw new RuntimeException("Auth failed");
+
+		String report = null;
+		try {
+			if (user.isSystemAdmin()) {
+				//Generate report of all accounts
+				report = ReportGenerationFacade.generateReport( reportType, period.getBeginningMs(), period.getEndingMs(), null );
+
+			} else if (user.isAccountAdmin()) {
+				String accountId;
+				try {
+					accountId = user.getAccount().getAccountNumber();
+				} catch (AuthException aex) {
+					throw new RuntimeException("Auth failed");
+				}
+				//Generate report of this account only
+				report = ReportGenerationFacade.generateReport( reportType, period.getBeginningMs(), period.getEndingMs(), accountId );
+			} else {
+				throw new RuntimeException("Only admins and account owners can generate reports");
 			}
-			//Generate report of this account only
-			ReportGenerator.getInstance().generateReport(reportType, format,
-					period, criterion, groupByCriterion, displayUnits,
-					res.getOutputStream(), accountId);			
-		} else {
-			throw new RuntimeException("Only admins and account owners can generate reports");
+			res.getWriter().print( report );
+		} catch (ReportGenerationFacade.ReportGenerationException e) {
+			LOG.error( e, e );
 		}
-	  
+
 	}
 
 	
