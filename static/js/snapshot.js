@@ -73,6 +73,7 @@
           header_title : snapshot_h_title,
           create_resource : snapshot_create,
           resource_found : snapshot_found,
+          resource_search : snapshot_search,
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();

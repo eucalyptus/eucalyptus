@@ -70,6 +70,7 @@
         text : {
           header_title : image_h_title,
           resource_found : image_found,
+          resource_search : image_search,
         },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $imgHelp);

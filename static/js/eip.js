@@ -63,6 +63,7 @@
           header_title : eip_h_title,
           create_resource : eip_allocate,
           resource_found : eip_found,
+          resource_search : eip_search,
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();

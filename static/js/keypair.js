@@ -51,6 +51,7 @@
           header_title : keypair_h_title,
           create_resource : keypair_create,
           resource_found : keypair_found,
+          resource_search : keypair_search,
         },
         menu_actions : function(args){ 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
