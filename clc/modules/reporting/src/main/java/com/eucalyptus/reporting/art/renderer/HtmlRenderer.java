@@ -82,7 +82,9 @@ public class HtmlRenderer
 	{
         Writer writer = new OutputStreamWriter(os);
         writer.write("<html><body>\n");
-        writer.write("<h1>Report, " + ms2Date(report.getBeginMs()) + "-" + ms2Date(report.getEndMs()) + "</h1>\n");
+        writer.write("<h1>Instance Report</h1>\n");
+        writer.write("<h4>Begin:" + ms2Date(report.getBeginMs()) + "</h4>\n");
+        writer.write("<h4>End:" + ms2Date(report.getEndMs()) + "</h4>\n");
         writer.write("<table border=0>\n");
         writer.write((new Row()).addEmptyCols(6, 50).addEmptyCols(3, 35)
         		.addCol("Net In GB-Days", 35, 3, "center")
