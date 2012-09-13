@@ -63,7 +63,7 @@ public class ReportCommand extends CommandSupport {
 
     final String reportData;
     try {
-      reportData = ReportGenerationFacade.generateReport( type, startTime, endTime );
+      reportData = ReportGenerationFacade.generateReport( type, startTime, endTime, null );
     } catch ( ReportGenerationException e ) {
       throw Exceptions.toUndeclared( e );
     }

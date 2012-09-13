@@ -86,7 +86,8 @@ public class ReportingService {
       reportData = ReportGenerationFacade.generateReport(
           Objects.firstNonNull( request.getType(), "instance" ),
           startTime,
-          endTime );
+          endTime,
+          null );
     } catch ( final Exception e ) {
       logger.error( e, e );
       throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error generating report");
