@@ -30,13 +30,7 @@ public class IndentingStringBuffer
 	public IndentingStringBuffer(final int numSpacesPerIndent)
 	{
 		this.sb = new StringBuffer();
-		
-		/* Generate a string with the appropriate number of spaces for indentation */
-		char[] charAry = new char[numSpacesPerIndent];
-		for (int i=0; i<charAry.length; i++) {
-			charAry[i] = ' ';
-		}
-		indentSpaces = new String(charAry);
+		this.indentSpaces = spaces(numSpacesPerIndent);
 	}
 	
 	public IndentingStringBuffer()
@@ -49,7 +43,7 @@ public class IndentingStringBuffer
 		sb.append(string);
 	}
 
-	public void appendIndent(int numIndents, String string)
+	public void appendIndentLine(int numIndents, String string)
 	{
 		for (int i=0; i<numIndents; i++) {
 			sb.append(indentSpaces);
@@ -60,6 +54,16 @@ public class IndentingStringBuffer
 	public String toString()
 	{
 		return sb.toString();
+	}
+	
+	public static String spaces(int numIndents)
+	{
+		/* Generate a string with the appropriate number of spaces for indentation */
+		char[] charAry = new char[numIndents*NUM_SPACES_PER_INDENT_DEFAULT];
+		for (int i=0; i<charAry.length; i++) {
+			charAry[i] = ' ';
+		}
+		return new String(charAry);		
 	}
 
 }

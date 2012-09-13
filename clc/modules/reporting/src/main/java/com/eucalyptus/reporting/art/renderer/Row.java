@@ -59,83 +59,48 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.reporting.art.renderer;
 
-package com.eucalyptus.reporting;
-
-import java.io.IOException;
-import java.io.OutputStream;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.art.generator.InstanceArtGenerator;
-import com.eucalyptus.reporting.art.renderer.HtmlRenderer;
-import com.eucalyptus.reporting.units.Units;
-
-/**
- * <p>ReportGenerator is the main class by which the reporting system is
- * accessed by outside modules. It acts as a facade for the various reporting
- * sub-packages (instance, storage, and s3 sub-packages).
- * 
- * <p>ReportGenerator contains all the jasper-related stuff.
- */
-public class ReportGenerator
+class Row
 {
-	private static Logger log = Logger.getLogger( ReportGenerator.class );
+    private final StringBuffer sb;
 
-	private static final int DEFAULT_CACHE_SIZE = 5;
-	
-	private static ReportGenerator instance;
+    public Row()
+    {
+        sb = new StringBuffer();
+    }
 
-	private ReportGenerator()
-	{
-	}
-	
-	public static ReportGenerator getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportGenerator();
-		}
-		return instance;
-	}
+    public Row addCol(String val)
+    {
+        return addCol(val, 35, 1, "center");
+    }
 
+    public Row addCol(Long val)
+    {
+        return addCol((val==null)?null:val.toString(), 35, 1, "center");
+    }
 
-	/**
-	 * STEVE: This is the method to use.
-	 * 
-	 * @param displayUnits Can be null if you just want the default units.
-	 * @param type The type of report, which is INSTANCE for the time being regardless of what you specify
-	 * @param format The report format, which must be HTML at the moment.
-	 * @param period The period for which you wish to generate a report
-	 * @param out Where to send the generated report
-	 * @param accountId The account to generate the report as, which is ignored at present.
-	 * 
-	 * @throws IOException If it cannot write to the stream you passed.
-	 */
-	public void generateReport(Period period, ReportFormat format, ReportType type,
-			Units displayUnits, OutputStream out, String accountId)
-		throws IOException
-	{
-		ReportArtEntity report = new ReportArtEntity(period.getBeginningMs(), period.getEndingMs());
-		if (displayUnits==null) displayUnits=Units.getDefaultDisplayUnits();
-		new InstanceArtGenerator().generateReportArt(report);
-		new HtmlRenderer().render(report, out, displayUnits);
-		
-		return;
-	}
-	
-	/**
-	 * Deprecated; do not use.
-	 * 
-	 * @deprecated
-	 */
-	public void generateReport(String reportType, ReportFormat format,
-			Period period, ReportingCriterion criterion,
-			ReportingCriterion groupByCriterion, Units displayUnits,
-			OutputStream out, String accountId)
-	{
-		return;
-	}
-	
-	
+    public Row addCol(Double val)
+    {
+        return addCol((val==null)?null:val.toString(), 35, 1, "center");
+    }
+
+    public Row addCol(String val, int width, int colspan, String align)
+    {
+        sb.append(String.format("<td width=%d colspan=%d align=%s>%s</td>",width,colspan,align,val));
+        return this;
+    }
+
+    public Row addEmptyCols(int num, int width)
+    {
+        for (int i=0; i<num; i++) {
+            sb.append("<td width=" + width + ">&nbsp;</td>");
+        }
+        return this;
+    }
+
+    public String toString()
+    {
+        return "<tr>" + sb.toString() + "</tr>\n";
+    }
 }

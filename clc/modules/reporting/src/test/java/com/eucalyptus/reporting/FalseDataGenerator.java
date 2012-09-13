@@ -1,5 +1,8 @@
 package com.eucalyptus.reporting;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.*;
 
 import org.apache.log4j.Logger;
@@ -32,17 +35,17 @@ import com.eucalyptus.util.ExposedCommand;
 public class FalseDataGenerator
 {
 	private static final long START_TIME       = 1104566400000l; //Jan 1, 2005 12:00AM
-	private static final long PERIOD_DURATION  = 14400000l; //4 hrs in milliseconds
-	private static final int  NUM_PERIODS      = 3000;
+	private static final long PERIOD_DURATION  = 86400000l; //24 hrs in milliseconds
+	private static final int  NUM_PERIODS      = 300;
 
 	private static final int NUM_USERS_PER_ACCOUNT        = 16;
 	private static final int NUM_ACCOUNTS_PER_CLUSTER     = 8;
 	private static final int NUM_CLUSTERS_PER_ZONE        = 4;
 	private static final int NUM_AVAIL_ZONE               = 2;
 	
-	private static final int NUM_PERIODS_PER_OBJECT       = 30;
-	private static final int NUM_PERIODS_PER_BUCKET       = 300;
-	private static final int NUM_PERIODS_PER_SNAPSHOT     = 90;
+	private static final int NUM_PERIODS_PER_OBJECT       = 3;
+	private static final int NUM_PERIODS_PER_BUCKET       = 30;
+	private static final int NUM_PERIODS_PER_SNAPSHOT     = 3;
 	/* NOTE: In this case "entity" refers to an Instance, Volume, or Elastic IP. There are always
 	 *  the same number of instances, volumes, and elastic IPs, because each volume is repeatedly
 	 *  attached and detached from its associated instance and similarly with IPs.
@@ -71,7 +74,7 @@ public class FalseDataGenerator
 	private static final long OBJECT_CUMULATIVE_GETS_PER_PERIOD    = 4;
 	private static final long OBJECT_CUMULATIVE_PUTS_PER_PERIOD    = 5;
 
-	private static final int ATTACH_PERIODS_DURATION     = 500;
+	private static final int ATTACH_PERIODS_DURATION     = 25;
 
 	
 	private static final long INSTANCE_UUID_START    = 1 * (2<<24);
@@ -170,13 +173,13 @@ public class FalseDataGenerator
 								System.out.printf("  Generating instance uuid %s\n", instanceUuid);
 								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid,
 										timeMs, ("i-" + userNum + "-" + periodNum),
-										type.toString(), user, cluster, availZone);
+										type.toString(), userId, cluster, availZone);
 								createdInstanceNum++;
 
 								volumeUuid = String.format(UUID_FORMAT, uniqueUserId, volumeUuidNum++);
 								System.out.printf("  Generating volume uuid %s\n", volumeUuid);
 								ReportingVolumeEventStore.getInstance().insertCreateEvent(volumeUuid, ("vol-" + userNum + "-" + periodNum),
-										timeMs, user, availZone, VOLUME_SIZE);
+										timeMs, userId, availZone, VOLUME_SIZE);
 
 								elasticIpUuid = String.format(UUID_FORMAT, uniqueUserId, elasticIpUuidNum++);
 								System.out.printf("  Generating elastic ip uuid %s\n", elasticIpUuid);
@@ -185,7 +188,7 @@ public class FalseDataGenerator
 										userNum % 256,
 										(periodNum >> 8) % 256,
 										periodNum % 256);
-								ReportingElasticIpEventStore.getInstance().insertCreateEvent(elasticIpUuid, timeMs, user, ip);
+								ReportingElasticIpEventStore.getInstance().insertCreateEvent(elasticIpUuid, timeMs, userId, ip);
 							}
 
 							/* Create a fake snapshot if one should be created in this period. */
@@ -194,14 +197,14 @@ public class FalseDataGenerator
 								System.out.printf("  Generating snapshot uuid %s\n", uuid);
 								ReportingVolumeSnapshotEventStore.getInstance().insertCreateEvent(uuid,
 										("snap-" + userNum + "-" + periodNum),
-										timeMs, user, SNAPSHOT_SIZE);
+										timeMs, userId, SNAPSHOT_SIZE);
 							}
 							
 							/* Create a fake bucket if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
 								System.out.printf("  Generating bucket uuid %s\n", bucketUuid);
-								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, BUCKET_SIZE, user, timeMs);
+								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, BUCKET_SIZE, userId, timeMs);
 							}
 							
 							/* Create a fake object if one should be created in this period. */
@@ -209,7 +212,7 @@ public class FalseDataGenerator
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
 								System.out.printf("  Generating object uuid %s\n", uuid);
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
-										OBJECT_SIZE, timeMs, user);
+										OBJECT_SIZE, timeMs, userId);
 							}
 							
 								
@@ -246,7 +249,7 @@ public class FalseDataGenerator
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
 								System.out.printf("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid);
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
-										bucketUuid,	uuid, OBJECT_SIZE, timeMs, user );
+										bucketUuid,	uuid, OBJECT_SIZE, timeMs, userId );
 							}
 
 							/* Attach Volumes and Elastic IPs to Instances */
@@ -305,10 +308,29 @@ public class FalseDataGenerator
 	}
 
 	@ExposedCommand
-	public static void generateTestReport()
+	public static void generateReport()
 	{
-		log.debug(" ----> GENERATING TEST REPORT");
+		log.debug(" ----> GENERATING REPORT");
 
+		Period period = new Period(START_TIME + (PERIOD_DURATION*3), START_TIME + (PERIOD_DURATION * 200));
+		
+		File file = new File("/tmp/report.html");
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(file);
+			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
+					ReportType.INSTANCE, null, fos, null);
+		} catch (IOException iox) {
+			log.error("Error generating report", iox);
+		} finally {
+			if (fos!=null) {
+				try {
+					fos.close();
+				} catch (IOException e) {
+					log.error("Error closing stream", e);
+				}
+			}
+		}
 	}
 
 	@ExposedCommand
