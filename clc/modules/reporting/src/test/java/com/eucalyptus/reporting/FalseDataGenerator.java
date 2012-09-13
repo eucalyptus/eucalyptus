@@ -222,14 +222,14 @@ public class FalseDataGenerator
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								System.out.printf("  Generating instance usage uuid %s\n", uuid);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid, timeMs,
-										INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD,
+										INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD*periodNum,
 										INSTANCE_CPU_UTILIZATION_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_INCOMING_WITHIN_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_INCOMING_PUBLIC_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_OUTGOING_BETWEEN_USAGE_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_OUTGOING_WITHIN_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_OUTGOING_PUBLIC_PER_PERIOD);									
+										INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD*periodNum,
+										INSTANCE_CUMULATIVE_NET_INCOMING_WITHIN_PER_PERIOD*periodNum,
+										INSTANCE_CUMULATIVE_NET_INCOMING_PUBLIC_PER_PERIOD*periodNum,
+										INSTANCE_CUMULATIVE_NET_OUTGOING_BETWEEN_USAGE_PER_PERIOD*periodNum,
+										INSTANCE_CUMULATIVE_NET_OUTGOING_WITHIN_PER_PERIOD*periodNum,
+										INSTANCE_CUMULATIVE_NET_OUTGOING_PUBLIC_PER_PERIOD*periodNum);
 							}
 
 							/* Generate volume usage in this period for every volume that was created before */

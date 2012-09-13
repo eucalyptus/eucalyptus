@@ -72,6 +72,9 @@ import com.eucalyptus.reporting.units.Units;
 
 public class HtmlRenderer
 {
+	private static final int LABEL_WIDTH = 50;
+	private static final int VALUE_WIDTH = 80;
+	
 	public HtmlRenderer()
 	{
 		
@@ -86,41 +89,41 @@ public class HtmlRenderer
         writer.write("<h4>Begin:" + ms2Date(report.getBeginMs()) + "</h4>\n");
         writer.write("<h4>End:" + ms2Date(report.getEndMs()) + "</h4>\n");
         writer.write("<table border=0>\n");
-        writer.write((new Row()).addEmptyCols(6, 50).addEmptyCols(3, 35)
-        		.addCol("Net In GB-Days", 35, 3, "center")
-        		.addCol("Net Out GB-Days", 35, 3, "center").toString());
-        writer.write((new Row()).addEmptyCols(6, 50).addCol("InstanceId").addCol("Type").addCol("CpuUsage%")
+        writer.write((new Row()).addEmptyCols(6, LABEL_WIDTH).addEmptyCols(3, VALUE_WIDTH)
+        		.addCol("Net In " + units.getSizeUnit(), VALUE_WIDTH, 3, "center")
+        		.addCol("Net Out " + units.getSizeUnit(), VALUE_WIDTH, 3, "center").toString());
+        writer.write((new Row()).addEmptyCols(6, LABEL_WIDTH).addCol("InstanceId").addCol("Type").addCol("CpuUsage%")
         		.addCol("Between").addCol("Within").addCol("Public").addCol("Between").addCol("Within")
         		.addCol("Public").toString());
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-            writer.write((new InsRow()).addCol("Zone:" + zoneName, 50, 3, "left").addEmptyCols(3, 50)
+            writer.write((new InsRow()).addCol("Zone: " + zoneName, LABEL_WIDTH, 3, "left").addEmptyCols(3, LABEL_WIDTH)
             		.addCol("cumul.").addCol("cumul.")
             		.addUsageCols(zone.getUsageTotals().getInstanceTotals(), units)
             		.toString());
             for (String clusterName: zone.getClusters().keySet()) {
             	ClusterArtEntity cluster = zone.getClusters().get(clusterName);
-                writer.write((new InsRow()).addEmptyCols(1,50)
-                		.addCol("Cluster: " + clusterName, 50, 3, "left").addEmptyCols(2, 50)
+                writer.write((new InsRow()).addEmptyCols(1,LABEL_WIDTH)
+                		.addCol("Cluster: " + clusterName, LABEL_WIDTH, 3, "left").addEmptyCols(2, LABEL_WIDTH)
                 		.addCol("cumul.").addCol("cumul.")
                 		.addUsageCols(zone.getUsageTotals().getInstanceTotals(),units)
                 		.toString());
                 for (String accountName: cluster.getAccounts().keySet()) {
                 	AccountArtEntity account = cluster.getAccounts().get(accountName);
-                    writer.write((new InsRow()).addEmptyCols(2,50)
-                    		.addCol("Account: " + accountName, 50, 3, "left").addEmptyCols(1, 50)
+                    writer.write((new InsRow()).addEmptyCols(2,LABEL_WIDTH)
+                    		.addCol("Account: " + accountName, LABEL_WIDTH, 3, "left").addEmptyCols(1, LABEL_WIDTH)
                     		.addCol("cumul.").addCol("cumul.")
                     		.addUsageCols(zone.getUsageTotals().getInstanceTotals(),units)
                     		.toString());
                     for (String userName: account.getUsers().keySet()) {
                     	UserArtEntity user = account.getUsers().get(userName);
-                        writer.write((new InsRow()).addEmptyCols(3,50)
-                        		.addCol("User: " + userName, 50, 3, "left").addCol("cumul.")
+                        writer.write((new InsRow()).addEmptyCols(3,LABEL_WIDTH)
+                        		.addCol("User: " + userName, LABEL_WIDTH, 3, "left").addCol("cumul.")
                         		.addCol("cumul.").addUsageCols(zone.getUsageTotals().getInstanceTotals(),units)
                         		.toString());
                         for (String instanceUuid: user.getInstances().keySet()) {
                         	InstanceArtEntity instance = user.getInstances().get(instanceUuid);
-                        	writer.write((new InsRow()).addEmptyCols(6,50)
+                        	writer.write((new InsRow()).addEmptyCols(6,LABEL_WIDTH)
                         			.addCol(instance.getInstanceId()).addCol(instance.getInstanceType())
                         			.addUsageCols(zone.getUsageTotals().getInstanceTotals(), units)
                         			.toString());
@@ -139,17 +142,17 @@ public class HtmlRenderer
 	{
 	    public InsRow addCol(String val)
 	    {
-	        return addCol(val, 35, 1, "center");
+	        return addCol(val, VALUE_WIDTH, 1, "center");
 	    }
 
 	    public InsRow addCol(Long val)
 	    {
-            return addCol((val==null)?null:val.toString(), 35, 1, "center");
+            return addCol((val==null)?null:val.toString(), VALUE_WIDTH, 1, "center");
 	    }
 
 	    public InsRow addCol(Double val)
 	    {
-            return addCol((val==null)?null:val.toString(), 35, 1, "center");
+            return addCol((val==null)?null:String.format("%3.1f", val), VALUE_WIDTH, 1, "center");
 	    }
 
 	    public InsRow addCol(String val, int width, int colspan, String align)
@@ -167,24 +170,12 @@ public class HtmlRenderer
 		public Row addUsageCols(InstanceUsageArtEntity entity, Units units)
 		{
 			addCol(entity.getCpuPercentAvg());
-			addCol(UnitUtil.convertSizeTime(
-					entity.getNetIoBetweenZoneInMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
-			addCol(UnitUtil.convertSizeTime(
-					entity.getNetIoWithinZoneInMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
-			addCol(UnitUtil.convertSizeTime(
-					entity.getNetIoPublicIpInMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
-			addCol(UnitUtil.convertSizeTime(
-					entity.getNetIoBetweenZoneOutMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
-			addCol(UnitUtil.convertSizeTime(
-					entity.getNetIoWithinZoneOutMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
-			addCol(UnitUtil.convertSizeTime(
-					entity.getNetIoPublicIpOutMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
+			addCol(UnitUtil.convertSize(entity.getNetIoBetweenZoneInMegs(), SizeUnit.MB, units.getSizeUnit()));
+			addCol(UnitUtil.convertSize(entity.getNetIoWithinZoneInMegs(), SizeUnit.MB, units.getSizeUnit()));
+			addCol(UnitUtil.convertSize(entity.getNetIoPublicIpInMegs(), SizeUnit.MB, units.getSizeUnit()));
+			addCol(UnitUtil.convertSize(entity.getNetIoBetweenZoneOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+			addCol(UnitUtil.convertSize(entity.getNetIoWithinZoneOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+			addCol(UnitUtil.convertSize(entity.getNetIoPublicIpOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 			return this;
 		}
 	}

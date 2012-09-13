@@ -71,52 +71,18 @@ public class InstanceUsageArtEntity
 	private long durationMs = 0l;
 
 	/* Attributes for usage-days */
-	private Long diskIoMegSecs = null;
-	private Long netIoWithinZoneInMegSecs = null;
-	private Long netIoBetweenZoneInMegSecs = null;
-	private Long netIoPublicIpInMegSecs = null;
-	private Long netIoWithinZoneOutMegSecs = null;
-	private Long netIoBetweenZoneOutMegSecs = null;
-	private Long netIoPublicIpOutMegSecs = null;
+	private Long diskIoMegs = null;
+	private Long netIoWithinZoneInMegs = null;
+	private Long netIoBetweenZoneInMegs = null;
+	private Long netIoPublicIpInMegs = null;
+	private Long netIoWithinZoneOutMegs = null;
+	private Long netIoBetweenZoneOutMegs = null;
+	private Long netIoPublicIpOutMegs = null;
 
-	/* Attributes for max usage */
-	private Long diskIoMegMax = null;
-	private Long netIoWithinZoneInMegMax = null;
-	private Long netIoBetweenZoneInMegMax = null;
-	private Long netIoPublicIpInMegMax = null;
-	private Long netIoWithinZoneOutMegMax = null;
-	private Long netIoBetweenZoneOutMegMax = null;
-	private Long netIoPublicIpOutMegMax = null;
-	
 	public InstanceUsageArtEntity()
 	{
 	}
 
-	public InstanceUsageArtEntity(Double cpuPercentAvg,
-			Long diskIoMegSecs, Long netIoWithinZoneInMegSecs,
-			Long netIoBetweenZoneInMegSecs, Long netIoPublicIpInMegSecs,
-			Long netIoWithinZoneOutMegSecs, Long netIoBetweenZoneOutMegSecs,
-			Long netIoPublicIpOutMegSecs, Long diskIoMegMax,
-			Long netIoWithinZoneInMegMax, Long netIoBetweenZoneInMegMax,
-			Long netIoPublicIpInMegMax, Long netIoWithinZoneOutMegMax,
-			Long netIoBetweenZoneOutMegMax, Long netIoPublicIpOutMegMax)
-	{
-		this.cpuPercentAvg = cpuPercentAvg;
-		this.diskIoMegSecs = diskIoMegSecs;
-		this.netIoWithinZoneInMegSecs = netIoWithinZoneInMegSecs;
-		this.netIoBetweenZoneInMegSecs = netIoBetweenZoneInMegSecs;
-		this.netIoPublicIpInMegSecs = netIoPublicIpInMegSecs;
-		this.netIoWithinZoneOutMegSecs = netIoWithinZoneOutMegSecs;
-		this.netIoBetweenZoneOutMegSecs = netIoBetweenZoneOutMegSecs;
-		this.netIoPublicIpOutMegSecs = netIoPublicIpOutMegSecs;
-		this.diskIoMegMax = diskIoMegMax;
-		this.netIoWithinZoneInMegMax = netIoWithinZoneInMegMax;
-		this.netIoBetweenZoneInMegMax = netIoBetweenZoneInMegMax;
-		this.netIoPublicIpInMegMax = netIoPublicIpInMegMax;
-		this.netIoWithinZoneOutMegMax = netIoWithinZoneOutMegMax;
-		this.netIoBetweenZoneOutMegMax = netIoBetweenZoneOutMegMax;
-		this.netIoPublicIpOutMegMax = netIoPublicIpOutMegMax;
-	}
 
 	public Double getCpuPercentAvg()
 	{
@@ -128,74 +94,39 @@ public class InstanceUsageArtEntity
 		return durationMs;
 	}
 	
-	public Long getDiskIoMegSecs()
+	public Long getDiskIoMegs()
 	{
-		return diskIoMegSecs;
+		return diskIoMegs;
 	}
 
-	public Long getNetIoWithinZoneInMegSecs()
+	public Long getNetIoWithinZoneInMegs()
 	{
-		return netIoWithinZoneInMegSecs;
+		return netIoWithinZoneInMegs;
 	}
 
-	public Long getNetIoBetweenZoneInMegSecs()
+	public Long getNetIoBetweenZoneInMegs()
 	{
-		return netIoBetweenZoneInMegSecs;
+		return netIoBetweenZoneInMegs;
 	}
 
-	public Long getNetIoPublicIpInMegSecs()
+	public Long getNetIoPublicIpInMegs()
 	{
-		return netIoPublicIpInMegSecs;
+		return netIoPublicIpInMegs;
 	}
 
-	public Long getNetIoWithinZoneOutMegSecs()
+	public Long getNetIoWithinZoneOutMegs()
 	{
-		return netIoWithinZoneOutMegSecs;
+		return netIoWithinZoneOutMegs;
 	}
 
-	public Long getNetIoBetweenZoneOutMegSecs()
+	public Long getNetIoBetweenZoneOutMegs()
 	{
-		return netIoBetweenZoneOutMegSecs;
+		return netIoBetweenZoneOutMegs;
 	}
 
-	public Long getNetIoPublicIpOutMegSecs()
+	public Long getNetIoPublicIpOutMegs()
 	{
-		return netIoPublicIpOutMegSecs;
-	}
-
-	public Long getDiskIoMegMax()
-	{
-		return diskIoMegMax;
-	}
-
-	public Long getNetIoWithinZoneInMegMax()
-	{
-		return netIoWithinZoneInMegMax;
-	}
-
-	public Long getNetIoBetweenZoneInMegMax()
-	{
-		return netIoBetweenZoneInMegMax;
-	}
-
-	public Long getNetIoPublicIpInMegMax()
-	{
-		return netIoPublicIpInMegMax;
-	}
-
-	public Long getNetIoWithinZoneOutMegMax()
-	{
-		return netIoWithinZoneOutMegMax;
-	}
-
-	public Long getNetIoBetweenZoneOutMegMax()
-	{
-		return netIoBetweenZoneOutMegMax;
-	}
-
-	public Long getNetIoPublicIpOutMegMax()
-	{
-		return netIoPublicIpOutMegMax;
+		return netIoPublicIpOutMegs;
 	}
 
 	public void setCpuPercentAvg(Double cpuPercentAvg)
@@ -208,84 +139,46 @@ public class InstanceUsageArtEntity
 		this.durationMs = addMs;
 	}
 
-	public void setDiskIoMegSecs(Long diskIoMegSecs)
+	public void setDiskIoMegs(Long diskIoMegs)
 	{
-		this.diskIoMegSecs = diskIoMegSecs;
+		this.diskIoMegs = diskIoMegs;
 	}
 
-	public void setNetIoWithinZoneInMegSecs(Long netIoWithinZoneInMegSecs)
+	public void setNetIoWithinZoneInMegs(Long netIoWithinZoneInMegs)
 	{
-		this.netIoWithinZoneInMegSecs = netIoWithinZoneInMegSecs;
+		this.netIoWithinZoneInMegs = netIoWithinZoneInMegs;
 	}
 
-	public void setNetIoBetweenZoneInMegSecs(Long netIoBetweenZoneInMegSecs)
+	public void setNetIoBetweenZoneInMegs(Long netIoBetweenZoneInMegs)
 	{
-		this.netIoBetweenZoneInMegSecs = netIoBetweenZoneInMegSecs;
+		this.netIoBetweenZoneInMegs = netIoBetweenZoneInMegs;
 	}
 
-	public void setNetIoPublicIpInMegSecs(Long netIoPublicIpInMegSecs)
+	public void setNetIoPublicIpInMegs(Long netIoPublicIpInMegs)
 	{
-		this.netIoPublicIpInMegSecs = netIoPublicIpInMegSecs;
+		this.netIoPublicIpInMegs = netIoPublicIpInMegs;
 	}
 
-	public void setNetIoWithinZoneOutMegSecs(Long netIoWithinZoneOutMegSecs)
+	public void setNetIoWithinZoneOutMegs(Long netIoWithinZoneOutMegs)
 	{
-		this.netIoWithinZoneOutMegSecs = netIoWithinZoneOutMegSecs;
+		this.netIoWithinZoneOutMegs = netIoWithinZoneOutMegs;
 	}
 
-	public void setNetIoBetweenZoneOutMegSecs(Long netIoBetweenZoneOutMegSecs)
+	public void setNetIoBetweenZoneOutMegs(Long netIoBetweenZoneOutMegs)
 	{
-		this.netIoBetweenZoneOutMegSecs = netIoBetweenZoneOutMegSecs;
+		this.netIoBetweenZoneOutMegs = netIoBetweenZoneOutMegs;
 	}
 
-	public void setNetIoPublicIpOutMegSecs(Long netIoPublicIpOutMegSecs)
+	public void setNetIoPublicIpOutMegs(Long netIoPublicIpOutMegs)
 	{
-		this.netIoPublicIpOutMegSecs = netIoPublicIpOutMegSecs;
-	}
-
-	public void setDiskIoMegMax(Long diskIoMegMax)
-	{
-		this.diskIoMegMax = diskIoMegMax;
-	}
-
-	public void setNetIoWithinZoneInMegMax(Long netIoWithinZoneInMegMax)
-	{
-		this.netIoWithinZoneInMegMax = netIoWithinZoneInMegMax;
-	}
-
-	public void setNetIoBetweenZoneInMegMax(Long netIoBetweenZoneInMegMax)
-	{
-		this.netIoBetweenZoneInMegMax = netIoBetweenZoneInMegMax;
-	}
-
-	public void setNetIoPublicIpInMegMax(Long netIoPublicIpInMegMax)
-	{
-		this.netIoPublicIpInMegMax = netIoPublicIpInMegMax;
-	}
-
-	public void setNetIoWithinZoneOutMegMax(Long netIoWithinZoneOutMegMax)
-	{
-		this.netIoWithinZoneOutMegMax = netIoWithinZoneOutMegMax;
-	}
-
-	public void setNetIoBetweenZoneOutMegMax(Long netIoBetweenZoneOutMegMax)
-	{
-		this.netIoBetweenZoneOutMegMax = netIoBetweenZoneOutMegMax;
-	}
-
-	public void setNetIoPublicIpOutMegMax(Long netIoPublicIpOutMegMax)
-	{
-		this.netIoPublicIpOutMegMax = netIoPublicIpOutMegMax;
+		this.netIoPublicIpOutMegs = netIoPublicIpOutMegs;
 	}
 
 	public String toString()
 	{
-		return String.format("(%3f %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d %4d)",
-				cpuPercentAvg, diskIoMegSecs, netIoWithinZoneInMegSecs, netIoBetweenZoneInMegSecs,
-				netIoPublicIpInMegSecs, netIoWithinZoneOutMegSecs, netIoBetweenZoneOutMegSecs,
-				netIoPublicIpOutMegMax, diskIoMegMax, netIoWithinZoneInMegMax, netIoBetweenZoneInMegMax,
-				netIoPublicIpInMegMax, netIoWithinZoneOutMegMax, netIoBetweenZoneOutMegMax,
-				netIoPublicIpOutMegMax);
+		return String.format("(%3f %4d %4d %4d %4d %4d %4d)",
+				cpuPercentAvg, diskIoMegs, netIoWithinZoneInMegs, netIoBetweenZoneInMegs,
+				netIoPublicIpInMegs, netIoWithinZoneOutMegs, netIoBetweenZoneOutMegs);
 	}
 
 }
