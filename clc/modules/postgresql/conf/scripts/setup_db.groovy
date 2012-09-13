@@ -340,6 +340,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             final Map<String,String> requiredProperties = [
                     max_connections: '8192',
                     unix_socket_directory: "'" + SubDirectory.DB.getChildPath( EUCA_DB_DIR ) + "'",
+                    unix_socket_directories: "'" + SubDirectory.DB.getChildPath( EUCA_DB_DIR ) + "'",
                     ssl: PG_USE_SSL ? 'on' : 'off',
                     ssl_ciphers: '\'AES128-SHA:AES256-SHA\''
             ]
