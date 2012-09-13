@@ -23,6 +23,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.eucalyptus.reporting.export.Export;
@@ -36,18 +38,16 @@ import com.google.common.collect.Maps;
  */
 public class ReportGenerationFacade {
 
-    public static String generateReport( final String type,
-                                         final long start,
-                                         final long end ) throws ReportGenerationException {
-
+    public static String generateReport( @Nonnull  final String type,
+                                                   final long start,
+                                                   final long end,
+                                         @Nullable final String accountId ) throws ReportGenerationException {
       final String report;
       if ( !"raw".equals(type) ) {
         final ReportGenerator generator = ReportGenerator.getInstance();
         final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
         try {
-          //TODO:STEVE: generate report
-          //generator.generateReport( ... );
-          reportOutput.write( ("REPORT CONTENT HERE\n type:" + type + ", start=" + start + ", end=" + end).getBytes(Charsets.UTF_8) );
+          generator.generateReport( new Period( start, end ), ReportFormat.HTML, ReportType.valueOf(type), null, reportOutput, null );
         } catch ( final Exception e ) {
           throw new ReportGenerationException( "Error generating report", e );
         }

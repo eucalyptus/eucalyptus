@@ -158,16 +158,17 @@
                             <td>From</td>
                             <td>Through</td>
                             <td>Report type</td>
-                            <td>Criteria</td>
-                            <td>Group by</td>
+                            <!--<td>Criteria</td>-->
+                            <!--<td>Group by</td>-->
                             <td>&nbsp;</td>
                         </tr>
                         <tr>
                             <td><d:DateBox addStyleNames="{style.input}" ui:field="fromDate"/></td>
                             <td><d:DateBox addStyleNames="{style.input}" ui:field="toDate"/></td>
                             <td><g:ListBox addStyleNames="{style.list}" ui:field="type"/></td>
-                            <td><g:ListBox addStyleNames="{style.list}" ui:field="criteria"/></td>
-                            <td><g:ListBox addStyleNames="{style.list}" ui:field="groupBy"/></td>
+                            <!-- TODO:STEVE:  re-enable if applicable later-->
+                            <!--<td><g:ListBox addStyleNames="{style.list}" ui:field="criteria"/></td>-->
+                            <!--<td><g:ListBox addStyleNames="{style.list}" ui:field="groupBy"/></td>-->
                             <td>
                                 <g:Anchor styleName="{global.buttonCss.button}" ui:field="generateButton">
                                     <span class="{global.buttonCss.report} {global.buttonCss.icon}"/>Generate
@@ -183,8 +184,9 @@
                 <table class="{style.mime}">
                     <tbody>
                         <tr>
-                            <td><g:Anchor styleName="{style.link}" ui:field="pdfButton"><span class="{style.pdf}"/></g:Anchor></td>
-                            <td><g:Anchor styleName="{style.link}" ui:field="csvButton"><span class="{style.csv}"/></g:Anchor></td>
+                            <!-- TODO:STEVE:  re-enable if applicable later-->
+                            <!--<td><g:Anchor styleName="{style.link}" ui:field="pdfButton"><span class="{style.pdf}"/></g:Anchor></td>-->
+                            <!--<td><g:Anchor styleName="{style.link}" ui:field="csvButton"><span class="{style.csv}"/></g:Anchor></td>-->
                             <td><g:Anchor styleName="{style.link}" ui:field="htmlButton"><span class="{style.html}"/></g:Anchor></td>
                         </tr>
                     </tbody>
