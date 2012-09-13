@@ -140,14 +140,14 @@ public class HtmlRenderer
 	        return addCol(val, 35, 1, "center");
 	    }
 
-	    public InsRow addCol(int val)
+	    public InsRow addCol(Long val)
 	    {
-	        return addCol(""+val, 35, 1, "center");
+            return addCol((val==null)?null:val.toString(), 35, 1, "center");
 	    }
 
-	    public InsRow addCol(double val)
+	    public InsRow addCol(Double val)
 	    {
-	        return addCol(""+val, 35, 1, "center");
+            return addCol((val==null)?null:val.toString(), 35, 1, "center");
 	    }
 
 	    public InsRow addCol(String val, int width, int colspan, String align)
@@ -164,23 +164,23 @@ public class HtmlRenderer
 
 		public Row addUsageCols(InstanceUsageArtEntity entity, Units units)
 		{
-			addCol(entity.getCpuPercentAvg())
-			.addCol(UnitUtil.convertSizeTime(
+			addCol(entity.getCpuPercentAvg());
+			addCol(UnitUtil.convertSizeTime(
 					entity.getNetIoBetweenZoneInMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()))
-			.addCol(UnitUtil.convertSizeTime(
+					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
+			addCol(UnitUtil.convertSizeTime(
 					entity.getNetIoWithinZoneInMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()))
-			.addCol(UnitUtil.convertSizeTime(
+					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
+			addCol(UnitUtil.convertSizeTime(
 					entity.getNetIoPublicIpInMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()))
-			.addCol(UnitUtil.convertSizeTime(
+					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
+			addCol(UnitUtil.convertSizeTime(
 					entity.getNetIoBetweenZoneOutMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()))
-			.addCol(UnitUtil.convertSizeTime(
+					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
+			addCol(UnitUtil.convertSizeTime(
 					entity.getNetIoWithinZoneOutMegSecs(),
-					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()))
-			.addCol(UnitUtil.convertSizeTime(
+					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
+			addCol(UnitUtil.convertSizeTime(
 					entity.getNetIoPublicIpOutMegSecs(),
 					SizeUnit.MB, units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
 			return this;

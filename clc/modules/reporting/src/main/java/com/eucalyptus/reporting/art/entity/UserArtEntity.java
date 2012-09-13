@@ -76,6 +76,7 @@ public class UserArtEntity
 	{
 		super();
 		this.instances = new HashMap<String,InstanceArtEntity>();
+		this.totals = new UsageTotalsArtEntity();
 	}
 
 	public Map<String,InstanceArtEntity> getInstances()
@@ -88,15 +89,10 @@ public class UserArtEntity
 		return totals;
 	}
 
-	public void setUsageTotals(UsageTotalsArtEntity usageTotals)
-	{
-		this.totals = usageTotals;
-	}
-
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s instances:{", totals.toString()));
+		sb.appendIndentLine(numIndents, String.format("(totals:%s instances:{", totals));
 		for (String uuid : instances.keySet()) {
 			sb.appendIndentLine(numIndents+1, instances.get(uuid).toString());			
 		}

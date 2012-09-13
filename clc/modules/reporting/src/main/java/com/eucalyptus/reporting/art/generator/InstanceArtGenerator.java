@@ -233,11 +233,16 @@ public class InstanceArtGenerator
 
 				/* Update cpu average */
 				long durationMs = Math.min(report.getEndMs(), usageEvent.getTimestampMs())-Math.max(report.getBeginMs(), lastMs);
-				double newWeightedAverage = (usage.getCpuPercentAvg() * (double)usage.getDurationMs()
-						+ (double)usageEvent.getCpuUtilizationPercent() * (double)durationMs)
-						/((double)usage.getDurationMs()+(double)durationMs);
-				usage.setCpuPercentAvg(newWeightedAverage);
-				usage.addDurationMs(durationMs);
+				if (usage.getCpuPercentAvg() == null && usageEvent.getCpuUtilizationPercent() != null) {
+					usage.setCpuPercentAvg((double)usageEvent.getCpuUtilizationPercent());
+					usage.addDurationMs(durationMs);
+				} else if (usage.getCpuPercentAvg() != null && usageEvent.getCpuUtilizationPercent() != null) {
+					double newWeightedAverage = (usage.getCpuPercentAvg() * (double)usage.getDurationMs()
+							+ (double)usageEvent.getCpuUtilizationPercent() * (double)durationMs)
+							/((double)usage.getDurationMs()+(double)durationMs);
+					usage.setCpuPercentAvg(newWeightedAverage);
+					usage.addDurationMs(durationMs);
+				}
 			}
 
 			log.debug("Post-interpolated Usage:" + usage.toString());
@@ -287,11 +292,16 @@ public class InstanceArtGenerator
 		InstanceUsageArtEntity newEntity = instance.getUsage();
 		
 		/* Update total average for this instance type, based upon instance average */
-		double newWeightedAverage = (totalEntity.getCpuPercentAvg() * (double)totalEntity.getDurationMs()
-				+ (double)newEntity.getCpuPercentAvg() * (double)newEntity.getDurationMs())
-				/((double)totalEntity.getDurationMs()+(double)newEntity.getDurationMs());
-		totalEntity.setCpuPercentAvg(newWeightedAverage);
-		totalEntity.addDurationMs(newEntity.getDurationMs());
+		if (totalEntity.getCpuPercentAvg() == null && newEntity.getCpuPercentAvg() != null) {
+			totalEntity.setCpuPercentAvg(newEntity.getCpuPercentAvg());
+			totalEntity.addDurationMs(newEntity.getDurationMs());
+		} else if (newEntity.getCpuPercentAvg() != null && totalEntity.getCpuPercentAvg() != null) {
+			double newWeightedAverage = (totalEntity.getCpuPercentAvg() * (double)totalEntity.getDurationMs()
+					+ (double)newEntity.getCpuPercentAvg() * (double)newEntity.getDurationMs())
+					/((double)totalEntity.getDurationMs()+(double)newEntity.getDurationMs());
+			totalEntity.setCpuPercentAvg(newWeightedAverage);
+			totalEntity.addDurationMs(newEntity.getDurationMs());
+		}
 		
 		/* Add meg-secs from this instance to totals for this instance type */
 		totalEntity.setDiskIoMegSecs(

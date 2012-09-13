@@ -75,6 +75,7 @@ public class AccountArtEntity
 	public AccountArtEntity()
 	{
 		this.users = new HashMap<String,UserArtEntity>();
+		this.usageTotals = new UsageTotalsArtEntity();
 	}
 
 	public Map<String,UserArtEntity> getUsers()
@@ -86,18 +87,13 @@ public class AccountArtEntity
 	{
 		return usageTotals;
 	}
-	
-	public void setUsageTotals(UsageTotalsArtEntity usageTotals)
-	{
-		this.usageTotals = usageTotals;
-	}
 
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s users:{"));
+		sb.appendIndentLine(numIndents, String.format("(totals:%s users:{",usageTotals));
 		for (String username : users.keySet()) {
-			sb.appendIndentLine(numIndents+1, users.get(username).toString());			
+			sb.appendIndentLine(numIndents+1, users.get(username).prettyPrint(numIndents+1));			
 		}
 		sb.appendIndentLine(numIndents, "})");
 		return sb.toString();

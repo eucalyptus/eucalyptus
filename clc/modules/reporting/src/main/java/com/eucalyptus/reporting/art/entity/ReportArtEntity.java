@@ -79,7 +79,7 @@ public class ReportArtEntity
 		this.beginMs = beginMs;
 		this.endMs = endMs;
 		this.zones = new HashMap<String, AvailabilityZoneArtEntity>();
-		this.usageTotals = null;
+		this.usageTotals = new UsageTotalsArtEntity();
 	}
 
 	public long getBeginMs()
@@ -102,17 +102,12 @@ public class ReportArtEntity
 		return usageTotals;
 	}
 
-	public void setUsageTotals(UsageTotalsArtEntity usageTotals)
-	{
-		this.usageTotals = usageTotals;
-	}
-
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(period:%d-%d totals:%s zones:{"));
+		sb.appendIndentLine(numIndents, String.format("(period:%d-%d totals:%s zones:{", beginMs, endMs, usageTotals));
 		for (String zonename : zones.keySet()) {
-			sb.appendIndentLine(numIndents+1, zones.get(zonename).toString());			
+			sb.appendIndentLine(numIndents+1, zones.get(zonename).prettyPrint(numIndents+1));			
 		}
 		sb.appendIndentLine(numIndents, "})");
 		return sb.toString();

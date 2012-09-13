@@ -75,6 +75,7 @@ public class ClusterArtEntity
 	public ClusterArtEntity()
 	{
 		this.accounts = new HashMap<String, AccountArtEntity>();
+		this.usageTotals = new UsageTotalsArtEntity();
 	}
 
 	public Map<String, AccountArtEntity> getAccounts()
@@ -87,17 +88,12 @@ public class ClusterArtEntity
 		return usageTotals;
 	}
 
-	public void setUsageTotals(UsageTotalsArtEntity usageTotals)
-	{
-		this.usageTotals = usageTotals;
-	}
-
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s accounts:{"));
+		sb.appendIndentLine(numIndents, String.format("(totals:%s accounts:{",usageTotals));
 		for (String accountname : accounts.keySet()) {
-			sb.appendIndentLine(numIndents+1, accounts.get(accountname).toString());			
+			sb.appendIndentLine(numIndents+1, accounts.get(accountname).prettyPrint(numIndents+1));			
 		}
 		sb.appendIndentLine(numIndents, "})");
 		return sb.toString();

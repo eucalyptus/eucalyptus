@@ -75,6 +75,7 @@ public class AvailabilityZoneArtEntity
 	public AvailabilityZoneArtEntity()
 	{
 		this.clusters = new HashMap<String, ClusterArtEntity>();
+		this.usageTotals = new UsageTotalsArtEntity();
 	}
 
 	public Map<String,ClusterArtEntity> getClusters()
@@ -87,17 +88,12 @@ public class AvailabilityZoneArtEntity
 		return usageTotals;
 	}
 
-	public void setUsageTotals(UsageTotalsArtEntity usageTotals)
-	{
-		this.usageTotals = usageTotals;
-	}
-
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s clusters:{"));
+		sb.appendIndentLine(numIndents, String.format("(totals:%s clusters:{", usageTotals));
 		for (String clustername : clusters.keySet()) {
-			sb.appendIndentLine(numIndents+1, clusters.get(clustername).toString());			
+			sb.appendIndentLine(numIndents+1, clusters.get(clustername).prettyPrint(numIndents+1));			
 		}
 		sb.appendIndentLine(numIndents, "})");
 		return sb.toString();

@@ -75,14 +75,14 @@ class Row
         return addCol(val, 35, 1, "center");
     }
 
-    public Row addCol(int val)
+    public Row addCol(Long val)
     {
-        return addCol(""+val, 35, 1, "center");
+        return addCol((val==null)?null:val.toString(), 35, 1, "center");
     }
 
-    public Row addCol(double val)
+    public Row addCol(Double val)
     {
-        return addCol(""+val, 35, 1, "center");
+        return addCol((val==null)?null:val.toString(), 35, 1, "center");
     }
 
     public Row addCol(String val, int width, int colspan, String align)
