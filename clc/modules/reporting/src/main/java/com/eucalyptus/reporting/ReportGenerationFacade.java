@@ -47,7 +47,7 @@ public class ReportGenerationFacade {
         final ReportGenerator generator = ReportGenerator.getInstance();
         final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
         try {
-          generator.generateReport( new Period( start, end ), ReportFormat.HTML, ReportType.valueOf(type), null, reportOutput, null );
+          generator.generateReport( new Period( start, end ), ReportFormat.HTML, ReportType.valueOf(type.toUpperCase()), null, reportOutput, null );
         } catch ( final Exception e ) {
           throw new ReportGenerationException( "Error generating report", e );
         }
