@@ -71,6 +71,14 @@
       });
       $launcher.appendTo(thisObj.element);
      },
+     close : function(){ 
+       var thisObj = this;
+       thisObj.options['image'] = null;
+       thisObj.options['type'] = null;
+       thisObj.options['security'] = null;
+       thisObj.options['advanced'] = null;
+       this._super('close');
+     },
 
     _destroy : function() { },
 
