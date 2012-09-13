@@ -64,8 +64,10 @@
 
 package com.eucalyptus.ws.server;
 
+import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.ws.handlers.BindingHandler;
@@ -74,6 +76,8 @@ import com.eucalyptus.ws.stages.WalrusSoapUserAuthenticationStage;
 
 @ComponentPart( Walrus.class )
 public class WalrusSoapPipeline extends FilteredPipeline {
+  private static final String DEFAULT_S3_SOAP_NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01/"; //TODO: @Configurable
+
   private final UnrollableStage auth = new WalrusSoapUserAuthenticationStage( );
 
   @Override
@@ -89,7 +93,10 @@ public class WalrusSoapPipeline extends FilteredPipeline {
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
     auth.unrollStage( pipeline );
-    pipeline.addLast( "binding", new BindingHandler( ) );
+    pipeline.addLast( "binding",
+        new BindingHandler(
+            BindingManager.getBinding(DEFAULT_S3_SOAP_NAMESPACE),
+            Pattern.compile("http://s3.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/") ) );
     return pipeline;
   }
 
