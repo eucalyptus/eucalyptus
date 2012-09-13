@@ -106,26 +106,26 @@ public class HtmlRenderer
                 writer.write((new InsRow()).addEmptyCols(1,LABEL_WIDTH)
                 		.addCol("Cluster: " + clusterName, LABEL_WIDTH, 3, "left").addEmptyCols(2, LABEL_WIDTH)
                 		.addCol("cumul.").addCol("cumul.")
-                		.addUsageCols(zone.getUsageTotals().getInstanceTotals(),units)
+                		.addUsageCols(cluster.getUsageTotals().getInstanceTotals(),units)
                 		.toString());
                 for (String accountName: cluster.getAccounts().keySet()) {
                 	AccountArtEntity account = cluster.getAccounts().get(accountName);
                     writer.write((new InsRow()).addEmptyCols(2,LABEL_WIDTH)
                     		.addCol("Account: " + accountName, LABEL_WIDTH, 3, "left").addEmptyCols(1, LABEL_WIDTH)
                     		.addCol("cumul.").addCol("cumul.")
-                    		.addUsageCols(zone.getUsageTotals().getInstanceTotals(),units)
+                    		.addUsageCols(account.getUsageTotals().getInstanceTotals(),units)
                     		.toString());
                     for (String userName: account.getUsers().keySet()) {
                     	UserArtEntity user = account.getUsers().get(userName);
                         writer.write((new InsRow()).addEmptyCols(3,LABEL_WIDTH)
                         		.addCol("User: " + userName, LABEL_WIDTH, 3, "left").addCol("cumul.")
-                        		.addCol("cumul.").addUsageCols(zone.getUsageTotals().getInstanceTotals(),units)
+                        		.addCol("cumul.").addUsageCols(user.getUsageTotals().getInstanceTotals(),units)
                         		.toString());
                         for (String instanceUuid: user.getInstances().keySet()) {
                         	InstanceArtEntity instance = user.getInstances().get(instanceUuid);
                         	writer.write((new InsRow()).addEmptyCols(6,LABEL_WIDTH)
                         			.addCol(instance.getInstanceId()).addCol(instance.getInstanceType())
-                        			.addUsageCols(zone.getUsageTotals().getInstanceTotals(), units)
+                        			.addUsageCols(instance.getUsage(), units)
                         			.toString());
                         }
                     }
