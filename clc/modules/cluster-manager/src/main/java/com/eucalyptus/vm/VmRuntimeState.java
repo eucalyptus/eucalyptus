@@ -83,6 +83,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Nodes;
@@ -138,6 +140,7 @@ public class VmRuntimeState {
   @Transient
   private StringBuffer      consoleOutput       = new StringBuffer( );
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_password_data" )
   private String            passwordData;
   @Column( name = "metadata_vm_pending" )

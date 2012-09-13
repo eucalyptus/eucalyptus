@@ -14,6 +14,8 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -43,6 +45,7 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   // The original policy text in JSON
   @Column( name = "auth_policy_text" )
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String text;
   
   // The set of statements of this policy

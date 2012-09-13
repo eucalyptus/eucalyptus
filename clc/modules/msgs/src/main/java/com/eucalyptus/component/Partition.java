@@ -81,6 +81,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -100,15 +102,19 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @Column( name = "config_partition_name", unique = true )
   String                name;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "config_partition_x509_certificate" )
   private String        pemCertificate;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "config_partition_node_x509_certificate" )
   private String        pemNodeCertificate;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "config_partition_kp" )
   private String        pemPrivateKey;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "config_partition_node_kp" )
   private String        pemNodePrivateKey;
   

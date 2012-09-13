@@ -71,6 +71,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIVolumeInfo" )
@@ -82,6 +84,7 @@ public class ISCSIVolumeInfo extends LVMVolumeInfo {
     private Integer lun;
     private String storeUser;
 	@Lob
+    @Type(type="org.hibernate.type.StringClobType")
     private String encryptedPassword;
 
     public ISCSIVolumeInfo() {}

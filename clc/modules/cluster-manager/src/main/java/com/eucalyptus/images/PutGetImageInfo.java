@@ -70,6 +70,8 @@ import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage {
@@ -77,6 +79,7 @@ public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDi
   private String manifestLocation;
   
   @Lob
+  @org.hibernate.annotations.Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_image_signature" )
   private String signature;
   

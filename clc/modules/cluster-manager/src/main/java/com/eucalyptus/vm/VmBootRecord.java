@@ -77,6 +77,8 @@ import javax.persistence.PreRemove;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -117,6 +119,7 @@ public class VmBootRecord {
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_sshkey" )
   private String                  sshKeyString;
   @ManyToOne
