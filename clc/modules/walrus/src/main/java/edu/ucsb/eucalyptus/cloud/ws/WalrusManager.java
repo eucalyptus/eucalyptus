@@ -225,7 +225,7 @@ import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.component.id.Walrus;
-import com.vmware.vim25.UserSearchResult;
+
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
