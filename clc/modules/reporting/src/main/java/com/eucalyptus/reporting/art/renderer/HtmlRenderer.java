@@ -88,6 +88,9 @@ public class HtmlRenderer
         writer.write("<h1>Instance Report</h1>\n");
         writer.write("<h4>Begin:" + ms2Date(report.getBeginMs()) + "</h4>\n");
         writer.write("<h4>End:" + ms2Date(report.getEndMs()) + "</h4>\n");
+        
+        
+        writer.write("<h3>Resource Usage Section</h3>\n");
         writer.write("<table border=0>\n");
         writer.write((new Row()).addEmptyCols(6, LABEL_WIDTH).addEmptyCols(3, VALUE_WIDTH)
         		.addCol("Net In " + units.getSizeUnit(), VALUE_WIDTH, 3, "center")
@@ -133,6 +136,41 @@ public class HtmlRenderer
             }
         }
         writer.write("</table>\n");
+
+        
+        writer.write("<h3>Instance Running Times Section</h3>\n");
+        writer.write("<table border=0>\n");
+        writer.write((new Row()).addEmptyCols(6, LABEL_WIDTH).addCol("m1Small").addCol("c1Medium").addCol("m1Large")
+        		.addCol("c1Large").addCol("m1XLarge").toString());
+        for(String zoneName : report.getZones().keySet()) {
+        	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
+            writer.write((new InsRow()).addCol("Zone: " + zoneName, LABEL_WIDTH, 3, "left").addEmptyCols(3, LABEL_WIDTH)
+            		.addTimeCols(zone.getUsageTotals(), units)
+            		.toString());
+            for (String clusterName: zone.getClusters().keySet()) {
+            	ClusterArtEntity cluster = zone.getClusters().get(clusterName);
+                writer.write((new InsRow()).addEmptyCols(1,LABEL_WIDTH)
+                		.addCol("Cluster: " + clusterName, LABEL_WIDTH, 3, "left").addEmptyCols(2, LABEL_WIDTH)
+                		.addTimeCols(cluster.getUsageTotals(),units)
+                		.toString());
+                for (String accountName: cluster.getAccounts().keySet()) {
+                	AccountArtEntity account = cluster.getAccounts().get(accountName);
+                    writer.write((new InsRow()).addEmptyCols(2,LABEL_WIDTH)
+                    		.addCol("Account: " + accountName, LABEL_WIDTH, 3, "left").addEmptyCols(1, LABEL_WIDTH)
+                    		.addTimeCols(account.getUsageTotals(),units)
+                    		.toString());
+                    for (String userName: account.getUsers().keySet()) {
+                    	UserArtEntity user = account.getUsers().get(userName);
+                        writer.write((new InsRow()).addEmptyCols(3,LABEL_WIDTH)
+                        		.addCol("User: " + userName, LABEL_WIDTH, 3, "left")
+                        		.addTimeCols(user.getUsageTotals(),units)
+                        		.toString());
+                    }
+                }
+            }
+        }
+        writer.write("</table>\n");
+
         writer.write("</body></html>\n");
         writer.flush();		
 	}
@@ -176,6 +214,16 @@ public class HtmlRenderer
 			addCol(UnitUtil.convertSize(entity.getNetIoBetweenZoneOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 			addCol(UnitUtil.convertSize(entity.getNetIoWithinZoneOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 			addCol(UnitUtil.convertSize(entity.getNetIoPublicIpOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+			return this;
+		}
+		
+		public Row addTimeCols(UsageTotalsArtEntity totals, Units units)
+		{
+			addCol(UnitUtil.convertTime(totals.getTotalRunningSecs().get("m1.small"), TimeUnit.MS, units.getTimeUnit()));
+			addCol(UnitUtil.convertTime(totals.getTotalRunningSecs().get("c1.medium"), TimeUnit.MS, units.getTimeUnit()));
+			addCol(UnitUtil.convertTime(totals.getTotalRunningSecs().get("m1.large"), TimeUnit.MS, units.getTimeUnit()));
+			addCol(UnitUtil.convertTime(totals.getTotalRunningSecs().get("c1.large"), TimeUnit.MS, units.getTimeUnit()));
+			addCol(UnitUtil.convertTime(totals.getTotalRunningSecs().get("m1.xlarge"), TimeUnit.MS, units.getTimeUnit()));
 			return this;
 		}
 	}

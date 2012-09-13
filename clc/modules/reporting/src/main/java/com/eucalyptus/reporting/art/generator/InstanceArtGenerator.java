@@ -128,6 +128,7 @@ public class InstanceArtGenerator
 		/* Add all usage to all instances, interpolating usage for partial periods
 		 */
 		Map<String,ReportingInstanceUsageEvent> lastEvents = new HashMap<String,ReportingInstanceUsageEvent>();
+		Map<String,Long> runningTimes = new HashMap<String,Long>(); //uuid->secs
 		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
 		while (iter.hasNext()) {
 			ReportingInstanceUsageEvent usageEvent = (ReportingInstanceUsageEvent) iter.next();
@@ -144,6 +145,15 @@ public class InstanceArtGenerator
 			/* Add usage to totals, and update average cpu */
 			if (lastEvent != null) {
 				long lastMs = lastEvent.getTimestampMs();
+				
+				/* Update running times */
+				long timeMs = (runningTimes.containsKey(usageEvent.getUuid()))
+								? runningTimes.get(usageEvent.getUuid()).longValue()
+								: 0l;
+				timeMs += Math.min(report.getEndMs(),usageEvent.getTimestampMs())
+						- Math.max(report.getBeginMs(),lastEvent.getTimestampMs()); 
+			    
+				runningTimes.put(usageEvent.getUuid(), timeMs);
 				
 				/* Add usage to totals */
 				usage.setDiskIoMegs(
@@ -216,10 +226,13 @@ public class InstanceArtGenerator
 						UsageTotalsArtEntity userUsage = user.getUsageTotals();
 						for (String instanceUuid : user.getInstances().keySet()) {
 							InstanceArtEntity instance = user.getInstances().get(instanceUuid);
-							updateUsageTotals(userUsage, instance);
-							updateUsageTotals(accountUsage, instance);
-							updateUsageTotals(clusterUsage, instance);
-							updateUsageTotals(zoneUsage, instance);
+							long timeMs = (runningTimes.containsKey(instanceUuid)) 
+											? runningTimes.get(instanceUuid).longValue()
+											: 0l;
+							updateUsageTotals(userUsage, instance, timeMs);
+							updateUsageTotals(accountUsage, instance, timeMs);
+							updateUsageTotals(clusterUsage, instance, timeMs);
+							updateUsageTotals(zoneUsage, instance, timeMs);
 						}
 					}
 				}
@@ -230,7 +243,7 @@ public class InstanceArtGenerator
 	}
 
 	
-	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)
+	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance, long runningTimeMs)
 	{
 		InstanceUsageArtEntity totalEntity =
 			totals.getInstanceTotals();
@@ -270,6 +283,11 @@ public class InstanceArtGenerator
 		totalEntity.setNetIoPublicIpOutMegs(
 				plus(totalEntity.getNetIoPublicIpOutMegs(),
 					 newEntity.getNetIoPublicIpOutMegs()));
+		
+		/* Add total running time for this instance type */
+		Map<String,Long> totalSecs = totals.getTotalRunningSecs();
+		totalSecs.put(instance.getInstanceType().toLowerCase(),
+				plus(totalSecs.get(instance.getInstanceType().toLowerCase()), runningTimeMs));
 	}
 
 	/**

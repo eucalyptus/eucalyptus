@@ -61,16 +61,20 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.entity;
 
+import java.util.*;
+
 import com.eucalyptus.reporting.art.ArtObject;
 
 public class UsageTotalsArtEntity
 	implements ArtObject
 {
 	private final InstanceUsageArtEntity instanceTotals;
+	private final Map<String,Long> totalRunningSecs;
 	
 	public UsageTotalsArtEntity()
 	{
 		this.instanceTotals = new InstanceUsageArtEntity();
+		this.totalRunningSecs = new HashMap<String,Long>();
 	}
 	
 	public InstanceUsageArtEntity getInstanceTotals()
@@ -78,4 +82,10 @@ public class UsageTotalsArtEntity
 		return this.instanceTotals;
 	}
 
+	public Map<String,Long> getTotalRunningSecs()
+	{
+		return this.totalRunningSecs;
+	}
+	
+	
 }
