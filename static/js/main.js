@@ -57,9 +57,13 @@
       $('html body').find(DOM_BINDING['footer']).footer();
 
       $('html body').keypress(function(e){
+        if($(e.target).is('input'))
+          return true;
+        if($(e.target).is('select'))
+          return true;
+
         var key = e.which;
-        /*
-          dashboard: D, d (68, 100)
+          /*dashboard: D, d (68, 100)
           images: I, i (73, 105)
           instances: N, n (78, 110)
           volumes: V, v (86, 118)
@@ -67,7 +71,8 @@
           security groups: G, g (71, 103)
           key pairs: K, k (75, 107)
           address: A, a (65, 97)          
-          launch new instance: L, l (76, 108) 
+          launch new instance: L, l (76, 108) */
+        
         switch(key){
           case 68:
           case 100:
@@ -105,7 +110,7 @@
           case 108:
             $container.maincontainer("changeSelected", e, {selected:'launcher'});
           break;
-        }*/
+        }
       });
     }).fail(function(){
         //TODO: what's the appropriate error message and the popup?

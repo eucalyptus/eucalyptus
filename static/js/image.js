@@ -37,7 +37,7 @@
           "aoColumns": [
             {
               "bSortable": false,
-              "fnRender": function(oObj) { return '<a href="#" onClick="startLaunchWizard(\''+oObj.aData.id+'\');">' + image_launch_btn +'</a>' },
+              "fnRender": function(oObj) { return '<a href="#" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'});">' + image_launch_btn +'</a>' },
             },
             { "mDataProp": "name" },
             {

@@ -123,7 +123,7 @@
         "product_codes": []
       },
       {
-        "kernel": "eki-A9813E54", 
+        "kernel": "eki-56B43CB2", 
         "root_device_type": "ebs", 
         "private_dns_name": "192.168.1.3", 
         "previous_state": null, 
@@ -133,7 +133,7 @@
         "state_reason": null, 
         "state_code": 16, 
         "monitored": false, 
-        "instance_type": "m1.small", 
+        "instance_type": "m1.large", 
         "subnet_id": null, 
         "tags": {}, 
         "shutdown_state": null, 
@@ -146,13 +146,13 @@
         "root_device_name": "/dev/sda1", 
         "ramdisk": "eri-121B3BE8", 
         "block_device_mapping": {}, 
-        "key_name": "tmpkey", 
+        "key_name": "dakkey", 
         "interfaces": [], 
         "image_id": "emi-308C37F3",
         "public_dns_name": "192.168.1.3", 
         "monitoring": "", 
         "requester_id": null, 
-        "group_name": null, 
+        "group_name": "test_grp", 
         "ip_address": "192.168.1.3", 
         "placement": "PARTI01", 
         "ami_launch_index": "0", 
@@ -175,7 +175,7 @@
         "product_codes": []
       },
       {
-        "kernel": "eki-A9813E54", 
+        "kernel": "eki-56B43CB2", 
         "root_device_type": "ebs", 
         "private_dns_name": "192.168.1.4", 
         "previous_state": null, 

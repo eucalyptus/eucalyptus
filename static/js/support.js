@@ -170,7 +170,7 @@ function formatDateTime(data) {
  d = new moment(data);
  return d.format(TIME_FORMAT);
 }
-function startLaunchWizard(emi) {
+function startLaunchWizard(filter) {
   var $container = $('html body').find(DOM_BINDING['main']);
-  $container.maincontainer("changeSelected", null, { selected:'launcher', filter: emi });
+  $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
 }

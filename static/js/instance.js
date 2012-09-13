@@ -291,7 +291,7 @@
      }
 
      if(numSelected == 1){
-       menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ ; }}
+       menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMore(); }}
      }
   
      if(numSelected >= 1){ // TODO: no state check for terminate?
@@ -627,6 +627,26 @@
             }
           })(volumeId)
       });
+    },
+    _launchMore : function(){
+      var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      var filter = {};
+      var result = describe('instance');
+      var instance = null;
+      for( i in result){
+        var inst = result[i];
+        if(inst.id === id){
+          instance = inst;
+          break;
+        }
+      }
+      if (!instance)
+        return;
+      filter['image'] = instance.image_id;
+      filter['type'] = {'instance_type': instance.instance_type, 'zone': instance.placement};
+      filter['security'] = {'keypair':instance.key_name, 'sgroup':instance.group_name};
+      filter['advanced'] = {'kernel':instance.kernel, 'ramdisk':instance.ramdisk};
+      startLaunchWizard(filter);      
     },
 /**** Public Methods ****/
     close: function() {

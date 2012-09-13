@@ -21,7 +21,10 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.launcher', $.eucalyptus.eucawidget, {
     options : {
-      image_filter : null,
+      image : null,
+      type : null,
+      security : null,
+      advanced : null
     },
     launchParam : {
       emi : null,
@@ -43,8 +46,6 @@
       $.each(thisObj.launchParam, function(k,v){
         thisObj.launchParam[k] = null;
       });
-      if ( thisObj.options.image_filter )
-        thisObj.launchParam['emi'] = thisObj.options.image_filter;
 
       var $tmpl = $('html body').find('.templates #launchWizardTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
@@ -167,6 +168,7 @@
       }
       return name;
     },
+
     _makeImageSection : function($section){ 
       var thisObj = this;
       var $content = $section.find('#launch-wizard-image-main-contents');
@@ -193,15 +195,13 @@
               $summary =  $('<div>').addClass(imgClass).addClass('summary').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(imgName));
             });
           }
+          // when image is pre-populated (launch-wizard called from image landing)
+          var emi = $currentRow.find('.image-id-arch').children().first().text();
+          if(thisObj.options.image && thisObj.options.image === emi){
+            $currentRow.trigger('click');
+            $section.find('#launch-wizard-buttons-image-next').trigger('click');
+          }
         });
-        // let's set emi if it is passed
-        if ( thisObj.options.image_filter ) {
-          $imageFilter = $content.find('#launch-images_filter').find(':input');
-          $imageFilter.val(thisObj.options.image_filter);
-          /* e = jQuery.Event("keydown");
-          e.which = RETURN_KEY_CODE;
-          $imageFilter.trigger(e); */
-        }
       };
 
       $section.find('#launch-wizard-buttons-image-next').click( function(e){
@@ -383,6 +383,7 @@
       $option.append($list);
 
       $section.find('#launch-wizard-buttons-type-next').click(function(e) {
+        selectedZone = $az.val();
         var $summary = $('<div>').addClass(selectedType).addClass('summary').append(
           $('<div>').attr('id','summary-type-insttype').append($('<span>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
           $('<div>').attr('id','summary-type-numinst').append($('<span>').text(launch_instance_summary_instances), $('<span>').text(numInstances)),
@@ -392,6 +393,20 @@
         thisObj.launchParam['zone'] = selectedZone;
         thisObj._setSummary('type', $summary); 
       });
+
+      if(thisObj.options.type){
+        var instType = thisObj.options.type['instance_type'];
+        var numInst = 1; // default to 1
+        var zone = thisObj.options.type['zone'];
+        $section.find('#launch-wizard-type-size').find('ul li a').each(function(){
+          if($(this).text() === instType){
+            $(this).trigger('click');
+          }
+        });
+        $list.find('#launch-instance-type-num-instance').val(numInst);
+        $az.val(zone);
+        setTimeout(function(){ $section.find('#launch-wizard-buttons-type-next').trigger('click')}, 100); // click event should be delayed
+      }
     },
 
     _makeSecuritySection : function($section) {
@@ -401,12 +416,38 @@
       var $keypair = $content.find('#launch-wizard-security-keypair');
       var $sgroup = $content.find('#launch-wizard-security-sgroup');
 
+      var populateKeypair = function(){
+        var $kp_selector = $keypair.find('select');
+        $kp_selector.children().detach();
+        var results = describe('keypair');
+        for( res in results) {
+          var kpName = results[res].name;
+          $kp_selector.append($('<option>').attr('value', kpName).text(kpName));
+        }
+      }
+
+      var populateSGroup = function(){
+        var $sg_selector = $sgroup.find('select');
+        $sg_selector.children().detach();
+        results = describe('sgroup');
+        for(res in results){
+          var sgName = results[res].name;
+          $sg_selector.append($('<option>').attr('value',sgName).text(sgName)); 
+        }
+        $sg_selector.find('option').each(function(){
+          if($(this).val() ==='default')
+            $(this).attr('selected','selected');
+        });
+      }
+
       $keypair.append(
         $('<div>').append(
           $('<span>').text(launch_instance_security_keypair),
           $('<select>').attr('id','launch-wizard-security-keypair-selector')),
         $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
           addKeypair();
+          // TODO: add callback to re-populate the select
+          populateKeypair();          
         })));
 
       $sgroup.append(
@@ -415,26 +456,14 @@
           $('<select>').attr('id','launch-wizard-security-sg-selector')),
         $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
           addGroup();
+          populateSGroup();
         })),
         $('<div>').attr('id','launch-wizard-security-sg-detail'));
      
+      populateKeypair();
+      populateSGroup();
       var $kp_selector = $keypair.find('select');
-      var results = describe('keypair');
-      for( res in results) {
-        var kpName = results[res].name;
-        $kp_selector.append($('<option>').attr('value', kpName).text(kpName));
-      }
       var $sg_selector = $sgroup.find('select');
-      results = describe('sgroup');
-      for(res in results){
-        var sgName = results[res].name;
-        $sg_selector.append($('<option>').attr('value',sgName).text(sgName)); 
-      }
-      $sg_selector.find('option').each(function(){
-        if($(this).val() ==='default')
-          $(this).attr('selected','selected');
-      });
-    
       var summarize = function(){
         var selectedKp = $kp_selector.val();
         var selectedSg = $sg_selector.val();
@@ -455,9 +484,20 @@
         thisObj._launch();
         // and launch
       });
+
+      if(thisObj.options['security']){
+        setTimeout(function(){
+          var keypair = thisObj.options['security']['keypair'];
+          var sgroup = thisObj.options['security']['sgroup'];
+          $section.find('#launch-wizard-security-keypair-selector').val(keypair);
+          $section.find('#launch-wizard-security-sg-selector').val(sgroup);
+          $section.find('#launch-wizard-buttons-security').find('ul a').trigger('click');
+        }, 200);
+      }
     },
 
     _makeAdvancedSection : function($section) { 
+      var thisObj = this;
       var $content = $section.find('#launch-wizard-advanced-main-contents');
       $content.prepend($('<span>').html(launch_instance_advanced_header));
       var $userdata = $content.find('#launch-wizard-advanced-userdata');
@@ -519,31 +559,199 @@
         $('<span>').text(launch_instance_advanced_network),
         $('<input>').attr('id','launch-wizard-advanced-input-network').attr('type','checkbox'),
         $('<span>').text(launch_instance_advanced_network_desc))
+      
+      var usedSnapshots = []; 
+      var usedVolumes = [];
+      var usedMappings = [];
+
+      var validate = function($selectedRow){
+        var $cells = $selectedRow.find('td');
+        var volume = $($cells[0]).find('select').val();
+        var mapping = '/dev/'+$($cells[1]).find('input').val();
+        var snapshot = $($cells[2]).find('select').val();
+        var size = $($cells[3]).find('input').val(); 
+        var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
+
+        //validate the input 
+        // TODO: create and use generic error dialog
+          
+        if($.inArray(mapping, usedMappings) >= 0){
+          alert(launch_instance_advanced_error_dev_dup);
+          return false;
+        }
+        if(mapping.replace('/dev/','').length <= 0){
+          alert(launch_instance_advanced_error_dev_none);
+          return false;
+        }
+        if(size.length <= 0 || (volume === 'ebs' && parseInt(size)<=0)){
+          alert(launch_instance_advanced_error_dev_size_none);
+          return false;
+        }
+        if(volume === 'ebs'){
+          //find the size of the chosen snapshot;
+          var result = describe('snapshot');
+          for (i in result){
+            var s = result[i]; 
+            if(s.id === snapshot){
+              if(s.volume_size > size){
+                alert(launch_instance_advanced_error_dev_size);
+                return false;
+              }else
+                break; 
+            }
+          }
+        } 
+        return true;
+      }
+ 
+      var addNewRow = function(param) {
+        var results = describe('snapshot');
+        var $snapshots = $('<div>');
+        $.each(results, function(idx, snapshot){
+          if(snapshot['status'] === 'completed' && $.inArray(snapshot['id'], usedSnapshots) < 0)
+            $snapshots.append($('<option>').attr('value',snapshot['id']).text(snapshot['id']));
+        }); 
+        var $volume = $('<select>').attr('class','launch-wizard-advanced-storage-volume-selector');
+        if(param && param['volume']){
+          $volume.append($('<option>').attr('value', param['volume'][0]).text(param['volume'][1]));
+          $volume.attr('disabled','disabled');
+        }
+        else{
+          // exclude used volumes
+          if($.inArray('root',usedVolumes) < 0)
+            $volume.append($('<option>').attr('value', 'root').text('Root'));
+          $volume.append($('<option>').attr('value', 'ebs').text('EBS')); // multiple ebs allowed
+          if($.inArray('ephemeral0',usedVolumes) < 0)
+            $volume.append($('<option>').attr('value', 'ephemeral0').text('Ephemeral 0'));
+          if($.inArray('ephemeral1',usedVolumes) < 0)
+            $volume.append($('<option>').attr('value', 'ephemeral1').text('Ephemeral 1'));
+          if($.inArray('ephemeral2',usedVolumes) < 0)
+            $volume.append($('<option>').attr('value', 'ephemeral2').text('Ephemeral 2'));
+          if($.inArray('ephemeral3',usedVolumes) < 0)
+            $volume.append($('<option>').attr('value', 'ephemeral3').text('Ephemeral 3'));
+
+          // change event should enable/disable following cells
+        }
+        $volume.change(function(e){
+          vol = $volume.val();
+          $row = $(e.target).parents('tr');
+          if (vol === 'ebs'){
+             $row.find('.launch-wizard-advanced-storage-delOnTerm').attr('checked','true');
+             $row.find('.launch-wizard-advanced-storage-snapshot-input').removeAttr('disabled');
+             $row.find('.launch-wizard-advanced-storage-size-input').removeAttr('disabled');
+             $row.find('.launch-wizard-advanced-storage-delOnTerm').removeAttr('disabled');
+          }else if (vol.indexOf('ephemeral')>=0){
+             $row.find('.launch-wizard-advanced-storage-snapshot-input').attr('disabled','disabled').val('none');
+             $row.find('.launch-wizard-advanced-storage-size-input').attr('disabled','disabled').val('-1');
+             $row.find('.launch-wizard-advanced-storage-delOnTerm').attr('disabled','disabled').removeAttr('checked');
+          }
+        });
+        
+        var $mapping = $('<input>').attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text'); // mapping
+        if(param && param['mapping']){
+          $mapping.val(param['mapping']);
+          $mapping.attr('disabled','disabled');
+        } 
+        var $snapshot = $('<select>').attr('class', 'launch-wizard-advanced-storage-snapshot-input');
+        if(param && param['snapshot']){
+          $snapshot.append($('<option>').attr('value',param['snapshot'][0]).text(param['snapshot'][1]));
+          $snapshot.attr('disabled','disabled');
+        }
+        else
+          $snapshot.append(
+            $('<option>').attr('value','none').text(launch_instance_advanced_snapshot_none), $snapshots.html());
+        $snapshot.change(function(e){
+           var result = describe('snapshot');
+           var size = 0;
+           for (i in result){
+             var s = result[i];
+             if(s.id === $snapshot.val()){
+               size = s.volume_size;
+               break;
+             }
+           }
+           var $row = $(e.target).parents('tr');
+           $row.find('.launch-wizard-advanced-storage-size-input').val(size);
+        });
+        var $size = $('<input>').attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
+        if(param && param['size']){
+          $size.val(param['size']);
+          $size.attr('disabled','disabled');
+        }
     
-      var addNewRow = function() {
+        var $delOnTerm= $('<input>').attr('class','launch-wizard-advanced-storage-delOnTerm').attr('type','checkbox');
+        if(param && param['delOnTerm'] !== undefined){
+          if(param['delOnTerm'])
+            $delOnTerm.attr('checked','true'); 
+          $delOnTerm.attr('disabled','disabled');
+        }else{
+          if ($volume.val() === 'ebs')
+            $delOnTerm.attr('checked','true'); 
+        }
+
+        var $addBtn = $('<input>').attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add);
+        if(param && param['add'] !== undefined){
+          if(!param['add']) 
+            $addBtn.attr('disabled','disabled');
+        }
+
+        $addBtn.click(function(e) {
+          var $selectedRow = $(e.target).parents('tr');
+          var $cells = $selectedRow.find('td');
+          var volume = $($cells[0]).find('select').val();
+          var mapping = '/dev/'+$($cells[1]).find('input').val();
+          var snapshot = $($cells[2]).find('select').val();
+          var size = $($cells[3]).find('input').val(); 
+          var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
+
+          if(!validate($selectedRow))
+            return false;
+          usedMappings.push(mapping);
+          usedVolumes.push(volume);
+          usedSnapshots.push(snapshot);
+          $selectedRow.find('.launch-wizard-advanced-storage-add-input').hide();
+          $selectedRow.find('.launch-wizard-advanced-storage-remove-input').hide();
+          $selectedRow.find('input').each(function(){
+            if($(this).attr('type') !== 'button')
+              $(this).attr('disabled','disabled')
+          });
+          $selectedRow.find('select').attr('disabled','disabled');
+          var $tbody = $storage.find('table tbody');
+          var $tr = addNewRow();
+          $tbody.append($tr);
+        });
+
+        var $removeBtn = $('<input>').attr('class', 'launch-wizard-advanced-storage-remove-input').attr('type','button').val(launch_instance_advanced_btn_remove);
+        if(param && param['remove'] !== undefined){
+          if(!param['remove'])
+            $removeBtn.attr('disabled','disabled');
+        }
+        $removeBtn.click(function(e) {
+          var $selectedRow = $(e.target).parents('tr');
+          var mapping = $selectedRow.find('.launch-wizard-advanced-storage-mapping-input').val();
+          var volume = $selectedRow.find('.launch-wizard-advanced-storage-volume-selector').val();
+          var snapshot = $selectedRow.find('.launch-wizard-advanced-storage-snapshot-input').val();
+          usedMappings.splice(usedMappings.indexOf(mapping), 1);
+          usedVolumes.splice(usedVolumes.indexOf(volume), 1);
+          usedSnapshots.splice(usedSnapshots.indexOf(snapshot),1);
+          $selectedRow.remove();
+          var $rows =  $storage.find('table tbody tr');
+          $rows.last().find('.launch-wizard-advanced-storage-add-input').show(); 
+          if($rows.length > 1) 
+            $rows.last().find('.launch-wizard-advanced-storage-remove-input').show(); 
+        });
         var $tr = $('<tr>').append(
-          $('<td>').append(
-            $('<select>').attr('class','launch-wizard-advanced-storage-root-selector').append(
-              $('<option>').attr('value', 'ebs').text('EBS'),
-              $('<option>').attr('value', 'ephemeral1').text('Ephemeral 1'),
-              $('<option>').attr('value', 'ephemeral2').text('Ephemeral 2'),
-              $('<option>').attr('value', 'ephemeral3').text('Ephemeral 3'),
-              $('<option>').attr('value', 'ephemeral4').text('Ephemeral 4'),
-              $('<option>').attr('value', 'ephemeral5').text('Ephemeral 4'))), // volume
-          $('<td>').text('/dev/').append(
-              $('<input>').attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text')), // mapping
-          $('<td>').append( 
-            $('<select>').attr('class', 'launch-wizard-advanced-storage-snapshot-input').append(
-              $('<option>').attr('value','none').text(launch_instance_advanced_snapshot_none))), // create from snapshot
-          $('<td>').append( 
-            $('<input>').attr('class','launch-wizard-advanced-storage-size-input').attr('type','text')), // size
-          $('<td>').append(
-            $('<input>').attr('class','launch-wizard-advanced-storage-delete-input').attr('type','checkbox')), // delete on terminate
-          $('<td>').append(
-            $('<input>').attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add)) // add another button
-        );
+          $('<td>').append($volume),
+          $('<td>').text('/dev/').append($mapping),
+          $('<td>').append($snapshot),
+          $('<td>').append($size), 
+          $('<td>').append($delOnTerm),
+          $('<td>').append($addBtn),
+          $('<td>').append($removeBtn));
+
         return $tr;
-      } 
+      } /// end of addNewRow()
+
       $storage.append(
         $('<span>').text(launch_instance_advanced_storage),
         $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
@@ -555,13 +763,107 @@
                 $('<th>').text(launch_instance_advanced_th_create),
                 $('<th>').text(launch_instance_advanced_th_size),
                 $('<th>').text(launch_instance_advanced_th_delete),
+                $('<th>').text(''),
                 $('<th>').text('')
               )
             ),
             $('<tbody>')
         )));
       var $tbody = $storage.find('table tbody');
-      $tbody.append( addNewRow());
+      $tbody.append(addNewRow({
+        'volume' : ['root', 'Root'],
+        'mapping' : 'sda1',
+        'snapshot' : ['none', launch_instance_advanced_snapshot_none],
+        'size' : '-1',
+        'delOnTerm' : false,
+        'add' : true,
+        'remove' : false
+      }));
+
+      var summarize = function(){
+        var dataAdded = false;
+        if($userdata.find('#launch-wizard-advanced-input-userdata').val().length > 0){
+          dataAdded = true;
+          thisObj.launchParam['data'] = $userdata.find('#launch-wizard-advanced-input-userdata').val();
+        }
+        var kernelChanged = false; 
+        if($kernel.find('#launch-wizard-advanced-kernel-selector').val() !== 'default'){
+          kernelChanged = true;
+          thisObj.launchParam['kernel'] = $kernel.find('#launch-wizard-advanced-kernel-selector').val();
+        }
+        var ramdiskChanged = false;
+        if($kernel.find('#launch-wizard-advanced-ramdisk-selector').val() !== 'default'){
+          ramdiskChanged = true;       
+          thisObj.launchParam['ramdisk'] = $kernel.find('#launch-wizard-advanced-ramdisk-selector').val();
+        }
+        var privateAddressing = false;
+        if($network.find('#launch-wizard-advanced-input-network').attr('checked')){
+          privateAddressing = true;
+          thisObj.launchParam['private_addressing'] = true;
+        }
+        var storageConfigured = true; // always configured
+         
+        thisObj.launchParam['device_map'] = [];       
+        $section.find('#launch-wizard-advanced-storage').find('table tbody tr').each(function(){
+          var $selectedRow = $(this);
+          var $cells = $selectedRow.find('td');
+          var volume = $($cells[0]).find('select').val();
+          var mapping = '/dev/'+$($cells[1]).find('input').val();
+          var snapshot = $($cells[2]).find('select').val();
+          var size = $($cells[3]).find('input').val(); 
+          var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
+        
+          snapshot = (snapshot ==='none') ? null : snapshot; 
+          if(volume ==='ebs'){
+            var mapping = {
+              'volume':'ebs',
+              'dev':mapping,
+              'snapshot':snapshot, 
+              'size':size,
+              'delOnTerm':delOnTerm
+            };
+            thisObj.launchParam['device_map'].push(mapping);
+          }else if(volume.indexOf('ephemeral')>=0){
+            var mapping = {
+              'volume':volume,
+              'dev':mapping
+            }
+            thisObj.launchParam['device_map'].push(mapping);
+          } 
+        });
+ 
+        var $wrapper = $('<div>').append($('<span>').text(launch_instance_summary_advanced));
+        if(dataAdded)
+          $wrapper.append($('<div>').attr('id','summary-advanced-userdata').text(launch_instance_summary_advanced_userdata));
+        if(kernelChanged)
+          $wrapper.append($('<div>').attr('id','summary-advanced-kernel').text(launch_instance_summary_advanced_kernel));
+        if(ramdiskChanged)
+          $wrapper.append($('<div>').attr('id','summary-advanced-ramdisk').text(launch_instance_summary_advanced_ramdisk));
+        if(privateAddressing)
+          $wrapper.append($('<div>').attr('id','summary-advanced-addressing').text(launch_instance_summary_advanced_addressing));
+        if(storageConfigured)
+          $wrapper.append($('<div>').attr('id','summary-advanced-storage').text(launch_instance_summary_advanced_storage));
+        return $wrapper;
+      }
+
+      $section.find('#launch-wizard-buttons-advanced').find('button').click(function(e){// launch button
+        var $selectedRow = $section.find('#launch-wizard-advanced-storage').find('table tbody tr').last(); 
+        if(!validate($selectedRow))
+          return false;
+
+        var $summary = summarize(); 
+        thisObj._setSummary('advanced', $summary.clone().children()); 
+        thisObj._launch();
+        // and launch
+      });
+
+      if(thisObj.options['advanced']){
+        var kernel = thisObj.options['advanced']['kernel'];
+        var ramdisk = thisObj.options['advanced']['ramdisk'];
+        $section.find('#launch-wizard-advanced-kernel-selector').val(kernel);
+        $section.find('#launch-wizard-advanced-ramdisk-selector').val(ramdisk);
+        // setTimeout ...
+      }
     },
 
     _setSummary : function(section, content){
@@ -600,7 +902,29 @@
         reqParam += '&Placement.AvailabilityZone='+param['zone'];
       reqParam += '&Placement.GroupName='+param['sgroup'];
       reqParam += '&KeyName='+param['keypair'];
-
+      if(param['kernel'] && param['kernel'].length > 0)
+        reqParam += '&KernelId='+param['kernel'];
+      if(param['ramdisk'] && param['ramdisk'].length > 0)
+        reqParam += '&RamdiskId='+param['ramdisk']; 
+      if(param['data'] && param['data'].length > 0)
+        reqParam += '&UserData='+param['data'];
+      if(param['private_addressing'])
+        reqParam += '&AddressingType=private';
+      if(param['device_map'] && param['device_map'].length>0){
+        $.each(param['device_map'], function(idx, mapping){
+          if(mapping['volume'] === 'ebs'){
+           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.DeviceName='+mapping['dev'];
+           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize='+mapping['size'];
+           if(mapping['snapshot'])
+             reqParam += '&BlockDeviceMapping.'+(idx+1)+'.Ebs.SnapshotId='+mapping['snapshot'];
+           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination='+mapping['delOnTerm'];
+          }else if(mapping['volume'].indexOf('ephemeral')>=0){
+           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.DeviceName='+mapping['dev'];
+           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.VirtualName='+mapping['volume'];
+          }
+        });
+      }
+          
       $.ajax({
           type:"GET",
           url:"/ec2?Action=RunInstances&" + reqParam,
