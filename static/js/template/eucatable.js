@@ -246,6 +246,7 @@
       }      
 
       var $searchBar = this.element.find('#'+this.options.id+'_filter');
+      $searchBar.find(":input").watermark(this.options.text.resource_search);
       var refresh = this.options.text.search_refresh ? this.options.text.search_refresh : search_refresh;
       $searchBar.append(
         $('<a>').addClass('table-refresh').attr('href','#').text(refresh).click(function(){

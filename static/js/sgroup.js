@@ -58,6 +58,7 @@
           header_title : sgroup_h_title,
           create_resource : sgroup_create,
           resource_found : sgroup_found,
+          resource_search : sgroup_search,
         },
         menu_actions : function(){
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
