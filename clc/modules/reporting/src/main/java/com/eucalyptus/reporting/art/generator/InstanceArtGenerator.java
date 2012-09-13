@@ -179,7 +179,7 @@ public class InstanceArtGenerator
 				usage.setNetIoPublicIpOutMegs(
 						plus(usage.getNetIoPublicIpOutMegs(),
 								subtract(usageEvent.getCumulativeNetOutgoingMegsPublic(),
-										usageEvent.getCumulativeNetOutgoingMegsPublic())));
+										lastEvent.getCumulativeNetOutgoingMegsPublic())));
 					
 
 				/* Update cpu average */
