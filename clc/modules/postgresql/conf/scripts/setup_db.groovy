@@ -135,7 +135,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     private int runProcess( List<String> args ) {
         Appendable outstream = null
         Appendable errstream = null
-        LOG.debug("Postgres 9.1 command : " + args.toString( ) )
+        LOG.debug("Postgres 9.X command : " + args.toString( ) )
         try {
             ProcessBuilder pb = new ProcessBuilder(args)
             Process p = pb.start()
@@ -259,11 +259,12 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
         }
     }
 
-    // Version check to ensure only Postgres 9.1.X creates the db.
+    // Version check to ensure only Postgres 9.X creates the db.
     private boolean versionCheck( ) {
         try {
             String cmd = PG_INITDB + " --version"
-            return cmd.execute( ).text.contains("9.1")
+            def pattern = ~/.*\s+9\.[1-9]\d*(\.\d+)*$/
+            return pattern.matcher( cmd.execute( ).text.trim( ) ).matches( )
         } catch ( Exception e ) {
             LOG.fatal("Unable to find the initdb command")
             return false
