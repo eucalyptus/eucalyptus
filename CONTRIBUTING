@@ -69,4 +69,3 @@ process occurs:
 * Specific tests are produced for the patch, and the patch is tested against them, to ensure behavior of the patch is correct for current and future branches;
 * If the patch is accepted, it is integrated into our development branch;
 * If the patch is not accepted, a report is issued explaining why it cannot be accepted, and guidelines are provided showing how to remedy the problem for subsequent patch acceptance.
-
