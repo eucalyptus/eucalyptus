@@ -97,8 +97,9 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   partition;     //TODO:GRZE: change to injected ref.
   @Column( name = "metadata_volume_parentsnapshot" )
   private String   parentSnapshot;
- 
-  @Transient
+  @Lob
+  @Column( name = "metadata_volume_remotedevice" )
+  @Type(type="org.hibernate.type.StringClobType")
   private String   remoteDevice;
   @Column( name = "metadata_volume_localdevice" )
   private String   localDevice;

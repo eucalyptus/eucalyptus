@@ -70,6 +70,8 @@ import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 
 @MappedSuperclass
 public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> extends AbstractPersistent {
@@ -82,9 +84,9 @@ public abstract class AbstractStatefulPersistent<STATE extends Enum<STATE>> exte
   @Column( name = "metadata_last_state" )
   @Enumerated( EnumType.STRING )
   STATE                     lastState;
-//  @Lob
-//  @Column( name = "metadata_state_change_stack" )
-  @Transient
+  @Lob
+  @Column( name = "metadata_state_change_stack" )
+  @Type(type="org.hibernate.type.StringClobType")
   protected String          stateChangeStack;
   @Column( name = "metadata_display_name" )
   protected String          displayName;
