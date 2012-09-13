@@ -46,12 +46,14 @@ public class DiskResourceCheck extends Thread {
 		this.started = true;
 		while (true) {
 			for (LocationInfo location: locations) {
-				long usableSpace = location.getFile().getUsableSpace();
-				LOG.debug("Checking disk space for " + location.getFile() + " usableSpace = " + usableSpace);
-//				if (!alreadyFaulted.contains(location) && location.getFile().getUsableSpace() < location.getMinimumFreeSpace()) {
-					FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(OUT_OF_DISK_SPACE_FAULT_ID).withVar("component", "eucalyptus").withVar("file",  location.getFile().getAbsolutePath()).log();
-//					alreadyFaulted.add(location);
-//				}
+				if (!alreadyFaulted.contains(location)) {
+					long usableSpace = location.getFile().getUsableSpace();
+					LOG.debug("Checking disk space for " + location.getFile() + " usableSpace = " + usableSpace + ", minimumFreeSpace = " + location.getMinimumFreeSpace());
+					if (usableSpace < location.getMinimumFreeSpace()) {
+						FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(OUT_OF_DISK_SPACE_FAULT_ID).withVar("component", "eucalyptus").withVar("file",  location.getFile().getAbsolutePath()).log();
+						alreadyFaulted.add(location);
+					}
+				}
 			}
 			try {
 				Thread.sleep(POLL_TIME);
