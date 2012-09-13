@@ -25,6 +25,7 @@
     tableWrapper : null,
     delDialog : null,
     addDialog : null,
+    editDialog : null,
     rulesList : null,
     _init : function() {
       var thisObj = this;
@@ -104,7 +105,7 @@
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
               var name = $.trim($add_dialog.find('#sgroup-name').val());
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
-              thisObj._storeRule();    // flush rule from form into array
+              thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
@@ -189,12 +190,54 @@
         });
       });
       this.addDialog.find('#sgroup-add-rule').click(function () {
-        thisObj._storeRule();
+        thisObj._storeRule(thisObj.addDialog);
         // now reset form
         $('#sgroup-template').val('none');
         $('#sgroup-ports').val('');
         $('#allow-ip').val('');
         $('#allow-group').val('');
+        thisObj._refreshRulesList();
+      });
+      var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
+      var $edit_dialog = $rendered.children().first();
+      var $edit_help = $rendered.children().last();
+      this.editDialog = $edit_dialog.eucadialog({
+        id: 'sgroups-edit',
+        title: sgroup_dialog_edit_title,
+        buttons: { 
+        'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
+            }},
+        'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
+        },
+        help: {title: help_volume['dialog_add_title'], content: $add_help},
+      });
+      this.editDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
+         var thediv = thisObj.editDialog.find('#sgroup-morerools');
+         var sel = thisObj.editDialog.find('#sgroup-template');
+         var templ = sel.val();
+         if (templ == 'none') {
+            thediv.css('display','none')
+            thisObj.editDialog.find('#sgroup-ports').val('');
+         }
+         else {
+            thediv.css('display','block')
+            if (templ.indexOf('Custom', 0) == -1) {
+                var idx = templ.indexOf('port', 0);
+                var part = templ.substr(idx+5);
+                thisObj.editDialog.find('#sgroup-ports').val(parseInt(part));
+            }
+            else
+                thisObj.editDialog.find('#sgroup-ports').val('');
+         }
+      });
+      this.editDialog.find('#sgroup-add-rule').click(function () {
+        thisObj._storeRule(thisObj.editDialog);
+        // now reset form
+        thisObj.editDialog.find('#sgroup-template').val('none');
+        thisObj.editDialog.find('#sgroup-ports').val('');
+        thisObj.editDialog.find('#allow-ip').val('');
+        thisObj.editDialog.find('#allow-group').val('');
         thisObj._refreshRulesList();
       });
     },
@@ -213,24 +256,24 @@
     },
 
     // this function is used to take an ingress rule from the form and move it to the rulesList
-    _storeRule : function() {
+    _storeRule : function(dialog) {
         if (this.rulesList == null) {
             this.rulesList = new Array();
         }
         // if nothing selected, don't save
-        if ($('#sgroup-template').val() == 'none')
+        if (dialog.find('#sgroup-template').val() == 'none')
             return
         var rule = new Object();
         rule.protocol = 'tcp';
-        var port_range = $('#sgroup-ports').val();
+        var port_range = dialog.find('#sgroup-ports').val();
         var ports = port_range.split('-');
         rule.from_port = ports[0];
         rule.to_port = ports[ports.length-1];
-        if ($("input[@name='allow-group']:checked").val() == 'ip') {
-            rule.ipaddr = $('#allow-ip').val();
+        if (dialog.find("input[@name='allow-group']:checked").val() == 'ip') {
+            rule.ipaddr = dialog.find('#allow-ip').val();
         }
-        else if ($("input[@name='allow-group']:checked").val() == 'group') {
-            rule.group = $('#allow-group').val();
+        else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
+            rule.group = dialog.find('#allow-group').val();
         }
         this.rulesList.push(rule);
     },
@@ -238,8 +281,6 @@
     // this function populates the div where rules are listed based on the rulesList
     _refreshRulesList : function() {
         if (this.rulesList != null) {
-            var theDiv = $('#sgroup-rules-list')
-            theDiv.html("loading...");
             var msg = "";
             var i=0
             for (rule in this.rulesList) {
@@ -247,12 +288,13 @@
                 if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
                     ports += "-"+this.rulesList[rule].to_port;
                 }
-                msg += "<a href='#' onclick='_deleteRule("+i+")'>Delete</a> Rule: "+this.rulesList[rule].protocol+
+                msg += "<a href='#' onclick='this._deleteRule("+i+")'>Delete</a> Rule: "+this.rulesList[rule].protocol+
                             " ("+ ports+"), "+
                             this.rulesList[rule].ipaddr+"<br/>";
                 i += 1;
             }
-            theDiv.html(msg);
+            $('#sgroup-rules-list').html(msg);
+            $('#sgroup-rules-list2').html(msg);
         }
     },
 
@@ -398,10 +440,9 @@
       rowsToEdit = $tableWrapper.eucatable('getSelectedRows');
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
-      thisObj.addDialog.dialog('option', 'title', sgroup_dialog_edit_title);
-      thisObj.addDialog.dialog('open');
-      thisObj.addDialog.find('#sgroup-name').val(firstRow.name);
-      thisObj.addDialog.find('#sgroup-description').val(firstRow.description);
+      thisObj.editDialog.dialog('open');
+      thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
+      thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
       thisObj._refreshRulesList();
     },
 
