@@ -1,5 +1,7 @@
 import base64
 import boto
+import sys
+import traceback
 import urllib2
 import xml.sax
 
@@ -28,7 +30,9 @@ class TokenAuthenticator(object):
             h = boto.handler.XmlHandler(creds, None)
             xml.sax.parseString(body, h)
             return creds
-        except urllib2.URLError:
+        except urllib2.URLError, err:
+            print err
+            traceback.print_exc(file=sys.stdout)
             return None
 
 

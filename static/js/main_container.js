@@ -79,7 +79,16 @@
           this.element.eip();
           break;
         case 'launcher':
-          this.element.launcher({'image_filter' : filter});
+          var option = {};
+          if(filter && filter['image'])
+            option['image'] = filter['image']; 
+          if(filter && filter['type'])
+            option['type'] = filter['type'];
+          if(filter && filter['security'])
+            option['security'] = filter['security'];
+          if(filter && filter['advanced'])
+            option['advanced'] = filter['advanced'];
+          this.element.launcher(option);
           break;
         case 'image':
           this.element.image();

@@ -134,7 +134,7 @@
                               $add_dialog.eucadialog("close");
                           }
                       } else {
-                          notifyError(sgroup_add_rule_error + ' ' + name);
+                          notifyFailure(sgroup_add_rule_error + ' ' + name);
                           $add_dialog.eucadialog("close");
                       }
                   },
@@ -221,8 +221,10 @@
             return
         var rule = new Object();
         rule.protocol = 'tcp';
-        rule.from_port = $('#sgroup-ports').val();
-        rule.to_port = $('#sgroup-ports').val();
+        var port_range = $('#sgroup-ports').val();
+        var ports = port_range.split('-');
+        rule.from_port = ports[0];
+        rule.to_port = ports[ports.length-1];
         if ($("input[@name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = $('#allow-ip').val();
         }
@@ -240,9 +242,13 @@
             var msg = "";
             var i=0
             for (rule in this.rulesList) {
-                msg += "<a href='#' onclick='_deleteRule("+i+")'>Delete</a> Rule: "+this.rulesList[rule].protocol+" ("+
-                             this.rulesList[rule].port+"), "+
-                             this.rulesList[rule].ipaddr+"<br/>";
+                var ports = this.rulesList[rule].from_port;
+                if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
+                    ports += "-"+this.rulesList[rule].to_port;
+                }
+                msg += "<a href='#' onclick='_deleteRule("+i+")'>Delete</a> Rule: "+this.rulesList[rule].protocol+
+                            " ("+ ports+"), "+
+                            this.rulesList[rule].ipaddr+"<br/>";
                 i += 1;
             }
             theDiv.html(msg);
@@ -254,7 +260,6 @@
         this.rulesList = new Array();
         rules = groupRecord.rules;
         for (i=0; i<rules.length; i++) {
-            alert("rule "+i+": "+rules[i].from_port);
             var rule = new Object();
             rule.protocol = rules[i].ip_protocol;
             rule.from_port = rules[i].from_port;
@@ -263,11 +268,13 @@
                 rule.ipaddr = rules[i].grants[0].cidr_ip;
             if (rules[i].grants[0].group_id != '')
                 rule.group = rules[i].grants[0].group_id;
+            this.rulesList.push(rule);
         }
     },
 
     _deleteRule : function(index) {
         alert("deleting rule "+index);
+        //TODO: need to remove rule from rulesList and/or flag for "unauthorize" call
     },
 
     _getGroupName : function(rowSelector) {
@@ -311,7 +318,6 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
-      alert("add rules params:"+req_params);
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
@@ -391,8 +397,11 @@
       rowsToEdit = $tableWrapper.eucatable('getSelectedRows');
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
-      thisObj.addDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_edit_resource_title], contents: firstRow});
+      thisObj.addDialog.dialog('option', 'title', sgroup_dialog_edit_title);
       thisObj.addDialog.dialog('open');
+      thisObj.addDialog.find('#sgroup-name').val(firstRow.name);
+      thisObj.addDialog.find('#sgroup-description').val(firstRow.description);
+      thisObj._refreshRulesList();
     },
 
 /**** Public Methods ****/

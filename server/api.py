@@ -110,7 +110,7 @@ class ComputeHandler(server.BaseHandler):
             mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
             idx = 1
             while mapping:
-                pre = 'BlockDeviceMapping.$d' % idx
+                pre = 'BlockDeviceMapping.%d' % idx
                 block_dev_mapping = BlockDeviceMapping()
                 block_dev_mapping.dev_name = mapping
                 block_dev_mapping.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
