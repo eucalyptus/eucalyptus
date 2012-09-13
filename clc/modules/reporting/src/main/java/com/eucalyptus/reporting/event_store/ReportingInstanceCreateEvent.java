@@ -25,6 +25,11 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
+@SqlResultSetMapping(name="createEventMap",
+        entities=@EntityResult(entityClass=ReportingInstanceCreateEvent.class))
+@NamedNativeQuery(name="scanInstanceCreateEvents",
+     query="select * from reporting_instance_create_events order by timestamp_ms",
+     resultSetMapping="createEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_instance_create_events")
 public class ReportingInstanceCreateEvent

@@ -59,83 +59,45 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.reporting.art.entity;
 
-package com.eucalyptus.reporting;
+import java.util.*;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import com.eucalyptus.reporting.art.ArtObject;
+import com.eucalyptus.reporting.art.util.IndentingStringBuffer;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.art.generator.InstanceArtGenerator;
-import com.eucalyptus.reporting.art.renderer.HtmlRenderer;
-import com.eucalyptus.reporting.units.Units;
-
-/**
- * <p>ReportGenerator is the main class by which the reporting system is
- * accessed by outside modules. It acts as a facade for the various reporting
- * sub-packages (instance, storage, and s3 sub-packages).
- * 
- * <p>ReportGenerator contains all the jasper-related stuff.
- */
-public class ReportGenerator
+public class AvailabilityZoneArtEntity
+	implements ArtObject
 {
-	private static Logger log = Logger.getLogger( ReportGenerator.class );
-
-	private static final int DEFAULT_CACHE_SIZE = 5;
+	private Map<String, ClusterArtEntity> clusters;
+	private UsageTotalsArtEntity usageTotals;
 	
-	private static ReportGenerator instance;
-
-	private ReportGenerator()
+	public AvailabilityZoneArtEntity()
 	{
+		this.clusters = new HashMap<String, ClusterArtEntity>();
+		this.usageTotals = new UsageTotalsArtEntity();
 	}
-	
-	public static ReportGenerator getInstance()
+
+	public Map<String,ClusterArtEntity> getClusters()
 	{
-		if (instance == null) {
-			instance = new ReportGenerator();
+		return clusters;
+	}
+
+	public UsageTotalsArtEntity getUsageTotals()
+	{
+		return usageTotals;
+	}
+
+	public String prettyPrint(int numIndents)
+	{
+		IndentingStringBuffer sb = new IndentingStringBuffer();
+		sb.appendIndentLine(numIndents, String.format("(totals:%s clusters:{", usageTotals));
+		for (String clustername : clusters.keySet()) {
+			sb.appendIndentLine(numIndents+1, clusters.get(clustername).prettyPrint(numIndents+1));			
 		}
-		return instance;
+		sb.appendIndentLine(numIndents, "})");
+		return sb.toString();
 	}
 
 
-	/**
-	 * STEVE: This is the method to use.
-	 * 
-	 * @param displayUnits Can be null if you just want the default units.
-	 * @param type The type of report, which is INSTANCE for the time being regardless of what you specify
-	 * @param format The report format, which must be HTML at the moment.
-	 * @param period The period for which you wish to generate a report
-	 * @param out Where to send the generated report
-	 * @param accountId The account to generate the report as, which is ignored at present.
-	 * 
-	 * @throws IOException If it cannot write to the stream you passed.
-	 */
-	public void generateReport(Period period, ReportFormat format, ReportType type,
-			Units displayUnits, OutputStream out, String accountId)
-		throws IOException
-	{
-		ReportArtEntity report = new ReportArtEntity(period.getBeginningMs(), period.getEndingMs());
-		if (displayUnits==null) displayUnits=Units.getDefaultDisplayUnits();
-		new InstanceArtGenerator().generateReportArt(report);
-		new HtmlRenderer().render(report, out, displayUnits);
-		
-		return;
-	}
-	
-	/**
-	 * Deprecated; do not use.
-	 * 
-	 * @deprecated
-	 */
-	public void generateReport(String reportType, ReportFormat format,
-			Period period, ReportingCriterion criterion,
-			ReportingCriterion groupByCriterion, Units displayUnits,
-			OutputStream out, String accountId)
-	{
-		return;
-	}
-	
-	
 }
