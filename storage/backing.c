@@ -386,6 +386,7 @@ int create_instance_backing (ncInstance * instance)
 {
     int ret = ERROR;
     virtualMachine * vm = &(instance->params);
+    artifact * sentinel = NULL;
 
     // ensure instance directory exists
     set_path (instance->instancePath,    sizeof (instance->instancePath),    instance, NULL);
@@ -410,11 +411,11 @@ int create_instance_backing (ncInstance * instance)
     set_id (instance, NULL, work_prefix, sizeof (work_prefix));
     
     // compute tree of dependencies
-    artifact * sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
-                                          FALSE, // for Xen and KVM we do not need to make disk bootable
-                                          TRUE, // make working copy of runtime-modifiable files
-                                          (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
-                                          instance->instanceId); // ID is for logging
+    sentinel = vbr_alloc_tree (vm, // the struct containing the VBR
+                               FALSE, // for Xen and KVM we do not need to make disk bootable
+                               TRUE, // make working copy of runtime-modifiable files
+                               (instance->do_inject_key)?(instance->keyName):(NULL), // the SSH key
+                               instance->instanceId); // ID is for logging
     if (sentinel == NULL) {
         logprintfl (EUCAERROR, "[%s] error: failed to prepare backing for instance\n", instance->instanceId);
         goto out;

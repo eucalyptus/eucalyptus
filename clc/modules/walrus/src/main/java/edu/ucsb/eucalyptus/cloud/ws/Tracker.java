@@ -103,7 +103,6 @@ public class Tracker extends Thread {
 		try {
 			return (findTracker().length() > 0);
 		} catch (EucalyptusCloudException e) {
-			LOG.error(e);
 			return false;
 		}
 	}

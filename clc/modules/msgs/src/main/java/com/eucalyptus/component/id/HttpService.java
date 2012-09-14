@@ -63,6 +63,7 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PublicService;
@@ -70,6 +71,7 @@ import com.eucalyptus.component.ComponentId.PublicService;
 @Partition( Eucalyptus.class )
 @PublicService
 @GenerateKeys
+@FaultLogPrefix( "cloud" )
 public class HttpService extends ComponentId {
   
   public HttpService( ) {

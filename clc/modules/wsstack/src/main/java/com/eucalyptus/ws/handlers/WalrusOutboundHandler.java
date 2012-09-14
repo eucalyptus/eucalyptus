@@ -74,10 +74,10 @@ import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.util.WalrusUtil;
 
+import edu.ucsb.eucalyptus.cloud.HeadExceptionInterface;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.PostObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.PutObjectResponseType;
@@ -147,7 +147,12 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 					WalrusErrorMessageType walrusErrorMsg = (WalrusErrorMessageType) errMsg;
 					httpResponse.setStatus(walrusErrorMsg.getStatus());
 				}
-				httpResponse.setMessage(errMsg);
+				// Fix for EUCA-2782. If the exception occurred on HEAD request, http response body should be empty
+				if(errorMessage.getException() instanceof HeadExceptionInterface) {
+					httpResponse.setMessage(null);
+				} else {
+					httpResponse.setMessage(errMsg);	
+				}
 			} else if(msg instanceof WalrusDeleteResponseType) {
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
 				httpResponse.setMessage(null);

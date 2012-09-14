@@ -80,7 +80,7 @@
 #define OP_TIMEOUT_MIN 5
 
 enum {SHARED_MEM, SHARED_FILE};
-enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
+enum {INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, SENSORCACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4, NCCALL5, NCCALL6, NCCALL7, NCCALL8, NCCALL9, NCCALL10, NCCALL11, NCCALL12, NCCALL13, NCCALL14, NCCALL15, NCCALL16, NCCALL17, NCCALL18, NCCALL19, NCCALL20, NCCALL21, NCCALL22, NCCALL23, NCCALL24, NCCALL25, NCCALL26, NCCALL27, NCCALL28, NCCALL29, NCCALL30, NCCALL31, ENDLOCK};
 enum {PRIMORDIAL, INITIALIZED, LOADED, DISABLED, ENABLED, STOPPED, NOTREADY, SHUTDOWNCC};
 
 static configEntry configKeysRestartCC[] = {
@@ -176,7 +176,7 @@ void print_ccInstance(char *tag, ccInstance *in);
 enum {RESDOWN, RESUP, RESASLEEP, RESWAKING};
 enum {INSTINVALID, INSTVALID, INSTCONFLICT};
 enum {RESINVALID, RESVALID};
-enum {MONITOR, CLEANUP, CONTROL};
+enum {MONITOR=0, SENSOR, NUM_THREADS};
 enum {CONFIGLOCK, CACHELOCK, VNETCONFIGLOCK};
 
 typedef struct resource_t {
@@ -227,7 +227,7 @@ typedef struct ccConfig_t {
   int schedPolicy, schedState;
   int idleThresh, wakeThresh;
   time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency;
-  int threads[3];
+  int threads[NUM_THREADS];
   int ncFanout;
   int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
   uint32_t cloudIp;
@@ -267,7 +267,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
 int doFlushNetwork(ncMetadata *ccMeta, char *accountId, char *destName);
 
 int doCreateImage(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-int doDescribeSensors(ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
+int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 
 int schedule_instance(virtualMachine *vm, char *targetNode, int *outresid);
 int schedule_instance_greedy(virtualMachine *vm, int *outresid);

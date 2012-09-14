@@ -63,9 +63,11 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.Partition;
 
 @Partition( Eucalyptus.class )
+@FaultLogPrefix( "cloud" )
 public class Ldap extends ComponentId {
   
 }

@@ -76,11 +76,12 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.system.BaseDirectory;
 
 public class FaultSubsystemManager {
 	private static final Logger LOG = Logger.getLogger(FaultSubsystemManager.class);
-	private Map<ComponentId, FaultLogger> loggerMap = new ConcurrentHashMap<ComponentId, FaultLogger>();
+	private Map<String, FaultLogger> loggerMap = new ConcurrentHashMap<String, FaultLogger>();
 	private FaultRegistry faultRegistry = null;
 	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
 	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
@@ -145,48 +146,51 @@ public class FaultSubsystemManager {
 	
 
 	public synchronized FaultLogger getFaultLogger(ComponentId componentId) {
+
+		
 		if (componentId == null) throw new IllegalArgumentException("componentId is null");
-		FaultLogger logger = loggerMap.get(componentId);
+		String faultLogPrefix = componentId.getFaultLogPrefix();
+		FaultLogger logger = loggerMap.get(faultLogPrefix);
 		if (logger == null) {
-			logger = initLogger(componentId);
-			loggerMap.put(componentId, logger);
+			logger = initLogger(faultLogPrefix);
+			loggerMap.put(faultLogPrefix, logger);
 		}
 		return logger;
 	}
 
-	private FaultLogger initLogger(ComponentId componentId) {
-		final String targetLoggerName = "com.eucalyptus.troubleshooting.fault." + componentId.getName().toLowerCase() + ".log";
-		final String targetAppenderName = componentId.getName().toLowerCase() + "-fault-log";
-		final String targetLogFileName = componentId.getName().toLowerCase() + "-fault.log";
+	private FaultLogger initLogger(String faultLogPrefix) {
+		final String targetLoggerName = "com.eucalyptus.troubleshooting.fault." + faultLogPrefix + ".log";
+		final String targetAppenderName = faultLogPrefix + "-fault-log";
+		final String targetLogFileName = faultLogPrefix + "-fault.log";
 				
 		// first find the actual logger (if it exists). Should be named com.eucalyptus.troubleshooting.fault.${component}.log
 		// Scan the loggers to see if it already exists.  Otherwise add it
-		LOG.info("looking for logger " + targetLoggerName);
+		LOG.debug("looking for logger " + targetLoggerName);
 		Logger logger = null;
 		Enumeration logEnum = LogManager.getCurrentLoggers();
 		while (logEnum.hasMoreElements()) {
 			Logger currentLogger = (Logger) logEnum.nextElement();
 			if (logger == null && currentLogger.getName().equals(targetLoggerName)) {
 				logger = currentLogger;
-				LOG.info("Found logger " + targetLoggerName);
+				LOG.debug("Found logger " + targetLoggerName);
 				break;
 			}
 		}
 		if (logger == null) {
-			LOG.info("Didn't find logger " + targetLoggerName + ", creating it now");
+			LOG.debug("Didn't find logger " + targetLoggerName + ", creating it now");
 			logger = Logger.getLogger(targetLoggerName);
 			logger.setAdditivity(false);
 			logger.setLevel(Level.FATAL);
 		}
 		// Check the log registry for the appender named ${component}-fault-log.  Need to check all loggers (unfortunately)
-		LOG.info("Checking root logger for appender " + targetAppenderName);
+		LOG.debug("Checking root logger for appender " + targetAppenderName);
 		Appender appender = checkAppender(LogManager.getRootLogger(), targetAppenderName);
 		if (appender == null) {
 			logEnum = LogManager.getCurrentLoggers();
 			while (logEnum.hasMoreElements()) {
 				if (appender == null) {
 					Logger currentLogger = (Logger) logEnum.nextElement();
-					LOG.info("Checking " + currentLogger.getName() + " for appender " + targetAppenderName);
+					LOG.debug("Checking " + currentLogger.getName() + " for appender " + targetAppenderName);
 					appender = checkAppender(currentLogger, targetAppenderName);
 				} else {
 					break; // found it
@@ -228,6 +232,13 @@ public class FaultSubsystemManager {
 
 	public FaultRegistry getFaultRegistry() {
 		return faultRegistry;
+	}
+	public void init() {
+		// preload as many appenders as we can right now...
+		for (ComponentId componentId: ComponentIds.list()) {
+			// TODO: don't forget to bridge the components
+			getFaultLogger(componentId);
+		}
 	}
 
 }

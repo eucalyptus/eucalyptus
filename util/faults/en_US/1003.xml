@@ -20,27 +20,26 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-    id="1001"
-    message="Invalid eucalyptus.conf">
+    id="1003"
+    message="Runniing very low on disk space.">
 
     <condition
-      message="Invalid eucalyptus.conf file."/>
+      message="Running very low on disk space."/>
 
     <cause
-      message="Invalid VNET_ADDRSPERNET settings."/>
+      message="Not enough disk space."/>
 
     <initiator
       message="${component}"/>
 
     <location
-      message="localhost"/>
+      message="Disk partition that hosts ${file}"/>
 
     <resolution>
       <message>
-        1) Correct VNET_ADDRSPERNET setting in eucalyptus.conf
-           (A valid setting is an even power of 2 between 16 and 2048.)
-
-        2) Restart Eucalyptus component: ${component}
+        1) Delete un-needed files on partition that hosts ${file}.
+        2) Allocate more disk space on the partition that hosts ${file}
+        3) Buy more storage and allocate it to the partition that hosts ${file} 
       </message>
     </resolution>
   </fault>
