@@ -230,7 +230,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				//query string authentication
 				String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
 				try {
-					String signature = WalrusUtil.URLdecode(parameters.remove(SecurityParameter.Signature.toString()));
+					//No need to decode the parameter, that is done during HTTP message creation
+					String signature = parameters.remove(SecurityParameter.Signature.toString());
 					if(signature == null) {
 						throw new AuthenticationException("User authentication failed. Null signature.");
 					}
