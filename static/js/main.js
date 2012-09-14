@@ -72,7 +72,7 @@
           key pairs: K, k (75, 107)
           address: A, a (65, 97)          
           launch new instance: L, l (76, 108) */
-        
+        $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
         switch(key){
           case 68:
           case 100:

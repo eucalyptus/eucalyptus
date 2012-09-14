@@ -54,7 +54,8 @@
           $curInstance.close();
         }
       }
-      $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
+     // $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
+     // Manage resources-->uncomment above
       switch(selected){
         case 'dashboard':
           var $container = $('html body').find(DOM_BINDING['main']);
