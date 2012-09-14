@@ -38,7 +38,7 @@
     <resolution>
       <message>
         1) Correct VNET_ADDRSPERNET setting in eucalyptus.conf
-           (A valid setting is an even power of 2 between 16 and 2048.)
+           (A valid setting is an integral power of 2 between 16 and 2048.)
 
         2) Restart Eucalyptus component: ${component}
       </message>
