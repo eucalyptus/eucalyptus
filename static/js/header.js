@@ -64,8 +64,8 @@
     _create : function(){
        var thisObj = this;
        // navigation area   
-       var $naviArea = this.element.find('#euca-navigator');
-       $naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));
+       //var $naviArea = this.element.find('#euca-navigator');
+       //$naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));
        
        //help area 
        var $helpArea = this.element.find('#euca-help');

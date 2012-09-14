@@ -99,7 +99,7 @@ a:hover {
 }
 
 .euca-explorer-container {
-  display:none;
+ /* display:none;*/
   background: transparent url(../images/css-sprites.png) repeat-x left -75px;
 
   /* Needed so the drop shadow will appear above the next section */
