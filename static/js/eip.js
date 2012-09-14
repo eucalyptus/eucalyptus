@@ -283,8 +283,10 @@
           success:
             function(data, textStatus, jqXHR){
               if ( data.results ) {
-                notifySuccess(null, eip_allocate_success(data.results.public_ip));
+                ip = data.results.public_ip;
+                notifySuccess(null, eip_allocate_success(ip));
                 thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable('glowRow', ip);
               } else {
                 notifyError(null, eip_allocate_error);
               }

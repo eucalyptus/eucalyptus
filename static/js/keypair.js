@@ -150,6 +150,7 @@
             });
             notifySuccess(null, keypair_create_success(keyName));
             thisObj.tableWrapper.eucatable('refreshTable');
+            thisObj.tableWrapper.eucatable('glowRow', keyName);
           } else {
             notifyError(null, keypair_create_error(keyName));
           }

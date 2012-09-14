@@ -243,8 +243,10 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, snapshot_create_success(volumeId));
+              var snapId = data.results.id;
+              notifySuccess(null, snapshot_create_success(snapId, volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
               notifyError(null, snapshot_create_error(volumeId));
             }

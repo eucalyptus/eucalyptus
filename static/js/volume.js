@@ -346,8 +346,10 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, volume_create_success(data.results.id));
+              var volId = data.results.id;
+              notifySuccess(null, volume_create_success(volId));
               thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable('glowRow', volId);
             } else {
               notifyError(null, volume_create_error);
             }

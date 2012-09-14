@@ -133,8 +133,9 @@
                               thisObj._addIngressRule(name, fromPort, toPort, protocol, cidr, fromGroup);
                           }
                           else {
-                              notifySuccess(sgroup_create_success + ' ' + name);
+                              notifySuccess(null, sgroup_create_success(name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
+                              thisObj._getTableWrapper().eucatable('glowRow', name);
                               $add_dialog.eucadialog("close");
                           }
                       } else {
@@ -143,7 +144,7 @@
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    nofityError(null, error_creating_group_msg);
+                    nofityError(null, sgroup_create_error(name));
                     dfd.reject();
                     $add_dialog.eucadialog("close");
                   }
@@ -364,27 +365,6 @@
 
     _reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
-    },
-
-    _addSecurityGroup : function(groupName, groupDesc) {
-      var thisObj = this;
-      return $.ajax({
-        type:"GET",
-        url:"/ec2?Action=CreateSecurityGroup",
-        data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
-        dataType:"json",
-        async:"true",
-        success: (function(sgroupName) {
-                     return function (data, textstatus, jqXHR) {
-                         notifySuccess(sgroup_rule_add_success + ' ' + name);
-                     }
-                 }),
-        error: (function(sgroupName) {
-                     return function(jqXHR, textStatus, errorThrown){
-                         notifyFailure(sgroup_rule_add_error + ' ' + sgroupName);
-                     }
-                 })
-      });
     },
 
     _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {

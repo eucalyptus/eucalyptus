@@ -1587,9 +1587,14 @@ span.on-error {
 }
 /* END Sang-min */
 
+/* Vasya: temporary styling. Style me. Move me! */
 .label_required:before {
   content: "* ";
 }
+.glow {
+  color: orange;
+}
+/* END Vasya */
 
 .euca-hidden-container {
   display : none;
