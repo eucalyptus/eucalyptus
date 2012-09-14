@@ -50,12 +50,21 @@ body {
   background: #fff;
   border-top: 10px solid #02405f;
   color: #444;
-  font-family: Arial, sans-serif;
-  font-size: 1em;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  font-size: 13px;
   margin: 0;
   padding: 0;
 }
 
+a {
+  color: #73a434;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #73a434;
+  text-decoration: underline;
+}
 
 /* ======= Helper classes ======= */
 
@@ -532,7 +541,8 @@ body {
   background-color: #f3f6f9;
   border-radius: 4px;
   border: 1px solid #9eb1c3;
-  color: #666;
+  color: #555;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
   font-size: 12px;
   padding: 6px;
   width: 255px;
@@ -560,7 +570,8 @@ body {
 }
 
 .password-help a {
-  color: #666;
+  color: #73a434;
+  font-weight: bold;
   text-decoration: none;
 }
 
@@ -615,6 +626,9 @@ body {
 .large-button:hover,
 .xlarge-button:hover,
 .ui-widget-content .ui-state-default:hover {
+  color: #fff;
+  text-decoration: none;
+
   background-image: -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
@@ -626,7 +640,9 @@ body {
 /* ======== Content styles ======= */
 
 .content-box,
-.euca-dialog-container {
+.euca-dialog-container,
+.help-page-wrapper,
+.launcher_wrapper {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
@@ -670,14 +686,11 @@ body {
 /* TODO: See if a common class could be used on some of them */
 
 .page-content-box,
-.dataTables_wrapper,
-.help-page-wrapper,
-.launcher_wrapper {
+.dataTables_wrapper
+{
   position: relative;
-
   background-color: #fff;
   border: 1px solid #d7d5d5;
-
   margin: 0 8px 35px;
   padding: 47px 0 10px 0; 
 
@@ -911,7 +924,7 @@ table.display td {
   padding: 5px 10px;
   border-top: 2px solid #dae2e8;
   border-left: 1px solid #dae2e8;
-  font-size: 11px;
+  /*font-size: 11px;*/
 }
 
 tr.odd,
@@ -1003,7 +1016,6 @@ tr.selected-row td.sorting_1
 .filter-label {
   padding-right: 5px;
   font-family: 'PlayRegular', Arial, sans-serif;
-  font-size: 12px;
   color: #02405F;
 }
 
@@ -1016,13 +1028,13 @@ tr.selected-row td.sorting_1
 .dataTables_filter label {
   margin-right: 10px;
   font-family: 'PlayRegular', Arial, sans-serif;
-  font-size: 12px;
   color: #02405f;
 }
 
 .dataTables_filter input {
   /* This element shares styling with .input-field */
   background: transparent url(../images/css-sprites-small.png) no-repeat right -250px;
+  margin-left: 3px;
 }
 
 .table-refresh {
@@ -1575,8 +1587,8 @@ span.on-error {
 }
 /* END Sang-min */
 
-.label_required:after {
-  content: " *";
+.label_required:before {
+  content: "* ";
 }
 
 .euca-hidden-container {

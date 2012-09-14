@@ -975,7 +975,7 @@
 				"sInfoFiltered": "(filtered from _MAX_ total entries)",
 				"sInfoPostFix": "",
 				"sInfoThousands": ",",
-				"sSearch": "Search:",
+				"sSearch": "Search",
 				"sUrl": "",
 				"oPaginate": {
 					"sFirst":    "First",
