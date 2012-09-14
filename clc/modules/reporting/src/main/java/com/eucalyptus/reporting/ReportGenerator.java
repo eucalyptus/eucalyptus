@@ -69,7 +69,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.generator.InstanceArtGenerator;
-import com.eucalyptus.reporting.art.renderer.HtmlRenderer;
+import com.eucalyptus.reporting.art.renderer.InstanceHtmlRenderer;
 import com.eucalyptus.reporting.units.Units;
 
 /**
@@ -118,8 +118,8 @@ public class ReportGenerator
 	{
 		ReportArtEntity report = new ReportArtEntity(period.getBeginningMs(), period.getEndingMs());
 		if (displayUnits==null) displayUnits=Units.getDefaultDisplayUnits();
-		new InstanceArtGenerator().generateReportArt(report);
-		new HtmlRenderer().render(report, out, displayUnits);
+		type.getGenerator().generateReportArt(report);
+		type.getRenderer().render(report, out, displayUnits);
 		
 		return;
 	}

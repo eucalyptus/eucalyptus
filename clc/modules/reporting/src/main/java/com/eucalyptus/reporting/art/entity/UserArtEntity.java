@@ -70,6 +70,7 @@ public class UserArtEntity
 	implements ArtObject
 {
 	private Map<String,InstanceArtEntity> instances;
+	private Map<String,VolumeArtEntity> volumes;
 	private UsageTotalsArtEntity totals;
 	
 	public UserArtEntity()
@@ -84,6 +85,11 @@ public class UserArtEntity
 		return instances;
 	}
 
+	public Map<String,VolumeArtEntity> getVolumes()
+	{
+		return volumes;
+	}
+
 	public UsageTotalsArtEntity getUsageTotals()
 	{
 		return totals;
@@ -92,11 +98,20 @@ public class UserArtEntity
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s instances:{", totals));
-		for (String uuid : instances.keySet()) {
-			sb.appendIndentLine(numIndents+1, instances.get(uuid).toString());			
+		sb.appendIndentLine(numIndents, String.format("(totals:%s", totals));
+		if (instances.keySet().size()>0) {
+			sb.append(" instances:{");
+			for (String uuid : instances.keySet()) {
+				sb.appendIndentLine(numIndents+1, instances.get(uuid).toString());			
+			}
+			sb.appendIndentLine(numIndents, "})");
+		} else if (volumes.keySet().size()>0) {
+			sb.append(" volumes:{");
+			for (String uuid : volumes.keySet()) {
+				sb.appendIndentLine(numIndents+1, volumes.get(uuid).toString());			
+			}
+			sb.appendIndentLine(numIndents, "})");			
 		}
-		sb.appendIndentLine(numIndents, "})");
 		return sb.toString();
 	}
 

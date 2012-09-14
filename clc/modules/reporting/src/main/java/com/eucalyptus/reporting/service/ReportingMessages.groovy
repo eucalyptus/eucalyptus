@@ -72,8 +72,7 @@ class GenerateReportType extends ReportingMessage {
   String startDate
   @HttpParameterMapping (parameter = "End")
   String endDate
-  @HttpParameterMapping (parameter = "Type")
-  ArrayList<String> types = new ArrayList<String>()
+  String type
 }
 
 class GenerateReportResponseType extends ReportingMessage  {

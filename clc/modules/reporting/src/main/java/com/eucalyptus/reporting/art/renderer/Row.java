@@ -64,25 +64,27 @@ package com.eucalyptus.reporting.art.renderer;
 class Row
 {
     private final StringBuffer sb;
+    private final int width;
 
-    public Row()
+    public Row(int width)
     {
         sb = new StringBuffer();
+        this.width = width;
     }
 
     public Row addCol(String val)
     {
-        return addCol(val, 35, 1, "center");
+        return addCol(val, width, 1, "center");
     }
 
     public Row addCol(Long val)
     {
-        return addCol((val==null)?null:val.toString(), 35, 1, "center");
+        return addCol((val==null)?null:val.toString(), width, 1, "center");
     }
 
     public Row addCol(Double val)
     {
-        return addCol((val==null)?null:String.format("%3.1f", val), 35, 1, "center");
+        return addCol((val==null)?null:String.format("%3.1f", val), width, 1, "center");
     }
 
     public Row addCol(String val, int width, int colspan, String align)

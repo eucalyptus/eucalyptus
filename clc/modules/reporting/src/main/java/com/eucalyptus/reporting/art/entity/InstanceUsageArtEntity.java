@@ -66,9 +66,11 @@ import com.eucalyptus.reporting.art.ArtObject;
 public class InstanceUsageArtEntity
 	implements ArtObject
 {
+	private int instanceCnt;
+	private long durationMs = 0l;
+
 	/* Attributes for cpu utilization percent */
 	private Double cpuPercentAvg = null;
-	private long durationMs = 0l;
 
 	/* Attributes for usage-days */
 	private Long diskIoMegs = null;
@@ -83,17 +85,36 @@ public class InstanceUsageArtEntity
 	{
 	}
 
+	public int getInstanceCnt()
+	{
+		return this.instanceCnt;
+	}
+	
+	public void setInstanceCnt(int instanceCnt)
+	{
+		this.instanceCnt = instanceCnt;
+	}
+	
+	public long getDurationMs()
+	{
+		return this.durationMs;
+	}
+	
+	public void setDurationMs(long durationMs)
+	{
+		this.durationMs = durationMs;
+	}
+	
+	public void addDurationMs(long addMs)
+	{
+		this.durationMs = addMs;
+	}
 
 	public Double getCpuPercentAvg()
 	{
 		return cpuPercentAvg;
 	}
 
-	public long getDurationMs()
-	{
-		return durationMs;
-	}
-	
 	public Long getDiskIoMegs()
 	{
 		return diskIoMegs;
@@ -134,11 +155,6 @@ public class InstanceUsageArtEntity
 		this.cpuPercentAvg = cpuPercentAvg;
 	}
 	
-	public void addDurationMs(long addMs)
-	{
-		this.durationMs = addMs;
-	}
-
 	public void setDiskIoMegs(Long diskIoMegs)
 	{
 		this.diskIoMegs = diskIoMegs;

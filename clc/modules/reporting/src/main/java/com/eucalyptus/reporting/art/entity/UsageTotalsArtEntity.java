@@ -69,22 +69,32 @@ public class UsageTotalsArtEntity
 	implements ArtObject
 {
 	private final InstanceUsageArtEntity instanceTotals;
-	private final Map<String,Long> totalRunningSecs;
+	private final VolumeUsageArtEntity volumeTotals;
+	private final Map<String,InstanceUsageArtEntity> typeTotals;
 	
 	public UsageTotalsArtEntity()
 	{
 		this.instanceTotals = new InstanceUsageArtEntity();
-		this.totalRunningSecs = new HashMap<String,Long>();
+		this.volumeTotals = new VolumeUsageArtEntity();
+		this.typeTotals = new HashMap<String,InstanceUsageArtEntity>();
 	}
 	
 	public InstanceUsageArtEntity getInstanceTotals()
 	{
 		return this.instanceTotals;
 	}
-
-	public Map<String,Long> getTotalRunningSecs()
+	
+	public VolumeUsageArtEntity getVolumeTotals()
 	{
-		return this.totalRunningSecs;
+		return this.volumeTotals;
+	}
+
+	/**
+	 * "m1.small" -> InstanceRunningTotalsArtEntity 
+	 */
+	public Map<String,InstanceUsageArtEntity> getTypeTotals()
+	{
+		return this.typeTotals;
 	}
 	
 	
