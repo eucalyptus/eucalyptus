@@ -177,7 +177,7 @@ a:hover {
 }
 
 #resources-link {
-  display: block;
+  display: none; /* Turned off the Manage resources link */
   background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
   color: #02405f;
   font-family: 'PlayBold', Arial, sans-serif;
@@ -435,13 +435,31 @@ a:hover {
   text-align: center;
   width: 960px;
 
-  -webkit-border-radius: 5px;
-  -moz-border-radius: 5px;
-  border-radius: 5px;
+  -webkit-border-radius: 2px;
+  -moz-border-radius: 2px;
+  border-radius: 2px;
 
   -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
   -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+}
+
+.success-msg {
+  border: 2px solid #aac684;
+  background-color: #E7FFC6;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+}
+
+.error-msg {
+  border: 2px solid #efa4a4;
+  background-color: #fedddf;  
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 #euca-notification-title {
@@ -703,6 +721,10 @@ a:hover {
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
+.dataTables_wrapper {
+  min-height: 400px;
+}
+
 /* Ribbon corners */
 
 .box-header::before,
@@ -827,10 +849,14 @@ a:hover {
 #dashboard-storage-img,
 #dashboard-netsec-img {
   float: left;
-  margin-top: 2px;  
+  margin: 2px 18px 0 0;
   height: 85px;
   width: 110px;
   background: transparent url(../images/css-sprites.png) no-repeat -150px -325px;
+}
+
+#dashboard-instance-img {
+  margin-right: 0;
 }
 
 #dashboard-storage-img {
@@ -858,12 +884,13 @@ a:hover {
 .storage,
 .netsec {
   float: left;
-  width: 46%;
+  width: 40%;
   min-height: 85px; 
 }
 
 .netsec {
   float: right;
+  width: 52%;
 }
 
 .status-readout {
@@ -872,7 +899,7 @@ a:hover {
   font-size: 13px;
   margin: 15px 5px 0 0;
   text-align: center;
-  width: 90px;
+  width: 95px;
 }
  
 .status-readout span {
@@ -895,7 +922,7 @@ a:hover {
   /* NOTE: Some common styles are set above with the page-content-box */
   /* Only the differences are placed here */
   margin: 0 8px 35px;
-  padding: 47px 0 10px 0; 
+  padding: 47px 0 12px 0; 
 }
 
 table.display {
@@ -921,10 +948,10 @@ table.display tr.heading2 td {
 }
 
 table.display td {
-  padding: 5px 10px;
+  padding: 5px 8px;
   border-top: 2px solid #dae2e8;
   border-left: 1px solid #dae2e8;
-  /*font-size: 11px;*/
+  font-size: 11px;
 }
 
 tr.odd,
@@ -1376,6 +1403,10 @@ tr.selected-row td.sorting_1
 
 /* ======= Overrides for jQuery UI dialog boxes ======= */
 
+.ui-widget {
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
 .ui-widget-overlay {
   background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
   opacity: 0.6;
@@ -1411,8 +1442,8 @@ tr.selected-row td.sorting_1
 
 .dialog-inner-content {
   padding: 0 15px 5px;
-  font-size: 11px;
   color: #444;
+  font-size: 13px;
 }
 
 .selected-resources {
@@ -1587,8 +1618,9 @@ span.on-error {
 }
 /* END Sang-min */
 
-.label_required:before {
-  content: "* ";
+.label_required:after {
+  content: "*";
+  color: #e36f1e;
 }
 
 .euca-hidden-container {
