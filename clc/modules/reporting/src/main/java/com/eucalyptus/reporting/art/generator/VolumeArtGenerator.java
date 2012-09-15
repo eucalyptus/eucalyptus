@@ -9,14 +9,12 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
 import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
-import com.eucalyptus.reporting.art.entity.ClusterArtEntity;
 import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
-import com.eucalyptus.reporting.art.entity.InstanceUsageArtEntity;
-import com.eucalyptus.reporting.art.entity.UsageTotalsArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeUsageArtEntity;
+import com.eucalyptus.reporting.art.util.AttachDurationCalculator;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
@@ -39,7 +37,7 @@ public class VolumeArtGenerator
 		EntityWrapper wrapper = EntityWrapper.get( ReportingVolumeCreateEvent.class );
 
 		/* Create super-tree of availZones, accounts, users, and volumes;
-		 * and create a Map of the volume nodes at the bottom.
+		 * and create a Map of the volume nodes at the bottom with start times.
 		 */
 		Iterator iter = wrapper.scanWithNativeQuery( "scanVolumeCreateEvents" );
 		Map<String,VolumeArtEntity> volumeEntities = new HashMap<String,VolumeArtEntity>();
@@ -75,6 +73,8 @@ public class VolumeArtGenerator
 			volumeEntities.put(createEvent.getUuid(), volume);
 		}
 		
+		/* Find end times for the volumes
+		 */
 		iter = wrapper.scanWithNativeQuery( "scanVolumeDeleteEvents" );
 		while (iter.hasNext()) {
 			ReportingVolumeDeleteEvent deleteEvent = (ReportingVolumeDeleteEvent) iter.next();
@@ -88,6 +88,8 @@ public class VolumeArtGenerator
 			startEndTimes.setEndTimeMs(endTime);
 		}
 
+		/* Set the duration of each volume
+		 */
 		for (String uuid: volumeEntities.keySet()) {
 			VolumeArtEntity volume = volumeEntities.get(uuid);
 			StartEndTimes startEndTimes = volStartEndTimes.get(uuid);
@@ -98,6 +100,7 @@ public class VolumeArtGenerator
 			volume.getUsage().setDurationMs(startEndTimes.getDurationMs());
 		}
 		
+
 		/* Scan instance entities so we can get the instance id from the uuid
 		 */
 		Map<String,InstanceArtEntity> instanceEntities = new HashMap<String,InstanceArtEntity>();
@@ -107,58 +110,36 @@ public class VolumeArtGenerator
 			InstanceArtEntity instance = new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId());
 			instanceEntities.put(createEvent.getUuid(), instance);
 		}
-
+		
 
 		/* Find attachment start times
 		 */
+		AttachDurationCalculator durationCalc = new AttachDurationCalculator(report.getBeginMs(), report.getEndMs());
 		iter = wrapper.scanWithNativeQuery( "scanVolumeAttachEvents" );
-		Map<String,Map<String,StartEndTimes>> attachStartEndTimes =
-			new HashMap<String,Map<String,StartEndTimes>>(); //volUuid -> instanceUuid -> startEndTimes
 		while (iter.hasNext()) {
 			ReportingVolumeAttachEvent attachEvent = (ReportingVolumeAttachEvent) iter.next();
-			long startTime = Math.max(report.getBeginMs(), attachEvent.getTimestampMs());
-			if (! attachStartEndTimes.containsKey(attachEvent.getVolumeUuid())) {
-				attachStartEndTimes.put(attachEvent.getVolumeUuid(), new HashMap<String,StartEndTimes>());
-			}
-			Map<String,StartEndTimes> innerMap = attachStartEndTimes.get(attachEvent.getVolumeUuid());
-			innerMap.put(attachEvent.getInstanceUuid(), new StartEndTimes( startTime, report.getEndMs() ));
+			durationCalc.attach(attachEvent.getInstanceUuid(), attachEvent.getVolumeUuid(),
+					attachEvent.getTimestampMs());
 		}
 
-		/* Find attachment end times
+		/* Find attachment end times and set durations
 		 */
 		iter = wrapper.scanWithNativeQuery( "scanVolumeDetachEvents" );
 		while (iter.hasNext()) {
 			ReportingVolumeDetachEvent detachEvent = (ReportingVolumeDetachEvent) iter.next();
-			long endTime = Math.max(report.getBeginMs(), detachEvent.getTimestampMs());
-			if (! attachStartEndTimes.containsKey(detachEvent.getVolumeUuid())) {
-				log.error("Detach volume without corresponding attach:" + detachEvent.getVolumeUuid());
-				continue;
-			}
-			Map<String,StartEndTimes> innerMap = attachStartEndTimes.get(detachEvent.getVolumeUuid());
-			if (!innerMap.containsKey(detachEvent.getInstanceUuid())) {
-				log.error("Detach instance without corresponding attach:" + detachEvent.getInstanceUuid());
-				continue;				
-			}
-			innerMap.get(detachEvent.getInstanceUuid()).setEndTimeMs(endTime);
-		}
+			long duration = durationCalc.detach(detachEvent.getInstanceUuid(),
+					detachEvent.getVolumeUuid(), detachEvent.getTimestampMs());			
+			if (duration==0) continue;
+			if (! volumeEntities.containsKey(detachEvent.getVolumeUuid())) continue;
+			VolumeArtEntity volume = volumeEntities.get(detachEvent.getVolumeUuid());
+			if (! volume.getInstanceAttachments().containsKey(detachEvent.getInstanceUuid())) continue;
+			VolumeUsageArtEntity usage = volume.getInstanceAttachments().get(detachEvent.getInstanceUuid());
+			usage.setDurationMs(duration);
 
-		for (String volUuid: volumeEntities.keySet()) {
-			VolumeArtEntity volume = volumeEntities.get(volUuid);
-			if (! attachStartEndTimes.containsKey(volUuid)) {
-				log.error("Volume without corresponding start/end times:" + volUuid);
-				continue;								
-			}
-			Map<String,StartEndTimes> innerMap = attachStartEndTimes.get(volUuid);
-			for (String instanceUuid: innerMap.keySet()) {
-				VolumeUsageArtEntity attachUsage = new VolumeUsageArtEntity();
-				attachUsage.setSizeGB(volume.getUsage().getSizeGB());
-				attachUsage.setDurationMs(innerMap.get(instanceUuid).getDurationMs());
-				volume.getInstanceAttachments().put(instanceUuid, attachUsage);
-			}
 		}
 
 		
-		/* Perform totals and summations
+		/* Perform totals and summations for user, account, and zone
 		 */
 		for (String zoneName : report.getZones().keySet()) {
 			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
