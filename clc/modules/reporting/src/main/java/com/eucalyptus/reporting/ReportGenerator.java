@@ -68,8 +68,6 @@ import java.io.OutputStream;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.art.generator.InstanceArtGenerator;
-import com.eucalyptus.reporting.art.renderer.InstanceHtmlRenderer;
 import com.eucalyptus.reporting.units.Units;
 
 /**
@@ -116,10 +114,21 @@ public class ReportGenerator
 			Units displayUnits, OutputStream out, String accountId)
 		throws IOException
 	{
+		if (period==null) {
+			throw new IllegalArgumentException("Period can't be null");
+		}
+		if (type==null) {
+			throw new IllegalArgumentException("type can't be null");
+		}
+		if (out==null) {
+			throw new IllegalArgumentException("out can't be null");
+		}
+		if (format==null) format=ReportFormat.HTML;
+		
 		ReportArtEntity report = new ReportArtEntity(period.getBeginningMs(), period.getEndingMs());
 		if (displayUnits==null) displayUnits=Units.getDefaultDisplayUnits();
 		type.getGenerator().generateReportArt(report);
-		type.getRenderer().render(report, out, displayUnits);
+		type.getRendererFactory().getRenderer(format).render(report, out, displayUnits);
 		
 		return;
 	}

@@ -5,29 +5,29 @@ import com.eucalyptus.reporting.art.renderer.*;
 
 public enum ReportType
 {
-	INSTANCE   (new InstanceArtGenerator(), new InstanceHtmlRenderer()),
-	S3         (null,null),
-	VOLUME     (new VolumeArtGenerator(), new VolumeHtmlRenderer()),
-	SNAPSHOT   (null,null),
-	ELASTIC_IP (null,null);
+	INSTANCE   (new InstanceArtGenerator(), new InstanceRendererFactory()),
+	S3         (null, null),
+	VOLUME     (new VolumeArtGenerator(), new VolumeRendererFactory()),
+	SNAPSHOT   (null, null),
+	ELASTIC_IP (null, null);
 	
-	private final HtmlRenderer renderer;
 	private final ArtGenerator generator;
+	private final RendererFactory rendererFactory;
 
-	private ReportType(ArtGenerator generator, HtmlRenderer renderer)
+	private ReportType(ArtGenerator generator, RendererFactory rendererFactory)
 	{
-		this.renderer = renderer;
 		this.generator = generator;
-	}
-
-	public HtmlRenderer getRenderer()
-	{
-		return renderer;
+		this.rendererFactory = rendererFactory;
 	}
 
 	public ArtGenerator getGenerator()
 	{
 		return generator;
+	}
+	
+	public RendererFactory getRendererFactory()
+	{
+		return this.rendererFactory;
 	}
 	
 }
