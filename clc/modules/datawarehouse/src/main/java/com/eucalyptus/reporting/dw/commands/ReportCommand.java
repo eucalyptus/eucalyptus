@@ -63,22 +63,22 @@ public class ReportCommand extends CommandSupport {
       throw new IllegalArgumentException( "Invalid start or end time");
     }
 
-    final String reportData;
-    try {
-      reportData = ReportGenerationFacade.generateReport( Iterables.get(types, 0, "raw"), startTime, endTime );
-    } catch ( ReportGenerationException e ) {
-      throw Exceptions.toUndeclared( e );
-    }
-
-    if ( reportFilename != null ) {
-      try {
-        Files.write( reportData, new File(reportFilename), Charsets.UTF_8);
-      } catch ( IOException  e) {
-        throw Exceptions.toUndeclared( e );
-      }
-    } else {
-      System.out.println( reportData );
-    }
+//    final String reportData;
+//    try {
+//      reportData = ReportGenerationFacade.generateReport( Iterables.get(types, 0, "raw"), startTime, endTime );
+//    } catch ( ReportGenerationException e ) {
+//      throw Exceptions.toUndeclared( e );
+//    }
+//
+//    if ( reportFilename != null ) {
+//      try {
+//        Files.write( reportData, new File(reportFilename), Charsets.UTF_8);
+//      } catch ( IOException  e) {
+//        throw Exceptions.toUndeclared( e );
+//      }
+//    } else {
+//      System.out.println( reportData );
+//    }
   }
 
   private String formatDate( final long time ) {
