@@ -196,7 +196,7 @@ public class FalseDataGenerator
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, snapshotUuidNum++);
 								System.out.printf("  Generating snapshot uuid %s\n", uuid);
 								ReportingVolumeSnapshotEventStore.getInstance().insertCreateEvent(uuid,
-										("snap-" + userNum + "-" + periodNum),
+										volumeUuid, ("snap-" + userNum + "-" + periodNum),
 										timeMs, userId, SNAPSHOT_SIZE);
 							}
 							
@@ -204,7 +204,7 @@ public class FalseDataGenerator
 							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
 								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
 								System.out.printf("  Generating bucket uuid %s\n", bucketUuid);
-								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, BUCKET_SIZE, userId, timeMs);
+								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, userId, timeMs);
 							}
 							
 							/* Create a fake object if one should be created in this period. */

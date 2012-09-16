@@ -40,8 +40,8 @@ public class ReportingS3ObjectEventStore extends EventStoreSupport
   }
 
   public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, long getRequestNumCumulative,
-		  long putRequestNumCumulative, long timestampMs, String userId) {
+		  long timestampMs, String userId) {
     persist( new ReportingS3ObjectUsageEvent(s3BucketName, s3ObjectName, getRequestNumCumulative,
-    		putRequestNumCumulative, timestampMs, userId) );
+    		timestampMs, userId) );
   }
 }

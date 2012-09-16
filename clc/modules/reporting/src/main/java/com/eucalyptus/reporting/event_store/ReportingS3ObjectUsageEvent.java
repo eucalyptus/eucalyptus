@@ -39,21 +39,18 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     protected String userId;
 	@Column(name="get_requests_num_cumulative", nullable=false)
 	protected Long getRequestsNumCumulative;
-	@Column(name="put_requests_num_cumulative", nullable=false)
-	protected Long putRequestsNumCumulative;
 
     protected ReportingS3ObjectUsageEvent() {
     }
 
     ReportingS3ObjectUsageEvent(String s3BucketName, String s3ObjectName,
-	    long getRequestsNumCumulative, long putRequestsNumCumulative,
+	    long getRequestsNumCumulative,
 	    long timestampMs, String userId)
 	{
     	this.bucketName = s3BucketName;
     	this.objectName = s3ObjectName;
     	this.timestampMs = timestampMs;
     	this.getRequestsNumCumulative = getRequestsNumCumulative;
-    	this.putRequestsNumCumulative = putRequestsNumCumulative;
     	this.userId = userId;
     }
 
@@ -70,11 +67,6 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
 	public Long getGetRequestsNumCumulative()
 	{
 		return getRequestsNumCumulative;
-	}
-
-	public Long getPutRequestsNumCumulative()
-	{
-		return putRequestsNumCumulative;
 	}
 
     public String getUserId()
