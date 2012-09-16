@@ -9,8 +9,6 @@ public class S3ObjectUsageArtEntity
 	private long durationMs;
 	private long getRequestsNum;
 	private long putRequestsNum;
-	private long inDataGB;
-	private long outDataGB;
 	
 	public S3ObjectUsageArtEntity()
 	{
@@ -60,26 +58,6 @@ public class S3ObjectUsageArtEntity
 	public void setPutRequestsNum(long putRequestsNum)
 	{
 		this.putRequestsNum = putRequestsNum;
-	}
-
-	public long getInDataGB()
-	{
-		return inDataGB;
-	}
-
-	public void setInDataGB(long inDataGB)
-	{
-		this.inDataGB = inDataGB;
-	}
-
-	public long getOutDataGB()
-	{
-		return outDataGB;
-	}
-
-	public void setOutDataGB(long outDataGB)
-	{
-		this.outDataGB = outDataGB;
 	}
 
 }
