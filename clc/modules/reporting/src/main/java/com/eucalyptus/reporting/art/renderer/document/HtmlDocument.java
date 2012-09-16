@@ -147,7 +147,7 @@ public class HtmlDocument
 		throws IOException
 	{
     	addEmptyLabelCols(indent);
-    	addCol(val, LABEL_WIDTH, 3, "center");
+        rowSb.append(String.format("<td width=%d colspan=%d align=\"left\">%s</td>",LABEL_WIDTH,3,val));
     	addEmptyLabelCols(3-indent);
     	rowHasLabel = true;
     	return this;

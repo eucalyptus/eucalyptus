@@ -42,7 +42,7 @@ class VolumeRenderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Instance Id").addValCol("Volume Id").addValCol("# Vol")
-        	.addValCol("Size (" + units.toString() + ")").addValCol("Vol Duration");
+        	.addValCol("Size (" + units.getSizeUnit().toString() + ")").addValCol("Vol Duration");
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
             doc.newRow().addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.").addValCol("cumul.");
