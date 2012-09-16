@@ -38,21 +38,15 @@ public class ReportingS3ObjectDeleteEvent
 	private String s3BucketName;
 	@Column(name="s3_object_name", nullable=false)
 	private String s3ObjectName;
-	@Column(name="s3_object_size", nullable=false)
-	private Long s3ObjectSize;
-	@Column(name="s3_object_owner", nullable=false)
-	private String s3ObjectOwnerId;
 
 	protected ReportingS3ObjectDeleteEvent()
 	{
 	}
 	
-	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String s3ObjectOwnerId)
+	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, Long timestampMs)
 	{
 		this.s3BucketName = s3BucketName;
 		this.s3ObjectName = s3ObjectName;
-		this.s3ObjectSize = s3ObjectSize;
-		this.s3ObjectOwnerId = s3ObjectOwnerId;
 		this.timestampMs = timestampMs;
 	}
 
@@ -66,20 +60,9 @@ public class ReportingS3ObjectDeleteEvent
 		return s3ObjectName;
 	}
 	
-	public Long getSizeGB()
-	{
-	    	return s3ObjectSize;
-	}
-	
-	public String getS3ObjectOwnerId()
-	{
-	    	return s3ObjectOwnerId;
-	}
-
 	@Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
-				.user( s3ObjectOwnerId )
 				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
 				.relation( ReportingS3ObjectCreateEvent.class, "s3ObjectName", s3ObjectName )
 				.set();
@@ -89,7 +72,6 @@ public class ReportingS3ObjectDeleteEvent
 	public String toString() {
 	    return "ReportingS3ObjectDeleteEvent [s3BucketName=" + s3BucketName
 		    + ", s3ObjectName=" + s3ObjectName + ", s3ObjectSize="
-		    + s3ObjectSize + ", s3ObjectOwnerId=" + s3ObjectOwnerId
 		    + ", timestampMs=" + timestampMs + "]";
 	}
 

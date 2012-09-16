@@ -58,9 +58,9 @@ public class ReportingVolumeSnapshotCreateEvent
 			String volumeSnapshotId, Long timestampMs, String userId, Long sizeGB)
 	{
 		this.uuid = uuid;
+		this.volumeUuid = volumeUuid;
 		this.volumeSnapshotId = volumeSnapshotId;
 		this.timestampMs = timestampMs;
-		this.volumeUuid = volumeUuid;
 		this.userId = userId;
 		this.sizeGB = sizeGB;
 	}

@@ -36,6 +36,8 @@ public class ReportingS3ObjectCreateEvent
 	protected String s3BucketName;
 	@Column(name="s3_object_name", nullable=false)
 	protected String s3ObjectName;
+	@Column(name="size_gb", nullable=false)
+	protected Long sizeGB;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
 	
@@ -49,11 +51,12 @@ public class ReportingS3ObjectCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
  	 */
-	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId)
+	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, Long sizeGB,
+			Long timestampMs, String userId)
 	{
 		this.s3BucketName = s3BucketName;
 		this.s3ObjectName = s3ObjectName;
-		this.sizeGB = s3ObjectSize;
+		this.sizeGB = sizeGB;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
 	}
@@ -76,12 +79,6 @@ public class ReportingS3ObjectCreateEvent
 	public Long getSizeGB()
 	{
 	    	return this.sizeGB;
-	}
-	
-
-	public void setDataOutGB(Long dataOutGB)
-	{
-		this.dataOutGB = dataOutGB;
 	}
 
 	public void setSizeGB(Long sizeGB)

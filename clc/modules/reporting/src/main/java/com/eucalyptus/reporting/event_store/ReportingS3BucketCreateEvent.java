@@ -36,25 +36,21 @@ public class ReportingS3BucketCreateEvent
 	protected String s3BucketName;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
-	@Column(name="bucket_size", nullable=false)
-	protected Long bucketSize;
         
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3BucketCrud class.
  	 */
 	protected ReportingS3BucketCreateEvent()
 	{
-		this.bucketSize = -1L;
 	}
 
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3BucketCrud class.
  	 */
-	ReportingS3BucketCreateEvent(String s3BucketName, Long s3BucketSize, String userId,  Long timeInMs)
+	ReportingS3BucketCreateEvent(String s3BucketName, String userId,  Long timeInMs)
 	{
 		this.s3BucketName = s3BucketName;
 		this.userId = userId;
-		this.bucketSize = s3BucketSize;
 		this.timestampMs = timeInMs;
 	}
 
@@ -67,11 +63,6 @@ public class ReportingS3BucketCreateEvent
 	public String getUserId()
 	{
 		return this.userId;
-	}
-
-	public long getBucketSize() 
-	{
-	    	return this.bucketSize;
 	}
 
 	@Override
@@ -90,15 +81,13 @@ public class ReportingS3BucketCreateEvent
 	public String toString() {
 	    return "ReportingS3BucketCreateEvent [s3BucketName=" + s3BucketName
 		    + ", timestampMs=" + timestampMs + ", userId=" + userId
-		    + ", bucketSize=" + bucketSize + "]";
+		    + "]";
 	}
 
 	@Override
 	public int hashCode() {
 	    final int prime = 31;
 	    int result = super.hashCode();
-	    result = prime * result
-		    + ((bucketSize == null) ? 0 : bucketSize.hashCode());
 	    result = prime * result
 		    + ((s3BucketName == null) ? 0 : s3BucketName.hashCode());
 	    result = prime * result

@@ -37,26 +37,23 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     protected String objectName;
     @Column(name = "user_id", nullable = false)
     protected String userId;
-	@Column(name="size_gb", nullable=false)
-	protected Long sizeGB;
-	@Column(name="get_requests_num", nullable=false)
-	protected Long getRequestsNum;
-	@Column(name="put_requests_num", nullable=false)
-	protected Long putRequestsNum;
-	@Column(name="data_in_gb", nullable=false)
-	protected Long dataInGB;
-	@Column(name="data_out_gb", nullable=false)
-	protected Long dataOutGB;
+	@Column(name="get_requests_num_cumulative", nullable=false)
+	protected Long getRequestsNumCumulative;
+	@Column(name="put_requests_num_cumulative", nullable=false)
+	protected Long putRequestsNumCumulative;
 
     protected ReportingS3ObjectUsageEvent() {
     }
 
     ReportingS3ObjectUsageEvent(String s3BucketName, String s3ObjectName,
-	    Long s3ObjectSize, Long timestampMs, String userId)
+	    long getRequestsNumCumulative, long putRequestsNumCumulative,
+	    long timestampMs, String userId)
 	{
     	this.bucketName = s3BucketName;
     	this.objectName = s3ObjectName;
     	this.timestampMs = timestampMs;
+    	this.getRequestsNumCumulative = getRequestsNumCumulative;
+    	this.putRequestsNumCumulative = putRequestsNumCumulative;
     	this.userId = userId;
     }
 
@@ -70,39 +67,14 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     	return objectName;
     }
 
-	public Long getGetRequestsNum()
+	public Long getGetRequestsNumCumulative()
 	{
-		return getRequestsNum;
+		return getRequestsNumCumulative;
 	}
 
-	public void setGetRequestsNum(Long getRequestsNum)
+	public Long getPutRequestsNumCumulative()
 	{
-		this.getRequestsNum = getRequestsNum;
-	}
-
-	public Long getPutRequestsNum()
-	{
-		return putRequestsNum;
-	}
-
-	public void setPutRequestsNum(Long putRequestsNum)
-	{
-		this.putRequestsNum = putRequestsNum;
-	}
-
-	public Long getDataInGB()
-	{
-		return dataInGB;
-	}
-
-	public void setDataInGB(Long dataInGB)
-	{
-		this.dataInGB = dataInGB;
-	}
-
-	public Long getDataOutGB()
-	{
-		return dataOutGB;
+		return putRequestsNumCumulative;
 	}
 
     public String getUserId()
