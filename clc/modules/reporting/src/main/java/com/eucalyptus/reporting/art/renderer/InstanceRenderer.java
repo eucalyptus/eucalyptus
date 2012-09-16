@@ -195,16 +195,15 @@ class InstanceRenderer
 		throws IOException
 	{
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
-		doc.addValCol((long)typeTotals.get("m1.small").getInstanceCnt());
-		doc.addValCol(UnitUtil.convertTime(typeTotals.get("m1.small").getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol((long)typeTotals.get("c1.medium").getInstanceCnt());
-		doc.addValCol(UnitUtil.convertTime(typeTotals.get("c1.medium").getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol((long)typeTotals.get("m1.large").getInstanceCnt());
-		doc.addValCol(UnitUtil.convertTime(typeTotals.get("m1.large").getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol((long)typeTotals.get("c1.large").getInstanceCnt());
-		doc.addValCol(UnitUtil.convertTime(typeTotals.get("c1.large").getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol((long)typeTotals.get("m1.xlarge").getInstanceCnt());
-		doc.addValCol(UnitUtil.convertTime(typeTotals.get("m1.xlarge").getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
+		for (String type : new String[] {"m1.small", "c1.medium", "m1.large", "c1.large", "m1.xlarge"}) {
+			if (typeTotals.containsKey(type)) {
+				doc.addValCol((long)typeTotals.get(type).getInstanceCnt());
+				doc.addValCol(UnitUtil.convertTime(typeTotals.get(type).getDurationMs(), TimeUnit.MS, units.getTimeUnit()));				
+			} else {
+				doc.addValCol("(null)");
+				doc.addValCol("(null)");
+			}
+		}
 		return doc;
 	}
 		
