@@ -35,37 +35,79 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     protected String bucketName;
     @Column(name = "object_name", nullable = false)
     protected String objectName;
-    @Column(name = "object_size", nullable = false)
-    protected Long object_size;
     @Column(name = "user_id", nullable = false)
     protected String userId;
+	@Column(name="size_gb", nullable=false)
+	protected Long sizeGB;
+	@Column(name="get_requests_num", nullable=false)
+	protected Long getRequestsNum;
+	@Column(name="put_requests_num", nullable=false)
+	protected Long putRequestsNum;
+	@Column(name="data_in_gb", nullable=false)
+	protected Long dataInGB;
+	@Column(name="data_out_gb", nullable=false)
+	protected Long dataOutGB;
 
     protected ReportingS3ObjectUsageEvent() {
     }
 
     ReportingS3ObjectUsageEvent(String s3BucketName, String s3ObjectName,
-	    Long s3ObjectSize, Long timestampMs, String userId) {
-	this.bucketName = s3BucketName;
-	this.objectName = s3ObjectName;
-	this.object_size = s3ObjectSize;
-	this.timestampMs = timestampMs;
-	this.userId = userId;
+	    Long s3ObjectSize, Long timestampMs, String userId)
+	{
+    	this.bucketName = s3BucketName;
+    	this.objectName = s3ObjectName;
+    	this.timestampMs = timestampMs;
+    	this.userId = userId;
     }
 
-    public String getBucketName() {
-	return bucketName;
+    public String getBucketName()
+    {
+    	return bucketName;
     }
 
-    public String getObjectName() {
-	return objectName;
+    public String getObjectName()
+    {
+    	return objectName;
     }
 
-    public Long getObject_size() {
-	return object_size;
-    }
+	public Long getGetRequestsNum()
+	{
+		return getRequestsNum;
+	}
 
-    public String getUserId() {
-	return userId;
+	public void setGetRequestsNum(Long getRequestsNum)
+	{
+		this.getRequestsNum = getRequestsNum;
+	}
+
+	public Long getPutRequestsNum()
+	{
+		return putRequestsNum;
+	}
+
+	public void setPutRequestsNum(Long putRequestsNum)
+	{
+		this.putRequestsNum = putRequestsNum;
+	}
+
+	public Long getDataInGB()
+	{
+		return dataInGB;
+	}
+
+	public void setDataInGB(Long dataInGB)
+	{
+		this.dataInGB = dataInGB;
+	}
+
+	public Long getDataOutGB()
+	{
+		return dataOutGB;
+	}
+
+    public String getUserId()
+    {
+    	return userId;
     }
 
 	@Override
@@ -80,7 +122,7 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     @Override
     public String toString() {
 	return "ReportingS3ObjectUsageEvent [bucketName=" + bucketName
-		+ ", objectName=" + objectName + ", object_size=" + object_size
+		+ ", objectName=" + objectName
 		+ ", timestampMs=" + timestampMs + ", userId=" + userId + "]";
     }
 

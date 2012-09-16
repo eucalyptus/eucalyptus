@@ -66,7 +66,7 @@ public class ReportingS3ObjectDeleteEvent
 		return s3ObjectName;
 	}
 	
-	public Long getS3ObjectSize()
+	public Long getSizeGB()
 	{
 	    	return s3ObjectSize;
 	}
