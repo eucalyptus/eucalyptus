@@ -68,15 +68,17 @@ import com.eucalyptus.reporting.art.ArtObject;
 public class VolumeArtEntity
 	implements ArtObject
 {
-	private String volumeId;
-	private VolumeUsageArtEntity usage;
-	private Map<String, VolumeUsageArtEntity> instanceAttachments;
+	private final String volumeId;
+	private final VolumeUsageArtEntity usage;
+	private final Map<String, VolumeSnapshotUsageArtEntity> volumeSnapshotUsage;
+	private final Map<String, VolumeUsageArtEntity> instanceAttachments;
 
 	public VolumeArtEntity(String volumeId)
 	{
 		this.volumeId = volumeId;
 		this.usage = new VolumeUsageArtEntity();
 		this.instanceAttachments = new HashMap<String, VolumeUsageArtEntity>();
+		this.volumeSnapshotUsage = new HashMap<String, VolumeSnapshotUsageArtEntity>();
 	}
 
 	public String getVolumeId()
@@ -95,6 +97,14 @@ public class VolumeArtEntity
 	public Map<String, VolumeUsageArtEntity> getInstanceAttachments()
 	{
 		return instanceAttachments;
+	}
+	
+	/**
+	 * snapshotId -> VolumeSnapshotUsageArtEntity 
+	 */
+	public Map<String, VolumeSnapshotUsageArtEntity> getSnapshotUsage()
+	{
+		return this.volumeSnapshotUsage;
 	}
 	
 	public String toString()

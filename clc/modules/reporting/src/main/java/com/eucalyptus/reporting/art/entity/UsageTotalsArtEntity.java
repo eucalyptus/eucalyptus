@@ -70,12 +70,18 @@ public class UsageTotalsArtEntity
 {
 	private final InstanceUsageArtEntity instanceTotals;
 	private final VolumeUsageArtEntity volumeTotals;
+	private final S3ObjectUsageArtEntity s3ObjectTotals;
+	private final VolumeSnapshotUsageArtEntity volumeSnapshotTotals;
+	private final ElasticIpUsageArtEntity elasticIpTotals;
 	private final Map<String,InstanceUsageArtEntity> typeTotals;
 	
 	public UsageTotalsArtEntity()
 	{
 		this.instanceTotals = new InstanceUsageArtEntity();
 		this.volumeTotals = new VolumeUsageArtEntity();
+		this.s3ObjectTotals = new S3ObjectUsageArtEntity();
+		this.volumeSnapshotTotals = new VolumeSnapshotUsageArtEntity();
+		this.elasticIpTotals = new ElasticIpUsageArtEntity();
 		this.typeTotals = new HashMap<String,InstanceUsageArtEntity>();
 	}
 	
@@ -88,7 +94,22 @@ public class UsageTotalsArtEntity
 	{
 		return this.volumeTotals;
 	}
-
+	
+	public S3ObjectUsageArtEntity getS3ObjectTotals()
+	{
+		return this.s3ObjectTotals;
+	}
+	
+	public VolumeSnapshotUsageArtEntity getSnapshotTotals()
+	{
+		return this.volumeSnapshotTotals;
+	}
+	
+	public ElasticIpUsageArtEntity getElasticIpTotals()
+	{
+		return this.elasticIpTotals;
+	}
+	
 	/**
 	 * "m1.small" -> InstanceRunningTotalsArtEntity 
 	 */

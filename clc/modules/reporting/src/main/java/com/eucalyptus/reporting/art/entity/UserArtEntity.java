@@ -69,14 +69,19 @@ import com.eucalyptus.reporting.art.util.IndentingStringBuffer;
 public class UserArtEntity
 	implements ArtObject
 {
-	private Map<String,InstanceArtEntity> instances;
-	private Map<String,VolumeArtEntity> volumes;
-	private UsageTotalsArtEntity totals;
+	private final Map<String,InstanceArtEntity> instances;
+	private final Map<String,VolumeArtEntity> volumes;
+	private final Map<String,BucketArtEntity> buckets;
+	private final Map<String,ElasticIpArtEntity> elasticIps;
+	private final UsageTotalsArtEntity totals;
 	
 	public UserArtEntity()
 	{
 		super();
 		this.instances = new HashMap<String,InstanceArtEntity>();
+		this.volumes = new HashMap<String,VolumeArtEntity>();
+		this.buckets = new HashMap<String,BucketArtEntity>();
+		this.elasticIps = new HashMap<String,ElasticIpArtEntity>();
 		this.totals = new UsageTotalsArtEntity();
 	}
 
@@ -88,6 +93,19 @@ public class UserArtEntity
 	public Map<String,VolumeArtEntity> getVolumes()
 	{
 		return volumes;
+	}
+
+	public Map<String,BucketArtEntity> getBuckets()
+	{
+		return buckets;
+	}
+
+	/**
+	 * "127.0.0.1" -> ElasticIpUsageArtEntity 
+	 */
+	public Map<String,ElasticIpArtEntity> getElasticIps()
+	{
+		return elasticIps;
 	}
 
 	public UsageTotalsArtEntity getUsageTotals()
