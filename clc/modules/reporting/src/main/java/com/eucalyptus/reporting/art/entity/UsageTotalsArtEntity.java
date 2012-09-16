@@ -69,22 +69,53 @@ public class UsageTotalsArtEntity
 	implements ArtObject
 {
 	private final InstanceUsageArtEntity instanceTotals;
-	private final Map<String,Long> totalRunningSecs;
+	private final VolumeUsageArtEntity volumeTotals;
+	private final S3ObjectUsageArtEntity s3ObjectTotals;
+	private final VolumeSnapshotUsageArtEntity volumeSnapshotTotals;
+	private final ElasticIpUsageArtEntity elasticIpTotals;
+	private final Map<String,InstanceUsageArtEntity> typeTotals;
 	
 	public UsageTotalsArtEntity()
 	{
 		this.instanceTotals = new InstanceUsageArtEntity();
-		this.totalRunningSecs = new HashMap<String,Long>();
+		this.volumeTotals = new VolumeUsageArtEntity();
+		this.s3ObjectTotals = new S3ObjectUsageArtEntity();
+		this.volumeSnapshotTotals = new VolumeSnapshotUsageArtEntity();
+		this.elasticIpTotals = new ElasticIpUsageArtEntity();
+		this.typeTotals = new HashMap<String,InstanceUsageArtEntity>();
 	}
 	
 	public InstanceUsageArtEntity getInstanceTotals()
 	{
 		return this.instanceTotals;
 	}
-
-	public Map<String,Long> getTotalRunningSecs()
+	
+	public VolumeUsageArtEntity getVolumeTotals()
 	{
-		return this.totalRunningSecs;
+		return this.volumeTotals;
+	}
+	
+	public S3ObjectUsageArtEntity getS3ObjectTotals()
+	{
+		return this.s3ObjectTotals;
+	}
+	
+	public VolumeSnapshotUsageArtEntity getSnapshotTotals()
+	{
+		return this.volumeSnapshotTotals;
+	}
+	
+	public ElasticIpUsageArtEntity getElasticIpTotals()
+	{
+		return this.elasticIpTotals;
+	}
+	
+	/**
+	 * "m1.small" -> InstanceRunningTotalsArtEntity 
+	 */
+	public Map<String,InstanceUsageArtEntity> getTypeTotals()
+	{
+		return this.typeTotals;
 	}
 	
 	

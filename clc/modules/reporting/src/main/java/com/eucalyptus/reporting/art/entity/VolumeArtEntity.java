@@ -59,48 +59,59 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.reporting.art.renderer;
+package com.eucalyptus.reporting.art.entity;
 
-class Row
+import java.util.*;
+
+import com.eucalyptus.reporting.art.ArtObject;
+
+public class VolumeArtEntity
+	implements ArtObject
 {
-    private final StringBuffer sb;
+	private final String volumeId;
+	private final VolumeUsageArtEntity usage;
+	private final Map<String, VolumeSnapshotUsageArtEntity> volumeSnapshotUsage;
+	private final Map<String, VolumeUsageArtEntity> instanceAttachments;
 
-    public Row()
-    {
-        sb = new StringBuffer();
-    }
+	public VolumeArtEntity(String volumeId)
+	{
+		this.volumeId = volumeId;
+		this.usage = new VolumeUsageArtEntity();
+		this.instanceAttachments = new HashMap<String, VolumeUsageArtEntity>();
+		this.volumeSnapshotUsage = new HashMap<String, VolumeSnapshotUsageArtEntity>();
+	}
 
-    public Row addCol(String val)
-    {
-        return addCol(val, 35, 1, "center");
-    }
-
-    public Row addCol(Long val)
-    {
-        return addCol((val==null)?null:val.toString(), 35, 1, "center");
-    }
-
-    public Row addCol(Double val)
-    {
-        return addCol((val==null)?null:String.format("%3.1f", val), 35, 1, "center");
-    }
-
-    public Row addCol(String val, int width, int colspan, String align)
-    {
-        sb.append(String.format("<td width=%d colspan=%d align=%s>%s</td>",width,colspan,align,val));
-        return this;
-    }
-
-    public Row addEmptyCols(int num, int width)
-    {
-        for (int i=0; i<num; i++) {
-            sb.append("<td width=" + width + ">&nbsp;</td>");
-        }
-        return this;
-    }
-
-    public String toString()
-    {
-        return "<tr>" + sb.toString() + "</tr>\n";
-    }
+	public String getVolumeId()
+	{
+		return volumeId;
+	}
+	
+	public VolumeUsageArtEntity getUsage()
+	{
+		return usage;
+	}
+	
+	/**
+	 * instanceId -> VolumeUsageArtEntity 
+	 */
+	public Map<String, VolumeUsageArtEntity> getInstanceAttachments()
+	{
+		return instanceAttachments;
+	}
+	
+	/**
+	 * snapshotId -> VolumeSnapshotUsageArtEntity 
+	 */
+	public Map<String, VolumeSnapshotUsageArtEntity> getSnapshotUsage()
+	{
+		return this.volumeSnapshotUsage;
+	}
+	
+	public String toString()
+	{
+		StringBuffer sb = new StringBuffer();
+		sb.append(String.format("(id:%s)", volumeId));
+		return sb.toString();
+	}
+	
 }

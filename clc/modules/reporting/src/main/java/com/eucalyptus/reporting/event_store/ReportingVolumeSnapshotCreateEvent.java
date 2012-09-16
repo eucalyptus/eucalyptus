@@ -34,6 +34,8 @@ public class ReportingVolumeSnapshotCreateEvent
 
 	@Column(name="uuid", nullable=false, unique=true)
 	private String uuid;
+	@Column(name="volume_uuid", nullable=false)
+	private String volumeUuid;
 	@Column(name="volume_snapshot_id", nullable=false)
 	private String volumeSnapshotId;
 	@Column(name="user_id", nullable=false)
@@ -52,10 +54,11 @@ public class ReportingVolumeSnapshotCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingVolumeSnapshotCrud class.
  	 */
-	ReportingVolumeSnapshotCreateEvent(String uuid, String volumeSnapshotId,
-				 Long timestampMs, String userId, Long sizeGB)
+	ReportingVolumeSnapshotCreateEvent(String uuid, String volumeUuid, 
+			String volumeSnapshotId, Long timestampMs, String userId, Long sizeGB)
 	{
 		this.uuid = uuid;
+		this.volumeUuid = volumeUuid;
 		this.volumeSnapshotId = volumeSnapshotId;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
@@ -67,6 +70,11 @@ public class ReportingVolumeSnapshotCreateEvent
 		return this.uuid;
 	}
 
+	public String getVolumeUuid()
+	{
+		return this.volumeUuid;
+	}
+	
 	public String getVolumeSnapshotId()
 	{
 		return this.volumeSnapshotId;

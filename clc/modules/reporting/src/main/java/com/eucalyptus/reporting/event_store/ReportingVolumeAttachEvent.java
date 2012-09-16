@@ -22,12 +22,32 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.EntityResult;
+import javax.persistence.NamedNativeQuery;
 import javax.persistence.PersistenceContext;
+import javax.persistence.SqlResultSetMapping;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
+@SqlResultSetMapping(name="attachVolumeEventMap",
+        entities=@EntityResult(entityClass=ReportingInstanceCreateEvent.class))
+@NamedNativeQuery(name="scanVolumeAttachDetachEventsJoin",
+	query=
+		"select a.instance_uuid as a_instance_uuid," +
+		"		d.instance_uuid as d_instance_uuid," +
+		"		a.volume_uuid as a_volume_uuid," +
+		"		d.volume_uuid as d_volume_uuid," +
+		"		a.size_gb as a_size_gb," +
+		"		d.size_gb as d_size_gb," +
+		"		a.timestamp_ms as a_timestamp_ms," +
+		"		d.timestamp_ms as d_timestamp_ms " +
+		"from reporting_volume_attach_events a," +
+		"	  reporting_volume_detach_events d " +
+		"where a.instance_uuid = d.instance_uuid " +
+		"and a.volume_uuid = d.volume_uuid",
+	resultSetMapping="attachDetachJoinMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_attach_events")
 public class ReportingVolumeAttachEvent

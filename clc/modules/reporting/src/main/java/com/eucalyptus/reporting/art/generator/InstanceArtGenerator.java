@@ -66,15 +66,15 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.reporting.art.AbstractReportingTreeFactory;
 import com.eucalyptus.reporting.art.entity.*;
 import com.eucalyptus.reporting.domain.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 
 public class InstanceArtGenerator
+	implements ArtGenerator
 {
-    private static Logger log = Logger.getLogger( AbstractReportingTreeFactory.class );
+    private static Logger log = Logger.getLogger( InstanceArtGenerator.class );
 
     public InstanceArtGenerator()
 	{
@@ -85,12 +85,12 @@ public class InstanceArtGenerator
 	{
 		log.debug("GENERATING REPORT ART");
 		EntityWrapper wrapper = EntityWrapper.get( ReportingInstanceCreateEvent.class );
-		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance nodes at the bottom.
 		 */
 		Map<String,InstanceArtEntity> instanceEntities = new HashMap<String,InstanceArtEntity>();
+		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
 		while (iter.hasNext()) {
 			ReportingInstanceCreateEvent createEvent = (ReportingInstanceCreateEvent) iter.next();
 			if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
@@ -125,10 +125,10 @@ public class InstanceArtGenerator
 			instanceEntities.put(createEvent.getUuid(), instance);
 		}
 		
-		/* Add all usage to all instances, interpolating usage for partial periods
+		/* Add all usage to all instances
 		 */
-		Map<String,ReportingInstanceUsageEvent> lastEvents = new HashMap<String,ReportingInstanceUsageEvent>();
-		Map<String,Long> runningTimes = new HashMap<String,Long>(); //uuid->secs
+		Map<String,ReportingInstanceUsageEvent> lastEvents =
+			new HashMap<String,ReportingInstanceUsageEvent>();
 		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
 		while (iter.hasNext()) {
 			ReportingInstanceUsageEvent usageEvent = (ReportingInstanceUsageEvent) iter.next();
@@ -140,56 +140,78 @@ public class InstanceArtGenerator
 				continue;
 			}
 			InstanceUsageArtEntity usage = instance.getUsage();
-			
+			usage.setInstanceCnt(1);		
 
 			/* Add usage to totals, and update average cpu */
 			if (lastEvent != null) {
 				long lastMs = lastEvent.getTimestampMs();
 				
 				/* Update running times */
-				long timeMs = (runningTimes.containsKey(usageEvent.getUuid()))
-								? runningTimes.get(usageEvent.getUuid()).longValue()
-								: 0l;
+				long timeMs = usage.getDurationMs();
 				timeMs += Math.min(report.getEndMs(),usageEvent.getTimestampMs())
-						- Math.max(report.getBeginMs(),lastEvent.getTimestampMs()); 
-			    
-				runningTimes.put(usageEvent.getUuid(), timeMs);
+						- Math.max(report.getBeginMs(),lastEvent.getTimestampMs());
+				usage.setDurationMs(usage.getDurationMs()+timeMs);
 				
-				/* Add usage to totals */
+				/* Interpolate and add usage to totals */
+				
+				/* Disk IO megs */
+				Long rawValue = plus(usage.getDiskIoMegs(),
+									subtract(usageEvent.getCumulativeDiskIoMegs(),
+											 lastEvent.getCumulativeDiskIoMegs()));
 				usage.setDiskIoMegs(
-						plus(usage.getDiskIoMegs(),
-								subtract(usageEvent.getCumulativeDiskIoMegs(),
-										lastEvent.getCumulativeDiskIoMegs())));
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+								    usageEvent.getTimestampMs(), rawValue));
 				
-				usage.setNetIoWithinZoneInMegs(
-						plus(usage.getNetIoWithinZoneInMegs(),
+				/* Net IO within zone incoming megs */
+				rawValue = plus(usage.getNetIoWithinZoneInMegs(),
 								subtract(usageEvent.getCumulativeNetIncomingMegsWithinZone(),
-										lastEvent.getCumulativeNetIncomingMegsWithinZone())));
-					
-				usage.setNetIoBetweenZoneInMegs(
-						plus(usage.getNetIoBetweenZoneInMegs(),
+										lastEvent.getCumulativeNetIncomingMegsWithinZone()));
+				usage.setNetIoWithinZoneInMegs(
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+									usageEvent.getTimestampMs(), rawValue));
+
+				/* Net IO within zone incoming megs */
+				rawValue = plus(usage.getNetIoBetweenZoneInMegs(),
 								subtract(usageEvent.getCumulativeNetIncomingMegsBetweenZones(),
-										lastEvent.getCumulativeNetIncomingMegsBetweenZones())));
-				
-				usage.setNetIoPublicIpInMegs(
-						plus(usage.getNetIoPublicIpInMegs(),
+										lastEvent.getCumulativeNetIncomingMegsBetweenZones()));
+				usage.setNetIoBetweenZoneInMegs(
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+									usageEvent.getTimestampMs(), rawValue));
+
+				/* Net IO public ip incoming megs */
+				rawValue = plus(usage.getNetIoPublicIpInMegs(),
 								subtract(usageEvent.getCumulativeNetIncomingMegsPublic(),
-										lastEvent.getCumulativeNetIncomingMegsPublic())));
-				
-				usage.setNetIoWithinZoneOutMegs(
-						plus(usage.getNetIoWithinZoneOutMegs(),
-								subtract(usageEvent.getCumulativeNetOutgoingMegsWithinZone(),
-										lastEvent.getCumulativeNetOutgoingMegsWithinZone())));
+										lastEvent.getCumulativeNetIncomingMegsPublic()));
+				usage.setNetIoPublicIpInMegs(
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+									usageEvent.getTimestampMs(), rawValue));
+
 					
-				usage.setNetIoBetweenZoneOutMegs(
-						plus(usage.getNetIoBetweenZoneOutMegs(),
+				/* Net IO within zone outgoing megs */
+				rawValue = plus(usage.getNetIoWithinZoneOutMegs(),
+								subtract(usageEvent.getCumulativeNetOutgoingMegsWithinZone(),
+										lastEvent.getCumulativeNetOutgoingMegsWithinZone()));
+				usage.setNetIoWithinZoneOutMegs(
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+									usageEvent.getTimestampMs(), rawValue));
+
+				/* Net IO within zone outgoing megs */
+				rawValue = plus(usage.getNetIoBetweenZoneOutMegs(),
 								subtract(usageEvent.getCumulativeNetOutgoingMegsBetweenZones(),
-										lastEvent.getCumulativeNetOutgoingMegsBetweenZones())));
-				
-				usage.setNetIoPublicIpOutMegs(
-						plus(usage.getNetIoPublicIpOutMegs(),
+										lastEvent.getCumulativeNetOutgoingMegsBetweenZones()));
+				usage.setNetIoBetweenZoneOutMegs(
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+									usageEvent.getTimestampMs(), rawValue));
+
+				/* Net IO public ip outgoing megs */
+				rawValue = plus(usage.getNetIoPublicIpOutMegs(),
 								subtract(usageEvent.getCumulativeNetOutgoingMegsPublic(),
-										lastEvent.getCumulativeNetOutgoingMegsPublic())));
+										lastEvent.getCumulativeNetOutgoingMegsPublic()));
+				usage.setNetIoPublicIpOutMegs(
+						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
+									usageEvent.getTimestampMs(), rawValue));
+
+					
 					
 
 				/* Update cpu average */
@@ -226,13 +248,10 @@ public class InstanceArtGenerator
 						UsageTotalsArtEntity userUsage = user.getUsageTotals();
 						for (String instanceUuid : user.getInstances().keySet()) {
 							InstanceArtEntity instance = user.getInstances().get(instanceUuid);
-							long timeMs = (runningTimes.containsKey(instanceUuid)) 
-											? runningTimes.get(instanceUuid).longValue()
-											: 0l;
-							updateUsageTotals(userUsage, instance, timeMs);
-							updateUsageTotals(accountUsage, instance, timeMs);
-							updateUsageTotals(clusterUsage, instance, timeMs);
-							updateUsageTotals(zoneUsage, instance, timeMs);
+							updateUsageTotals(userUsage, instance);
+							updateUsageTotals(accountUsage, instance);
+							updateUsageTotals(clusterUsage, instance);
+							updateUsageTotals(zoneUsage, instance);
 						}
 					}
 				}
@@ -242,14 +261,16 @@ public class InstanceArtGenerator
 		return report;
 	}
 
-	
-	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance, long runningTimeMs)
+
+	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)
 	{
 		InstanceUsageArtEntity totalEntity =
 			totals.getInstanceTotals();
 		InstanceUsageArtEntity newEntity = instance.getUsage();
 		
-		/* Update total average for this instance type, based upon instance average */
+		totalEntity.addDurationMs(newEntity.getDurationMs());
+
+		/* Update total average for this zone, cluster, etc, based upon instance average */
 		if (totalEntity.getCpuPercentAvg() == null && newEntity.getCpuPercentAvg() != null) {
 			totalEntity.setCpuPercentAvg(newEntity.getCpuPercentAvg());
 			totalEntity.addDurationMs(newEntity.getDurationMs());
@@ -258,10 +279,9 @@ public class InstanceArtGenerator
 					+ (double)newEntity.getCpuPercentAvg() * (double)newEntity.getDurationMs())
 					/((double)totalEntity.getDurationMs()+(double)newEntity.getDurationMs());
 			totalEntity.setCpuPercentAvg(newWeightedAverage);
-			totalEntity.addDurationMs(newEntity.getDurationMs());
 		}
 		
-		/* Add megs from this instance to totals for this instance type */
+		/* Add megs from this instance to totals for zone, cluster, etc */
 		totalEntity.setDiskIoMegs(
 				plus(totalEntity.getDiskIoMegs(),
 					 newEntity.getDiskIoMegs()));
@@ -284,10 +304,19 @@ public class InstanceArtGenerator
 				plus(totalEntity.getNetIoPublicIpOutMegs(),
 					 newEntity.getNetIoPublicIpOutMegs()));
 		
-		/* Add total running time for this instance type */
-		Map<String,Long> totalSecs = totals.getTotalRunningSecs();
-		totalSecs.put(instance.getInstanceType().toLowerCase(),
-				plus(totalSecs.get(instance.getInstanceType().toLowerCase()), runningTimeMs));
+		totalEntity.setInstanceCnt(totalEntity.getInstanceCnt()+1);
+		
+		/* Update total running time and type count for this instance type */
+		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
+		if (!typeTotals.containsKey(instance.getInstanceType().toLowerCase())) {
+			typeTotals.put(instance.getInstanceType().toLowerCase(),
+					new InstanceUsageArtEntity());
+		}
+		InstanceUsageArtEntity typeTotal =
+			typeTotals.get(instance.getInstanceType().toLowerCase());
+		
+		typeTotal.setInstanceCnt(typeTotal.getInstanceCnt()+1);
+		typeTotal.setDurationMs(typeTotal.getDurationMs() + totalEntity.getDurationMs());
 	}
 
 	/**

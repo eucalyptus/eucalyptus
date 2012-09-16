@@ -61,6 +61,9 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.entity;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.eucalyptus.reporting.art.ArtObject;
 
 public class InstanceArtEntity

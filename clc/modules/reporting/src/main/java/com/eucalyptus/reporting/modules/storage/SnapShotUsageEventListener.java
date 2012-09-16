@@ -61,10 +61,12 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
 
       final ReportingVolumeSnapshotEventStore eventStore = getReportingVolumeSnapshotEventStore();
       switch (event.getActionInfo().getAction()) {
-        case SNAPSHOTCREATE:
-          eventStore.insertCreateEvent(event.getUuid(), event.getSnapshotId(), timeInMs, event.getOwner(), 
-        	  ((CreateActionInfo)event.getActionInfo()).getSize() );
-          break;
+//TODO: Tom writes this: We definitely need the volume of which this is a snapshot
+//  This has been added to the domain model as it was forgotten before.
+//        case SNAPSHOTCREATE:
+//          eventStore.insertCreateEvent(event.getUuid(), event.getSnapshotId(), timeInMs, event.getOwner(), 
+//        	  ((CreateActionInfo)event.getActionInfo()).getSize() );
+//          break;
         case SNAPSHOTDELETE:
           eventStore.insertDeleteEvent(event.getUuid(), timeInMs);
           break;

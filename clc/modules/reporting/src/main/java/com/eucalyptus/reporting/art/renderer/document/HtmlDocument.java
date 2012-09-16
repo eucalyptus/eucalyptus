@@ -59,92 +59,158 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
-package com.eucalyptus.reporting;
+package com.eucalyptus.reporting.art.renderer.document;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.Writer;
 
-import org.apache.log4j.Logger;
 
-import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.units.Units;
-
-/**
- * <p>ReportGenerator is the main class by which the reporting system is
- * accessed by outside modules. It acts as a facade for the various reporting
- * sub-packages (instance, storage, and s3 sub-packages).
- * 
- * <p>ReportGenerator contains all the jasper-related stuff.
- */
-public class ReportGenerator
+public class HtmlDocument
+	implements Document
 {
-	private static Logger log = Logger.getLogger( ReportGenerator.class );
-
-	private static final int DEFAULT_CACHE_SIZE = 5;
+	private static final int LABEL_WIDTH = 50;
+	private static final int VALUE_WIDTH = 80;
 	
-	private static ReportGenerator instance;
+    private StringBuffer rowSb;
+    private Writer writer;
+    private boolean rowHasLabel = false;
 
-	private ReportGenerator()
-	{
-	}
-	
-	public static ReportGenerator getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportGenerator();
-		}
-		return instance;
-	}
+    public HtmlDocument()
+    {
+        rowSb = null;
+    }
 
+    @Override
+    public void setWriter(Writer writer)
+    {
+    	this.writer = writer;
+    }
+    
+    @Override
+	public Document open()
+    	throws IOException
+    {
+        writer.write("<html><body>\n");
+    	return this;
+    }
+    
+    @Override
+	public Document close()
+    	throws IOException
+    {
+    	writer.write("</body></html>\n");
+    	writer.flush();
+    	return this;
+    }
+    
+    @Override
+	public Document tableOpen()
+    	throws IOException
+    {
+    	writer.write("<table>\n");
+    	return this;
+    }
 
-	/**
-	 * STEVE: This is the method to use.
-	 * 
-	 * @param displayUnits Can be null if you just want the default units.
-	 * @param type The type of report, which is INSTANCE for the time being regardless of what you specify
-	 * @param format The report format, which must be HTML at the moment.
-	 * @param period The period for which you wish to generate a report
-	 * @param out Where to send the generated report
-	 * @param accountId The account to generate the report as, which is ignored at present.
-	 * 
-	 * @throws IOException If it cannot write to the stream you passed.
-	 */
-	public void generateReport(Period period, ReportFormat format, ReportType type,
-			Units displayUnits, OutputStream out, String accountId)
+    @Override
+	public Document tableClose()
 		throws IOException
 	{
-		if (period==null) {
-			throw new IllegalArgumentException("Period can't be null");
-		}
-		if (type==null) {
-			throw new IllegalArgumentException("type can't be null");
-		}
-		if (out==null) {
-			throw new IllegalArgumentException("out can't be null");
-		}
-		if (format==null) format=ReportFormat.HTML;
-		
-		ReportArtEntity report = new ReportArtEntity(period.getBeginningMs(), period.getEndingMs());
-		if (displayUnits==null) displayUnits=Units.getDefaultDisplayUnits();
-		type.getGenerator().generateReportArt(report);
-		type.getRendererFactory().getRenderer(format).render(report, out, displayUnits);
-		
-		return;
+    	if (rowSb != null) {
+    		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
+    	}
+    	writer.write("</table>\n");
+    	return this;
 	}
-	
-	/**
-	 * Deprecated; do not use.
-	 * 
-	 * @deprecated
-	 */
-	public void generateReport(String reportType, ReportFormat format,
-			Period period, ReportingCriterion criterion,
-			ReportingCriterion groupByCriterion, Units displayUnits,
-			OutputStream out, String accountId)
+    
+    @Override
+	public Document textLine(String text, int emphasis)
+    	throws IOException
+    {
+    	writer.write(String.format("<h%d>%s</h%d>\n", emphasis, text, emphasis));
+    	return this;    	
+    }
+
+    @Override
+	public Document newRow()
+    	throws IOException
+    {
+    	rowHasLabel = false;
+    	if (rowSb != null) {
+    		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
+    	}
+        rowSb = new StringBuffer();
+    	return this;    	
+    }
+
+    @Override
+	public Document addLabelCol(int indent, String val)
+		throws IOException
 	{
-		return;
+    	addEmptyLabelCols(indent);
+    	addCol(val, LABEL_WIDTH, 3, "center");
+    	addEmptyLabelCols(3-indent);
+    	rowHasLabel = true;
+    	return this;
+	}	
+
+
+    @Override
+	public Document addValCol(String val)
+    	throws IOException
+    {
+        return addCol(val, VALUE_WIDTH, 1, "center");
+    }
+
+    @Override
+	public Document addValCol(Long val)
+		throws IOException
+    {
+        return addCol((val==null)?null:val.toString(), VALUE_WIDTH, 1, "center");
+    }
+
+    @Override
+	public Document addValCol(Double val)
+		throws IOException
+    {
+        return addCol((val==null)?null:String.format("%3.1f", val), VALUE_WIDTH, 1, "center");
+    }
+
+    @Override
+	public HtmlDocument addValCol(String val, int colspan, String align)
+		throws IOException
+	{
+    	return addCol(val, VALUE_WIDTH, colspan, align);
 	}
-	
-	
+
+    private HtmlDocument addCol(String val, int width, int colspan, String align)
+		throws IOException
+    {
+    	if (!rowHasLabel) {
+    		addEmptyLabelCols(6);
+    		rowHasLabel = true;
+    	}
+        rowSb.append(String.format("<td width=%d colspan=%d align=%s>%s</td>",width,colspan,align,val));
+        return this;
+    }
+
+    @Override
+	public HtmlDocument addEmptyValCols(int num)
+		throws IOException
+   {
+        for (int i=0; i<num; i++) {
+            rowSb.append("<td width=" + VALUE_WIDTH + ">&nbsp;</td>");
+        }
+        return this;
+    }
+
+    @Override
+	public Document addEmptyLabelCols(int num)
+		throws IOException
+	{
+    	for (int i=0; i<num; i++) {
+        	rowSb.append("<td width=" + LABEL_WIDTH + ">&nbsp;</td>");
+    	}
+    	return this;
+	}
+
 }

@@ -36,10 +36,10 @@ public class ReportingS3ObjectCreateEvent
 	protected String s3BucketName;
 	@Column(name="s3_object_name", nullable=false)
 	protected String s3ObjectName;
+	@Column(name="size_gb", nullable=false)
+	protected Long sizeGB;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
-	@Column(name="s3_object_size", nullable=false)
-	protected Long s3ObjectSize;
 	
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
@@ -51,11 +51,12 @@ public class ReportingS3ObjectCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
  	 */
-	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId)
+	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, Long sizeGB,
+			Long timestampMs, String userId)
 	{
 		this.s3BucketName = s3BucketName;
 		this.s3ObjectName = s3ObjectName;
-		this.s3ObjectSize = s3ObjectSize;
+		this.sizeGB = sizeGB;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
 	}
@@ -75,9 +76,14 @@ public class ReportingS3ObjectCreateEvent
 		return this.userId;
 	}
 	
-	public Long getS3ObjectSize()
+	public Long getSizeGB()
 	{
-	    	return this.s3ObjectSize;
+	    	return this.sizeGB;
+	}
+
+	public void setSizeGB(Long sizeGB)
+	{
+		this.sizeGB = sizeGB;
 	}
 
 	@Override
@@ -102,7 +108,7 @@ public class ReportingS3ObjectCreateEvent
 	    result = prime * result
 		    + ((s3ObjectName == null) ? 0 : s3ObjectName.hashCode());
 	    result = prime * result
-		    + ((s3ObjectSize == null) ? 0 : s3ObjectSize.hashCode());
+		    + ((sizeGB == null) ? 0 : sizeGB.hashCode());
 	    result = prime * result
 		    + ((timestampMs == null) ? 0 : timestampMs.hashCode());
 	    result = prime * result
@@ -129,10 +135,10 @@ public class ReportingS3ObjectCreateEvent
 		    return false;
 	    } else if (!s3ObjectName.equals(other.s3ObjectName))
 		return false;
-	    if (s3ObjectSize == null) {
-		if (other.s3ObjectSize != null)
+	    if (sizeGB == null) {
+		if (other.sizeGB != null)
 		    return false;
-	    } else if (!s3ObjectSize.equals(other.s3ObjectSize))
+	    } else if (!sizeGB.equals(other.sizeGB))
 		return false;
 	    if (timestampMs == null) {
 		if (other.timestampMs != null)
@@ -152,7 +158,7 @@ public class ReportingS3ObjectCreateEvent
 	    return "ReportingS3ObjectCreateEvent [s3BucketName=" + s3BucketName
 		    + ", s3ObjectName=" + s3ObjectName + ", timestampMs="
 		    + timestampMs + ", userId=" + userId + ", s3ObjectSize="
-		    + s3ObjectSize + "]";
+		    + sizeGB + "]";
 	}
 
 

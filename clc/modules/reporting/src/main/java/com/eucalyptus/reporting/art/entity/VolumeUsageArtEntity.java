@@ -59,92 +59,55 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+package com.eucalyptus.reporting.art.entity;
 
-package com.eucalyptus.reporting;
+import com.eucalyptus.reporting.art.ArtObject;
 
-import java.io.IOException;
-import java.io.OutputStream;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.units.Units;
-
-/**
- * <p>ReportGenerator is the main class by which the reporting system is
- * accessed by outside modules. It acts as a facade for the various reporting
- * sub-packages (instance, storage, and s3 sub-packages).
- * 
- * <p>ReportGenerator contains all the jasper-related stuff.
- */
-public class ReportGenerator
+public class VolumeUsageArtEntity
+	implements ArtObject
 {
-	private static Logger log = Logger.getLogger( ReportGenerator.class );
+	private long sizeGB;
+	private long durationMs;
+	private long volumeCnt;
 
-	private static final int DEFAULT_CACHE_SIZE = 5;
-	
-	private static ReportGenerator instance;
-
-	private ReportGenerator()
+	public VolumeUsageArtEntity()
 	{
-	}
-	
-	public static ReportGenerator getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportGenerator();
-		}
-		return instance;
-	}
-
-
-	/**
-	 * STEVE: This is the method to use.
-	 * 
-	 * @param displayUnits Can be null if you just want the default units.
-	 * @param type The type of report, which is INSTANCE for the time being regardless of what you specify
-	 * @param format The report format, which must be HTML at the moment.
-	 * @param period The period for which you wish to generate a report
-	 * @param out Where to send the generated report
-	 * @param accountId The account to generate the report as, which is ignored at present.
-	 * 
-	 * @throws IOException If it cannot write to the stream you passed.
-	 */
-	public void generateReport(Period period, ReportFormat format, ReportType type,
-			Units displayUnits, OutputStream out, String accountId)
-		throws IOException
-	{
-		if (period==null) {
-			throw new IllegalArgumentException("Period can't be null");
-		}
-		if (type==null) {
-			throw new IllegalArgumentException("type can't be null");
-		}
-		if (out==null) {
-			throw new IllegalArgumentException("out can't be null");
-		}
-		if (format==null) format=ReportFormat.HTML;
 		
-		ReportArtEntity report = new ReportArtEntity(period.getBeginningMs(), period.getEndingMs());
-		if (displayUnits==null) displayUnits=Units.getDefaultDisplayUnits();
-		type.getGenerator().generateReportArt(report);
-		type.getRendererFactory().getRenderer(format).render(report, out, displayUnits);
-		
-		return;
 	}
 	
-	/**
-	 * Deprecated; do not use.
-	 * 
-	 * @deprecated
-	 */
-	public void generateReport(String reportType, ReportFormat format,
-			Period period, ReportingCriterion criterion,
-			ReportingCriterion groupByCriterion, Units displayUnits,
-			OutputStream out, String accountId)
+	public long getSizeGB()
 	{
-		return;
+		return sizeGB;
+	}
+
+	public void setSizeGB(long sizeGB)
+	{
+		this.sizeGB = sizeGB;
+	}
+
+	public long getDurationMs()
+	{
+		return durationMs;
 	}
 	
+	public void setDurationMs(long durationMs)
+	{
+		this.durationMs = durationMs;
+	}
 	
+	public long getVolumeCnt()
+	{
+		return volumeCnt;
+	}
+
+	public void setVolumeCnt(long volumeCnt)
+	{
+		this.volumeCnt = volumeCnt;
+	}
+
+	public String toString()
+	{
+		return String.format("(size:%d duration:%d)\n", sizeGB, durationMs);
+	}
+
 }

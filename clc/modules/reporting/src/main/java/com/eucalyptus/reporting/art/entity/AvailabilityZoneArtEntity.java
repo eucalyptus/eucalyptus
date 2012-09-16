@@ -69,18 +69,25 @@ import com.eucalyptus.reporting.art.util.IndentingStringBuffer;
 public class AvailabilityZoneArtEntity
 	implements ArtObject
 {
-	private Map<String, ClusterArtEntity> clusters;
+	private Map<String, ClusterArtEntity> clusters; //used in instance reports only
+	private Map<String, AccountArtEntity> accounts; //used in vol reports only
 	private UsageTotalsArtEntity usageTotals;
 	
 	public AvailabilityZoneArtEntity()
 	{
 		this.clusters = new HashMap<String, ClusterArtEntity>();
+		this.accounts = new HashMap<String, AccountArtEntity>();
 		this.usageTotals = new UsageTotalsArtEntity();
 	}
 
 	public Map<String,ClusterArtEntity> getClusters()
 	{
 		return clusters;
+	}
+
+	public Map<String,AccountArtEntity> getAccounts()
+	{
+		return accounts;
 	}
 
 	public UsageTotalsArtEntity getUsageTotals()
@@ -91,11 +98,21 @@ public class AvailabilityZoneArtEntity
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s clusters:{", usageTotals));
-		for (String clustername : clusters.keySet()) {
-			sb.appendIndentLine(numIndents+1, clusters.get(clustername).prettyPrint(numIndents+1));			
+		sb.appendIndentLine(numIndents, String.format("(totals:%s", usageTotals));
+		if (clusters.keySet().size() > 0) {
+			sb.append(" clusters:{");
+			for (String clustername : clusters.keySet()) {
+				sb.appendIndentLine(numIndents+1, clusters.get(clustername).prettyPrint(numIndents+1));			
+			}
+			sb.appendIndentLine(numIndents, "})");
 		}
-		sb.appendIndentLine(numIndents, "})");
+		if (accounts.keySet().size() > 0) {
+			sb.append(" accounts:{");
+			for (String accountname : accounts.keySet()) {
+				sb.appendIndentLine(numIndents+1, accounts.get(accountname).prettyPrint(numIndents+1));			
+			}
+			sb.appendIndentLine(numIndents, "})");
+		}
 		return sb.toString();
 	}
 

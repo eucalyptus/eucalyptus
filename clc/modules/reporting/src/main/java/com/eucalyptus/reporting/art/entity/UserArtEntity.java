@@ -69,19 +69,43 @@ import com.eucalyptus.reporting.art.util.IndentingStringBuffer;
 public class UserArtEntity
 	implements ArtObject
 {
-	private Map<String,InstanceArtEntity> instances;
-	private UsageTotalsArtEntity totals;
+	private final Map<String,InstanceArtEntity> instances;
+	private final Map<String,VolumeArtEntity> volumes;
+	private final Map<String,BucketArtEntity> buckets;
+	private final Map<String,ElasticIpArtEntity> elasticIps;
+	private final UsageTotalsArtEntity totals;
 	
 	public UserArtEntity()
 	{
 		super();
 		this.instances = new HashMap<String,InstanceArtEntity>();
+		this.volumes = new HashMap<String,VolumeArtEntity>();
+		this.buckets = new HashMap<String,BucketArtEntity>();
+		this.elasticIps = new HashMap<String,ElasticIpArtEntity>();
 		this.totals = new UsageTotalsArtEntity();
 	}
 
 	public Map<String,InstanceArtEntity> getInstances()
 	{
 		return instances;
+	}
+
+	public Map<String,VolumeArtEntity> getVolumes()
+	{
+		return volumes;
+	}
+
+	public Map<String,BucketArtEntity> getBuckets()
+	{
+		return buckets;
+	}
+
+	/**
+	 * "127.0.0.1" -> ElasticIpUsageArtEntity 
+	 */
+	public Map<String,ElasticIpArtEntity> getElasticIps()
+	{
+		return elasticIps;
 	}
 
 	public UsageTotalsArtEntity getUsageTotals()
@@ -92,11 +116,20 @@ public class UserArtEntity
 	public String prettyPrint(int numIndents)
 	{
 		IndentingStringBuffer sb = new IndentingStringBuffer();
-		sb.appendIndentLine(numIndents, String.format("(totals:%s instances:{", totals));
-		for (String uuid : instances.keySet()) {
-			sb.appendIndentLine(numIndents+1, instances.get(uuid).toString());			
+		sb.appendIndentLine(numIndents, String.format("(totals:%s", totals));
+		if (instances.keySet().size()>0) {
+			sb.append(" instances:{");
+			for (String uuid : instances.keySet()) {
+				sb.appendIndentLine(numIndents+1, instances.get(uuid).toString());			
+			}
+			sb.appendIndentLine(numIndents, "})");
+		} else if (volumes.keySet().size()>0) {
+			sb.append(" volumes:{");
+			for (String uuid : volumes.keySet()) {
+				sb.appendIndentLine(numIndents+1, volumes.get(uuid).toString());			
+			}
+			sb.appendIndentLine(numIndents, "})");			
 		}
-		sb.appendIndentLine(numIndents, "})");
 		return sb.toString();
 	}
 
