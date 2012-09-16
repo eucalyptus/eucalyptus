@@ -41,30 +41,30 @@ class VolumeRenderer
         doc.textLine("Resource Usage Section", 3);
         doc.tableOpen();
 
-        doc.addValCol("Instance Id").addValCol("Volume Id").addValCol("# Vol")
+        doc.newRow().addValCol("Instance Id").addValCol("Volume Id").addValCol("# Vol")
         	.addValCol("Size (" + units.toString() + ")").addValCol("Vol Duration");
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-            doc.addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.").addValCol("cumul.");
+            doc.newRow().addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.").addValCol("cumul.");
             addUsageCols(doc, zone.getUsageTotals().getVolumeTotals(), units);
             for (String accountName: zone.getAccounts().keySet()) {
               	AccountArtEntity account = zone.getAccounts().get(accountName);
-                doc.addLabelCol(1, "Account: " + accountName).addValCol("cumul.").addValCol("cumul.");
+                doc.newRow().addLabelCol(1, "Account: " + accountName).addValCol("cumul.").addValCol("cumul.");
                 addUsageCols(doc, account.getUsageTotals().getVolumeTotals(),units);
                 for (String userName: account.getUsers().keySet()) {
                    	UserArtEntity user = account.getUsers().get(userName);
-                       doc.addLabelCol(2, "User: " + userName)
+                       doc.newRow().addLabelCol(2, "User: " + userName)
                        		.addValCol("cumul.").addValCol("cumul.");
                        addUsageCols(doc, user.getUsageTotals().getVolumeTotals(),units);
                     for (String volumeUuid: user.getVolumes().keySet()) {
                        	VolumeArtEntity volume = user.getVolumes().get(volumeUuid);
-                       	doc.addValCol(volume.getVolumeId())
+                       	doc.newRow().addValCol(volume.getVolumeId())
                        			.addValCol("cumul,");
                        	addUsageCols(doc, volume.getUsage(), units);
                        	/* Add a separate line for each attachment, below the volume line */
                        	for (String instanceId: volume.getInstanceAttachments().keySet()) {
                        		VolumeUsageArtEntity usage = volume.getInstanceAttachments().get(instanceId);
-                           	doc.addEmptyValCols(6).addValCol(volume.getVolumeId())
+                           	doc.newRow().addEmptyValCols(6).addValCol(volume.getVolumeId())
                            			.addValCol(instanceId);
                            	addUsageCols(doc, usage, units);
                        		
