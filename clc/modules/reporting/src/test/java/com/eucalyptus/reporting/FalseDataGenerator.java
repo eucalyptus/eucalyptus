@@ -308,18 +308,70 @@ public class FalseDataGenerator
 	}
 
 	@ExposedCommand
-	public static void generateReport()
+	public static void generateInstanceHtmlReport()
 	{
-		log.debug(" ----> GENERATING REPORT");
+		log.debug(" ----> GENERATING INSTANCE HTML REPORT");
 
 		Period period = new Period(START_TIME + (PERIOD_DURATION*3), START_TIME + (PERIOD_DURATION * 200));
 		
-		File file = new File("/tmp/report.html");
+		File file = new File("/tmp/report_instance.html");
 		FileOutputStream fos = null;
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
 					ReportType.INSTANCE, null, fos, null);
+		} catch (IOException iox) {
+			log.error("Error generating report", iox);
+		} finally {
+			if (fos!=null) {
+				try {
+					fos.close();
+				} catch (IOException e) {
+					log.error("Error closing stream", e);
+				}
+			}
+		}
+	}
+
+	@ExposedCommand
+	public static void generateInstanceCsvReport()
+	{
+		log.debug(" ----> GENERATING INSTANCE CSV REPORT");
+
+		Period period = new Period(START_TIME + (PERIOD_DURATION*3), START_TIME + (PERIOD_DURATION * 200));
+		
+		File file = new File("/tmp/report_instance.csv");
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(file);
+			ReportGenerator.getInstance().generateReport(period, ReportFormat.CSV,
+					ReportType.INSTANCE, null, fos, null);
+		} catch (IOException iox) {
+			log.error("Error generating report", iox);
+		} finally {
+			if (fos!=null) {
+				try {
+					fos.close();
+				} catch (IOException e) {
+					log.error("Error closing stream", e);
+				}
+			}
+		}
+	}
+
+	@ExposedCommand
+	public static void generateVolumeHtmlReport()
+	{
+		log.debug(" ----> GENERATING VOLUME HTML REPORT");
+
+		Period period = new Period(START_TIME + (PERIOD_DURATION*3), START_TIME + (PERIOD_DURATION * 200));
+		
+		File file = new File("/tmp/report_volume.html");
+		FileOutputStream fos = null;
+		try {
+			fos = new FileOutputStream(file);
+			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
+					ReportType.VOLUME, null, fos, null);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
