@@ -531,12 +531,25 @@ a:hover {
 
 .form-row label {
   display: inline-block;
-  width: 90px;
+  width: 170px;
+  margin-right: 5px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 13px;
   text-align: right;
-  margin-right: 13px;
   color: #02405f;
+}
+
+.form-row label.long-label {
+  width: 320px;
+}
+
+#login .form-row label {
+  width: 90px;
+  margin-right: 13px;
+}
+
+.short-textinput {
+  width: 45px;
 }
 
 .checkbox-row {
@@ -1440,26 +1453,14 @@ tr.selected-row td.sorting_1
   /* This doesn't appear on every dialog */
 }
 
+.ui-dialog .ui-dialog-content {
+  padding: 0 15px;
+}
+
 .dialog-inner-content {
-  padding: 0 15px 5px;
+  padding: 0 15px 10px;
   color: #444;
   font-size: 13px;
-}
-
-.selected-resources {
-  color: #02405f;
-  font-family: 'PlayRegular', Arial, sans-serif;
-  font-size: 14px;
-  text-align: center;
-}
-
-.selected-resources table {
-  width: 100%;
-}
-
-.selected-resources th {
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-weight: normal;
 }
 
 .dialog-error {
@@ -1471,10 +1472,11 @@ tr.selected-row td.sorting_1
   margin: 0;
   padding: 0 5px 5px 0;
   border: 0;
+  background-color: transparent;
 }
 
 .ui-dialog .ui-dialog-buttonpane button {
-    margin: 0.5em 0.7em 0.5em 0;
+    margin: 0 12px 8px 0;
     outline: 0;
 }    
 
@@ -1482,6 +1484,15 @@ tr.selected-row td.sorting_1
   padding: 0;
   line-height: 1;  
 }
+
+.ui-widget-content a {
+  color: #73a434;
+}
+
+.ui-widget-content a.button {
+  color: #fff;
+}
+
 
 .ui-widget-content .ui-state-disabled,
 .ui-widget-content .ui-state-disabled:hover {
@@ -1499,6 +1510,52 @@ tr.selected-row td.sorting_1
   background-image: linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
 
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ======= Dialog box content styles ======= */
+
+.label,
+.required-label {
+  display: inline-block;
+  width: 170px;
+  text-align: right;
+}
+
+.required-hint {
+  position: relative;
+  top: 5px;
+  margin-bottom: 0;
+}
+
+.required-hint:before,
+.required-label:after {
+  content: "*";
+  color: #e36f1e;
+}
+
+.required-hint:before {
+  padding-right: 2px;
+}
+
+.required-label:after {
+  padding-left: 2px;
+} 
+
+.selected-resources {
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  text-align: center;
+}
+
+.selected-resources table {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.selected-resources th {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-weight: normal;
 }
 
 
@@ -1596,19 +1653,19 @@ span.on-error {
   box-shadow: inset 0 0 3px #a8b9c8;
 }
 .wizard-step .dataTables_wrapper table thead{
-    display:none;
+  display:none;
 }
 
 /* Sang-min: temporary styling for launch wizard */
-#launch-wizard-advanced-storage th{
+#launch-wizard-advanced-storage th {
   font-size: 11px;
 }
-#launch-wizard-advanced-storage td{
+#launch-wizard-advanced-storage td {
   padding: 5px 10px;
   border-top: 2px solid #dae2e8;
   border-left: 1px solid #dae2e8;
   font-size: 11px;
-  width : auto;
+  width: auto;
 }
 #launch-wizard-advanced-storage input[type='text']{
   width: 30px;
@@ -1617,11 +1674,6 @@ span.on-error {
   width: 10px;
 }
 /* END Sang-min */
-
-.label_required:after {
-  content: "*";
-  color: #e36f1e;
-}
 
 .euca-hidden-container {
   display : none;

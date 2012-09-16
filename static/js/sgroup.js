@@ -163,7 +163,7 @@
          thisObj._validateForm(createButtonId);
       });
       this.addDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
-         var thediv = $('#sgroup-morerools');
+         var thediv = $('#sgroup-more-rules');
          var sel = $('#sgroup-template');
          var templ = sel.val();
          if (templ == 'none') {
@@ -237,7 +237,7 @@
         },
       });
       this.editDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
-         var thediv = thisObj.editDialog.find('#sgroup-morerools');
+         var thediv = thisObj.editDialog.find('#sgroup-more-rules');
          var sel = thisObj.editDialog.find('#sgroup-template');
          var templ = sel.val();
          if (templ == 'none') {
