@@ -33,7 +33,7 @@ import org.hibernate.annotations.Entity;
 @Entity @javax.persistence.Entity
 @SqlResultSetMapping(name="detachVolumeEventMap",
         entities=@EntityResult(entityClass=ReportingInstanceCreateEvent.class))
-@NamedNativeQuery(name="scanVolumeCreateEvents",
+@NamedNativeQuery(name="scanVolumeDetachEvents",
      query="select * from reporting_volume_detach_events order by timestamp_ms",
      resultSetMapping="detachVolumeEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
