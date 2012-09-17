@@ -88,8 +88,8 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
-public class InstanceEventListener implements EventListener<InstanceEvent> {
-  private static final Logger log = Logger.getLogger( InstanceEventListener.class );
+public class InstanceUsageEventListener implements EventListener<InstanceUsageEvent> {
+  private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
 
   @ConfigurableField( initial = "1200", description = "How often the reporting system writes instance snapshots" )
   public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
@@ -100,8 +100,8 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
   private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
   public static void register( ) {
-    final InstanceEventListener listener = new InstanceEventListener( );
-    Listeners.register( InstanceEvent.class, listener );
+    final InstanceUsageEventListener listener = new InstanceUsageEventListener( );
+    Listeners.register( InstanceUsageEvent.class, listener );
     OrderedShutdown.registerPreShutdownHook( new Runnable() {
       @Override
       public void run( ) {
@@ -110,10 +110,10 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     } );
   }
 
-  public void fireEvent( @Nonnull final InstanceEvent event ) {
+  public void fireEvent( @Nonnull final InstanceUsageEvent event ) {
     final long receivedEventMs = getCurrentTimeMillis();
 
-    log.debug("Received instance event:" + event);
+    log.debug("Received instance usage event:" + event);
 
     final String uuid = event.getUuid();
     if ( uuid == null ) {
@@ -124,22 +124,23 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     /* Retain records of all account and user id's and names encountered
      * even if they're subsequently deleted.
      */
-    getReportingAccountCrud().createOrUpdateAccount( event.getAccountId(), event.getAccountName() );
-    getReportingUserCrud().createOrUpdateUser( event.getUserId(), event.getAccountId(), event.getUserName() );
+    //getReportingAccountCrud().createOrUpdateAccount( event.getAccountId(), event.getAccountName() );
+    //getReportingUserCrud().createOrUpdateUser( event.getUserId(), event.getAccountId(), event.getUserName() );
 
     // Write the instance attributes, but only if we don't have it already.
     if ( !recentlySeenUuids.contains(uuid) ) {
       try {
         log.info( "Wrote Reporting Instance:" + uuid );
         final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
-        eventStore.insertCreateEvent(
+        eventStore.insertUsageEvent(
             event.getUuid(),
             receivedEventMs,
-            event.getInstanceId(),
-            event.getInstanceType(),
-            event.getUserId(),
-            event.getClusterName(),
-            event.getAvailabilityZone()
+            event.getResourceName(),
+            event.getMetric(),
+            event.getSequenceNum(),
+            event.getDimension(),
+            event.getValue(),
+            event.getValueTimestamp()
         );
       } catch ( ConstraintViolationException ex ) {
         log.debug( ex, ex ); // info already exists for instance
@@ -186,18 +187,17 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
         @Override
         public Void apply( final Collection<DatedInstanceEvent> datedInstanceEvents ) {
           for ( final DatedInstanceEvent datedEvent : datedInstanceEvents ) {
-            final InstanceEvent event = datedEvent.getInstanceEvent();
+            final InstanceUsageEvent event = datedEvent.getInstanceEvent();
+            
             eventStore.insertUsageEvent(
                 event.getUuid(),
-                datedEvent.getTimestamp(),
-                event.getCumulativeDiskIoMegs(),
-                event.getCpuUtilizationPercent(),
-                event.getCumulativeNetIncomingMegsBetweenZones(),
-                event.getCumulativeNetIncomingMegsWithinZone(),
-                event.getCumulativeNetIncomingMegsPublicIp(),
-                event.getCumulativeNetOutgoingMegsBetweenZones(),
-                event.getCumulativeNetOutgoingMegsWithinZone(),
-                event.getCumulativeNetOutgoingMegsPublicIp()
+                event.getTimestamp(),
+                event.getResourceName(),
+                event.getMetric(),
+                event.getSequenceNum(),
+                event.getDimension(),
+                event.getValue(),
+                event.getValueTimestamp()
             );
             log.debug( "Wrote instance usage for: " + event.getUuid() );
           }
@@ -210,6 +210,7 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     }
   }
 
+  /*
   protected ReportingAccountCrud getReportingAccountCrud() {
     return ReportingAccountCrud.getInstance();
   }
@@ -218,10 +219,12 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
     return ReportingUserCrud.getInstance();
   }
 
+  */
   protected ReportingInstanceEventStore getReportingInstanceEventStore() {
     return ReportingInstanceEventStore.getInstance();
   }
 
+  
   /**
    * Get the current time which will be used for recording when an event
    * occurred. This can be overridden if you have some alternative method
@@ -242,10 +245,10 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
 
   private static final class DatedInstanceEvent {
     private final long timestamp;
-    private final InstanceEvent instanceEvent;
+    private final InstanceUsageEvent instanceEvent;
 
     private DatedInstanceEvent( final long timestamp,
-                                final InstanceEvent instanceEvent ) {
+                                final InstanceUsageEvent instanceEvent ) {
       this.timestamp = timestamp;
       this.instanceEvent = instanceEvent;
     }
@@ -254,7 +257,7 @@ public class InstanceEventListener implements EventListener<InstanceEvent> {
       return timestamp;
     }
 
-    public InstanceEvent getInstanceEvent() {
+    public InstanceUsageEvent getInstanceEvent() {
       return instanceEvent;
     }
   }

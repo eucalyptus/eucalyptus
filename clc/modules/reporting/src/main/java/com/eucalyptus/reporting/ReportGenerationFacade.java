@@ -65,18 +65,18 @@ public class ReportGenerationFacade {
             uuidToInstanceIdMap.put( event.getUuid(), event.getInstanceId() );
           }
           if ( item instanceof ReportingInstanceUsageEvent) {
+              
             final ReportingInstanceUsageEvent event = (ReportingInstanceUsageEvent) item;
             builder.append( SerializationUtils.serializeDateTime( new Date( event.getTimestampMs() ) ) ).append(", ");
             builder.append( event.getUuid() ).append( ", ");
             builder.append( uuidToInstanceIdMap.get(event.getUuid()) ).append( ", ");
-            builder.append( event.getCpuUtilizationPercent() ).append( ", ");
-            builder.append( event.getCumulativeDiskIoMegs() ).append( ", ");
-            builder.append( event.getCumulativeNetIncomingMegsPublic() ).append( ", ");
-            builder.append( event.getCumulativeNetIncomingMegsBetweenZones() ).append(", ");
-            builder.append( event.getCumulativeNetIncomingMegsWithinZone() ).append( ", ");
-            builder.append( event.getCumulativeNetOutgoingMegsPublic() ).append( ", ");
-            builder.append( event.getCumulativeNetOutgoingMegsBetweenZones() ).append(", ");
-            builder.append( event.getCumulativeNetOutgoingMegsWithinZone() ).append("\n");
+            builder.append( event.getTimestamp()).append( ", ");
+            builder.append( event.getResourceName() ).append( ", ");
+            builder.append( event.getMetric()).append( ", ");
+            builder.append( event.getSequenceNum()).append(", ");
+            builder.append( event.getDimension() ).append( ", ");
+            builder.append( event.getValue()).append( ", ");
+            builder.append( SerializationUtils.serializeDateTime( new Date( event.getValueTimestamp() ) ) ).append("\n");
           }
         }
 
