@@ -460,7 +460,7 @@
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifySuccess($.i18n.prop('sgroup_add_rule_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
@@ -487,13 +487,13 @@
         async:"false",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(sgroup_revoke_rule_success + ' ' + sgroupName);
+                notifySuccess($.i18n.prop('sgroup_revoke_rule_success', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifySuccess(sgroup_revoke_rule_error + ' ' + sgroupName);
+                notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
