@@ -42,7 +42,7 @@ class VolumeRenderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Instance Id").addValCol("Volume Id").addValCol("# Vol")
-        	.addValCol("Size (" + units.getSizeUnit().toString() + ")").addValCol("Vol Duration");
+        	.addValCol("Size (" + units.getSizeUnit().toString() + ")").addValCol("GB-Days");
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
             doc.newRow().addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.").addValCol("cumul.");
@@ -58,14 +58,14 @@ class VolumeRenderer
                        addUsageCols(doc, user.getUsageTotals().getVolumeTotals(),units);
                     for (String volumeUuid: user.getVolumes().keySet()) {
                        	VolumeArtEntity volume = user.getVolumes().get(volumeUuid);
-                       	doc.newRow().addValCol(volume.getVolumeId())
-                       			.addValCol("cumul,");
+                       	doc.newRow().addValCol("cumul.")
+                       			.addValCol(volume.getVolumeId());
                        	addUsageCols(doc, volume.getUsage(), units);
                        	/* Add a separate line for each attachment, below the volume line */
                        	for (String instanceId: volume.getInstanceAttachments().keySet()) {
                        		VolumeUsageArtEntity usage = volume.getInstanceAttachments().get(instanceId);
-                           	doc.newRow().addEmptyValCols(6).addValCol(volume.getVolumeId())
-                           			.addValCol(instanceId);
+                           	doc.newRow().addValCol(instanceId)
+                           			.addValCol(volume.getVolumeId());
                            	addUsageCols(doc, usage, units);
                        		
                        	}
@@ -83,7 +83,8 @@ class VolumeRenderer
 	{
 		doc.addValCol(entity.getVolumeCnt());
 		doc.addValCol(UnitUtil.convertSize(entity.getSizeGB(), SizeUnit.GB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
+		doc.addValCol(UnitUtil.convertSizeTime(entity.getGBSecs(), SizeUnit.GB,
+				units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
 		return doc;
 	}
 

@@ -67,7 +67,7 @@ public class VolumeUsageArtEntity
 	implements ArtObject
 {
 	private long sizeGB;
-	private long durationMs;
+	private long gBSecs;
 	private long volumeCnt;
 
 	public VolumeUsageArtEntity()
@@ -85,14 +85,14 @@ public class VolumeUsageArtEntity
 		this.sizeGB = sizeGB;
 	}
 
-	public long getDurationMs()
+	public long getGBSecs()
 	{
-		return durationMs;
+		return gBSecs;
 	}
 	
-	public void setDurationMs(long durationMs)
+	public void setGBSecs(long gBSecs)
 	{
-		this.durationMs = durationMs;
+		this.gBSecs = gBSecs;
 	}
 	
 	public long getVolumeCnt()
@@ -107,7 +107,7 @@ public class VolumeUsageArtEntity
 
 	public String toString()
 	{
-		return String.format("(size:%d duration:%d)\n", sizeGB, durationMs);
+		return String.format("(size:%d GBSecs:%d)\n", sizeGB, gBSecs);
 	}
 
 }

@@ -66,11 +66,14 @@ public class VolumeArtGenerator
 			}
 			UserArtEntity user = account.getUsers().get(reportingUser.getName());
 			VolumeArtEntity volume = new VolumeArtEntity(createEvent.getVolumeId());
-			user.getVolumes().put(createEvent.getUuid(), volume);
 			volume.getUsage().setSizeGB( createEvent.getSizeGB() );
 			long startTime = Math.max(report.getBeginMs(), createEvent.getTimestampMs());
-			volStartEndTimes.put(createEvent.getUuid(), new StartEndTimes( startTime, report.getEndMs() ));
-			volumeEntities.put(createEvent.getUuid(), volume);
+			if (startTime <= report.getEndMs()) {
+				user.getVolumes().put(createEvent.getUuid(), volume);
+				volStartEndTimes.put(createEvent.getUuid(), new StartEndTimes( startTime, report.getEndMs() ));
+				volumeEntities.put(createEvent.getUuid(), volume);
+				volume.getUsage().setVolumeCnt(1);
+			}
 		}
 		
 		/* Find end times for the volumes
@@ -78,14 +81,13 @@ public class VolumeArtGenerator
 		iter = wrapper.scanWithNativeQuery( "scanVolumeDeleteEvents" );
 		while (iter.hasNext()) {
 			ReportingVolumeDeleteEvent deleteEvent = (ReportingVolumeDeleteEvent) iter.next();
-			VolumeArtEntity volume = volumeEntities.get(deleteEvent.getUuid());
 			long endTime = Math.min(deleteEvent.getTimestampMs(), report.getEndMs());
-			if (! volStartEndTimes.containsKey(deleteEvent.getUuid())) {
-				log.error("Volume delete event without corresponding start event:" + deleteEvent.getUuid());
-				continue;
+			if (endTime >= report.getBeginMs() && volStartEndTimes.containsKey(deleteEvent.getUuid())) {
+				StartEndTimes startEndTimes = volStartEndTimes.get(deleteEvent.getUuid());
+				startEndTimes.setEndTimeMs(endTime);
+				volumeEntities.remove(deleteEvent.getUuid());
+				volStartEndTimes.remove(deleteEvent.getUuid());
 			}
-			StartEndTimes startEndTimes = volStartEndTimes.get(deleteEvent.getUuid());
-			startEndTimes.setEndTimeMs(endTime);
 		}
 
 		/* Set the duration of each volume
@@ -97,7 +99,7 @@ public class VolumeArtGenerator
 				log.error("volume without corresponding start end times:" + uuid);
 				continue;
 			}
-			volume.getUsage().setDurationMs(startEndTimes.getDurationMs());
+			volume.getUsage().setGBSecs(startEndTimes.getDurationMs()*volume.getUsage().getSizeGB());
 		}
 		
 
@@ -128,14 +130,22 @@ public class VolumeArtGenerator
 		while (iter.hasNext()) {
 			ReportingVolumeDetachEvent detachEvent = (ReportingVolumeDetachEvent) iter.next();
 			long duration = durationCalc.detach(detachEvent.getInstanceUuid(),
-					detachEvent.getVolumeUuid(), detachEvent.getTimestampMs());			
+					detachEvent.getVolumeUuid(), detachEvent.getTimestampMs());
 			if (duration==0) continue;
 			if (! volumeEntities.containsKey(detachEvent.getVolumeUuid())) continue;
 			VolumeArtEntity volume = volumeEntities.get(detachEvent.getVolumeUuid());
-			if (! volume.getInstanceAttachments().containsKey(detachEvent.getInstanceUuid())) continue;
-			VolumeUsageArtEntity usage = volume.getInstanceAttachments().get(detachEvent.getInstanceUuid());
-			usage.setDurationMs(duration);
-
+			long gbsecs = duration * volume.getUsage().getSizeGB();
+			/* If a volume is repeatedly attached to and detached from an instance,
+			 * add up the total attachment time.
+			 */
+			if (volume.getInstanceAttachments().containsKey(detachEvent.getInstanceUuid())) {
+				gbsecs += volume.getInstanceAttachments().get(detachEvent.getInstanceUuid()).getGBSecs();
+			}
+			VolumeUsageArtEntity usage = new VolumeUsageArtEntity();
+			usage.setGBSecs(gbsecs);
+			usage.setSizeGB(volume.getUsage().getSizeGB());
+			usage.setVolumeCnt(1);
+			volume.getInstanceAttachments().put(detachEvent.getInstanceUuid(), usage);
 		}
 
 		
@@ -165,7 +175,7 @@ public class VolumeArtGenerator
 			VolumeUsageArtEntity newEntity)
 	{
 		
-		totalEntity.setDurationMs(totalEntity.getDurationMs()+newEntity.getDurationMs());
+		totalEntity.setGBSecs(totalEntity.getGBSecs()+newEntity.getGBSecs());
 		totalEntity.setVolumeCnt(totalEntity.getVolumeCnt()+1);
 		totalEntity.setSizeGB(plus(totalEntity.getSizeGB(), newEntity.getSizeGB()));
 
