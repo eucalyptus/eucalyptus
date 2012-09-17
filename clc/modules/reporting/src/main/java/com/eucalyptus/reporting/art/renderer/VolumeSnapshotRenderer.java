@@ -62,8 +62,7 @@ class VolumeSnapshotRenderer
                        	addUsageCols(doc, volume.getSnapshotTotals(), units);
                        	for (String snapId: volume.getSnapshotUsage().keySet()) {
                        		VolumeSnapshotUsageArtEntity snap = volume.getSnapshotUsage().get(snapId);
-                           	doc.newRow().addValCol(volume.getVolumeId()).addValCol(volume.getVolumeId())
-                   			.addValCol(snapId);
+                           	doc.newRow().addValCol(volume.getVolumeId()).addValCol(snapId);
                            	addUsageCols(doc, snap, units);
                        	}
                     }
