@@ -6,6 +6,7 @@ public class ElasticIpUsageArtEntity
 	implements ArtObject
 {
 	private long durationMs;
+	private long ipNum;
 	
 	public ElasticIpUsageArtEntity()
 	{
@@ -20,6 +21,16 @@ public class ElasticIpUsageArtEntity
 	public void setDurationMs(long durationMs)
 	{
 		this.durationMs = durationMs;
+	}
+
+	public long getIpNum()
+	{
+		return ipNum;
+	}
+
+	public void setIpNum(long ipNum)
+	{
+		this.ipNum = ipNum;
 	}
 
 }

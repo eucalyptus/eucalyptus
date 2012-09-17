@@ -130,7 +130,7 @@ public class VolumeSnapshotArtGenerator
 			VolumeSnapshotUsageArtEntity newEntity)
 	{
 		
-		totalEntity.setSnapshotNum(newEntity.getSnapshotNum()+1);
+		totalEntity.setSnapshotNum(newEntity.getSnapshotNum()+totalEntity.getSnapshotNum());
 		totalEntity.setGBSecs(totalEntity.getGBSecs()+newEntity.getGBSecs());
 		totalEntity.setSizeGB(plus(totalEntity.getSizeGB(), newEntity.getSizeGB()));
 

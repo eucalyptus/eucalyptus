@@ -72,6 +72,7 @@ public class ReportArtEntity
 	private long beginMs;
 	private long endMs;
 	private Map<String, AvailabilityZoneArtEntity> zones;
+	private Map<String, AccountArtEntity> accounts; //For Elastic IP reports
 	private UsageTotalsArtEntity usageTotals;
 
 	public ReportArtEntity(long beginMs, long endMs)
@@ -79,6 +80,7 @@ public class ReportArtEntity
 		this.beginMs = beginMs;
 		this.endMs = endMs;
 		this.zones = new HashMap<String, AvailabilityZoneArtEntity>();
+		this.accounts = new HashMap<String, AccountArtEntity>();
 		this.usageTotals = new UsageTotalsArtEntity();
 	}
 
@@ -95,6 +97,11 @@ public class ReportArtEntity
 	public Map<String, AvailabilityZoneArtEntity> getZones()
 	{
 		return zones;
+	}
+	
+	public Map<String, AccountArtEntity> getAccounts()
+	{
+		return accounts;
 	}
 
 	public UsageTotalsArtEntity getUsageTotals()
