@@ -27,6 +27,7 @@
        buttons :  {},
        help : null,  // help title and content 
        on_open: null, // {spin: True, callback: function(){}}
+       user_val: null, // for user use...
     },
     $error_div : null,
     help_flipped : false,
@@ -48,6 +49,7 @@
          closeOnEscape : false,
          position: { my: 'center', at: 'center', of: window, collision: 'none'},
          title: thisObj.options.title,
+         user_val: thisObj.options.user_val,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
              if($titleBar.find('.help-link').length <= 0)

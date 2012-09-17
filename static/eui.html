@@ -134,7 +134,7 @@
             
             <div class="form-row">
               <label for="username">{{!>login_uname}}</label>
-              <input type="text" id="username" class="input-field" value="admin"/>
+              <input type="text" id="username" class="input-field" value=""/>
             </div>
             
             <div class="form-row">
@@ -279,13 +279,12 @@
         <div id="keys-add-dialog-wrapper">
           <div id="keys-add-dialog" class="add-dialog">
             <div class="dialog-inner-content">
-              {{!: keypair_dialog_add_text }}
-              <p>{{!: required_fields }}</p>
-              <div class="dialog-field">
-                <span class="label_required">{{!>keypair_dialog_add_name}}</span>
+              <p>{{!: keypair_dialog_add_text }}</p>
+              <div class="form-row">
+                <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
                 <input type="text" id="key-name" class="required"/>
               </div>
-            </p>
+              <p class="required-hint">{{!: required_fields }}</p>
             </div>
           </div>
           <div id="keys-add-dialog-help" class="dialog-help">
@@ -303,9 +302,9 @@
         <div id="keys-euca-dialog-wrapper">
           <div id="keys-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-            {{!: keypair_dialog_del_text }}
+              <p>{{!: keypair_dialog_del_text }}</p>
+              <div class="selected-resources"></div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
           <div id="keys-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
@@ -318,7 +317,7 @@
       </script>
       <!-- END Keypair dialog template -->
 
-      <!-- Secruity Group table -->
+      <!-- Security Group table -->
       <script id="sgroupTblTmpl" type="text/x-jsrender">
         <div id="sgroups-wrapper">
           <div id="sgroups-table">
@@ -356,51 +355,70 @@
           {{!: required_fields }}
           <div class="group inner-box clearfix">
               <h3>Group *</h3>
-              {{!: sgroup_dialog_add_group }}
-              <p>
-              <span class="field">{{!>sgroup_dialog_add_name}}</span><input type="text" id="sgroup-name" class="required"/><br/>
-              <span class="field">{{!>sgroup_dialog_add_description}}</span><input type="text" id="sgroup-description" class="required"/>
-              </p>
+              <p>{{!: sgroup_dialog_add_group }}</p>
+              <div class="form-row">
+                <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
+                <input type="text" id="sgroup-name" class="required"/>
+              </div>
+              <div class="form-row">    
+                <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
+                <input type="text" id="sgroup-description" class="required"/>
+              </div>  
           </div>
           <div class="rules inner-box clearfix">
               <h3>Rules</h3>
-              {{!: sgroup_dialog_add_rules }}
-              <p>
-              <span class="field">{{!>sgroup_dialog_add_protocol}}</span>
-                  <select id="sgroup-template">
-                    <option value="none">Select protocol</option>
-                    <optgroup label="">
-                    <option>SSH (TCP port 22, for terminal access)</option>
-                    <option>RDP (TCP port 3389, for Windows instances)</option>
-                    <option>HTTP (TCP port 80, for web servers)</option>
-                    <option>HTTPS (TCP port 443, for web servers)</option>
-                    <option>MS SQL (TCP port 1433)</option>
-                    <option>MySQL (TCP port 3306)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>POP3 (TCP port 110)</option>
-                    <option>POP3S (TCP port 995)</option>
-                    <option>LDAP (TCP port 389)</option>
-                    <option>IMAP (TCP port 143)</option>
-                    <option>SMTP (TCP port 465)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>Custom TCP</option>
-                    <option>Custom UDP</option>
-                    <option>Custom ICMP</option>
-                    </optgroup>
-                  </select><br/>
-              <div id="sgroup-morerools" style='display: none;'>
-                <span class="field">{{!>sgroup_dialog_add_ports}}</span><input type="text" id="sgroup-ports" class="required"/><div class="dialog-notifications"></div>
-                <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip<a><br/>
-                <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/><br/>
-                <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}<br/>
-                <a href='#' id='sgroup-add-rule'>Add Another Rule</a><br/>
+              <p>{{!: sgroup_dialog_add_rules }}</p>
+              <div class="form-row"> 
+                <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                <select id="sgroup-template">
+                  <option value="none">Select protocol</option>
+                  <optgroup label="">
+                  <option>SSH (TCP port 22, for terminal access)</option>
+                  <option>RDP (TCP port 3389, for Windows instances)</option>
+                  <option>HTTP (TCP port 80, for web servers)</option>
+                  <option>HTTPS (TCP port 443, for web servers)</option>
+                  <option>MS SQL (TCP port 1433)</option>
+                  <option>MySQL (TCP port 3306)</option>
+                  </optgroup>
+                  <optgroup label="----------------">
+                  <option>POP3 (TCP port 110)</option>
+                  <option>POP3S (TCP port 995)</option>
+                  <option>LDAP (TCP port 389)</option>
+                  <option>IMAP (TCP port 143)</option>
+                  <option>SMTP (TCP port 465)</option>
+                  </optgroup>
+                  <optgroup label="----------------">
+                  <option>Custom TCP</option>
+                  <option>Custom UDP</option>
+                  <option>Custom ICMP</option>
+                  </optgroup>
+                </select>
               </div>
-              <div id="sgroup-rules-list">
+              <div id="sgroup-more-rules" style='display: none;'>
+                <div class="form-row"> 
+                  <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                  <input type="text" id="sgroup-ports" class="required"/>
+                  <div class="dialog-notifications"></div>
+                </div>  
+                
+                <div class="form-row">
+                  <span class="field">{{!>sgroup_dialog_add_allow}}</span>
+                  <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                </div>
+
+                <div class="form-row">
+                  <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group"/>
+                </div>
+
+                <div class="form-row"> 
+                  <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
+                </div>
+                
+                <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
+
               </div>
-              </p>
+              <div id="sgroup-rules-list"></div>
+              <p class="required-hint">{{!: required_fields }}</p>
           </div>
 
         </div>
@@ -411,47 +429,62 @@
         <div id="sgroups-edit-dialog" class="euca-dialog">
           <div id="sgroups-edit-group-name"></div>
           <div id="sgroups-edit-group-desc"></div>
-          <p/>
+          
           <div class="rules inner-box clearfix">
               <h3>Rules</h3>
-              {{!: sgroup_dialog_edit_rules }}
-              <p>
-              <span class="field">{{!>sgroup_dialog_add_protocol}}</span>
-                  <select id="sgroup-template">
-                    <option value="none">Select protocol</option>
-                    <optgroup label="">
-                    <option>SSH (TCP port 22, for terminal access)</option>
-                    <option>RDP (TCP port 3389, for Windows instances)</option>
-                    <option>HTTP (TCP port 80, for web servers)</option>
-                    <option>HTTPS (TCP port 443, for web servers)</option>
-                    <option>MS SQL (TCP port 1433)</option>
-                    <option>MySQL (TCP port 3306)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>POP3 (TCP port 110)</option>
-                    <option>POP3S (TCP port 995)</option>
-                    <option>LDAP (TCP port 389)</option>
-                    <option>IMAP (TCP port 143)</option>
-                    <option>SMTP (TCP port 465)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>Custom TCP</option>
-                    <option>Custom UDP</option>
-                    <option>Custom ICMP</option>
-                    </optgroup>
-                  </select><br/>
-              <div id="sgroup-morerools" style='display: block;'>
-                <span class="field">{{!>sgroup_dialog_add_ports}}</span><input type="text" id="sgroup-ports" class="required"/><div class="dialog-notifications"></div>
-                <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip<a><br/>
-                <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/><br/>
-                <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}<br/>
-                <a href='#' id='sgroup-add-rule'>Add Another Rule</a><br/>
+              <p>{{!: sgroup_dialog_edit_rules }}</p>
+              <div class="form-row">
+                <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                <select id="sgroup-template">
+                  <option value="none">Select protocol</option>
+                  <optgroup label="">
+                  <option>SSH (TCP port 22, for terminal access)</option>
+                  <option>RDP (TCP port 3389, for Windows instances)</option>
+                  <option>HTTP (TCP port 80, for web servers)</option>
+                  <option>HTTPS (TCP port 443, for web servers)</option>
+                  <option>MS SQL (TCP port 1433)</option>
+                  <option>MySQL (TCP port 3306)</option>
+                  </optgroup>
+                  <optgroup label="----------------">
+                  <option>POP3 (TCP port 110)</option>
+                  <option>POP3S (TCP port 995)</option>
+                  <option>LDAP (TCP port 389)</option>
+                  <option>IMAP (TCP port 143)</option>
+                  <option>SMTP (TCP port 465)</option>
+                  </optgroup>
+                  <optgroup label="----------------">
+                  <option>Custom TCP</option>
+                  <option>Custom UDP</option>
+                  <option>Custom ICMP</option>
+                  </optgroup>
+                </select>
               </div>
-              {{!: sgroup_dialog_edit_existing_rules }}
-              <div id="sgroup-rules-list">
+
+              <div id="sgroup-more-rules" style='display: block;'>
+                <div class="form-row">
+                  <label for="sgroup-ports" class="required-label">{{!>sgroup_dialog_add_ports}}</label>
+                  <input type="text" id="sgroup-ports" class="required"/>
+                  <div class="dialog-notifications"></div>
+                </div>
+
+                <div class="form-row">
+                  <label for="sgroup-allow-ip">{{!>sgroup_dialog_add_allow}}</label>
+                  <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}
+                  <input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                </div>
+
+                <div class="form-row"> 
+                  <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
+                </div>
+
+                <div class="form-row"> 
+                  <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
+                </div>
+
+                <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
               </div>
-              </p>
+              <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
+              <div id="sgroup-rules-list"></div>
           </div>
 
         </div>
@@ -459,8 +492,10 @@
 
       <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-euca-dialog" class="euca-dialog">
-          {{!: sgroup_dialog_del_text }}
-        <div class="selected-resources"> </div>
+          <div class="dialog-inner-content">
+            <p>{{!: sgroup_dialog_del_text }}</p>
+            <div class="selected-resources"></div>
+          </div>  
         </div>
       </script>
       <!-- END Security Group dialog template -->
@@ -506,12 +541,14 @@
       <!-- Volume dialog template -->
       <script id="volumeDelDlgTmpl" type="text/x-jsrender">
         <div id="volumes-euca-dialog-wrapper">
+          
           <div id="volumes-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: volume_dialog_del_text }}
+              <p>{{!: volume_dialog_del_text }}</p>
+              <div class="selected-resources"></div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
+
           <div id="volumes-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_delete_content}}
@@ -520,17 +557,20 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 
       <script id="volumeDetachDlgTmpl" type="text/x-jsrender">
         <div id="volumes-detach-dialog-wrapper">
+          
           <div id="volumes-detach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: volume_dialog_detach_text }}
-            </div>
-            <div class="selected-resources"> </div>
+              <p>{{!: volume_dialog_detach_text }}</p>
+              <div class="selected-resources"></div>
+            </div>  
           </div>
+
           <div id="volumes-detach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_detach_content}}
@@ -539,6 +579,7 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 
@@ -546,17 +587,18 @@
         <div id="volumes-detach-dialog-wrapper">
           <div id="volumes-detach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: volume_dialog_detach_text }}
-              <div class="dialog-field">
-                <span class="label">{{!: instance_label }}</span>
+              <p>{{!: volume_dialog_detach_text }}</p>
+              <div class="form-row">
+                <label for="volume-detach-instance-id">{{!: instance_label }}</label>
                 <input id="volume-detach-instance-id" disabled='disabled'/ >
               </div>
-              <div class="dialog-field">
-                <span class="label">{{!: volume_label }}</span>
+              <div class="form-row">
+                <label for="volume-detach-volume-selector">{{!: volume_label }}</label>
                 <select id="volume-detach-volume-selector"/>
               </div>
             </div>
-          </div>   
+          </div> 
+
           <div id="volumes-detach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_detach_content}}
@@ -570,25 +612,27 @@
 
       <script id="volumeAddDlgTmpl" type="text/x-jsrender">
         <div id="volumes-add-dialog-wrapper">
+          
           <div id="volumes-add-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: volume_dialog_add_text }}</p>
-              <p>{{!: required_fields }}</p>
-              <div class="dialog-field">
-                <span class="label">{{!: volume_dialog_snapshot_label }}</span>
+              <div class="form-row">
+                <label for="volume-add-snapshot-selector">{{!: volume_dialog_snapshot_label }}</label>
                 <select id="volume-add-snapshot-selector"></select>
               </div>
-              <div class="dialog-field">
-                <span class="label_required">{{!: volume_dialog_size_label }}</span>
+              <div class="form-row">
+                <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
                 <input type="text" id="volume-size" class="required"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
-              <div class="dialog-field">
-                <span class="label_required">{{!: volume_dialog_az_label }}</span>
+              <div class="form-row">
+                <label for="volume-add-az-selector" class="required-label">{{!: volume_dialog_az_label }}</label>
                 <select id="volume-add-az-selector"></select>
               </div>
+              <p class="required-hint">{{!: required_fields }}</p>
             </div>
           </div>
+
           <div id="volumes-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_add_content }}
@@ -597,6 +641,7 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 
@@ -604,21 +649,22 @@
         <div id="volumes-attach-dialog-wrapper">
           <div id="volumes-attach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: required_fields }}</p>
-              <div class="dialog-field">
-                <span class="label_required">{{!: volume_dialog_attach_volume_label }}</span>
+              <div class="form-row">
+                <label for="volume-attach-volume-id" class="required-label">{{!: volume_dialog_attach_volume_label }}</label>
                 <input type="text" id="volume-attach-volume-id" class="required"/>
               </div>
-              <div class="dialog-field">
-                <span class="label_required">{{!: volume_dialog_attach_instance_label }}</span>
+              <div class="form-row">
+                <label for="volume-attach-instance-id" class="required-label">{{!: volume_dialog_attach_instance_label }}</label>
                 <input type="text" id="volume-attach-instance-id" class="required"/>
               </div>
-              <div class="dialog-field">
-                <span class="label_required">{{!: volume_dialog_attach_device_label }}</span>
+              <div class="form-row">
+                <label for="volume-attach-device-name" class="required-label">{{!: volume_dialog_attach_device_label }}</label>
                 <input type="text" id="volume-attach-device-name" class="required"/>
               </div>
+              <p class="required-hint">{{!: required_fields }}</p>
             </div>
           </div>
+
           <div id="volumes-attach-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_attach_content}}
@@ -627,6 +673,7 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
       <!-- END Volume dialog template -->
@@ -634,6 +681,7 @@
       <!-- Snapshot table -->
       <script id="snapshotTblTmpl" type="text/x-jsrender">
         <div id="snapshot-wrapper">
+
           <div id="snapshot-table">
             <table id="snapshots" class="display">
               <thead>
@@ -653,6 +701,7 @@
                </tbody>
             </table>
           </div>
+
           <div id="snapshot-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -661,24 +710,24 @@
               <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
-      <!-- END Volume table -->
+      <!-- END Snapshot table -->
 
-      <!-- Snapshot dialog template -->
+      <!-- Snapshot dialog templates -->
       <script id="snapshotCreateDlgTmpl" type="text/x-jsrender">
         <div id="snapshot-create-dialog-wrapper">
           <div id="snapshot-create-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <div id="snapshot-create-dialog-some-volumes">
-              {{!: snapshot_create_dialog_text }}
-              <p>{{!: required_fields }}</p>
-              <div class="dialog-field" id="snapshot-create-dialog-vol-id">
-                <span class="label_required">{{!: snapshot_create_dialog_volume_label }}</span>
+              <p>{{!: snapshot_create_dialog_text }}</p>
+              <div class="form-row" id="snapshot-create-dialog-vol-id">
+                <label for="snapshot-create-volume-id" class="required-label">{{!: snapshot_create_dialog_volume_label }}</label>
                 <input type="text" id="snapshot-create-volume-id" class="required"/>
               </div>
-              <div class="dialog-field" id="snapshot-create-dialog-desc">
-                <span class="label">{{!: snapshot_create_dialog_description_label }}</span>
+              <div class="form-row" id="snapshot-create-dialog-desc">
+                <label for="snapshot-create-description" class="required-label">{{!: snapshot_create_dialog_description_label }}</label>
                 <textarea id="snapshot-create-description" class="required" class="description"/>
               </div>
               </div>
@@ -686,6 +735,7 @@
                  <p>{{!: snapshot_create_dialog_no_volumes_text }}</p>
                  <p><a href="#" id="snapshot-create-dialog-new-vol">{{!: snapshot_create_dialog_no_volumes_link }}</a></p>
               </div>
+              <p class="required-hint">{{!: required_fields }}</p>
             </div>
           </div>
           <div id="snapshot-create-dialog-help" class="dialog-help">
@@ -698,14 +748,17 @@
           </div>
         </div>
       </script>
+
       <script id="snapshotDelDlgTmpl" type="text/x-jsrender">
         <div id="snapshot-euca-dialog-wrapper">
+          
           <div id="snapshot-delete-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: snapshot_delete_dialog_text }}
+              <p>{{!: snapshot_delete_dialog_text }}</p>
+              <div class="selected-resources"></div>
             </div>
-          <div class="selected-resources"> </div>
           </div>
+
           <div id="snapshot-delete-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_delete_content}}
@@ -714,9 +767,10 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
-      <!-- END Snapshot dialog template -->
+      <!-- END Snapshot dialog templates -->
 
       <!-- IPs table -->
       <script id="eipTblTmpl" type="text/x-jsrender">
@@ -754,11 +808,11 @@
           <div id="eip-allocate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: eip_allocate_dialog_text }}</p>
-              <p>{{!: required_fields }}</p>
-              <div class="dialog-field">
-                <span class="label_required">{{!: eip_allocate_dialog_count_label }}</span>
-                <input type="text" id="eip-allocate-count" class="required" maxlength="3" size="4"/>
+              <div class="form-row">
+                <label for="eip-allocate-count" class="required-label long-label">{{!: eip_allocate_dialog_count_label }}</label>
+                <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="3"/>
               </div>
+              <p class="required-hint">{{!: required_fields }}</p>
             </div>
           </div>
           <div id="snapshot-create-dialog-help" class="dialog-help">
@@ -773,12 +827,14 @@
       </script>
       <script id="eipReleaseDlgTmpl" type="text/x-jsrender">
         <div id="eip-euca-dialog-wrapper">
+
           <div id="eip-release-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: eip_release_dialog_text }}
+              <p>{{!: eip_release_dialog_text }}</p>
+              <div class="selected-resources"></div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
+
           <div id="eip-release-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_release_content}}
@@ -787,20 +843,23 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 
       <script id="eipAssociateDlgTmpl" type="text/x-jsrender">
         <div id="eip-associate-dialog-wrapper">
+          
           <div id="eip-associate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <div class="dialog-field">
-                <span class="label" id="eip-associate-instance-txt"></span>
+              <div class="form-row">
+                <label for="eip-associate-instance-id" class="required-label" id="eip-associate-instance-txt"></label>
                 <input type="text" id="eip-associate-instance-id" class="required"/>
               </div>
               <span style="display:none" id="eip-to-associate"/>
             </div>
           </div>
+
           <div id="eip-associate-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_associate_content}}
@@ -809,17 +868,20 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 
       <script id="eipDisassociateDlgTmpl" type="text/x-jsrender">
         <div id="eip-disassociate-dialog-wrapper">
+          
           <div id="eip-disassociate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: eip_disassociate_dialog_text }}
+              <p>{{!: eip_disassociate_dialog_text }}</p>
+              <div class="selected-resources"></div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
+
           <div id="eip-disassociate-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_disassociate_content}}
@@ -828,6 +890,7 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 
@@ -874,13 +937,15 @@
       <!-- Instance dialog templates -->
       <script id="instanceTermDlgTmpl" type="text/x-jsrender">
         <div id="instances-euca-dialog-wrapper">
+          
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <div id="ebs-backed-warning"> </div>
-              {{!: instance_dialog_term_text }}
+              <p>{{!: instance_dialog_term_text }}</p>
+              <div class="selected-resources"> </div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
+
           <div id="instances-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_terminate_content}}
@@ -889,16 +954,19 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
       <script id="instanceRebootDlgTmpl" type="text/x-jsrender">
         <div id="instances-euca-dialog-wrapper">
+          
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: instance_dialog_reboot_text }}
+              <p>{{!: instance_dialog_reboot_text }}</p>
+              <div class="selected-resources"></div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
+
           <div id="instances-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_reboot_content}}
@@ -907,16 +975,19 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
       <script id="instanceStopDlgTmpl" type="text/x-jsrender">
         <div id="instances-euca-dialog-wrapper">
+          
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: instance_dialog_stop_text }}
+              <p>{{!: instance_dialog_stop_text }}</p>
+              <div class="selected-resources"> </div>
             </div>
-            <div class="selected-resources"> </div>
           </div>
+
           <div id="instances-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_stop_content}}
@@ -925,8 +996,10 @@
               <a href="#"> {{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
+
       <script id="instanceConnectDlgTmpl" type="text/x-jsrender">
         <div id="instances-euca-dialog-wrapper">
           <div id="instances-euca-dialog" class="euca-dialog">
@@ -946,6 +1019,7 @@
           </div>
         </div>
       </script>
+
       <script id="instanceConsoleDlgTmpl" type="text/x-jsrender">
         <div id="instances-euca-dialog-wrapper">
           <div id="instances-euca-dialog" class="euca-dialog">
@@ -968,6 +1042,7 @@
       <!-- Image landing table template -->
       <script id="imageTblTmpl" type="text/x-jsrender">
         <div id="images-wrapper">
+
           <div id="images-table">
             <table id="images" class="display">
               <thead>
@@ -984,6 +1059,7 @@
               </tbody>
             </table>
           </div>
+
           <div id="instance-help">
             <div class="help-content">
               {{!: landing_content }}
@@ -992,6 +1068,7 @@
               <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
+
         </div>
       </script>
 

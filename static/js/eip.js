@@ -313,12 +313,12 @@
               notifySuccess(null, eip_associate_success(publicIp, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, eip_associate_error(publicIp, instanceId));
+              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, eip_associate_error(publicIp, instanceId));
+              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
           }
       });
     },

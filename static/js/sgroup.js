@@ -112,7 +112,8 @@
               var cidr = new Array();
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
-                  if (rule.isnew) {
+                  alert("adding rule for port "+thisObj.rulesList[rule].from_port+" new:"+thisObj.rulesList[rule].isnew);
+                  if (thisObj.rulesList[rule].isnew == true) {
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -120,7 +121,6 @@
                       fromGroup.push(thisObj.rulesList[rule].fromGroup);
                   }
               }
-              var dfd = $.Deferred();
               $.ajax({
                   type:"GET",
                   url:"/ec2?Action=CreateSecurityGroup",
@@ -130,7 +130,8 @@
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
-                              thisObj._addIngressRule(name, fromPort, toPort, protocol, cidr, fromGroup);
+                              alert("adding rules to group");
+                              thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
                           }
                           else {
                               notifySuccess(null, sgroup_create_success(name));
@@ -153,8 +154,10 @@
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
-        deleteRule : function(index) {
-                 alert("add: deleting rule "+index);
+        user_val : function(index) {
+                    alert("add: deleting rule "+index);
+                    thisObj.rulesList.splice(index, 1);
+                    thisObj._refreshRulesList(thisObj.addDialog);
         },
       });
       this.addDialog.eucadialog('onKeypress', 'sgroup-name', createButtonId, function () {
@@ -164,7 +167,7 @@
          thisObj._validateForm(createButtonId);
       });
       this.addDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
-         var thediv = $('#sgroup-morerools');
+         var thediv = $('#sgroup-more-rules');
          var sel = $('#sgroup-template');
          var templ = sel.val();
          if (templ == 'none') {
@@ -211,14 +214,15 @@
         title: sgroup_dialog_edit_title,
         buttons: { 
         'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
-              thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
+              thisObj._storeRule(thisObj.editDialog);    // flush rule from form into array
+              // need to remove rules flagged for deletion, then add new ones to avoid conflicts
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
               var cidr = new Array();
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
-                  if (rule.isnew) {
+                  if (thisObj.rulesList[rule].deletethis == true) {
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -227,18 +231,42 @@
                   }
               }
               if (fromPort.length > 0) {
-                  thisObj._addIngressRule(name, fromPort, toPort, protocol, cidr, fromGroup);
+                  thisObj._removeIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
+              }
+              var fromPort = new Array();
+              var toPort = new Array();
+              var protocol = new Array();
+              var cidr = new Array();
+              var fromGroup = new Array();
+              for (rule in thisObj.rulesList){
+                  if (thisObj.rulesList[rule].isnew == true) {
+                      fromPort.push(thisObj.rulesList[rule].from_port);
+                      toPort.push(thisObj.rulesList[rule].to_port);
+                      protocol.push(thisObj.rulesList[rule].protocol);
+                      cidr.push(thisObj.rulesList[rule].ipaddr);
+                      fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                  }
+              }
+              if (fromPort.length > 0) {
+                  thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
             }},
-        'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
+        'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
-        deleteRule : function(index) {
-                alert("edit: deleting rule "+index);
+        user_val : function(index) {
+                    alert("edit: deleting rule "+index);
+                    if (thisObj.rulesList[index].isnew) {
+                        thisObj.rulesList.splice(index, 1);
+                    }
+                    else {
+                        thisObj.rulesList[index].deletethis = true;
+                    }
+                    thisObj._refreshRulesList(thisObj.editDialog);
         },
       });
       this.editDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
-         var thediv = thisObj.editDialog.find('#sgroup-morerools');
+         var thediv = thisObj.editDialog.find('#sgroup-more-rules');
          var sel = thisObj.editDialog.find('#sgroup-template');
          var templ = sel.val();
          if (templ == 'none') {
@@ -311,7 +339,7 @@
         else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
             rule.group = dialog.find('#allow-group').val();
         }
-        rule.isnew = True;
+        rule.isnew = true;
         this.rulesList.push(rule);
     },
 
@@ -334,8 +362,7 @@
             i=0;
             for (rule in this.rulesList) {
                 dialog.find('#sgroup-rule-number-'+i).on('click', {index: i, source: dialog}, function(event) {
-                      alert(event.data.source.dialog('option', 'deleteRule'));
-                      event.data.source.dialog('option', 'deleteRule')(event.data.index);
+                      event.data.source.dialog('option', 'user_val')(event.data.index);
                 });
                 i += 1;
             }
@@ -365,39 +392,6 @@
 
     _reDrawTable : function() {
       this.tableWrapper.eucatable('reDrawTable');
-    },
-
-    _addIngressRule : function(groupName, fromPort, toPort, protocol, cidr, fromGroup) {
-      var thisObj = this;
-      var req_params = "&GroupName=" + groupName;
-      for (i=0; i<fromPort.length; i++) {
-          req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
-          req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
-          req_params += "&IpPermissions."+(i+1)+".ToPort=" + toPort[i];
-          if (cidr[i])
-              req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + cidr[i];
-          if (fromGroup[i])
-              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
-      }
-      $.ajax({
-        type:"GET",
-        url:"/ec2?Action=AuthorizeSecurityGroupIngress",
-        data:"_xsrf="+$.cookie('_xsrf') + req_params,
-        dataType:"json",
-        async:"false",
-        success: (function(sgroupName) {
-            return function(data, textStatus, jqXHR){
-                notifySuccess(sgroup_add_rule_success + ' ' + sgroupName);
-                $add_dialog.eucadialog("close");
-            }
-        }),
-        error: (function(sgroupName) {
-            return function(jqXHR, textStatus, errorThrown){
-                notifySuccess(sgroup_add_rule_error + ' ' + sgroupName);
-                $add_dialog.eucadialog("close");
-            }
-        }),
-      });
     },
 
     _deleteSelectedSecurityGroups : function () {
@@ -430,6 +424,73 @@
           })(sgroupName)
         });
       }
+    },
+
+    _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup) {
+      var thisObj = this;
+      var req_params = "&GroupName=" + groupName;
+      for (i=0; i<fromPort.length; i++) {
+          req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
+          req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
+          req_params += "&IpPermissions."+(i+1)+".ToPort=" + toPort[i];
+          if (cidr[i])
+              req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + cidr[i];
+          if (fromGroup[i])
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
+      }
+      alert("req_params = "+req_params);
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=AuthorizeSecurityGroupIngress",
+        data:"_xsrf="+$.cookie('_xsrf') + req_params,
+        dataType:"json",
+        async:"false",
+        success: (function(sgroupName) {
+            return function(data, textStatus, jqXHR){
+                notifySuccess(sgroup_add_rule_success + ' ' + sgroupName);
+                dialog.eucadialog("close");
+            }
+        }),
+        error: (function(sgroupName) {
+            return function(jqXHR, textStatus, errorThrown){
+                notifySuccess(sgroup_add_rule_error + ' ' + sgroupName);
+                dialog.eucadialog("close");
+            }
+        }),
+      });
+    },
+
+    _removeIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup) {
+      var thisObj = this;
+      var req_params = "&GroupName=" + groupName;
+      for (i=0; i<fromPort.length; i++) {
+          req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
+          req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
+          req_params += "&IpPermissions."+(i+1)+".ToPort=" + toPort[i];
+          if (cidr[i])
+              req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + cidr[i];
+          if (fromGroup[i])
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
+      }
+      $.ajax({
+        type:"GET",
+        url:"/ec2?Action=RevokeSecurityGroupIngress",
+        data:"_xsrf="+$.cookie('_xsrf') + req_params,
+        dataType:"json",
+        async:"false",
+        success: (function(sgroupName) {
+            return function(data, textStatus, jqXHR){
+                notifySuccess(sgroup_add_rule_success + ' ' + sgroupName);
+                dialog.eucadialog("close");
+            }
+        }),
+        error: (function(sgroupName) {
+            return function(jqXHR, textStatus, errorThrown){
+                notifySuccess(sgroup_add_rule_error + ' ' + sgroupName);
+                dialog.eucadialog("close");
+            }
+        }),
+      });
     },
 
     _getTableWrapper : function() {
