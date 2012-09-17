@@ -6,7 +6,8 @@ public class VolumeSnapshotUsageArtEntity
 	implements ArtObject
 {
 	private long sizeGB;
-	private long durationMs;
+	private long gBSecs;
+	private long snapshotNum;
 	
 	public VolumeSnapshotUsageArtEntity()
 	{
@@ -22,15 +23,24 @@ public class VolumeSnapshotUsageArtEntity
 		this.sizeGB = sizeGB;
 	}
 
-	public long getDurationMs()
+	public long getGBSecs()
 	{
-		return durationMs;
+		return gBSecs;
 	}
 
-	public void setDurationMs(long durationMs)
+	public void setGBSecs(long gBSecs)
 	{
-		this.durationMs = durationMs;
+		this.gBSecs = gBSecs;
 	}
 
+	public long getSnapshotNum()
+	{
+		return snapshotNum;
+	}
+
+	public void setSnapshotNum(long snapshotNum)
+	{
+		this.snapshotNum = snapshotNum;
+	}
 
 }

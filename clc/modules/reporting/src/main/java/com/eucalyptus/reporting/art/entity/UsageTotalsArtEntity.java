@@ -109,6 +109,7 @@ public class UsageTotalsArtEntity
 	{
 		return this.elasticIpTotals;
 	}
+
 	
 	/**
 	 * "m1.small" -> InstanceRunningTotalsArtEntity 

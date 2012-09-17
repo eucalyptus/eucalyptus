@@ -70,6 +70,7 @@ public class VolumeArtEntity
 {
 	private final String volumeId;
 	private final VolumeUsageArtEntity usage;
+	private final VolumeSnapshotUsageArtEntity snapshotTotals;
 	private final Map<String, VolumeSnapshotUsageArtEntity> volumeSnapshotUsage;
 	private final Map<String, VolumeUsageArtEntity> instanceAttachments;
 
@@ -77,6 +78,7 @@ public class VolumeArtEntity
 	{
 		this.volumeId = volumeId;
 		this.usage = new VolumeUsageArtEntity();
+		this.snapshotTotals = new VolumeSnapshotUsageArtEntity();
 		this.instanceAttachments = new HashMap<String, VolumeUsageArtEntity>();
 		this.volumeSnapshotUsage = new HashMap<String, VolumeSnapshotUsageArtEntity>();
 	}
@@ -105,6 +107,11 @@ public class VolumeArtEntity
 	public Map<String, VolumeSnapshotUsageArtEntity> getSnapshotUsage()
 	{
 		return this.volumeSnapshotUsage;
+	}
+	
+	public VolumeSnapshotUsageArtEntity getSnapshotTotals()
+	{
+		return this.snapshotTotals;
 	}
 	
 	public String toString()
