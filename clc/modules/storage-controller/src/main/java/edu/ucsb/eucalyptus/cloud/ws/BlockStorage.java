@@ -77,30 +77,22 @@ import javax.persistence.RollbackException;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.mule.RequestContext;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.SnapShotEvent;
-import com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
-import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
@@ -744,26 +736,31 @@ public class BlockStorage {
 					}
 				}
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				SnapshotInfo snapshotInfo = null;
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
-					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
+					snapshotInfo = db.getUnique(snapInfo);
 					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 					snapshotInfo.setProgress("100");
-					
-					blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
-					
-		    fireUsageEvent(snapshotInfo.getNaturalId(),
-			    snapshotInfo.getSnapshotId(),
-			    snapshotInfo.getUserName(),
-			    SnapShotEvent.forSnapShotCreate(Long
-				    .valueOf(blockManager
-					    .getSnapshotSize(snapshotInfo
-						    .getSnapshotId()))));
-					
 				} catch(EucalyptusCloudException e) {
 					LOG.error(e);
 				} finally {
 					db.commit();
+				}
+
+				if ( snapshotInfo != null ) try {
+					final long snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
+					final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
+					ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
+							SnapShotEvent.forSnapShotCreate(
+								snapshotSize,
+								volumeUuid,
+								volumeId ),
+							snapshotInfo.getNaturalId(),
+							snapshotInfo.getSnapshotId(),
+							snapshotInfo.getUserName() ) ); // snapshot info user name is user id
+				} catch ( final Exception e ) {
+					LOG.error( e, e  );
 				}
 			} catch(Exception ex) {
 				semaphore.release();
@@ -1098,16 +1095,4 @@ public class BlockStorage {
 		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
 		return reply;
 	}
-
-    private static void fireUsageEvent(String uuid, String displayName, String userName,
-	    final EventActionInfo<SnapShotAction> actionInfo) {
-	try {
-	    ListenerRegistry.getInstance().fireEvent(
-		    SnapShotEvent.with(actionInfo, uuid,
-			    displayName, userName));
-	} catch (final Exception e) {
-	    LOG.error(e, e);
-}
-}
-
 }

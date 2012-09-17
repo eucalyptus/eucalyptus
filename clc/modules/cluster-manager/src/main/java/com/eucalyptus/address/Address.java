@@ -485,7 +485,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public String getInstanceId( ) {
     return this.instanceId;
   }
-  
+
+  public String getInstanceUuid( ) {
+    return this.instanceUuid;
+  }
+
   public String getUserId( ) {
     return this.getOwner( ).getUserId( );
   }

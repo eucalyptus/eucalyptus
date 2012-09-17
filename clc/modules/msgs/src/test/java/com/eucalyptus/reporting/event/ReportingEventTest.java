@@ -129,88 +129,40 @@ public class ReportingEventTest {
 
   @Test
   public void testInstanceEventCreation() {
-    final InstanceEvent event = new InstanceEvent(
-        uuid( "i-00000001" ),
-        "i-00000001",
-        "c1.medium",
-        Principals.systemFullName().getUserId(),
-        Principals.systemFullName().getUserName(),
-        Principals.systemFullName().getAccountNumber(),
-        "testaccount",
-        "CC_111",
-        "PARTI00",
-        1L,
-        2,
-        3L,
-        4L,
-        5L,
-        6L,
-        7L,
-        8L
+    final long timestamp = System.currentTimeMillis();
+    final long valueTimestamp = System.currentTimeMillis() - 2000;
+    final InstanceUsageEvent event = new InstanceUsageEvent(
+            uuid( "i-00000001" ),
+            timestamp,
+            "resource",
+            "metric",
+            1,
+            "dimension",
+            12.17,
+            valueTimestamp
         );
 
     assertEquals( "uuid", uuid( "i-00000001" ), event.getUuid() );
-    assertEquals( "instance id", "i-00000001", event.getInstanceId() );
-    assertEquals( "account number", Principals.systemFullName().getAccountNumber(), event.getAccountId() );
-    assertEquals( "account name", "testaccount", event.getAccountName() );
-    assertEquals( "user number", Principals.systemFullName().getUserId(), event.getUserId() );
-    assertEquals( "user name", Principals.systemFullName().getUserName(), event.getUserName() );
-    assertEquals( "cluster name", "CC_111", event.getClusterName() );
-    assertEquals( "availability zone", "PARTI00", event.getAvailabilityZone() );
-    assertEquals( "disk IO", (Long)1L, event.getCumulativeDiskIoMegs() );
-    assertEquals( "cpu utilization", (Integer)2, event.getCpuUtilizationPercent());
-    assertEquals( "net incoming between", (Long)3L, event.getCumulativeNetIncomingMegsBetweenZones() );
-    assertEquals( "net incoming within", (Long)4L, event.getCumulativeNetIncomingMegsWithinZone() );
-    assertEquals( "net incoming public", (Long)5L, event.getCumulativeNetIncomingMegsPublicIp() );
-    assertEquals( "net outgoing between", (Long)6L, event.getCumulativeNetOutgoingMegsBetweenZones() );
-    assertEquals( "net outgoing within", (Long)7L, event.getCumulativeNetOutgoingMegsWithinZone() );
-    assertEquals( "net outgoing public", (Long)8L, event.getCumulativeNetOutgoingMegsPublicIp() );
+    assertEquals( "timestamp", timestamp, event.getTimestamp() );
+    assertEquals( "resource", "resource", event.getResourceName() );
+    assertEquals( "metric", "metric", event.getMetric() );
+    assertEquals( "sequence", 1, event.getSequenceNum() );
+    assertEquals( "dimension", "dimension", event.getDimension() );
+    assertEquals( "value", (Double)12.17, event.getValue() );
     assertEquals( "event string", "[uuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001,instanceType:c1.medium,userId:eucalyptus,accountId:000000000000,cluster:CC_111,zone:PARTI00,disk:1,cpu:2]", event.toString() );
-  }
-
-  @Test
-  public void testInstanceEventCreationWithoutOptional() {
-    new InstanceEvent(
-        uuid( "i-00000001" ),
-        "i-00000001",
-        "c1.medium",
-        Principals.systemFullName().getUserId(),
-        Principals.systemFullName().getUserName(),
-        Principals.systemFullName().getAccountNumber(),
-        "testaccount",
-        "CC_111",
-        "PARTI00",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
   }
 
   @Test(expected=IllegalArgumentException.class)
   public void testInstanceEventCreationFailure() {
-    new InstanceEvent(
+    new InstanceUsageEvent(
         uuid( "i-00000001" ),
-        "i-00000001",
-        "c1.medium",
-        Principals.systemFullName().getUserId(),
-        Principals.systemFullName().getUserName(),
-        Principals.systemFullName().getAccountNumber(),
-        "testaccount",
-        "CC_111",
-        "PARTI00",
-        -1L,
+        System.currentTimeMillis(),
         null,
         null,
+        1,
         null,
         null,
-        null,
-        null,
-        null
+        System.currentTimeMillis() - 2000
     );
   }
 
@@ -427,26 +379,26 @@ public class ReportingEventTest {
 
   @Test
   public void testSnapshotCreateEvent() {
-    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotCreate(4L), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName() );
+    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotCreate(4L, uuid("vol-00000001"), "vol-00000001" ), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId() );
 
     assertEquals( "uuid", uuid("snap-00000001"), event.getUuid() );
     assertEquals( "id", "snap-00000001", event.getSnapshotId() );
-    assertEquals( "owner", Principals.systemFullName(), event.getOwner() );
+    assertEquals( "owner", Principals.systemFullName().getUserId(), event.getUserId() );
     assertEquals( "action info type", SnapShotEvent.CreateActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", SnapShotEvent.SnapShotAction.SNAPSHOTCREATE, event.getActionInfo().getAction() );
-    assertEquals( "event string", "SnapShotEvent [actionInfo=[action:SNAPSHOTCREATE,size:4], userName=eucalyptus, snapshotId=snap-00000001, uuid=110a7f12-de63-3b1d-b5bc-ced21b270ae4]", event.toString() );
+    assertEquals( "event string", "SnapShotEvent [actionInfo=[action:SNAPSHOTCREATE,size:4], userId=eucalyptus, snapshotId=snap-00000001, uuid=110a7f12-de63-3b1d-b5bc-ced21b270ae4]", event.toString() );
   }
 
   @Test
   public void testSnapshotDeleteEvent() {
-    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotDelete(), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName() );
+    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotDelete(), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId() );
 
     assertEquals( "uuid", uuid("snap-00000001"), event.getUuid() );
     assertEquals( "id", "snap-00000001", event.getSnapshotId() );
-    assertEquals( "owner", Principals.systemFullName(), event.getOwner() );
+    assertEquals( "owner", Principals.systemFullName().getUserId(), event.getUserId() );
     assertEquals( "action info type", EventActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", SnapShotEvent.SnapShotAction.SNAPSHOTDELETE, event.getActionInfo().getAction() );
-    assertEquals( "event string", "SnapShotEvent [actionInfo=[action:SNAPSHOTDELETE], userName=eucalyptus, snapshotId=snap-00000001, uuid=110a7f12-de63-3b1d-b5bc-ced21b270ae4]", event.toString() );
+    assertEquals( "event string", "SnapShotEvent [actionInfo=[action:SNAPSHOTDELETE], userId=eucalyptus, snapshotId=snap-00000001, uuid=110a7f12-de63-3b1d-b5bc-ced21b270ae4]", event.toString() );
   }
 
   private String uuid( final String seed ) {

@@ -171,10 +171,11 @@ public class FalseDataGenerator
 								FalseInstanceType type = FalseInstanceType.values()[typeNum];
 								instanceUuid = String.format(UUID_FORMAT, uniqueUserId, instanceUuidNum++);
 								log.debug(String.format("  Generating instance uuid %s\n", instanceUuid));
-								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid,
-										timeMs, ("i-" + userNum + "-" + periodNum),
-										type.toString(), userId, cluster, availZone);
-								createdInstanceNum++;
+//TODO:FIXME: Does not compile after instance event changes
+//								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid,
+//										timeMs, ("i-" + userNum + "-" + periodNum),
+//										type.toString(), userId, cluster, availZone);
+//								createdInstanceNum++;
 
 								volumeUuid = String.format(UUID_FORMAT, uniqueUserId, volumeUuidNum++);
 								log.debug(String.format("  Generating volume uuid %s\n", volumeUuid));
@@ -221,15 +222,16 @@ public class FalseDataGenerator
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid, timeMs,
-										INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD*periodNum,
-										INSTANCE_CPU_UTILIZATION_PER_PERIOD,
-										INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD*periodNum,
-										INSTANCE_CUMULATIVE_NET_INCOMING_WITHIN_PER_PERIOD*periodNum,
-										INSTANCE_CUMULATIVE_NET_INCOMING_PUBLIC_PER_PERIOD*periodNum,
-										INSTANCE_CUMULATIVE_NET_OUTGOING_BETWEEN_USAGE_PER_PERIOD*periodNum,
-										INSTANCE_CUMULATIVE_NET_OUTGOING_WITHIN_PER_PERIOD*periodNum,
-										INSTANCE_CUMULATIVE_NET_OUTGOING_PUBLIC_PER_PERIOD*periodNum);
+//TODO:FIXME: Does not compile after instance event changes
+//                ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid, timeMs,
+//										INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD*periodNum,
+//										INSTANCE_CPU_UTILIZATION_PER_PERIOD,
+//										INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD*periodNum,
+//										INSTANCE_CUMULATIVE_NET_INCOMING_WITHIN_PER_PERIOD*periodNum,
+//										INSTANCE_CUMULATIVE_NET_INCOMING_PUBLIC_PER_PERIOD*periodNum,
+//										INSTANCE_CUMULATIVE_NET_OUTGOING_BETWEEN_USAGE_PER_PERIOD*periodNum,
+//										INSTANCE_CUMULATIVE_NET_OUTGOING_WITHIN_PER_PERIOD*periodNum,
+//										INSTANCE_CUMULATIVE_NET_OUTGOING_PUBLIC_PER_PERIOD*periodNum);
 							}
 
 							/* Generate volume usage in this period for every volume that was created before */
