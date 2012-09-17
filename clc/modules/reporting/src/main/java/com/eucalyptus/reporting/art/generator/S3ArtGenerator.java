@@ -43,10 +43,6 @@ public class S3ArtGenerator
 		Map<String,BucketArtEntity> bucketEntities = new HashMap<String,BucketArtEntity>();
 		while (iter.hasNext()) {
 			ReportingS3BucketCreateEvent createEvent = (ReportingS3BucketCreateEvent) iter.next();
-			if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
-				report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
-			}
-			AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
 			
 			ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
 			if (reportingUser==null) {
@@ -56,10 +52,10 @@ public class S3ArtGenerator
 			if (reportingAccount==null) {
 				log.error("No account corresponding to user:" + reportingUser.getAccountId());
 			}
-			if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
-				zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
+			if (! report.getAccounts().containsKey(reportingAccount.getName())) {
+				report.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
 			}
-			AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
+			AccountArtEntity account = report.getAccounts().get(reportingAccount.getName());
 			if (! account.getUsers().containsKey(reportingUser.getName())) {
 				account.getUsers().put(reportingUser.getName(), new UserArtEntity());
 			}

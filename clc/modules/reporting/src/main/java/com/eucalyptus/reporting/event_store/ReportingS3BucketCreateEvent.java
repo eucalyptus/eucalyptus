@@ -37,8 +37,6 @@ public class ReportingS3BucketCreateEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	@Column(name="availability_zone", nullable=false)
-	protected String availabilityZone;
 	@Column(name="s3_bucket_name", nullable=false)
 	protected String s3BucketName;
 	@Column(name="user_id", nullable=false)
@@ -54,11 +52,10 @@ public class ReportingS3BucketCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3BucketCrud class.
  	 */
-	ReportingS3BucketCreateEvent(String availabilityZone, String s3BucketName, String userId, 
+	ReportingS3BucketCreateEvent(String s3BucketName, String userId, 
 			Long timeInMs)
 	{
 		this.s3BucketName = s3BucketName;
-		this.availabilityZone = availabilityZone;
 		this.userId = userId;
 		this.timestampMs = timeInMs;
 	}
@@ -69,11 +66,6 @@ public class ReportingS3BucketCreateEvent
 		return this.s3BucketName;
 	}
 
-	public String getAvailabilityZone()
-	{
-		return this.availabilityZone;
-	}
-	
 	public String getUserId()
 	{
 		return this.userId;

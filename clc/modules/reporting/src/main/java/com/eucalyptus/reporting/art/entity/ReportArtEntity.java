@@ -72,7 +72,7 @@ public class ReportArtEntity
 	private long beginMs;
 	private long endMs;
 	private Map<String, AvailabilityZoneArtEntity> zones;
-	private Map<String, AccountArtEntity> accounts; //For Elastic IP reports
+	private Map<String, AccountArtEntity> accounts; //For Elastic IP reports and S3 reports
 	private UsageTotalsArtEntity usageTotals;
 
 	public ReportArtEntity(long beginMs, long endMs)

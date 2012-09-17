@@ -60,8 +60,7 @@ public class S3BucketUsageEventListener implements EventListener<S3BucketEvent>{
         final ReportingS3BucketEventStore eventStore = getReportingS3BucketEventStore();
         switch (event.getAction()) {
           case BUCKETCREATE:
-        	  //TODO: ken: we need the availability zone for bucket events!!!
-            eventStore.insertS3BucketCreateEvent( null, event.getBucketName(), event.getOwner().getUserId(), timeInMs);
+            eventStore.insertS3BucketCreateEvent( event.getBucketName(), event.getOwner().getUserId(), timeInMs);
             break;
           case BUCKETDELETE:
             eventStore.insertS3BucketDeleteEvent(event.getBucketName(), timeInMs); 
