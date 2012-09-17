@@ -21,12 +21,20 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.EntityResult;
+import javax.persistence.NamedNativeQuery;
 import javax.persistence.PersistenceContext;
+import javax.persistence.SqlResultSetMapping;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
+@SqlResultSetMapping(name="s3BucketDeleteEventMap",
+        entities=@EntityResult(entityClass=ReportingS3BucketDeleteEvent.class))
+@NamedNativeQuery(name="scanS3BucketDeleteEvents",
+     query="select * from reporting_s3_bucket_delete_events order by timestamp_ms",
+     resultSetMapping="s3BucketDeleteEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_bucket_delete_events")
 public class ReportingS3BucketDeleteEvent
@@ -36,20 +44,14 @@ public class ReportingS3BucketDeleteEvent
 
 	@Column(name="s3_bucket_name", nullable=false)
 	protected String s3BucketName;
-	@Column(name="s3_bucket_size", nullable=false)
-	protected Long s3BucketSize;
-	@Column(name="s3_bucket_userId", nullable=false)
-	protected String s3userId;
 
 	protected ReportingS3BucketDeleteEvent()
 	{
 	}
 
-	protected ReportingS3BucketDeleteEvent(String s3BucketName, Long s3BucketSize, String userId, Long timeInMs)
+	protected ReportingS3BucketDeleteEvent(String s3BucketName, Long timeInMs)
 	{
 		this.s3BucketName = s3BucketName;
-		this.timestampMs = timeInMs;
-		this.s3BucketSize = s3BucketSize;
 		this.timestampMs = timeInMs;
 	}
 
@@ -58,76 +60,17 @@ public class ReportingS3BucketDeleteEvent
 		return s3BucketName;
 	}
 
-	public Long getS3BucketSize() {
-	    return s3BucketSize;
-	}
-
-
-	public String getS3userId() {
-	    return s3userId;
-	}
-
 	@Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
-				.user( s3userId )
 				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
 				.set();
-	}
-
-
-	@Override
-	public int hashCode() {
-	    final int prime = 31;
-	    int result = super.hashCode();
-	    result = prime * result
-		    + ((s3BucketName == null) ? 0 : s3BucketName.hashCode());
-	    result = prime * result
-		    + ((s3BucketSize == null) ? 0 : s3BucketSize.hashCode());
-	    result = prime * result
-		    + ((s3userId == null) ? 0 : s3userId.hashCode());
-	    result = prime * result
-		    + ((timestampMs == null) ? 0 : timestampMs.hashCode());
-	    return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-	    if (this == obj)
-		return true;
-	    if (!super.equals(obj))
-		return false;
-	    if (getClass() != obj.getClass())
-		return false;
-	    ReportingS3BucketDeleteEvent other = (ReportingS3BucketDeleteEvent) obj;
-	    if (s3BucketName == null) {
-		if (other.s3BucketName != null)
-		    return false;
-	    } else if (!s3BucketName.equals(other.s3BucketName))
-		return false;
-	    if (s3BucketSize == null) {
-		if (other.s3BucketSize != null)
-		    return false;
-	    } else if (!s3BucketSize.equals(other.s3BucketSize))
-		return false;
-	    if (s3userId == null) {
-		if (other.s3userId != null)
-		    return false;
-	    } else if (!s3userId.equals(other.s3userId))
-		return false;
-	    if (timestampMs == null) {
-		if (other.timestampMs != null)
-		    return false;
-	    } else if (!timestampMs.equals(other.timestampMs))
-		return false;
-	    return true;
 	}
 
 	@Override
 	public String toString() {
 	    return "ReportingS3BucketDeleteEvent [s3BucketName=" + s3BucketName
-		    + ", s3BucketSize=" + s3BucketSize + ", s3userId="
-		    + s3userId + ", timestampMs=" + timestampMs + "]";
+		    + ", timestampMs=" + timestampMs + "]";
 	}
 	
 }

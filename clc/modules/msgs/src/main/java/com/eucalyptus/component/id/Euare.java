@@ -63,6 +63,7 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.component.ComponentId.PublicService;
@@ -70,6 +71,7 @@ import com.eucalyptus.component.ComponentId.PublicService;
 @Partition( Eucalyptus.class )
 @PublicService
 @PolicyVendor( "iam" )
+@FaultLogPrefix( "cloud" )
 public class Euare extends ComponentId {
   public static Euare INSTANCE = new Euare( );
   

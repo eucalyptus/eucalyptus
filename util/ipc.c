@@ -139,6 +139,21 @@ sem * sem_realloc (const int val, const char * name, int flags)
     return s;
 }
 
+// allocates sem structure from an already allocated Posix named
+// semaphore; sem_p/v can be used with it; freeing the sem struct
+// also closes the Posix semaphore that was passed in
+sem * sem_alloc_posix (sem_t * external_lock)
+{
+    sem * s = malloc (sizeof (sem));
+    if (s == NULL)
+        return NULL;
+    bzero (s, sizeof (sem));
+    s->posix = external_lock;
+    s->name = strdup ("unknown");
+    
+    return s;
+}
+
 int sem_p (sem * s)
 {
     int rc;

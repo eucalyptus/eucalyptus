@@ -289,7 +289,7 @@ check_eucafault_suppression (const char *fault_id, const char *fault_file)
             return FALSE;
         }
         if (st.st_size == 0) {
-            logprintfl (EUCADEBUG, "Suppressing fault id %s.\n", fault_id);
+            logprintfl (EUCAINFO, "Suppressing fault id %s.\n", fault_id);
 
             struct suppress_list *new_supp =
                 (struct suppress_list *)malloc (sizeof (struct suppress_list));
@@ -840,6 +840,7 @@ format_eucafault (const char *fault_id, const char_map **map)
     }
     // Bottom border.
     fprintf (faultlog, "%s\n\n", STARS);
+    fflush (faultlog);
     return TRUE;
 }
 
@@ -851,7 +852,7 @@ format_eucafault (const char *fault_id, const char_map **map)
  * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
 boolean
-log_eucafault (const char *fault_id, const char_map **map)
+log_eucafault_map (const char *fault_id, const char_map **map)
 {
     int load = init_eucafaults (NULL);
 
@@ -870,11 +871,11 @@ log_eucafault (const char *fault_id, const char_map **map)
  * Logs a fault, initializing the fault registry, if necessary.
  *
  * Returns the number of substitution parameters it was called with,
- * returning it as a negative number if the underlying log_eucafault()
+ * returning it as a negative number if the underlying log_eucafault_map()
  * call returned FALSE.
  */
 int
-log_eucafault_v (const char *fault_id, ...)
+log_eucafault (const char *fault_id, ...)
 {
     va_list argv;
     char *token[2];
@@ -894,10 +895,10 @@ log_eucafault_v (const char *fault_id, ...)
     va_end (argv);
 
     if (count % 2) {
-        logprintfl (EUCAWARN, "log_eucafault_v() called with an odd (unmatched) number of substitution parameters: %d\n", count);
+        logprintfl (EUCAWARN, "log_eucafault() called with an odd (unmatched) number of substitution parameters: %d\n", count);
     }
-    if (!log_eucafault (fault_id, (const char_map **)m)) {
-        PRINTF (("log_eucafault() returned FALSE inside log_eucafault_v()\n"));
+    if (!log_eucafault_map (fault_id, (const char_map **)m)) {
+        PRINTF (("log_eucafault_map() returned FALSE inside log_eucafault()\n"));
         count *= -1;
     }
     c_varmap_free (m);
@@ -963,19 +964,19 @@ main (int argc, char **argv)
         m = c_varmap_alloc (m, "brokerIp", "127.0.0.2");
         m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
         PRINTF1 (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
-        log_eucafault (argv[optind], (const char_map **)m);
+        log_eucafault_map (argv[optind], (const char_map **)m);
         c_varmap_free (m);
 
         // Now log to stdout for the remainder of the test.
         faultlog = stdout;
 
         // Reusing & abusing opt. :)
-        opt = log_eucafault_v (argv[optind], "daemon", "Balrog",
+        opt = log_eucafault (argv[optind], "daemon", "Balrog",
                                "hostIp", "127.0.0.1",
                                "brokerIp", "127.0.0.2",
                                "endpointIp", "127.0.0.3",
                                "unmatched!", NULL);
-        PRINTF (("log_eucafault_v args returned: %d\n", opt));
+        PRINTF (("log_eucafault args returned: %d\n", opt));
 
         // This allows substitution-argument pairs for unit test to be
         // passed in on command line.
@@ -988,12 +989,12 @@ main (int argc, char **argv)
             }
         }
         if (m != NULL) {
-            log_eucafault (argv[optind], (const char_map **)m);
+            log_eucafault_map (argv[optind], (const char_map **)m);
             c_varmap_free (m);
         } else {
-            log_eucafault (argv[optind], NULL);
+            log_eucafault_map (argv[optind], NULL);
         }
-        log_eucafault_v (argv[optind], NULL); // Deliberately call w/NULL.
+        log_eucafault (argv[optind], NULL); // Deliberately call w/NULL.
     }
     if (dump) {
         dump_eucafaults_db ();

@@ -366,7 +366,7 @@ int main(int argc, char **argv) {
         sensorResource ** res;
         int resSize;
 
-	rc = cc_describeSensors(NULL, 0, NULL, 0, &res, &resSize, env, stub);
+	rc = cc_describeSensors(20, 5000, NULL, 0, NULL, 0, &res, &resSize, env, stub);
         if (rc != 0) {
 	  printf("cc_describeSensors() failed: error=%d\n", rc);
 	  exit(1);
@@ -374,6 +374,9 @@ int main(int argc, char **argv) {
         char buf [10240];
         sensor_res2str (buf, sizeof(buf), res, resSize);
         printf ("resources: %d\n%s\n", resSize, buf);
+    } else {
+      printf("unrecognized operation '%s'\n", argv[2]);
+      exit(1);
     }
   }
   

@@ -79,14 +79,23 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.mule.RequestContext;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.EventActionInfo;
+import com.eucalyptus.reporting.event.SnapShotEvent;
+import com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
@@ -740,6 +749,17 @@ public class BlockStorage {
 					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
 					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 					snapshotInfo.setProgress("100");
+					
+					blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
+					
+		    fireUsageEvent(snapshotInfo.getNaturalId(),
+			    snapshotInfo.getSnapshotId(),
+			    snapshotInfo.getUserName(),
+			    SnapShotEvent.forSnapShotCreate(Long
+				    .valueOf(blockManager
+					    .getSnapshotSize(snapshotInfo
+						    .getSnapshotId()))));
+					
 				} catch(EucalyptusCloudException e) {
 					LOG.error(e);
 				} finally {
@@ -1078,4 +1098,16 @@ public class BlockStorage {
 		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
 		return reply;
 	}
+
+    private static void fireUsageEvent(String uuid, String displayName, String userName,
+	    final EventActionInfo<SnapShotAction> actionInfo) {
+	try {
+	    ListenerRegistry.getInstance().fireEvent(
+		    SnapShotEvent.with(actionInfo, uuid,
+			    displayName, userName));
+	} catch (final Exception e) {
+	    LOG.error(e, e);
+}
+}
+
 }

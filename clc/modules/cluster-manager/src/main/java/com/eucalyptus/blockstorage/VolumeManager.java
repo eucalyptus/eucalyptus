@@ -95,6 +95,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
@@ -276,7 +277,7 @@ public class VolumeManager {
           Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, input ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            Volumes.fireUsageEvent( foundVol, VolumeEvent.forVolumeDelete() );
+            //Volumes.fireUsageEvent( foundVol, VolumeEvent.forVolumeDelete() );
             reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
             return foundVol;
           } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
@@ -418,16 +419,6 @@ public class VolumeManager {
     if ( request.getDevice( ) != null && !request.getDevice( ).equals( "" ) && !volume.getDevice( ).equals( request.getDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not attached to device: " + request.getDevice( ) );
     }
-    
-    Cluster cluster = null;
-    ServiceConfiguration ccConfig = null;
-    try {
-      ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
-      cluster = Clusters.lookup( ccConfig );
-    } catch ( NoSuchElementException e ) {
-      LOG.debug( e, e );
-      throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
-    }
     ServiceConfiguration scVm;
     try {
       scVm = Topology.lookup( Storage.class, vm.lookupPartition( ) );
@@ -435,22 +426,39 @@ public class VolumeManager {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( "Failed to lookup SC for partition: " + vm.getPartition( ), ex );
     }
-    request.setVolumeId( volume.getVolumeId( ) );
-    request.setRemoteDevice( volume.getRemoteDevice( ) );
-    request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
-    request.setInstanceId( vm.getInstanceId( ) );
-    VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
-    try {
-      AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
-    } catch ( Exception e ) {
-      LOG.debug( e );
-      Logs.extreme( ).debug( e, e );
-//GRZE: attach is idempotent, failure here is ok.      throw new EucalyptusCloudException( e.getMessage( ) );
+    if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+    	try {
+    		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
+    	} catch ( Exception e ) {
+    		LOG.debug( e );
+    		Logs.extreme( ).debug( e, e );
+    		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
+    	}
+    	vm.removeVolumeAttachment( volume.getVolumeId( ) );
+    } else {
+    	Cluster cluster = null;
+    	ServiceConfiguration ccConfig = null;
+    	try {
+    		ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
+    		cluster = Clusters.lookup( ccConfig );
+    	} catch ( NoSuchElementException e ) {
+    		LOG.debug( e, e );
+    		throw new EucalyptusCloudException( "Cluster does not exist in partition: " + vm.getPartition( ) );
+    	}
+    	request.setVolumeId( volume.getVolumeId( ) );
+    	request.setRemoteDevice( volume.getRemoteDevice( ) );
+    	request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
+    	request.setInstanceId( vm.getInstanceId( ) );
+    	VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
+    	try {
+    		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
+    	} catch ( Exception e ) {
+    		LOG.debug( e );
+    		Logs.extreme( ).debug( e, e );
+    		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
+    	}
+    	AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
     }
-    AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
-    EventRecord.here( VolumeManager.class, EventClass.VOLUME, EventType.VOLUME_DETACH )
-               .withDetails( vm.getOwner( ).toString( ), volume.getVolumeId( ), "instance", vm.getInstanceId( ) )
-               .withDetails( "cluster", ccConfig.getFullName( ).toString( ) ).info( );
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );
     Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));

@@ -76,7 +76,7 @@
 
 if [ "$#" -lt "2" ]
 then
-	echo "Usage: generate_false_data adminPassword (create|delete|report)"
+	echo "Usage: generate_false_data adminPassword (create|delete|instance-report-html|instance-report-csv|volume-report-html|snapshot-report-html|s3-report-html|elasticip-report-html)"
 	exit 1
 fi
 
@@ -94,12 +94,27 @@ case "$command" in
 	"delete" )
 		method="removeFalseData"
 	;;
-	"report" )
-		method="generateReport"
+	"instance-report-html" )
+		method="generateInstanceHtmlReport"
+	;;
+	"instance-report-csv" )
+		method="generateInstanceCsvReport"
+	;;
+	"volume-report-html" )
+		method="generateVolumeHtmlReport"
+	;;
+	"snapshot-report-html" )
+		method="generateSnapshotHtmlReport"
+	;;
+	"s3-report-html" )
+		method="generateS3HtmlReport"
+	;;
+	"elasticip-report-html" )
+		method="generateElasticIpHtmlReport"
 	;;
 	* )
 		echo "No such command:$command"
-		echo "Usage: generate_false_data adminPassword (create|delete|report)"
+		echo "Usage: generate_false_data adminPassword (create|delete|instance-report-html|instance-report-csv|volume-report-html|snapshot-report-html|s3-report-html|elasticip-report-html)"
 		exit 1
 esac
 

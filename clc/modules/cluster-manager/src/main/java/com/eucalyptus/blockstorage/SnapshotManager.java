@@ -123,7 +123,7 @@ public class SnapshotManager {
   static Logger LOG       = Logger.getLogger( SnapshotManager.class );
   static String ID_PREFIX = "snap";
   
-  public CreateSnapshotResponseType create( CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
+  public CreateSnapshotResponseType create( final CreateSnapshotType request ) throws EucalyptusCloudException, NoSuchComponentException, DuplicateMetadataException, AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException, TransactionException {
     final Context ctx = Contexts.lookup( );
     Volume vol = Transactions.find( Volume.named( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) ) );
     final ServiceConfiguration sc = Topology.lookup( Storage.class, Partitions.lookupByName( vol.getPartition( ) ) );
@@ -133,7 +133,7 @@ public class SnapshotManager {
       @Override
       public Snapshot get( ) {
         try {
-          return Snapshots.initializeSnapshot( ctx.getUserFullName( ), volReady, sc );
+          return Snapshots.initializeSnapshot( ctx.getUserFullName( ), volReady, sc, request.getDescription() );
         } catch ( EucalyptusCloudException ex ) {
           throw new RuntimeException( ex );
         }
@@ -141,7 +141,7 @@ public class SnapshotManager {
     };
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
-    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue() ) );
+    //fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue() ) );
 
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
@@ -277,7 +277,7 @@ public class SnapshotManager {
                                       final EventActionInfo<SnapShotAction> actionInfo ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
-          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner() ));
+          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner().getUserName() ));
     } catch (final Exception e) {
       LOG.error(e, e);
     }

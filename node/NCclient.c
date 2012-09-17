@@ -596,7 +596,7 @@ int main (int argc, char **argv)
         sensorResource ** res;
         int resSize;
 
-        int rc = ncDescribeSensorsStub (stub, &meta, NULL, 0, NULL, 0, &res, &resSize);
+        int rc = ncDescribeSensorsStub (stub, &meta, 20, 5000, NULL, 0, NULL, 0, &res, &resSize);
         if (rc != 0) {
             printf("ncDescribeSensors() failed: error=%d\n", rc);
             exit(1);

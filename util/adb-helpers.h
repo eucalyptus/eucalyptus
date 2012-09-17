@@ -385,7 +385,8 @@ static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axu
                 adb_metricDimensionsType_t * dimension = adb_metricDimensionsType_create(env);
                 adb_metricDimensionsType_set_dimensionName (dimension, env, sd->dimensionName);
                 for (int v=0; v<sd->valuesLen; v++) {
-                    const sensorValue * sv = sd->values + v;
+                    int v_adj = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
+                    const sensorValue * sv = sd->values + v_adj;
                     adb_metricDimensionsValuesType_t * value = adb_metricDimensionsValuesType_create(env);
                     axutil_date_time_t* ts = unixms_to_datetime (env, sv->timestampMs);
                     adb_metricDimensionsValuesType_set_timestamp (value, env, ts);

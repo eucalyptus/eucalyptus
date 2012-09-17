@@ -244,6 +244,8 @@ struct handlers {
 					 int *outBundleTasksLen);
   int (*doDescribeSensors) (struct nc_state_t *nc,
 			    ncMetadata *meta, 
+                            int historySize, 
+                            long long collectionIntervalTimeMs, 
 			    char **instIds, 
 			    int instIdsLen, 
 			    char **sensorIds, 
@@ -268,7 +270,7 @@ int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, cha
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-int doDescribeSensors           (ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
+int doDescribeSensors           (ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);

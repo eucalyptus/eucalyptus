@@ -112,10 +112,16 @@ public class FaultBuilderImpl implements FaultBuilder {
 		try {
 			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentId);
 			Fault fault = faultSubsystemManager.getFaultRegistry().lookupFault(faultId);
-			for (NameValuePair nameValuePair: vars) {
-				fault = fault.withVar(nameValuePair.getName(), nameValuePair.getValue());
+			if (fault == FaultRegistry.SUPPRESSED_FAULT) {
+				LOG.debug("Fault " + faultId + " detected, will not be logged because it has been configured to be suppressed.");
+			} else if (fault == null) {
+				LOG.error( "Fault " + faultId + " detected, could not find fault id in registry.");
+			} else {
+				for (NameValuePair nameValuePair: vars) {
+					fault = fault.withVar(nameValuePair.getName(), nameValuePair.getValue());
+				}
+				faultLogger.log(fault);
 			}
-			faultLogger.log(fault);
 		} catch (Exception ex) {
 			LOG.error("Error writing fault with id " + faultId + "  for component " + componentId);
 			ex.printStackTrace();

@@ -27,18 +27,20 @@
       message="Invalid eucalyptus.conf file."/>
 
     <cause
-      message="Nonsense ADDRS_PER_NET settings."/>
+      message="Invalid VNET_ADDRSPERNET settings."/>
 
     <initiator
       message="${component}"/>
 
     <location
-      message="${hostIp}"/>
+      message="localhost"/>
 
     <resolution>
       <message>
-        1) Correct ADDRS_PER_NET in eucalyptus.conf
-        2) Restart Eucalyptus.
+        1) Correct VNET_ADDRSPERNET setting in eucalyptus.conf
+           (A valid setting is an even power of 2 between 16 and 2048.)
+
+        2) Restart Eucalyptus component: ${component}
       </message>
     </resolution>
   </fault>

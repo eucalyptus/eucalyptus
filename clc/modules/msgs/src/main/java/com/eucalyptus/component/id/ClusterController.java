@@ -66,11 +66,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.util.Internets;
 
 @Partition( value = { Eucalyptus.class } )
+@FaultLogPrefix( "cloud" ) // stub for cc, but in clc
 public class ClusterController extends ComponentId {
   
   private static final long       serialVersionUID = 1L;
@@ -115,6 +117,7 @@ public class ClusterController extends ComponentId {
   
   @Partition( value = { ClusterController.class }, manyToOne = true )
   @InternalService
+  @FaultLogPrefix( "cloud" ) // nc stub, but within clc
   public static class NodeController extends ComponentId {
     
     public NodeController( ) {
@@ -145,6 +148,7 @@ public class ClusterController extends ComponentId {
   
   @Partition( ClusterController.class )
   @InternalService
+  @FaultLogPrefix( "cloud" )
   public static class GatherLogService extends ComponentId {
     
     private static final long serialVersionUID = 1L;

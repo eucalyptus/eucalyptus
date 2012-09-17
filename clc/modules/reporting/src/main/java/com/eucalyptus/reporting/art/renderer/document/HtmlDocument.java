@@ -59,48 +59,158 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.reporting.art.renderer;
+package com.eucalyptus.reporting.art.renderer.document;
 
-class Row
+import java.io.IOException;
+import java.io.Writer;
+
+
+public class HtmlDocument
+	implements Document
 {
-    private final StringBuffer sb;
+	private static final int LABEL_WIDTH = 50;
+	private static final int VALUE_WIDTH = 80;
+	
+    private StringBuffer rowSb;
+    private Writer writer;
+    private boolean rowHasLabel = false;
 
-    public Row()
+    public HtmlDocument()
     {
-        sb = new StringBuffer();
+        rowSb = null;
     }
 
-    public Row addCol(String val)
+    @Override
+    public void setWriter(Writer writer)
     {
-        return addCol(val, 35, 1, "center");
+    	this.writer = writer;
+    }
+    
+    @Override
+	public Document open()
+    	throws IOException
+    {
+        writer.write("<html><body>\n");
+    	return this;
+    }
+    
+    @Override
+	public Document close()
+    	throws IOException
+    {
+    	writer.write("</body></html>\n");
+    	writer.flush();
+    	return this;
+    }
+    
+    @Override
+	public Document tableOpen()
+    	throws IOException
+    {
+    	writer.write("<table>\n");
+    	return this;
     }
 
-    public Row addCol(Long val)
+    @Override
+	public Document tableClose()
+		throws IOException
+	{
+    	if (rowSb != null) {
+    		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
+    	}
+    	writer.write("</table>\n");
+    	return this;
+	}
+    
+    @Override
+	public Document textLine(String text, int emphasis)
+    	throws IOException
     {
-        return addCol((val==null)?null:val.toString(), 35, 1, "center");
+    	writer.write(String.format("<h%d>%s</h%d>\n", emphasis, text, emphasis));
+    	return this;    	
     }
 
-    public Row addCol(Double val)
+    @Override
+	public Document newRow()
+    	throws IOException
     {
-        return addCol((val==null)?null:val.toString(), 35, 1, "center");
+    	rowHasLabel = false;
+    	if (rowSb != null) {
+    		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
+    	}
+        rowSb = new StringBuffer();
+    	return this;    	
     }
 
-    public Row addCol(String val, int width, int colspan, String align)
+    @Override
+	public Document addLabelCol(int indent, String val)
+		throws IOException
+	{
+    	addEmptyLabelCols(indent);
+        rowSb.append(String.format("<td width=%d colspan=%d align=\"left\">%s</td>",LABEL_WIDTH,3,val));
+    	addEmptyLabelCols(3-indent);
+    	rowHasLabel = true;
+    	return this;
+	}	
+
+
+    @Override
+	public Document addValCol(String val)
+    	throws IOException
     {
-        sb.append(String.format("<td width=%d colspan=%d align=%s>%s</td>",width,colspan,align,val));
+        return addCol(val, VALUE_WIDTH, 1, "center");
+    }
+
+    @Override
+	public Document addValCol(Long val)
+		throws IOException
+    {
+        return addCol((val==null)?null:val.toString(), VALUE_WIDTH, 1, "center");
+    }
+
+    @Override
+	public Document addValCol(Double val)
+		throws IOException
+    {
+        return addCol((val==null)?null:String.format("%3.1f", val), VALUE_WIDTH, 1, "center");
+    }
+
+    @Override
+	public HtmlDocument addValCol(String val, int colspan, String align)
+		throws IOException
+	{
+    	return addCol(val, VALUE_WIDTH, colspan, align);
+	}
+
+    private HtmlDocument addCol(String val, int width, int colspan, String align)
+		throws IOException
+    {
+    	if (!rowHasLabel) {
+    		addEmptyLabelCols(6);
+    		rowHasLabel = true;
+    	}
+        rowSb.append(String.format("<td width=%d colspan=%d align=%s>%s</td>",width,colspan,align,val));
         return this;
     }
 
-    public Row addEmptyCols(int num, int width)
-    {
+    @Override
+	public HtmlDocument addEmptyValCols(int num)
+		throws IOException
+   {
         for (int i=0; i<num; i++) {
-            sb.append("<td width=" + width + ">&nbsp;</td>");
+            rowSb.append("<td width=" + VALUE_WIDTH + ">&nbsp;</td>");
         }
         return this;
     }
 
-    public String toString()
-    {
-        return "<tr>" + sb.toString() + "</tr>\n";
-    }
+    @Override
+	public Document addEmptyLabelCols(int num)
+		throws IOException
+	{
+    	for (int i=0; i<num; i++) {
+        	rowSb.append("<td width=" + LABEL_WIDTH + ">&nbsp;</td>");
+    	}
+    	return this;
+	}
+
 }

@@ -22,12 +22,20 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.EntityResult;
+import javax.persistence.NamedNativeQuery;
 import javax.persistence.PersistenceContext;
+import javax.persistence.SqlResultSetMapping;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
+@SqlResultSetMapping(name="attachVolumeEventMap",
+        entities=@EntityResult(entityClass=ReportingVolumeAttachEvent.class))
+@NamedNativeQuery(name="scanVolumeAttachEvents",
+     query="select * from reporting_volume_attach_events order by timestamp_ms",
+     resultSetMapping="attachVolumeEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_attach_events")
 public class ReportingVolumeAttachEvent
