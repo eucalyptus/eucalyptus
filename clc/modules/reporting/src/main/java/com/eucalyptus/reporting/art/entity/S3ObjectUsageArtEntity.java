@@ -5,8 +5,9 @@ import com.eucalyptus.reporting.art.ArtObject;
 public class S3ObjectUsageArtEntity
 	implements ArtObject
 {
+	private long objectsNum;
 	private long sizeGB;
-	private long durationMs;
+	private long gBsecs;
 	private long getRequestsNum;
 	private long putRequestsNum;
 	
@@ -28,16 +29,15 @@ public class S3ObjectUsageArtEntity
 	{
 		this.sizeGB = sizeGB;
 	}
-
 	
-	public long getDurationMs()
+	public long getGBsecs()
 	{
-		return durationMs;
+		return gBsecs;
 	}
 
-	public void setDurationMs(long durationMs)
+	public void setGBsecs(long gBsecs)
 	{
-		this.durationMs = durationMs;
+		this.gBsecs = gBsecs;
 	}
 
 	public long getGetRequestsNum()
@@ -60,4 +60,16 @@ public class S3ObjectUsageArtEntity
 		this.putRequestsNum = putRequestsNum;
 	}
 
+	public long getObjectsNum()
+	{
+		return objectsNum;
+	}
+
+	public void setObjectsNum(long objectsNum)
+	{
+		this.objectsNum = objectsNum;
+	}
+
+	
+	
 }

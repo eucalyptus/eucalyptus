@@ -25,6 +25,8 @@ public class RendererFactory
 			return new VolumeSnapshotRenderer(document);
 		} else if (type.equals(ReportType.ELASTIC_IP)) {
 			return new ElasticIpRenderer(document);
+		} else if (type.equals(ReportType.S3)) {
+			return new S3Renderer(document);
 		} else {
 			throw new UnsupportedOperationException("Unsupported type:" + type);			
 		}

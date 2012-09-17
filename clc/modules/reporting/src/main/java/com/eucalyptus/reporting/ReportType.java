@@ -6,10 +6,10 @@ import com.eucalyptus.reporting.art.renderer.*;
 public enum ReportType
 {
 	INSTANCE   (new InstanceArtGenerator()),
-	S3         (null),
+	S3         (new S3ArtGenerator()),
 	VOLUME     (new VolumeArtGenerator()),
-	SNAPSHOT   (null),
-	ELASTIC_IP (null);
+	SNAPSHOT   (new VolumeSnapshotArtGenerator()),
+	ELASTIC_IP (new ElasticIpArtGenerator());
 	
 	private final ArtGenerator generator;
 

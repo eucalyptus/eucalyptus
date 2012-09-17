@@ -30,8 +30,8 @@ public class ReportingS3BucketEventStore extends EventStoreSupport
   protected ReportingS3BucketEventStore() {
   }
 
-  public void insertS3BucketCreateEvent( String s3BucketName, String userId, Long timeInMs ) {
-    persist( new ReportingS3BucketCreateEvent(s3BucketName, userId, timeInMs) );
+  public void insertS3BucketCreateEvent( String availabilityZone, String s3BucketName, String userId, Long timeInMs ) {
+    persist( new ReportingS3BucketCreateEvent( availabilityZone, s3BucketName, userId, timeInMs) );
   }
 
   public void insertS3BucketDeleteEvent( String s3BucketName, Long timeInMs ) {
