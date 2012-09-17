@@ -825,9 +825,9 @@ var // currently active contextMenu trigger
             opt.position.call($this, opt, x, y);
 
             // make sure we're in front
-            if (opt.zIndex) {
-                css.zIndex = zindex($this) + opt.zIndex;
-            }
+           // if (opt.zIndex) {
+                //css.zIndex = zindex($this) + opt.zIndex;
+            //}
             
             // add layer
             op.layer.call(opt.$menu, opt, css.zIndex);

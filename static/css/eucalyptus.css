@@ -1157,6 +1157,7 @@ tr.selected-row td.sorting_1
   font-size: 14px;
   font-weight: normal;
   line-height: 1em;
+  z-index: 30;
 }
 
 .context-menu-item {

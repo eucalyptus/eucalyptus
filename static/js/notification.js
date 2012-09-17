@@ -75,11 +75,14 @@
       }
        
       if (args.success){
+        this.element.removeClass('failure').addClass('success');
         setTimeout(function(){ 
            //TODO: is this enough?; no unique ID necessary?
            if(thisObj.element.find('#euca-notification-desc').text() === args.desc)
              thisObj.element.find('#euca-notification-close a').trigger('click');
         }, 5000);
+      }else{
+        this.element.removeClass('success').addClass('failure');
       }
     },
    
