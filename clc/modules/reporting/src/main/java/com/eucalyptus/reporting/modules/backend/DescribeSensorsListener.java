@@ -26,14 +26,11 @@ import java.util.ArrayList;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 
 import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.util.async.AsyncRequests;
 
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
@@ -53,8 +50,8 @@ public class DescribeSensorsListener implements EventListener<ClockTick> {
 
         ArrayList<String> fakeSensorIds = new ArrayList<String>();
 	ArrayList<String> fakeInstanceIds = new ArrayList<String>();
-	fakeSensorIds.add("fakesensorId");
-	fakeInstanceIds.add("fakeInstanceIds");
+	fakeSensorIds.add("SensorId"); // future feature
+	fakeInstanceIds.add("InstanceIds"); // future feature
 	
 	try {
 	    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
@@ -64,8 +61,9 @@ public class DescribeSensorsListener implements EventListener<ClockTick> {
 		// need to determine the correct values for the describe sensor callback
 		AsyncRequests.newRequest(
 			new DescribeSensorCallback(
+				Units.HISTORY_SIZE,
 				Units.COLLECTION_INTERVAL_TIME_MS,
-				Units.HISTORY_SIZE, fakeSensorIds, fakeInstanceIds)).dispatch(
+				fakeSensorIds, fakeInstanceIds)).dispatch(
 			ccConfig);
 		LOG.debug("DecribeSensorCallback has been successfully executed");
 		}

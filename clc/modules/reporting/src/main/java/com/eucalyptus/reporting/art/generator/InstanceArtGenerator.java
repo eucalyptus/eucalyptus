@@ -90,8 +90,10 @@ public class InstanceArtGenerator
 		 * and create a Map of the instance nodes at the bottom.
 		 */
 		Map<String,InstanceArtEntity> instanceEntities = new HashMap<String,InstanceArtEntity>();
+/*
 		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
 		while (iter.hasNext()) {
+
 			ReportingInstanceCreateEvent createEvent = (ReportingInstanceCreateEvent) iter.next();
 			if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
 				report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
@@ -125,8 +127,8 @@ public class InstanceArtGenerator
 			instanceEntities.put(createEvent.getUuid(), instance);
 		}
 		
-		/* Add all usage to all instances
-		 */
+		 Add all usage to all instances
+		 
 		Map<String,ReportingInstanceUsageEvent> lastEvents =
 			new HashMap<String,ReportingInstanceUsageEvent>();
 		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
@@ -140,29 +142,34 @@ public class InstanceArtGenerator
 				continue;
 			}
 			InstanceUsageArtEntity usage = instance.getUsage();
-			usage.setInstanceCnt(1);		
-
-			/* Add usage to totals, and update average cpu */
+			
+			
+			 Add usage to totals, and update average cpu 
 			if (lastEvent != null) {
 				long lastMs = lastEvent.getTimestampMs();
 				
-				/* Update running times */
-				long timeMs = usage.getDurationMs();
+				 Update running times 
+				long timeMs = (runningTimes.containsKey(usageEvent.getUuid()))
+								? runningTimes.get(usageEvent.getUuid()).longValue()
+								: 0l;
+>>>>>>> dev/kedwards/reporting-dsensor
 				timeMs += Math.min(report.getEndMs(),usageEvent.getTimestampMs())
 						- Math.max(report.getBeginMs(),lastEvent.getTimestampMs());
 				usage.setDurationMs(usage.getDurationMs()+timeMs);
 				
-				/* Interpolate and add usage to totals */
+<<<<<<< HEAD
+				/* Interpolate and add usage to totals 
 				
-				/* Disk IO megs */
+				 Disk IO megs 
 				Long rawValue = plus(usage.getDiskIoMegs(),
 									subtract(usageEvent.getCumulativeDiskIoMegs(),
 											 lastEvent.getCumulativeDiskIoMegs()));
+
 				usage.setDiskIoMegs(
 						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
 								    usageEvent.getTimestampMs(), rawValue));
 				
-				/* Net IO within zone incoming megs */
+				 Net IO within zone incoming megs 
 				rawValue = plus(usage.getNetIoWithinZoneInMegs(),
 								subtract(usageEvent.getCumulativeNetIncomingMegsWithinZone(),
 										lastEvent.getCumulativeNetIncomingMegsWithinZone()));
@@ -170,7 +177,7 @@ public class InstanceArtGenerator
 						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
 									usageEvent.getTimestampMs(), rawValue));
 
-				/* Net IO within zone incoming megs */
+				 Net IO within zone incoming megs 
 				rawValue = plus(usage.getNetIoBetweenZoneInMegs(),
 								subtract(usageEvent.getCumulativeNetIncomingMegsBetweenZones(),
 										lastEvent.getCumulativeNetIncomingMegsBetweenZones()));
@@ -178,7 +185,7 @@ public class InstanceArtGenerator
 						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
 									usageEvent.getTimestampMs(), rawValue));
 
-				/* Net IO public ip incoming megs */
+				 Net IO public ip incoming megs 
 				rawValue = plus(usage.getNetIoPublicIpInMegs(),
 								subtract(usageEvent.getCumulativeNetIncomingMegsPublic(),
 										lastEvent.getCumulativeNetIncomingMegsPublic()));
@@ -187,7 +194,7 @@ public class InstanceArtGenerator
 									usageEvent.getTimestampMs(), rawValue));
 
 					
-				/* Net IO within zone outgoing megs */
+				 Net IO within zone outgoing megs 
 				rawValue = plus(usage.getNetIoWithinZoneOutMegs(),
 								subtract(usageEvent.getCumulativeNetOutgoingMegsWithinZone(),
 										lastEvent.getCumulativeNetOutgoingMegsWithinZone()));
@@ -195,7 +202,7 @@ public class InstanceArtGenerator
 						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
 									usageEvent.getTimestampMs(), rawValue));
 
-				/* Net IO within zone outgoing megs */
+				 Net IO within zone outgoing megs 
 				rawValue = plus(usage.getNetIoBetweenZoneOutMegs(),
 								subtract(usageEvent.getCumulativeNetOutgoingMegsBetweenZones(),
 										lastEvent.getCumulativeNetOutgoingMegsBetweenZones()));
@@ -203,7 +210,7 @@ public class InstanceArtGenerator
 						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
 									usageEvent.getTimestampMs(), rawValue));
 
-				/* Net IO public ip outgoing megs */
+				 Net IO public ip outgoing megs 
 				rawValue = plus(usage.getNetIoPublicIpOutMegs(),
 								subtract(usageEvent.getCumulativeNetOutgoingMegsPublic(),
 										lastEvent.getCumulativeNetOutgoingMegsPublic()));
@@ -214,7 +221,7 @@ public class InstanceArtGenerator
 					
 					
 
-				/* Update cpu average */
+				 Update cpu average 
 				long durationMs = Math.min(report.getEndMs(), usageEvent.getTimestampMs())-Math.max(report.getBeginMs(), lastMs);
 				if (usage.getCpuPercentAvg() == null && usageEvent.getCpuUtilizationPercent() != null) {
 					usage.setCpuPercentAvg((double)usageEvent.getCpuUtilizationPercent());
@@ -229,8 +236,8 @@ public class InstanceArtGenerator
 			}
 
 			
-		} //while
-
+  		} //while 
+*/
 		
 		/* Perform totals and summations
 		 */

@@ -20,17 +20,23 @@
 
 package com.eucalyptus.cluster.callback;
 
+import java.io.StringReader;
 import java.util.ArrayList;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.log4j.Logger;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.InputSource;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 
@@ -42,64 +48,75 @@ import edu.ucsb.eucalyptus.msgs.MetricCounterType;
 import edu.ucsb.eucalyptus.msgs.MetricDimensionsType;
 import edu.ucsb.eucalyptus.msgs.MetricsResourceType;
 import edu.ucsb.eucalyptus.msgs.SensorsResourceType;
+import edu.ucsb.eucalyptus.msgs.MetricDimensionsValuesType;
 
-public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse>{
+public class DescribeSensorCallback extends
+	BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> {
 
-    private static Logger      LOG = Logger.getLogger( DescribeSensorCallback.class );
-    private int historySize; 
+    private static Logger LOG = Logger.getLogger(DescribeSensorCallback.class);
+    private int historySize;
     private int collectionIntervalTimeMs;
     ArrayList<String> sensorIds = new ArrayList<String>();
     ArrayList<String> instanceIds = new ArrayList<String>();
-    
-    public DescribeSensorCallback(int historySize, int collectionIntervalTimeMS, ArrayList<String> sensorIds, ArrayList<String> instanceIds ) {
-	    this.historySize = historySize;
-	    this.collectionIntervalTimeMs = collectionIntervalTimeMS;
-	    this.sensorIds = sensorIds;
-	    this.instanceIds = instanceIds;
-	
-	    DescribeSensorsType msg = new DescribeSensorsType(this.historySize, this.collectionIntervalTimeMs, sensorIds, instanceIds);
-	    
-	    try {
-		msg.setUser(Accounts.lookupSystemAdmin());
-	    } catch (AuthException e) {
-		LOG.error("Unable to find the system user", e);
-	    }
-	    
-	    this.setRequest( msg );
-	    
-	  }
+
+    public DescribeSensorCallback(int historySize,
+	    int collectionIntervalTimeMS, ArrayList<String> sensorIds,
+	    ArrayList<String> instanceIds) {
+	this.historySize = historySize;
+	this.collectionIntervalTimeMs = collectionIntervalTimeMS;
+	this.sensorIds = sensorIds;
+	this.instanceIds = instanceIds;
+
+	DescribeSensorsType msg = new DescribeSensorsType(this.historySize,
+		this.collectionIntervalTimeMs, sensorIds, instanceIds);
+
+	try {
+	    msg.setUser(Accounts.lookupSystemAdmin());
+	} catch (AuthException e) {
+	    LOG.error("Unable to find the system user", e);
+	}
+
+	this.setRequest(msg);
+
+    }
 
     @Override
-    public void initialize( DescribeSensorsType msg ) {
-      try {
-        msg.setNameServer( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
-        msg.setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-      } catch ( Exception e ) {
-        LOG.debug( e, e );
-      }
+    public void initialize(DescribeSensorsType msg) {
+	try {
+	    msg.setNameServer(edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
+		    .getSystemConfiguration().getNameserverAddress());
+	    msg.setClusterControllers(Lists.newArrayList(Clusters.getInstance()
+		    .getClusterAddresses()));
+	} catch (Exception e) {
+	    LOG.debug(e, e);
+	}
     }
-    
+
     @Override
     public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> newInstance() {
-	return new DescribeSensorCallback(this.historySize, this.collectionIntervalTimeMs, this.sensorIds, this.instanceIds);
+	return new DescribeSensorCallback(this.historySize,
+		this.collectionIntervalTimeMs, this.sensorIds, this.instanceIds);
     }
 
-    
     @Override
-    public void fireException( Throwable e ) {
-      LOG.debug( "Request failed: " + LogUtil.subheader( this.getRequest( ).toString( "eucalyptus_ucsb_edu" ) ) );
-      Logs.extreme( ).error( e, e );
+    public void fireException(Throwable e) {
+	LOG.debug("Request failed: "
+		+ LogUtil.subheader(this.getRequest().toString(
+			"eucalyptus_ucsb_edu")));
+	Logs.extreme().error(e, e);
     }
-    
+
     @Override
-    public void fire(DescribeSensorsResponse msg)  {
-	User admin;
+    public void fire(DescribeSensorsResponse msg) {
+	
 	try {
-	    admin = Accounts.lookupSystemAdmin();
-	
-	//TODO : Need to fire the correct usage events to the domain model
-	
-	    for (SensorsResourceType sensorData : msg.getSensorsResources()) {
+
+	    //Document sensorDoc = loadXMLFromString(msg.toString());
+	    
+	    //sensorDoc.get
+	    // TODO : Need to fire the correct usage events to the domain model
+
+	     for (SensorsResourceType sensorData : msg.getSensorsResources()) {
 		LOG.debug("sensorData.getResourceName() : "
 			+ sensorData.getResourceName());
 
@@ -115,27 +132,70 @@ public class DescribeSensorCallback extends BroadcastCallback<DescribeSensorsTyp
 				.getDimensions()) {
 			    LOG.debug("counterType.getDimensions() : "
 				    + dimensionType);
-			    // fire constructed event to the domain model
-			    ListenerRegistry.getInstance( ).fireEvent( new com.eucalyptus.reporting.event.InstanceEvent( sensorData.getResourceName(),
-				    metricType.getMetricName(),
-				    counterType.toString(),
-			            admin.getName(),
-			            admin.getName(),
-			            admin.getUserId(),
-			            admin.getUserId(),
-			            dimensionType.toString(),
-			            "PARTI00",
-			            0L,
-			            0, 0L ,0L ,0L ,0L ,0L ,0L )); 
+
+			    for (MetricDimensionsValuesType valueType : dimensionType
+				    .getValues()) {
+				// fire constructed event to the domain model
+				// Need real uuid from describe sensors.
+
+				ListenerRegistry
+					.getInstance()
+					.fireEvent(
+						new com.eucalyptus.reporting.event.InstanceUsageEvent(
+							String.valueOf(sensorData
+								.hashCode()),
+							System.currentTimeMillis(),
+							sensorData
+								.getResourceName(),
+							metricType
+								.getMetricName(),
+							Integer.parseInt(counterType
+								.getSequenceNum()
+								.toString()),
+							dimensionType
+								.getDimensionName(),
+							valueType.getValue()
+								,
+							Long.getLong(valueType
+								.getTimestamp()
+								.toString())));
+			    }
 			}
 		    }
 		}
-
 	    }
+	    
+	   
 	} catch (Exception ex) {
 	    LOG.debug("Unable to fire describe sensors call back", ex);
-	    
+
 	}
     }
 
+    private static Document loadXMLFromString(String xml) throws Exception
+    {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        InputSource is = new InputSource(new StringReader(xml));
+        return builder.parse(is);
+    }
+
+    private InstanceUsageEvent buildInstanceUsageEvent(Document sensorsDoc) {
+    
+	String uuid = sensorsDoc.getElementsByTagName("uuid").item(0).getNodeValue();
+	String timestamp = sensorsDoc.getElementsByTagName("timestamp").item(0).getNodeValue();
+	String resourceName = sensorsDoc.getElementsByTagName("resourceName").item(0).getNodeValue();
+	String metric = sensorsDoc.getElementsByTagName("metric").item(0).getNodeValue();
+	String sequenceNum = sensorsDoc.getElementsByTagName("sequenceNum").item(0).getNodeValue();
+	String dimension;
+	Double value;
+	long valueTimestamp;
+	
+	
+	
+	Element TIMESTAMP = sensorsDoc.getElementById("timestamp");
+	
+	return null; //  new InstanceUsageEvent(UUID.getNodeValue(),TIMESTAMP.getNodeValue(), );
+    }
+    
 }
