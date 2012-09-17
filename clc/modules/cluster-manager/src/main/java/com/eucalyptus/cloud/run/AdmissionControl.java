@@ -145,7 +145,7 @@ public class AdmissionControl {
   }
   
   private static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
-    for ( ResourceAllocator rollback : Iterables.reverse( finished ) ) {
+    for ( ResourceAllocator rollback : Lists.reverse( finished ) ) {
       try {
         rollback.fail( allocInfo, e );
       } catch ( Exception e1 ) {
