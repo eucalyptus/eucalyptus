@@ -81,6 +81,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.Charset;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
@@ -241,7 +242,19 @@ public class BindingCache {
           this.addCurrentBinding( bindingBytes, ff.getName( ), "file:" + ff.getAbsolutePath( ) );
         }
       } else {
-        String digest = new BigInteger( Files.getDigest( f, Digest.MD5.get( ) ) ).abs( ).toString( 16 );
+        byte[] digestBytes = null;
+        Class files = Class.forName( "com.google.common.io.Files" );
+        try {
+          // Guava >= 12
+          Class cls = Class.forName( "com.google.common.hash.Hashing" );
+          Class hashcode = Class.forName( "com.google.common.hash.HashCode" );
+          Class hashfunc = Class.forName( "com.google.common.hash.HashFunction" );
+          digestBytes = (byte[]) hashcode.getMethod( "asBytes" ).invoke( files.getMethod( "hash",  File.class, hashfunc ).invoke( null, f, cls.getMethod( "md5" ).invoke( null ) ) );
+        } catch (ClassNotFoundException ex) {
+          // Guava < 12
+          digestBytes = (byte[]) files.getMethod( "getDigest", File.class, MessageDigest.class ).invoke( null, f, Digest.MD5.get( ) );
+        }
+        String digest = new BigInteger( digestBytes ).abs( ).toString( 16 );
         CURRENT_PROPS.put( BINDING_CACHE_JAR_PREFIX + f.getName( ), digest );
         final JarFile jar = new JarFile( f );
         final List<JarEntry> jarList = Collections.list( jar.entries( ) );
