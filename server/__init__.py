@@ -122,7 +122,10 @@ class EuiException(BaseException):
 
 class CheckIpHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write(self.request.remote_ip)
+        remote = self.request.remote_ip
+        if remote == '::1':
+            remote = '127.0.0.1'
+        self.write(remote)
 
 class BaseHandler(tornado.web.RequestHandler):
     user_session = None
