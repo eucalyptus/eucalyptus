@@ -28,7 +28,7 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 public class ElasticIpArtGenerator
 	implements ArtGenerator
 {
-    private static Logger log = Logger.getLogger( VolumeArtGenerator.class );
+    private static Logger log = Logger.getLogger( ElasticIpArtGenerator.class );
 
     public ElasticIpArtGenerator()
 	{
@@ -82,6 +82,7 @@ public class ElasticIpArtGenerator
 			if (endTime >= report.getBeginMs() && ipStartEndTimes.containsKey(deleteEvent.getUuid())) {
 				StartEndTimes startEndTimes = ipStartEndTimes.get(deleteEvent.getUuid());
 				startEndTimes.setEndTimeMs(endTime);
+			} else {
 				elasticIpEntities.remove(deleteEvent.getUuid());
 				ipStartEndTimes.remove(deleteEvent.getUuid());
 			}
