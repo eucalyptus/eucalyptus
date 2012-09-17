@@ -215,17 +215,17 @@
           (function(snapshotId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, snapshot_delete_success(snapshotId));
+                notifySuccess($.i18n.prop('snapshot_delete_success', snapshotId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, snapshot_delete_error(snapshotId));
+                notifyError($.i18n.prop('snapshot_delete_error', snapshotId));
               }
            }
           })(snapshotId),
           error:
           (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, snapshot_delete_error(snapshotId));
+              notifyError($.i18n.prop('snapshot_delete_error', snapshotId));
             }
           })(snapshotId)
         });
@@ -244,16 +244,16 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var snapId = data.results.id;
-              notifySuccess(null, snapshot_create_success(snapId, volumeId));
+              notifySuccess($.i18n.prop('snapshot_create_success', snapId, volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
-              notifyError(null, snapshot_create_error(volumeId));
+              notifyError($.i18n.prop('snapshot_create_error', volumeId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, snapshot_create_error(volumeId));
+            notifyError($.i18n.prop('snapshot_create_error', volumeId));
           }
       });
     },
