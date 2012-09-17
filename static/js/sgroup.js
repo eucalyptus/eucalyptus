@@ -112,7 +112,6 @@
               var cidr = new Array();
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
-                  alert("adding rule for port "+thisObj.rulesList[rule].from_port+" new:"+thisObj.rulesList[rule].isnew);
                   if (thisObj.rulesList[rule].isnew == true) {
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
@@ -130,8 +129,10 @@
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
-                              alert("adding rules to group");
+                              notifySuccess(sgroup_create_success + ' ' + name);
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
+                              thisObj._getTableWrapper().eucatable('refreshTable');
+                              $add_dialog.eucadialog("close");
                           }
                           else {
                               notifySuccess(sgroup_create_success + ' ' + name);
@@ -153,7 +154,6 @@
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
         user_val : function(index) {
-                    alert("add: deleting rule "+index);
                     thisObj.rulesList.splice(index, 1);
                     thisObj._refreshRulesList(thisObj.addDialog);
         },
@@ -221,6 +221,7 @@
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].deletethis == true) {
+                      alert("revoking rule for port "+thisObj.rulesList[rule].from_port+" cidr:"+thisObj.rulesList[rule].ipaddr);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -229,6 +230,8 @@
                   }
               }
               if (fromPort.length > 0) {
+                  
+                  //TODO: NEED Name!!
                   thisObj._removeIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
               var fromPort = new Array();
@@ -238,6 +241,7 @@
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
+                      alert("adding rule for port "+thisObj.rulesList[rule].from_port+" delete:"+thisObj.rulesList[rule].isnew);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -248,16 +252,18 @@
               if (fromPort.length > 0) {
                   thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
+              $add_dialog.eucadialog("close");
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
         help: {title: help_volume['dialog_add_title'], content: $add_help},
         user_val : function(index) {
-                    alert("edit: deleting rule "+index);
                     if (thisObj.rulesList[index].isnew) {
+                        alert("edit: deleting new rule "+index);
                         thisObj.rulesList.splice(index, 1);
                     }
                     else {
+                        alert("edit: deleting old rule "+index);
                         thisObj.rulesList[index].deletethis = true;
                     }
                     thisObj._refreshRulesList(thisObj.editDialog);
@@ -347,6 +353,7 @@
             var msg = "";
             var i=0;
             for (rule in this.rulesList) {
+                if (this.rulesList[rule].deletethis == true) continue;
                 var ports = this.rulesList[rule].from_port;
                 if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
                     ports += "-"+this.rulesList[rule].to_port;
@@ -359,6 +366,7 @@
             dialog.find('#sgroup-rules-list').html(msg);
             i=0;
             for (rule in this.rulesList) {
+                if (this.rulesList[rule].deletethis == true) continue;
                 dialog.find('#sgroup-rule-number-'+i).on('click', {index: i, source: dialog}, function(event) {
                       event.data.source.dialog('option', 'user_val')(event.data.index);
                 });
@@ -457,7 +465,6 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
-      alert("req_params = "+req_params);
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
@@ -499,13 +506,13 @@
         async:"false",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(sgroup_add_rule_success + ' ' + sgroupName);
+                notifySuccess(sgroup_revoke_rule_success + ' ' + sgroupName);
                 dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifySuccess(sgroup_add_rule_error + ' ' + sgroupName);
+                notifySuccess(sgroup_revoke_rule_error + ' ' + sgroupName);
                 dialog.eucadialog("close");
             }
         }),
