@@ -220,17 +220,17 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eip_release_success(eipId));
+                notifySuccess(null, $.i18n.prop('eip_release_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, eip_release_error(eipId));
+                notifyError($.i18n.prop('eip_release_error', eipId));
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, eip_release_error(eipId));
+              notifyError($.i18n.prop('eip_release_error', eipId));
             }
           })(eipId)
         });
@@ -253,17 +253,17 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, eip_disassociate_success(eipId));
+                notifySuccess(null, $.i18n.prop('eip_disassociate_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, eip_disassociate_error(eipId));
+                notifyError($.i18n.prop('eip_disassociate_error', eipId));
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, eip_disassociate_error(eipId));
+              notifyError($.i18n.prop('eip_disassociate_error', eipId));
             }
           })(eipId)
         });
@@ -283,15 +283,17 @@
           success:
             function(data, textStatus, jqXHR){
               if ( data.results ) {
-                notifySuccess(null, eip_allocate_success(data.results.public_ip));
+                ip = data.results.public_ip;
+                notifySuccess(null, $.i18n.prop('eip_allocate_success', ip));
                 thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable('glowRow', ip);
               } else {
-                notifyError(null, eip_allocate_error);
+                notifyError($.i18n.prop('eip_allocate_error'));
               }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError(null, eip_allocate_error);
+              notifyError($.i18n.prop('eip_allocate_error'));
             }
         });
     },
@@ -308,15 +310,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, eip_associate_success(publicIp, instanceId));
+              notifySuccess(null, $.i18n.prop('eip_associate_success', publicIp, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId));
           }
       });
     },

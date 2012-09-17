@@ -400,10 +400,32 @@
       return selectedRows;
     },
 
+    _glowRow : function(val, columnId, found) {
+      var selector = ':nth-child('+columnId+')';
+      $.each( this.table.fnGetNodes(), function(inx, row) {
+        $td = $(row).find(selector);
+        if (val == $td.text()) {
+          $td.parent().addClass('glow');
+          found = true;
+          return;
+        }
+      });
+    },
+
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
       this.table.fnReloadAjax();
+    },
+
+    glowRow : function(val, columnId) {
+      var thisObj = this;
+      var cId = columnId || 2;
+      var found = false;
+      setTimeout( function() { thisObj._glowRow(val, cId, found); }, 1000);
+      // wait till next refresh if needed
+      if ( !found )
+        setTimeout( function() { thisObj._glowRow(val, cId); }, (RERFRESH_INTERVAL_SEC + 2) * 1000);
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

@@ -135,17 +135,19 @@
                               $add_dialog.eucadialog("close");
                           }
                           else {
-                              notifySuccess(sgroup_create_success + ' ' + name);
+                              notifySuccess($.i18n.prop('sgroup_create_success', name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
+                              thisObj._getTableWrapper().eucatable('glowRow', name);
                               $add_dialog.eucadialog("close");
                           }
                       } else {
-                          notifyFailure(sgroup_add_rule_error + ' ' + name);
+                          notifyError($.i18n.prop('sgroup_add_rule_error', name));
                           $add_dialog.eucadialog("close");
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    nofityError(null, error_creating_group_msg);
+                    notifyError($.i18n.prop('sgroup_create_error', name));
+                    dfd.reject();
                     $add_dialog.eucadialog("close");
                   }
               });
@@ -400,27 +402,6 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
-    _addSecurityGroup : function(groupName, groupDesc) {
-      var thisObj = this;
-      return $.ajax({
-        type:"GET",
-        url:"/ec2?Action=CreateSecurityGroup",
-        data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + groupName + "&GroupDescription=" + groupDesc,
-        dataType:"json",
-        async:"true",
-        success: (function(sgroupName) {
-                     return function (data, textstatus, jqXHR) {
-                         notifySuccess(sgroup_rule_add_success + ' ' + name);
-                     }
-                 }),
-        error: (function(sgroupName) {
-                     return function(jqXHR, textStatus, errorThrown){
-                         notifyFailure(sgroup_rule_add_error + ' ' + sgroupName);
-                     }
-                 })
-      });
-    },
-
     _deleteSelectedSecurityGroups : function () {
       var thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
@@ -436,17 +417,17 @@
           (function(sgroupName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(sgroup_delete_success + ' ' + sgroupName);
+                notifySuccess($.i18n.prop('sgroup_delete_success', sgroupName));
                 thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
-                notifyFailure(sgroup_delete_error + ' ' + sgroupName);
+                notifyError($.i18n.prop('sgroup_delete_error', sgroupName));
               }
            }
           })(sgroupName),
           error:
           (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-              thisObj.delDialog.eucadialog('showError', sgroup_delete_error + ' ' + sgroupName);
+              thisObj.delDialog.eucadialog('showError', $.i18n.prop('sgroup_delete_error', sgroupName));
             }
           })(sgroupName)
         });
@@ -473,13 +454,13 @@
         async:"false",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(sgroup_add_rule_success + ' ' + sgroupName);
+                notifySuccess($.i18n.prop('sgroup_add_rule_success', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifySuccess(sgroup_add_rule_error + ' ' + sgroupName);
+                notifySuccess($.i18n.prop('sgroup_add_rule_error', sgroupName));
                 dialog.eucadialog("close");
             }
         }),

@@ -23,6 +23,8 @@ var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
+var RERFRESH_INTERVAL_SEC = 10;
+
 var ID_SEPARATOR = ',';
 
 var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-container',
