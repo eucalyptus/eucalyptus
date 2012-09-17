@@ -90,6 +90,7 @@
 
          buttons: thisObj._makeButtons(),
       });
+      this.element.tooltip();
     },
 
     _getButtonId : function(buttonDomId, buttonId) {

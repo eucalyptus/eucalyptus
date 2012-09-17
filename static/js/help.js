@@ -54,6 +54,26 @@ function loadHtml(url, handler){
         }
     });
 }
+
+function loadJSON(urlToLoad, helpVolume){
+    $.ajax({
+        url: urlToLoad,
+        type:"GET",
+        dataType:"json",
+        async:false, // async option deprecated as of jQuery 1.8
+        success: function (data){
+          for (var key in helpVolume) {
+            if (data[key]) {
+              helpVolume[key] = data[key];
+            }
+          }
+        },
+        error : function (){
+          // nothing to do
+        }
+    });
+}
+
   //[keypair]
 var help_keypair = {
   load : function(arg){
@@ -119,14 +139,16 @@ var help_volume = {
   load : function(arg){
     loadHtml('help/'+arg.language+'/console_manage_volumes.html', function(data){help_volume.landing_content=data})
     loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.dialog_add_content=data})
+    loadJSON('help/'+arg.language+'/console_volume_flh.json', help_volume)
   },
-  revert_button: "Back to volumes",
-  landing_title: "Volume -- help", // TODO: deprecate
+  revert_button: "",
   landing_content: "",
-  dialog_add_title: "Creating new volume?", 
+  dialog_add_title: "",
   dialog_add_content: "",
-  dialog_delete_title: "Deleting volumes", 
-  dialog_delete_content: ""
+  dialog_delete_title: "",
+  dialog_delete_content: "",
+  dialog_add_flh_az_selector: "",
+  dialog_add_flh_volume_size: "",
 };
 
 var help_sgroup = {
