@@ -45,26 +45,21 @@ class S3Renderer
 
         doc.newRow().addValCol("Bucket").addValCol("# Objects")
         	.addValCol("Total Obj Size (" + units.getSizeUnit().toString() + ")").addValCol("Obj GB-Days");
-        for(String zoneName : report.getZones().keySet()) {
-        	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-            doc.newRow().addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.");
-            addUsageCols(doc, zone.getUsageTotals().getS3ObjectTotals(), units);
-            for (String accountName: zone.getAccounts().keySet()) {
-              	AccountArtEntity account = zone.getAccounts().get(accountName);
-                doc.newRow().addLabelCol(1, "Account: " + accountName).addValCol("cumul.");
-                addUsageCols(doc, account.getUsageTotals().getS3ObjectTotals(),units);
-                for (String userName: account.getUsers().keySet()) {
-                   	UserArtEntity user = account.getUsers().get(userName);
-                       doc.newRow().addLabelCol(2, "User: " + userName)
-                       		.addValCol("cumul.");
-                       addUsageCols(doc, user.getUsageTotals().getS3ObjectTotals(),units);
-                    for (String bucketName: user.getBuckets().keySet()) {
-                    	BucketArtEntity bucket = user.getBuckets().get(bucketName);
-                       	doc.newRow().addValCol(bucketName);
-                       	addUsageCols(doc, bucket.getTotalUsage(), units);
-                    }
-                }
-            }
+        for (String accountName: report.getAccounts().keySet()) {
+        	AccountArtEntity account = report.getAccounts().get(accountName);
+        	doc.newRow().addLabelCol(1, "Account: " + accountName).addValCol("cumul.");
+        	addUsageCols(doc, account.getUsageTotals().getS3ObjectTotals(),units);
+        	for (String userName: account.getUsers().keySet()) {
+        		UserArtEntity user = account.getUsers().get(userName);
+        		doc.newRow().addLabelCol(2, "User: " + userName)
+        		.addValCol("cumul.");
+        		addUsageCols(doc, user.getUsageTotals().getS3ObjectTotals(),units);
+        		for (String bucketName: user.getBuckets().keySet()) {
+        			BucketArtEntity bucket = user.getBuckets().get(bucketName);
+        			doc.newRow().addValCol(bucketName);
+        			addUsageCols(doc, bucket.getTotalUsage(), units);
+        		}
+        	}
         }
         doc.tableClose();
         doc.close();

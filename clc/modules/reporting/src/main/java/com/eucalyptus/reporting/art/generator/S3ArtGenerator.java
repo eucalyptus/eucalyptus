@@ -83,6 +83,10 @@ public class S3ArtGenerator
 				 */
 				long durationSecs = (report.getEndMs()-createEvent.getTimestampMs())/1000;
 				usage.setGBsecs(durationSecs*createEvent.getSizeGB());
+				if (! bucketEntities.containsKey(createEvent.getS3BucketName())) {
+					log.error("S3 object without corresponding bucket:" + createEvent.getS3BucketName());
+					continue;
+				}
 				bucketEntities.get(createEvent.getS3BucketName()).getObjects().put(createEvent.getS3ObjectName(), usage);
 				if (! objectStartTimes.containsKey(createEvent.getS3BucketName())) {
 					objectStartTimes.put(createEvent.getS3BucketName(), new HashMap<String, Long>());
