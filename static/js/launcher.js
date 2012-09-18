@@ -961,7 +961,7 @@
             }
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('instance_run_error');
+            notifyError($.i18n.prop('instance_run_error'));
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'launcher'});

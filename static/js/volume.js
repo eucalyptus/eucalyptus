@@ -203,7 +203,7 @@
        }); 
        this.addDialog.eucadialog('buttonOnChange', $vol_size_edit,  createButtonId, function(){
          return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
-       }); 
+       });
        // volume create dialog end
     },
 
