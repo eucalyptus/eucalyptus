@@ -84,6 +84,7 @@
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
       var $del_dialog = $rendered.children().first();
       var $del_help = $rendered.children().last();
+
       this.delDialog = $del_dialog.eucadialog({
          id: 'sgroups-delete',
          title: sgroup_dialog_del_title,
