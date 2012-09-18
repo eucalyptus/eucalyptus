@@ -1675,6 +1675,11 @@ span.on-error {
   width: 10px;
 }
 /* END Sang-min */
+.spin-wheel { /* positioning the spin-wheel during the log-in */
+  position: absolute;
+  top: 196px;
+  left: 480px;
+}
 
 /* Vasya: temporary styling. Style me. Move me! */
 .label_required:before {

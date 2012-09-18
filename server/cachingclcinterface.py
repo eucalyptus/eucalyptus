@@ -50,37 +50,37 @@ class CachingClcInterface(ClcInterface):
     # load saved state to simulate CLC
     def __init__(self, clcinterface, config):
         self.clc = clcinterface
-        pollfreq = config.getint('eui', 'pollfreq')
+        pollfreq = config.getint('server', 'pollfreq')
         try:
-            self.zoneFreq = config.getint('eui', 'pollfreq.zones')
+            self.zoneFreq = config.getint('server', 'pollfreq.zones')
         except ConfigParser.NoOptionError:
             self.zoneFreq = pollfreq
         try:
-            self.imageFreq = config.getint('eui', 'pollfreq.images')
+            self.imageFreq = config.getint('server', 'pollfreq.images')
         except ConfigParser.NoOptionError:
             self.imageFreq = pollfreq
         try:
-            self.instanceFreq = config.getint('eui', 'pollfreq.instances')
+            self.instanceFreq = config.getint('server', 'pollfreq.instances')
         except ConfigParser.NoOptionError:
             self.instanceFreq = pollfreq
         try:
-            self.keypairFreq = config.getint('eui', 'pollfreq.keypairs')
+            self.keypairFreq = config.getint('server', 'pollfreq.keypairs')
         except ConfigParser.NoOptionError:
             self.keypairFreq = pollfreq
         try:
-            self.groupFreq = config.getint('eui', 'pollfreq.groups')
+            self.groupFreq = config.getint('server', 'pollfreq.groups')
         except ConfigParser.NoOptionError:
             self.groupFreq = pollfreq
         try:
-            self.addressFreq = config.getint('eui', 'pollfreq.addresses')
+            self.addressFreq = config.getint('server', 'pollfreq.addresses')
         except ConfigParser.NoOptionError:
             self.addressFreq = pollfreq
         try:
-            self.volumeFreq = config.getint('eui', 'pollfreq.volumes')
+            self.volumeFreq = config.getint('server', 'pollfreq.volumes')
         except ConfigParser.NoOptionError:
             self.volumeFreq = pollfreq
         try:
-            self.snapshotFreq = config.getint('eui', 'pollfreq.snapshots')
+            self.snapshotFreq = config.getint('server', 'pollfreq.snapshots')
         except ConfigParser.NoOptionError:
             self.snapshotFreq = pollfreq
 

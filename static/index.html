@@ -355,153 +355,177 @@
       <!-- Security Group dialog template -->
       <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-add-wrapper">
-        <div id="sgroups-add-dialog" class="euca-dialog">
-          {{!: required_fields }}
-          <div class="group inner-box clearfix">
-              <h3>Group *</h3>
-              <p>{{!: sgroup_dialog_add_group }}</p>
-              <div class="form-row">
-                <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
-                <input type="text" id="sgroup-name" class="required"/>
-              </div>
-              <div class="form-row">    
-                <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
-                <input type="text" id="sgroup-description" class="required"/>
-              </div>  
-          </div>
-          <div class="rules inner-box clearfix">
-              <h3>Rules</h3>
-              <p>{{!: sgroup_dialog_add_rules }}</p>
-              <div class="form-row"> 
-                <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                <select id="sgroup-template">
-                  <option value="none">Select protocol</option>
-                  <optgroup label="">
-                  <option>SSH (TCP port 22, for terminal access)</option>
-                  <option>RDP (TCP port 3389, for Windows instances)</option>
-                  <option>HTTP (TCP port 80, for web servers)</option>
-                  <option>HTTPS (TCP port 443, for web servers)</option>
-                  <option>MS SQL (TCP port 1433)</option>
-                  <option>MySQL (TCP port 3306)</option>
-                  </optgroup>
-                  <optgroup label="----------------">
-                  <option>POP3 (TCP port 110)</option>
-                  <option>POP3S (TCP port 995)</option>
-                  <option>LDAP (TCP port 389)</option>
-                  <option>IMAP (TCP port 143)</option>
-                  <option>SMTP (TCP port 465)</option>
-                  </optgroup>
-                  <optgroup label="----------------">
-                  <option>Custom TCP</option>
-                  <option>Custom UDP</option>
-                  <option>Custom ICMP</option>
-                  </optgroup>
-                </select>
-              </div>
-              <div id="sgroup-more-rules" style='display: none;'>
-                <div class="form-row"> 
-                  <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                  <input type="text" id="sgroup-ports" class="required"/>
-                  <div class="dialog-notifications"></div>
+          <div id="sgroups-add-dialog" class="euca-dialog">
+            {{!: required_fields }}
+            <div class="group inner-box clearfix">
+                <h3>Group *</h3>
+                <p>{{!: sgroup_dialog_add_group }}</p>
+                <div class="form-row">
+                  <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
+                  <input type="text" id="sgroup-name" class="required"/>
+                </div>
+                <div class="form-row">    
+                  <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
+                  <input type="text" id="sgroup-description" class="required"/>
                 </div>  
-                
-                <div class="form-row">
-                  <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                  <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
-                </div>
-
-                <div class="form-row">
-                  <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group"/>
-                </div>
-
+            </div>
+            <div class="rules inner-box clearfix">
+                <h3>Rules</h3>
+                <p>{{!: sgroup_dialog_add_rules }}</p>
                 <div class="form-row"> 
-                  <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
+                  <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                  <select id="sgroup-template">
+                    <option value="none">Select protocol</option>
+                    <optgroup label="">
+                    <option>SSH (TCP port 22, for terminal access)</option>
+                    <option>RDP (TCP port 3389, for Windows instances)</option>
+                    <option>HTTP (TCP port 80, for web servers)</option>
+                    <option>HTTPS (TCP port 443, for web servers)</option>
+                    <option>MS SQL (TCP port 1433)</option>
+                    <option>MySQL (TCP port 3306)</option>
+                    </optgroup>
+                    <optgroup label="----------------">
+                    <option>POP3 (TCP port 110)</option>
+                    <option>POP3S (TCP port 995)</option>
+                    <option>LDAP (TCP port 389)</option>
+                    <option>IMAP (TCP port 143)</option>
+                    <option>SMTP (TCP port 465)</option>
+                    </optgroup>
+                    <optgroup label="----------------">
+                    <option>Custom TCP</option>
+                    <option>Custom UDP</option>
+                    <option>Custom ICMP</option>
+                    </optgroup>
+                  </select>
                 </div>
-                
-                <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
-
+                <div id="sgroup-more-rules" style='display: none;'>
+                  <div class="form-row"> 
+                    <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                    <input type="text" id="sgroup-ports" class="required"/>
+                    <div class="dialog-notifications"></div>
+                  </div>  
+                  
+                  <div class="form-row">
+                    <span class="field">{{!>sgroup_dialog_add_allow}}</span>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                  </div>
+  
+                  <div class="form-row">
+                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group"/>
+                  </div>
+  
+                  <div class="form-row"> 
+                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
+                  </div>
+                  
+                  <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
+  
+                </div>
+                <div id="sgroup-rules-list"></div>
+                <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+            <div id="sgroup-add-dialog-help" class="dialog-help">
+              <div class="dialog-help-content">
+                {{!: dialog_add_content }}
               </div>
-              <div id="sgroup-rules-list"></div>
-              <p class="required-hint">{{!: required_fields }}</p>
-          </div>
-
+              <div class="help-revert-button">
+                <a href="#"> {{!>revert_button}}</a>
+              </div>
+            </div>
         </div>
       </script>
 
       <script id="sgroupEditDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-edit-wrapper">
-        <div id="sgroups-edit-dialog" class="euca-dialog">
-          <div id="sgroups-edit-group-name"></div>
-          <div id="sgroups-edit-group-desc"></div>
-          <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
-          <div id="sgroups-hidden-name" style='display: none;'></div>
+          <div id="sgroups-edit-dialog" class="euca-dialog">
+            <div id="sgroups-edit-group-name"></div>
+            <div id="sgroups-edit-group-desc"></div>
+            <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
+            <div id="sgroups-hidden-name" style='display: none;'></div>
           
-          <div class="rules inner-box clearfix">
-              <h3>Rules</h3>
-              <p>{{!: sgroup_dialog_edit_rules }}</p>
-              <div class="form-row">
-                <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                <select id="sgroup-template">
-                  <option value="none">Select protocol</option>
-                  <optgroup label="">
-                  <option>SSH (TCP port 22, for terminal access)</option>
-                  <option>RDP (TCP port 3389, for Windows instances)</option>
-                  <option>HTTP (TCP port 80, for web servers)</option>
-                  <option>HTTPS (TCP port 443, for web servers)</option>
-                  <option>MS SQL (TCP port 1433)</option>
-                  <option>MySQL (TCP port 3306)</option>
-                  </optgroup>
-                  <optgroup label="----------------">
-                  <option>POP3 (TCP port 110)</option>
-                  <option>POP3S (TCP port 995)</option>
-                  <option>LDAP (TCP port 389)</option>
-                  <option>IMAP (TCP port 143)</option>
-                  <option>SMTP (TCP port 465)</option>
-                  </optgroup>
-                  <optgroup label="----------------">
-                  <option>Custom TCP</option>
-                  <option>Custom UDP</option>
-                  <option>Custom ICMP</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div id="sgroup-more-rules" style='display: none;'>
+            <div class="rules inner-box clearfix">
+                <h3>Rules</h3>
+                <p>{{!: sgroup_dialog_edit_rules }}</p>
                 <div class="form-row">
-                  <label for="sgroup-ports" class="required-label">{{!>sgroup_dialog_add_ports}}</label>
-                  <input type="text" id="sgroup-ports" class="required"/>
-                  <div class="dialog-notifications"></div>
+                  <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                  <select id="sgroup-template">
+                    <option value="none">Select protocol</option>
+                    <optgroup label="">
+                    <option>SSH (TCP port 22, for terminal access)</option>
+                    <option>RDP (TCP port 3389, for Windows instances)</option>
+                    <option>HTTP (TCP port 80, for web servers)</option>
+                    <option>HTTPS (TCP port 443, for web servers)</option>
+                    <option>MS SQL (TCP port 1433)</option>
+                    <option>MySQL (TCP port 3306)</option>
+                    </optgroup>
+                    <optgroup label="----------------">
+                    <option>POP3 (TCP port 110)</option>
+                    <option>POP3S (TCP port 995)</option>
+                    <option>LDAP (TCP port 389)</option>
+                    <option>IMAP (TCP port 143)</option>
+                    <option>SMTP (TCP port 465)</option>
+                    </optgroup>
+                    <optgroup label="----------------">
+                    <option>Custom TCP</option>
+                    <option>Custom UDP</option>
+                    <option>Custom ICMP</option>
+                    </optgroup>
+                  </select>
                 </div>
-
-                <div class="form-row">
-                  <label for="sgroup-allow-ip">{{!>sgroup_dialog_add_allow}}</label>
-                  <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}
-                  <input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
+  
+                <div id="sgroup-more-rules" style='display: none;'>
+                  <div class="form-row">
+                    <label for="sgroup-ports" class="required-label">{{!>sgroup_dialog_add_ports}}</label>
+                    <input type="text" id="sgroup-ports" class="required"/>
+                    <div class="dialog-notifications"></div>
+                  </div>
+  
+                  <div class="form-row">
+                    <label for="sgroup-allow-ip">{{!>sgroup_dialog_add_allow}}</label>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}
+                    <input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                  </div>
+  
+                  <div class="form-row"> 
+                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
+                  </div>
+  
+                  <div class="form-row"> 
+                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
+                  </div>
+  
+                  <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
                 </div>
-
-                <div class="form-row"> 
-                  <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
-                </div>
-
-                <div class="form-row"> 
-                  <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
-                </div>
-
-                <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
+                <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
+                <div id="sgroup-rules-list"></div>
+            </div>
+            <div id="sgroup-edit-dialog-help" class="dialog-help">
+              <div class="dialog-help-content">
+                {{!: dialog_edit_content }}
               </div>
-              <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
-              <div id="sgroup-rules-list"></div>
+              <div class="help-revert-button">
+                <a href="#"> {{!>revert_button}}</a>
+              </div>
           </div>
-
         </div>
       </script>
 
       <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
-        <div id="sgroups-euca-dialog" class="euca-dialog">
-          <div class="dialog-inner-content">
-            <p>{{!: sgroup_dialog_del_text }}</p>
-            <div class="selected-resources"></div>
-          </div>  
+        <div id="sgroups-delete-dialog-wrapper">
+          <div id="sgroups-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: sgroup_dialog_del_text }}</p>
+              <div class="selected-resources"></div>
+            </div>  
+            <div id="sgroup-delete-dialog-help" class="dialog-help">
+              <div class="dialog-help-content">
+                {{!: dialog_delete_content }}
+              </div>
+              <div class="help-revert-button">
+                <a href="#"> {{!>revert_button}}</a>
+              </div>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Security Group dialog template -->

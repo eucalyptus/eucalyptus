@@ -79,6 +79,10 @@ class GlobalSession(object):
         return self.get_value('locale', 'language')
 
     @property
+    def email(self):
+        return self.get_value('locale', 'email')
+
+    @property
     def instance_type(self):
         '''
         m1.small:1 128 2
@@ -96,6 +100,7 @@ class GlobalSession(object):
     def get_session(self):
         return {'timezone': self.timezone,
                 'language': self.language,
+                'email' : self.email,
                 'instance_type': self.instance_type 
                }
 
@@ -130,7 +135,7 @@ class CheckIpHandler(tornado.web.RequestHandler):
 class BaseHandler(tornado.web.RequestHandler):
     user_session = None
     def should_use_mock(self):
-        use_mock = config.getboolean('eui', 'usemock')
+        use_mock = config.getboolean('test', 'usemock')
         return use_mock
 
     def authorized(self):
@@ -146,10 +151,10 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class RootHandler(BaseHandler):
     def get(self, path):
-        if config.has_option('eui', 'staticpath'):
-            path = os.path.join(config.get('eui', 'staticpath'), "eui.html")
+        if config.has_option('server', 'staticpath'):
+            path = os.path.join(config.get('server', 'staticpath'), "index.html")
         else:
-            path = '../static/eui.html'
+            path = '../static/index.html'
         self.render(path)
 
     def post(self, arg):
@@ -219,8 +224,8 @@ class LoginProcessor(ProxyProcessor):
         account, user, passwd = auth_decoded.split(':', 3)
         remember = web_req.get_argument("remember")
 
-        if config.getboolean('eui', 'usemock') == False:
-            auth = TokenAuthenticator(config.get('eui', 'clchost'), 3600)
+        if config.getboolean('test', 'usemock') == False:
+            auth = TokenAuthenticator(config.get('server', 'clchost'), 3600)
             creds = auth.authenticate(account, user, passwd)
             if creds:
                 session_token = creds.session_token
@@ -257,8 +262,9 @@ class LanguageProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
         language = config.get('locale','language')
+        email = config.get('locale','email')
 
-        return LanguageResponse(language)
+        return LanguageResponse(language,email)
 
 class SessionProcessor(ProxyProcessor):
     @staticmethod
@@ -285,8 +291,9 @@ class LoginResponse(ProxyResponse):
                 'user_session': self.user_session.get_session()}
 
 class LanguageResponse(ProxyResponse):
-    def __init__(self, lang):
+    def __init__(self, lang, email):
         self.language = lang
+        self.email = email
 
     def get_response(self):
-        return {'language': self.language}
+        return {'language': self.language, 'email': self.email}
