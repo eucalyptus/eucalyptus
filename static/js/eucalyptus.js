@@ -23,6 +23,7 @@
   if (! $.eucaData){
 	$.eucaData = {};
   }
+  var email = '';
   $(document).ready(function() {
     $.when( // this is to synchronize a chain of ajax calls 
       $.ajax({
@@ -33,6 +34,7 @@
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
           eucalyptus.help({'language':out.language}); // loads help files
+          email = out.email;
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
@@ -57,7 +59,7 @@
           });
         } else {
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
-          $main.login({ doLogin : function(evt, args) {
+          $main.login({ 'email' : email, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
               var hash = btoa(tok);
               var remember = (args.param.remember!=null)?"yes":"no";

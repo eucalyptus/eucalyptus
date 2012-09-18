@@ -29,8 +29,8 @@ class MockClcInterface(ClcInterface):
     # load saved state to simulate CLC
     def __init__(self):
         self.config = ConfigLoader.getParser()
-        if self.config.has_option('eui', 'mockpath'):
-            self.mockpath = self.config.get('eui', 'mockpath')
+        if self.config.has_option('server', 'mockpath'):
+            self.mockpath = self.config.get('server', 'mockpath')
         else:
             self.mockpath = 'mockdata'
 

@@ -306,7 +306,7 @@ class ComputeHandler(server.BaseHandler):
             if self.should_use_mock():
                 self.user_session.clc = MockClcInterface()
             else:
-                self.user_session.clc = BotoClcInterface(server.config.get('eui', 'clchost'),
+                self.user_session.clc = BotoClcInterface(server.config.get('server', 'clchost'),
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
@@ -352,7 +352,7 @@ class ComputeHandler(server.BaseHandler):
             if self.should_use_mock():
                 self.user_session.clc = MockClcInterface()
             else:
-                self.user_session.clc = BotoClcInterface(server.config.get('eui', 'clchost'),
+                self.user_session.clc = BotoClcInterface(server.config.get('server', 'clchost'),
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)

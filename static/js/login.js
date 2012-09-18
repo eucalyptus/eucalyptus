@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
-    _options : { },
+    _options : {
+      email : '',
+     },
     errorDialog : null,
     _init : function() { },
     _create : function() { 
@@ -84,6 +86,9 @@
       }
       else {
         $form.find('input[id=password]').focus();
+      }
+      if (this.options.email && this.options.email.indexOf('@')){
+        this.element.find('.password-help a').attr('href', 'mailto:'+this.options.email);
       }
     },
     _destroy : function() { },

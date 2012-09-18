@@ -18,11 +18,11 @@ webroot = os.path.join(os.path.dirname(__file__), 'static')
 server.config = ConfigLoader.getParser()
 # When staticpath is in the config we will assume that it is
 # not a relative path
-if server.config.has_option('eui', 'staticpath'):
-    webroot = server.config.get('eui', 'staticpath')
+if server.config.has_option('server', 'staticpath'):
+    webroot = server.config.get('server', 'staticpath')
 
-if server.config.has_option('eui', 'cookie.secret'):
-    settings['cookie_secret'] = server.config.get('eui', 'cookie.secret')
+if server.config.has_option('server', 'cookie.secret'):
+    settings['cookie_secret'] = server.config.get('server', 'cookie.secret')
 
 application = tornado.web.Application([
         (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
@@ -43,5 +43,5 @@ if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
 #    for ip in ipaddrs:
 #      print "host IP: "+ip
-    application.listen(server.config.getint('eui', 'uiport'))
+    application.listen(server.config.getint('server', 'uiport'))
     tornado.ioloop.IOLoop.instance().start()
