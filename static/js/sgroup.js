@@ -92,7 +92,7 @@
            'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: {title: help_sgroup['dialog_delete_title'], content: $del_help},
+         help: { content: $del_help },
        });
 
       var createButtonId = 'sgroup-add-btn';
@@ -158,7 +158,7 @@
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
-        help: {title: help_sgroup['dialog_add_title'], content: $add_help},
+        help: { content: $add_help },
         user_val : function(index) {
                     thisObj.rulesList.splice(index, 1);
                     thisObj._refreshRulesList(thisObj.addDialog);
@@ -262,7 +262,7 @@
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
-        help: {title: help_sgroup['dialog_edit_title'], content: $edit_help},
+        help: { content: $edit_help },
         user_val : function(index) {
                     if (thisObj.rulesList[index].isnew) {
                         thisObj.rulesList.splice(index, 1);

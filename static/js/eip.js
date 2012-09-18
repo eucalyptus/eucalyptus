@@ -96,7 +96,7 @@
            'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.eucadialog("close");}}
          },
-         help: {title: help_eip['dialog_release_title'], content: $release_help},
+         help: { content: $release_help },
        });
       // eip release dialog end
       // allocate eip dialog end
@@ -121,7 +121,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
          },
-         help: {title: help_eip['dialog_allocate_title'], content: $eip_allocate_dialog_help},
+         help: { content: $eip_allocate_dialog_help },
        });
       var $ip_count_edit = this.allocateDialog.find('#eip-allocate-count');
       this.allocateDialog.eucadialog('buttonOnFocus', $ip_count_edit,  allocateButtonId, function(){
@@ -157,7 +157,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
-         help: {title: help_eip['dialog_associate_title'], content: $eip_associate_dialog_help},
+         help: { content: $eip_associate_dialog_help },
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAssociateDialog(dfd) ; // pulls instances from the server
@@ -181,7 +181,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_disassociate_dialog.eucadialog("close"); } }
          },
-         help: {title: help_eip['dialog_disassociate_title'], content: $eip_disassociate_dialog_help},
+         help: { content: $eip_disassociate_dialog_help },
        });
       // disassociate eip dialog end
     },

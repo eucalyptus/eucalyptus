@@ -69,12 +69,8 @@ var help_keypair = {
     loadHtml('help/'+arg.language+'/console_create_keypair.html', function(data){help_keypair.dialog_add_content=data})
     loadHtml('help/'+arg.language+'/console_delete_keypair.html', function(data){help_keypair.dialog_delete_content=data})
   },
-  revert_button: "Back to key pair",
-  landing_title: "Key pairs -- help", // TODO: deprecate
   landing_content: "",
-  dialog_add_title: "Creating new key pair?",
   dialog_add_content: "",
-  dialog_delete_title: "Deleting key pair?",
   dialog_delete_content: ""
 };
 
@@ -82,8 +78,6 @@ var help_image = {
   load : function(arg){
     loadHtml('help/'+arg.language+'/console_manage_images.html', function(data){help_image.landing_content=data})
   },
-  revert_button: "Back to images",
-  landing_title: "Images -- help", // TODO: deprecate
   landing_content: "",
 };
 
@@ -93,12 +87,8 @@ var help_snapshot = {
     loadHtml('help/'+arg.language+'/console_create_snapshot.html', function(data){help_snapshot.dialog_create_content=data})
     loadHtml('help/'+arg.language+'/console_delete_snapshot.html', function(data){help_snapshot.dialog_delete_content=data})
   },
-  revert_button: "Back to snapshots",
-  landing_title: "Snapshots -- help", // TODO: deprecate
   landing_content: "",
-  dialog_delete_title: "Deleting snapshots?",
   dialog_delete_content: "",
-  dialog_create_title: "Creating new snapshot?",
   dialog_create_content: ""
 };
 
@@ -110,16 +100,10 @@ var help_eip = {
     loadHtml('help/'+arg.language+'/console_associate_eip.html', function(data){help_eip.dialog_associate_content=data})
     loadHtml('help/'+arg.language+'/console_disassociate_eip.html', function(data){help_eip.dialog_disassociate_content=data})
   },
-  revert_button: "Back to IP addresses",
-  landing_title: "IP addresses -- help", // TODO: deprecate
   landing_content: "",
-  dialog_release_title: "Releasing IP Address?",
   dialog_release_content: "",
-  dialog_allocate_title: "Allocating IP Address?",
   dialog_allocate_content: "",
-  dialog_associate_title: "Associating IP Address?",
   dialog_associate_content: "",
-  dialog_disassociate_title: "Disassociating IP Address?",
   dialog_disassociate_content: ""
 };
 
@@ -140,14 +124,9 @@ var help_sgroup = {
     loadHtml('help/'+arg.language+'/console_edit_security_group.html', function(data){help_sgroup.dialog_edit_content=data})
     loadHtml('help/'+arg.language+'/console_delete_security_group.html', function(data){help_sgroup.dialog_delete_content=data})
   },
-  revert_button: "Back to security group",
-  landing_title: "",  // TODO: deprecate
   landing_content: "",
-  dialog_add_title: "",
   dialog_add_content: "",
-  dialog_edit_title: "",
   dialog_edit_content: "",
-  dialog_delete_title: "",
   dialog_delete_content: "",
 }
 
@@ -155,14 +134,9 @@ var help_instance = {
   load : function(arg){
     loadHtml('help/'+arg.language+'/console_manage_instances.html', function(data){help_instance.landing_content=data})
   },
-  revert_button: "Back to instances", // TODO: i18n
-  landing_title: "",  // TODO: deprecate
   landing_content: "",
-  dialog_add_title: "",
   dialog_add_content: "",
-  dialog_delete_title: "",
   dialog_delete_content: "",
-  dialog_terminate_content: "",
   dialog_reboot_content: "",
   dialog_start_content: "",
   dialog_stop_content: "",
