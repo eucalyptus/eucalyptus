@@ -25,7 +25,7 @@
        title : null,
        // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
        buttons :  {},
-       help : null,  // help title and content 
+       help : null,  // { content: ... }
        on_open: null, // {spin: True, callback: function(){}}
        user_val: null, // for user use...
     },
@@ -86,7 +86,10 @@
 
          buttons: thisObj._makeButtons(),
       });
-      this.element.tooltip();
+      this.element.tooltip({
+        delay: 0,
+        predelay: 500
+      });
     },
 
     _getButtonId : function(buttonDomId, buttonId) {
@@ -147,8 +150,6 @@
               if(!thisObj.help_flipped){
                 $titleBar.find('.help-link').removeClass().addClass('help-return');
                 $helpLink.html('&nbsp;');
-                if(thisObj.options.help.title)
-                  $titleBar.find('span').text(thisObj.options.help.title);
                 $buttonPane.hide(); 
                 $resourcePane.hide();
                 thisObj.help_flipped =true;
