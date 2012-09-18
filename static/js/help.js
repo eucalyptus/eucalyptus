@@ -29,6 +29,7 @@
     help_image.load({language:language}); 
     help_eip.load({language:language});
     help_launcher.load({language:language});
+    help_dashboard.load({language:language});
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
@@ -74,6 +75,12 @@ function loadJSON(urlToLoad, helpVolume){
     });
 }
 
+var help_dashboard = {
+   load : function(arg){
+    loadHtml('help/'+arg.language+'/console_dashboard.html', function(data){help_dashboard.landing_content=data})
+   },
+   landing_content: "",
+}
   //[keypair]
 var help_keypair = {
   load : function(arg){

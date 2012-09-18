@@ -273,7 +273,7 @@
         $volumeSelector.autocomplete( {
           source: vol_ids
         });
-        $volumeSelector.watermark(volume_id_msg);
+        $volumeSelector.watermark(volume_id_watermark);
       }
       dfd.resolve();
     },
@@ -293,17 +293,17 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess($.i18n.prop('volume_delete_success', volumeId));
+                notifySuccess(null, $.i18n.prop('volume_delete_success', volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError($.i18n.prop('volume_delete_error', volumeId));
+                notifyError(null, $.i18n.prop('volume_delete_error', volumeId));
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('volume_delete_error', volumeId));
+              notifyError(null, $.i18n.prop('volume_delete_error', volumeId));
             }
           })(volumeId)
         });
@@ -321,15 +321,15 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess($.i18n.prop('volume_attach_success', volumeId, instanceId));
+              notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId));
+              notifyError(null, $.i18n.prop('volume_attach_error', volumeId, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId));
+            notifyError(null, $.i18n.prop('volume_attach_error', volumeId, instanceId));
           }
       });
     },
@@ -347,16 +347,16 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var volId = data.results.id;
-              notifySuccess($.i18n.prop('volume_create_success', volId));
+              notifySuccess(null, $.i18n.prop('volume_create_success', volId));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', volId);
             } else {
-              notifyError($.i18n.prop('volume_create_error'));
+              notifyError(null, $.i18n.prop('volume_create_error'));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('volume_create_error'));
+            notifyError(null, $.i18n.prop('volume_create_error'));
           }
       });
     },
@@ -378,15 +378,15 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
                 if (force)
-                  notifySuccess($.i18n.prop('volume_force_detach_success', volumeId));
+                  notifySuccess(null, $.i18n.prop('volume_force_detach_success', volumeId));
                 else
-                  notifySuccess($.i18n.prop('volume_detach_success', volumeId));
+                  notifySuccess(null, $.i18n.prop('volume_detach_success', volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 if (force)
-                  notifyError($.i18n.prop('volume_force_detach_error', volumeId));
+                  notifyError(null, $.i18n.prop('volume_force_detach_error', volumeId));
                 else
-                  notifyError($.i18n.prop('volume_detach_error', volumeId));
+                  notifyError(null, $.i18n.prop('volume_detach_error', volumeId));
               }
            }
           })(volumeId),
@@ -394,9 +394,9 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError($.i18n.prop('volume_force_detach_error', volumeId));
+                notifyError(null, $.i18n.prop('volume_force_detach_error', volumeId));
               else
-                notifyError($.i18n.prop('volume_detach_error', volumeId));
+                notifyError(null, $.i18n.prop('volume_detach_error', volumeId));
             }
           })(volumeId)
         });

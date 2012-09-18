@@ -129,24 +129,24 @@
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
-                              notifySuccess(sgroup_create_success + ' ' + name);
+                              notifySuccess(null, sgroup_create_success + ' ' + name);
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               $add_dialog.eucadialog("close");
                           }
                           else {
-                              notifySuccess($.i18n.prop('sgroup_create_success', name));
+                              notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
                               $add_dialog.eucadialog("close");
                           }
                       } else {
-                          notifyError($.i18n.prop('sgroup_add_rule_error', name));
+                          notifyError(null, $.i18n.prop('sgroup_add_rule_error', name));
                           $add_dialog.eucadialog("close");
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    notifyError($.i18n.prop('sgroup_create_error', name));
+                    notifyError(null, $.i18n.prop('sgroup_create_error', name));
                     dfd.reject();
                     $add_dialog.eucadialog("close");
                   }
@@ -418,10 +418,10 @@
           (function(sgroupName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess($.i18n.prop('sgroup_delete_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
                 thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
-                notifyError($.i18n.prop('sgroup_delete_error', sgroupName));
+                notifyError(null, $.i18n.prop('sgroup_delete_error', sgroupName));
               }
            }
           })(sgroupName),
@@ -455,13 +455,13 @@
         async:"false",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess($.i18n.prop('sgroup_add_rule_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName));
+                notifyError(null, $.i18n.prop('sgroup_add_rule_error', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
@@ -488,13 +488,13 @@
         async:"false",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess($.i18n.prop('sgroup_revoke_rule_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName));
+                notifyError(null, $.i18n.prop('sgroup_revoke_rule_error', sgroupName));
                 dialog.eucadialog("close");
             }
         }),
