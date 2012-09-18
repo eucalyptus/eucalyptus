@@ -84,25 +84,46 @@ import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
  */
 public final class ReportingDataVerifier {
 
-  public static String closeGap() {
+  /**
+   * Update the reporting database to ensure events are present for existing items.
+   *
+   * @return A description of the changes made
+   */
+  public static String addMissingReportingEvents() {
     final View liveView = getLiveView();
     final View reportingView = getReportingView();
-    final Gap gap = getGap( liveView, reportingView );
-    apply( gap );
-    return "Live:\n" + liveView + "\nReporting:\n" + reportingView + "\nGap:\n" + gap ;
+    final EventDescriptionBag eventDescriptions = getEventDifferences( liveView, reportingView );
+    addReportingEvents( eventDescriptions );
+    return "Live:\n" + liveView + "\nReporting:\n" + reportingView + "\nGap:\n" + eventDescriptions ;
   }
 
-
+  /**
+   * Get the "event" view of the cloud metadata.
+   *
+   * @return The "live" view
+   */
   public static View getLiveView() {
     return new LiveViewBuilder().buildView();
   }
 
+  /**
+   * Get the view of the reporting database / event store
+   *
+   * @return The reporting view
+   */
   public static View getReportingView() {
     return new ReportingViewBuilder().buildView();
   }
 
-  public static Gap getGap( final View target, final View current ) {
-    final Gap gap = new Gap();
+  /**
+   * Get the events neccessary to align the current view with the target view.
+   *
+   * @param target The desired "event" state
+   * @param current The current state
+   * @return The bag describing the necessary events
+   */
+  public static EventDescriptionBag getEventDifferences( final View target, final View current ) {
+    final EventDescriptionBag description = new EventDescriptionBag();
 
     final Set<Class<?>> types = Sets.newHashSet( Iterables.transform( Iterables.concat( target.typedResourceHolders, current.typedResourceHolders ), type() ) );
     for ( final Class<?> type : types ) {
@@ -110,9 +131,9 @@ public final class ReportingDataVerifier {
       final TypedResourceHolder currentHolder = current.getHolderOrNull( type );
 
       if ( targetHolder == null ) {
-        gap.delete.add( currentHolder );
+        description.delete.add( currentHolder );
       } else if ( currentHolder == null ) {
-        gap.create.add( targetHolder );
+        description.create.add( targetHolder );
       } else { // determine difference
         final TypedResourceHolder add = new TypedResourceHolder( type );
         final TypedResourceHolder del = new TypedResourceHolder( type );
@@ -150,14 +171,28 @@ public final class ReportingDataVerifier {
           addTo.resources.add( Iterables.find( findIn, withKeyMatching( key ) ) );
         }
 
-        if ( !add.resources.isEmpty() ) gap.create.add( add );
-        if ( !del.resources.isEmpty() ) gap.delete.add( del );
-        if ( !att.resources.isEmpty() ) gap.attach.add( att );
-        if ( !det.resources.isEmpty() ) gap.detach.add( det );
+        if ( !add.resources.isEmpty() ) description.create.add( add );
+        if ( !del.resources.isEmpty() ) description.delete.add( del );
+        if ( !att.resources.isEmpty() ) description.attach.add( att );
+        if ( !det.resources.isEmpty() ) description.detach.add( det );
       }
     }
 
-    return gap;
+    return description;
+  }
+
+  /**
+   * Add events as described in the given bag
+   *
+   * @param eventDescriptions The description of the events to add.
+   */
+  public static void addReportingEvents( final EventDescriptionBag eventDescriptions ) {
+    final long timestamp = System.currentTimeMillis();
+    final Set<String> verifiedUserIds = Sets.newHashSet();
+    addCreateEvents( verifiedUserIds, eventDescriptions.create );
+    addDeleteEvents( timestamp, eventDescriptions.delete );
+    addAttachmentStateEvents( timestamp, verifiedUserIds, eventDescriptions.attach, true );
+    addAttachmentStateEvents( timestamp, verifiedUserIds, eventDescriptions.detach, false );
   }
 
   /**
@@ -181,17 +216,6 @@ public final class ReportingDataVerifier {
 
   private static Predicate<ResourceWithRelation<?>> withKeyMatching( final ResourceKey key ) {
     return Predicates.compose( Predicates.equalTo( key ), key() );
-  }
-
-  public static void apply( final Gap gap ) {
-    final long timestamp = System.currentTimeMillis();
-
-    final Set<String> verifiedUserIds = Sets.newHashSet();
-
-    addCreateEvents( verifiedUserIds, gap.create );
-    addDeleteEvents( timestamp, gap.delete );
-    addAttachmentStateEvents( timestamp, verifiedUserIds, gap.attach, true );
-    addAttachmentStateEvents( timestamp, verifiedUserIds, gap.detach, false );
   }
 
   private static void addCreateEvents( final Set<String> verifiedUserIds,
@@ -437,7 +461,7 @@ public final class ReportingDataVerifier {
     };
   }
 
-  public static class Gap {
+  public static class EventDescriptionBag {
     private final List<TypedResourceHolder> create = Lists.newArrayList();
     private final List<TypedResourceHolder> delete = Lists.newArrayList();
     private final List<TypedResourceHolder> attach = Lists.newArrayList();

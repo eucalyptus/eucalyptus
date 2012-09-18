@@ -51,7 +51,7 @@ class upgrade_31_32 extends AbstractUpgradeScript {
       EntityManager entityManager ->
       // delete old tables
       [ 'storage_usage_snapshot', 'instance_usage_snapshot', 's3_usage_snapshot', 'reporting_instance' ].each { table ->
-        entityManager.createNativeQuery( 'drop table ' + table ).executeUpdate()
+        entityManager.createNativeQuery( 'drop table if exists ' + table ).executeUpdate()
       }
 
       // purge old data from re-used tables
@@ -61,6 +61,6 @@ class upgrade_31_32 extends AbstractUpgradeScript {
     }
 
     // create events for existing entities
-    ReportingDataVerifier.closeGap()
+    ReportingDataVerifier.addMissingReportingEvents()
   }
 }

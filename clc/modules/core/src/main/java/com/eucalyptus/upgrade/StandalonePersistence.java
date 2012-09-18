@@ -103,17 +103,17 @@ public class StandalonePersistence {
   
   public static void main( String[] args ) throws Exception {
     if ( ( eucaHome = System.getProperty( "euca.upgrade.new.dir" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.dir' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.dir' property" );
     } else if ( ( eucaOld = System.getProperty( "euca.upgrade.old.dir" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.dir' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.dir' property" );
     } else if ( ( eucaNewVersion = System.getProperty( "euca.upgrade.new.version" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.version' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.version' property" );
     } else if ( ( eucaOldVersion = System.getProperty( "euca.upgrade.old.version" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.version' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.version' property" );
     } else if ( ( eucaSource = System.getProperty( "euca.upgrade.source" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.source' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.source' property" );
     } else if ( ( eucaDest = System.getProperty( "euca.upgrade.destination" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.destination' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.destination' property" );
     } else {
       StandalonePersistence.setupSystemProperties( );
       StandalonePersistence.setupConfigurations( );
@@ -204,7 +204,7 @@ public class StandalonePersistence {
   
   public static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
-    dest.initialize( );    
+    dest.initialize( );
   }
   
   public static void setupInitProviders( ) throws Exception {
@@ -298,5 +298,4 @@ public class StandalonePersistence {
       }
     }
   }
-  
 }

@@ -144,8 +144,8 @@ upgrade_db() {
           log "This is not a CLC.  Skipping DB upgrade."
           return
       else 
-          log "Cannot locate previous database files in ${OLD_EUCA}/${DBDIR}! Skipping DB upgrade.";    
-          exit 1; 
+          log "Cannot locate previous database files in ${OLD_EUCA}/${DBDIR}! Skipping DB upgrade."
+          return
       fi
   fi
   
