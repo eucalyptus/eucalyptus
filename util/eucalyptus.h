@@ -74,7 +74,7 @@
 #define DATADIR	"/usr/share"
 #endif
 #ifndef LIBEXECDIR
-#define LIBEXECDIR	"/usr/libexec"
+#define LIBEXECDIR	"/usr/lib"
 #endif
 #ifndef SBINDIR
 #define SBINDIR	"/usr/sbin"
