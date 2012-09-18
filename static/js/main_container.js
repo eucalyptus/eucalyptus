@@ -54,11 +54,12 @@
           $curInstance.close();
         }
       }
+      var $container = $('html body').find(DOM_BINDING['main']);
+      $container.children().detach();
      // $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
      // Manage resources-->uncomment above
       switch(selected){
         case 'dashboard':
-          var $container = $('html body').find(DOM_BINDING['main']);
           this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});
           break;
         case 'instance':

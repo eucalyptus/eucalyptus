@@ -66,6 +66,10 @@
  	        data:"action=login&remember="+remember, 
                 beforeSend: function (xhr) { 
                    xhr.setRequestHeader('Authorization', 'Basic '+hash); 
+                   $main.find('#euca-main-container').append(
+                     $('<div>').addClass('spin-wheel').append( 
+                      $('<img>').attr('src','images/dots32.gif'))); // spinwheel
+                   $main.find('#euca-main-container').show();
                 },
     	        dataType:"json",
 	        async:"false",
@@ -74,6 +78,8 @@
                   args.onSuccess($.eucaData); // call back to login UI
                 },
                 error: function(jqXHR, textStatus, errorThrown){
+                  var $container = $('html body').find(DOM_BINDING['main']);
+                  $container.children().detach(); // remove spinwheel
 	          args.onError(errorThrown);
                 }
  	     });
