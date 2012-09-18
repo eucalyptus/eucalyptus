@@ -91,8 +91,8 @@ public class PostgresqlDestination implements DatabaseDestination {
     final Component dbComp = Components.lookup( Database.class );
     db = Groovyness.newInstance( "setup_db" );
     try {
-      db.init();
-      
+      db.load();
+
       final Map<String, String> props = ImmutableMap.<String,String>builder()
           //.put( "hibernate.archive.autodetection", "jar, class, hbm" )
           .put( "hibernate.show_sql", "false" )

@@ -165,7 +165,7 @@ upgrade_db() {
   CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
 
   # clean out the target DB directory
-  rm -rfv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
+  # rm -rfv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
   
   # setup the upgrade command
   UPGRADE_CLASS="com.eucalyptus.upgrade.StandalonePersistence"
@@ -175,7 +175,7 @@ upgrade_db() {
   UPGRADE_DEST_VERSION="euca.upgrade.new.version=${NEW_EUCA_VERSION}"
   UPGRADE_SRC_VERSION="euca.upgrade.old.version=${OLD_EUCA_VERSION}" 
   UPGRADE_DEST_DB="euca.upgrade.destination=com.eucalyptus.upgrade.PostgresqlDestination"
-  UPGRADE_SRC_DB="NONE"
+  UPGRADE_SRC_DB="euca.upgrade.source=NONE"
   # Arbitrary string of properly formatted opts passed direct to jvm"
   UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m"
   # Setup commands 
