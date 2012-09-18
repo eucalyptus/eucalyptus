@@ -183,9 +183,21 @@ typedef struct _blockblob {
     struct _blockblob * prev;
 } blockblob;
 
+typedef enum { 
+    BLOBSTORE_COPY, 
+    BLOBSTORE_MAP, 
+    BLOBSTORE_SNAPSHOT
+} blockmap_relation_t;
+
+typedef enum { 
+    BLOBSTORE_DEVICE, 
+    BLOBSTORE_BLOCKBLOB, 
+    BLOBSTORE_ZERO 
+} blockmap_source_t;
+
 typedef struct _blockmap {
-    enum { BLOBSTORE_COPY, BLOBSTORE_MAP, BLOBSTORE_SNAPSHOT } relation_type;
-    enum { BLOBSTORE_DEVICE, BLOBSTORE_BLOCKBLOB, BLOBSTORE_ZERO } source_type;
+    blockmap_relation_t relation_type;
+    blockmap_source_t source_type;
     union {
         char device_path [BLOBSTORE_MAX_PATH];
         blockblob * blob;
