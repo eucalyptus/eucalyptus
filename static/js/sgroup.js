@@ -192,7 +192,7 @@
             contentType: 'text/plain; charset=utf-8',
             dataType: "text",
             success: function(data, textStatus, jqXHR) {
-                         thisObj.addDialog.find('#allow-ip').val(jqXHR.responseText)
+                         thisObj.addDialog.find('#allow-ip').val(jqXHR.responseText+"/32")
                      }
         });
       });
@@ -216,7 +216,7 @@
         'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
               thisObj._storeRule(thisObj.editDialog);    // flush rule from form into array
               // need to remove rules flagged for deletion, then add new ones to avoid conflicts
-              var name = thisObj.editDialog.find('#sgroups-edit-group-name').html();
+              var name = thisObj.editDialog.find('#sgroups-hidden-name').html();
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
@@ -234,7 +234,6 @@
               }
               if (fromPort.length > 0) {
                   
-                  //TODO: NEED Name!!
                   thisObj._removeIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
               var fromPort = new Array();
@@ -244,7 +243,7 @@
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
-                      alert("adding rule for port "+thisObj.rulesList[rule].from_port+" delete:"+thisObj.rulesList[rule].isnew);
+                      alert("adding rule for port "+thisObj.rulesList[rule].from_port+" cidr:"+thisObj.rulesList[rule].ipaddr);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -255,7 +254,7 @@
               if (fromPort.length > 0) {
                   thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
-              $add_dialog.eucadialog("close");
+              $edit_dialog.eucadialog("close");
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
@@ -307,7 +306,7 @@
             contentType: 'text/plain; charset=utf-8',
             dataType: "text",
             success: function(data, textStatus, jqXHR) {
-                         thisObj.editDialog.find('#allow-ip').val(jqXHR.responseText)
+                         thisObj.editDialog.find('#allow-ip').val(jqXHR.responseText+"/32")
                      }
         });
       });
@@ -333,10 +332,13 @@
         }
         // if nothing selected, don't save
         if (dialog.find('#sgroup-template').val() == 'none')
-            return
+            return;
         var rule = new Object();
         rule.protocol = 'tcp';
         var port_range = dialog.find('#sgroup-ports').val();
+        // if no port named, don't save
+        if (port_range == '')
+            return;
         var ports = port_range.split('-');
         rule.from_port = ports[0];
         rule.to_port = ports[ports.length-1];
@@ -447,6 +449,7 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
+      var sgroupName = groupName;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
@@ -480,6 +483,7 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
+      var sgroupName = groupName;
       $.ajax({
         type:"GET",
         url:"/ec2?Action=RevokeSecurityGroupIngress",
@@ -529,7 +533,7 @@
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
       thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
-      thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name);
+      thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
       thisObj._refreshRulesList(thisObj.editDialog);
     },
