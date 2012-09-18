@@ -2,4 +2,4 @@
 
 export PYTHONPATH=`pwd`
 
-python -tt launch.py
+python -tt server.py -c ./server/eui.ini
