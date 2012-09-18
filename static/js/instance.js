@@ -181,7 +181,7 @@
       var $console_help = $rendered.children().last();
       this.consoleDialog = $console_dialog.eucadialog({
         id: 'instances-console',
-        title: instance_dialog_console_title,
+        title: 'instance_dialog_console_title',
         buttons: {
           'close': {text: dialog_close_btn, focus:true, click: function() { $console_dialog.eucadialog("close");}}
         },
@@ -414,10 +414,14 @@
     _rebootInstances : function(){
       var thisObj = this;
       var instances = thisObj.rebootDialog.eucadialog('getSelectedResources',0);
-      instances = instances.join(' ');
+      //instances = instances.join(' ');
+      var instIds = '';
+      for(i=0; i<instances.length; i++)
+        instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
+     
       $.ajax({
           type:"GET",
-          url:"/ec2?Action=RebootInstances&InstanceId=" + instances,
+          url:"/ec2?Action=RebootInstances"+instIds,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:true,
@@ -481,7 +485,7 @@
         async:true,
         success: function(data, textStatus, jqXHR){
           if ( data.results && data.results == true ) {
-            notifySuccess(null, instance_start_success + ' ' + instances);
+            notifySuccess(null, $.i18n.prop('instance_start_success',instances));
             thisObj.tableWrapper.eucatable('refreshTable');
           } else {
             notifyError(null, instance_start_error + ' ' + instances);
@@ -496,14 +500,16 @@
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
       var oss = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var keyname = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
+      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6);
       if ( instances.length > 0 ) {
         // connect is for one instance 
         var instance = instances[0];
         var os = oss[0]; 
         if(os === 'windows'){ 
-          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_windows_text);
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_windows_text', keyname));
           thisObj.connectDialog.eucadialog('addNote','instance-connect-uname-password', 
-            ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span> &lt;public_ip&gt;\\Administrator </span></td> <td> <span> <a href="#">'+instance_dialog_connect_getpassword+'</a></span></td> </tr> </tbody> </table>');
+            ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span>'+ip+'\\Administrator </span></td> <td> <span> <a href="#">'+$.i18n.prop('instance_dialog_connect_getpassword', keyname)+'</a></span></td> </tr> </tbody> </table>');
           if (!thisObj.instPassword[instance]){
             var $fileSelector = thisObj.connectDialog.find('input#fileupload');
             $fileSelector.fileupload( {
@@ -531,7 +537,7 @@
           }
         }
         else{
-          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',instance_dialog_connect_linux_text);
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_linux_text', keyname, ip));
         }
 
         thisObj.connectDialog.eucadialog('open');
@@ -541,7 +547,6 @@
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
       instances=instances[0];
-
       $.when( 
         $.ajax({
           type:"GET",
@@ -552,6 +557,8 @@
         })).done(function(data){
           if(data && data.results){
             consoleOutput = data.results.output;   
+            var newTitle = $.i18n.prop('instance_dialog_console_title', instances);
+            thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.eucadialog('addNote', 'instance-console-output', consoleOutput); 
             thisObj.consoleDialog.eucadialog('open');
           }else{

@@ -103,6 +103,13 @@
     _destroy : function() {
     },
 
+   _setOption: function(key, value) {
+      if (key === 'title') {
+        this.element.dialog('option', 'title', value);
+      }
+      $.Widget.prototype._setOption.apply(this, arguments);
+    },
+
     _activateSpinWheel : function() {
       var $spinWheel = $('<div>').addClass('status-readout').append(
                          $('<img>').attr('src','images/dots32.gif'),
