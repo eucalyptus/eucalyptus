@@ -112,7 +112,6 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.S3BucketEvent;
 import com.eucalyptus.reporting.event.S3BucketEvent.S3BucketAction;
-import com.eucalyptus.reporting.event.S3Event;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent.S3ObjectAction;
 import com.eucalyptus.reporting.event.SnapShotEvent;

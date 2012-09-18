@@ -21,7 +21,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 
 import com.eucalyptus.event.Event;
@@ -75,13 +77,13 @@ public class VolumeEvent implements Event {
                        final OwnerFullName ownerFullName,
                        final String availabilityZone ) {
     assertThat(actionInfo, notNullValue());
-    assertThat(uuid, notNullValue());
+    assertThat(uuid, not( isEmptyOrNullString() ));
     assertThat(sizeGB, notNullValue());
-    assertThat(volumeId, notNullValue());
+    assertThat(volumeId, not( isEmptyOrNullString() ));
     assertThat(availabilityZone, notNullValue());
-    assertThat(ownerFullName.getUserId(), notNullValue());
-    assertThat(ownerFullName.getAccountNumber(), notNullValue());
-    assertThat(ownerFullName.getUserName(), notNullValue());
+    assertThat(ownerFullName.getUserId(), not( isEmptyOrNullString() ));
+    assertThat(ownerFullName.getAccountNumber(), not( isEmptyOrNullString() ));
+    assertThat(ownerFullName.getUserName(), not( isEmptyOrNullString() ));
     this.ownerFullName = ownerFullName;
     this.actionInfo = actionInfo;
     this.uuid = uuid;

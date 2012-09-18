@@ -21,7 +21,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 
 import com.eucalyptus.event.Event;
 
@@ -89,8 +91,8 @@ public class SnapShotEvent implements Event {
                                                                    final String volumeUuid,
                                                                    final String volumeId ) {
     assertThat(size, notNullValue());
-    assertThat(volumeUuid, notNullValue());
-    assertThat(volumeId, notNullValue());
+    assertThat(volumeUuid, not( isEmptyOrNullString() ));
+    assertThat(volumeId, not( isEmptyOrNullString() ));
 
     return new CreateActionInfo( size, volumeUuid, volumeId );
   }
@@ -112,9 +114,9 @@ public class SnapShotEvent implements Event {
                          final String snapshotId,
                          final String userId ) {
     assertThat(actionInfo, notNullValue());
-    assertThat(uuid, notNullValue());
-    assertThat(userId, notNullValue());
-    assertThat(snapshotId, notNullValue());
+    assertThat(uuid, not( isEmptyOrNullString() ));
+    assertThat(userId, not( isEmptyOrNullString() ));
+    assertThat(snapshotId, not( isEmptyOrNullString() ));
     this.actionInfo = actionInfo;
     this.userId = userId;
     this.snapshotId = snapshotId;

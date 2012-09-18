@@ -21,7 +21,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 
 import com.eucalyptus.event.Event;
 
@@ -46,12 +48,12 @@ public class InstanceUsageEvent implements Event {
                              final Double value,
                              final long valueTimestamp ) {
 
-    assertThat( uuid, notNullValue() );
+    assertThat( uuid, not( isEmptyOrNullString() ) );
     assertThat( timestamp, notNullValue() );
-    assertThat( resourceName, notNullValue() );
-    assertThat( metric, notNullValue() );
+    assertThat( resourceName, not(isEmptyOrNullString()) );
+    assertThat( metric, not(isEmptyOrNullString()) );
     assertThat( sequenceNum, notNullValue() );
-    assertThat( dimension, notNullValue() );
+    assertThat( dimension, not(isEmptyOrNullString()) );
     assertThat( value, notNullValue() );
     assertThat( valueTimestamp, notNullValue() );
     this.uuid = uuid;

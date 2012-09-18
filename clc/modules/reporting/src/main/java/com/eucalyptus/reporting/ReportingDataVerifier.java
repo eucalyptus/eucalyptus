@@ -624,7 +624,7 @@ public final class ReportingDataVerifier {
         public void fire( final ReportingElasticIpDetachEvent input ) {
           if ( addressRelationMap.containsKey( input.getIpUuid() ) ) {
             RelationTimestamp rt = addressRelationMap.get(input.getIpUuid());
-            if ( rt != null && rt.relationId.equals( input.getInstanceUuid() ) && rt.timestamp < input.getTimestampMs() ) {
+            if ( rt != null && rt.relationId != null && rt.relationId.equals( input.getInstanceUuid() ) && rt.timestamp < input.getTimestampMs() ) {
               addressRelationMap.put( input.getIpUuid(), null );
             }
           }

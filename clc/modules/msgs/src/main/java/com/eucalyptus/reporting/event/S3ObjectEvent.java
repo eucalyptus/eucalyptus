@@ -21,7 +21,8 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
 import com.eucalyptus.util.OwnerFullName;
 
@@ -73,7 +74,7 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
                  @Nonnull final OwnerFullName ownerFullName,
                  @Nonnull final Long size ) {
     super( action, uuid, bucketName, ownerFullName, size );
-    assertThat(objectName, notNullValue());
+    assertThat(objectName, not( isEmptyOrNullString() ));
     this.objectName = objectName;
   }
 

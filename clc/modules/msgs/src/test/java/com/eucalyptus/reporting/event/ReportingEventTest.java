@@ -129,8 +129,8 @@ public class ReportingEventTest {
 
   @Test
   public void testInstanceEventCreation() {
-    final long timestamp = System.currentTimeMillis();
-    final long valueTimestamp = System.currentTimeMillis() - 2000;
+    final long timestamp = 1347987263899L;
+    final long valueTimestamp = timestamp - 2000L;
     final InstanceUsageEvent event = new InstanceUsageEvent(
             uuid( "i-00000001" ),
             timestamp,
@@ -149,10 +149,10 @@ public class ReportingEventTest {
     assertEquals( "sequence", 1, event.getSequenceNum() );
     assertEquals( "dimension", "dimension", event.getDimension() );
     assertEquals( "value", (Double)12.17, event.getValue() );
-    assertEquals( "event string", "[uuid:51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0,instanceId:i-00000001,instanceType:c1.medium,userId:eucalyptus,accountId:000000000000,cluster:CC_111,zone:PARTI00,disk:1,cpu:2]", event.toString() );
+    assertEquals( "event string", "InstanceUsageEvent [uuid=51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0, timestamp=1347987263899, resourceName=resource, metric=metric, sequenceNum=1, dimension=dimension, value=12.17, valueTimestamp=1347987261899]", event.toString() );
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected=AssertionError.class)
   public void testInstanceEventCreationFailure() {
     new InstanceUsageEvent(
         uuid( "i-00000001" ),

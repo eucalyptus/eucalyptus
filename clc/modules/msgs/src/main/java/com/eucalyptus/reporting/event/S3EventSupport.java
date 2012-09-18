@@ -20,7 +20,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
@@ -43,10 +45,10 @@ class S3EventSupport<E extends Enum<E>> implements Event {
                   @Nonnull final OwnerFullName ownerFullName,
                   @Nonnull final Long size ) {
     assertThat(action, notNullValue());
-    assertThat(uuid, notNullValue());
-    assertThat(bucketName, notNullValue());
+    assertThat(uuid, not( isEmptyOrNullString() ));
+    assertThat(bucketName, not(isEmptyOrNullString()));
     assertThat(ownerFullName, notNullValue());
-    assertThat(ownerFullName.getUserId(), notNullValue());
+    assertThat(ownerFullName.getUserId(), not(isEmptyOrNullString()));
     assertThat(size, notNullValue());
 
     this.action = action;

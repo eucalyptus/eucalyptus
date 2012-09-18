@@ -21,7 +21,8 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 
 import com.eucalyptus.event.Event;
 
@@ -39,25 +40,25 @@ public class InstanceCreationEvent implements Event{
     private String availabilityZone;
     
     public InstanceCreationEvent(String uuid, String instanceId,
-	    String instanceType, String userId, String userName, String accountId,
-	    String accountName, String availabilityZone) {
-	
-	assertThat(uuid, notNullValue());
-	assertThat(instanceId, notNullValue());
-	assertThat(instanceType, notNullValue());
-	assertThat(userId, notNullValue());
-	assertThat(userName, notNullValue());
-	assertThat(accountId, notNullValue());
-	assertThat(accountName, notNullValue());
+          String instanceType, String userId, String userName, String accountId,
+          String accountName, String availabilityZone) {
 
-	this.uuid = uuid;
-	this.instanceId = instanceId;
-	this.instanceType = instanceType;
-	this.userId = userId;
-	this.userName = userName;
-	this.accountId = accountId;
-	this.accountName = accountName;
-	this.availabilityZone = availabilityZone;
+      assertThat(uuid, not( isEmptyOrNullString() ));
+      assertThat(instanceId, not(isEmptyOrNullString()));
+      assertThat(instanceType, not(isEmptyOrNullString()));
+      assertThat(userId, not(isEmptyOrNullString()));
+      assertThat(userName, not(isEmptyOrNullString()));
+      assertThat(accountId, not(isEmptyOrNullString()));
+      assertThat(accountName, not(isEmptyOrNullString()));
+
+      this.uuid = uuid;
+      this.instanceId = instanceId;
+      this.instanceType = instanceType;
+      this.userId = userId;
+      this.userName = userName;
+      this.accountId = accountId;
+      this.accountName = accountName;
+      this.availabilityZone = availabilityZone;
 
     }
 
