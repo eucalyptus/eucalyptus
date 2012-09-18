@@ -55,10 +55,6 @@
              if($titleBar.find('.help-link').length <= 0)
                $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
 
-             $('.ui-widget-overlay').live("click", function() {
-               thisObj.close();
-             });
-
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){
                var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
                if (!$btn || $btn.length<=0) {
