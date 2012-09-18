@@ -23,11 +23,14 @@
     options : { },
     _init : function() {
       var $tmpl = $('html body div.templates').find('#dashboardTmpl').clone();       
-      var $div = $($tmpl.render($.i18n.map));
-      this._setInstSummary($div.find('#dashboard-content .instances'));
-      this._setStorageSummary($div.find('#dashboard-content .storage'));
-      this._setNetSecSummary($div.find('#dashboard-content .netsec')); 
-      $div.appendTo(this.element);
+      var $wrapper = $($tmpl.render($.extend($.i18n.map, help_dashboard)));
+      var $dashboard = $wrapper.children().first();
+      var $help = $wrapper.children().last();
+      this._setInstSummary($dashboard.find('#dashboard-content .instances'));
+      this._setStorageSummary($dashboard.find('#dashboard-content .storage'));
+      this._setNetSecSummary($dashboard.find('#dashboard-content .netsec')); 
+      $dashboard.appendTo(this.element);
+      this._addHelp($help);
     },
 
     _create : function() { 
@@ -66,6 +69,16 @@
         $container.maincontainer("changeSelected", e, {selected:'launcher'});
       });
       thisObj._reloadInstSummary($instObj);
+    },
+    _addHelp : function(help){
+      var thisObj = this;
+      var $header = this.element.find('.box-header');
+      $header.find('span').append(
+          $('<div>').addClass('help-link').append(
+            $('<a>').attr('href','#').text('?').click( function(evt){
+              thisObj._flipToHelp(evt,help);
+            })));
+      return $header;
     },
 
     _reloadInstSummary : function($instObj){
