@@ -62,26 +62,46 @@
 
 package com.eucalyptus.upgrade;
 
+import java.util.List;
+import org.apache.log4j.Logger;
+
 /**
  * Any Class implementing this interface will be registered as a candidate for usage during the upgrade procedure.
  */
 public abstract class AbstractUpgradeScript implements UpgradeScript, Comparable<UpgradeScript> {
-	protected int priority;
-	
-	protected AbstractUpgradeScript(int priority) {
-		this.priority = priority;
-	}
-	
-	public int getPriority() {
-		return priority;
-	}
-	
-    public int compareTo(UpgradeScript o) {
-        if(o.getPriority() == priority)
-            return 0 ;
-        if(o.getPriority() < priority)
-            return 1;
-        else
-            return -1;
-    }
+  protected final int priority;
+  protected final List<String> versionFrom;
+  protected final List<String> versionTo;
+  protected Logger LOG = Logger.getLogger( getClass() );
+
+  protected AbstractUpgradeScript( final int priority,
+                                   final List<String> versionFrom,
+                                   final List<String> versionTo ) {
+    this.priority = priority;
+    this.versionFrom = versionFrom;
+    this.versionTo = versionTo;
+  }
+
+  @Override
+  public Boolean accepts( final String from, final String to ) {
+    return versionFrom.contains(from) && versionTo.contains(to);
+  }
+
+  public int getPriority() {
+    return priority;
+  }
+
+  @Override
+  public void setLogger( final Logger log ) {
+    LOG = log;
+  }
+
+  public int compareTo(UpgradeScript o) {
+      if(o.getPriority() == priority)
+          return 0 ;
+      if(o.getPriority() < priority)
+          return 1;
+      else
+          return -1;
+  }
 }

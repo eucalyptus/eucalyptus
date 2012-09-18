@@ -30,6 +30,7 @@ import javax.persistence.EntityTransaction;
 import org.hibernate.Criteria;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
@@ -43,6 +44,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent;
@@ -339,6 +341,25 @@ public final class ReportingDataVerifier {
     return user;
   }
 
+  private static String getAccountNumberForUserId( final Map<String, String> userIdToAccountNumberMap,
+                                                   final String userId ) {
+    String accountNumber = userIdToAccountNumberMap.get( userId );
+
+    if ( accountNumber == null && !userIdToAccountNumberMap.containsKey(userId) ) {
+      final ReportingUser user = (ReportingUser) Entities.createCriteria( ReportingUser.class )
+          .setCacheable(false)
+          .setReadOnly(true)
+          .add( Restrictions.idEq( userId ) )
+          .uniqueResult();
+      if ( user != null ) {
+        accountNumber = user.getAccountId();
+      }
+      userIdToAccountNumberMap.put( userId, accountNumber );
+    }
+
+    return accountNumber;
+  }
+
   private static Address findAddress( final String uuid ) {
     return Iterables.getFirst( Iterables.filter(
         Iterables.concat( Addresses.getInstance().listValues(), Addresses.getInstance().listDisabledValues() ),
@@ -517,7 +538,7 @@ public final class ReportingDataVerifier {
           if ( Boolean.FALSE.equals(objectInfo.getDeleted()) ) {
             view.add( ObjectInfo.class, s3ObjectResource(
                 objectInfo.getBucketName(),
-                objectInfo.getObjectName(),
+                objectInfo.getObjectKey(),
                 objectInfo.getSize(),
                 objectInfo.getOwnerId() ) );
           }
@@ -565,19 +586,26 @@ public final class ReportingDataVerifier {
 
     @Override
     View buildView() {
+      final Map<String,String> userIdToAccountNumberMap = Maps.newHashMap();
 
       // Build address info, map key denotes existence
       final Map<String,RelationTimestamp> addressRelationMap = Maps.newHashMap();
       foreach( ReportingElasticIpCreateEvent.class, new Callback<ReportingElasticIpCreateEvent>() {
         @Override
         public void fire( final ReportingElasticIpCreateEvent input ) {
-          addressRelationMap.put( input.getUuid(), null );
+          RelationTimestamp rt = addressRelationMap.get(input.getUuid());
+          if ( rt == null || rt.timestamp < input.getTimestampMs() ) {
+            addressRelationMap.put( input.getUuid(), new RelationTimestamp( null, input.getTimestampMs() ) );
+          }
         }
       } );
       foreach(ReportingElasticIpDeleteEvent.class, new Callback<ReportingElasticIpDeleteEvent>() {
         @Override
         public void fire( final ReportingElasticIpDeleteEvent input ) {
-          addressRelationMap.remove(input.getUuid());
+          RelationTimestamp rt = addressRelationMap.get(input.getUuid());
+          if ( rt == null || rt.timestamp < input.getTimestampMs() ) {
+            addressRelationMap.remove(input.getUuid());
+          }
         }
       } );
       foreach(ReportingElasticIpAttachEvent.class, new Callback<ReportingElasticIpAttachEvent>() {
@@ -585,7 +613,7 @@ public final class ReportingDataVerifier {
         public void fire( final ReportingElasticIpAttachEvent input ) {
           if ( addressRelationMap.containsKey( input.getIpUuid() ) ) {
             RelationTimestamp rt = addressRelationMap.get(input.getIpUuid());
-            if ( rt == null || rt.timestamp < input.getTimestampMs() ) {
+            if ( rt == null || rt.relationId == null || rt.timestamp < input.getTimestampMs() ) {
               addressRelationMap.put( input.getIpUuid(), new RelationTimestamp( input.getInstanceUuid(), input.getTimestampMs() ) );
             }
           }
@@ -608,7 +636,7 @@ public final class ReportingDataVerifier {
       foreach(ReportingS3ObjectCreateEvent.class, new Callback<ReportingS3ObjectCreateEvent>() {
         @Override
         public void fire( final ReportingS3ObjectCreateEvent input ) {
-          s3ObjectList.add( new S3ObjectKey( input.getS3BucketName(), input.getS3ObjectName(), input.getSizeGB(), input.getUserId() ) );
+          s3ObjectList.add( new S3ObjectKey( input.getS3BucketName(), input.getS3ObjectName(), input.getSizeGB(), getAccountNumberForUserId( userIdToAccountNumberMap, input.getUserId() ) ) );
         }
       } );
       foreach(ReportingS3ObjectDeleteEvent.class, new Callback<ReportingS3ObjectDeleteEvent>() {
@@ -764,7 +792,7 @@ public final class ReportingDataVerifier {
   private static final class S3ObjectKey extends ResourceKey {
     private final String bucketName;
     private final String objectName;
-    private final long size; // we don't store the version so we have to do some voodoo based on the size
+    private final long size;
     private final String accountNumber;
 
     private S3ObjectKey( final String bucketName, final String objectName ) {
