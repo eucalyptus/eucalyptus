@@ -946,13 +946,13 @@
                 instances += instance.id+' ';
               });
               instances = $.trim(instances);
-              notifySuccess($.i18n.prop('instance_run_success', instances));
+              notifySuccess(null, $.i18n.prop('instance_run_success', instances));
               //TODO: move to instance page?
               var $container = $('html body').find(DOM_BINDING['main']);
               $container.maincontainer("changeSelected",null, {selected:'instance'});
 
             } else {
-              notifyError($.i18n.prop('instance_run_error'));
+              notifyError(null, $.i18n.prop('instance_run_error'));
               //TODO: clear launch-instance wizard?
               var $container = $('html body').find(DOM_BINDING['main']);
               $container.maincontainer("clearSelected");
@@ -961,7 +961,7 @@
             }
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('instance_run_error'));
+            notifyError(null, $.i18n.prop('instance_run_error'));
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'launcher'});

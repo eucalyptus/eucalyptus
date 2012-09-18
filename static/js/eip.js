@@ -20,7 +20,9 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.eip', $.eucalyptus.eucawidget, {
-    options : { },
+    options : { 
+      from_instance : false,
+    },
     baseTable : null,
     tableWrapper : null,
     releaseDialog : null,
@@ -139,10 +141,17 @@
          title: eip_associate_dialog_title,
          buttons: {
            'associate': { text: eip_associate_dialog_associate_btn, click: function() {
-               thisObj._associateIp(
-                 $eip_associate_dialog.find("#eip-to-associate").html(),
-                 $eip_associate_dialog.find('#eip-associate-instance-id').val()
-               );
+               if(thisObj.options.from_instance){
+                 thisObj._associateIp(
+                   $eip_associate_dialog.find('#eip-associate-instance-id').val(),
+                   $eip_associate_dialog.find('#to-associate').html()
+                 );
+               }else{
+                 thisObj._associateIp(
+                   $eip_associate_dialog.find('#to-associate').html(),
+                   $eip_associate_dialog.find('#eip-associate-instance-id').val()
+                 );
+               }
                $eip_associate_dialog.eucadialog("close");
               } 
             },
@@ -223,14 +232,14 @@
                 notifySuccess(null, $.i18n.prop('eip_release_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError($.i18n.prop('eip_release_error', eipId));
+                notifyError(null, $.i18n.prop('eip_release_error', eipId));
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_release_error', eipId));
+              notifyError(null, $.i18n.prop('eip_release_error', eipId));
             }
           })(eipId)
         });
@@ -256,14 +265,14 @@
                 notifySuccess(null, $.i18n.prop('eip_disassociate_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError($.i18n.prop('eip_disassociate_error', eipId));
+                notifyError(null, $.i18n.prop('eip_disassociate_error', eipId));
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_disassociate_error', eipId));
+              notifyError(null, $.i18n.prop('eip_disassociate_error', eipId));
             }
           })(eipId)
         });
@@ -288,12 +297,12 @@
                 thisObj.tableWrapper.eucatable('refreshTable');
                 thisObj.tableWrapper.eucatable('glowRow', ip);
               } else {
-                notifyError($.i18n.prop('eip_allocate_error'));
+                notifyError(null, $.i18n.prop('eip_allocate_error'));
               }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_allocate_error'));
+              notifyError(null, $.i18n.prop('eip_allocate_error'));
             }
         });
     },
@@ -313,34 +322,52 @@
               notifySuccess(null, $.i18n.prop('eip_associate_success', publicIp, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
           }
       });
     },
 
     _initAssociateDialog : function(dfd) {  // should resolve dfd object
-      thisObj = this;
-      var $instanceSelector = thisObj.associateDialog.find('#eip-associate-instance-id').html('');
-      var results = describe('instance');
-      var volume_ids = [];
-      if ( results ) {
-        for( res in results) {
-          instance = results[res];
-          if ( instance.state === 'running' ) 
-            volume_ids.push(instance.id);
+      var thisObj = this;
+      var $selector = thisObj.associateDialog.find('#eip-associate-instance-id').html('');
+      if(! thisObj.options.from_instance){ 
+        var results = describe('instance');
+        var inst_ids = [];
+        if ( results ) {
+          for( res in results) {
+            var instance = results[res];
+            if ( instance.state === 'running' ) 
+              inst_ids.push(instance.id);
+          }
         }
+        if ( inst_ids.length === 0 )
+          this.associateDialog.eucadialog('showError', no_running_instances);
+        $selector.autocomplete({
+            source: inst_ids
+        });
+        $selector.watermark(instance_id_watermark);
+      }else{ // called from instance landing page
+        var results = describe('eip');
+        var addresses = [];
+        if (results) {
+          for( res in results){
+            var addr = results[res];
+            if ( ! addr.instance_id )
+              addresses.push(addr.public_ip);
+          }
+        } 
+        if (addresses.length ===0 )
+          this.associateDialog.eucadialog('showError', no_available_address);
+        $selector.autocomplete({
+          source: addresses
+        });
+        $selector.watermark(address_watermark);
       }
-      if ( volume_ids.length == 0 )
-        this.associateDialog.eucadialog('showError', no_running_instances);
-      $instanceSelector.autocomplete({
-        source: volume_ids
-      });
-      $instanceSelector.watermark(instance_id_msg);
       dfd.resolve();
     },
 
@@ -360,26 +387,14 @@
     _disassociateAction : function(){
       var thisObj = this;
       var rows = thisObj.tableWrapper.eucatable('getSelectedRows');
-      if ( rows.length > 0 ) {
-        var matrix = [];
-        $.each(rows, function(idx, ip){
-          matrix.push([ip.public_ip, ip.instance_id]); 
-        });
-        this.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
-        this.disassociateDialog.dialog('open');
-      }
+      thisObj.dialogDisassociateIp(rows);
     },
 
 
     _associateAction : function() {
       var thisObj = this;
-      eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-
-      if ( eipsToAssociate.length == 1 ) {
-        thisObj.associateDialog.find("#eip-to-associate").html(eipsToAssociate[0]);
-        thisObj.associateDialog.find('#eip-associate-instance-txt').html(eip_associate_dialog_text(eipsToAssociate[0]));
-        thisObj.associateDialog.dialog('open');
-      }
+      var eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      thisObj.dialogAssociateIp(eipsToAssociate[0], null);
     },
 
     _createAction : function() {
@@ -387,6 +402,29 @@
     },
 
 /**** Public Methods ****/
+    dialogAssociateIp : function(ip, instance){
+      var thisObj = this;
+      if(ip){
+        thisObj.associateDialog.find('#to-associate').html(ip);
+        thisObj.associateDialog.find('#eip-associate-instance-txt').html(eip_associate_dialog_text(ip));
+        thisObj.associateDialog.dialog('open');
+      }else if(instance){
+        thisObj.associateDialog.find('#to-associate').html(instance);
+        thisObj.associateDialog.find('#eip-associate-instance-txt').html(instance_dialog_associate_ip_text(instance));
+        thisObj.associateDialog.dialog('open');
+      }
+    },
+    dialogDisassociateIp : function(addresses){
+      var thisObj = this;
+      if ( addresses.length > 0 ) {
+        var matrix = [];
+        $.each(addresses, function(idx, ip){
+          matrix.push([ip.public_ip, ip.instance_id]); 
+        });
+        thisObj.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
+        thisObj.disassociateDialog.dialog('open');
+      }
+    },
     close: function() {
       this._super('close');
     },

@@ -184,7 +184,7 @@
           $volSelector.autocomplete({
             source: volume_ids
           });
-          $volSelector.watermark(volume_id_msg);
+          $volSelector.watermark(volume_id_watermark);
         }
       }
       dfd.resolve();
@@ -215,17 +215,17 @@
           (function(snapshotId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess($.i18n.prop('snapshot_delete_success', snapshotId));
+                notifySuccess(null,$.i18n.prop('snapshot_delete_success', snapshotId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError($.i18n.prop('snapshot_delete_error', snapshotId));
+                notifyError(null, $.i18n.prop('snapshot_delete_error', snapshotId));
               }
            }
           })(snapshotId),
           error:
           (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('snapshot_delete_error', snapshotId));
+              notifyError(null, $.i18n.prop('snapshot_delete_error', snapshotId));
             }
           })(snapshotId)
         });
@@ -244,16 +244,16 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var snapId = data.results.id;
-              notifySuccess($.i18n.prop('snapshot_create_success', snapId, volumeId));
+              notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
-              notifyError($.i18n.prop('snapshot_create_error', volumeId));
+              notifyError(null, $.i18n.prop('snapshot_create_error', volumeId));
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_create_error', volumeId));
+            notifyError(null, $.i18n.prop('snapshot_create_error', volumeId));
           }
       });
     },

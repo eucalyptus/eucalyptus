@@ -163,6 +163,18 @@ function attachVolume(volume, instance){
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAttachVolume', volume, instance);
 }
 
+function associateIp(instance) {
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip('dialogAssociateIp', null, instance);
+}
+
+function disassociateIp(address){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
+}
+
 function logout(){
   $.cookie('session-id',''); 
   location.href='/';

@@ -319,11 +319,11 @@
 
      // TODO: assuming associate-address is valid for only running/pending instances
      if(numSelected === 1 && ('running' in stateMap || 'pending' in stateMap) && ($.inArray(instIds[0], stateMap['running']>=0) || $.inArray(instIds[0], stateMap['pending'] >=0)))
-       menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){; }}
+       menuItems['associate'] = {"name":instance_action_associate, callback: function(key, opt){thisObj._associateAction(); }}
   
      // TODO: assuming disassociate-address is for only one selected instance 
      if(numSelected  === 1 && instIds[0] in thisObj.instIpMap)
-       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){;}}
+       menuItems['disassociate'] = {"name":instance_action_disassociate, callback: function(key, opt){thisObj._disassociateAction();}}
  
      return menuItems;
     },
@@ -379,17 +379,30 @@
     _terminateInstances : function(){
       var thisObj = this;
       var instances = thisObj.termDialog.eucadialog('getSelectedResources',0);
-      instances = instances.join(' ');
+      var toTerminate = instances.slice(0);
+      var instIds = '';
+      for(i=0; i<instances.length; i++)
+        instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
           type:"GET",
-          url:"/ec2?Action=TerminateInstances&InstanceId=" + instances,
+          url:"/ec2?Action=TerminateInstances"+instIds,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:true,
           success: function(data, textStatus, jqXHR){
-            if ( data.results && data.results == true ) {
-              notifySuccess(null, instance_terminate_success + ' ' + instances);
-              thisObj.tableWrapper.eucatable('refreshTable');
+            if(data.results){
+              $.each(data.results, function(idx, instance){
+                var toDel = toTerminate.indexOf(instance.id);
+                if(toDel>=0)
+                  toTerminate.splice(toDel, 1);
+              });
+
+              if(toTerminate.length <=0){
+                notifySuccess(null, instance_terminate_success + ' ' + instances);
+                thisObj.tableWrapper.eucatable('refreshTable');
+              }else{
+                notifyError(null, instance_terminate_error + ' ' + toTerminate);
+              }
             } else {
               notifyError(null, instance_terminate_error + ' ' + instances);
             }
@@ -453,20 +466,31 @@
     _stopInstances : function(){
       var thisObj = this;
       var instances = thisObj.stopDialog.eucadialog('getSelectedResources',0);
-      instances = instances.join(' ');
+      var toStop = instances.slice(0);
+      var instIds = '';
+      for(i=0; i<instances.length; i++)
+        instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
           type:"GET",
-          url:"/ec2?Action=StopInstances&InstanceId=" + instances,
+          url:"/ec2?Action=StopInstances"+instIds,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:true,
           success: function(data, textStatus, jqXHR){
-            if ( data.results && data.results == true ) {
-              notifySuccess(null, instance_stop_success + ' ' + instances);
-              thisObj.tableWrapper.eucatable('refreshTable');
-            } else {
+            if(data.results){
+              $.each(data.results, function(idx, instance){
+                var stopIdx = toStop.indexOf(instance.id);
+                if(stopIdx>=0)
+                  toStop.splice(stopIdx, 1);
+              });
+              if(toStop.length <=0){
+                notifySuccess(null, instance_stop_success + ' ' + instances);
+                thisObj.tableWrapper.eucatable('refreshTable');
+              }else{
+                notifyError(null, instance_stop_error + ' ' + toStop);
+              }
+            }else
               notifyError(null, instance_stop_error + ' ' + instances);
-            }
           },
           error: function(jqXHR, textStatus, errorThrown){
             notifyError(null, instance_stop_error + ' ' + instances);
@@ -476,18 +500,30 @@
     _startInstances : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
-      instances = instances.join(' ');
+      var toStart = instances.slice(0);
+      var instIds = '';
+      for(i=0; i<instances.length; i++)
+        instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
         type:"GET",
-        url:"/ec2?Action=StartInstances&InstanceId=" + instances,
+        url:"/ec2?Action=StartInstances"+instIds, 
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
         async:true,
         success: function(data, textStatus, jqXHR){
-          if ( data.results && data.results == true ) {
-            notifySuccess(null, $.i18n.prop('instance_start_success',instances));
-            thisObj.tableWrapper.eucatable('refreshTable');
-          } else {
+          if(data.results){
+            $.each(data.results, function(idx, instance){
+              var startIdx = toStart.indexOf(instance.id);
+              if(startIdx>=0)
+                toStart.splice(startIdx, 1);
+            });
+            if(toStart.length <=0){
+              notifySuccess(null, $.i18n.prop('instance_start_success',instances));
+              thisObj.tableWrapper.eucatable('refreshTable');
+            }else{
+              notifyError(null, instance_start_error + ' ' + toStart);
+            }
+          }else {
             notifyError(null, instance_start_error + ' ' + instances);
           }
         },
@@ -635,6 +671,25 @@
             }
           })(volumeId)
       });
+    },
+    _associateAction : function(){
+      var thisObj = this;
+      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      associateIp(instance);
+    },
+    _disassociateAction : function(){
+      var thisObj = this;
+      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6)[0];
+      var results = describe('eip');
+      var addr = null;
+      for(i in results){
+        if (results[i].public_ip === ip){
+          addr = results[i];
+          break;
+        }
+      }
+      if(addr)
+        disassociateIp(addr);
     },
     _launchMore : function(){
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
