@@ -44,7 +44,7 @@
 
     updateSelected : function (selected, filter) {
       if(this._curSelected === selected){
-        $('html body').trigger('click');
+        //$('html body').trigger('click'); // Manage resources --> uncomment this line
         return;
       }
 
