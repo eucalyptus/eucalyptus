@@ -174,13 +174,8 @@ upgrade_db() {
   UPGRADE_SRC_DIR="euca.upgrade.old.dir=${OLD_EUCA}" 
   UPGRADE_DEST_VERSION="euca.upgrade.new.version=${NEW_EUCA_VERSION}"
   UPGRADE_SRC_VERSION="euca.upgrade.old.version=${OLD_EUCA_VERSION}" 
-  UPGRADE_DEST_DB="euca.upgrade.destination=com.eucalyptus.upgrade.PgsqldbDestination"
-  if [ "${OLD_EUCA_VERSION:0:7}" == "eee-2.0" -o "${OLD_EUCA_VERSION:0:3}" == "3.0" ]; then
-    UPGRADE_SRC_DB="euca.upgrade.source=groovy:mysqldbsource"
-    CLASSPATH=${CLASSPATH}:$( echo ${OLD_EUCA}/usr/share/eucalyptus/eucalyptus-core-*.jar ):$( echo ${OLD_EUCA}/usr/share/eucalyptus/mysql-connector-java-commercial-*-bin.jar ):$( echo ${OLD_EUCA}/usr/share/eucalyptus/eucalyptus-mysqldb-*.jar )
-  else
-    UPGRADE_SRC_DB="euca.upgrade.source=com.eucalyptus.upgrade.HsqldbSource"
-  fi
+  UPGRADE_DEST_DB="euca.upgrade.destination=com.eucalyptus.upgrade.PostgresqlDestination"
+  UPGRADE_SRC_DB="NONE"
   # Arbitrary string of properly formatted opts passed direct to jvm"
   UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m"
   # Setup commands 

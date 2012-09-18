@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 /**
  * Any Class implementing this interface will be registered as a candidate for usage during the upgrade procedure.
  */
-public abstract class AbstractUpgradeScript implements UpgradeScript, Comparable<UpgradeScript> {
+public abstract class AbstractUpgradeScript implements UpgradeScript {
   protected final int priority;
   protected final List<String> versionFrom;
   protected final List<String> versionTo;
@@ -87,6 +87,7 @@ public abstract class AbstractUpgradeScript implements UpgradeScript, Comparable
     return versionFrom.contains(from) && versionTo.contains(to);
   }
 
+  @Override
   public int getPriority() {
     return priority;
   }
@@ -96,6 +97,7 @@ public abstract class AbstractUpgradeScript implements UpgradeScript, Comparable
     LOG = log;
   }
 
+  @Override
   public int compareTo(UpgradeScript o) {
       if(o.getPriority() == priority)
           return 0 ;

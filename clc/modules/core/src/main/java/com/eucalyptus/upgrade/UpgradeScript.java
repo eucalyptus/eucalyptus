@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 /**
  * Any Class implementing this interface will be registered as a candidate for usage during the upgrade procedure.
  */
-public interface UpgradeScript {
+public interface UpgradeScript extends Comparable<UpgradeScript>{
   /**
    * Indicates whether this upgrade script handles upgrades from version <tt>from</tt> to version <tt>to</tt>.
    * 
