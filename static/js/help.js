@@ -160,13 +160,18 @@ var help_volume = {
 
 var help_sgroup = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_create_security_group.html', function(data){help_sgroup.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_manage_security_groups.html', function(data){help_sgroup.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_security_group.html', function(data){help_sgroup.dialog_add_content=data})
+    loadHtml('help/'+arg.language+'/console_edit_security_group.html', function(data){help_sgroup.dialog_edit_content=data})
+    loadHtml('help/'+arg.language+'/console_delete_security_group.html', function(data){help_sgroup.dialog_delete_content=data})
   },
   revert_button: "Back to security group",
   landing_title: "",  // TODO: deprecate
   landing_content: "",
   dialog_add_title: "",
   dialog_add_content: "",
+  dialog_edit_title: "",
+  dialog_edit_content: "",
   dialog_delete_title: "",
   dialog_delete_content: "",
 }

@@ -424,7 +424,14 @@
               <div id="sgroup-rules-list"></div>
               <p class="required-hint">{{!: required_fields }}</p>
           </div>
-
+          <div id="sgroup-add-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_add_content }}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
 
@@ -492,7 +499,14 @@
               <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
               <div id="sgroup-rules-list"></div>
           </div>
-
+          <div id="sgroup-edit-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_edit_content }}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
 
@@ -502,6 +516,14 @@
             <p>{{!: sgroup_dialog_del_text }}</p>
             <div class="selected-resources"></div>
           </div>  
+          <div id="sgroup-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_delete_content }}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
         </div>
       </script>
       <!-- END Security Group dialog template -->

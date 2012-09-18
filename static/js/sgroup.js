@@ -81,15 +81,17 @@
       $("#sgroups-selector").change( function() { thisObj.reDrawTable() } );
 
       var $tmpl = $('html body').find('.templates #sgroupDelDlgTmpl').clone();
-      $del_dialog = $($tmpl.render($.i18n.map));
-
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
+      var $del_dialog = $rendered.children().first();
+      var $del_help = $rendered.children().last();
       this.delDialog = $del_dialog.eucadialog({
          id: 'sgroups-delete',
          title: sgroup_dialog_del_title,
          buttons: {
            'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
-         }
+         },
+         help: {title: help_sgroup['dialog_delete_title'], content: $del_help},
        });
 
       var createButtonId = 'sgroup-add-btn';
@@ -97,6 +99,7 @@
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
       var $add_dialog = $rendered.children().first();
       var $add_help = $rendered.children().last();
+
       this.addDialog = $add_dialog.eucadialog({
         id: 'sgroups-add',
         title: sgroup_dialog_add_title,
@@ -154,7 +157,7 @@
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
-        help: {title: help_volume['dialog_add_title'], content: $add_help},
+        help: {title: help_sgroup['dialog_add_title'], content: $add_help},
         user_val : function(index) {
                     thisObj.rulesList.splice(index, 1);
                     thisObj._refreshRulesList(thisObj.addDialog);
@@ -258,14 +261,12 @@
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
-        help: {title: help_volume['dialog_add_title'], content: $add_help},
+        help: {title: help_sgroup['dialog_edit_title'], content: $edit_help},
         user_val : function(index) {
                     if (thisObj.rulesList[index].isnew) {
-                        alert("edit: deleting new rule "+index);
                         thisObj.rulesList.splice(index, 1);
                     }
                     else {
-                        alert("edit: deleting old rule "+index);
                         thisObj.rulesList[index].deletethis = true;
                     }
                     thisObj._refreshRulesList(thisObj.editDialog);
