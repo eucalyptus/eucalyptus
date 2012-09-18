@@ -70,7 +70,7 @@ public class UsageTotalsArtEntity
 {
 	private final InstanceUsageArtEntity instanceTotals;
 	private final VolumeUsageArtEntity volumeTotals;
-	private final S3ObjectUsageArtEntity s3ObjectTotals;
+	private final BucketUsageArtEntity bucketTotals;
 	private final VolumeSnapshotUsageArtEntity volumeSnapshotTotals;
 	private final ElasticIpUsageArtEntity elasticIpTotals;
 	private final Map<String,InstanceUsageArtEntity> typeTotals;
@@ -79,7 +79,7 @@ public class UsageTotalsArtEntity
 	{
 		this.instanceTotals = new InstanceUsageArtEntity();
 		this.volumeTotals = new VolumeUsageArtEntity();
-		this.s3ObjectTotals = new S3ObjectUsageArtEntity();
+		this.bucketTotals = new BucketUsageArtEntity();
 		this.volumeSnapshotTotals = new VolumeSnapshotUsageArtEntity();
 		this.elasticIpTotals = new ElasticIpUsageArtEntity();
 		this.typeTotals = new HashMap<String,InstanceUsageArtEntity>();
@@ -95,9 +95,9 @@ public class UsageTotalsArtEntity
 		return this.volumeTotals;
 	}
 	
-	public S3ObjectUsageArtEntity getS3ObjectTotals()
+	public BucketUsageArtEntity getBucketTotals()
 	{
-		return this.s3ObjectTotals;
+		return this.bucketTotals;
 	}
 	
 	public VolumeSnapshotUsageArtEntity getSnapshotTotals()

@@ -29,47 +29,47 @@ import java.util.*;
  * 
  * <p>In all cases, durations will be truncated according to report beginning and end.
  */
-public class AttachDurationCalculator
+public class AttachDurationCalculator<A, B>
 {
 	// resourceId -> attachedResourceId -> SortedSet -> timestampMs
-	private final Map<String,Map<String,TreeSet<Long>>> attachments;
+	private final Map<A,Map<B,TreeSet<Long>>> attachments;
 	private final long reportBeginMs;
 	private final long reportEndMs;
 	
 	public AttachDurationCalculator(long reportBeginMs, long reportEndMs)
 	{
-		this.attachments = new HashMap<String,Map<String,TreeSet<Long>>>();
+		this.attachments = new HashMap<A,Map<B,TreeSet<Long>>>();
 		this.reportBeginMs = reportBeginMs;
 		this.reportEndMs = reportEndMs;
 	}
 
-	public void attach(String resourceId, String attachedResourceId, long timestampMs)
+	public void attach(A resourceKey, B attachedKey, long timestampMs)
 	{
 		if (timestampMs > reportEndMs) return;  //Attachment falls entirely outside report boundaries
-		if (! attachments.containsKey(resourceId)) {
-			attachments.put(resourceId, new HashMap<String,TreeSet<Long>>());
+		if (! attachments.containsKey(resourceKey)) {
+			attachments.put(resourceKey, new HashMap<B,TreeSet<Long>>());
 		}
-		Map<String,TreeSet<Long>> innerMap = attachments.get(resourceId);
-		if (!innerMap.containsKey(attachedResourceId)) {
-			innerMap.put(attachedResourceId, new TreeSet<Long>());
+		Map<B,TreeSet<Long>> innerMap = attachments.get(resourceKey);
+		if (!innerMap.containsKey(attachedKey)) {
+			innerMap.put(attachedKey, new TreeSet<Long>());
 		}
-		innerMap.get(attachedResourceId).add(Math.max(reportBeginMs, timestampMs));
+		innerMap.get(attachedKey).add(Math.max(reportBeginMs, timestampMs));
 	}
 	
 	/**
 	 * @return duration in milliseconds of how long the attachment was
 	 */
-	public long detach(String resourceId, String attachedResourceId, long timestampMs)
+	public long detach(A resourceKey, B attachedResourceKey, long timestampMs)
 	{
 		if (timestampMs < reportBeginMs) return 0l; //Attachment falls entirely outside report boundaries
-		if (! attachments.containsKey(resourceId)) {
-			attachments.put(resourceId, new HashMap<String,TreeSet<Long>>());
+		if (! attachments.containsKey(resourceKey)) {
+			attachments.put(resourceKey, new HashMap<B,TreeSet<Long>>());
 		}
-		Map<String,TreeSet<Long>> innerMap = attachments.get(resourceId);
-		if (!innerMap.containsKey(attachedResourceId)) {
-			innerMap.put(attachedResourceId, new TreeSet<Long>());
+		Map<B,TreeSet<Long>> innerMap = attachments.get(resourceKey);
+		if (!innerMap.containsKey(attachedResourceKey)) {
+			innerMap.put(attachedResourceKey, new TreeSet<Long>());
 		}
-		TreeSet<Long> timestamps = innerMap.get(attachedResourceId);
+		TreeSet<Long> timestamps = innerMap.get(attachedResourceKey);
 		Long attachTimestamp = timestamps.floor(timestampMs);
 		if (attachTimestamp != null) {
 			return (Math.min(timestampMs, reportEndMs) - attachTimestamp.longValue());

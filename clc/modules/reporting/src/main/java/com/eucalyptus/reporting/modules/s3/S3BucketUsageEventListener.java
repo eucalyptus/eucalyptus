@@ -32,7 +32,6 @@ import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event.S3BucketEvent;
-import com.eucalyptus.reporting.event_store.ReportingS3BucketEventStore;
 import com.google.common.base.Preconditions;
 
 public class S3BucketUsageEventListener implements EventListener<S3BucketEvent>{
@@ -57,16 +56,17 @@ public class S3BucketUsageEventListener implements EventListener<S3BucketEvent>{
         getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
             .getAccount().getAccountNumber(), user.getName());
 
-        final ReportingS3BucketEventStore eventStore = getReportingS3BucketEventStore();
-        switch (event.getAction()) {
-          case BUCKETCREATE:
-            eventStore.insertS3BucketCreateEvent( event.getBucketName(), event.getOwner().getUserId(), timeInMs);
-            break;
-          case BUCKETDELETE:
-            eventStore.insertS3BucketDeleteEvent(event.getBucketName(), timeInMs); 
-            break;
-    
-        }
+// TODO: We no longer track buckets separately!!
+//        final ReportingS3BucketEventStore eventStore = getReportingS3BucketEventStore();
+//        switch (event.getAction()) {
+//          case BUCKETCREATE:
+//            eventStore.insertS3BucketCreateEvent( event.getBucketName(), event.getOwner().getUserId(), timeInMs);
+//            break;
+//          case BUCKETDELETE:
+//            eventStore.insertS3BucketDeleteEvent(event.getBucketName(), timeInMs); 
+//            break;
+//    
+//        }
       } catch (AuthException e) {
           LOG.error("Unable fire snap shot reporting event", e.getCause());
       }
@@ -78,10 +78,6 @@ public class S3BucketUsageEventListener implements EventListener<S3BucketEvent>{
 
     protected ReportingUserCrud getReportingUserCrud() {
       return ReportingUserCrud.getInstance();
-    }
-
-    protected ReportingS3BucketEventStore getReportingS3BucketEventStore() {
-      return ReportingS3BucketEventStore.getInstance();
     }
 
     protected long getCurrentTimeMillis() {

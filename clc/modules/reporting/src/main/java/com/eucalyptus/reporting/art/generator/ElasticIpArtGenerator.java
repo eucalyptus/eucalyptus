@@ -113,7 +113,7 @@ public class ElasticIpArtGenerator
 		
 		/* Find attachment start times
 		 */
-		AttachDurationCalculator durationCalc = new AttachDurationCalculator(report.getBeginMs(), report.getEndMs());
+		AttachDurationCalculator<String,String> durationCalc = new AttachDurationCalculator<String,String>(report.getBeginMs(), report.getEndMs());
 		iter = wrapper.scanWithNativeQuery( "scanElasticIpAttachEvents" );
 		while (iter.hasNext()) {
 			ReportingElasticIpAttachEvent attachEvent = (ReportingElasticIpAttachEvent) iter.next();

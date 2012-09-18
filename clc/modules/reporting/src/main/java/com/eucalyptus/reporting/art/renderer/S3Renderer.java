@@ -6,13 +6,9 @@ import java.io.OutputStreamWriter;
 import java.util.Date;
 
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
-import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
-import com.eucalyptus.reporting.art.entity.BucketArtEntity;
+import com.eucalyptus.reporting.art.entity.BucketUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
-import com.eucalyptus.reporting.art.entity.S3ObjectUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
-import com.eucalyptus.reporting.art.entity.VolumeArtEntity;
-import com.eucalyptus.reporting.art.entity.VolumeUsageArtEntity;
 import com.eucalyptus.reporting.art.renderer.document.Document;
 import com.eucalyptus.reporting.units.SizeUnit;
 import com.eucalyptus.reporting.units.TimeUnit;
@@ -48,16 +44,16 @@ class S3Renderer
         for (String accountName: report.getAccounts().keySet()) {
         	AccountArtEntity account = report.getAccounts().get(accountName);
         	doc.newRow().addLabelCol(1, "Account: " + accountName).addValCol("cumul.");
-        	addUsageCols(doc, account.getUsageTotals().getS3ObjectTotals(),units);
+        	addUsageCols(doc, account.getUsageTotals().getBucketTotals(),units);
         	for (String userName: account.getUsers().keySet()) {
         		UserArtEntity user = account.getUsers().get(userName);
         		doc.newRow().addLabelCol(2, "User: " + userName)
         		.addValCol("cumul.");
-        		addUsageCols(doc, user.getUsageTotals().getS3ObjectTotals(),units);
-        		for (String bucketName: user.getBuckets().keySet()) {
-        			BucketArtEntity bucket = user.getBuckets().get(bucketName);
+        		addUsageCols(doc, user.getUsageTotals().getBucketTotals(),units);
+        		for (String bucketName: user.getBucketUsage().keySet()) {
+        			BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
         			doc.newRow().addValCol(bucketName);
-        			addUsageCols(doc, bucket.getTotalUsage(), units);
+        			addUsageCols(doc, usage, units);
         		}
         	}
         }
@@ -66,12 +62,12 @@ class S3Renderer
      
 	}
 
-	public static Document addUsageCols(Document doc, S3ObjectUsageArtEntity entity, Units units)
+	public static Document addUsageCols(Document doc, BucketUsageArtEntity entity, Units units)
 		throws IOException
 	{
 		doc.addValCol(entity.getObjectsNum());
 		doc.addValCol(UnitUtil.convertSize(entity.getSizeGB(), SizeUnit.GB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSizeTime(entity.getGBsecs(), SizeUnit.GB,
+		doc.addValCol(UnitUtil.convertSizeTime(entity.getGBSecs(), SizeUnit.GB,
 				units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
 		return doc;
 	}
