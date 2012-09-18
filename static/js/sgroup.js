@@ -216,6 +216,7 @@
         'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
               thisObj._storeRule(thisObj.editDialog);    // flush rule from form into array
               // need to remove rules flagged for deletion, then add new ones to avoid conflicts
+              var name = thisObj.editDialog.find('#sgroups-edit-group-name').html();
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
@@ -528,6 +529,7 @@
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
       thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
+      thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
       thisObj._refreshRulesList(thisObj.editDialog);
     },
