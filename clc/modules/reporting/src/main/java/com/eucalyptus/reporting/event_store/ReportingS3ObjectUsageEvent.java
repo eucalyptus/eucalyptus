@@ -28,13 +28,17 @@ import org.hibernate.annotations.Entity;
 @javax.persistence.Entity
 @PersistenceContext(name = "eucalyptus_reporting")
 @Table(name = "reporting_s3_object_usage_events")
-public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
+public class ReportingS3ObjectUsageEvent
+	extends ReportingEventSupport
+{
     private static final long serialVersionUID = 1L;
 
     @Column(name = "bucket_name", nullable = false)
     protected String bucketName;
     @Column(name = "object_name", nullable = false)
     protected String objectName;
+	@Column(name="object_version", nullable=true) //version can be null as per disc with Zach
+	protected String objectVersion;
     @Column(name = "user_id", nullable = false)
     protected String userId;
 	@Column(name="get_requests_num_cumulative", nullable=false)
@@ -44,11 +48,12 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     }
 
     ReportingS3ObjectUsageEvent(String s3BucketName, String s3ObjectName,
-	    long getRequestsNumCumulative,
+	    String objectVersion, long getRequestsNumCumulative,
 	    long timestampMs, String userId)
 	{
     	this.bucketName = s3BucketName;
     	this.objectName = s3ObjectName;
+    	this.objectVersion = objectVersion;
     	this.timestampMs = timestampMs;
     	this.getRequestsNumCumulative = getRequestsNumCumulative;
     	this.userId = userId;
@@ -68,6 +73,11 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
 	{
 		return getRequestsNumCumulative;
 	}
+	
+	public String getObjectVersion()
+	{
+		return objectVersion;
+	}
 
     public String getUserId()
     {
@@ -78,7 +88,6 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
 				.user( userId )
-				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", bucketName )
 				.relation( ReportingS3ObjectCreateEvent.class, "s3ObjectName", objectName )
 				.set();
 	}
