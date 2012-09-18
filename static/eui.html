@@ -429,6 +429,8 @@
         <div id="sgroups-edit-dialog" class="euca-dialog">
           <div id="sgroups-edit-group-name"></div>
           <div id="sgroups-edit-group-desc"></div>
+          <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
+          <div id="sgroup-hidden-name" style='display: none;'></div>
           
           <div class="rules inner-box clearfix">
               <h3>Rules</h3>
@@ -460,7 +462,7 @@
                 </select>
               </div>
 
-              <div id="sgroup-more-rules" style='display: block;'>
+              <div id="sgroup-more-rules" style='display: none;'>
                 <div class="form-row">
                   <label for="sgroup-ports" class="required-label">{{!>sgroup_dialog_add_ports}}</label>
                   <input type="text" id="sgroup-ports" class="required"/>
