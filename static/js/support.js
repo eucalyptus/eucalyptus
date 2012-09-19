@@ -184,6 +184,7 @@ function formatDateTime(data) {
  d = new moment(data);
  return d.format(TIME_FORMAT);
 }
+
 function startLaunchWizard(filter) {
   var $container = $('html body').find(DOM_BINDING['main']);
   $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
