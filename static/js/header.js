@@ -76,7 +76,7 @@
          $('<li>').append(
            $('<a>').attr('href','#').text(v).click(function(e,src){
              if(src!=='triggered')
-               thisObj._trigger('select',e, {selected:k});
+               thisObj._trigger('select',e, {selected:k, options:OPEN_NEW_WINDOW});
             })).appendTo($help_menus);
        });
        $helpArea.append(
