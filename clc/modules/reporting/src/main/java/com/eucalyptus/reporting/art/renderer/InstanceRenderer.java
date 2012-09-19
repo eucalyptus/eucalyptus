@@ -94,42 +94,36 @@ class InstanceRenderer
         doc.textLine("Resource Usage Section", 3);
         doc.tableOpen();
         doc.newRow().addEmptyValCols(5)
-        		.addValCol("Net In " + units.getSizeUnit(), 3, "center")
-        		.addValCol("Net Out " + units.getSizeUnit(), 3, "center");
+        		.addValCol("Net Internal " + units.getSizeUnit(), 2, "center")
+        		.addValCol("Net Total " + units.getSizeUnit(), 2, "center")
+        		.addValCol("Disk " + units.getSizeUnit(), 2, "center");
         doc.newRow().addValCol("InstanceId")
         		.addValCol("Type").addValCol("#").addValCol("Time").addValCol("CpuUsage%")
-        		.addValCol("Between").addValCol("Within").addValCol("Public").addValCol("Between").addValCol("Within")
-        		.addValCol("Public");
+        		.addValCol("In").addValCol("Out").addValCol("In").addValCol("Out").addValCol("In")
+        		.addValCol("Out");
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
             doc.newRow().addLabelCol(0, "Zone: " + zoneName)
             		.addValCol("cumul.")
             		.addValCol("cumul.");
             addUsageCols(doc, zone.getUsageTotals().getInstanceTotals(), units);
-            for (String clusterName: zone.getClusters().keySet()) {
-            	ClusterArtEntity cluster = zone.getClusters().get(clusterName);
-                doc.newRow().addLabelCol(1, "Cluster: " + clusterName)
-                		.addValCol("cumul.")
-                		.addValCol("cumul.");
-                addUsageCols(doc, cluster.getUsageTotals().getInstanceTotals(),units);
-                for (String accountName: cluster.getAccounts().keySet()) {
-                	AccountArtEntity account = cluster.getAccounts().get(accountName);
-                    doc.newRow().addLabelCol(2, "Account: " + accountName)
-                    		.addValCol("cumul.")
-                    		.addValCol("cumul.");
-                    addUsageCols(doc, account.getUsageTotals().getInstanceTotals(),units);
-                    for (String userName: account.getUsers().keySet()) {
-                    	UserArtEntity user = account.getUsers().get(userName);
-                        doc.newRow().addLabelCol(3, "User: " + userName)
-                        		.addValCol("cumul.")
-                        		.addValCol("cumul.");
-                        addUsageCols(doc, user.getUsageTotals().getInstanceTotals(),units);
-                        for (String instanceUuid: user.getInstances().keySet()) {
-                        	InstanceArtEntity instance = user.getInstances().get(instanceUuid);
-                        	doc.newRow().addValCol(instance.getInstanceId())
-                        			.addValCol(instance.getInstanceType());
-                        	addUsageCols(doc, instance.getUsage(), units);
-                        }
+            for (String accountName: zone.getAccounts().keySet()) {
+              	AccountArtEntity account = zone.getAccounts().get(accountName);
+                doc.newRow().addLabelCol(2, "Account: " + accountName)
+                   		.addValCol("cumul.")
+                   		.addValCol("cumul.");
+                addUsageCols(doc, account.getUsageTotals().getInstanceTotals(),units);
+                for (String userName: account.getUsers().keySet()) {
+                   	UserArtEntity user = account.getUsers().get(userName);
+                    doc.newRow().addLabelCol(3, "User: " + userName)
+                       		.addValCol("cumul.")
+                       		.addValCol("cumul.");
+                    addUsageCols(doc, user.getUsageTotals().getInstanceTotals(),units);
+                    for (String instanceUuid: user.getInstances().keySet()) {
+                       	InstanceArtEntity instance = user.getInstances().get(instanceUuid);
+                       	doc.newRow().addValCol(instance.getInstanceId())
+                       			.addValCol(instance.getInstanceType());
+                       	addUsageCols(doc, instance.getUsage(), units);
                     }
                 }
             }
@@ -155,19 +149,14 @@ class InstanceRenderer
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
             doc.newRow().addLabelCol(0, "Zone: " + zoneName);
             	addTimeCols(doc, zone.getUsageTotals(), units);
-            for (String clusterName: zone.getClusters().keySet()) {
-            	ClusterArtEntity cluster = zone.getClusters().get(clusterName);
-                doc.newRow().addLabelCol(1, "Cluster: " + clusterName);
-                addTimeCols(doc, cluster.getUsageTotals(),units);
-                for (String accountName: cluster.getAccounts().keySet()) {
-                	AccountArtEntity account = cluster.getAccounts().get(accountName);
-                    doc.newRow().addLabelCol(2, "Account: " + accountName);
-                    addTimeCols(doc, account.getUsageTotals(),units);
-                    for (String userName: account.getUsers().keySet()) {
-                    	UserArtEntity user = account.getUsers().get(userName);
-                        doc.newRow().addValCol("User: " + userName, 3, "left");
-                        addTimeCols(doc, user.getUsageTotals(),units);
-                    }
+            for (String accountName: zone.getAccounts().keySet()) {
+               	AccountArtEntity account = zone.getAccounts().get(accountName);
+                doc.newRow().addLabelCol(2, "Account: " + accountName);
+                addTimeCols(doc, account.getUsageTotals(),units);
+                for (String userName: account.getUsers().keySet()) {
+                	UserArtEntity user = account.getUsers().get(userName);
+                    doc.newRow().addValCol("User: " + userName, 3, "left");
+                    addTimeCols(doc, user.getUsageTotals(),units);
                 }
             }
         }
@@ -181,13 +170,13 @@ class InstanceRenderer
 	{
 		doc.addValCol((long)entity.getInstanceCnt());
 		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol(entity.getCpuPercentAvg());
-		doc.addValCol(UnitUtil.convertSize(entity.getNetIoBetweenZoneInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetIoWithinZoneInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetIoPublicIpInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetIoBetweenZoneOutMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetIoWithinZoneOutMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetIoPublicIpOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(entity.getCpuUtilizationMs()/entity.getDurationMs());
+		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalInMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getDiskInMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getDiskOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 		return doc;
 	}
 

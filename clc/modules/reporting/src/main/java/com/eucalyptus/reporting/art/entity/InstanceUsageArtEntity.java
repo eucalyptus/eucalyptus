@@ -66,135 +66,128 @@ import com.eucalyptus.reporting.art.ArtObject;
 public class InstanceUsageArtEntity
 	implements ArtObject
 {
-	private int instanceCnt;
-	private long durationMs = 0l;
+	private long durationMs           = 0l;
+	private int  instanceCnt          = 0;
 
-	/* Attributes for cpu utilization percent */
-	private Double cpuPercentAvg = null;
-
-	/* Attributes for usage-days */
-	private Long diskIoMegs = null;
-	private Long netIoWithinZoneInMegs = null;
-	private Long netIoBetweenZoneInMegs = null;
-	private Long netIoPublicIpInMegs = null;
-	private Long netIoWithinZoneOutMegs = null;
-	private Long netIoBetweenZoneOutMegs = null;
-	private Long netIoPublicIpOutMegs = null;
+	private Long cpuUtilizationMs     = null;
+	private Long diskInMegs           = null;
+	private Long diskOutMegs          = null;
+	private Long netInternalInMegs    = null;
+	private Long netInternalOutMegs   = null;
+	private Long netExternalInMegs    = null;
+	private Long netExternalOutMegs   = null;
 
 	public InstanceUsageArtEntity()
 	{
 	}
 
-	public int getInstanceCnt()
-	{
-		return this.instanceCnt;
-	}
-	
-	public void setInstanceCnt(int instanceCnt)
-	{
-		this.instanceCnt = instanceCnt;
-	}
-	
 	public long getDurationMs()
 	{
-		return this.durationMs;
+		return durationMs;
+	}
+
+	public void addDurationMs(long durationMs)
+	{
+		this.durationMs += durationMs;
 	}
 	
 	public void setDurationMs(long durationMs)
 	{
 		this.durationMs = durationMs;
 	}
-	
-	public void addDurationMs(long addMs)
+
+	public int getInstanceCnt()
 	{
-		this.durationMs = addMs;
+		return instanceCnt;
 	}
 
-	public Double getCpuPercentAvg()
+	public void addInstanceCnt(int instanceCnt)
 	{
-		return cpuPercentAvg;
+		this.instanceCnt += instanceCnt;
 	}
 
-	public Long getDiskIoMegs()
+	public Long getCpuUtilizationMs()
 	{
-		return diskIoMegs;
+		return cpuUtilizationMs;
 	}
 
-	public Long getNetIoWithinZoneInMegs()
+	public void addCpuUtilizationMs(Long cpuUtilizationMs)
 	{
-		return netIoWithinZoneInMegs;
+		if (cpuUtilizationMs!=null) {
+			this.cpuUtilizationMs = this.cpuUtilizationMs+cpuUtilizationMs;
+		}
 	}
 
-	public Long getNetIoBetweenZoneInMegs()
+	public Long getDiskInMegs()
 	{
-		return netIoBetweenZoneInMegs;
+		return diskInMegs;
 	}
 
-	public Long getNetIoPublicIpInMegs()
+	public void addDiskInMegs(Long diskInMegs)
 	{
-		return netIoPublicIpInMegs;
+		if (diskInMegs!=null) {
+			this.diskInMegs = this.diskInMegs+diskInMegs;
+		}
 	}
 
-	public Long getNetIoWithinZoneOutMegs()
+	public Long getDiskOutMegs()
 	{
-		return netIoWithinZoneOutMegs;
+		return diskOutMegs;
 	}
 
-	public Long getNetIoBetweenZoneOutMegs()
+	public void addDiskOutMegs(Long diskOutMegs)
 	{
-		return netIoBetweenZoneOutMegs;
+		if (diskOutMegs!=null) {
+			this.diskOutMegs = this.diskOutMegs+diskOutMegs;
+		}
 	}
 
-	public Long getNetIoPublicIpOutMegs()
+	public Long getNetInternalInMegs()
 	{
-		return netIoPublicIpOutMegs;
+		return netInternalInMegs;
 	}
 
-	public void setCpuPercentAvg(Double cpuPercentAvg)
+	public void addNetInternalInMegs(Long netInternalInMegs)
 	{
-		this.cpuPercentAvg = cpuPercentAvg;
-	}
-	
-	public void setDiskIoMegs(Long diskIoMegs)
-	{
-		this.diskIoMegs = diskIoMegs;
+		if (netInternalInMegs!=null) {
+			this.netInternalInMegs = this.netInternalInMegs+netInternalInMegs;
+		}
 	}
 
-	public void setNetIoWithinZoneInMegs(Long netIoWithinZoneInMegs)
+	public Long getNetInternalOutMegs()
 	{
-		this.netIoWithinZoneInMegs = netIoWithinZoneInMegs;
+		return netInternalOutMegs;
 	}
 
-	public void setNetIoBetweenZoneInMegs(Long netIoBetweenZoneInMegs)
+	public void addNetInternalOutMegs(Long netInternalOutMegs)
 	{
-		this.netIoBetweenZoneInMegs = netIoBetweenZoneInMegs;
+		if (netInternalOutMegs!=null) {
+			this.netInternalOutMegs = this.netInternalOutMegs+netInternalOutMegs;
+		}
 	}
 
-	public void setNetIoPublicIpInMegs(Long netIoPublicIpInMegs)
+	public Long getNetTotalInMegs()
 	{
-		this.netIoPublicIpInMegs = netIoPublicIpInMegs;
+		return netExternalInMegs;
 	}
 
-	public void setNetIoWithinZoneOutMegs(Long netIoWithinZoneOutMegs)
+	public void addNetTotalInMegs(Long netExternalInMegs)
 	{
-		this.netIoWithinZoneOutMegs = netIoWithinZoneOutMegs;
+		if (netExternalInMegs!=null) {
+			this.netExternalInMegs = this.netExternalInMegs+netExternalInMegs;
+		}
 	}
 
-	public void setNetIoBetweenZoneOutMegs(Long netIoBetweenZoneOutMegs)
+	public Long getNetTotalOutMegs()
 	{
-		this.netIoBetweenZoneOutMegs = netIoBetweenZoneOutMegs;
+		return netExternalOutMegs;
 	}
 
-	public void setNetIoPublicIpOutMegs(Long netIoPublicIpOutMegs)
+	public void addNetTotalOutMegs(Long netExternalOutMegs)
 	{
-		this.netIoPublicIpOutMegs = netIoPublicIpOutMegs;
-	}
-
-	public String toString()
-	{
-		return String.format("(%3f %4d %4d %4d %4d %4d %4d)",
-				cpuPercentAvg, diskIoMegs, netIoWithinZoneInMegs, netIoBetweenZoneInMegs,
-				netIoPublicIpInMegs, netIoWithinZoneOutMegs, netIoBetweenZoneOutMegs);
+		if (netExternalOutMegs!=null) {
+			this.netExternalOutMegs = this.netExternalOutMegs+netExternalOutMegs;
+		}
 	}
 
 }
