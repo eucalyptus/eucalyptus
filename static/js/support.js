@@ -19,6 +19,7 @@
  ************************************************************************/
 
 /* Constants */
+var DEPRECATE = false; 
 var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;

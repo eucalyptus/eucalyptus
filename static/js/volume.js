@@ -256,7 +256,7 @@
         $instanceSelector.autocomplete({
           source: inst_ids
         });
-        $instanceSelector.watermark(instance_id_msg);
+        $instanceSelector.watermark(instance_id_watermark);
       }
       if(!$volumeSelector.val()){
         var vol_ids = [];

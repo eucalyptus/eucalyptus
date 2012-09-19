@@ -1113,11 +1113,12 @@ tr.selected-row td.sorting_1
   margin-left: 15px;
 }
 
-.actionmenu span {
-
+/* Commented out by Sang-min
+.actionmenu a {
+*/
   /* These are the differences from the button styles in order to accomodate the arrow */
   /* If button gradients are changed, they will need to be changed here as well */
-
+/*
   cursor: default;
   padding: 5px 30px 5px 17px;
 
@@ -1128,15 +1129,15 @@ tr.selected-row td.sorting_1
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 }
 
-.actionmenu span:hover {
+.actionmenu a:hover {
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
 }
-
-.actionmenu span.inactive-menu {
+*/
+.actionmenu a.inactive-menu {
   border: 1px solid rgba(128, 128, 128, 0.4);
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
@@ -1681,6 +1682,31 @@ span.on-error {
   left: 480px;
 }
 
+/* Sang-min : change related to more actions menu */
+.euca-table-action ul{
+  list-style-type: none;
+  background-color: #fff;
+  padding: 5px;
+  position: absolute;
+  top: 135px;
+  left: 238px;
+  width: 138px;
+  z-index: 2;
+  -webkit-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
+  -moz-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50); 
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
+}
+
+.euca-table-action ul li{
+  margin : 2px;
+}
+
+li.disabled a {
+  color: gray;
+  text-decoration: none;
+}
+
+/* END Sang-min */
 /* Vasya: temporary styling. Style me. Move me! */
 .label_required:before {
   content: "* ";
