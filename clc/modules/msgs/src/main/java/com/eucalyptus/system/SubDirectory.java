@@ -71,7 +71,10 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 
 public enum SubDirectory {
-  DB( BaseDirectory.VAR, "db" ){
+	SYSFAULTS (BaseDirectory.LIB, "faults"),
+	CUSTOMFAULTS (BaseDirectory.HOME, "/etc/eucalyptus/faults"), 
+
+	DB( BaseDirectory.VAR, "db" ){
       @Override
       protected void assertPermissions() {
   	
