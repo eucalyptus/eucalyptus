@@ -100,6 +100,7 @@ static int getstat_refresh (void)
 
     getstat_free(); // free the old stats, regardless of whether we succeed or not
 
+    errno = 0;
     char * output = system_output ("euca_rootwrap getstats.pl"); // invoke th Perl script
     int ret = ERROR;
 
@@ -186,7 +187,7 @@ static int getstat_refresh (void)
     done:
         free (output);
     } else {
-        logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
+        logprintfl (EUCAWARN, "failed to invoke getstats for sensor data (%s)\n", strerror (errno));
     }
     
     return ret;
