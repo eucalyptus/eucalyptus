@@ -23,7 +23,7 @@ setup (name="Eucalyptus Management Console",
     url = "http://www.eucalytpus.com",
     packages = ['server'],
     package_data={'server': ['server/console.ini']},
-    scripts = ['launch.py'],
+    scripts = ['euca-console-server'],
     data_files = data_files
 )
 
