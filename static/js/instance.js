@@ -512,10 +512,14 @@
     _startInstances : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      $.each(instances, function(idx, instance){
+        instances[idx] = $(instance).html();
+      });
       var toStart = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
-        instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
+        instIds+= '&InstanceId.'+parseInt(i+1)+'='+(instances[i]);
+
       $.ajax({
         type:"GET",
         url:"/ec2?Action=StartInstances"+instIds, 
