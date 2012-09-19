@@ -95,7 +95,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private String getConnectionStatus() throws ExecutionException, EucalyptusCloudException {
-		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "cstate", DRBDInfo.getDRBDInfo().getResource()});
+		String returnValue = SystemUtil.run(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "cstate", DRBDInfo.getDRBDInfo().getResource()});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to get connection status for resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
@@ -103,7 +103,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private String getDataStatus() throws ExecutionException, EucalyptusCloudException {
-		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "dstate", DRBDInfo.getDRBDInfo().getResource()});
+		String returnValue = SystemUtil.run(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "dstate", DRBDInfo.getDRBDInfo().getResource()});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to get data status for resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
@@ -116,7 +116,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	 * @throws EucalyptusCloudException
 	 */
 	private String getRole() throws ExecutionException, EucalyptusCloudException {
-		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "role", DRBDInfo.getDRBDInfo().getResource()});
+		String returnValue = SystemUtil.run(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "role", DRBDInfo.getDRBDInfo().getResource()});
 		if(returnValue.length() == 0) {
 			throw new EucalyptusCloudException("Unable to get role for resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
@@ -129,7 +129,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	 * @throws EucalyptusCloudException
 	 */
 	private void makePrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "primary", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "primary", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to make resource " + DRBDInfo.getDRBDInfo().getResource() + " primary");
 		}
 	}
@@ -140,19 +140,19 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	 * @throws EucalyptusCloudException
 	 */
 	private void makeSecondary() throws ExecutionException, EucalyptusCloudException {		
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "secondary", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "secondary", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to make resource " + DRBDInfo.getDRBDInfo().getResource() + " secondary");
 		}
 	}
 
 	private void connectResource() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to connect resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
 	}
 
 	private void disconnectResource() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "disconnect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "disconnect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to disconnect resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
 	}
@@ -163,14 +163,14 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private void mountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir(), WalrusProperties.EUCA_USER}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir(), WalrusProperties.EUCA_USER}) != 0) {
 			throw new EucalyptusCloudException("Unable to mount " + DRBDInfo.getDRBDInfo().getBlockDevice() + " as " + WalrusInfo.getWalrusInfo().getStorageDir());
 		}
 		SystemUtil.setEucaReadWriteOnly(WalrusInfo.getWalrusInfo().getStorageDir());
 	}
 
 	private void unmountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_MOUNT_WRAPPER, "umount", WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_MOUNT_WRAPPER, "umount", WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
 			throw new EucalyptusCloudException("Unable to unmount " + DRBDInfo.getDRBDInfo().getBlockDevice());
 		}
 	}
@@ -181,7 +181,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	 * @throws ExecutionException
 	 */
 	private boolean isMounted() throws EucalyptusCloudException {
-		String returnValue = SystemUtil.run(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "cat", "/proc/mounts"});
+		String returnValue = SystemUtil.run(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "cat", "/proc/mounts"});
 		if(returnValue.length() > 0) {
 			if(returnValue.contains(DRBDInfo.getDRBDInfo().getBlockDevice())) {
 				return true;
@@ -344,7 +344,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	//check status
 
 	public void secondaryDrasticRecovery() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.eucaHome + WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "--", "--discard-my-data", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "--", "--discard-my-data", "connect", DRBDInfo.getDRBDInfo().getResource()}) != 0) {
 			throw new EucalyptusCloudException("Unable to recover from split brain for resource: " + DRBDInfo.getDRBDInfo().getResource());
 		}
 	}

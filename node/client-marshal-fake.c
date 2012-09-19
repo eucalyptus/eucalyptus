@@ -124,9 +124,9 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t **lo
     
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-      snprintf(path, MAX_PATH, "/var/lib/eucalyptus/CC/%s", bufname);
+      snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
     } else {
-      snprintf(path, MAX_PATH, "%s/var/lib/eucalyptus/CC/%s", tmpstr, bufname);
+      snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
     }
     fd = open(path, O_RDWR | O_CREAT, 0600);
     if (fd<0) {

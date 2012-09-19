@@ -141,9 +141,8 @@ public class WalrusProperties {
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
-	public static final String eucaHome = System.getProperty("euca.home");
-	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
-	public static final String EUCA_MOUNT_WRAPPER = "/usr/lib/eucalyptus/euca_mountwrap";
+	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
+	public static final String EUCA_MOUNT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_mountwrap";
 	public static final String EUCA_USER = System.getProperty("euca.user");
 
 	//15 minutes

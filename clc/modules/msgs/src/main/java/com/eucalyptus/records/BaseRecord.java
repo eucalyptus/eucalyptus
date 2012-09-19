@@ -86,6 +86,8 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
@@ -118,6 +120,7 @@ public class BaseRecord extends AbstractPersistent implements Serializable, Reco
   @Column( name = "record_correlation_id" )
   private String                            correlationId;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "record_extra" )
   private String                            extra;
   @Column( name = "record_level" )

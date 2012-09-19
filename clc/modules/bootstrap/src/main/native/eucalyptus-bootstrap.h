@@ -73,6 +73,8 @@
 #include <sys/stat.h>
 #include <linux/capability.h>
 #include "eucalyptus-opts.h"
+#include <eucalyptus.h>
+
 #define PRINT_NULL(x) ((x) == NULL ? "null" : (x))
 #define LIMIT_FILENO 65535
 #define LIMIT_NPROC RLIM_INFINITY
@@ -119,10 +121,6 @@ static int debug = 0;
 #define __abort(r,condition,format,...) do { if(condition) {fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ ); fflush(stderr); return r;} } while(0)
 #define __debug(format,...) do { if(debug){fprintf(stdout,"[debug:%04d] ", __LINE__);fprintf(stdout, format "\n", ##__VA_ARGS__ );fflush(stdout); } } while(0)
 #define __error(format,...) do { fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
-#define EUCA_LIB_DIR "/usr/share/eucalyptus"
-#define EUCA_ETC_DIR "/etc/eucalyptus/cloud.d"
-#define EUCA_CLASSCACHE_DIR "/var/run/eucalyptus/classcache"
-#define EUCA_SCRIPT_DIR "/etc/eucalyptus/cloud.d/scripts"
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
 #define java_load_bootstrapper euca_load_bootstrapper
@@ -163,23 +161,26 @@ typedef struct {
     jvm_opt.optionString=strdup(temp); \
 } while(0)
 static char *jvm_default_opts[] = {
-	    "-Xbootclasspath/p:%1$s/usr/share/eucalyptus/openjdk-crypto.jar",
+	    "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
 	    "-Xmx1024m",
 	    "-XX:MaxPermSize=256m",
 	    "-XX:+UseConcMarkSweepGC",
 	    "-Djava.net.preferIPv4Stack=true",
-	    "-Djava.security.policy=%1$s/etc/eucalyptus/cloud.d/security.policy", 
-	    "-Djava.library.path=%1$s/usr/lib/eucalyptus",
+	    "-Djava.security.policy=" EUCA_ETC_DIR "/security.policy", 
+	    "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
 	    "-Djava.awt.headless=true",
 	    "-Dsun.java.command=Eucalyptus",
 	    "-Deuca.home=%1$s",
             "-Deuca.db.home=",
             "-Deuca.extra_version=",
-	    "-Deuca.var.dir=%1$s/var/lib/eucalyptus",
-	    "-Deuca.run.dir=%1$s/var/run/eucalyptus",
-	    "-Deuca.lib.dir=%1$s/usr/share/eucalyptus",
-	    "-Deuca.conf.dir=%1$s/etc/eucalyptus/cloud.d",
-	    "-Deuca.log.dir=%1$s/var/log/eucalyptus",
+	    "-Deuca.var.dir=" EUCALYPTUS_STATE_DIR,
+	    "-Deuca.state.dir=" EUCALYPTUS_STATE_DIR,
+	    "-Deuca.run.dir=" EUCALYPTUS_RUN_DIR,
+	    "-Deuca.lib.dir=" EUCALYPTUS_JAVA_LIB_DIR,
+	    "-Deuca.libexec.dir=" EUCALYPTUS_LIBEXEC_DIR,
+	    "-Deuca.conf.dir=" EUCALYPTUS_CONF_DIR "/cloud.d",
+	    "-Deuca.log.dir=" EUCALYPTUS_LOG_DIR,
+	    "-Deuca.jni.dir=" EUCALYPTUS_LIB_DIR,
 	    "-Djava.util.prefs.PreferencesFactory=com.eucalyptus.util.NoopPreferencesFactory",
 	    NULL,
 };
