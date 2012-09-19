@@ -1,0 +1,84 @@
+Basic README for adding new faults to the fault-reporting system.
+-----------------------------------------------------------------
+
+- Create an XML document that will be used for reporting the fault.
+
+  English (the default) language fault XML files can be found under
+  util/faults/en_US/ in files named ####.xml.
+
+  Using an existing functional XML file as a template, describe your
+  fault as thoroughly as possible using the tag structure in the
+  template.
+
+  Assign the fault a unique, four-digit id number and ensure the
+  filename is of the form ####.xml (where the #### matches).
+
+  Add runtime-variable information using tokens of the form ${TOKEN} so
+  that a subsystem reporting a fault can provide a replacement string
+  for the ${TOKEN}.
+
+  An example replacement might be:
+
+    ${component}
+
+  ...which can be replaced by the cluster controller at runtime with:
+
+    CC
+
+  Another example might be:
+
+    ${ipAddress}
+
+  ...which can be replace at runtime with:
+
+    192.168.1.1
+
+- Add the following line to your C source file:
+
+    #include <fault.h>
+
+  (fault.h will include other required .h files, such as log.h, misc.h,
+  and wc.h.)
+
+- Ensure your binary links against the new fault.o and wc.o object
+  files, as well as log.o and misc.o, if they were not already present.
+
+  Note: these .o files may be rolled into some sort of libutil.a archive
+  in the future to eliminate the need for piecemeal inclusion of .o
+  files.
+
+- Add an init_eucafaults() call to your program's initialization.
+
+  Strictly speaking, this call is optional: if you don't call
+  init_eucafaults() explicitly, it will be called implicitly when the
+  first attempt is made to log a fault. (The advantage to calling it
+  explicitly is that allows the caller to know ahead of time if the
+  fault-reporting system itself is having problems initializing itself.)
+
+- Add appropriate calls to log_eucafault() using the form:
+
+    log_eucafault("####", "token1", "token11Replacement", ... , NULL);
+
+  An example, using some of the tokens from above:
+
+    log_eucafault("9876", "component", "CC", "ipAddress", "192.168.1.1", NULL);
+
+  Note that the ${} characters used to enclose the replacement tokens
+  should *not* be included in the call to log_eucafault().
+
+- Note also that another call exists for logging faults,
+  log_eucafault_map(). This function is useful if the list of tokens to
+  be replaced is to be determined at runtime.
+
+  Rather than take a NULL-terminated variable-argument list,
+  log_eucafault_map() takes a pointer to a map of token/replacement
+  pairings that can be assembled using c_varmap_alloc() calls. (See
+  wc.h.)
+
+  Sample log_eucafault_map() usage:
+
+    char_map **cm = NULL;
+    cm = c_varmap_alloc(cm, "component", "CC");
+    cm = c_varmap_alloc(cm, "ipAddress", "192.168.1.1");
+    log_eucafault_map("9876", cm);
+    c_varmap_free(cm);
