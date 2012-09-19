@@ -74,8 +74,8 @@ public class InstanceUsageArtEntity
 	private Long diskOutMegs          = null;
 	private Long netInternalInMegs    = null;
 	private Long netInternalOutMegs   = null;
-	private Long netExternalInMegs    = null;
-	private Long netExternalOutMegs   = null;
+	private Long netTotalInMegs       = null;
+	private Long netTotalOutMegs      = null;
 
 	public InstanceUsageArtEntity()
 	{
@@ -111,11 +111,22 @@ public class InstanceUsageArtEntity
 		return cpuUtilizationMs;
 	}
 
+	private static Long plus(Long a, Long b)
+	{
+		if (a!=null && b!=null) {
+			return a.longValue()+b.longValue();
+		} else if (a!=null) {
+			return a.longValue();
+		} else if (b!=null) {
+			return b.longValue();
+		} else {
+			return null;
+		}
+	}
+	
 	public void addCpuUtilizationMs(Long cpuUtilizationMs)
 	{
-		if (cpuUtilizationMs!=null) {
-			this.cpuUtilizationMs = this.cpuUtilizationMs+cpuUtilizationMs;
-		}
+		this.cpuUtilizationMs = plus(this.cpuUtilizationMs, cpuUtilizationMs);
 	}
 
 	public Long getDiskInMegs()
@@ -125,9 +136,7 @@ public class InstanceUsageArtEntity
 
 	public void addDiskInMegs(Long diskInMegs)
 	{
-		if (diskInMegs!=null) {
-			this.diskInMegs = this.diskInMegs+diskInMegs;
-		}
+		this.diskInMegs = plus(this.diskInMegs, diskInMegs);
 	}
 
 	public Long getDiskOutMegs()
@@ -137,9 +146,7 @@ public class InstanceUsageArtEntity
 
 	public void addDiskOutMegs(Long diskOutMegs)
 	{
-		if (diskOutMegs!=null) {
-			this.diskOutMegs = this.diskOutMegs+diskOutMegs;
-		}
+		this.diskOutMegs = plus(this.diskOutMegs, diskOutMegs);
 	}
 
 	public Long getNetInternalInMegs()
@@ -149,10 +156,8 @@ public class InstanceUsageArtEntity
 
 	public void addNetInternalInMegs(Long netInternalInMegs)
 	{
-		if (netInternalInMegs!=null) {
-			this.netInternalInMegs = this.netInternalInMegs+netInternalInMegs;
-		}
-	}
+		this.netInternalInMegs = plus(this.netInternalInMegs, netInternalInMegs);
+}
 
 	public Long getNetInternalOutMegs()
 	{
@@ -161,33 +166,27 @@ public class InstanceUsageArtEntity
 
 	public void addNetInternalOutMegs(Long netInternalOutMegs)
 	{
-		if (netInternalOutMegs!=null) {
-			this.netInternalOutMegs = this.netInternalOutMegs+netInternalOutMegs;
-		}
+		this.netInternalOutMegs = plus(this.netInternalOutMegs, netInternalOutMegs);
 	}
 
 	public Long getNetTotalInMegs()
 	{
-		return netExternalInMegs;
+		return netTotalInMegs;
 	}
 
-	public void addNetTotalInMegs(Long netExternalInMegs)
+	public void addNetTotalInMegs(Long netTotalInMegs)
 	{
-		if (netExternalInMegs!=null) {
-			this.netExternalInMegs = this.netExternalInMegs+netExternalInMegs;
-		}
+		this.netTotalInMegs = plus(this.netTotalInMegs, netTotalInMegs);
 	}
 
 	public Long getNetTotalOutMegs()
 	{
-		return netExternalOutMegs;
+		return netTotalOutMegs;
 	}
 
 	public void addNetTotalOutMegs(Long netExternalOutMegs)
 	{
-		if (netExternalOutMegs!=null) {
-			this.netExternalOutMegs = this.netExternalOutMegs+netExternalOutMegs;
-		}
+		this.netTotalOutMegs = plus(this.netTotalOutMegs, netTotalOutMegs);
 	}
 
 }

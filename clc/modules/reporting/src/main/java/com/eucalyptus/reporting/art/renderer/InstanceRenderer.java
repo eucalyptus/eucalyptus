@@ -109,13 +109,13 @@ class InstanceRenderer
             addUsageCols(doc, zone.getUsageTotals().getInstanceTotals(), units);
             for (String accountName: zone.getAccounts().keySet()) {
               	AccountArtEntity account = zone.getAccounts().get(accountName);
-                doc.newRow().addLabelCol(2, "Account: " + accountName)
+                doc.newRow().addLabelCol(1, "Account: " + accountName)
                    		.addValCol("cumul.")
                    		.addValCol("cumul.");
                 addUsageCols(doc, account.getUsageTotals().getInstanceTotals(),units);
                 for (String userName: account.getUsers().keySet()) {
                    	UserArtEntity user = account.getUsers().get(userName);
-                    doc.newRow().addLabelCol(3, "User: " + userName)
+                    doc.newRow().addLabelCol(2, "User: " + userName)
                        		.addValCol("cumul.")
                        		.addValCol("cumul.");
                     addUsageCols(doc, user.getUsageTotals().getInstanceTotals(),units);
@@ -151,11 +151,11 @@ class InstanceRenderer
             	addTimeCols(doc, zone.getUsageTotals(), units);
             for (String accountName: zone.getAccounts().keySet()) {
                	AccountArtEntity account = zone.getAccounts().get(accountName);
-                doc.newRow().addLabelCol(2, "Account: " + accountName);
+                doc.newRow().addLabelCol(1, "Account: " + accountName);
                 addTimeCols(doc, account.getUsageTotals(),units);
                 for (String userName: account.getUsers().keySet()) {
                 	UserArtEntity user = account.getUsers().get(userName);
-                    doc.newRow().addValCol("User: " + userName, 3, "left");
+                    doc.newRow().addLabelCol(2, "User: " + userName);
                     addTimeCols(doc, user.getUsageTotals(),units);
                 }
             }
@@ -170,7 +170,7 @@ class InstanceRenderer
 	{
 		doc.addValCol((long)entity.getInstanceCnt());
 		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol(entity.getCpuUtilizationMs()/entity.getDurationMs());
+		doc.addValCol((entity.getCpuUtilizationMs()==null)?null:(entity.getCpuUtilizationMs()/entity.getDurationMs()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalInMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInMegs(), SizeUnit.MB, units.getSizeUnit()));

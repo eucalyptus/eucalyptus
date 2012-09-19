@@ -220,23 +220,23 @@ public class FalseDataGenerator
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "NetworkIn", 0, "total", oneMB*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "NetworkIn", 0, "internal", oneMB*2*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "NetworkOut", 0, "total", oneMB*3*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "NetworkOut", 0, "internal", oneMB*4*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "DiskReadBytes", 0, "root", oneMB*5*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "DiskWriteBytes", 0, "root", oneMB*6*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "DiskReadBytes", 0, "ephemeral0", oneMB*7*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "DiskWriteBytes", 0, "ephemeral0", oneMB*8*periodNum, timeMs);
-								ReportingInstanceEventStore.getInstance().insertUsageEvent(volumeUuid,
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "", "CPUUtilizationMs", 0, "default", (double)(PERIOD_DURATION/2), timeMs);
 							}
 
