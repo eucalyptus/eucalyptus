@@ -91,7 +91,6 @@ public class InstanceArtGenerator
 		 */
 		Map<String,InstanceArtEntity> instanceEntities = new HashMap<String,InstanceArtEntity>();
 /*
-		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
 		while (iter.hasNext()) {
 
 			ReportingInstanceCreateEvent createEvent = (ReportingInstanceCreateEvent) iter.next();
@@ -143,7 +142,11 @@ public class InstanceArtGenerator
 			}
 			InstanceUsageArtEntity usage = instance.getUsage();
 			
+
 			
+
+			
+>>>>>>> team/clc-dev/reporting
 			 Add usage to totals, and update average cpu 
 			if (lastEvent != null) {
 				long lastMs = lastEvent.getTimestampMs();
@@ -158,6 +161,9 @@ public class InstanceArtGenerator
 				usage.setDurationMs(usage.getDurationMs()+timeMs);
 				
 <<<<<<< HEAD
+				 Add usage to totals 
+=======
+<<<<<<< HEAD
 				/* Interpolate and add usage to totals 
 				
 				 Disk IO megs 
@@ -165,6 +171,7 @@ public class InstanceArtGenerator
 									subtract(usageEvent.getCumulativeDiskIoMegs(),
 											 lastEvent.getCumulativeDiskIoMegs()));
 
+>>>>>>> team/clc-dev/reporting
 				usage.setDiskIoMegs(
 						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
 								    usageEvent.getTimestampMs(), rawValue));
@@ -237,8 +244,8 @@ public class InstanceArtGenerator
 
 			
   		} //while 
-*/
-		
+
+		*/
 		/* Perform totals and summations
 		 */
 		for (String zoneName : report.getZones().keySet()) {
@@ -277,7 +284,7 @@ public class InstanceArtGenerator
 		
 		totalEntity.addDurationMs(newEntity.getDurationMs());
 
-		/* Update total average for this zone, cluster, etc, based upon instance average */
+		/* Update total average for this zone, cluster, etc, based upon instance average 
 		if (totalEntity.getCpuPercentAvg() == null && newEntity.getCpuPercentAvg() != null) {
 			totalEntity.setCpuPercentAvg(newEntity.getCpuPercentAvg());
 			totalEntity.addDurationMs(newEntity.getDurationMs());
@@ -288,7 +295,7 @@ public class InstanceArtGenerator
 			totalEntity.setCpuPercentAvg(newWeightedAverage);
 		}
 		
-		/* Add megs from this instance to totals for zone, cluster, etc */
+		 Add megs from this instance to totals for zone, cluster, etc 
 		totalEntity.setDiskIoMegs(
 				plus(totalEntity.getDiskIoMegs(),
 					 newEntity.getDiskIoMegs()));
@@ -313,7 +320,7 @@ public class InstanceArtGenerator
 		
 		totalEntity.setInstanceCnt(totalEntity.getInstanceCnt()+1);
 		
-		/* Update total running time and type count for this instance type */
+		 Update total running time and type count for this instance type 
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
 		if (!typeTotals.containsKey(instance.getInstanceType().toLowerCase())) {
 			typeTotals.put(instance.getInstanceType().toLowerCase(),
@@ -323,7 +330,7 @@ public class InstanceArtGenerator
 			typeTotals.get(instance.getInstanceType().toLowerCase());
 		
 		typeTotal.setInstanceCnt(typeTotal.getInstanceCnt()+1);
-		typeTotal.setDurationMs(typeTotal.getDurationMs() + totalEntity.getDurationMs());
+		typeTotal.setDurationMs(typeTotal.getDurationMs() + totalEntity.getDurationMs());*/
 	}
 
 	/**

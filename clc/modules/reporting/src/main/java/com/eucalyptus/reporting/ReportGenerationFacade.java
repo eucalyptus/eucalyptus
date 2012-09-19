@@ -45,6 +45,7 @@ public class ReportGenerationFacade {
             null );
       } catch ( final Exception e ) {
         throw new ReportGenerationException( "Error generating report", e );
+
       }
 
       return new String( reportOutput.toByteArray(), Charsets.UTF_8 );
