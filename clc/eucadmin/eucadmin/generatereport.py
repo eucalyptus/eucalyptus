@@ -50,7 +50,7 @@ class GenerateReport(ReportsRequest):
             ptype='datetime',
             doc='The exclusive end date for the report period (e.g. 2012-08-26)'),
         Param(name='Force',
-            short_name='f', long_name='force',
+            short_name='F', long_name='force',
             ptype='boolean', request_param=False,
             doc='overwrite output file if it exists'),
         ]
