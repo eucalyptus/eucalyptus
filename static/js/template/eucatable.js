@@ -34,6 +34,7 @@
       context_menu_actions : null,
       draw_cell_callback : null,  // if we want to customize how the cell is drawn (e.g., map EMI to manifest)
                                   // {column: 3, callback: function(){ } }
+      expand_callback : null,
       filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
       legend : null, // e.g., ['available', 'attaching', 'attached', ...]
       show_only : null, // e.g, {filter_value: 'machine', filter_col: 7}
@@ -122,17 +123,42 @@
         var $currentRow = $(tr);
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
           $currentRow.unbind('click').bind('click', function (e) {
+            if(thisObj.options.expand_callback){
+              if(!$currentRow.next().hasClass('expanded') && !($(e.target).is('input'))){
+                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+                thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
+                var row = [];
+                var i=0;
+                $currentRow.find('td').each(function(){
+                  row[i++] = $(this).text(); 
+                });
+                var $expand = thisObj.options.expand_callback(row);
+                if($expand && $expand.length > 0){
+                  $currentRow.after($('<tr>').addClass('expanded').append(
+                                  $('<td>').attr('colspan', $currentRow.find('td').length).append(
+                                    $expand)));
+                  $currentRow.find('div.instance-id').addClass('expanded');
+                }
+              }else{
+                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
+                thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
+              }
+            }  
           // checked/uncheck on checkbox
+            thisObj._onRowClick();
+            thisObj._trigger('row_click', e);
+          });
+
+          $currentRow.find('input[type="checkbox"]').unbind('click').bind('click', function(e){
+            thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+            thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
             var $selectedRow = $currentRow; //$(e.target).parents('tr');
             $selectedRow.toggleClass('selected-row');
-            $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
+            var $rowCheckbox = $(e.target);
             if($selectedRow.hasClass('selected-row'))
               $rowCheckbox.attr('checked', true);
             else
               $rowCheckbox.attr('checked', false);
-            //e.stopPropagation();
-            thisObj._onRowClick();
-            thisObj._trigger('row_click', e);
           });
         }
 

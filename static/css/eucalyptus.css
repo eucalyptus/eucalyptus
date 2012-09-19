@@ -1705,6 +1705,24 @@ li.disabled a {
   color: gray;
   text-decoration: none;
 }
+.expanded ul{
+    margin: 0 auto;
+    padding: 0;
+}
+.expanded ul li{
+    text-align: left;
+    float: left;
+    list-style: none;
+    padding: 1px 1px;
+    margin: 1px;
+}
+div.instance-id{
+
+}
+div.instance-id.expanded {
+    /* arrow  */ 
+    background : yellow;
+}
 
 /* END Sang-min */
 /* Vasya: temporary styling. Style me. Move me! */

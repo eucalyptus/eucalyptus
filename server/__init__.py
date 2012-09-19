@@ -71,10 +71,6 @@ class GlobalSession(object):
         return items
 
     @property
-    def timezone(self):
-        return self.get_value('locale', 'timezone')
-
-    @property
     def language(self):
         return self.get_value('locale', 'language')
 
@@ -98,8 +94,7 @@ class GlobalSession(object):
 
     # return the collection of global session info
     def get_session(self):
-        return {'timezone': self.timezone,
-                'language': self.language,
+        return {'language': self.language,
                 'email' : self.email,
                 'instance_type': self.instance_type 
                }
