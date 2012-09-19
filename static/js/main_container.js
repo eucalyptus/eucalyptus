@@ -105,6 +105,9 @@
         case 'forum':
           window.open('https://engage.eucalyptus.com', '_blank');
           break;
+        case 'report':
+          window.open('https://eucalyptus.atlassian.net', '_blank');
+          break;
         default:
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
