@@ -363,11 +363,11 @@
                 <p>{{!: sgroup_dialog_add_group }}</p>
                 <div class="form-row">
                   <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
-                  <input type="text" id="sgroup-name" class="required" title="{{!: sgroups_dialog_create_flh_name }}"/>
+                  <input type="text" id="sgroup-name" class="required" title="{{!: sgroup_dialog_add_name_tip }}"/>
                 </div>
                 <div class="form-row">    
                   <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
-                  <input type="text" id="sgroup-description" class="required" title="{{!: sgroups_dialog_create_flh_description }}"/>
+                  <input type="text" id="sgroup-description" class="required" title="{{!: sgroup_dialog_add_description_tip }}"/>
                 </div>  
             </div>
             <div class="rules inner-box clearfix">
@@ -375,7 +375,7 @@
                 <p>{{!: sgroup_dialog_add_rules }}</p>
                 <div class="form-row"> 
                   <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                  <select id="sgroup-template" title="{{!: sgroups_dialog_create_flh_template }}">
+                  <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
                     <option value="none">Select protocol</option>
                     <optgroup label="">
                     <option>SSH (TCP port 22, for terminal access)</option>
@@ -402,21 +402,21 @@
                 <div id="sgroup-more-rules" style='display: none;'>
                   <div class="form-row"> 
                     <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                    <input type="text" id="sgroup-ports" class="required" title="{{!: sgroups_dialog_create_flh_ports }}"/>
+                    <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
                     <div class="dialog-notifications"></div>
                   </div>  
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroups_dialog_create_flh_allow_ip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroups_dialog_create_flh_allow_group }}"/>
+                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                   </div>
   
                   <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroups_dialog_create_flh_allow_instances }}"/>{{!>sgroup_dialog_add_allow_instances}}
+                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroup_dialog_add_allow_instances_tip }}"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
