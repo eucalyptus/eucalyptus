@@ -39,10 +39,10 @@
 
     // event receiver for menu selection
     changeSelected : function (evt, ui) { 
-        this.updateSelected(ui.selected, ui.filter);
+        this.updateSelected(ui.selected, ui.filter, ui.options);
     },
 
-    updateSelected : function (selected, filter) {
+    updateSelected : function (selected, filter, options) {
       if(this._curSelected === selected){
         //$('html body').trigger('click'); // Manage resources --> uncomment this line
         return;
@@ -50,12 +50,13 @@
 
       if(this._curSelected !== null){
         var $curInstance = this.element.data(this._curSelected);
-        if($curInstance !== undefined){
+        if($curInstance !== undefined && options != OPEN_NEW_WINDOW){
           $curInstance.close();
         }
       }
       var $container = $('html body').find(DOM_BINDING['main']);
-      $container.children().detach();
+      if (options != OPEN_NEW_WINDOW)
+        $container.children().detach();
      // $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
      // Manage resources-->uncomment above
       switch(selected){
@@ -98,10 +99,17 @@
         case 'logout':
           logout();
           break;
+        case 'documentation':
+          window.open('http://www.eucalyptus.com/eucalyptus-cloud/documentation', '_blank');
+          break;
+        case 'forum':
+          window.open('https://engage.eucalyptus.com', '_blank');
+          break;
         default:
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
-      this._curSelected = selected;
+      if (options != OPEN_NEW_WINDOW)
+        this._curSelected = selected;
     },
 
     clearSelected : function (){
