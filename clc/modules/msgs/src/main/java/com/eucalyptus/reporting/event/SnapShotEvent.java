@@ -21,10 +21,11 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 
 import com.eucalyptus.event.Event;
-import com.eucalyptus.util.OwnerFullName;
 
 public class SnapShotEvent implements Event {
   private static final long serialVersionUID = 1L;
@@ -37,10 +38,16 @@ public class SnapShotEvent implements Event {
   public static class CreateActionInfo extends EventActionInfo<SnapShotAction> {
     private static final long serialVersionUID = 1L;
     private final Long size;
+    private final String volumeId;
+    private final String volumeUuid;
 
-    private CreateActionInfo( final Long size ) {
+    private CreateActionInfo( final Long size,
+                              final String volumeUuid,
+                              final String volumeId ) {
       super( SnapShotAction.SNAPSHOTCREATE );
       this.size = size;
+      this.volumeUuid = volumeUuid;
+      this.volumeId = volumeId;
     }
 
     /**
@@ -50,13 +57,27 @@ public class SnapShotEvent implements Event {
       return size;
     }
 
+    /**
+     * Get the uuid for the parent volume
+     */
+    public String getVolumeUuid() {
+      return volumeUuid;
+    }
+
+    /**
+     * Get the id for the parent volume
+     */
+    public String getVolumeId() {
+      return volumeId;
+    }
+
     public String toString() {
       return String.format("[action:%s,size:%s]", getAction(), getSize());
     }
   }
 
   private final EventActionInfo<SnapShotAction> actionInfo;
-  private final String userName;
+  private final String userId;
   private final String snapshotId;
   private final String uuid;
 
@@ -66,10 +87,14 @@ public class SnapShotEvent implements Event {
    * @param size The snapshot size in GiB
    * @return The action info
    */
-  public static EventActionInfo<SnapShotAction> forSnapShotCreate( final Long size ) {
+  public static EventActionInfo<SnapShotAction> forSnapShotCreate( final Long size,
+                                                                   final String volumeUuid,
+                                                                   final String volumeId ) {
     assertThat(size, notNullValue());
+    assertThat(volumeUuid, not( isEmptyOrNullString() ));
+    assertThat(volumeId, not( isEmptyOrNullString() ));
 
-    return new CreateActionInfo( size );
+    return new CreateActionInfo( size, volumeUuid, volumeId );
   }
 
   public static EventActionInfo<SnapShotAction> forSnapShotDelete() {
@@ -79,21 +104,21 @@ public class SnapShotEvent implements Event {
   public static SnapShotEvent with( final EventActionInfo<SnapShotAction> actionInfo,
                                     final String snapShotUUID,
                                     final String snapshotId,
-                                    final String userName ) {
+                                    final String userId ) {
 
-    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userName );
+    return new SnapShotEvent( actionInfo, snapShotUUID, snapshotId, userId );
   }
 
   private SnapShotEvent( final EventActionInfo<SnapShotAction> actionInfo,
                          final String uuid,
                          final String snapshotId,
-                         final String userName ) {
+                         final String userId ) {
     assertThat(actionInfo, notNullValue());
-    assertThat(uuid, notNullValue());
-    assertThat(userName, notNullValue());
-    assertThat(snapshotId, notNullValue());
+    assertThat(uuid, not( isEmptyOrNullString() ));
+    assertThat(userId, not( isEmptyOrNullString() ));
+    assertThat(snapshotId, not( isEmptyOrNullString() ));
     this.actionInfo = actionInfo;
-    this.userName = userName;
+    this.userId = userId;
     this.snapshotId = snapshotId;
     this.uuid = uuid;
   }
@@ -102,8 +127,8 @@ public class SnapShotEvent implements Event {
     return snapshotId;
   }
 
-  public String getOwner() {
-    return userName;
+  public String getUserId() {
+    return userId;
   }
 
   public EventActionInfo<SnapShotAction> getActionInfo() {
@@ -117,7 +142,7 @@ public class SnapShotEvent implements Event {
   @Override
   public String toString() {
     return "SnapShotEvent [actionInfo=" + actionInfo
-        + ", userName=" + userName + ", snapshotId="
+        + ", userId=" + userId + ", snapshotId="
         + snapshotId + ", uuid=" + uuid + "]";
   }
 }

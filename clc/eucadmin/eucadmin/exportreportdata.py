@@ -32,7 +32,7 @@ class ExportReportData(ReportsRequest):
 
     Params = [
         Param(name='Force',
-            short_name='f', long_name='force',
+            short_name='F', long_name='force',
             ptype='boolean', request_param=False,
             doc='overwrite output file if it exists'),
         ]

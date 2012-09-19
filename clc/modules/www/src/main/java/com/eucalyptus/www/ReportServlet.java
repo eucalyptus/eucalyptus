@@ -75,6 +75,7 @@ import com.eucalyptus.reporting.*;
 import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.server.*;
+import com.google.common.base.Objects;
 
 @SuppressWarnings("serial")
 public class ReportServlet
@@ -104,7 +105,7 @@ public class ReportServlet
 		/* Parse all params
 		 */
 		final String reportType = Param.type.get(req);
-		final ReportFormat format = ReportFormat.valueOf(Param.format.get(req));
+		final ReportFormat format = ReportFormat.valueOf( Objects.firstNonNull(Param.format.get(req),"html"));
 		final long start = Long.parseLong(Param.start.get(req));
 		final long end = Long.parseLong(Param.end.get(req));
 		final Period period = new Period(start, end);
@@ -137,19 +138,19 @@ public class ReportServlet
 		try {
 			if (user.isSystemAdmin()) {
 				//Generate report of all accounts
-				report = ReportGenerationFacade.generateReport( reportType, period.getBeginningMs(), period.getEndingMs(), null );
+				report = ReportGenerationFacade.generateReport( reportType, format.name(), period.getBeginningMs(), period.getEndingMs() );
 
-			} else if (user.isAccountAdmin()) {
-				String accountId;
-				try {
-					accountId = user.getAccount().getAccountNumber();
-				} catch (AuthException aex) {
-					throw new RuntimeException("Auth failed");
-				}
-				//Generate report of this account only
-				report = ReportGenerationFacade.generateReport( reportType, period.getBeginningMs(), period.getEndingMs(), accountId );
+//			} else if (user.isAccountAdmin()) {
+//				String accountId;
+//				try {
+//					accountId = user.getAccount().getAccountNumber();
+//				} catch (AuthException aex) {
+//					throw new RuntimeException("Auth failed");
+//				}
+//				//Generate report of this account only
+//				report = ReportGenerationFacade.generateReport( reportType, format.name(), period.getBeginningMs(), period.getEndingMs() );
 			} else {
-				throw new RuntimeException("Only admins and account owners can generate reports");
+				throw new RuntimeException("Only admins can generate reports");
 			}
 			res.getWriter().print( report );
 		} catch (ReportGenerationFacade.ReportGenerationException e) {

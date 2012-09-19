@@ -21,8 +21,10 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.util.OwnerFullName;
 
 public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> {
@@ -37,7 +39,8 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
     OBJECTGET, OBJECTCREATE, OBJECTDELETE
   }
 
-  private final String objectName;
+  private final String objectKey;
+  private final String version;
 
   public static S3ObjectAction forS3ObjectCreate() {
     return S3ObjectAction.OBJECTCREATE;
@@ -56,37 +59,42 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
    * @see #forS3ObjectDelete
    * @see #forS3ObjectGet
    */
-  public static S3ObjectEvent with( @Nonnull final S3ObjectAction action,
-                                    @Nonnull final String s3UUID,
-                                    @Nonnull final String bucketName,
-                                    @Nonnull final String objectName,
-                                    @Nonnull final OwnerFullName ownerFullName,
-                                    @Nonnull final Long size ) {
+  public static S3ObjectEvent with( @Nonnull  final S3ObjectAction action,
+                                    @Nonnull  final String bucketName,
+                                    @Nonnull  final String objectKey,
+                                    @Nullable final String version,
+                                    @Nonnull  final OwnerFullName ownerFullName,
+                                    @Nonnull  final Long size ) {
 
-    return new S3ObjectEvent( action, s3UUID, bucketName, objectName, ownerFullName, size );
+    return new S3ObjectEvent( action, bucketName, objectKey, version, ownerFullName, size );
   }
 
-  S3ObjectEvent( @Nonnull final S3ObjectAction action,
-                 @Nonnull final String uuid,
-                 @Nonnull final String bucketName,
-                 @Nonnull final String objectName,
-                 @Nonnull final OwnerFullName ownerFullName,
-                 @Nonnull final Long size ) {
-    super( action, uuid, bucketName, ownerFullName, size );
-    assertThat(objectName, notNullValue());
-    this.objectName = objectName;
+  S3ObjectEvent( @Nonnull  final S3ObjectAction action,
+                 @Nonnull  final String bucketName,
+                 @Nonnull  final String objectKey,
+                 @Nullable final String version,
+                 @Nonnull  final OwnerFullName ownerFullName,
+                 @Nonnull  final Long size ) {
+    super( action, bucketName, ownerFullName, size );
+    assertThat(objectKey, not( isEmptyOrNullString() ));
+    this.objectKey = objectKey;
+    this.version = version;
   }
 
   @Nonnull
-  public String getObjectName() {
-    return objectName;
+  public String getObjectKey() {
+    return objectKey;
+  }
+
+  public String getVersion() {
+    return version;
   }
 
   @Override
   public String toString() {
     return "S3ObjectEvent [action=" + getAction()
-        + ", ownerFullName=" + getOwner() + ", uuid=" + getUuid()
+        + ", ownerFullName=" + getOwner()
         + ", size=" + getSize() + ", bucketName=" + getBucketName()
-        + ", objectName=" + getObjectName() + "]";
+        + ", objectKey=" + getObjectKey() + ", version=" + getVersion() + "]";
   }
 }

@@ -61,16 +61,14 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
         final ReportingS3ObjectEventStore eventStore = getReportingS3ObjectEventStore();
         switch (event.getAction()) {
           case OBJECTCREATE:
-// TODO: We track object versions now!!
-//            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectName(), event.getSize(), timeInMs, event.getOwner().getUserId());
+            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwner().getUserId());
             break;
           case OBJECTDELETE:
-//            eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectName(), timeInMs);
+            eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), timeInMs);
             break;
-//TODO: Tom commented this out because we will pend it until later this week
-//          case OBJECTGET:
-//            eventStore.insertS3ObjectUsageEvent(event.getBucketName(), event.getObjectName(), event.getSize(), timeInMs, event.getOwner().getUserId());
-//            break;
+          case OBJECTGET:
+            eventStore.insertS3ObjectUsageEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwner().getUserId());
+            break;
         }
       } catch (AuthException e) {
           LOG.error("Unable fire s3 object reporting event", e.getCause());
