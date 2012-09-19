@@ -130,14 +130,13 @@
               $rowCheckbox.attr('checked', true);
             else
               $rowCheckbox.attr('checked', false);
-
-            e.stopPropagation();
+            //e.stopPropagation();
             thisObj._onRowClick();
             thisObj._trigger('row_click', e);
           });
         }
 
-        if (thisObj.options.context_menu_actions) {
+        if (DEPRECATE && thisObj.options.context_menu_actions) {
           rID = 'ri-'+S4()+S4();
           $currentRow.attr('id', rID);
           $.contextMenu({
@@ -316,23 +315,42 @@
       if (!this.options.menu_actions)
         return undefined;
       var txt_action = this.options.text.action ? this.options.text.action : table_menu_main_action;
-      $menuDiv.append($('<span>').attr('id','more-actions-'+this.options.id).
-                      addClass("inactive-menu").text(txt_action));
 
-      //var itemsList = thisObj.options.menu_actions();
-      $.contextMenu({
-            selector: '#more-actions-'+this.options.id,
-            trigger: "left",
-            build: function(trigger, e) {
-                var itemsList = thisObj.options.menu_actions();
-              return {
-                items: itemsList,
-              };
+       //menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+      $menuDiv.append(
+        //.attr('id','more-actions-'+this.options.id).addClass("inactive-menu").append(
+          $('<a>').attr('id','more-actions-'+this.options.id).addClass("button").addClass("inactive-menu").attr('href','#').text(txt_action).click(function(e){
+            if($(this).hasClass('inactive-menu') && !$menuDiv.find('ul').hasClass('toggle-on'))
+              return false;
+            var menu_actions = thisObj.options.menu_actions();
+            
+            var $ul = $menuDiv.find('ul');
+            if($ul && $ul.length > 0){
+              $ul.slideToggle('fast');
+              $ul.toggleClass('toggle-on'); 
+            }else{
+              $ul = $('<ul>').addClass('toggle-on');      
+              $.each(menu_actions, function (key, menu){
+                $ul.append(
+                  $('<li>').attr('id', thisObj.options.id + '-' + key).append(
+                    $('<a>').attr('href','#').text(menu.name).click( menu.callback)));
+              });
+              $menuDiv.append($ul);
             }
-          });
-      // TODO: init menu in deactive state
-      $('#more-actions-'+this.options.id).contextMenu(false);
-
+            $('html body').trigger('click','table:instance');
+            if($ul.hasClass('toggle-on')){
+              $.each(menu_actions, function (key, menu){
+                if(menu.disabled){
+                  $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click');
+                }else{
+                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').click(menu.callback);
+                }
+              }); 
+              $('html body').eucaevent('add_click', 'table:instance', e);
+            }else
+              $('html body').eucaevent('del_click', 'table:instance');
+              return false;
+          }));
       return $menuDiv;
     },
 

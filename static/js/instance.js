@@ -235,6 +235,8 @@
 
     _createMenuActions : function(args) {
       var thisObj = this;
+      if(!thisObj.tableWrapper)
+        return [];
     // # selected rows, instance_state, attach state, inst type
       var selectedRows = thisObj.tableWrapper.eucatable('getSelectedRows');  
       var numSelected = selectedRows.length;
