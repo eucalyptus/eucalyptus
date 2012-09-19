@@ -152,6 +152,7 @@
                 $helpLink.html('&nbsp;');
                 $buttonPane.hide(); 
                 $resourcePane.hide();
+                $titleBar.find('span').text('');
                 thisObj.help_flipped =true;
               } else{
                 $titleBar.find('.help-return').removeClass().addClass('help-link');
