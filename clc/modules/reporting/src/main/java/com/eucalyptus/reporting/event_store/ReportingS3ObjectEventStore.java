@@ -30,18 +30,22 @@ public class ReportingS3ObjectEventStore extends EventStoreSupport
   protected ReportingS3ObjectEventStore() {
   }
 
-  public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, long sizeGB, long timestampMs,
-                                        String userId) {
-    persist( new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, sizeGB, timestampMs, userId) );
+  public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+		  long sizeGB, long timestampMs, String userId)
+  {
+    persist( new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectName, objectVersion, sizeGB, timestampMs, userId) );
   }
 
-  public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, long timestampMs) {
-    persist( new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, timestampMs) );
+  public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+		  long timestampMs)
+  {
+    persist( new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectName, objectVersion, timestampMs) );
   }
 
-  public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, long getRequestNumCumulative,
-		  long timestampMs, String userId) {
-    persist( new ReportingS3ObjectUsageEvent(s3BucketName, s3ObjectName, getRequestNumCumulative,
+  public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+		  long getRequestNumCumulative,  long timestampMs, String userId)
+  {
+    persist( new ReportingS3ObjectUsageEvent(s3BucketName, s3ObjectName, objectVersion, getRequestNumCumulative,
     		timestampMs, userId) );
   }
 }

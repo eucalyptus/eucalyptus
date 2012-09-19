@@ -29,8 +29,6 @@ import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent;
 import com.eucalyptus.reporting.event_store.ReportingEventSupport;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
-import com.eucalyptus.reporting.event_store.ReportingS3BucketCreateEvent;
-import com.eucalyptus.reporting.event_store.ReportingS3BucketDeleteEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectUsageEvent;
@@ -61,8 +59,6 @@ public class ExportUtils {
       ReportingElasticIpDeleteEvent.class,
       ReportingInstanceCreateEvent.class,
       ReportingInstanceUsageEvent.class,
-      ReportingS3BucketCreateEvent.class,
-      ReportingS3BucketDeleteEvent.class,
       ReportingS3ObjectCreateEvent.class,
       ReportingS3ObjectDeleteEvent.class,
       ReportingS3ObjectUsageEvent.class,

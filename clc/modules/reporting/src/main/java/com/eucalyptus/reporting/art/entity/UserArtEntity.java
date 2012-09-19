@@ -71,7 +71,7 @@ public class UserArtEntity
 {
 	private final Map<String,InstanceArtEntity> instances;
 	private final Map<String,VolumeArtEntity> volumes;
-	private final Map<String,BucketArtEntity> buckets;
+	private final Map<String,BucketUsageArtEntity> bucketsUsage;
 	private final Map<String,ElasticIpArtEntity> elasticIps;
 	private final UsageTotalsArtEntity totals;
 	
@@ -80,7 +80,7 @@ public class UserArtEntity
 		super();
 		this.instances = new HashMap<String,InstanceArtEntity>();
 		this.volumes = new HashMap<String,VolumeArtEntity>();
-		this.buckets = new HashMap<String,BucketArtEntity>();
+		this.bucketsUsage = new HashMap<String,BucketUsageArtEntity>();
 		this.elasticIps = new HashMap<String,ElasticIpArtEntity>();
 		this.totals = new UsageTotalsArtEntity();
 	}
@@ -95,9 +95,9 @@ public class UserArtEntity
 		return volumes;
 	}
 
-	public Map<String,BucketArtEntity> getBuckets()
+	public Map<String,BucketUsageArtEntity> getBucketUsage()
 	{
-		return buckets;
+		return bucketsUsage;
 	}
 
 	/**
