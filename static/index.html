@@ -443,12 +443,14 @@
       <script id="sgroupEditDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-edit-wrapper">
           <div id="sgroups-edit-dialog" class="euca-dialog">
-            <div id="sgroups-edit-group-name"></div>
-            <div id="sgroups-edit-group-desc"></div>
-            <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
-            <div id="sgroups-hidden-name" style='display: none;'></div>
-          
-            <div class="rules inner-box clearfix">
+            <div class="dialog-inner-content">
+              <div class="group inner-box clearfix">
+                <div id="sgroups-edit-group-name"></div>
+                <div id="sgroups-edit-group-desc"></div>
+                <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
+                <div id="sgroups-hidden-name" style='display: none;'></div>
+              </div>
+              <div class="rules inner-box clearfix">
                 <h3>Rules</h3>
                 <p>{{!: sgroup_dialog_edit_rules }}</p>
                 <div class="form-row">
@@ -503,6 +505,7 @@
                 </div>
                 <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
                 <div id="sgroup-rules-list"></div>
+              </div>
             </div>
           </div> 
           <div id="sgroup-edit-dialog-help" class="dialog-help">

@@ -25,6 +25,7 @@ class MockClcInterface(ClcInterface):
     groups = None
     volumes = None
     snapshots = None
+    consoleoutput = None
 
     # load saved state to simulate CLC
     def __init__(self):
@@ -50,6 +51,8 @@ class MockClcInterface(ClcInterface):
             self.volumes = json.load(f, cls=BotoJsonDecoder)
         with open(os.path.join(self.mockpath, 'Snapshots.json')) as f:
             self.snapshots = json.load(f, cls=BotoJsonDecoder)
+        with open(os.path.join(self.mockpath, 'ConsoleOutput.json')) as f:
+            self.consoleoutput = json.load(f, cls=BotoJsonDecoder)
 
     def get_all_zones(self):
         return self.zones
@@ -142,7 +145,7 @@ class MockClcInterface(ClcInterface):
 
     # returns console output
     def get_console_output(self, instance_id):
-        return None
+        return self.consoleoutput
 
     # returns password data
     def get_password_data(self, instance_id):
