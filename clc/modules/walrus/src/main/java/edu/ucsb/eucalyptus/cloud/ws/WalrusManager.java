@@ -110,9 +110,6 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.EventActionInfo;
-import com.eucalyptus.reporting.event.S3BucketEvent;
-import com.eucalyptus.reporting.event.S3BucketEvent.S3BucketAction;
-import com.eucalyptus.reporting.event.S3Event;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent.S3ObjectAction;
 import com.eucalyptus.reporting.event.SnapShotEvent;
@@ -3723,18 +3720,6 @@ public class WalrusManager {
 	} catch (final Exception e) {
 	    LOG.error(e, e);
 	}
-    }
-
-    private static void fireBucketUsageEvent(final S3BucketAction s3BucketAction , final String s3oUUID, 
-	    String bucketName, OwnerFullName ownerFullName, Long sizeInBytes) {
-	try {
-	    
-	    ListenerRegistry.getInstance().fireEvent(
-		    S3BucketEvent.with(s3BucketAction, s3oUUID, bucketName, ownerFullName, sizeInBytes));
-	} catch (final Exception e) {
-	    LOG.error(e, e);
-	}
-
     }
     
 }

@@ -289,6 +289,7 @@ public class DescribeSensorsResponse extends CloudClusterMessage {
 public class SensorsResourceType extends EucalyptusData {
     String resourceName;
     String resourceType;
+    String resourceUuid;
     
     ArrayList<MetricsResourceType> metrics = new ArrayList<MetricsResourceType>();
     

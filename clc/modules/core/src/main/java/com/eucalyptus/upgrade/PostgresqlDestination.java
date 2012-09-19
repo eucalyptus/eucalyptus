@@ -60,96 +60,72 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.reporting.modules.s3;
+package com.eucalyptus.upgrade;
 
-import java.util.*;
-
+import java.util.Map;
+import java.util.Properties;
 import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
+import org.hibernate.ejb.Ejb3Configuration;
+import com.eucalyptus.component.Component;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.id.Eucalyptus.Database;
+import com.eucalyptus.entities.PersistenceContexts;
+import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.bootstrap.DatabaseBootstrapper;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.ImmutableMap;
 
-import com.eucalyptus.reporting.Period;
-import com.eucalyptus.reporting.ReportingModule;
-import com.eucalyptus.reporting.ReportingCriterion;
-import com.eucalyptus.reporting.units.Units;
-import com.eucalyptus.reporting.domain.ReportingAccountDao;
-import com.eucalyptus.reporting.domain.ReportingUserDao;
+public class PostgresqlDestination implements DatabaseDestination {
+  private static Logger LOG = Logger.getLogger( PostgresqlDestination.class );
+  private DatabaseBootstrapper db;
 
-public class S3ReportingModule
-	implements ReportingModule<S3ReportLine>
-{
-	private static Logger log = Logger.getLogger( S3ReportingModule.class );
+  @Override
+  public DatabaseBootstrapper getDb( ) throws Exception {
+    return db;
+  }
+  
+  @Override
+  public void initialize( ) throws Exception {
+    /** Bring up the new destination database **/
+    final Component dbComp = Components.lookup( Database.class );
+    db = Groovyness.newInstance( "setup_db" );
+    try {
+      db.load();
 
-	public S3ReportingModule()
-	{
-		
-	}
-	
-	public List<S3ReportLine> getReportLines(Period period,
-			ReportingCriterion criterion, Units displayUnits,
-			String accountId)
-	{
-		return getReportLines(period, null, criterion, displayUnits, accountId);
-	}
+      final Map<String, String> props = ImmutableMap.<String,String>builder()
+          //.put( "hibernate.archive.autodetection", "jar, class, hbm" )
+          .put( "hibernate.show_sql", "false" )
+          .put( "hibernate.format_sql", "false" )
+          .put( "hibernate.connection.autocommit", "false" )
+          .put( "hibernate.hbm2ddl.auto", "update" )
+          .put( "hibernate.generate_statistics", "false" )
+          .put( "hibernate.connection.driver_class", db.getDriverName() )
+          .put( "hibernate.connection.username", db.getUserName() )
+          .put( "hibernate.connection.password", db.getPassword() )
+          .put( "hibernate.bytecode.use_reflection_optimizer", "true" )
+          .put( "hibernate.cglib.use_reflection_optimizer", "true" )
+          .put( "hibernate.dialect", db.getHibernateDialect() )
+          .put( "hibernate.cache.use_second_level_cache", "false" )
+          .put( "hibernate.cache.use_query_cache", "false" )
+          .build();
 
-	public List<S3ReportLine> getReportLines(Period period, ReportingCriterion groupByCrit,
-			ReportingCriterion crit, Units displayUnits, String accountId)
-	{
-		Map<S3ReportLineKey, S3ReportLine> reportLineMap =
-			new HashMap<S3ReportLineKey, S3ReportLine>();
-		
-		S3UsageLog usageLog = S3UsageLog.getS3UsageLog();
-		Map<S3SummaryKey, S3UsageSummary> usageMap = 
-			usageLog.getUsageSummaryMap(period, accountId);
-		for (S3SummaryKey key: usageMap.keySet()) {
-			Log.info("Adding key:" + key + " data:" + usageMap.get(key));
-			String critVal = getAttributeValue(crit, key);
-			String groupVal = (groupByCrit==null) ? null : getAttributeValue(groupByCrit, key);
-			S3ReportLineKey lineKey = new S3ReportLineKey(critVal, groupVal);
-			if (!reportLineMap.containsKey(lineKey)) {
-				reportLineMap.put(lineKey, new S3ReportLine(lineKey,
-						new S3UsageSummary(), displayUnits));
-			}
-			S3ReportLine reportLine = reportLineMap.get(lineKey);
-			S3UsageSummary summary = usageMap.get(key);
-			reportLine.addUsage(summary);
-		}
-
-		final List<S3ReportLine> results = new ArrayList<S3ReportLine>();
-		for (S3ReportLineKey lineKey: reportLineMap.keySet()) {
-			results.add(reportLineMap.get(lineKey));
-		}
-		
-		Collections.sort(results);
-		return results;
-	}
-
-	
-	private static String getAttributeValue(ReportingCriterion criterion,
-			S3SummaryKey key)
-	{
-		log.debug("owner id:" + key.getOwnerId() + " account id:" + key.getAccountId());
-
-		switch (criterion) {
-			case ACCOUNT:
-				return ReportingAccountDao.getInstance().getReportingAccount(key.getAccountId()).getName();
-			case USER:
-				return ReportingUserDao.getInstance().getReportingUser(key.getOwnerId()).getName();
-			default:
-				return ReportingUserDao.getInstance().getReportingUser(key.getOwnerId()).getName();
-		}
-	}
-	
-	@Override
-	public String getJrxmlFilename()
-	{
-		return "s3.jrxml";
-	}
-
-	@Override
-	public String getNestedJrxmlFilename()
-	{
-		return "nested_s3.jrxml";
-	}
-
-
+      for ( final String ctx : PersistenceContexts.list( ) ) {
+        final Properties p = new Properties( );
+        p.putAll( props );
+        final String ctxUrl = String.format("jdbc:%s",ServiceUris.remote(dbComp,ctx));
+        p.put( "hibernate.connection.url", ctxUrl );
+        final Ejb3Configuration config = new Ejb3Configuration( );
+        config.setProperties( p );
+        for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {
+          config.addAnnotatedClass( c );
+        }
+        PersistenceContexts.registerPersistenceContext( ctx, config );
+      } 
+    } catch ( final Exception e ) {
+      LOG.fatal( e, e );
+      LOG.fatal( "Failed to initialize the persistence layer." );
+      throw Exceptions.toUndeclared( e );
+    }
+  }
 }

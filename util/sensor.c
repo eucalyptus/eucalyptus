@@ -560,7 +560,7 @@ int sensor_get_dummy_instance_data (long long sn, const char * instanceId, const
     return 0;
 }
 
-static sensorResource * find_or_alloc_sr (const boolean do_alloc, const char * resourceName, const char * resourceType)
+static sensorResource * find_or_alloc_sr (const boolean do_alloc, const char * resourceName, const char * resourceType, const char * resourceUuid)
 {
     sensorResource * unused_sr = NULL;
     for (int r=0; r<sensor_state->max_resources; r++) {
@@ -594,7 +594,10 @@ static sensorResource * find_or_alloc_sr (const boolean do_alloc, const char * r
     if (unused_sr != NULL) {
         bzero (unused_sr, sizeof (sensorResource));
         strncpy (unused_sr->resourceName, resourceName, sizeof (unused_sr->resourceName));
-        strncpy (unused_sr->resourceType, resourceType, sizeof (unused_sr->resourceType));
+        if (resourceType)
+            strncpy (unused_sr->resourceType, resourceType, sizeof (unused_sr->resourceType));
+        if (resourceUuid)
+            strncpy (unused_sr->resourceUuid, resourceUuid, sizeof (unused_sr->resourceUuid));
         sensor_state->used_resources++;
         logprintfl (EUCADEBUG, "allocated new sensor resource %s\n", resourceName);
     }
@@ -688,7 +691,7 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
         const sensorResource * sr = srs [r];
         if (is_empty_sr (sr))
             continue;
-        sensorResource * cache_sr = find_or_alloc_sr (TRUE, sr->resourceName, sr->resourceType);
+        sensorResource * cache_sr = find_or_alloc_sr (TRUE, sr->resourceName, sr->resourceType, sr->resourceUuid);
         if (cache_sr == NULL) {
             logprintfl (EUCAWARN, "failed to find space in sensor cache for resource %s\n", 
                         sr->resourceName);
@@ -917,7 +920,7 @@ int sensor_get_value (const char * instanceId,
     if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
 
     sem_p (state_sem);
-    sensorResource * cache_sr = find_or_alloc_sr (FALSE, instanceId, "instance");
+    sensorResource * cache_sr = find_or_alloc_sr (FALSE, instanceId, "instance", NULL);
     if (cache_sr == NULL)
         goto bail;
 
@@ -990,14 +993,15 @@ int sensor_get_instance_data (const char * instanceId, const char ** sensorIds, 
     return ret;
 }
 
-int sensor_add_resource (const char * resourceName, const char * resourceType)
+int sensor_add_resource (const char * resourceName, const char * resourceType, const char * resourceUuid)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
     
     int ret = 1;
     sem_p (state_sem);
-    if (find_or_alloc_sr (TRUE, resourceName, resourceType) != NULL)
+    if (find_or_alloc_sr (TRUE, resourceName, resourceType, resourceUuid) != NULL) {
         ret = 0;
+    }
     sem_v (state_sem);
 
     return ret;
@@ -1009,7 +1013,7 @@ int sensor_remove_resource (const char * resourceName)
     
     int ret = 1;
     sem_p (state_sem);
-    sensorResource * sr = find_or_alloc_sr (FALSE, resourceName, NULL);
+    sensorResource * sr = find_or_alloc_sr (FALSE, resourceName, NULL, NULL);
     if (sr != NULL) {
         sr->resourceName [0] = '\0'; // marks the slot as empty
         ret = 0;

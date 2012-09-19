@@ -123,15 +123,15 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     this.progress = "0%";
     super.setState( State.NIHIL );
   }
-  
 
-  /**
-   * @param accountFullName
-   * @param snapshotId
-   * @return
-   */
   public static Snapshot named( final OwnerFullName ownerFullName, String snapshotId ) {
     return new Snapshot( ownerFullName, snapshotId );
+  }
+
+  public static Snapshot naturalId( final String naturalId ) {
+    final Snapshot snapshot = new Snapshot();
+    snapshot.setNaturalId( naturalId );
+    return snapshot;
   }
 
   public String mapState( ) {

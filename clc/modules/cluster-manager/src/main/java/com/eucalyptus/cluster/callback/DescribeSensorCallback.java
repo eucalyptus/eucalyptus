@@ -22,23 +22,26 @@ package com.eucalyptus.cluster.callback;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Date;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.log4j.Logger;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.ws.util.SerializationUtils;
 
 import com.google.common.collect.Lists;
 
@@ -108,17 +111,12 @@ public class DescribeSensorCallback extends
 
     @Override
     public void fire(DescribeSensorsResponse msg) {
-	
+
 	try {
 
-	    //Document sensorDoc = loadXMLFromString(msg.toString());
-	    
-	    //sensorDoc.get
-	    // TODO : Need to fire the correct usage events to the domain model
-
-	     for (SensorsResourceType sensorData : msg.getSensorsResources()) {
-		LOG.debug("sensorData.getResourceName() : "
-			+ sensorData.getResourceName());
+	    for (SensorsResourceType sensorData : msg.getSensorsResources()) {
+		String resourceName = sensorData.getResourceName();
+		String resourceUuid = sensorData.getResourceUuid();
 
 		for (MetricsResourceType metricType : sensorData.getMetrics()) {
 		    LOG.debug("sensorData.getMetrics() : "
@@ -137,65 +135,39 @@ public class DescribeSensorCallback extends
 				    .getValues()) {
 				// fire constructed event to the domain model
 				// Need real uuid from describe sensors.
+				
+				final long valueTimeStamp = valueType.getTimestamp().getTime();
+				if (!resourceUuid.isEmpty()
+					&& !resourceName.isEmpty()) {
+				    ListenerRegistry
+					    .getInstance()
+					    .fireEvent(
+						    new com.eucalyptus.reporting.event.InstanceUsageEvent(
+							    resourceUuid,
+							    System.currentTimeMillis(),
+							    resourceName,
+							    metricType
+								    .getMetricName(),
+							    Integer.parseInt(counterType
+								    .getSequenceNum()
+								    .toString()),
+							    dimensionType
+								    .getDimensionName(),
+							    valueType
+								    .getValue(),
+							    valueTimeStamp));
+				    
 
-				ListenerRegistry
-					.getInstance()
-					.fireEvent(
-						new com.eucalyptus.reporting.event.InstanceUsageEvent(
-							String.valueOf(sensorData
-								.hashCode()),
-							System.currentTimeMillis(),
-							sensorData
-								.getResourceName(),
-							metricType
-								.getMetricName(),
-							Integer.parseInt(counterType
-								.getSequenceNum()
-								.toString()),
-							dimensionType
-								.getDimensionName(),
-							valueType.getValue()
-								,
-							Long.getLong(valueType
-								.getTimestamp()
-								.toString())));
+				}
 			    }
 			}
 		    }
 		}
 	    }
-	    
-	   
 	} catch (Exception ex) {
 	    LOG.debug("Unable to fire describe sensors call back", ex);
 
 	}
     }
 
-    private static Document loadXMLFromString(String xml) throws Exception
-    {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        InputSource is = new InputSource(new StringReader(xml));
-        return builder.parse(is);
-    }
-
-    private InstanceUsageEvent buildInstanceUsageEvent(Document sensorsDoc) {
-    
-	String uuid = sensorsDoc.getElementsByTagName("uuid").item(0).getNodeValue();
-	String timestamp = sensorsDoc.getElementsByTagName("timestamp").item(0).getNodeValue();
-	String resourceName = sensorsDoc.getElementsByTagName("resourceName").item(0).getNodeValue();
-	String metric = sensorsDoc.getElementsByTagName("metric").item(0).getNodeValue();
-	String sequenceNum = sensorsDoc.getElementsByTagName("sequenceNum").item(0).getNodeValue();
-	String dimension;
-	Double value;
-	long valueTimestamp;
-	
-	
-	
-	Element TIMESTAMP = sensorsDoc.getElementById("timestamp");
-	
-	return null; //  new InstanceUsageEvent(UUID.getNodeValue(),TIMESTAMP.getNodeValue(), );
-    }
-    
 }

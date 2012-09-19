@@ -361,6 +361,7 @@ static inline sensorResource * copy_sensor_resource_from_adb (adb_sensorsResourc
     
     safe_strncpy (sr->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof (sr->resourceName));
     safe_strncpy (sr->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof (sr->resourceType));
+    safe_strncpy (sr->resourceUuid, (char *)adb_sensorsResourceType_get_resourceUuid(resource, env), sizeof (sr->resourceUuid));
     
     return sr;
 }
@@ -370,6 +371,7 @@ static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axu
     adb_sensorsResourceType_t * resource = adb_sensorsResourceType_create(env);    
     adb_sensorsResourceType_set_resourceName (resource, env, sr->resourceName);
     adb_sensorsResourceType_set_resourceType (resource, env, sr->resourceType);
+    adb_sensorsResourceType_set_resourceUuid (resource, env, sr->resourceUuid);
     for (int m=0; m<sr->metricsLen; m++) {
         const sensorMetric * sm = sr->metrics + m;
         adb_metricsResourceType_t * metric = adb_metricsResourceType_create(env);

@@ -169,6 +169,7 @@ public class InstanceArtGenerator
 				continue;
 			}
 
+
 			/* Update instance start and end times */
 			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
 				startEndTimes.put(usageEvent.getUuid(),
