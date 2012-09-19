@@ -73,6 +73,7 @@ class GenerateReportType extends ReportingMessage {
   @HttpParameterMapping (parameter = "End")
   String endDate
   String type
+  String format
 }
 
 class GenerateReportResponseType extends ReportingMessage  {

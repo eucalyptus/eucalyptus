@@ -20,18 +20,9 @@
 package com.eucalyptus.reporting;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Serializable;
-import java.util.Date;
-import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
-import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
-import com.eucalyptus.reporting.export.Export;
-import com.eucalyptus.reporting.export.ReportingExport;
-import com.eucalyptus.ws.util.SerializationUtils;
 import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
 
 /**
  *
@@ -39,53 +30,25 @@ import com.google.common.collect.Maps;
 public class ReportGenerationFacade {
 
     public static String generateReport( @Nonnull  final String type,
+                                         @Nonnull  final String format,
                                                    final long start,
-                                                   final long end,
-                                         @Nullable final String accountId ) throws ReportGenerationException {
-      final String report;
-      if ( !"raw".equals(type) ) {
-        final ReportGenerator generator = ReportGenerator.getInstance();
-        final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
-        try {
-          generator.generateReport( new Period( start, end ), ReportFormat.HTML, ReportType.valueOf(type.toUpperCase().replace('-','_')), null, reportOutput, null );
-        } catch ( final Exception e ) {
-          throw new ReportGenerationException( "Error generating report", e );
-        }
-
-        report = new String( reportOutput.toByteArray(), Charsets.UTF_8 );
-      } else {
-        //TODO:STEVE: remove temporary "raw" report type
-        final ReportingExport export = Export.export(new Date(start), new Date(end));
-        final StringBuilder builder = new StringBuilder(10240);
-
-        final Map<String,String> uuidToInstanceIdMap = Maps.newHashMap();
-        for ( final Serializable item : export ) {
-          if ( item instanceof ReportingInstanceCreateEvent ) {
-            final ReportingInstanceCreateEvent event = (ReportingInstanceCreateEvent) item;
-            uuidToInstanceIdMap.put( event.getUuid(), event.getInstanceId() );
-          }
-          if ( item instanceof ReportingInstanceUsageEvent) {
-              
-            final ReportingInstanceUsageEvent event = (ReportingInstanceUsageEvent) item;
-            builder.append( SerializationUtils.serializeDateTime( new Date( event.getTimestampMs() ) ) ).append(", ");
-            builder.append( event.getUuid() ).append( ", ");
-            builder.append( uuidToInstanceIdMap.get(event.getUuid()) ).append( ", ");
-            builder.append( event.getTimestamp()).append( ", ");
-            builder.append( event.getResourceName() ).append( ", ");
-            builder.append( event.getMetric()).append( ", ");
-            builder.append( event.getSequenceNum()).append(", ");
-            builder.append( event.getDimension() ).append( ", ");
-            builder.append( event.getValue()).append( ", ");
-            builder.append( SerializationUtils.serializeDateTime( new Date( event.getValueTimestamp() ) ) ).append("\n");
-          }
-        }
-
-        report = builder.toString();
+                                                   final long end ) throws ReportGenerationException {
+      final ReportGenerator generator = ReportGenerator.getInstance();
+      final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
+      try {
+        generator.generateReport(
+            new Period( start, end ),
+            ReportFormat.valueOf(format.toUpperCase()),
+            ReportType.valueOf(type.toUpperCase().replace('-','_')),
+            null,
+            reportOutput,
+            null );
+      } catch ( final Exception e ) {
+        throw new ReportGenerationException( "Error generating report", e );
       }
 
-      return report;
+      return new String( reportOutput.toByteArray(), Charsets.UTF_8 );
     }
-
 
     public static final class ReportGenerationException extends Exception {
       private static final long serialVersionUID = 1L;
