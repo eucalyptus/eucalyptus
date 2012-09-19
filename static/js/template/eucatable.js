@@ -359,7 +359,7 @@
               $.each(menu_actions, function (key, menu){
                 $ul.append(
                   $('<li>').attr('id', thisObj.options.id + '-' + key).append(
-                    $('<a>').attr('href','#').text(menu.name).click( menu.callback)));
+                    $('<a>').attr('href','#').text(menu.name).unbind('click').bind('click', menu.callback)));
               });
               $menuDiv.append($ul);
             }
@@ -369,7 +369,7 @@
                 if(menu.disabled){
                   $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click');
                 }else{
-                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').click(menu.callback);
+                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click').bind('click',menu.callback);
                 }
               }); 
               $('html body').eucaevent('add_click', 'table:instance', e);
