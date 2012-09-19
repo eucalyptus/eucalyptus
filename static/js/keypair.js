@@ -81,7 +81,7 @@
            'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: {title: help_keypair['dialog_delete_title'], content: $del_help}, 
+         help: { content: $del_help },
        });
 
       var createButtonId = 'keys-add-btn'; 
@@ -108,7 +108,7 @@
                   },
         'cancel': {domid: 'keys-cancel-btn', text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
-        help : {title: help_keypair['dialog_add_title'], content: $add_help},
+        help : { content: $add_help },
       });
       $add_dialog.eucadialog('onKeypress', 'key-name', createButtonId); 
     },

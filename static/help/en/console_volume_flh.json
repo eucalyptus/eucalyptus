@@ -1,7 +1,0 @@
-{
-  "revert_button": "Back to volumes",
-  "dialog_add_title": "Creating new volume?", 
-  "dialog_delete_title": "Deleting volumes?", 
-  "dialog_add_flh_az_selector": "This is tootlip about AZ",
-  "dialog_add_flh_volume_size" : "This is tootlip about volume size"
-}

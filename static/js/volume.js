@@ -101,7 +101,7 @@
            'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: {title: help_volume['dialog_delete_title'], content: $del_help},
+         help: { content: $del_help },
        });
       // volume delete dialog end
       // volume detach dialog start
@@ -116,7 +116,7 @@
            'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
-         help: {title: help_volume['dialog_detach_title'], content: $detach_help},
+         help: { content: $detach_help },
        });
       // volume detach dialog end
       // attach dialog start
@@ -139,7 +139,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
          },
-         help: {title: help_volume['dialog_volume_attach_title'], content: $attach_dialog_help},
+         help: { content: $attach_dialog_help },
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAttachDialog(dfd); // pulls instance info from server
@@ -188,7 +188,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
          },
-         help: {title: help_volume['dialog_add_title'], content: $add_help},
+         help: { content: $add_help },
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAddDialog(dfd) ; // pulls az and snapshot info from the server

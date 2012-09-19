@@ -105,7 +105,7 @@
            'delete': {text: snapshot_dialog_del_btn, click: function() { thisObj._deleteListedSnapshots(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: {title: help_snapshot['dialog_delete_title'], content: $del_help},
+         help: { content: $del_help },
        });
       // snapshot delete dialog end
       // create snapshot dialog start
@@ -130,7 +130,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
-         help: {title: help_snapshot['dialog_create_title'], content: $snapshot_dialog_help},
+         help: { content: $snapshot_dialog_help },
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initCreateDialog(dfd) ; // pulls volumes info from the server

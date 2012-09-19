@@ -286,7 +286,7 @@
               <p>{{!: keypair_dialog_add_text }}</p>
               <div class="form-row">
                 <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
-                <input type="text" id="key-name" class="required"/>
+                <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_create_flh_name }}"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -355,18 +355,19 @@
       <!-- Security Group dialog template -->
       <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-add-wrapper">
+
           <div id="sgroups-add-dialog" class="euca-dialog">
-            {{!: required_fields }}
-            <div class="group inner-box clearfix">
+            <div class="dialog-inner-content">
+              <div class="group inner-box clearfix">
                 <h3>Group *</h3>
                 <p>{{!: sgroup_dialog_add_group }}</p>
                 <div class="form-row">
                   <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
-                  <input type="text" id="sgroup-name" class="required"/>
+                  <input type="text" id="sgroup-name" class="required" title="{{!: sgroups_dialog_create_flh_name }}"/>
                 </div>
                 <div class="form-row">    
                   <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
-                  <input type="text" id="sgroup-description" class="required"/>
+                  <input type="text" id="sgroup-description" class="required" title="{{!: sgroups_dialog_create_flh_description }}"/>
                 </div>  
             </div>
             <div class="rules inner-box clearfix">
@@ -374,7 +375,7 @@
                 <p>{{!: sgroup_dialog_add_rules }}</p>
                 <div class="form-row"> 
                   <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                  <select id="sgroup-template">
+                  <select id="sgroup-template" title="{{!: sgroups_dialog_create_flh_template }}">
                     <option value="none">Select protocol</option>
                     <optgroup label="">
                     <option>SSH (TCP port 22, for terminal access)</option>
@@ -401,21 +402,21 @@
                 <div id="sgroup-more-rules" style='display: none;'>
                   <div class="form-row"> 
                     <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                    <input type="text" id="sgroup-ports" class="required"/>
+                    <input type="text" id="sgroup-ports" class="required" title="{{!: sgroups_dialog_create_flh_ports }}"/>
                     <div class="dialog-notifications"></div>
                   </div>  
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroups_dialog_create_flh_allow_ip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group"/>
+                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroups_dialog_create_flh_allow_group }}"/>
                   </div>
   
                   <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
+                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroups_dialog_create_flh_allow_instances }}"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
@@ -423,15 +424,19 @@
                 </div>
                 <div id="sgroup-rules-list"></div>
                 <p class="required-hint">{{!: required_fields }}</p>
-            </div>
-            <div id="sgroup-add-dialog-help" class="dialog-help">
-              <div class="dialog-help-content">
+              </div>
+            </div> 
+          </div>
+
+          <div id="sgroup-add-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
                 {{!: dialog_add_content }}
-              </div>
-              <div class="help-revert-button">
-                <a href="#"> {{!>revert_button}}</a>
-              </div>
             </div>
+            <div class="help-revert-button">
+                <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+
         </div>
       </script>
 
@@ -499,7 +504,8 @@
                 <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
                 <div id="sgroup-rules-list"></div>
             </div>
-            <div id="sgroup-edit-dialog-help" class="dialog-help">
+          </div> 
+          <div id="sgroup-edit-dialog-help" class="dialog-help">
               <div class="dialog-help-content">
                 {{!: dialog_edit_content }}
               </div>
@@ -516,14 +522,14 @@
             <div class="dialog-inner-content">
               <p>{{!: sgroup_dialog_del_text }}</p>
               <div class="selected-resources"></div>
-            </div>  
-            <div id="sgroup-delete-dialog-help" class="dialog-help">
-              <div class="dialog-help-content">
+            </div>
+          </div>
+          <div id="sgroup-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
                 {{!: dialog_delete_content }}
-              </div>
-              <div class="help-revert-button">
+            </div>
+            <div class="help-revert-button">
                 <a href="#"> {{!>revert_button}}</a>
-              </div>
             </div>
           </div>
         </div>
@@ -648,16 +654,16 @@
               <p>{{!: volume_dialog_add_text }}</p>
               <div class="form-row">
                 <label for="volume-add-snapshot-selector">{{!: volume_dialog_snapshot_label }}</label>
-                <select id="volume-add-snapshot-selector"></select>
+                <select title="{{!: volume_dialog_create_flh_snapshot_selector }}" id="volume-add-snapshot-selector"></select>
               </div>
               <div class="form-row">
                 <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
-                <input type="text" id="volume-size" class="required" title="{{!: dialog_add_flh_volume_size }}"/>
+                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_create_flh_volume_size }}"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
               <div class="form-row">
                 <label for="volume-add-az-selector" class="required-label">{{!: volume_dialog_az_label }}</label>
-                <select title="{{!: dialog_add_flh_az_selector }}" id="volume-add-az-selector"></select>
+                <select title="{{!: volume_dialog_create_flh_az_selector }}" id="volume-add-az-selector"></select>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
