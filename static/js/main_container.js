@@ -102,6 +102,9 @@
         case 'documentation':
           window.open('http://www.eucalyptus.com/eucalyptus-cloud/documentation', '_blank');
           break;
+        case 'forum':
+          window.open('https://engage.eucalyptus.com', '_blank');
+          break;
         default:
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
