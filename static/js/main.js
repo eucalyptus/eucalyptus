@@ -61,6 +61,8 @@
           return true;
         if($(e.target).is('select'))
           return true;
+        if($(e.target).is('textarea'))
+          return true;
 
         var key = e.which;
           /*dashboard: D, d (68, 100)
