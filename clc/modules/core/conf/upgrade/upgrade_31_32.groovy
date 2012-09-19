@@ -1,11 +1,5 @@
 import com.eucalyptus.upgrade.AbstractUpgradeScript
-import com.eucalyptus.upgrade.StandalonePersistence
 import com.eucalyptus.entities.PersistenceContexts
-import org.hibernate.ejb.Ejb3Configuration
-import com.eucalyptus.bootstrap.ServiceJarDiscovery
-import com.eucalyptus.entities.PersistenceContextDiscovery
-import org.logicalcobwebs.proxool.configuration.PropertyConfigurator
-import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.reporting.domain.ReportingUser
 import javax.persistence.EntityManagerFactory
 import com.eucalyptus.system.Ats
@@ -58,9 +52,10 @@ class upgrade_31_32 extends AbstractUpgradeScript {
       [ ReportingUser.class, ReportingAccount.class ].each { entityClass ->
         entityManager.createQuery( 'delete from ' + entityClass.getName() ).executeUpdate()
       }
-    }
 
-    // create events for existing entities
-    ReportingDataVerifier.addMissingReportingEvents()
+      // create events for existing entities
+      String desc = ReportingDataVerifier.addMissingReportingEvents()
+      LOG.info( "Reporting event status / changes:\n " + desc )
+    }
   }
 }

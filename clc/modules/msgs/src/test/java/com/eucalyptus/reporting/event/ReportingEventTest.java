@@ -206,87 +206,56 @@ public class ReportingEventTest {
   }
 
   @Test
-  public void testS3BucketEventCreation() {
-    final S3BucketEvent createEvent = S3BucketEvent.with(
-      S3BucketEvent.forS3BucketCreate(),
-      uuid("bucket1"),
-      "bucket1",
-      Principals.systemFullName(),
-      12L
-    );
-
-    assertEquals("action", S3BucketEvent.S3BucketAction.BUCKETCREATE, createEvent.getAction() );
-    assertEquals("uuid", uuid("bucket1"), createEvent.getUuid());
-    assertEquals("bucket name", "bucket1", createEvent.getBucketName());
-    assertEquals("owner", Principals.systemFullName(), createEvent.getOwner() );
-    assertEquals("size", (Long) 12L, createEvent.getSize());
-    assertEquals("create event string", "S3BucketEvent [action=BUCKETCREATE, userId=eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1]", createEvent.toString());
-
-    final S3BucketEvent deleteEvent = S3BucketEvent.with(
-        S3BucketEvent.forS3BucketDelete(),
-        uuid("bucket1"),
-        "bucket1",
-        Principals.systemFullName(),
-        12L
-    );
-
-    assertEquals("action", S3BucketEvent.S3BucketAction.BUCKETDELETE, deleteEvent.getAction() );
-    assertEquals("uuid", uuid("bucket1"), deleteEvent.getUuid());
-    assertEquals("bucket name", "bucket1", deleteEvent.getBucketName());
-    assertEquals("owner", Principals.systemFullName(), deleteEvent.getOwner() );
-    assertEquals("size", (Long) 12L, deleteEvent.getSize());
-    assertEquals("delete event string", "S3BucketEvent [action=BUCKETDELETE, userId=eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1]", deleteEvent.toString());
-  }
-
-  @Test
   public void testS3ObjectEventCreation() {
     final S3ObjectEvent getEvent = S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectGet(),
-        uuid("bucket1"),
         "bucket1",
         "object1",
+        "version1",
         Principals.systemFullName(),
         12L
     );
 
     assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTGET, getEvent.getAction());
-    assertEquals("uuid", uuid("bucket1"), getEvent.getUuid());
     assertEquals("bucket name", "bucket1", getEvent.getBucketName());
+    assertEquals("object key", "object1", getEvent.getObjectKey());
+    assertEquals("version", "version1", getEvent.getVersion());
     assertEquals("owner", Principals.systemFullName(), getEvent.getOwner());
     assertEquals("size", (Long) 12L, getEvent.getSize());
-    assertEquals("get event string", "S3ObjectEvent [action=OBJECTGET, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1, objectName=object1]", getEvent.toString());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTGET, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=version1]", getEvent.toString());
 
     final S3ObjectEvent putEvent = S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectCreate(),
-        uuid("bucket1"),
         "bucket1",
         "object1",
+        null,
         Principals.systemFullName(),
         12L
     );
 
     assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTCREATE, putEvent.getAction());
-    assertEquals("uuid", uuid("bucket1"), putEvent.getUuid());
     assertEquals("bucket name", "bucket1", putEvent.getBucketName());
+    assertEquals("object key", "object1", putEvent.getObjectKey());
+    assertNull("version", putEvent.getVersion());
     assertEquals("owner", Principals.systemFullName(), putEvent.getOwner());
     assertEquals("size", (Long) 12L, putEvent.getSize());
-    assertEquals("get event string", "S3ObjectEvent [action=OBJECTCREATE, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1, objectName=object1]", putEvent.toString());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTCREATE, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=null]", putEvent.toString());
 
     final S3ObjectEvent deleteEvent = S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectDelete(),
-        uuid("bucket1"),
         "bucket1",
         "object1",
+        "version1",
         Principals.systemFullName(),
         12L
     );
 
     assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTDELETE, deleteEvent.getAction());
-    assertEquals("uuid", uuid("bucket1"), deleteEvent.getUuid());
     assertEquals("bucket name", "bucket1", deleteEvent.getBucketName());
+    assertEquals("version", "version1", deleteEvent.getVersion());
     assertEquals("owner", Principals.systemFullName(), deleteEvent.getOwner());
     assertEquals("size", (Long) 12L, deleteEvent.getSize());
-    assertEquals("get event string", "S3ObjectEvent [action=OBJECTDELETE, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, uuid=721449c1-7af4-3c6b-aee3-7abc80049ae0, size=12, bucketName=bucket1, objectName=object1]", deleteEvent.toString());
+    assertEquals("get event string", "S3ObjectEvent [action=OBJECTDELETE, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=version1]", deleteEvent.toString());
   }
 
   @Test

@@ -9,7 +9,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
-import com.eucalyptus.reporting.event_store.ReportingS3BucketEventStore;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore;
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore;
@@ -201,20 +200,21 @@ public class FalseDataGenerator
 										timeMs, userId, SNAPSHOT_SIZE);
 							}
 							
-							/* Create a fake bucket if one should be created in this period. */
-							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
-								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
-								log.debug(String.format("  Generating bucket uuid %s\n", bucketUuid));
-								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, userId, timeMs);
-							}
-							
-							/* Create a fake object if one should be created in this period. */
-							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
-								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
-								log.debug(String.format("  Generating object uuid %s\n", uuid));
-								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
-										OBJECT_SIZE, timeMs, userId);
-							}
+//TODO:FIXME Does not compile after S3 event changes
+//							/* Create a fake bucket if one should be created in this period. */
+//							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
+//								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
+//								log.debug(String.format("  Generating bucket uuid %s\n", bucketUuid));
+//								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, userId, timeMs);
+//							}
+//
+//							/* Create a fake object if one should be created in this period. */
+//							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
+//								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
+//								log.debug(String.format("  Generating object uuid %s\n", uuid));
+//								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
+//										OBJECT_SIZE, timeMs, userId);
+//							}
 							
 								
 								
@@ -244,15 +244,16 @@ public class FalseDataGenerator
 							}
 
 							/* Generate object usage in this period for every object that was created before */
-							for (long i=OBJECT_UUID_START; i<objectUuidNum-2; i++) {
-								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
-								//TODO: divide by zero here
-								long bucketNum = i/(NUM_PERIODS_PER_BUCKET/NUM_PERIODS_PER_OBJECT);
-								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
-								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid));
-								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
-										bucketUuid,	uuid, OBJECT_SIZE, timeMs, userId );
-							}
+////TODO:FIXME Does not compile after S3 event changes
+//							for (long i=OBJECT_UUID_START; i<objectUuidNum-2; i++) {
+//								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
+//								//TODO: divide by zero here
+//								long bucketNum = i/(NUM_PERIODS_PER_BUCKET/NUM_PERIODS_PER_OBJECT);
+//								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
+//								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid));
+//								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
+//										bucketUuid,	uuid, OBJECT_SIZE, timeMs, userId );
+//							}
 
 							/* Attach Volumes and Elastic IPs to Instances */
 							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, VOLUME_SIZE, timeMs);

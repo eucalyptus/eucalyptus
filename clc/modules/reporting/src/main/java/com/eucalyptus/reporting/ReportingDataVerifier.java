@@ -30,7 +30,6 @@ import javax.persistence.EntityTransaction;
 import org.hibernate.Criteria;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
-import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
@@ -44,7 +43,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
-import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent;
@@ -66,6 +64,7 @@ import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
+import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -143,13 +142,8 @@ public final class ReportingDataVerifier {
         // create copies containing only items that differ
         List<ResourceWithRelation<?>> targetCopy = Lists.newArrayList( targetHolder.resources );
         List<ResourceWithRelation<?>> currentCopy = Lists.newArrayList( currentHolder.resources );
-        if ( ObjectInfo.class.equals(type) ) {
-          removeMatching( targetCopy, currentHolder.resources );
-          removeMatching( currentCopy, targetHolder.resources );
-        } else {
-          targetCopy.removeAll( currentHolder.resources );
-          currentCopy.removeAll( targetHolder.resources );
-        }
+        targetCopy.removeAll( currentHolder.resources );
+        currentCopy.removeAll( targetHolder.resources );
 
         final Set<ResourceKey> keys = Sets.newHashSet( Iterables.transform( Iterables.concat( targetCopy, currentCopy ), key() ) );
         for ( final ResourceKey key : keys ) {
@@ -195,25 +189,6 @@ public final class ReportingDataVerifier {
     addAttachmentStateEvents( timestamp, verifiedUserIds, eventDescriptions.detach, false );
   }
 
-  /**
-   * Remove matching S3 resources using custom "match" method and only
-   * removing one instance per match.
-   */
-  private static void removeMatching( final List<ResourceWithRelation<?>> update,
-                                      final List<ResourceWithRelation<?>> remove ) {
-    Iterables.removeIf( update, new Predicate<ResourceWithRelation<?>>() {
-      @Override
-      public boolean apply( final ResourceWithRelation<?> removable ) {
-        return Iterables.find( remove,  new Predicate<ResourceWithRelation<?>>() {
-          @Override
-          public boolean apply( final ResourceWithRelation<?> remove ) {
-            return ((S3ObjectKey)removable.resourceKey).matches( (S3ObjectKey)remove.resourceKey );
-          }
-        }, null ) != null;
-      }
-    } );
-  }
-
   private static Predicate<ResourceWithRelation<?>> withKeyMatching( final ResourceKey key ) {
     return Predicates.compose( Predicates.equalTo( key ), key() );
   }
@@ -235,7 +210,7 @@ public final class ReportingDataVerifier {
           final ObjectInfo objectInfo = findObjectInfo( key );
           final User user = objectInfo==null ? null : getAccountAdmin( accountNumberToAccountAdminMap, objectInfo.getOwnerId() );
           if ( objectInfo != null && user != null && ensureUserAndAccount( verifiedUserIds, user.getUserId() ) ) {
-            store.insertS3ObjectCreateEvent( objectInfo.getBucketName(), objectInfo.getObjectKey(), objectInfo.getSize(), objectInfo.getCreationTimestamp().getTime(), user.getUserId() );
+            store.insertS3ObjectCreateEvent( objectInfo.getBucketName(), objectInfo.getObjectKey(), objectInfo.getVersionId(), objectInfo.getSize(), objectInfo.getCreationTimestamp().getTime(), user.getUserId() );
           }
         } else if ( Snapshot.class.equals( holder.type ) ) {
           final ReportingVolumeSnapshotEventStore store = ReportingVolumeSnapshotEventStore.getInstance();
@@ -265,7 +240,7 @@ public final class ReportingDataVerifier {
         } else if ( ObjectInfo.class.equals( holder.type ) ) {
           final ReportingS3ObjectEventStore store = ReportingS3ObjectEventStore.getInstance();
           final S3ObjectKey key = (S3ObjectKey) resource.resourceKey;
-          store.insertS3ObjectDeleteEvent( key.bucketName, key.objectName, /*key.size,*/ timestamp );
+          store.insertS3ObjectDeleteEvent( key.bucketName, key.objectKey, key.objectVersion, timestamp );
         } else if ( Snapshot.class.equals( holder.type ) ) {
           final ReportingVolumeSnapshotEventStore store = ReportingVolumeSnapshotEventStore.getInstance();
           store.insertDeleteEvent( resource.resourceKey.toString(), timestamp );
@@ -311,10 +286,9 @@ public final class ReportingDataVerifier {
   }
 
   private static ResourceWithRelation<S3ObjectKey> s3ObjectResource( final String bucketName,
-                                                                     final String objectName,
-                                                                     final long size,
-                                                                     final String userId ) {
-    return s3ObjectResource( new S3ObjectKey( bucketName, objectName, size, userId ) );
+                                                                     final String objectKey,
+                                                                     final String objectVersion ) {
+    return s3ObjectResource( new S3ObjectKey( bucketName, objectKey, objectVersion ) );
   }
 
   private static ResourceWithRelation<S3ObjectKey> s3ObjectResource( final S3ObjectKey key ) {
@@ -365,25 +339,6 @@ public final class ReportingDataVerifier {
     return user;
   }
 
-  private static String getAccountNumberForUserId( final Map<String, String> userIdToAccountNumberMap,
-                                                   final String userId ) {
-    String accountNumber = userIdToAccountNumberMap.get( userId );
-
-    if ( accountNumber == null && !userIdToAccountNumberMap.containsKey(userId) ) {
-      final ReportingUser user = (ReportingUser) Entities.createCriteria( ReportingUser.class )
-          .setCacheable(false)
-          .setReadOnly(true)
-          .add( Restrictions.idEq( userId ) )
-          .uniqueResult();
-      if ( user != null ) {
-        accountNumber = user.getAccountId();
-      }
-      userIdToAccountNumberMap.put( userId, accountNumber );
-    }
-
-    return accountNumber;
-  }
-
   private static Address findAddress( final String uuid ) {
     return Iterables.getFirst( Iterables.filter(
         Iterables.concat( Addresses.getInstance().listValues(), Addresses.getInstance().listDisabledValues() ),
@@ -394,9 +349,8 @@ public final class ReportingDataVerifier {
     try {
       final ObjectInfo objectInfo = new ObjectInfo();
       objectInfo.setBucketName( key.bucketName );
-      objectInfo.setObjectKey( key.objectName );
-      objectInfo.setSize( key.size );
-      objectInfo.setOwnerId( key.accountNumber );
+      objectInfo.setObjectKey( key.objectKey );
+      objectInfo.setVersionId( key.objectVersion==null ? WalrusProperties.NULL_VERSION_ID : key.objectVersion );
       final List<ObjectInfo> infos = Transactions.findAll( objectInfo );
       if ( infos.isEmpty() ) {
         return null;
@@ -563,8 +517,7 @@ public final class ReportingDataVerifier {
             view.add( ObjectInfo.class, s3ObjectResource(
                 objectInfo.getBucketName(),
                 objectInfo.getObjectKey(),
-                objectInfo.getSize(),
-                objectInfo.getOwnerId() ) );
+                objectInfo.getVersionId() ) );
           }
         }
 
@@ -610,8 +563,6 @@ public final class ReportingDataVerifier {
 
     @Override
     View buildView() {
-      final Map<String,String> userIdToAccountNumberMap = Maps.newHashMap();
-
       // Build address info, map key denotes existence
       final Map<String,RelationTimestamp> addressRelationMap = Maps.newHashMap();
       foreach( ReportingElasticIpCreateEvent.class, new Callback<ReportingElasticIpCreateEvent>() {
@@ -660,13 +611,13 @@ public final class ReportingDataVerifier {
       foreach(ReportingS3ObjectCreateEvent.class, new Callback<ReportingS3ObjectCreateEvent>() {
         @Override
         public void fire( final ReportingS3ObjectCreateEvent input ) {
-          s3ObjectList.add( new S3ObjectKey( input.getS3BucketName(), input.getS3ObjectName(), input.getSizeGB(), getAccountNumberForUserId( userIdToAccountNumberMap, input.getUserId() ) ) );
+          s3ObjectList.add( new S3ObjectKey( input.getS3BucketName(), input.getS3ObjectKey(), input.getObjectVersion() ) );
         }
       } );
       foreach(ReportingS3ObjectDeleteEvent.class, new Callback<ReportingS3ObjectDeleteEvent>() {
         @Override
         public void fire( final ReportingS3ObjectDeleteEvent input ) {
-          s3ObjectList.remove( new S3ObjectKey(input.getS3BucketName(), input.getS3ObjectName() ) );
+          s3ObjectList.remove( new S3ObjectKey(input.getS3BucketName(), input.getS3ObjectKey(), input.getObjectVersion() ) );
         }
       } );
 
@@ -815,29 +766,15 @@ public final class ReportingDataVerifier {
 
   private static final class S3ObjectKey extends ResourceKey {
     private final String bucketName;
-    private final String objectName;
-    private final long size;
-    private final String accountNumber;
+    private final String objectKey;
+    private final String objectVersion;
 
-    private S3ObjectKey( final String bucketName, final String objectName ) {
-      this( bucketName, objectName, 0, null );
-    }
-
-    private S3ObjectKey( final String bucketName, final String objectName, final long size, final String accountNumber ) {
+    private S3ObjectKey( final String bucketName,
+                         final String objectKey,
+                         final String objectVersion  ) {
       this.bucketName = bucketName;
-      this.objectName = objectName;
-      this.size = size;
-      this.accountNumber = accountNumber;
-    }
-
-    public boolean matches( final S3ObjectKey that ) {
-      return this == that ||
-          !(accountNumber == null || that.accountNumber == null) &&
-              size == that.size &&
-              accountNumber.equals( that.accountNumber ) &&
-              bucketName.equals( that.bucketName ) &&
-              objectName.equals( that.objectName );
-
+      this.objectKey = objectKey;
+      this.objectVersion = objectVersion; //TODO:STEVE: Will we store "null" or actually null?
     }
 
     @SuppressWarnings( "RedundantIfStatement" )
@@ -849,7 +786,9 @@ public final class ReportingDataVerifier {
       final S3ObjectKey that = (S3ObjectKey) o;
 
       if ( !bucketName.equals( that.bucketName ) ) return false;
-      if ( !objectName.equals( that.objectName ) ) return false;
+      if ( !objectKey.equals( that.objectKey ) ) return false;
+      if ( objectVersion != null ? !objectVersion.equals( that.objectVersion ) : that.objectVersion != null )
+        return false;
 
       return true;
     }
@@ -857,7 +796,8 @@ public final class ReportingDataVerifier {
     @Override
     public int hashCode() {
       int result = bucketName.hashCode();
-      result = 31 * result + objectName.hashCode();
+      result = 31 * result + objectKey.hashCode();
+      result = 31 * result + (objectVersion != null ? objectVersion.hashCode() : 0);
       return result;
     }
 
@@ -865,9 +805,8 @@ public final class ReportingDataVerifier {
     public String toString() {
       return "ObjectKey[" +
           "bucket:" + bucketName +
-          "; object:" + objectName +
-          "; size:" + size +
-          "; accountNumber:'" + accountNumber +
+          "; object:" + objectKey +
+          "; version:" + objectVersion +
           ']';
     }
   }
