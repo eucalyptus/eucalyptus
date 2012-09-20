@@ -133,6 +133,7 @@ public class InstanceArtGenerator
 				user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId()));
 			}
 			InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
+			instance.getUsage().addInstanceCnt(1);
 			usageEntities.put(createEvent.getUuid(), instance.getUsage());
 		}
 
@@ -148,8 +149,23 @@ public class InstanceArtGenerator
 		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
 		while (iter.hasNext()) {
 
-			/* Grab event, last event, and usage entity to update */
 			ReportingInstanceUsageEvent usageEvent = (ReportingInstanceUsageEvent) iter.next();
+
+			/* Update instance start and end times */
+			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
+				startEndTimes.put(usageEvent.getUuid(),
+						new StartEndTime(Math.max(report.getBeginMs(), usageEvent.getTimestampMs()),
+								Math.min(report.getEndMs(), usageEvent.getTimestampMs())));
+			} else {
+				StartEndTime seTime = startEndTimes.get(usageEvent.getUuid());
+				seTime.setStartTimeMs(Math.max(report.getBeginMs(),
+						Math.min(seTime.getStartTimeMs(), usageEvent.getTimestampMs())));
+				seTime.setEndTimeMs(Math.min(report.getEndMs(),
+						Math.max(seTime.getEndTimeMs(), usageEvent.getTimestampMs())));
+			}
+			
+			
+			/* Grab last event for this metric/dim combo, and usage entity to update */
 			UsageEventKey key = new UsageEventKey(usageEvent.getUuid(), usageEvent.getMetric(),
 					usageEvent.getDimension());
 			if (! lastEvents.containsKey(key)) {
@@ -170,18 +186,7 @@ public class InstanceArtGenerator
 			}
 
 
-			/* Update instance start and end times */
-			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
-				startEndTimes.put(usageEvent.getUuid(),
-						new StartEndTime(Math.max(report.getBeginMs(), lastEvent.getTimestampMs()),
-								Math.min(report.getEndMs(), usageEvent.getTimestampMs())));
-			} else {
-				StartEndTime seTime = startEndTimes.get(usageEvent.getUuid());
-				seTime.setStartTimeMs(Math.max(report.getBeginMs(),
-						Math.min(seTime.getStartTimeMs(), lastEvent.getTimestampMs())));
-				seTime.setEndTimeMs(Math.min(report.getEndMs(),
-						Math.max(seTime.getEndTimeMs(), usageEvent.getTimestampMs())));
-			}
+			/* We sometimes miss events here. Last event is dropped. Last event is last event for this metric/dim combo?? */
 
 			/* Update metrics in usage */
 			Double value = null;
