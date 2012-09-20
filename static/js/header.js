@@ -68,7 +68,7 @@
        //$naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));
        
        //help area 
-       var $helpArea = this.element.find('#euca-help');
+/*       var $helpArea = this.element.find('#euca-help');
 
        var help_menus = {'documentation':menu_help_documentation,'forum':menu_help_forum,'report':menu_help_report}
        var $help_menus = $('<ul>');
@@ -94,9 +94,9 @@
              }),
              $help_menus)));
      
-
+*/
        //user area
-       var user_menus = {'preference':{text:menu_user_preferences},'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
+       var user_menus = {'help':{text:menu_help, options:KEEP_VIEW}, 'preference':{text:menu_user_preferences},'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
 
        var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
        var $userArea = this.element.find('#euca-user');

@@ -28,6 +28,7 @@
     _aboutDialog : null,
     _version : '',
     _adminURL : '',
+    _helpLink : '',
 
     _init : function() {
       this.updateSelected(this.options.default_selected);
@@ -48,6 +49,7 @@
             if ( data ) {
               thisObj._version = data.version;
               thisObj._adminURL = data.admin_url;
+              thisObj._helpLink = data.help_page;
             }
           },
         error:
@@ -138,14 +140,8 @@
         case 'logout':
           logout();
           break;
-        case 'documentation':
-          window.open('http://www.eucalyptus.com/eucalyptus-cloud/documentation', '_blank');
-          break;
-        case 'forum':
-          window.open('https://engage.eucalyptus.com', '_blank');
-          break;
-        case 'report':
-          window.open('https://eucalyptus.atlassian.net', '_blank');
+        case 'help':
+          window.open(thisObj._helpLink, '_blank');
           break;
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");
