@@ -59,35 +59,38 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.reporting.art.entity;
+package com.eucalyptus.reporting.art.util;
 
-import java.util.*;
-
-import com.eucalyptus.reporting.art.ArtObject;
-
-public class ElasticIpArtEntity
-	implements ArtObject
+public class StartEndTimes
 {
-	final ElasticIpUsageArtEntity usage;
-	final Map<String, ElasticIpUsageArtEntity> instanceAttachments;
-	
-	public ElasticIpArtEntity()
+	private long startTime;
+	private long endTime;
+
+	public StartEndTimes( long startTime, long endTime )
 	{
-		this.usage = new ElasticIpUsageArtEntity();
-		this.instanceAttachments = new HashMap<String, ElasticIpUsageArtEntity>();
+		this.startTime = startTime;
+		this.endTime = endTime;
 	}
 	
-	public ElasticIpUsageArtEntity getUsage()
+	public long getStartTime()
 	{
-		return this.usage;
+		return startTime;
 	}
 	
-	/**
-	 * instanceId -> usage 
-	 */
-	public Map<String, ElasticIpUsageArtEntity> getInstanceAttachments()
+	public void setStartTime(long startTime)
 	{
-		return this.instanceAttachments;
+		this.startTime = startTime;
 	}
 	
+	public long getEndTime()
+	{
+		return endTime;
+	}
+	
+	public void setEndTime(long endTime)
+	{
+		this.endTime = endTime;
+	}
+
 }
+

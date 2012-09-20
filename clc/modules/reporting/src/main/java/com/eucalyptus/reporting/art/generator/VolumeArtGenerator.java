@@ -1,3 +1,64 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 package com.eucalyptus.reporting.art.generator;
 
 import java.util.HashMap;
@@ -15,6 +76,8 @@ import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeUsageArtEntity;
 import com.eucalyptus.reporting.art.util.AttachDurationCalculator;
+import com.eucalyptus.reporting.art.util.DurationCalculator;
+import com.eucalyptus.reporting.art.util.StartEndTimes;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
@@ -67,7 +130,7 @@ public class VolumeArtGenerator
 			UserArtEntity user = account.getUsers().get(reportingUser.getName());
 			VolumeArtEntity volume = new VolumeArtEntity(createEvent.getVolumeId());
 			volume.getUsage().setSizeGB( createEvent.getSizeGB() );
-			long startTime = Math.max(report.getBeginMs(), createEvent.getTimestampMs());
+			long startTime = createEvent.getTimestampMs();
 			if (startTime <= report.getEndMs()) {
 				user.getVolumes().put(createEvent.getUuid(), volume);
 				volStartEndTimes.put(createEvent.getUuid(), new StartEndTimes( startTime, report.getEndMs() ));
@@ -81,10 +144,11 @@ public class VolumeArtGenerator
 		iter = wrapper.scanWithNativeQuery( "scanVolumeDeleteEvents" );
 		while (iter.hasNext()) {
 			ReportingVolumeDeleteEvent deleteEvent = (ReportingVolumeDeleteEvent) iter.next();
-			long endTime = Math.min(deleteEvent.getTimestampMs(), report.getEndMs());
+			long endTime = deleteEvent.getTimestampMs();
 			if (endTime >= report.getBeginMs() && volStartEndTimes.containsKey(deleteEvent.getUuid())) {
 				StartEndTimes startEndTimes = volStartEndTimes.get(deleteEvent.getUuid());
-				startEndTimes.setEndTimeMs(endTime);
+				startEndTimes.setEndTime(endTime);
+			} else {
 				volumeEntities.remove(deleteEvent.getUuid());
 				volStartEndTimes.remove(deleteEvent.getUuid());
 			}
@@ -99,7 +163,9 @@ public class VolumeArtGenerator
 				log.error("volume without corresponding start end times:" + uuid);
 				continue;
 			}
-			volume.getUsage().setGBSecs(startEndTimes.getDurationMs()*volume.getUsage().getSizeGB());
+			long duration = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
+					startEndTimes.getStartTime(), startEndTimes.getEndTime())/1000;
+			volume.getUsage().setGBSecs(duration*volume.getUsage().getSizeGB());
 		}
 		
 
@@ -129,12 +195,12 @@ public class VolumeArtGenerator
 		iter = wrapper.scanWithNativeQuery( "scanVolumeDetachEvents" );
 		while (iter.hasNext()) {
 			ReportingVolumeDetachEvent detachEvent = (ReportingVolumeDetachEvent) iter.next();
-			long duration = durationCalc.detach(detachEvent.getInstanceUuid(),
+			long durationMs = durationCalc.detach(detachEvent.getInstanceUuid(),
 					detachEvent.getVolumeUuid(), detachEvent.getTimestampMs());
-			if (duration==0) continue;
+			if (durationMs==0) continue;
 			if (! volumeEntities.containsKey(detachEvent.getVolumeUuid())) continue;
 			VolumeArtEntity volume = volumeEntities.get(detachEvent.getVolumeUuid());
-			long gbsecs = duration * volume.getUsage().getSizeGB();
+			long gbsecs = ((durationMs/1000) * volume.getUsage().getSizeGB());
 			/* If a volume is repeatedly attached to and detached from an instance,
 			 * add up the total attachment time.
 			 */
@@ -145,9 +211,13 @@ public class VolumeArtGenerator
 			usage.setGBSecs(gbsecs);
 			usage.setSizeGB(volume.getUsage().getSizeGB());
 			usage.setVolumeCnt(1);
-			volume.getInstanceAttachments().put(detachEvent.getInstanceUuid(), usage);
+			if (instanceEntities.keySet().contains(detachEvent.getInstanceUuid())) {
+				String instanceId = instanceEntities.get(detachEvent.getInstanceUuid()).getInstanceId();
+				volume.getInstanceAttachments().put(instanceId, usage);
+			} else {
+				log.error("instance uuid in detach events without corresponding instance:" + detachEvent.getInstanceUuid());
+			}
 		}
-
 		
 		/* Perform totals and summations for user, account, and zone
 		 */
@@ -181,38 +251,6 @@ public class VolumeArtGenerator
 
 	}
 
-	private static class StartEndTimes
-	{
-		private long startTimeMs;
-		private long endTimeMs;
-
-		private StartEndTimes(long startTimeMs, long endTimeMs )
-		{
-			this.startTimeMs = startTimeMs;
-			this.endTimeMs = endTimeMs;
-		}
-		
-		public long getStartTimeMs()
-		{
-			return startTimeMs;
-		}
-		
-		public long getEndTimeMs()
-		{
-			return endTimeMs;
-		}
-		
-		public void setEndTimeMs(long endTimeMs)
-		{
-			this.endTimeMs = endTimeMs;
-		}
-		
-		public long getDurationMs()
-		{
-			return endTimeMs - startTimeMs;
-		}
-	}
-	
 	/**
 	 * Addition with the peculiar semantics for null we need here
 	 */
@@ -228,20 +266,5 @@ public class VolumeArtGenerator
 		
 	}
 	
-	/**
-	 * Subtraction with the peculiar semantics we need here: previous value of null means zero
-	 *    whereas current value of null returns null.
-	 */
-	private static Long subtract(Long currCumul, Long prevCumul)
-	{
-		if (currCumul==null) {
-			return null;
-		} else if (prevCumul==null) {
-			return currCumul;
-		} else {
-		    return new Long(currCumul.longValue()-prevCumul.longValue());	
-		}
-	}
-
 
 }
