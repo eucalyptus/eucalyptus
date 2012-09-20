@@ -170,11 +170,10 @@ public class FalseDataGenerator
 								FalseInstanceType type = FalseInstanceType.values()[typeNum];
 								instanceUuid = String.format(UUID_FORMAT, uniqueUserId, instanceUuidNum++);
 								log.debug(String.format("  Generating instance uuid %s\n", instanceUuid));
-//TODO:FIXME: Does not compile after instance event changes
-//								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid,
-//										timeMs, ("i-" + userNum + "-" + periodNum),
-//										type.toString(), userId, cluster, availZone);
-//								createdInstanceNum++;
+								ReportingInstanceEventStore.getInstance().insertCreateEvent(instanceUuid, timeMs,
+										("i-" + userNum + "-" + periodNum), type.toString(), userId, userName,
+										accountName, accountId, availZone);
+								createdInstanceNum++;
 
 								volumeUuid = String.format(UUID_FORMAT, uniqueUserId, volumeUuidNum++);
 								log.debug(String.format("  Generating volume uuid %s\n", volumeUuid));
@@ -200,38 +199,45 @@ public class FalseDataGenerator
 										timeMs, userId, SNAPSHOT_SIZE);
 							}
 							
-//TODO:FIXME Does not compile after S3 event changes
-//							/* Create a fake bucket if one should be created in this period. */
-//							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
-//								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
-//								log.debug(String.format("  Generating bucket uuid %s\n", bucketUuid));
-//								ReportingS3BucketEventStore.getInstance().insertS3BucketCreateEvent(bucketUuid, userId, timeMs);
-//							}
-//
-//							/* Create a fake object if one should be created in this period. */
-//							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
-//								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
-//								log.debug(String.format("  Generating object uuid %s\n", uuid));
-//								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid,
-//										OBJECT_SIZE, timeMs, userId);
-//							}
+							/* Create a fake bucket if one should be created in this period. */
+							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
+								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
+
+							}
+
+							/* Create a fake object if one should be created in this period. */
+							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
+								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
+								log.debug(String.format("  Generating object uuid %s\n", uuid));
+								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid, "0",
+										OBJECT_SIZE, timeMs, userId);
+							}
 							
 								
 								
 							/* Generate instance usage in this period for every instance running from before */
+							double oneMB = 1024d*11024d;
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
-//TODO:FIXME: Does not compile after instance event changes
-//                ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid, timeMs,
-//										INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD*periodNum,
-//										INSTANCE_CPU_UTILIZATION_PER_PERIOD,
-//										INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD*periodNum,
-//										INSTANCE_CUMULATIVE_NET_INCOMING_WITHIN_PER_PERIOD*periodNum,
-//										INSTANCE_CUMULATIVE_NET_INCOMING_PUBLIC_PER_PERIOD*periodNum,
-//										INSTANCE_CUMULATIVE_NET_OUTGOING_BETWEEN_USAGE_PER_PERIOD*periodNum,
-//										INSTANCE_CUMULATIVE_NET_OUTGOING_WITHIN_PER_PERIOD*periodNum,
-//										INSTANCE_CUMULATIVE_NET_OUTGOING_PUBLIC_PER_PERIOD*periodNum);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "NetworkIn", 0, "total", oneMB*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "NetworkIn", 0, "internal", oneMB*2*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "NetworkOut", 0, "total", oneMB*3*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "NetworkOut", 0, "internal", oneMB*4*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "DiskReadBytes", 0, "root", oneMB*5*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "DiskWriteBytes", 0, "root", oneMB*6*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "DiskReadBytes", 0, "ephemeral0", oneMB*7*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "DiskWriteBytes", 0, "ephemeral0", oneMB*8*periodNum, timeMs);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "", "CPUUtilizationMs", 0, "default", (double)(PERIOD_DURATION/2), timeMs);
 							}
 
 							/* Generate volume usage in this period for every volume that was created before */
@@ -244,16 +250,15 @@ public class FalseDataGenerator
 							}
 
 							/* Generate object usage in this period for every object that was created before */
-////TODO:FIXME Does not compile after S3 event changes
-//							for (long i=OBJECT_UUID_START; i<objectUuidNum-2; i++) {
-//								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
-//								//TODO: divide by zero here
-//								long bucketNum = i/(NUM_PERIODS_PER_BUCKET/NUM_PERIODS_PER_OBJECT);
-//								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
-//								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid));
-//								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
-//										bucketUuid,	uuid, OBJECT_SIZE, timeMs, userId );
-//							}
+							for (long i=OBJECT_UUID_START; i<objectUuidNum-2; i++) {
+								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
+								//TODO: divide by zero here
+								long bucketNum = i/(NUM_PERIODS_PER_BUCKET/NUM_PERIODS_PER_OBJECT);
+								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
+								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid));
+								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
+										bucketUuid,	uuid, "0", OBJECT_SIZE, timeMs, userId );
+							}
 
 							/* Attach Volumes and Elastic IPs to Instances */
 							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, VOLUME_SIZE, timeMs);
@@ -276,9 +281,9 @@ public class FalseDataGenerator
 					}
 				}
 			}
-		}
 		
 
+		}
 	}
 
 	private static class Attachment
@@ -306,8 +311,7 @@ public class FalseDataGenerator
 		public String getElasticIpUuid() {
 			return elasticIpUuid;
 		}
-		
-		
+
 	}
 
 	@ExposedCommand
