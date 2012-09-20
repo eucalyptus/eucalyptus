@@ -170,7 +170,7 @@ class InstanceRenderer
 	{
 		doc.addValCol((long)entity.getInstanceCnt());
 		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol((entity.getCpuUtilizationMs()==null)?null:(entity.getCpuUtilizationMs()/entity.getDurationMs()));
+		doc.addValCol((entity.getCpuUtilizationMs()==null)?null:((double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalInMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInMegs(), SizeUnit.MB, units.getSizeUnit()));

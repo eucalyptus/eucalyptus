@@ -66,9 +66,9 @@ import com.eucalyptus.reporting.art.ArtObject;
 public class VolumeUsageArtEntity
 	implements ArtObject
 {
-	private long sizeGB;
-	private long gBSecs;
-	private long volumeCnt;
+	private long sizeGB = 0;
+	private long gBSecs = 0;
+	private long volumeCnt = 0;
 
 	public VolumeUsageArtEntity()
 	{
@@ -92,6 +92,7 @@ public class VolumeUsageArtEntity
 	
 	public void setGBSecs(long gBSecs)
 	{
+		if (gBSecs < 0) throw new IllegalArgumentException("gBSecs can't be negative");
 		this.gBSecs = gBSecs;
 	}
 	

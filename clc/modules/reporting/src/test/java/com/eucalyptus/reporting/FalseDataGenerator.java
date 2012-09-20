@@ -157,7 +157,7 @@ public class FalseDataGenerator
 						String instanceUuid  = "(none)";
 						String volumeUuid    = "(none)";
 						String elasticIpUuid = "(none)";
-						String bucketUuid    = "(none)";
+						String bucketName    = "(none)";
 						int createdInstanceNum = 0;
 						for (int periodNum=0; periodNum<NUM_PERIODS; periodNum++) {
 							log.debug(String.format(" Generating usage for period %d\n", periodNum));
@@ -201,15 +201,14 @@ public class FalseDataGenerator
 							
 							/* Create a fake bucket if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_BUCKET == 0) {
-								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketUuidNum++);
-
+								bucketName = "bucket-" + bucketUuidNum++;
 							}
 
 							/* Create a fake object if one should be created in this period. */
 							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
 								log.debug(String.format("  Generating object uuid %s\n", uuid));
-								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketUuid, uuid, "0",
+								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketName, uuid, "0",
 										OBJECT_SIZE, timeMs, userId);
 							}
 
@@ -254,10 +253,10 @@ public class FalseDataGenerator
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								//TODO: divide by zero here
 								long bucketNum = i/(NUM_PERIODS_PER_BUCKET/NUM_PERIODS_PER_OBJECT);
-								bucketUuid = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
-								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketUuid, uuid));
+								bucketName = String.format(UUID_FORMAT, uniqueUserId, bucketNum);
+								log.debug(String.format("  Generating object usage, bucket uuid %s, object uuid %s\n", bucketName, uuid));
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectUsageEvent(
-										bucketUuid,	uuid, "0", OBJECT_SIZE, timeMs, userId );
+										bucketName,	uuid, "0", OBJECT_SIZE, timeMs, userId );
 							}
 
 							/* Attach Volumes and Elastic IPs to Instances */

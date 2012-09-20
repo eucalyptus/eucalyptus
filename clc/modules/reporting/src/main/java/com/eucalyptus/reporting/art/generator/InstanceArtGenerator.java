@@ -67,6 +67,8 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.*;
+import com.eucalyptus.reporting.art.util.DurationCalculator;
+import com.eucalyptus.reporting.art.util.StartEndTimes;
 import com.eucalyptus.reporting.domain.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
@@ -133,6 +135,7 @@ public class InstanceArtGenerator
 				user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId()));
 			}
 			InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
+			instance.getUsage().addInstanceCnt(1);
 			usageEntities.put(createEvent.getUuid(), instance.getUsage());
 		}
 
@@ -143,13 +146,25 @@ public class InstanceArtGenerator
 		 */
 		Map<UsageEventKey,ReportingInstanceUsageEvent> lastEvents =
 			new HashMap<UsageEventKey,ReportingInstanceUsageEvent>();
-		Map<String,StartEndTime> startEndTimes =
-			new HashMap<String,StartEndTime>();
+		Map<String,StartEndTimes> startEndTimes =
+			new HashMap<String,StartEndTimes>();
 		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
 		while (iter.hasNext()) {
 
-			/* Grab event, last event, and usage entity to update */
 			ReportingInstanceUsageEvent usageEvent = (ReportingInstanceUsageEvent) iter.next();
+
+			/* Update instance start and end times */
+			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
+				startEndTimes.put(usageEvent.getUuid(),
+					new StartEndTimes(usageEvent.getTimestampMs(), usageEvent.getTimestampMs()));
+			} else {
+				StartEndTimes seTime = startEndTimes.get(usageEvent.getUuid());
+				seTime.setStartTime(Math.min(seTime.getStartTime(), usageEvent.getTimestampMs()));
+				seTime.setEndTime(Math.max(seTime.getEndTime(), usageEvent.getTimestampMs()));
+			}
+			
+			
+			/* Grab last event for this metric/dim combo, and usage entity to update */
 			UsageEventKey key = new UsageEventKey(usageEvent.getUuid(), usageEvent.getMetric(),
 					usageEvent.getDimension());
 			if (! lastEvents.containsKey(key)) {
@@ -170,18 +185,7 @@ public class InstanceArtGenerator
 			}
 
 
-			/* Update instance start and end times */
-			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
-				startEndTimes.put(usageEvent.getUuid(),
-						new StartEndTime(Math.max(report.getBeginMs(), lastEvent.getTimestampMs()),
-								Math.min(report.getEndMs(), usageEvent.getTimestampMs())));
-			} else {
-				StartEndTime seTime = startEndTimes.get(usageEvent.getUuid());
-				seTime.setStartTimeMs(Math.max(report.getBeginMs(),
-						Math.min(seTime.getStartTimeMs(), lastEvent.getTimestampMs())));
-				seTime.setEndTimeMs(Math.min(report.getEndMs(),
-						Math.max(seTime.getEndTimeMs(), usageEvent.getTimestampMs())));
-			}
+			/* We sometimes miss events here. Last event is dropped. Last event is last event for this metric/dim combo?? */
 
 			/* Update metrics in usage */
 			Double value = null;
@@ -225,9 +229,10 @@ public class InstanceArtGenerator
 		/* Update durations of all instances
 		 */
 		for (String uuid: startEndTimes.keySet()) {
-			StartEndTime seTime = startEndTimes.get(uuid);
+			StartEndTimes seTime = startEndTimes.get(uuid);
 			if (usageEntities.containsKey(uuid)) {
-				long durationMs = seTime.getEndTimeMs() - seTime.getStartTimeMs();
+				long durationMs = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
+						seTime.getStartTime(), seTime.getEndTime());
 				usageEntities.get(uuid).setDurationMs(durationMs);
 			} else {
 				log.error("startEndTime without corresponding instance:" + uuid);
@@ -274,6 +279,7 @@ public class InstanceArtGenerator
 		totalEntity.addNetTotalOutMegs(usage.getNetTotalOutMegs());
 		totalEntity.addNetInternalInMegs(usage.getNetInternalInMegs());
 		totalEntity.addNetInternalOutMegs(usage.getNetInternalOutMegs());
+		totalEntity.addInstanceCnt(1);
 		
 		/* Update total running time and type count for this instance type */
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
@@ -339,21 +345,6 @@ public class InstanceArtGenerator
 			this.dimension = dimension;
 		}
 
-		public String getUuid()
-		{
-			return uuid;
-		}
-		
-		public String getMetric()
-		{
-			return metric;
-		}
-		
-		public String getDimension()
-		{
-			return dimension;
-		}
-
 		@Override
 		public int hashCode()
 		{
@@ -398,77 +389,4 @@ public class InstanceArtGenerator
 		
 	}
 	
-	private static class StartEndTime
-	{
-		private long startTimeMs;
-		private long endTimeMs;
-		
-		private StartEndTime(long startTimeMs, long endTimeMs)
-		{
-			this.startTimeMs = startTimeMs;
-			this.endTimeMs = endTimeMs;
-		}
-
-		public long getStartTimeMs()
-		{
-			return startTimeMs;
-		}
-
-		public void setStartTimeMs(long startTimeMs)
-		{
-			this.startTimeMs = startTimeMs;
-		}
-
-		public long getEndTimeMs()
-		{
-			return endTimeMs;
-		}
-
-		public void setEndTimeMs(long endTimeMs)
-		{
-			this.endTimeMs = endTimeMs;
-		}
-	}
-	
-	/**
-	 * Addition with the peculiar semantics for null we need here
-	 */
-	private static Long plus(Long added, Long defaultVal)
-	{
-		if (added==null) {
-			return defaultVal;
-		} else if (defaultVal==null) {
-			return added;
-		} else {
-			return (added.longValue() + defaultVal.longValue());
-		}
-		
-	}
-	
-	/**
-	 * Subtraction with the peculiar semantics we need here: previous value of null means zero
-	 *    whereas current value of null returns null.
-	 */
-	private static Long subtract(Long currCumul, Long prevCumul)
-	{
-		if (currCumul==null) {
-			return null;
-		} else if (prevCumul==null) {
-			return currCumul;
-		} else {
-		    return new Long(currCumul.longValue()-prevCumul.longValue());	
-		}
-	}
-
-	private static Long max(Long a, Long b)
-	{
-		if (a==null) {
-			return b;
-		} else if (b==null) {
-			return a;
-		} else {
-			return new Long(Math.max(a.longValue(), b.longValue()));
-		}
-	}
-
 }

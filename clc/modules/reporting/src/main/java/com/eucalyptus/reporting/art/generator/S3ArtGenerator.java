@@ -1,3 +1,64 @@
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
 package com.eucalyptus.reporting.art.generator;
 
 import java.util.HashMap;
@@ -8,7 +69,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
-import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
 import com.eucalyptus.reporting.art.entity.BucketUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
@@ -51,7 +111,7 @@ public class S3ArtGenerator
 		Iterator iter = wrapper.scanWithNativeQuery( "scanS3ObjectCreateEvents" );
 		Map<String,BucketUsageArtEntity> bucketUsageEntities = new HashMap<String,BucketUsageArtEntity>();
 		Map<S3ObjectKey,S3ObjectData> objectData = new HashMap<S3ObjectKey,S3ObjectData>();
-		DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>();
+		DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>(report.getBeginMs(),report.getEndMs());
 		while (iter.hasNext()) {
 			ReportingS3ObjectCreateEvent createEvent = (ReportingS3ObjectCreateEvent) iter.next();
 			
@@ -89,8 +149,7 @@ public class S3ArtGenerator
 			 * will be overwritten later if we encounter a delete event (or multiple delete
 			 * events) for an object before the end of the report.
 			 */
-			objectData.put(objectKey, new S3ObjectData((createEvent.getSizeGB()-report.getEndMs()),
-					createEvent.getSizeGB()));
+			objectData.put(objectKey, new S3ObjectData(createEvent.getSizeGB()));
 		}
 		
 		/* Find end timestamps for objects which are subsequently deleted, including
@@ -104,10 +163,13 @@ public class S3ArtGenerator
 			if (deleteEvent.getTimestampMs() < report.getEndMs()) {
 				S3ObjectKey key = new S3ObjectKey(deleteEvent.getS3BucketName(), deleteEvent.getS3ObjectKey(),
 					deleteEvent.getObjectVersion());
-				long objDurationMs = objectDurationCalculator.getDuration(key, deleteEvent.getTimestampMs());
-				if (objectData.containsKey(key)) {
-					objectData.get(key).incrementDurationMs(objDurationMs);
-				}
+				objectDurationCalculator.addEnd(key, deleteEvent.getTimestampMs());
+			}
+		}
+		Map<S3ObjectKey,Long> durationMap = objectDurationCalculator.getDurationMap();
+		for (S3ObjectKey key: durationMap.keySet()) {
+			if (objectData.containsKey(key)) {
+				objectData.get(key).durationMs = durationMap.get(key);
 			}
 		}
 		
@@ -115,32 +177,28 @@ public class S3ArtGenerator
 		 */
 		for (S3ObjectKey objKey : objectData.keySet()) {
 			S3ObjectData data = objectData.get(objKey);
-			if (bucketUsageEntities.containsKey(objKey.getBucketName())) {
-				BucketUsageArtEntity usage = bucketUsageEntities.get(objKey.getBucketName());
+			if (bucketUsageEntities.containsKey(objKey.bucketName)) {
+				BucketUsageArtEntity usage = bucketUsageEntities.get(objKey.bucketName);
 				usage.setObjectsNum(usage.getObjectsNum()+1);
-				long gBSecs = (data.getDurationMs()/1000)*data.getSizeGB();
+				long gBSecs = (data.durationMs/1000)*data.sizeGB;
 				usage.setGBSecs(gBSecs);
-				usage.setSizeGB(usage.getSizeGB() + data.getSizeGB());
+				usage.setSizeGB(usage.getSizeGB() + data.sizeGB);
 			} else {
-				log.error("Object without corresponding bucket:" + objKey.getBucketName());
+				log.error("Object without corresponding bucket:" + objKey.bucketName);
 			}
 		}
 		
 		/* Perform totals and summations for user, account, zone, and bucket
 		 * todo: no zones here
 		 */
-		for (String zoneName : report.getZones().keySet()) {
-			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-			for (String accountName : zone.getAccounts().keySet()) {
-				AccountArtEntity account = zone.getAccounts().get(accountName);
-				for (String userName : account.getUsers().keySet()) {
-					UserArtEntity user = account.getUsers().get(userName);
-					for (String bucketName : user.getBucketUsage().keySet()) {
-						BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
-						updateUsageTotals(user.getUsageTotals().getBucketTotals(), usage);
-						updateUsageTotals(account.getUsageTotals().getBucketTotals(), usage);
-						updateUsageTotals(zone.getUsageTotals().getBucketTotals(), usage);							
-					}
+		for (String accountName : report.getAccounts().keySet()) {
+			AccountArtEntity account = report.getAccounts().get(accountName);
+			for (String userName : account.getUsers().keySet()) {
+				UserArtEntity user = account.getUsers().get(userName);
+				for (String bucketName : user.getBucketUsage().keySet()) {
+					BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
+					updateUsageTotals(user.getUsageTotals().getBucketTotals(), usage);
+					updateUsageTotals(account.getUsageTotals().getBucketTotals(), usage);
 				}
 			}
 		}
@@ -174,21 +232,6 @@ public class S3ArtGenerator
 			this.bucketName = bucketName;
 			this.objectKey = objectKey;
 			this.objectVer = objectVer;
-		}
-
-		public String getBucketName()
-		{
-			return bucketName;
-		}
-		
-		public String getObjectKey()
-		{
-			return objectKey;
-		}
-		
-		public String getObjectVer()
-		{
-			return objectVer;
 		}
 
 		@Override
@@ -244,62 +287,14 @@ public class S3ArtGenerator
 	private static class S3ObjectData
 	{
 		private long durationMs;
-		private long defaultDurationMs;
 		private long sizeGB;
 		
-		private S3ObjectData(long defaultDurationMs, long sizeGB)
+		private S3ObjectData(long sizeGB)
 		{
-			this.defaultDurationMs = defaultDurationMs;
 			this.durationMs = 0l;
 			this.sizeGB = sizeGB;
 		}
-
-		public long getSizeGB()
-		{
-			return sizeGB;
-		}
-
-		public long getDurationMs()
-		{
-			return (durationMs==0l)?defaultDurationMs:durationMs;
-		}
-
-		public void incrementDurationMs(long ms)
-		{
-			this.durationMs += ms;
-		}
-
 	}
 	
-	/**
-	 * Addition with the peculiar semantics for null we need here
-	 */
-	private static Long plus(Long added, Long defaultVal)
-	{
-		if (added==null) {
-			return defaultVal;
-		} else if (defaultVal==null) {
-			return added;
-		} else {
-			return (added.longValue() + defaultVal.longValue());
-		}
-		
-	}
-	
-	/**
-	 * Subtraction with the peculiar semantics we need here: previous value of null means zero
-	 *    whereas current value of null returns null.
-	 */
-	private static Long subtract(Long currCumul, Long prevCumul)
-	{
-		if (currCumul==null) {
-			return null;
-		} else if (prevCumul==null) {
-			return currCumul;
-		} else {
-		    return new Long(currCumul.longValue()-prevCumul.longValue());	
-		}
-	}
-
 
 }
