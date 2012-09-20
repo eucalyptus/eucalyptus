@@ -657,16 +657,16 @@
               <p>{{!: volume_dialog_add_text }}</p>
               <div class="form-row">
                 <label for="volume-add-snapshot-selector">{{!: volume_dialog_snapshot_label }}</label>
-                <select title="{{!: volume_dialog_create_flh_snapshot_selector }}" id="volume-add-snapshot-selector"></select>
+                <select title="{{!: volume_dialog_snapshot_tip }}" id="volume-add-snapshot-selector"></select>
               </div>
               <div class="form-row">
                 <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
-                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_create_flh_volume_size }}"/>
+                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_size_tip }}"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
               <div class="form-row">
                 <label for="volume-add-az-selector" class="required-label">{{!: volume_dialog_az_label }}</label>
-                <select title="{{!: volume_dialog_create_flh_az_selector }}" id="volume-add-az-selector"></select>
+                <select title="{{!: volume_dialog_az_tip }}" id="volume-add-az-selector"></select>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -690,14 +690,17 @@
             <div class="dialog-inner-content">
               <div class="form-row">
                 <label for="volume-attach-volume-id" class="required-label">{{!: volume_dialog_attach_volume_label }}</label>
+                <select title="{{!: volume_dialog_attach_volume_tip }}" id="volume-attach-volume-id"></select>
                 <input type="text" id="volume-attach-volume-id" class="required"/>
               </div>
               <div class="form-row">
                 <label for="volume-attach-instance-id" class="required-label">{{!: volume_dialog_attach_instance_label }}</label>
+                <select title="{{!: volume_dialog_attach_instance_tip }}" id="volume-attach-instance-id"></select>
                 <input type="text" id="volume-attach-instance-id" class="required"/>
               </div>
               <div class="form-row">
                 <label for="volume-attach-device-name" class="required-label">{{!: volume_dialog_attach_device_label }}</label>
+                <select title="{{!: volume_dialog_attach_device_tip }}" id="volume-attach-device-name"></select>
                 <input type="text" id="volume-attach-device-name" class="required"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
