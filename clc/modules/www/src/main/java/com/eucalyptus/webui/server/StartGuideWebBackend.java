@@ -68,6 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.GuideItem;
 import com.eucalyptus.webui.shared.query.QueryType;
+import com.google.common.collect.Lists;
 
 public class StartGuideWebBackend {
 
@@ -80,7 +81,7 @@ public class StartGuideWebBackend {
 
   public static ArrayList<GuideItem> getGuide( User user, String snippet ) {
     if ( SERVICE.equals( snippet ) ) {
-      return getServiceGuides( );
+      return getServiceGuides( user.isSystemAdmin( ) );
     } else if ( IAM.equals( snippet ) ) {
       try {
         return getIamGuides( user );
@@ -110,19 +111,27 @@ public class StartGuideWebBackend {
                                                                    "key" ) ) );
   }
 
-  private static ArrayList<GuideItem> getServiceGuides( ) {
-    return new ArrayList<GuideItem>( Arrays.asList( new GuideItem( "View and configure cloud service components",
-                                                                   QueryBuilder.get( ).start( QueryType.config ).url( ),
-                                                                   "service" ),
-                                                    new GuideItem( "Download and view images",
-                                                                   QueryBuilder.get( ).start( QueryType.image ).url( ),
-                                                                   "image" ),
-                                                    new GuideItem( "View and configure virtual machine types",
-                                                                    QueryBuilder.get( ).start( QueryType.vmtype ).url( ),
-                                                                   "vmtype" ),
-                                                    new GuideItem( "Generate cloud resource usage report",
-                                                                   QueryBuilder.get( ).start( QueryType.report ).url( ),
-                                                                   "report" ) ) );
+  private static ArrayList<GuideItem> getServiceGuides( boolean systemAdmin ) {
+    final ArrayList<GuideItem> items = Lists.newArrayList(
+        new GuideItem( "View and configure cloud service components",
+          QueryBuilder.get().start( QueryType.config ).url(),
+          "service" ),
+        new GuideItem( "Download and view images",
+            QueryBuilder.get().start( QueryType.image ).url(),
+            "image" ),
+        new GuideItem( "View and configure virtual machine types",
+            QueryBuilder.get().start( QueryType.vmtype ).url(),
+            "vmtype" ) );
+
+    if ( systemAdmin ) {
+      items.addAll( Lists.newArrayList(
+          new GuideItem( "Generate cloud resource usage report",
+              QueryBuilder.get().start( QueryType.report ).url(),
+              "report" )
+      ) );
+    }
+
+    return items;
   }
   
 }

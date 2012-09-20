@@ -63,5 +63,5 @@
 package com.eucalyptus.reporting;
 
 public enum ReportFormat {
-  PDF, CSV, HTML, XLS
+  CSV, HTML
 }

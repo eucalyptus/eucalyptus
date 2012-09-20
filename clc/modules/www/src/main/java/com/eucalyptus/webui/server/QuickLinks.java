@@ -64,7 +64,6 @@ package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.webui.client.service.QuickLink;
@@ -88,9 +87,7 @@ public class QuickLinks {
   
   private static ArrayList<QuickLinkTag> getSystemAdminTags( User login ) throws EucalyptusServiceException {
     try {
-      String accountId = login.getAccount( ).getAccountNumber( );
-      String userId = login.getUserId( );
-      return new ArrayList<QuickLinkTag>( Arrays.asList( 
+      return new ArrayList<QuickLinkTag>( Arrays.asList(
               new QuickLinkTag( "System Management", 
                                new ArrayList<QuickLink>( Arrays.asList(
                                               new QuickLink( "Start", "Start guide", "home",
@@ -152,9 +149,7 @@ public class QuickLinks {
 	              new QuickLinkTag( "Resource Management",
                                  new ArrayList<QuickLink>( Arrays.asList(
                                  new QuickLink( "Images", "Virtual machine images (EMIs)", "image",
-                                                   QueryBuilder.get( ).start( QueryType.image ).query( ) ),
-                                 new QuickLink( "Usage Report", "Resource usage report", "report",
-                                                   QueryBuilder.get( ).start( QueryType.report ).query( ) ) ) ) ) ) );
+                                                   QueryBuilder.get( ).start( QueryType.image ).query( ) )  ) ) ) ) );
 
 	    } catch ( Exception e ) {
 	      LOG.error( "Failed to load user information", e );
