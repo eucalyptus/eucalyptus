@@ -610,6 +610,7 @@
 
 /**** Public Methods ****/
     close: function() {
+      this.tableWrapper.eucatable('close');
       this._super('close');
     },
 

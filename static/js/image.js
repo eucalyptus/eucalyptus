@@ -192,6 +192,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 
 /**** Public Methods ****/
     close: function() {
+      this.tableWrapper.eucatable('close');
       this._super('close');
     },
 /**** End of Public Methods ****/
