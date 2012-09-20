@@ -40,8 +40,7 @@ public class ReportGenerationFacade {
             ReportFormat.valueOf(format.toUpperCase()),
             ReportType.valueOf(type.toUpperCase().replace('-','_')),
             null,
-            reportOutput,
-            null );
+            reportOutput );
       } catch ( final Exception e ) {
         throw new ReportGenerationException( "Error generating report", e );
       }

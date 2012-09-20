@@ -73,6 +73,7 @@ public class UsageTotalsArtEntity
 	private final BucketUsageArtEntity bucketTotals;
 	private final VolumeSnapshotUsageArtEntity volumeSnapshotTotals;
 	private final ElasticIpUsageArtEntity elasticIpTotals;
+	private final ComputeCapacityArtEntity computeCapacityArtEntity;
 	private final Map<String,InstanceUsageArtEntity> typeTotals;
 	
 	public UsageTotalsArtEntity()
@@ -82,6 +83,7 @@ public class UsageTotalsArtEntity
 		this.bucketTotals = new BucketUsageArtEntity();
 		this.volumeSnapshotTotals = new VolumeSnapshotUsageArtEntity();
 		this.elasticIpTotals = new ElasticIpUsageArtEntity();
+		this.computeCapacityArtEntity = new ComputeCapacityArtEntity();
 		this.typeTotals = new HashMap<String,InstanceUsageArtEntity>();
 	}
 	
@@ -110,8 +112,11 @@ public class UsageTotalsArtEntity
 		return this.elasticIpTotals;
 	}
 
-	
-	/**
+	public ComputeCapacityArtEntity getComputeCapacityArtEntity() {
+		return computeCapacityArtEntity;
+	}
+
+  /**
 	 * "m1.small" -> InstanceRunningTotalsArtEntity 
 	 */
 	public Map<String,InstanceUsageArtEntity> getTypeTotals()

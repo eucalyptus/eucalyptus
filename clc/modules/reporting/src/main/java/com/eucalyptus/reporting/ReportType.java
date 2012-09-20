@@ -1,7 +1,6 @@
 package com.eucalyptus.reporting;
 
 import com.eucalyptus.reporting.art.generator.*;
-import com.eucalyptus.reporting.art.renderer.*;
 
 public enum ReportType
 {
@@ -9,8 +8,10 @@ public enum ReportType
 	S3         (new S3ArtGenerator()),
 	VOLUME     (new VolumeArtGenerator()),
 	SNAPSHOT   (new VolumeSnapshotArtGenerator()),
-	ELASTIC_IP (new ElasticIpArtGenerator());
-	
+	ELASTIC_IP (new ElasticIpArtGenerator()),
+	CAPACITY   (new ComputeCapacityArtGenerator()),
+	;
+
 	private final ArtGenerator generator;
 
 	private ReportType(ArtGenerator generator)
@@ -22,5 +23,4 @@ public enum ReportType
 	{
 		return generator;
 	}
-	
 }

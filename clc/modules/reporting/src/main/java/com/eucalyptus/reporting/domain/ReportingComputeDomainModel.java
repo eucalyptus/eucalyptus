@@ -62,9 +62,11 @@
 package com.eucalyptus.reporting.domain;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * <p>ReportingComputeDomainModel contains statistics of the total compute resources available,
@@ -94,7 +96,11 @@ public class ReportingComputeDomainModel
 	{
 		return globalModel;
 	}
-	
+
+	public static Set<String> getZones() {
+		return Sets.newTreeSet( zoneModels.keySet() );
+	}
+
 	public static ReportingComputeZoneDomainModel getZoneComputeDomainModel( final String zoneName )
 	{
 		ReportingComputeZoneDomainModel zoneModel = zoneModels.get( zoneName );
@@ -110,7 +116,9 @@ public class ReportingComputeDomainModel
 	}
 	
 	private final AtomicReference<Long>    sizeS3ObjectAvailableGB  = new AtomicReference<Long>();
+	private final AtomicReference<Long>    sizeS3ObjectTotalGB  = new AtomicReference<Long>();
 	private final AtomicReference<Integer> numPublicIpsAvailable    = new AtomicReference<Integer>();
+	private final AtomicReference<Integer> numPublicIpsTotal    = new AtomicReference<Integer>();
 
 	public Long getSizeS3ObjectAvailableGB()
 	{
@@ -120,6 +128,16 @@ public class ReportingComputeDomainModel
 	public void setSizeS3ObjectAvailableGB( final Long sizeS3ObjectAvailableGB )
 	{
 		this.sizeS3ObjectAvailableGB.set( sizeS3ObjectAvailableGB );
+	}
+
+	public Long getSizeS3ObjectTotalGB()
+	{
+		return sizeS3ObjectTotalGB.get();
+	}
+
+	public void setSizeS3ObjectTotalGB( final Long sizeS3ObjectTotalGB )
+	{
+		this.sizeS3ObjectTotalGB.set( sizeS3ObjectTotalGB );
 	}
 
 	public Integer getNumPublicIpsAvailable()
@@ -132,11 +150,25 @@ public class ReportingComputeDomainModel
 		this.numPublicIpsAvailable.set( numPublicIpsAvailable );
 	}
 
+	public Integer getNumPublicIpsTotal()
+	{
+		return numPublicIpsTotal.get();
+	}
+
+	public void setNumPublicIpsTotal( final Integer numPublicIpsTotal )
+	{
+		this.numPublicIpsTotal.set( numPublicIpsTotal );
+	}
+
 	public static final class ReportingComputeZoneDomainModel {
 		private final AtomicReference<Integer> ec2ComputeUnitsAvailable = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2ComputeUnitsTotal = new AtomicReference<Integer>();
 		private final AtomicReference<Integer> ec2MemoryUnitsAvailable  = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2MemoryUnitsTotal  = new AtomicReference<Integer>();
 		private final AtomicReference<Integer> ec2DiskUnitsAvailable    = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2DiskUnitsTotal    = new AtomicReference<Integer>();
 		private final AtomicReference<Long>    sizeEbsAvailableGB       = new AtomicReference<Long>();
+		private final AtomicReference<Long>    sizeEbsTotalGB       = new AtomicReference<Long>();
 
 		/**
 		 * <p>Returns the total number of instances which can be created, based upon the amount of
@@ -175,9 +207,19 @@ public class ReportingComputeDomainModel
 		 *
 		 * See: http://aws.amazon.com/ec2/instance-types/
 		 */
-		public void setEc2ComputeUnitsAvailable( final Integer numM1SmallInstancesAvailable )
+		public void setEc2ComputeUnitsAvailable( final Integer available )
 		{
-			this.ec2ComputeUnitsAvailable.set( numM1SmallInstancesAvailable );
+			this.ec2ComputeUnitsAvailable.set( available );
+		}
+
+		public Integer getEc2ComputeUnitsTotal()
+		{
+			return ec2ComputeUnitsTotal.get();
+		}
+
+		public void setEc2ComputeUnitsTotal( final Integer ec2ComputeUnitsTotal )
+		{
+			this.ec2ComputeUnitsTotal.set( ec2ComputeUnitsTotal );
 		}
 
 		/**
@@ -204,6 +246,16 @@ public class ReportingComputeDomainModel
 			this.ec2MemoryUnitsAvailable.set( ec2MemoryUnitsAvailable );
 		}
 
+		public Integer getEc2MemoryUnitsTotal()
+		{
+			return ec2MemoryUnitsTotal.get();
+		}
+
+		public void setEc2MemoryUnitsTotal( final Integer ec2MemoryUnitsTotal )
+		{
+			this.ec2MemoryUnitsTotal.set( ec2MemoryUnitsTotal );
+		}
+
 		/**
 		 * <p>The total number of instances of various types which could be created based upon the
 		 *  the amount of disk available in the cloud and its distribution across nodes. This value is
@@ -226,6 +278,14 @@ public class ReportingComputeDomainModel
 			this.ec2DiskUnitsAvailable.set( ec2DiskUnitsAvailable );
 		}
 
+		public Integer getEc2DiskUnitsTotal() {
+			return ec2DiskUnitsTotal.get();
+		}
+
+		public void setEc2DiskUnitsTotal( final Integer ec2DiskUnitsTotal ) {
+			this.ec2DiskUnitsTotal.set( ec2DiskUnitsTotal );
+		}
+
 		public Long getSizeEbsAvailableGB()
 		{
 			return sizeEbsAvailableGB.get();
@@ -235,6 +295,16 @@ public class ReportingComputeDomainModel
 		{
 			this.sizeEbsAvailableGB.set( sizeEbsAvailableGB );
 		}
+
+		public Long getSizeEbsTotalGB()
+		{
+			return sizeEbsTotalGB.get();
+		}
+
+		public void setSizeEbsTotalGB( final Long sizeEbsTotalGB )
+		{
+			this.sizeEbsTotalGB.set( sizeEbsTotalGB );
+		}
 	}
 
 	public static String dump() {
@@ -242,16 +312,16 @@ public class ReportingComputeDomainModel
 		builder.append("Compute capacity:\n");
 
 		// global compute
-		builder.append("IP Addresses: ").append(globalModel.getNumPublicIpsAvailable()).append("\n");
-		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append(" GiB\n");
+		builder.append("IP Addresses: ").append(globalModel.getNumPublicIpsAvailable()).append("/").append(globalModel.getNumPublicIpsTotal()).append("\n");
+		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append("/").append(globalModel.getSizeS3ObjectTotalGB()).append(" GiB\n");
 
 		// zone compute
 		for ( final Map.Entry<String,ReportingComputeZoneDomainModel> modelEntry : zoneModels.entrySet() ) {
 			builder.append(modelEntry.getKey()).append(":\n");
-			builder.append("\t").append("Cores      : ").append(modelEntry.getValue().getEc2ComputeUnitsAvailable()).append("\n");
-			builder.append("\t").append("Disk       : ").append(modelEntry.getValue().getEc2DiskUnitsAvailable()).append(" GiB\n");
-			builder.append("\t").append("Memory     : ").append(modelEntry.getValue().getEc2MemoryUnitsAvailable()).append(" MiB\n");
-			builder.append("\t").append("EBS Storage: ").append(modelEntry.getValue().getSizeEbsAvailableGB()).append(" GiB\n");
+			builder.append("\t").append("Cores      : ").append(modelEntry.getValue().getEc2ComputeUnitsAvailable()).append("/").append(modelEntry.getValue().getEc2ComputeUnitsTotal()).append("\n");
+			builder.append("\t").append("Disk       : ").append(modelEntry.getValue().getEc2DiskUnitsAvailable()).append("/").append(modelEntry.getValue().getEc2DiskUnitsTotal()).append(" GiB\n");
+			builder.append("\t").append("Memory     : ").append(modelEntry.getValue().getEc2MemoryUnitsAvailable()).append("/").append(modelEntry.getValue().getEc2MemoryUnitsTotal()).append(" MiB\n");
+			builder.append("\t").append("EBS Storage: ").append(modelEntry.getValue().getSizeEbsAvailableGB()).append("/").append(modelEntry.getValue().getSizeEbsTotalGB()).append(" GiB\n");
 		}
 
 		return builder.toString();

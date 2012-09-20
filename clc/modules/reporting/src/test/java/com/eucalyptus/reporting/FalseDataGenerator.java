@@ -326,7 +326,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.INSTANCE, null, fos, null);
+					ReportType.INSTANCE, null, fos );
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -352,7 +352,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.CSV,
-					ReportType.INSTANCE, null, fos, null);
+					ReportType.INSTANCE, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -378,7 +378,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.VOLUME, null, fos, null);
+					ReportType.VOLUME, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -404,7 +404,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.S3, null, fos, null);
+					ReportType.S3, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -430,7 +430,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.SNAPSHOT, null, fos, null);
+					ReportType.SNAPSHOT, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -456,7 +456,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.ELASTIC_IP, null, fos, null);
+					ReportType.ELASTIC_IP, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
