@@ -41,7 +41,8 @@
     <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
     <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/dataTables.fnGetTds.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
@@ -333,7 +334,6 @@
                   </th>
                   <th>{{!>sgroup_tbl_hdr_name}}</th>
                   <th>{{!>sgroup_tbl_hdr_description}}</th>
-                  <th>{{!>sgroup_tbl_hdr_rules}}</th>
                 </tr>
                </thead>
                <tbody>
@@ -1088,6 +1088,7 @@
                 <tr>
                   <th>&nbsp;</th>
                   <th>{{!>img_tbl_hdr_name}}</th>
+                  <th>{{!>img_tbl_hdr_os}}</th>
                   <th>{{!>img_tbl_hdr_status}}</th>
                   <th>{{!>img_tbl_hdr_architecture}}</th>
                   <th>{{!>img_tbl_hdr_description}}</th>

@@ -124,20 +124,21 @@
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
           $currentRow.unbind('click').bind('click', function (e) {
             if(thisObj.options.expand_callback){
-              if(!$currentRow.next().hasClass('expanded') && !($(e.target).is('input'))){
+              if(!$currentRow.next().hasClass('expanded') && !($(e.target).is('input')) && !($(e.target).find('input').length >0)){
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
+                var allTds = thisObj.table.fnGetTds($currentRow[0]);      
                 var row = [];
-                var i=0;
-                $currentRow.find('td').each(function(){
-                  row[i++] = $(this).text(); 
-                });
+                var i =0; 
+                $(allTds).each(function(){ 
+                  row[i++] = $(this).text();
+                }); 
                 var $expand = thisObj.options.expand_callback(row);
                 if($expand && $expand.length > 0){
                   $currentRow.after($('<tr>').addClass('expanded').append(
                                   $('<td>').attr('colspan', $currentRow.find('td').length).append(
                                     $expand)));
-                  $currentRow.find('div.instance-id').addClass('expanded');
+                  $currentRow.find('div.twist').addClass('expanded');
                 }
               }else{
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
