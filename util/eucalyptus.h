@@ -100,6 +100,9 @@
 #define EUCALYPTUS_STATE_DIR       "%s" LOCALSTATEDIR "/lib/eucalyptus"
 #define EUCALYPTUS_LOG_DIR         "%s" LOCALSTATEDIR "/log/eucalyptus"
 
+#define EUCALYPTUS_FAULT_DIR            EUCALYPTUS_DATA_DIR "/faults"
+#define EUCALYPTUS_CUSTOM_FAULT_DIR     EUCALYPTUS_CONF_DIR "/faults"
+
 // scripts ... to Fedora / RHEL they are the same as indirectly
 // executed binaries.  We need a separate variable in case people
 // want them in /usr/share, though.
@@ -211,7 +214,7 @@
 
 typedef enum instance_states_t { // these must match instance_sate_names[] below!
     /* the first 7 should match libvirt */
-    NO_STATE = 0, 
+    NO_STATE = 0,
     RUNNING,
     BLOCKED,
     PAUSED,
@@ -233,7 +236,7 @@ typedef enum instance_states_t { // these must match instance_sate_names[] below
     CREATEIMAGE_SHUTOFF,
 
     /* the only three states reported to CLC */
-    PENDING,  /* staging in data, starting to boot, failed to boot */ 
+    PENDING,  /* staging in data, starting to boot, failed to boot */
     EXTANT,   /* guest OS booting, running, shutting down, cleaning up state */
     TEARDOWN, /* a marker for a terminated domain, one not taking up resources */
 
@@ -269,7 +272,7 @@ typedef enum bundling_progress_t {
 	BUNDLING_SUCCESS,
         BUNDLING_FAILED,
         BUNDLING_CANCELLED
-} bundling_progress; 
+} bundling_progress;
 
 static char * bundling_progress_names[] = {
 	"none",
