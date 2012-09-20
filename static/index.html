@@ -657,16 +657,16 @@
               <p>{{!: volume_dialog_add_text }}</p>
               <div class="form-row">
                 <label for="volume-add-snapshot-selector">{{!: volume_dialog_snapshot_label }}</label>
-                <select title="{{!: volume_dialog_create_flh_snapshot_selector }}" id="volume-add-snapshot-selector"></select>
+                <select title="{{!: volume_dialog_snapshot_tip }}" id="volume-add-snapshot-selector"></select>
               </div>
               <div class="form-row">
                 <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
-                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_create_flh_volume_size }}"/>
+                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_size_tip }}"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
               <div class="form-row">
                 <label for="volume-add-az-selector" class="required-label">{{!: volume_dialog_az_label }}</label>
-                <select title="{{!: volume_dialog_create_flh_az_selector }}" id="volume-add-az-selector"></select>
+                <select title="{{!: volume_dialog_az_tip }}" id="volume-add-az-selector"></select>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -690,15 +690,18 @@
             <div class="dialog-inner-content">
               <div class="form-row">
                 <label for="volume-attach-volume-id" class="required-label">{{!: volume_dialog_attach_volume_label }}</label>
-                <input type="text" id="volume-attach-volume-id" class="required"/>
+                <select title="{{!: volume_dialog_attach_volume_tip }}" id="volume-attach-volume-id"></select>
+                <input type="text" id="volume-attach-volume-id" class="required" title="{{!: volume_attach_volume_id_text_tip }}"/>
               </div>
               <div class="form-row">
                 <label for="volume-attach-instance-id" class="required-label">{{!: volume_dialog_attach_instance_label }}</label>
-                <input type="text" id="volume-attach-instance-id" class="required"/>
+                <select title="{{!: volume_dialog_attach_instance_tip }}" id="volume-attach-instance-id"></select>
+                <input type="text" id="volume-attach-instance-id" class="required" title="{{!: volume_attach_instance_id_text_tip }}"/>
               </div>
               <div class="form-row">
                 <label for="volume-attach-device-name" class="required-label">{{!: volume_dialog_attach_device_label }}</label>
-                <input type="text" id="volume-attach-device-name" class="required"/>
+                <select title="{{!: volume_dialog_attach_device_tip }}" id="volume-attach-device-name"></select>
+                <input type="text" id="volume-attach-device-name" class="required" title="{{!: volume_attach_device_name_text_tip }}"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -763,11 +766,11 @@
               <p>{{!: snapshot_create_dialog_text }}</p>
               <div class="form-row" id="snapshot-create-dialog-vol-id">
                 <label for="snapshot-create-volume-id" class="required-label">{{!: snapshot_create_dialog_volume_label }}</label>
-                <input type="text" id="snapshot-create-volume-id" class="required"/>
+                <input type="text" id="snapshot-create-volume-id" class="required" title="{{!: snapshot_create_dialog_volume_tip }}"/>
               </div>
               <div class="form-row" id="snapshot-create-dialog-desc">
                 <label for="snapshot-create-description">{{!: snapshot_create_dialog_description_label }}</label>
-                <textarea id="snapshot-create-description" class="description"/>
+                <textarea id="snapshot-create-description" class="description" title="{{!: snapshot_create_dialog_description_tip }}"/>
               </div>
               </div>
               <div id="snapshot-create-dialog-no-volumes" style="display:none">
