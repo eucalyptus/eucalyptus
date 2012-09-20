@@ -42,8 +42,6 @@ public class ReportingInstanceUsageEvent
 	
 	@Column(name="uuid", nullable=false)
 	protected String uuid;
-	@Column(name="timestamp", nullable=true)
-	protected Long timestamp;
 	@Column(name="resource_name", nullable=true)
 	protected String resourceName;
 	@Column(name="metric", nullable=true)
@@ -61,6 +59,7 @@ public class ReportingInstanceUsageEvent
 
 	protected ReportingInstanceUsageEvent()
 	{
+	  
 	}
 
 	ReportingInstanceUsageEvent(final String uuid, final long timestamp, final String resourceName,
@@ -76,7 +75,7 @@ public class ReportingInstanceUsageEvent
 		assertThat(value, notNullValue());
 		assertThat(valueTimestamp, notNullValue());
 		this.uuid = uuid;
-		this.timestamp = timestamp;
+		this.timestampMs = timestamp;
 		this.resourceName = resourceName;
 		this.metric = metric;
 		this.sequenceNum = sequenceNum;
@@ -95,10 +94,6 @@ public class ReportingInstanceUsageEvent
 
 	public String getUuid() {
 	    return uuid;
-	}
-
-	public Long getTimestamp() {
-	    return timestamp;
 	}
 
 	public String getResourceName() {
@@ -127,53 +122,11 @@ public class ReportingInstanceUsageEvent
 
 	@Override
 	public String toString() {
-	    return "ReportingInstanceUsageEvent [uuid=" + uuid + ", timestamp="
-		    + timestamp + ", resourceName=" + resourceName
-		    + ", metric=" + metric + ", sequenceNum=" + sequenceNum
-		    + ", dimension=" + dimension + ", value=" + value
-		    + ", valueTimestamp=" + valueTimestamp + "]";
-	}
-
-	@Override
-	public int hashCode() {
-	    final int prime = 31;
-	    int result = super.hashCode();
-	    result = prime * result
-		    + ((dimension == null) ? 0 : dimension.hashCode());
-	    result = prime * result + sequenceNum;
-	    result = prime * result
-		    + ((timestamp == null) ? 0 : timestamp.hashCode());
-	    result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
-	    return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-	    if (this == obj)
-		return true;
-	    if (!super.equals(obj))
-		return false;
-	    if (getClass() != obj.getClass())
-		return false;
-	    ReportingInstanceUsageEvent other = (ReportingInstanceUsageEvent) obj;
-	    if (dimension == null) {
-		if (other.dimension != null)
-		    return false;
-	    } else if (!dimension.equals(other.dimension))
-		return false;
-	    if (sequenceNum != other.sequenceNum)
-		return false;
-	    if (timestamp == null) {
-		if (other.timestamp != null)
-		    return false;
-	    } else if (!timestamp.equals(other.timestamp))
-		return false;
-	    if (uuid == null) {
-		if (other.uuid != null)
-		    return false;
-	    } else if (!uuid.equals(other.uuid))
-		return false;
-	    return true;
+	    return "ReportingInstanceUsageEvent [uuid=" + uuid
+		    + ", resourceName=" + resourceName + ", metric=" + metric
+		    + ", sequenceNum=" + sequenceNum + ", dimension="
+		    + dimension + ", value=" + value + ", valueTimestamp="
+		    + valueTimestamp + "]";
 	}
 
 }

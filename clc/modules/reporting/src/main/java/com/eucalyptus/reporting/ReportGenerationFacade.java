@@ -21,7 +21,6 @@ package com.eucalyptus.reporting;
 
 import java.io.ByteArrayOutputStream;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import com.google.common.base.Charsets;
 
 /**

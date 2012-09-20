@@ -24,7 +24,6 @@ import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-
 @Entity
 @javax.persistence.Entity
 @SqlResultSetMapping(name = "createEventMap", entities = @EntityResult(entityClass = ReportingInstanceCreateEvent.class))

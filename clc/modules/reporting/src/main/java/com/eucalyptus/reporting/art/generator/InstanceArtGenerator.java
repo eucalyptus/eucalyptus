@@ -76,6 +76,20 @@ public class InstanceArtGenerator
 {
     private static Logger log = Logger.getLogger( InstanceArtGenerator.class );
 
+    /* Metric names */
+    private static final String METRIC_NET_IN_BYTES   = "NetworkIn";
+    private static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
+    private static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
+    private static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
+    private static final String METRIC_CPU_USAGE_MS   = "CPUUtilizationMs";
+    
+    private static final String DIM_TOTAL     = "total";
+    private static final String DIM_ROOT	  = "root";
+    private static final String DIM_INTERNAL  = "internal";
+    private static final String DIM_DEFAULT   = "default";
+    private static final String DIM_EPHEMERAL = "ephemeral";
+    
+    
     public InstanceArtGenerator()
 	{
 		
@@ -87,22 +101,17 @@ public class InstanceArtGenerator
 		EntityWrapper wrapper = EntityWrapper.get( ReportingInstanceCreateEvent.class );
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
-		 * and create a Map of the instance nodes at the bottom.
+		 * and create a Map of the instance usage nodes at the bottom.
 		 */
-		Map<String,InstanceArtEntity> instanceEntities = new HashMap<String,InstanceArtEntity>();
-/*
+		Map<String,InstanceUsageArtEntity> usageEntities = new HashMap<String,InstanceUsageArtEntity>();
 		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
 		while (iter.hasNext()) {
-
 			ReportingInstanceCreateEvent createEvent = (ReportingInstanceCreateEvent) iter.next();
+
 			if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
 				report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
 			}
 			AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
-			if (! zone.getClusters().containsKey(createEvent.getClusterName())) {
-				zone.getClusters().put(createEvent.getClusterName(), new ClusterArtEntity());
-			}
-			ClusterArtEntity cluster = zone.getClusters().get(createEvent.getClusterName());
 			
 			ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
 			if (reportingUser==null) {
@@ -112,10 +121,10 @@ public class InstanceArtGenerator
 			if (reportingAccount==null) {
 				log.error("No account corresponding to user:" + reportingUser.getAccountId());
 			}
-			if (! cluster.getAccounts().containsKey(reportingAccount.getName())) {
-				cluster.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
+			if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
+				zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
 			}
-			AccountArtEntity account = cluster.getAccounts().get(reportingAccount.getName());
+			AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
 			if (! account.getUsers().containsKey(reportingUser.getName())) {
 				account.getUsers().put(reportingUser.getName(), new UserArtEntity());
 			}
@@ -124,142 +133,124 @@ public class InstanceArtGenerator
 				user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId()));
 			}
 			InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
-			instanceEntities.put(createEvent.getUuid(), instance);
+			usageEntities.put(createEvent.getUuid(), instance.getUsage());
 		}
+
 		
-		 Add all usage to all instances
-		 
-		Map<String,ReportingInstanceUsageEvent> lastEvents =
-			new HashMap<String,ReportingInstanceUsageEvent>();
+		
+		/* Scan through instance usage and update instance usage nodes. Also,
+		 * find start and end times.
+		 */
+		Map<UsageEventKey,ReportingInstanceUsageEvent> lastEvents =
+			new HashMap<UsageEventKey,ReportingInstanceUsageEvent>();
+		Map<String,StartEndTime> startEndTimes =
+			new HashMap<String,StartEndTime>();
 		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
 		while (iter.hasNext()) {
+
+			/* Grab event, last event, and usage entity to update */
 			ReportingInstanceUsageEvent usageEvent = (ReportingInstanceUsageEvent) iter.next();
-			ReportingInstanceUsageEvent lastEvent = lastEvents.get(usageEvent.getUuid());
-			lastEvents.put(usageEvent.getUuid(), usageEvent);
-			InstanceArtEntity instance = instanceEntities.get(usageEvent.getUuid());
-			if (instance==null) {
-				log.error("instance usage without corresponding instance:" + usageEvent.getUuid());
+			UsageEventKey key = new UsageEventKey(usageEvent.getUuid(), usageEvent.getMetric(),
+					usageEvent.getDimension());
+			if (! lastEvents.containsKey(key)) {
+				lastEvents.put(key, usageEvent);
 				continue;
 			}
-			InstanceUsageArtEntity usage = instance.getUsage();
-			
-			
-			 Add usage to totals, and update average cpu 
-			if (lastEvent != null) {
-				long lastMs = lastEvent.getTimestampMs();
-				
-				 Update running times 
-				long timeMs = (runningTimes.containsKey(usageEvent.getUuid()))
-								? runningTimes.get(usageEvent.getUuid()).longValue()
-								: 0l;
->>>>>>> dev/kedwards/reporting-dsensor
-				timeMs += Math.min(report.getEndMs(),usageEvent.getTimestampMs())
-						- Math.max(report.getBeginMs(),lastEvent.getTimestampMs());
-				usage.setDurationMs(usage.getDurationMs()+timeMs);
-				
-<<<<<<< HEAD
-				/* Interpolate and add usage to totals 
-				
-				 Disk IO megs 
-				Long rawValue = plus(usage.getDiskIoMegs(),
-									subtract(usageEvent.getCumulativeDiskIoMegs(),
-											 lastEvent.getCumulativeDiskIoMegs()));
-
-				usage.setDiskIoMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-								    usageEvent.getTimestampMs(), rawValue));
-				
-				 Net IO within zone incoming megs 
-				rawValue = plus(usage.getNetIoWithinZoneInMegs(),
-								subtract(usageEvent.getCumulativeNetIncomingMegsWithinZone(),
-										lastEvent.getCumulativeNetIncomingMegsWithinZone()));
-				usage.setNetIoWithinZoneInMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-									usageEvent.getTimestampMs(), rawValue));
-
-				 Net IO within zone incoming megs 
-				rawValue = plus(usage.getNetIoBetweenZoneInMegs(),
-								subtract(usageEvent.getCumulativeNetIncomingMegsBetweenZones(),
-										lastEvent.getCumulativeNetIncomingMegsBetweenZones()));
-				usage.setNetIoBetweenZoneInMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-									usageEvent.getTimestampMs(), rawValue));
-
-				 Net IO public ip incoming megs 
-				rawValue = plus(usage.getNetIoPublicIpInMegs(),
-								subtract(usageEvent.getCumulativeNetIncomingMegsPublic(),
-										lastEvent.getCumulativeNetIncomingMegsPublic()));
-				usage.setNetIoPublicIpInMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-									usageEvent.getTimestampMs(), rawValue));
-
-					
-				 Net IO within zone outgoing megs 
-				rawValue = plus(usage.getNetIoWithinZoneOutMegs(),
-								subtract(usageEvent.getCumulativeNetOutgoingMegsWithinZone(),
-										lastEvent.getCumulativeNetOutgoingMegsWithinZone()));
-				usage.setNetIoWithinZoneOutMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-									usageEvent.getTimestampMs(), rawValue));
-
-				 Net IO within zone outgoing megs 
-				rawValue = plus(usage.getNetIoBetweenZoneOutMegs(),
-								subtract(usageEvent.getCumulativeNetOutgoingMegsBetweenZones(),
-										lastEvent.getCumulativeNetOutgoingMegsBetweenZones()));
-				usage.setNetIoBetweenZoneOutMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-									usageEvent.getTimestampMs(), rawValue));
-
-				 Net IO public ip outgoing megs 
-				rawValue = plus(usage.getNetIoPublicIpOutMegs(),
-								subtract(usageEvent.getCumulativeNetOutgoingMegsPublic(),
-										lastEvent.getCumulativeNetOutgoingMegsPublic()));
-				usage.setNetIoPublicIpOutMegs(
-						interpolate(report.getBeginMs(), report.getEndMs(), lastMs,
-									usageEvent.getTimestampMs(), rawValue));
-
-					
-					
-
-				 Update cpu average 
-				long durationMs = Math.min(report.getEndMs(), usageEvent.getTimestampMs())-Math.max(report.getBeginMs(), lastMs);
-				if (usage.getCpuPercentAvg() == null && usageEvent.getCpuUtilizationPercent() != null) {
-					usage.setCpuPercentAvg((double)usageEvent.getCpuUtilizationPercent());
-					usage.addDurationMs(durationMs);
-				} else if (usage.getCpuPercentAvg() != null && usageEvent.getCpuUtilizationPercent() != null) {
-					double newWeightedAverage = (usage.getCpuPercentAvg() * (double)usage.getDurationMs()
-							+ (double)usageEvent.getCpuUtilizationPercent() * (double)durationMs)
-							/((double)usage.getDurationMs()+(double)durationMs);
-					usage.setCpuPercentAvg(newWeightedAverage);
-					usage.addDurationMs(durationMs);
-				}
+			ReportingInstanceUsageEvent lastEvent = lastEvents.get(key);
+			if (! usageEntities.containsKey(usageEvent.getUuid())) {
+				log.error("usage event without corresponding instance:" + usageEvent.getUuid());
+				continue;				
+			}
+			InstanceUsageArtEntity usage = usageEntities.get(usageEvent.getUuid());
+			String metric = usageEvent.getMetric();
+			String dim    = usageEvent.getDimension();
+			if (usageEvent.getValue()==null || lastEvent.getValue()==null) {
+				log.debug("Null metric values shouldn't occur");
+				continue;
 			}
 
-			
+
+			/* Update instance start and end times */
+			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
+				startEndTimes.put(usageEvent.getUuid(),
+						new StartEndTime(Math.max(report.getBeginMs(), lastEvent.getTimestampMs()),
+								Math.min(report.getEndMs(), usageEvent.getTimestampMs())));
+			} else {
+				StartEndTime seTime = startEndTimes.get(usageEvent.getUuid());
+				seTime.setStartTimeMs(Math.max(report.getBeginMs(),
+						Math.min(seTime.getStartTimeMs(), lastEvent.getTimestampMs())));
+				seTime.setEndTimeMs(Math.min(report.getEndMs(),
+						Math.max(seTime.getEndTimeMs(), usageEvent.getTimestampMs())));
+			}
+
+			/* Update metrics in usage */
+			Double value = null;
+			/* Subtract last usage from this usage because all these statistics are CUMULATIVE.	 */
+			if (usageEvent.getValue()!=null && lastEvent.getValue()!=null) {
+				value = usageEvent.getValue() - lastEvent.getValue();
+			} else if (usageEvent.getValue()!=null) {
+				value = usageEvent.getValue();
+			}
+			Double valueMB = (value==null) ? null : value/1024/1024; //don't bitshift a double
+
+			if (metric.equals(METRIC_NET_IN_BYTES) && dim.equals(DIM_TOTAL)) {
+				usage.addNetTotalInMegs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), valueMB).longValue());
+			} else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_TOTAL)) {
+				usage.addNetTotalOutMegs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), valueMB).longValue());
+			} else if (metric.equals(METRIC_NET_IN_BYTES)  && dim.equals(DIM_INTERNAL)) {
+				usage.addNetInternalInMegs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), valueMB).longValue());
+			} else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_INTERNAL)) {
+				usage.addNetTotalInMegs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), valueMB).longValue());
+			} else if (metric.equals(METRIC_DISK_IN_BYTES) && (dim.equals(DIM_ROOT)||dim.startsWith(DIM_EPHEMERAL))) {
+				usage.addDiskInMegs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), valueMB).longValue());
+			} else if (metric.equals(METRIC_DISK_OUT_BYTES) && (dim.equals(DIM_ROOT)||dim.startsWith(DIM_EPHEMERAL))) {
+				usage.addDiskOutMegs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), valueMB).longValue());
+			} else if (metric.equals(METRIC_CPU_USAGE_MS) && (dim.equals(DIM_DEFAULT))) {
+				usage.addCpuUtilizationMs(interpolate(report.getBeginMs(), report.getEndMs(),
+						lastEvent.getTimestampMs(), usageEvent.getTimestampMs(), value).longValue());
+			} else {
+				log.debug("Unrecognized metric for report:" + metric + "/" + dim);
+			}
+
+			lastEvents.put(key, usageEvent);
   		} //while 
-*/
+
+		
+		/* Update durations of all instances
+		 */
+		for (String uuid: startEndTimes.keySet()) {
+			StartEndTime seTime = startEndTimes.get(uuid);
+			if (usageEntities.containsKey(uuid)) {
+				long durationMs = seTime.getEndTimeMs() - seTime.getStartTimeMs();
+				usageEntities.get(uuid).setDurationMs(durationMs);
+			} else {
+				log.error("startEndTime without corresponding instance:" + uuid);
+			}
+		}
+		
 		
 		/* Perform totals and summations
 		 */
 		for (String zoneName : report.getZones().keySet()) {
 			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
 			UsageTotalsArtEntity zoneUsage = zone.getUsageTotals();
-			for (String clusterName : zone.getClusters().keySet()) {
-				ClusterArtEntity cluster = zone.getClusters().get(clusterName);
-				UsageTotalsArtEntity clusterUsage = cluster.getUsageTotals();
-				for (String accountName : cluster.getAccounts().keySet()) {
-					AccountArtEntity account = cluster.getAccounts().get(accountName);
-					UsageTotalsArtEntity accountUsage = account.getUsageTotals();
-					for (String userName : account.getUsers().keySet()) {
-						UserArtEntity user = account.getUsers().get(userName);
-						UsageTotalsArtEntity userUsage = user.getUsageTotals();
-						for (String instanceUuid : user.getInstances().keySet()) {
-							InstanceArtEntity instance = user.getInstances().get(instanceUuid);
-							updateUsageTotals(userUsage, instance);
-							updateUsageTotals(accountUsage, instance);
-							updateUsageTotals(clusterUsage, instance);
-							updateUsageTotals(zoneUsage, instance);
-						}
+			for (String accountName : zone.getAccounts().keySet()) {
+				AccountArtEntity account = zone.getAccounts().get(accountName);
+				UsageTotalsArtEntity accountUsage = account.getUsageTotals();
+				for (String userName : account.getUsers().keySet()) {
+					UserArtEntity user = account.getUsers().get(userName);
+					UsageTotalsArtEntity userUsage = user.getUsageTotals();
+					for (String instanceUuid : user.getInstances().keySet()) {
+						InstanceArtEntity instance = user.getInstances().get(instanceUuid);
+						updateUsageTotals(userUsage, instance);
+						updateUsageTotals(accountUsage, instance);
+						updateUsageTotals(zoneUsage, instance);
 					}
 				}
 			}
@@ -271,47 +262,18 @@ public class InstanceArtGenerator
 
 	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)
 	{
-		InstanceUsageArtEntity totalEntity =
-			totals.getInstanceTotals();
-		InstanceUsageArtEntity newEntity = instance.getUsage();
+		InstanceUsageArtEntity totalEntity = totals.getInstanceTotals();
+		InstanceUsageArtEntity usage = instance.getUsage();
 		
-		totalEntity.addDurationMs(newEntity.getDurationMs());
-
-		/* Update total average for this zone, cluster, etc, based upon instance average */
-		if (totalEntity.getCpuPercentAvg() == null && newEntity.getCpuPercentAvg() != null) {
-			totalEntity.setCpuPercentAvg(newEntity.getCpuPercentAvg());
-			totalEntity.addDurationMs(newEntity.getDurationMs());
-		} else if (newEntity.getCpuPercentAvg() != null && totalEntity.getCpuPercentAvg() != null) {
-			double newWeightedAverage = (totalEntity.getCpuPercentAvg() * (double)totalEntity.getDurationMs()
-					+ (double)newEntity.getCpuPercentAvg() * (double)newEntity.getDurationMs())
-					/((double)totalEntity.getDurationMs()+(double)newEntity.getDurationMs());
-			totalEntity.setCpuPercentAvg(newWeightedAverage);
-		}
-		
-		/* Add megs from this instance to totals for zone, cluster, etc */
-		totalEntity.setDiskIoMegs(
-				plus(totalEntity.getDiskIoMegs(),
-					 newEntity.getDiskIoMegs()));
-		totalEntity.setNetIoBetweenZoneInMegs(
-				plus(totalEntity.getNetIoBetweenZoneInMegs(),
-				     newEntity.getNetIoBetweenZoneInMegs()));
-		totalEntity.setNetIoWithinZoneInMegs(
-				plus(totalEntity.getNetIoWithinZoneInMegs(),
-					 newEntity.getNetIoWithinZoneInMegs()));
-		totalEntity.setNetIoPublicIpInMegs(
-				plus(totalEntity.getNetIoPublicIpInMegs(),
-					 newEntity.getNetIoPublicIpInMegs()));
-		totalEntity.setNetIoBetweenZoneOutMegs(
-				plus(totalEntity.getNetIoBetweenZoneOutMegs(),
-				     newEntity.getNetIoBetweenZoneOutMegs()));
-		totalEntity.setNetIoWithinZoneOutMegs(
-				plus(totalEntity.getNetIoWithinZoneOutMegs(),
-					 newEntity.getNetIoWithinZoneOutMegs()));
-		totalEntity.setNetIoPublicIpOutMegs(
-				plus(totalEntity.getNetIoPublicIpOutMegs(),
-					 newEntity.getNetIoPublicIpOutMegs()));
-		
-		totalEntity.setInstanceCnt(totalEntity.getInstanceCnt()+1);
+		/* Update metrics */
+		totalEntity.addDurationMs(usage.getDurationMs());
+		totalEntity.addCpuUtilizationMs(usage.getCpuUtilizationMs());
+		totalEntity.addDiskInMegs(totalEntity.getDiskInMegs());
+		totalEntity.addDiskOutMegs(usage.getDiskOutMegs());
+		totalEntity.addNetTotalInMegs(usage.getNetTotalInMegs());
+		totalEntity.addNetTotalOutMegs(usage.getNetTotalOutMegs());
+		totalEntity.addNetInternalInMegs(usage.getNetInternalInMegs());
+		totalEntity.addNetInternalOutMegs(usage.getNetInternalOutMegs());
 		
 		/* Update total running time and type count for this instance type */
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
@@ -322,15 +284,16 @@ public class InstanceArtGenerator
 		InstanceUsageArtEntity typeTotal =
 			typeTotals.get(instance.getInstanceType().toLowerCase());
 		
-		typeTotal.setInstanceCnt(typeTotal.getInstanceCnt()+1);
-		typeTotal.setDurationMs(typeTotal.getDurationMs() + totalEntity.getDurationMs());
+		typeTotal.addInstanceCnt(1);
+		typeTotal.addDurationMs(totalEntity.getDurationMs());
+		
 	}
 
 	/**
 	 * Interpolate usage based upon the fraction of the usage in some period which falls within
 	 * report boundaries. 
 	 */
-	private static Long interpolate(long repBegin, long repEnd, long perBegin, long perEnd, Long currValue)
+	private static Double interpolate(long repBegin, long repEnd, long perBegin, long perEnd, Double currValue)
 	{
 		if (currValue==null) return null;
 		
@@ -360,9 +323,113 @@ public class InstanceArtGenerator
 //		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
 //				repBegin, repEnd, repEnd-repBegin, perBegin, perEnd, perEnd-perBegin, factor));
 
-		return (long)(((double)currValue.longValue())*factor);
+		return currValue*factor;
 	}
 
+	private static class UsageEventKey
+	{
+		private final String uuid;
+		private final String metric;
+		private final String dimension;
+		
+		private UsageEventKey(String uuid, String metric, String dimension)
+		{
+			this.uuid = uuid;
+			this.metric = metric;
+			this.dimension = dimension;
+		}
+
+		public String getUuid()
+		{
+			return uuid;
+		}
+		
+		public String getMetric()
+		{
+			return metric;
+		}
+		
+		public String getDimension()
+		{
+			return dimension;
+		}
+
+		@Override
+		public int hashCode()
+		{
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((dimension == null) ? 0 : dimension.hashCode());
+			result = prime * result
+					+ ((metric == null) ? 0 : metric.hashCode());
+			result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj)
+		{
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			UsageEventKey other = (UsageEventKey) obj;
+			if (dimension == null) {
+				if (other.dimension != null)
+					return false;
+			} else if (!dimension.equals(other.dimension))
+				return false;
+			if (metric == null) {
+				if (other.metric != null)
+					return false;
+			} else if (!metric.equals(other.metric))
+				return false;
+			if (uuid == null) {
+				if (other.uuid != null)
+					return false;
+			} else if (!uuid.equals(other.uuid))
+				return false;
+			return true;
+		}
+		
+		
+	}
+	
+	private static class StartEndTime
+	{
+		private long startTimeMs;
+		private long endTimeMs;
+		
+		private StartEndTime(long startTimeMs, long endTimeMs)
+		{
+			this.startTimeMs = startTimeMs;
+			this.endTimeMs = endTimeMs;
+		}
+
+		public long getStartTimeMs()
+		{
+			return startTimeMs;
+		}
+
+		public void setStartTimeMs(long startTimeMs)
+		{
+			this.startTimeMs = startTimeMs;
+		}
+
+		public long getEndTimeMs()
+		{
+			return endTimeMs;
+		}
+
+		public void setEndTimeMs(long endTimeMs)
+		{
+			this.endTimeMs = endTimeMs;
+		}
+	}
+	
 	/**
 	 * Addition with the peculiar semantics for null we need here
 	 */

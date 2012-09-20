@@ -58,7 +58,8 @@
 	<mapping class="edu.ucsb.eucalyptus.msgs.SensorsResourceType"
 		abstract="true">
 		<value name="resourceName" field="resourceName" type="java.lang.String" />
-                <value name="resourceType" field="resourceType" type="java.lang.String" />	
+                <value name="resourceType" field="resourceType" type="java.lang.String" />
+                <value name="resourceUuid" field="resourceUuid" type="java.lang.String" />	
         	<collection field="metrics"
 			factory="org.jibx.runtime.Utility.arrayListFactory">
 			<structure name="metrics"

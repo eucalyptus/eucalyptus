@@ -711,7 +711,7 @@ void *startup_thread (void * arg)
     xml = file2str (instance->libvirtFilePath);
     
     save_instance_struct (instance); // to enable NC recovery
-    sensor_add_resource (instance->instanceId, "instance");
+    sensor_add_resource (instance->instanceId, "instance", instance->uuid);
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 
@@ -903,7 +903,7 @@ void adopt_instances()
 			free_instance (&instance);
 			continue;
 		}
-        sensor_add_resource (instance->instanceId, "instance"); // ensure the sensor system monitors this instance
+        sensor_add_resource (instance->instanceId, "instance", instance->uuid); // ensure the sensor system monitors this instance
 
 		logprintfl (EUCAINFO, "- adopted running domain %s from user %s\n", instance->instanceId, instance->userId); // TODO: try to re-check IPs?
 
