@@ -68,6 +68,8 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Lob;
 import org.hibernate.annotations.Parent;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -163,6 +165,7 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   @Column( name = "metadata_vm_volume_device" )
   private String     device;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_volume_remove_device" )
   private String     remoteDevice;
   @Column( name = "metadata_vm_volume_status" )

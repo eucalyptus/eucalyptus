@@ -556,7 +556,7 @@ int clean_network_state(void) {
   for (i=1; i<NUMBER_OF_PUBLIC_IPS; i++) {
     if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
       ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
-      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
+      snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
       logprintfl(EUCADEBUG, "clean_network_state(): running command '%s'\n", cmd);
       rc = system(cmd);
       rc = rc>>8;
@@ -571,7 +571,7 @@ int clean_network_state(void) {
 
   // dhcp
   snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
-  snprintf(rootwrap, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", tmpvnetconfig->eucahome);
+  snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, tmpvnetconfig->eucahome);
   if (!check_file(file)) {
     pidstr = file2str(file);
     if (pidstr) {

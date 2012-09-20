@@ -95,6 +95,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.NaturalId;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import org.jboss.netty.util.internal.LinkedTransferQueue;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -204,6 +206,7 @@ public class Faults {
     private final Component.State eventState;
     @Column( name = "fault_stack_trace" )
     @Lob
+    @Type(type="org.hibernate.type.StringClobType")
     private String                stackString;
     @Transient
     private CheckException        other;

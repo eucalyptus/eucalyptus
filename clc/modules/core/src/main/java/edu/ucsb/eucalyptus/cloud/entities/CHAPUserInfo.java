@@ -71,6 +71,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.eucalyptus.entities.AbstractPersistent;
 
 @Entity @javax.persistence.Entity
@@ -81,6 +83,7 @@ public class CHAPUserInfo extends AbstractPersistent {
     @Column( name = "username" )
     private String user;
     @Lob
+    @Type(type="org.hibernate.type.StringClobType")
     private String encryptedPassword;
     
     public CHAPUserInfo() {}
