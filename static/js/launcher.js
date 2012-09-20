@@ -70,7 +70,21 @@
         $container.maincontainer("changeSelected", e, {selected:'instance'});
       });
       $launcher.appendTo(thisObj.element);
+
+      thisObj._addHelp($launcherHelp);
      },
+
+    _addHelp : function(help){
+      var thisObj = this;
+      var $header = this.element.find('.box-header');
+      $header.find('span').append(
+          $('<div>').addClass('help-link').append(
+            $('<a>').attr('href','#').text('?').click( function(evt){
+              thisObj._flipToHelp(evt,help);
+            })));
+      return $header;
+    },
+
      close : function(){ 
        var thisObj = this;
        thisObj.options['image'] = null;

@@ -194,3 +194,5 @@ function startLaunchWizard(filter) {
   var $container = $('html body').find(DOM_BINDING['main']);
   $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
 }
+
+var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help

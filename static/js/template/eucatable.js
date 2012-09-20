@@ -65,6 +65,7 @@
       }
 
       thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
+      tableRefreshCallback = thisObj.refreshCallback;
     },
 
     _create : function() {
@@ -509,7 +510,7 @@
       return selectedRows;
     },
     close : function() {
-      cancelRepeat(this.refreshCallback);
+      ; // cancelRepeat(this.refreshCallback);
     }
 /**** End of Public Methods ****/ 
   });

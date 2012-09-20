@@ -131,6 +131,7 @@
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
         legend : ['running','pending','stopping','stopped','shutting down','terminated']
       }) //end of eucatable
+      
       thisObj.tableWrapper.appendTo(thisObj.element);
     },
     _create : function() { 
@@ -827,7 +828,8 @@
     },
 /**** Public Methods ****/
     close: function() {
-      this.tableWrapper.eucatable('close');
+    //  this.tableWrapper.eucatable('close'); // shouldn't reference eucatable b/c flippy help changes the this.element dom
+      cancelRepeat(tableRefreshCallback);
       this._super('close');
     },
 /**** End of Public Methods ****/

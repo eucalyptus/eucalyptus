@@ -30,7 +30,8 @@
         var waitSec = 30;
         var intervalMs = 100;
         var numCheck = 0;
-        var token = runRepeat( function (){
+        var token = null; 
+        token = runRepeat( function (){
           if($('html body').eucadata('getStatus') === 'online'){
             cancelRepeat(token);
             dfd.resolve();
