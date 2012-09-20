@@ -20,28 +20,20 @@
 
 package com.eucalyptus.cluster.callback;
 
-import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Date;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.log4j.Logger;
-import org.xml.sax.InputSource;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.entities.Entities;
+import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
+
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstances;
-import com.eucalyptus.ws.util.SerializationUtils;
 
 import com.google.common.collect.Lists;
 
@@ -114,49 +106,42 @@ public class DescribeSensorCallback extends
 
 	try {
 
+	    String resourceName, resourceUuid, metricName, dimensionName = "";
+	    int sequenceNum = -1;
+	    long valueDatestamp = -1;
+	    Double value = null;
+
 	    for (SensorsResourceType sensorData : msg.getSensorsResources()) {
-		String resourceName = sensorData.getResourceName();
-		String resourceUuid = sensorData.getResourceUuid();
+		resourceName = sensorData.getResourceName();
+		resourceUuid = sensorData.getResourceUuid();
 
 		for (MetricsResourceType metricType : sensorData.getMetrics()) {
-		    LOG.debug("sensorData.getMetrics() : "
-			    + metricType.getMetricName());
+		    metricName = metricType.getMetricName();
 
 		    for (MetricCounterType counterType : metricType
 			    .getCounters()) {
-			LOG.debug("metricType.getCounters : " + counterType);
+			sequenceNum = Integer.parseInt(counterType
+				.getSequenceNum().toString());
 
 			for (MetricDimensionsType dimensionType : counterType
 				.getDimensions()) {
-			    LOG.debug("counterType.getDimensions() : "
-				    + dimensionType);
+
+			    dimensionName = dimensionType.getDimensionName();
 
 			    for (MetricDimensionsValuesType valueType : dimensionType
 				    .getValues()) {
-				// fire constructed event to the domain model
-				// Need real uuid from describe sensors.
-				
-				final long valueTimeStamp = valueType.getTimestamp().getTime();
+
+				value = valueType.getValue();
+				valueDatestamp = valueType.getTimestamp()
+					.getTime();
 				if (!resourceUuid.isEmpty()
 					&& !resourceName.isEmpty()) {
-				    ListenerRegistry
-					    .getInstance()
-					    .fireEvent(
-						    new com.eucalyptus.reporting.event.InstanceUsageEvent(
-							    resourceUuid,
-							    System.currentTimeMillis(),
-							    resourceName,
-							    metricType
-								    .getMetricName(),
-							    Integer.parseInt(counterType
-								    .getSequenceNum()
-								    .toString()),
-							    dimensionType
-								    .getDimensionName(),
-							    valueType
-								    .getValue(),
-							    valueTimeStamp));
-				    
+				    fireUsageEvent(new com.eucalyptus.reporting.event.InstanceUsageEvent(
+					    resourceUuid,
+					    System.currentTimeMillis(),
+					    resourceName, metricName,
+					    sequenceNum, dimensionName, value,
+					    valueDatestamp));
 
 				}
 			    }
@@ -168,6 +153,17 @@ public class DescribeSensorCallback extends
 	    LOG.debug("Unable to fire describe sensors call back", ex);
 
 	}
+    }
+
+    private void fireUsageEvent(InstanceUsageEvent instanceUsageEvent) {
+
+	try {
+	    ListenerRegistry.getInstance().fireEvent(instanceUsageEvent);
+	} catch (EventFailedException e) {
+	    LOG.debug("Failed to fire instance usage event"
+		    + instanceUsageEvent, e);
+	}
+
     }
 
 }

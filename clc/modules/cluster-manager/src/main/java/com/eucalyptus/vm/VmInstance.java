@@ -778,6 +778,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
+        vmInst.setNaturalId(token.getInstanceUuid());
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
@@ -948,8 +949,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   void store( ) {
     this.updateTimeStamps( );
-    this.fireUsageEvent( );
     this.firePersist( );
+    this.fireUsageEvent( );
   }
   
   private void firePersist( ) {
@@ -1537,7 +1538,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else {
               this.updateState( runVm );
             }
-            VmInstance.this.fireUsageEvent( );
+            //VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
