@@ -28,6 +28,7 @@
        help : null,  // { content: ... }
        on_open: null, // {spin: True, callback: function(){}}
        user_val: null, // for user use...
+       help_icon_class : 'help-link',
     },
     $error_div : null,
     help_flipped : false,
@@ -52,8 +53,8 @@
          user_val: thisObj.options.user_val,
          open: function(event, ui) {
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
-             if($titleBar.find('.help-link').length <= 0)
-               $titleBar.append($('<div>').addClass('help-link').append($('<a>').attr('href','#').text('?')));
+             if($titleBar.find('.' + thisObj.options.help_icon_class).length <= 0)
+               $titleBar.append($('<div>').addClass(thisObj.options.help_icon_class).append($('<a>').attr('href','#').text('?')));
 
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){
                var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
@@ -86,10 +87,7 @@
 
          buttons: thisObj._makeButtons(),
       });
-      this.element.tooltip({
-        delay: 0,
-        predelay: 500
-      });
+      this.element.qtip();
     },
 
     _getButtonId : function(buttonDomId, buttonId) {
@@ -131,7 +129,7 @@
       $contentPane =  this.element.find('.dialog-inner-content');
       $resourcePane = this.element.find('.selected-resources');
 
-      $helpLink = $titleBar.find('.help-link a');
+      $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
           $contentPane.flip({
@@ -148,14 +146,14 @@
               });
               // at the end of flip/revertFlip, change the ?/x button
               if(!thisObj.help_flipped){
-                $titleBar.find('.help-link').removeClass().addClass('help-return');
+                $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
                 $helpLink.html('&nbsp;');
                 $buttonPane.hide(); 
                 $resourcePane.hide();
                 $titleBar.find('span').text('');
                 thisObj.help_flipped =true;
               } else{
-                $titleBar.find('.help-return').removeClass().addClass('help-link');
+                $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
                 $helpLink.html('&nbsp;');
                 $buttonPane.show();
                 $resourcePane.show();

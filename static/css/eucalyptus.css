@@ -1008,15 +1008,16 @@ tr.selected-row td.sorting_1
 }
 
 .help-link,
-.help-return {
+.help-return,
+.help-euca {
   float: right;
   height: 16px;
   margin: 3px 20px 0 0;
 }
 
 .help-link a,
-.help-return a
- {
+.help-return a,
+.help-euca a {
   display: inline-block;
   height: 18px; /* To match the height of the optional header text */
   width: 16px;
@@ -1028,6 +1029,10 @@ tr.selected-row td.sorting_1
 
 .help-return a {
   background-position: left -170px;
+}
+
+.help-euca a {
+  background: transparent url(../images/euca.png) no-repeat;
 }
 
 .help-content {
