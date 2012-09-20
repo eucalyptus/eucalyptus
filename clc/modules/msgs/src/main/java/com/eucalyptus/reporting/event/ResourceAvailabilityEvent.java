@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import com.eucalyptus.event.Event;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -149,5 +150,18 @@ public class ResourceAvailabilityEvent implements Event {
 
   public String toString() {
     return String.format( "[type:%s,availability:%s]", getType(), Joiner.on(",").join( getAvailability() ) );
+  }
+
+  public static Function<Tag,String> tagType() {
+    return TagTypeFunction.INSTANCE;
+  }
+
+  private enum TagTypeFunction implements Function<Tag,String> {
+    INSTANCE;
+
+    @Override
+    public String apply( final Tag tag ) {
+      return tag.getType();
+    }
   }
 }

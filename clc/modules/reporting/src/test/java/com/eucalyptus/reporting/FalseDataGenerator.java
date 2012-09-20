@@ -211,9 +211,9 @@ public class FalseDataGenerator
 								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketName, uuid, "0",
 										OBJECT_SIZE, timeMs, userId);
 							}
-							
-								
-								
+
+
+
 							/* Generate instance usage in this period for every instance running from before */
 							double oneMB = 1024d*11024d;
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
@@ -325,7 +325,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.INSTANCE, null, fos, null);
+					ReportType.INSTANCE, null, fos );
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -351,7 +351,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.CSV,
-					ReportType.INSTANCE, null, fos, null);
+					ReportType.INSTANCE, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -377,7 +377,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.VOLUME, null, fos, null);
+					ReportType.VOLUME, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -403,7 +403,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.S3, null, fos, null);
+					ReportType.S3, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -429,7 +429,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.SNAPSHOT, null, fos, null);
+					ReportType.SNAPSHOT, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {
@@ -455,7 +455,7 @@ public class FalseDataGenerator
 		try {
 			fos = new FileOutputStream(file);
 			ReportGenerator.getInstance().generateReport(period, ReportFormat.HTML,
-					ReportType.ELASTIC_IP, null, fos, null);
+					ReportType.ELASTIC_IP, null, fos);
 		} catch (IOException iox) {
 			log.error("Error generating report", iox);
 		} finally {

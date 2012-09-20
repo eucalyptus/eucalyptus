@@ -73,7 +73,7 @@ public class RendererFactory
 		if (format.equals(ReportFormat.CSV)) {
 			document = new CsvDocument();
 		} else if (format.equals(ReportFormat.HTML)) {
-			document = new HtmlDocument();			
+			document = new HtmlDocument();
 		} else {
 			throw new UnsupportedOperationException("Unsupported format:" + format);
 		}
@@ -81,17 +81,17 @@ public class RendererFactory
 		if (type.equals(ReportType.INSTANCE)) {
 			return new InstanceRenderer(document);
 		} else if (type.equals(ReportType.VOLUME)) {
-			return new VolumeRenderer(document);			
+			return new VolumeRenderer(document);
 		} else if (type.equals(ReportType.SNAPSHOT)) {
 			return new VolumeSnapshotRenderer(document);
 		} else if (type.equals(ReportType.ELASTIC_IP)) {
 			return new ElasticIpRenderer(document);
 		} else if (type.equals(ReportType.S3)) {
 			return new S3Renderer(document);
+		} else if (type.equals(ReportType.COMPUTE)) {
+			return new ComputeCapacityRenderer(document);
 		} else {
-			throw new UnsupportedOperationException("Unsupported type:" + type);			
+			throw new UnsupportedOperationException("Unsupported type:" + type);
 		}
-		
 	}
-
 }

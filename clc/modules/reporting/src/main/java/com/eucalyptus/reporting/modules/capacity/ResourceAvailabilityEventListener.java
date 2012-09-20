@@ -33,9 +33,10 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.domain.ReportingComputeDomainModel;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 
 /**
  * Resource availability listener that updates the compute capacity domain model.
@@ -50,17 +51,17 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
   public void fireEvent( @Nonnull final ResourceAvailabilityEvent event ) {
     Preconditions.checkNotNull(event, "Event is required");
 
-    final Function<ReportingComputeZoneDomainModel,Function<Long,Void>> zoneSetter = zoneSetters.get( event.getType() );
-    final Function<ReportingComputeDomainModel,Function<Long,Void>> globalSetter = globalSetters.get( event.getType() );
+    final ModelComputeUpdater<ReportingComputeZoneDomainModel> zoneSetter = zoneSetters.get( event.getType() );
+    final ModelComputeUpdater<ReportingComputeDomainModel> globalSetter = globalSetters.get( event.getType() );
     for ( final Availability availability : event.getAvailability() ) {
       if ( zoneSetter != null ) {
         final ReportingComputeZoneDomainModel zoneModel = getZoneModelForTags( availability.getTags() );
         if ( zoneModel == null ) continue;
-        zoneSetter.apply( zoneModel ).apply( availability.getAvailable() );
+        zoneSetter.update( zoneModel, availability.getTags(), availability.getAvailable(), availability.getTotal() );
       }
       if ( globalSetter != null ) {
         final ReportingComputeDomainModel globalModel = getReportingComputeDomainModel();
-        globalSetter.apply( globalModel ).apply( availability.getAvailable() );
+        globalSetter.update( globalModel, availability.getTags(), availability.getAvailable(), availability.getTotal() );
       }
     }
   }
@@ -71,7 +72,7 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
     for ( final Tag tag : tags ) {
       if ( tag instanceof Dimension && "availabilityZone".equals(tag.getType()) ) {
         model = getReportingComputeDomainModelForZone( tag.getValue() );
-      } else if ( tag instanceof Type ) {
+      } else if ( tag instanceof Type && !tag.getType().equals("vm-type")) {
         return null;
       }
     }
@@ -88,88 +89,73 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
     return ReportingComputeDomainModel.getZoneComputeDomainModel( availabilityZone );
   }
 
-  private static final Map<ResourceType,Function<ReportingComputeZoneDomainModel,Function<Long,Void>>> zoneSetters =
-      ImmutableMap.<ResourceType,Function<ReportingComputeZoneDomainModel,Function<Long,Void>>>builder()
-          .put( ResourceType.Core,
-              new Function<ReportingComputeZoneDomainModel,Function<Long,Void>>(){
+  private static interface ModelComputeUpdater<T> {
+    void update( T model, Set<Tag> tags, Long available, Long total );
+  }
+
+  private static final Map<ResourceType,ModelComputeUpdater<ReportingComputeZoneDomainModel>> zoneSetters =
+      ImmutableMap.<ResourceType,ModelComputeUpdater<ReportingComputeZoneDomainModel>>builder()
+          .put( ResourceType.Instance,
+              new ModelComputeUpdater<ReportingComputeZoneDomainModel>() {
                 @Override
-                public Function<Long, Void> apply( final ReportingComputeZoneDomainModel reportingComputeZoneDomainModel ) {
-                  return new Function<Long,Void>() {
-                    @Override
-                    public Void apply( final Long available ) {
-                      reportingComputeZoneDomainModel.setEc2ComputeUnitsAvailable( available.intValue() );
-                      return null;
-                    }
-                  };
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  final Tag vmTypeTag = Iterables.find( tags, Predicates.compose( Predicates.equalTo( "vm-type" ), ResourceAvailabilityEvent.tagType() ), null );
+                  if ( vmTypeTag != null ) {
+                    model.setInstancesAvailableForType( vmTypeTag.getValue(), available.intValue() );
+                    model.setInstancesTotalForType( vmTypeTag.getValue(), total.intValue() );
+                  }
+                }
+              } )
+          .put( ResourceType.Core,
+              new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
+                @Override
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  model.setEc2ComputeUnitsAvailable( available.intValue() );
+                  model.setEc2ComputeUnitsTotal( total.intValue() );
                 }
               } )
           .put( ResourceType.Memory,
-              new Function<ReportingComputeZoneDomainModel,Function<Long,Void>>(){
+              new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public Function<Long, Void> apply( final ReportingComputeZoneDomainModel reportingComputeZoneDomainModel ) {
-                  return new Function<Long,Void>() {
-                    @Override
-                    public Void apply( final Long available ) {
-                      reportingComputeZoneDomainModel.setEc2MemoryUnitsAvailable( available.intValue() );
-                      return null;
-                    }
-                  };
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  model.setEc2MemoryUnitsAvailable( available.intValue() );
+                  model.setEc2MemoryUnitsTotal( total.intValue() );
                 }
               } )
           .put( ResourceType.Disk,
-              new Function<ReportingComputeZoneDomainModel,Function<Long,Void>>(){
+              new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public Function<Long, Void> apply( final ReportingComputeZoneDomainModel reportingComputeZoneDomainModel ) {
-                  return new Function<Long,Void>() {
-                    @Override
-                    public Void apply( final Long available ) {
-                      reportingComputeZoneDomainModel.setEc2DiskUnitsAvailable( available.intValue() );
-                      return null;
-                    }
-                  };
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  model.setEc2DiskUnitsAvailable( available.intValue() );
+                  model.setEc2DiskUnitsTotal( total.intValue() );
                 }
               } )
           .put( ResourceType.StorageEBS,
-              new Function<ReportingComputeZoneDomainModel,Function<Long,Void>>(){
+              new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public Function<Long, Void> apply( final ReportingComputeZoneDomainModel reportingComputeZoneDomainModel ) {
-                  return new Function<Long,Void>() {
-                    @Override
-                    public Void apply( final Long available ) {
-                      reportingComputeZoneDomainModel.setSizeEbsAvailableGB( available );
-                      return null;
-                    }
-                  };
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  model.setSizeEbsAvailableGB( available );
+                  model.setSizeEbsTotalGB( total );
                 }
               } )
           .build();
 
-  private static final Map<ResourceType,Function<ReportingComputeDomainModel,Function<Long,Void>>> globalSetters =
-      ImmutableMap.<ResourceType,Function<ReportingComputeDomainModel,Function<Long,Void>>>builder()
+  private static final Map<ResourceType,ModelComputeUpdater<ReportingComputeDomainModel>> globalSetters =
+      ImmutableMap.<ResourceType,ModelComputeUpdater<ReportingComputeDomainModel>>builder()
           .put( ResourceType.Address,
-              new Function<ReportingComputeDomainModel,Function<Long,Void>>(){
+              new ModelComputeUpdater<ReportingComputeDomainModel>(){
                 @Override
-                public Function<Long, Void> apply( final ReportingComputeDomainModel reportingComputeDomainModel ) {
-                  return new Function<Long,Void>() {
-                    @Override
-                    public Void apply( final Long available ) {
-                      reportingComputeDomainModel.setNumPublicIpsAvailable( available.intValue() );
-                      return null;
-                    }
-                  };
+                public void update( final ReportingComputeDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  model.setNumPublicIpsAvailable( available.intValue() );
+                  model.setNumPublicIpsTotal( total.intValue() );
                 }
               } )
           .put( ResourceType.StorageWalrus,
-              new Function<ReportingComputeDomainModel,Function<Long,Void>>(){
+              new ModelComputeUpdater<ReportingComputeDomainModel>(){
                 @Override
-                public Function<Long, Void> apply( final ReportingComputeDomainModel reportingComputeDomainModel ) {
-                  return new Function<Long,Void>() {
-                    @Override
-                    public Void apply( final Long available ) {
-                      reportingComputeDomainModel.setSizeS3ObjectAvailableGB( available );
-                      return null;
-                    }
-                  };
+                public void update( final ReportingComputeDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  model.setSizeS3ObjectAvailableGB( available );
+                  model.setSizeS3ObjectTotalGB( total );
                 }
               } )
           .build();

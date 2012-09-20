@@ -21,7 +21,6 @@ package com.eucalyptus.reporting;
 
 import java.io.ByteArrayOutputStream;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import com.google.common.base.Charsets;
 
 /**
@@ -41,11 +40,9 @@ public class ReportGenerationFacade {
             ReportFormat.valueOf(format.toUpperCase()),
             ReportType.valueOf(type.toUpperCase().replace('-','_')),
             null,
-            reportOutput,
-            null );
+            reportOutput );
       } catch ( final Exception e ) {
         throw new ReportGenerationException( "Error generating report", e );
-
       }
 
       return new String( reportOutput.toByteArray(), Charsets.UTF_8 );
