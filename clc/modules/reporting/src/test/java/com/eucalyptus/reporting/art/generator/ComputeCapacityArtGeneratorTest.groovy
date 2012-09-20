@@ -31,6 +31,10 @@ class ComputeCapacityArtGeneratorTest {
     zone1Model.setEc2MemoryUnitsTotal( 15 )
     zone1Model.setEc2DiskUnitsAvailable( 2000 )
     zone1Model.setEc2DiskUnitsTotal( 5000 )
+    zone1Model.setInstancesAvailableForType( "small", 5 )
+    zone1Model.setInstancesTotalForType( "small", 10 )
+    zone1Model.setInstancesAvailableForType( "big", 2 )
+    zone1Model.setInstancesTotalForType( "big", 3 )
 
     ReportingComputeDomainModel.ReportingComputeZoneDomainModel zone2Model =
       ReportingComputeDomainModel.getZoneComputeDomainModel( "zone2" );
@@ -42,6 +46,10 @@ class ComputeCapacityArtGeneratorTest {
     zone2Model.setEc2MemoryUnitsTotal( 30 )
     zone2Model.setEc2DiskUnitsAvailable( 4000 )
     zone2Model.setEc2DiskUnitsTotal( 10000 )
+    zone2Model.setInstancesAvailableForType( "small", 2 )
+    zone2Model.setInstancesTotalForType( "small", 8 )
+    zone2Model.setInstancesAvailableForType( "big", 1 )
+    zone2Model.setInstancesTotalForType( "big", 2 )
 
     ComputeCapacityArtGenerator generator = new ComputeCapacityArtGenerator();
     ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T00:00:00") ) )
@@ -59,6 +67,10 @@ class ComputeCapacityArtGeneratorTest {
     assertEquals( "Cloud memory total", 45, cloudCapacity.getEc2MemoryUnitsTotal() )
     assertEquals( "Cloud disk available", 6000, cloudCapacity.getEc2DiskUnitsAvailable() )
     assertEquals( "Cloud disk total", 15000, cloudCapacity.getEc2DiskUnitsTotal() )
+    assertEquals( "Cloud small vmtype available", 7, cloudCapacity.getInstancesAvailableForType("small") )
+    assertEquals( "Cloud small vmtype total", 18, cloudCapacity.getInstancesTotalForType("small") )
+    assertEquals( "Cloud big vmtype available", 3, cloudCapacity.getInstancesAvailableForType("big") )
+    assertEquals( "Cloud big vmtype total", 5, cloudCapacity.getInstancesTotalForType("big") )
 
     assertEquals( "availability zones", Sets.newHashSet( "zone1", "zone2" ), art.getZones().keySet() )
     ComputeCapacityArtEntity zone1ComputeCapacity = art.getZones().get( "zone1" ).getUsageTotals().getComputeCapacityArtEntity();
@@ -70,6 +82,10 @@ class ComputeCapacityArtGeneratorTest {
     assertEquals( "Zone1 memory total", 15, zone1ComputeCapacity.getEc2MemoryUnitsTotal() )
     assertEquals( "Zone1 disk available", 2000, zone1ComputeCapacity.getEc2DiskUnitsAvailable() )
     assertEquals( "Zone1 disk total", 5000, zone1ComputeCapacity.getEc2DiskUnitsTotal() )
+    assertEquals( "Zone1 small vmtype available", 5, zone1ComputeCapacity.getInstancesAvailableForType("small") )
+    assertEquals( "Zone1 small vmtype total", 10, zone1ComputeCapacity.getInstancesTotalForType("small") )
+    assertEquals( "Zone1 big vmtype available", 2, zone1ComputeCapacity.getInstancesAvailableForType("big") )
+    assertEquals( "Zone1 big vmtype total", 3, zone1ComputeCapacity.getInstancesTotalForType("big") )
 
     ComputeCapacityArtEntity zone2ComputeCapacity = art.getZones().get( "zone2" ).getUsageTotals().getComputeCapacityArtEntity();
     assertEquals( "Zone2 ebs available", 100, zone2ComputeCapacity.getSizeEbsAvailableGB() )
@@ -80,6 +96,10 @@ class ComputeCapacityArtGeneratorTest {
     assertEquals( "Zone2 memory total", 30, zone2ComputeCapacity.getEc2MemoryUnitsTotal() )
     assertEquals( "Zone2 disk available", 4000, zone2ComputeCapacity.getEc2DiskUnitsAvailable() )
     assertEquals( "Zone2 disk total", 10000, zone2ComputeCapacity.getEc2DiskUnitsTotal() )
+    assertEquals( "Zone2 small vmtype available", 2, zone2ComputeCapacity.getInstancesAvailableForType("small") )
+    assertEquals( "Zone2 small vmtype total", 8, zone2ComputeCapacity.getInstancesTotalForType("small") )
+    assertEquals( "Zone2 big vmtype available", 1, zone2ComputeCapacity.getInstancesAvailableForType("big") )
+    assertEquals( "Zone2 big vmtype total", 2, zone2ComputeCapacity.getInstancesTotalForType("big") )
 
     //new ComputeCapacityRenderer( new CsvDocument() ).render( art, System.out, Units.getDefaultDisplayUnits() )
   }

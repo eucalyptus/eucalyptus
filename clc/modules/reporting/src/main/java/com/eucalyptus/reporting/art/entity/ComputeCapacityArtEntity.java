@@ -19,7 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.entity;
 
+import java.util.Map;
+import java.util.Set;
 import com.eucalyptus.reporting.art.ArtObject;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -40,6 +45,8 @@ public class ComputeCapacityArtEntity implements ArtObject {
   private Integer ec2DiskUnitsTotal;
   private Long    sizeEbsAvailableGB;
   private Long    sizeEbsTotalGB;
+  private Map<String,Integer> ec2VmTypeToAvailable = Maps.newHashMap();
+  private Map<String,Integer> ec2VmTypeToTotal = Maps.newHashMap();
 
   public Long getSizeS3ObjectAvailableGB() {
     return sizeS3ObjectAvailableGB;
@@ -135,5 +142,25 @@ public class ComputeCapacityArtEntity implements ArtObject {
 
   public void setSizeEbsTotalGB( final Long sizeEbsTotalGB ) {
     this.sizeEbsTotalGB = sizeEbsTotalGB;
+  }
+
+  public Set<String> getVmTypes() {
+    return Sets.newTreeSet( Iterables.concat( this.ec2VmTypeToAvailable.keySet(), this.ec2VmTypeToTotal.keySet() ) );
+  }
+
+  public Integer getInstancesAvailableForType( final String vmType ) {
+    return this.ec2VmTypeToAvailable.get( vmType );
+  }
+
+  public void setInstancesAvailableForType( final String vmType, final Integer available ) {
+    this.ec2VmTypeToAvailable.put( vmType, available );
+  }
+
+  public Integer getInstancesTotalForType( final String vmType ) {
+    return this.ec2VmTypeToTotal.get( vmType );
+  }
+
+  public void setInstancesTotalForType( final String vmType, final Integer total ) {
+    this.ec2VmTypeToTotal.put( vmType, total );
   }
 }

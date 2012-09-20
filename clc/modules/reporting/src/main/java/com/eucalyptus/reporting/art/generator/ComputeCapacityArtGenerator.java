@@ -24,6 +24,7 @@ import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
 import com.eucalyptus.reporting.art.entity.ComputeCapacityArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.domain.ReportingComputeDomainModel;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -35,10 +36,10 @@ public class ComputeCapacityArtGenerator implements ArtGenerator {
     final ReportingComputeDomainModel model = ReportingComputeDomainModel.getGlobalComputeDomainModel();
 
     final ComputeCapacityArtEntity globalCapacity = report.getUsageTotals().getComputeCapacityArtEntity();
-    globalCapacity.setSizeS3ObjectAvailableGB( model.getSizeS3ObjectAvailableGB() );
-    globalCapacity.setSizeS3ObjectTotalGB( model.getSizeS3ObjectTotalGB() );
-    globalCapacity.setNumPublicIpsAvailable( model.getNumPublicIpsAvailable() );
-    globalCapacity.setNumPublicIpsTotal( model.getNumPublicIpsTotal() );
+    globalCapacity.setSizeS3ObjectAvailableGB( nullSafe(model.getSizeS3ObjectAvailableGB()) );
+    globalCapacity.setSizeS3ObjectTotalGB( nullSafe(model.getSizeS3ObjectTotalGB()) );
+    globalCapacity.setNumPublicIpsAvailable( nullSafe(model.getNumPublicIpsAvailable()) );
+    globalCapacity.setNumPublicIpsTotal( nullSafe(model.getNumPublicIpsTotal()) );
     globalCapacity.setEc2ComputeUnitsAvailable( 0 );
     globalCapacity.setEc2ComputeUnitsTotal( 0 );
     globalCapacity.setEc2DiskUnitsAvailable( 0 );
@@ -57,14 +58,19 @@ public class ComputeCapacityArtGenerator implements ArtGenerator {
       final ComputeCapacityArtEntity zoneCapacity = zoneEntity.getUsageTotals().getComputeCapacityArtEntity();
 
       final ReportingComputeZoneDomainModel zoneModel = ReportingComputeDomainModel.getZoneComputeDomainModel( zone );
-      zoneCapacity.setEc2ComputeUnitsAvailable( zoneModel.getEc2ComputeUnitsAvailable() );
-      zoneCapacity.setEc2ComputeUnitsTotal( zoneModel.getEc2ComputeUnitsTotal() );
-      zoneCapacity.setEc2DiskUnitsAvailable( zoneModel.getEc2DiskUnitsAvailable() );
-      zoneCapacity.setEc2DiskUnitsTotal( zoneModel.getEc2DiskUnitsTotal() );
-      zoneCapacity.setEc2MemoryUnitsAvailable( zoneModel.getEc2MemoryUnitsAvailable() );
-      zoneCapacity.setEc2MemoryUnitsTotal( zoneModel.getEc2MemoryUnitsTotal() );
-      zoneCapacity.setSizeEbsAvailableGB( zoneModel.getSizeEbsAvailableGB() );
-      zoneCapacity.setSizeEbsTotalGB( zoneModel.getSizeEbsTotalGB() );
+      zoneCapacity.setEc2ComputeUnitsAvailable( nullSafe(zoneModel.getEc2ComputeUnitsAvailable()) );
+      zoneCapacity.setEc2ComputeUnitsTotal( nullSafe(zoneModel.getEc2ComputeUnitsTotal()) );
+      zoneCapacity.setEc2DiskUnitsAvailable( nullSafe(zoneModel.getEc2DiskUnitsAvailable()) );
+      zoneCapacity.setEc2DiskUnitsTotal( nullSafe(zoneModel.getEc2DiskUnitsTotal()) );
+      zoneCapacity.setEc2MemoryUnitsAvailable( nullSafe(zoneModel.getEc2MemoryUnitsAvailable()) );
+      zoneCapacity.setEc2MemoryUnitsTotal( nullSafe(zoneModel.getEc2MemoryUnitsTotal()) );
+      zoneCapacity.setSizeEbsAvailableGB( nullSafe(zoneModel.getSizeEbsAvailableGB()) );
+      zoneCapacity.setSizeEbsTotalGB( nullSafe(zoneModel.getSizeEbsTotalGB()) );
+
+      for ( final String vmType : zoneModel.getVmTypes() ) {
+        zoneCapacity.setInstancesAvailableForType( vmType, nullSafe(zoneModel.getInstancesAvailableForType(vmType)) );
+        zoneCapacity.setInstancesTotalForType( vmType, nullSafe(zoneModel.getInstancesTotalForType(vmType)) );
+      }
 
       globalCapacity.setEc2ComputeUnitsAvailable( globalCapacity.getEc2ComputeUnitsAvailable() + zoneCapacity.getEc2ComputeUnitsAvailable() );
       globalCapacity.setEc2ComputeUnitsTotal( globalCapacity.getEc2ComputeUnitsTotal() + zoneCapacity.getEc2ComputeUnitsTotal() );
@@ -74,8 +80,20 @@ public class ComputeCapacityArtGenerator implements ArtGenerator {
       globalCapacity.setEc2MemoryUnitsTotal( globalCapacity.getEc2MemoryUnitsTotal() + zoneCapacity.getEc2MemoryUnitsTotal() );
       globalCapacity.setSizeEbsAvailableGB( globalCapacity.getSizeEbsAvailableGB() + zoneCapacity.getSizeEbsAvailableGB() );
       globalCapacity.setSizeEbsTotalGB( globalCapacity.getSizeEbsTotalGB() + zoneCapacity.getSizeEbsTotalGB() );
+      for ( final String vmType : zoneModel.getVmTypes() ) {
+        globalCapacity.setInstancesAvailableForType( vmType, nullSafe(globalCapacity.getInstancesAvailableForType(vmType)) + zoneCapacity.getInstancesAvailableForType(vmType) );
+        globalCapacity.setInstancesTotalForType( vmType, nullSafe(globalCapacity.getInstancesTotalForType(vmType)) + zoneCapacity.getInstancesTotalForType(vmType) );
+      }
     }
 
     return report;
+  }
+
+  private Integer nullSafe( final Integer value ) {
+    return Objects.firstNonNull( value, 0 );
+  }
+
+  private Long nullSafe( final Long value ) {
+    return Objects.firstNonNull( value, 0L );
   }
 }

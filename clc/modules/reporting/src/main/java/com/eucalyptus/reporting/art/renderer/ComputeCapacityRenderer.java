@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
 import com.eucalyptus.reporting.art.entity.ComputeCapacityArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
@@ -45,7 +46,7 @@ public class ComputeCapacityRenderer implements Renderer {
     doc.setWriter(new OutputStreamWriter(os));
 
     doc.open();
-    doc.textLine("Elastic IP Report", 1);
+    doc.textLine("Compute Report", 1);
     doc.textLine("Begin:" + new Date(report.getBeginMs()).toString(), 4);
     doc.textLine("End:" + new Date(report.getEndMs()).toString(), 4);
     doc.textLine("Resource Usage Section", 3);
@@ -70,11 +71,18 @@ public class ComputeCapacityRenderer implements Renderer {
     doc.close();
   }
 
-  //TODO:STEVE: include breakdown for instance types?
   private void outputZoneCapacities( final ComputeCapacityArtEntity entity ) throws IOException {
     doc.addValCol( "EBS Storage" ).addValCol( entity.getSizeEbsAvailableGB() ).addValCol( entity.getSizeEbsTotalGB() ).newRow();
     doc.addValCol( "EC2 Compute" ).addValCol( entity.getEc2ComputeUnitsAvailable().longValue() ).addValCol( entity.getEc2ComputeUnitsTotal().longValue() ).newRow();
     doc.addValCol( "EC2 Disk" ).addValCol( entity.getEc2DiskUnitsAvailable().longValue() ).addValCol( entity.getEc2DiskUnitsTotal().longValue() ).newRow();
     doc.addValCol( "EC2 Memory" ).addValCol( entity.getEc2MemoryUnitsAvailable().longValue() ).addValCol( entity.getEc2MemoryUnitsTotal().longValue() ).newRow();
+
+    final Set<String> vmTypes = entity.getVmTypes();
+    if ( !vmTypes.isEmpty() ) {
+      doc.addLabelCol(2, "VM Types" );
+      for ( final String vmType : vmTypes ) {
+        doc.addValCol( vmType ).addValCol( entity.getInstancesAvailableForType(vmType).longValue() ).addValCol( entity.getInstancesTotalForType(vmType).longValue() ).newRow();
+      }
+    }
   }
 }

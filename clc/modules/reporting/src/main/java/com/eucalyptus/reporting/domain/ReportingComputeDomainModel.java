@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -162,13 +163,15 @@ public class ReportingComputeDomainModel
 
 	public static final class ReportingComputeZoneDomainModel {
 		private final AtomicReference<Integer> ec2ComputeUnitsAvailable = new AtomicReference<Integer>();
-		private final AtomicReference<Integer> ec2ComputeUnitsTotal = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2ComputeUnitsTotal     = new AtomicReference<Integer>();
 		private final AtomicReference<Integer> ec2MemoryUnitsAvailable  = new AtomicReference<Integer>();
-		private final AtomicReference<Integer> ec2MemoryUnitsTotal  = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2MemoryUnitsTotal      = new AtomicReference<Integer>();
 		private final AtomicReference<Integer> ec2DiskUnitsAvailable    = new AtomicReference<Integer>();
-		private final AtomicReference<Integer> ec2DiskUnitsTotal    = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2DiskUnitsTotal        = new AtomicReference<Integer>();
 		private final AtomicReference<Long>    sizeEbsAvailableGB       = new AtomicReference<Long>();
-		private final AtomicReference<Long>    sizeEbsTotalGB       = new AtomicReference<Long>();
+		private final AtomicReference<Long>    sizeEbsTotalGB           = new AtomicReference<Long>();
+		private final Map<String,Integer>      ec2VmTypeToAvailable     = Maps.newConcurrentMap();
+		private final Map<String,Integer>      ec2VmTypeToTotal         = Maps.newConcurrentMap();
 
 		/**
 		 * <p>Returns the total number of instances which can be created, based upon the amount of
@@ -305,23 +308,43 @@ public class ReportingComputeDomainModel
 		{
 			this.sizeEbsTotalGB.set( sizeEbsTotalGB );
 		}
-	}
+
+		public Set<String> getVmTypes() {
+			return Sets.newHashSet( Iterables.concat( this.ec2VmTypeToAvailable.keySet(), this.ec2VmTypeToTotal.keySet() ) );
+		}
+
+		public Integer getInstancesAvailableForType( final String vmType ) {
+			return this.ec2VmTypeToAvailable.get( vmType );
+		}
+
+		public void setInstancesAvailableForType( final String vmType, final Integer available ) {
+			this.ec2VmTypeToAvailable.put( vmType, available );
+		}
+
+		public Integer getInstancesTotalForType( final String vmType ) {
+			return this.ec2VmTypeToTotal.get( vmType );
+		}
+
+		public void setInstancesTotalForType( final String vmType, final Integer total ) {
+			this.ec2VmTypeToTotal.put( vmType, total );
+		}
+  }
 
 	public static String dump() {
 		final StringBuilder builder = new StringBuilder( 512 );
 		builder.append("Compute capacity:\n");
 
 		// global compute
-		builder.append("IP Addresses: ").append(globalModel.getNumPublicIpsAvailable()).append("/").append(globalModel.getNumPublicIpsTotal()).append("\n");
-		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append("/").append(globalModel.getSizeS3ObjectTotalGB()).append(" GiB\n");
+		builder.append("IP Addresses: ").append(globalModel.getNumPublicIpsAvailable()).append( "/" ).append(globalModel.getNumPublicIpsTotal()).append("\n");
+		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append( "/" ).append(globalModel.getSizeS3ObjectTotalGB()).append(" GiB\n");
 
 		// zone compute
 		for ( final Map.Entry<String,ReportingComputeZoneDomainModel> modelEntry : zoneModels.entrySet() ) {
 			builder.append(modelEntry.getKey()).append(":\n");
-			builder.append("\t").append("Cores      : ").append(modelEntry.getValue().getEc2ComputeUnitsAvailable()).append("/").append(modelEntry.getValue().getEc2ComputeUnitsTotal()).append("\n");
-			builder.append("\t").append("Disk       : ").append(modelEntry.getValue().getEc2DiskUnitsAvailable()).append("/").append(modelEntry.getValue().getEc2DiskUnitsTotal()).append(" GiB\n");
-			builder.append("\t").append("Memory     : ").append(modelEntry.getValue().getEc2MemoryUnitsAvailable()).append("/").append(modelEntry.getValue().getEc2MemoryUnitsTotal()).append(" MiB\n");
-			builder.append("\t").append("EBS Storage: ").append(modelEntry.getValue().getSizeEbsAvailableGB()).append("/").append(modelEntry.getValue().getSizeEbsTotalGB()).append(" GiB\n");
+			builder.append("\t").append("Cores      : ").append( modelEntry.getValue().getEc2ComputeUnitsAvailable() ).append("/").append(modelEntry.getValue().getEc2ComputeUnitsTotal()).append("\n");
+			builder.append("\t").append("Disk       : ").append( modelEntry.getValue().getEc2DiskUnitsAvailable() ).append("/").append(modelEntry.getValue().getEc2DiskUnitsTotal()).append(" GiB\n");
+			builder.append("\t").append("Memory     : ").append( modelEntry.getValue().getEc2MemoryUnitsAvailable() ).append("/").append(modelEntry.getValue().getEc2MemoryUnitsTotal()).append(" MiB\n");
+			builder.append("\t").append("EBS Storage: ").append( modelEntry.getValue().getSizeEbsAvailableGB() ).append("/").append(modelEntry.getValue().getSizeEbsTotalGB()).append(" GiB\n");
 		}
 
 		return builder.toString();

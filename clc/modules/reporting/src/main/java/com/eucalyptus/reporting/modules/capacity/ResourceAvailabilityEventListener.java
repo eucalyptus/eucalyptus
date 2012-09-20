@@ -33,9 +33,10 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.domain.ReportingComputeDomainModel;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 
 /**
  * Resource availability listener that updates the compute capacity domain model.
@@ -56,11 +57,11 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
       if ( zoneSetter != null ) {
         final ReportingComputeZoneDomainModel zoneModel = getZoneModelForTags( availability.getTags() );
         if ( zoneModel == null ) continue;
-        zoneSetter.update( zoneModel, availability.getAvailable(), availability.getTotal() );
+        zoneSetter.update( zoneModel, availability.getTags(), availability.getAvailable(), availability.getTotal() );
       }
       if ( globalSetter != null ) {
         final ReportingComputeDomainModel globalModel = getReportingComputeDomainModel();
-        globalSetter.update( globalModel, availability.getAvailable(), availability.getTotal() );
+        globalSetter.update( globalModel, availability.getTags(), availability.getAvailable(), availability.getTotal() );
       }
     }
   }
@@ -89,15 +90,26 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
   }
 
   private static interface ModelComputeUpdater<T> {
-    void update( T model, Long available, Long total );
+    void update( T model, Set<Tag> tags, Long available, Long total );
   }
 
   private static final Map<ResourceType,ModelComputeUpdater<ReportingComputeZoneDomainModel>> zoneSetters =
       ImmutableMap.<ResourceType,ModelComputeUpdater<ReportingComputeZoneDomainModel>>builder()
+          .put( ResourceType.Instance,
+              new ModelComputeUpdater<ReportingComputeZoneDomainModel>() {
+                @Override
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
+                  final Tag vmTypeTag = Iterables.find( tags, Predicates.compose( Predicates.equalTo( "vm-type" ), ResourceAvailabilityEvent.tagType() ), null );
+                  if ( vmTypeTag != null ) {
+                    model.setInstancesAvailableForType( vmTypeTag.getValue(), available.intValue() );
+                    model.setInstancesTotalForType( vmTypeTag.getValue(), total.intValue() );
+                  }
+                }
+              } )
           .put( ResourceType.Core,
               new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public void update( final ReportingComputeZoneDomainModel model, final Long available, final Long total ) {
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
                   model.setEc2ComputeUnitsAvailable( available.intValue() );
                   model.setEc2ComputeUnitsTotal( total.intValue() );
                 }
@@ -105,7 +117,7 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
           .put( ResourceType.Memory,
               new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public void update( final ReportingComputeZoneDomainModel model, final Long available, final Long total ) {
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
                   model.setEc2MemoryUnitsAvailable( available.intValue() );
                   model.setEc2MemoryUnitsTotal( total.intValue() );
                 }
@@ -113,7 +125,7 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
           .put( ResourceType.Disk,
               new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public void update( final ReportingComputeZoneDomainModel model, final Long available, final Long total ) {
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
                   model.setEc2DiskUnitsAvailable( available.intValue() );
                   model.setEc2DiskUnitsTotal( total.intValue() );
                 }
@@ -121,9 +133,9 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
           .put( ResourceType.StorageEBS,
               new ModelComputeUpdater<ReportingComputeZoneDomainModel>(){
                 @Override
-                public void update( final ReportingComputeZoneDomainModel model, final Long available, final Long total ) {
+                public void update( final ReportingComputeZoneDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
                   model.setSizeEbsAvailableGB( available );
-                  model.setSizeEbsAvailableGB( total );
+                  model.setSizeEbsTotalGB( total );
                 }
               } )
           .build();
@@ -133,7 +145,7 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
           .put( ResourceType.Address,
               new ModelComputeUpdater<ReportingComputeDomainModel>(){
                 @Override
-                public void update( final ReportingComputeDomainModel model, final Long available, final Long total ) {
+                public void update( final ReportingComputeDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
                   model.setNumPublicIpsAvailable( available.intValue() );
                   model.setNumPublicIpsTotal( total.intValue() );
                 }
@@ -141,7 +153,7 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
           .put( ResourceType.StorageWalrus,
               new ModelComputeUpdater<ReportingComputeDomainModel>(){
                 @Override
-                public void update( final ReportingComputeDomainModel model, final Long available, final Long total ) {
+                public void update( final ReportingComputeDomainModel model, final Set<Tag> tags, final Long available, final Long total ) {
                   model.setSizeS3ObjectAvailableGB( available );
                   model.setSizeS3ObjectTotalGB( total );
                 }
