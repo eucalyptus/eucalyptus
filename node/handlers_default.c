@@ -1520,15 +1520,14 @@ doDescribeSensors (struct nc_state_t *nc,
 	else 
 		total = instIdsLen;
 
-    * outResources = malloc (total * sizeof (sensorResource *));
-    if ((*outResources) == NULL) {
+    sensorResource ** rss = malloc (total * sizeof (sensorResource *));
+    if (rss == NULL) {
         sem_v (inst_copy_sem);
         return OUT_OF_MEMORY;
     }
 
 	int k = 0;
 
-#if 0    
     ncInstance * instance;
 	for (int i=0; (instance = get_instance(&global_instances_copy)) != NULL; i++) {
 		// only pick ones the user (or admin) is allowed to see
@@ -1548,19 +1547,16 @@ doDescribeSensors (struct nc_state_t *nc,
 				continue;
 		}
         
-        * outResources [k] = malloc (sizeof (sensorResource));
-        sensor_get_dummy_instance_data (0L, instance->instanceId, sensorIds, sensorIdsLen, (* outResources) + k, 1);
+        rss [k] = malloc (sizeof (sensorResource));
+        sensor_get_instance_data (instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1);
         k++;
 	}
-#endif
-    
-    * outResources [k] = malloc (sizeof (sensorResource));
-    sensor_get_instance_data (NULL, sensorIds, sensorIdsLen, (* outResources) + k, 1);
-    k++;
     
     * outResourcesLen = k;
+    * outResources = rss;
 	sem_v (inst_copy_sem);
-    
+   
+	logprintfl (EUCADEBUG, "doDescribeSensors: %d resource(s)\n", k);
     return 0;
 }
 
