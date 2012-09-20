@@ -205,9 +205,6 @@ static void sensor_bottom_half (void)
         resourceNames [i][0]='\0';
     
     long long sn = 0L;
-    char fake_name [32];
-    double fake_val = 11.0;
-    snprintf (fake_name, sizeof(fake_name), "i-%08x", rand());
     
     for (;;) {
         usleep (next_sleep_duration_usec);
@@ -229,10 +226,6 @@ static void sensor_bottom_half (void)
             strncpy (resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
         sem_v (state_sem);
         
-        // TODO3.2: remove this temporary fake data generation
-        long long ts = time_usec() / 1000;
-        sensor_add_value (fake_name, "CPUUtilization", SENSOR_AVERAGE, "default", sn, ts, TRUE, fake_val++);
-        
         if (getstat_refresh() != OK) {
             logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
             continue;
@@ -243,8 +236,6 @@ static void sensor_bottom_half (void)
         for (int i=0; i<MAX_SENSOR_RESOURCES; i++) {
             char * name = resourceNames [i];
             if (name [0] == '\0')
-                continue;
-            if (strcmp (name, fake_name) == 0) // skip the fake resource
                 continue;
             getstat * head = getstat_find (name);
             for (getstat * s = head; s != NULL; s = s->next) {
