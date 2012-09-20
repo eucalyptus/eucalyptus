@@ -200,7 +200,7 @@ public class VolumeArtGenerator
 			if (durationMs==0) continue;
 			if (! volumeEntities.containsKey(detachEvent.getVolumeUuid())) continue;
 			VolumeArtEntity volume = volumeEntities.get(detachEvent.getVolumeUuid());
-			long gbsecs = (durationMs * volume.getUsage().getSizeGB())/1000;
+			long gbsecs = ((durationMs/1000) * volume.getUsage().getSizeGB());
 			/* If a volume is repeatedly attached to and detached from an instance,
 			 * add up the total attachment time.
 			 */
@@ -211,9 +211,13 @@ public class VolumeArtGenerator
 			usage.setGBSecs(gbsecs);
 			usage.setSizeGB(volume.getUsage().getSizeGB());
 			usage.setVolumeCnt(1);
-			volume.getInstanceAttachments().put(detachEvent.getInstanceUuid(), usage);
+			if (instanceEntities.keySet().contains(detachEvent.getInstanceUuid())) {
+				String instanceId = instanceEntities.get(detachEvent.getInstanceUuid()).getInstanceId();
+				volume.getInstanceAttachments().put(instanceId, usage);
+			} else {
+				log.error("instance uuid in detach events without corresponding instance:" + detachEvent.getInstanceUuid());
+			}
 		}
-
 		
 		/* Perform totals and summations for user, account, and zone
 		 */

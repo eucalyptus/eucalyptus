@@ -279,6 +279,7 @@ public class InstanceArtGenerator
 		totalEntity.addNetTotalOutMegs(usage.getNetTotalOutMegs());
 		totalEntity.addNetInternalInMegs(usage.getNetInternalInMegs());
 		totalEntity.addNetInternalOutMegs(usage.getNetInternalOutMegs());
+		totalEntity.addInstanceCnt(1);
 		
 		/* Update total running time and type count for this instance type */
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();

@@ -143,8 +143,8 @@ public class VolumeSnapshotArtGenerator
 			/* Default sizeGB is remainder of report * GB. This will be overwritten later if there's
 			 * a corresponding delete event before the report end, later.
 			 */
-			usage.setGBSecs(createEvent.getSizeGB() * DurationCalculator.boundDuration(report.getBeginMs(),
-					report.getEndMs(), createEvent.getTimestampMs())/1000);
+			usage.setGBSecs(createEvent.getSizeGB() * (DurationCalculator.boundDuration(report.getBeginMs(),
+					report.getEndMs(), createEvent.getTimestampMs())/1000));
 			VolumeArtEntity volume = volumeEntities.get(createEvent.getVolumeUuid());
 			volume.getSnapshotUsage().put(createEvent.getVolumeSnapshotId(), usage);
 			snapshotEntities.put(createEvent.getUuid(), usage);
