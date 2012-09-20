@@ -51,7 +51,7 @@ public class S3ArtGenerator
 		Iterator iter = wrapper.scanWithNativeQuery( "scanS3ObjectCreateEvents" );
 		Map<String,BucketUsageArtEntity> bucketUsageEntities = new HashMap<String,BucketUsageArtEntity>();
 		Map<S3ObjectKey,S3ObjectData> objectData = new HashMap<S3ObjectKey,S3ObjectData>();
-		DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>();
+		DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>(report.getEndMs());
 		while (iter.hasNext()) {
 			ReportingS3ObjectCreateEvent createEvent = (ReportingS3ObjectCreateEvent) iter.next();
 			
@@ -89,8 +89,7 @@ public class S3ArtGenerator
 			 * will be overwritten later if we encounter a delete event (or multiple delete
 			 * events) for an object before the end of the report.
 			 */
-			objectData.put(objectKey, new S3ObjectData((createEvent.getSizeGB()-report.getEndMs()),
-					createEvent.getSizeGB()));
+			objectData.put(objectKey, new S3ObjectData(createEvent.getSizeGB()));
 		}
 		
 		/* Find end timestamps for objects which are subsequently deleted, including
@@ -104,10 +103,13 @@ public class S3ArtGenerator
 			if (deleteEvent.getTimestampMs() < report.getEndMs()) {
 				S3ObjectKey key = new S3ObjectKey(deleteEvent.getS3BucketName(), deleteEvent.getS3ObjectKey(),
 					deleteEvent.getObjectVersion());
-				long objDurationMs = objectDurationCalculator.getDuration(key, deleteEvent.getTimestampMs());
-				if (objectData.containsKey(key)) {
-					objectData.get(key).incrementDurationMs(objDurationMs);
-				}
+				objectDurationCalculator.addEnd(key, deleteEvent.getTimestampMs());
+			}
+		}
+		Map<S3ObjectKey,Long> durationMap = objectDurationCalculator.getDurationMap();
+		for (S3ObjectKey key: durationMap.keySet()) {
+			if (objectData.containsKey(key)) {
+				objectData.get(key).setDurationMs(durationMap.get(key));
 			}
 		}
 		
@@ -129,18 +131,14 @@ public class S3ArtGenerator
 		/* Perform totals and summations for user, account, zone, and bucket
 		 * todo: no zones here
 		 */
-		for (String zoneName : report.getZones().keySet()) {
-			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-			for (String accountName : zone.getAccounts().keySet()) {
-				AccountArtEntity account = zone.getAccounts().get(accountName);
-				for (String userName : account.getUsers().keySet()) {
-					UserArtEntity user = account.getUsers().get(userName);
-					for (String bucketName : user.getBucketUsage().keySet()) {
-						BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
-						updateUsageTotals(user.getUsageTotals().getBucketTotals(), usage);
-						updateUsageTotals(account.getUsageTotals().getBucketTotals(), usage);
-						updateUsageTotals(zone.getUsageTotals().getBucketTotals(), usage);							
-					}
+		for (String accountName : report.getAccounts().keySet()) {
+			AccountArtEntity account = report.getAccounts().get(accountName);
+			for (String userName : account.getUsers().keySet()) {
+				UserArtEntity user = account.getUsers().get(userName);
+				for (String bucketName : user.getBucketUsage().keySet()) {
+					BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
+					updateUsageTotals(user.getUsageTotals().getBucketTotals(), usage);
+					updateUsageTotals(account.getUsageTotals().getBucketTotals(), usage);
 				}
 			}
 		}
@@ -244,12 +242,10 @@ public class S3ArtGenerator
 	private static class S3ObjectData
 	{
 		private long durationMs;
-		private long defaultDurationMs;
 		private long sizeGB;
 		
-		private S3ObjectData(long defaultDurationMs, long sizeGB)
+		private S3ObjectData(long sizeGB)
 		{
-			this.defaultDurationMs = defaultDurationMs;
 			this.durationMs = 0l;
 			this.sizeGB = sizeGB;
 		}
@@ -261,12 +257,12 @@ public class S3ArtGenerator
 
 		public long getDurationMs()
 		{
-			return (durationMs==0l)?defaultDurationMs:durationMs;
+			return durationMs;
 		}
 
-		public void incrementDurationMs(long ms)
+		public void setDurationMs(long ms)
 		{
-			this.durationMs += ms;
+			this.durationMs = ms;
 		}
 
 	}
