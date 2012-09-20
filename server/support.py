@@ -24,7 +24,7 @@ class ComputeHandler(tornado.web.RequestHandler):
     def get(self):
         action = self.get_argument("Action")
         if action == 'About':
-            ret = {'version':'3.2.0', 'admin-url': 'https://' + server.config.get('server', 'clchost') + ':8443'}
+            ret = {'version':'3.2.0', 'admin_url': 'https://' + server.config.get('server', 'clchost') + ':8443'}
             data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
             self.write(data)
         else:

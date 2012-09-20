@@ -39,7 +39,7 @@
       thisObj = this;
       $.ajax({
         type:"GET",
-        url:"/support?Action=About"
+        url:"/support?Action=About",
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
         async:false,
@@ -47,7 +47,7 @@
           function(data, textStatus, jqXHR){
             if ( data ) {
               thisObj._version = data.version;
-              thisObj._adminURL = data.admin-url;
+              thisObj._adminURL = data.admin_url;
             }
           },
         error:
