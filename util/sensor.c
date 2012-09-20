@@ -436,7 +436,7 @@ int sensor_res2str (char * buf, int bufLen, sensorResource **srs, int srsLen)
         const sensorResource * sr = srs [r];
         if (is_empty_sr (sr))
             continue;
-        printed = snprintf (s, left, "resource: %s type: %s metrics: %d\n", sr->resourceName, sr->resourceType, sr->metricsLen);
+        printed = snprintf (s, left, "resource: %s uuid: %s type: %s metrics: %d\n", sr->resourceName, sr->resourceUuid, sr->resourceType, sr->metricsLen);
 #define MAYBE_BAIL s = s + printed; left = left - printed; if (left < 1) return (bufLen - left);
         MAYBE_BAIL
         for (int m=0; m<sr->metricsLen; m++) {

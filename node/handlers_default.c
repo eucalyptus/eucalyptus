@@ -1548,14 +1548,15 @@ doDescribeSensors (struct nc_state_t *nc,
 		}
         
         rss [k] = malloc (sizeof (sensorResource));
-        sensor_get_instance_data (NULL, sensorIds, sensorIdsLen, rss + k, 1);
+        sensor_get_instance_data (instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1);
         k++;
 	}
     
     * outResourcesLen = k;
     * outResources = rss;
 	sem_v (inst_copy_sem);
-    
+   
+	logprintfl (EUCADEBUG, "doDescribeSensors: %d resource(s)\n", k);
     return 0;
 }
 
