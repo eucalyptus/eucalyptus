@@ -67,6 +67,7 @@
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
          },
          help: { content: $dialog_help },
+         help_icon_class : 'help-euca',
        });
        this._aboutDialog.find('#version').html(this._version);
        this._aboutDialog.find('#admin-url').attr('href', this._adminURL);
