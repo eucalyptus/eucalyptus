@@ -164,7 +164,7 @@ public class VolumeArtGenerator
 				continue;
 			}
 			long duration = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
-					startEndTimes.getStartTime(), startEndTimes.getEndTime());
+					startEndTimes.getStartTime(), startEndTimes.getEndTime())/1000;
 			volume.getUsage().setGBSecs(duration*volume.getUsage().getSizeGB());
 		}
 		
@@ -195,12 +195,12 @@ public class VolumeArtGenerator
 		iter = wrapper.scanWithNativeQuery( "scanVolumeDetachEvents" );
 		while (iter.hasNext()) {
 			ReportingVolumeDetachEvent detachEvent = (ReportingVolumeDetachEvent) iter.next();
-			long duration = durationCalc.detach(detachEvent.getInstanceUuid(),
+			long durationMs = durationCalc.detach(detachEvent.getInstanceUuid(),
 					detachEvent.getVolumeUuid(), detachEvent.getTimestampMs());
-			if (duration==0) continue;
+			if (durationMs==0) continue;
 			if (! volumeEntities.containsKey(detachEvent.getVolumeUuid())) continue;
 			VolumeArtEntity volume = volumeEntities.get(detachEvent.getVolumeUuid());
-			long gbsecs = duration * volume.getUsage().getSizeGB();
+			long gbsecs = (durationMs * volume.getUsage().getSizeGB())/1000;
 			/* If a volume is repeatedly attached to and detached from an instance,
 			 * add up the total attachment time.
 			 */

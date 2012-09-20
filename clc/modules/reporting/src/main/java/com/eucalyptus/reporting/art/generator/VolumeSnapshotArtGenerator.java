@@ -144,7 +144,7 @@ public class VolumeSnapshotArtGenerator
 			 * a corresponding delete event before the report end, later.
 			 */
 			usage.setGBSecs(createEvent.getSizeGB() * DurationCalculator.boundDuration(report.getBeginMs(),
-					report.getEndMs(), createEvent.getTimestampMs()));
+					report.getEndMs(), createEvent.getTimestampMs())/1000);
 			VolumeArtEntity volume = volumeEntities.get(createEvent.getVolumeUuid());
 			volume.getSnapshotUsage().put(createEvent.getVolumeSnapshotId(), usage);
 			snapshotEntities.put(createEvent.getUuid(), usage);
@@ -158,7 +158,7 @@ public class VolumeSnapshotArtGenerator
 				VolumeSnapshotUsageArtEntity snap = snapshotEntities.get(deleteEvent.getUuid());
 				long startTimeMs = snapshotStartTimes.get(deleteEvent.getUuid()).longValue();
 				long duration = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
-						startTimeMs, deleteEvent.getTimestampMs());
+						startTimeMs, deleteEvent.getTimestampMs())/1000;
 				snap.setGBSecs(snap.getSizeGB() * duration);
 			}
 		}
