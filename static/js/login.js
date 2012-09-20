@@ -87,7 +87,7 @@
       else {
         $form.find('input[id=password]').focus();
       }
-      if (this.options.email && this.options.email.indexOf('@')){
+      if (this.options.email && this.options.email.indexOf('@') && this.options.email !== 'help@YOUR-DOMAIN.COM'){
         this.element.find('.password-help a').attr('href', 'mailto:'+this.options.email);
       }
     },
