@@ -1,4 +1,8 @@
 import tornado.web
+import json
+import server
+
+from .botojsonencoder import BotoJsonEncoder
 
 class ComputeHandler(tornado.web.RequestHandler):
     # TODO: should an authorization be checked? 
@@ -15,4 +19,13 @@ class ComputeHandler(tornado.web.RequestHandler):
             self.set_header("Content-Disposition", "attachment; filename=\"" + file_name + '.pem"')
             self.write(data)
         else:
-            self.write("What are you doing here?");
+            self.write("What are you doing here?")
+
+    def get(self):
+        action = self.get_argument("Action")
+        if action == 'About':
+            ret = {'version':'3.2.0', 'admin-url': 'https://' + server.config.get('server', 'clchost') + ':8443'}
+            data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+            self.write(data)
+        else:
+            self.write("What are you doing here?")

@@ -25,13 +25,51 @@
     },
 
     _curSelected : null,
+    _aboutDialog : null,
+    _version : '',
+    _adminURL : '',
 
     _init : function() {
       this.updateSelected(this.options.default_selected);
       this.element.show();
     },
 
-    _create : function() { 
+    _create : function() {
+      // load about cloud
+      thisObj = this;
+      $.ajax({
+        type:"GET",
+        url:"/support?Action=About"
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:false,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data ) {
+              thisObj._version = data.version;
+              thisObj._adminURL = data.admin-url;
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            // ?
+          }
+      });
+      // about cloud dialog
+      $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
+      var $dialog = $rendered.children().first();
+      var $dialog_help = $rendered.children().last();
+      this._aboutDialog = $dialog.eucadialog({
+         id: 'about-cloud',
+         title: about_dialog_title,
+         buttons: {
+           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
+         },
+         help: { content: $dialog_help },
+       });
+       this._aboutDialog.find('#version').html(this._version);
+       this._aboutDialog.find('#admin-url').attr('href', this._adminURL);
     },
 
     _destroy : function() {
@@ -50,12 +88,12 @@
 
       if(this._curSelected !== null){
         var $curInstance = this.element.data(this._curSelected);
-        if($curInstance !== undefined && options != OPEN_NEW_WINDOW){
+        if($curInstance !== undefined && options != KEEP_VIEW){
           $curInstance.close();
         }
       }
       var $container = $('html body').find(DOM_BINDING['main']);
-      if (options != OPEN_NEW_WINDOW)
+      if (options != KEEP_VIEW)
         $container.children().detach();
      // $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
      // Manage resources-->uncomment above
@@ -108,10 +146,13 @@
         case 'report':
           window.open('https://eucalyptus.atlassian.net', '_blank');
           break;
+        case 'aboutcloud':
+          this._aboutDialog.eucadialog("open");
+          break;
         default:
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
-      if (options != OPEN_NEW_WINDOW)
+      if (options != KEEP_VIEW)
         this._curSelected = selected;
     },
 

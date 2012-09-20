@@ -39,7 +39,7 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
 var KEY_PATTERN = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 
-var OPEN_NEW_WINDOW = 'new_window';
+var KEEP_VIEW = 'keep_view';
 
 function escapeHTML(input) {
   return $('<div/>').text(input).html();

@@ -30,6 +30,7 @@
     help_eip.load({language:language});
     help_launcher.load({language:language});
     help_dashboard.load({language:language});
+    help_about.load({language:language});
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
@@ -143,6 +144,13 @@ var help_instance = {
   dialog_connect_content: "",
   dialog_console_content: "",
   dialog_password_content: "",
+}
+
+var help_about = {
+  load : function(arg) {
+    loadHtml('help/'+arg.language+'/console_about.html', function(data){help_about.dialog_content=data})
+  },
+  dialog_content: "",
 }
 
 var help_launcher = {

@@ -76,7 +76,7 @@
          $('<li>').append(
            $('<a>').attr('href','#').text(v).click(function(e,src){
              if(src!=='triggered')
-               thisObj._trigger('select',e, {selected:k, options:OPEN_NEW_WINDOW});
+               thisObj._trigger('select',e, {selected:k, options:KEEP_VIEW});
             })).appendTo($help_menus);
        });
        $helpArea.append(
@@ -96,7 +96,7 @@
      
 
        //user area
-       var user_menus = {'preference':menu_user_preferences,'aboutcloud':menu_user_aboutcloud,'logout':menu_user_logout}
+       var user_menus = {'preference':{text:menu_user_preferences},'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
 
        var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
        var $userArea = this.element.find('#euca-user');
@@ -104,9 +104,9 @@
        var $user_menus = $('<ul>');
        $.each(user_menus, function(k, v){
          $('<li>').append(
-           $('<a>').attr('href','#').text(v).click(function(e,src){
+           $('<a>').attr('href','#').text(v.text).click(function(e,src){
              if(src!=='triggered')
-               thisObj._trigger('select',e, {selected:k});
+               thisObj._trigger('select',e, {selected:k, options:v.options});
             })).appendTo($user_menus);
        });
  
