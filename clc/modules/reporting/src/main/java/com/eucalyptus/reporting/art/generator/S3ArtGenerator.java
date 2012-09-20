@@ -8,7 +8,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
-import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
 import com.eucalyptus.reporting.art.entity.BucketUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
@@ -51,7 +50,7 @@ public class S3ArtGenerator
 		Iterator iter = wrapper.scanWithNativeQuery( "scanS3ObjectCreateEvents" );
 		Map<String,BucketUsageArtEntity> bucketUsageEntities = new HashMap<String,BucketUsageArtEntity>();
 		Map<S3ObjectKey,S3ObjectData> objectData = new HashMap<S3ObjectKey,S3ObjectData>();
-		DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>(report.getEndMs());
+		DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>(report.getBeginMs(),report.getEndMs());
 		while (iter.hasNext()) {
 			ReportingS3ObjectCreateEvent createEvent = (ReportingS3ObjectCreateEvent) iter.next();
 			
@@ -109,7 +108,7 @@ public class S3ArtGenerator
 		Map<S3ObjectKey,Long> durationMap = objectDurationCalculator.getDurationMap();
 		for (S3ObjectKey key: durationMap.keySet()) {
 			if (objectData.containsKey(key)) {
-				objectData.get(key).setDurationMs(durationMap.get(key));
+				objectData.get(key).durationMs = durationMap.get(key);
 			}
 		}
 		
@@ -117,14 +116,14 @@ public class S3ArtGenerator
 		 */
 		for (S3ObjectKey objKey : objectData.keySet()) {
 			S3ObjectData data = objectData.get(objKey);
-			if (bucketUsageEntities.containsKey(objKey.getBucketName())) {
-				BucketUsageArtEntity usage = bucketUsageEntities.get(objKey.getBucketName());
+			if (bucketUsageEntities.containsKey(objKey.bucketName)) {
+				BucketUsageArtEntity usage = bucketUsageEntities.get(objKey.bucketName);
 				usage.setObjectsNum(usage.getObjectsNum()+1);
-				long gBSecs = (data.getDurationMs()/1000)*data.getSizeGB();
+				long gBSecs = (data.durationMs/1000)*data.sizeGB;
 				usage.setGBSecs(gBSecs);
-				usage.setSizeGB(usage.getSizeGB() + data.getSizeGB());
+				usage.setSizeGB(usage.getSizeGB() + data.sizeGB);
 			} else {
-				log.error("Object without corresponding bucket:" + objKey.getBucketName());
+				log.error("Object without corresponding bucket:" + objKey.bucketName);
 			}
 		}
 		
@@ -172,21 +171,6 @@ public class S3ArtGenerator
 			this.bucketName = bucketName;
 			this.objectKey = objectKey;
 			this.objectVer = objectVer;
-		}
-
-		public String getBucketName()
-		{
-			return bucketName;
-		}
-		
-		public String getObjectKey()
-		{
-			return objectKey;
-		}
-		
-		public String getObjectVer()
-		{
-			return objectVer;
 		}
 
 		@Override
@@ -249,53 +233,7 @@ public class S3ArtGenerator
 			this.durationMs = 0l;
 			this.sizeGB = sizeGB;
 		}
-
-		public long getSizeGB()
-		{
-			return sizeGB;
-		}
-
-		public long getDurationMs()
-		{
-			return durationMs;
-		}
-
-		public void setDurationMs(long ms)
-		{
-			this.durationMs = ms;
-		}
-
 	}
 	
-	/**
-	 * Addition with the peculiar semantics for null we need here
-	 */
-	private static Long plus(Long added, Long defaultVal)
-	{
-		if (added==null) {
-			return defaultVal;
-		} else if (defaultVal==null) {
-			return added;
-		} else {
-			return (added.longValue() + defaultVal.longValue());
-		}
-		
-	}
-	
-	/**
-	 * Subtraction with the peculiar semantics we need here: previous value of null means zero
-	 *    whereas current value of null returns null.
-	 */
-	private static Long subtract(Long currCumul, Long prevCumul)
-	{
-		if (currCumul==null) {
-			return null;
-		} else if (prevCumul==null) {
-			return currCumul;
-		} else {
-		    return new Long(currCumul.longValue()-prevCumul.longValue());	
-		}
-	}
-
 
 }

@@ -13,6 +13,7 @@ import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeSnapshotUsageArtEntity;
+import com.eucalyptus.reporting.art.util.DurationCalculator;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
@@ -74,6 +75,7 @@ public class VolumeSnapshotArtGenerator
 		Map<String, Long> snapshotStartTimes = new HashMap<String, Long>();
 		while (iter.hasNext()) {
 			ReportingVolumeSnapshotCreateEvent createEvent = (ReportingVolumeSnapshotCreateEvent) iter.next();
+			if (createEvent.getTimestampMs() > report.getEndMs()) continue; //not included in this report
 			VolumeSnapshotUsageArtEntity usage = new VolumeSnapshotUsageArtEntity();
 			usage.setSizeGB(createEvent.getSizeGB());
 			usage.setSnapshotNum(1);
@@ -81,13 +83,11 @@ public class VolumeSnapshotArtGenerator
 			 * a corresponding delete event before the report end, later.
 			 */
 			usage.setGBSecs(createEvent.getSizeGB() * (report.getEndMs() - createEvent.getTimestampMs()));
-			if (createEvent.getTimestampMs() <= report.getEndMs()) {
-				VolumeArtEntity volume = volumeEntities.get(createEvent.getVolumeUuid());
-				volume.getSnapshotUsage().put(createEvent.getVolumeSnapshotId(), usage);
-				snapshotEntities.put(createEvent.getUuid(), usage);
-				snapshotStartTimes.put(createEvent.getUuid(), createEvent.getTimestampMs());
-			}
-		}
+			VolumeArtEntity volume = volumeEntities.get(createEvent.getVolumeUuid());
+			volume.getSnapshotUsage().put(createEvent.getVolumeSnapshotId(), usage);
+			snapshotEntities.put(createEvent.getUuid(), usage);
+			snapshotStartTimes.put(createEvent.getUuid(), createEvent.getTimestampMs());
+	}
 		
 		iter = wrapper.scanWithNativeQuery( "scanVolumeSnapshotDeleteEvents" );
 		while (iter.hasNext()) {
@@ -95,7 +95,9 @@ public class VolumeSnapshotArtGenerator
 			if (snapshotEntities.containsKey(deleteEvent.getUuid())) {
 				VolumeSnapshotUsageArtEntity snap = snapshotEntities.get(deleteEvent.getUuid());
 				long startTimeMs = snapshotStartTimes.get(deleteEvent.getUuid()).longValue();
-				snap.setSizeGB(snap.getSizeGB() * (deleteEvent.getTimestampMs() - startTimeMs));
+				long duration = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
+						startTimeMs, deleteEvent.getTimestampMs());
+				snap.setSizeGB(snap.getSizeGB() * duration);
 			}
 		}
 		
@@ -151,20 +153,4 @@ public class VolumeSnapshotArtGenerator
 		
 	}
 	
-	/**
-	 * Subtraction with the peculiar semantics we need here: previous value of null means zero
-	 *    whereas current value of null returns null.
-	 */
-	private static Long subtract(Long currCumul, Long prevCumul)
-	{
-		if (currCumul==null) {
-			return null;
-		} else if (prevCumul==null) {
-			return currCumul;
-		} else {
-		    return new Long(currCumul.longValue()-prevCumul.longValue());	
-		}
-	}
-
-
 }

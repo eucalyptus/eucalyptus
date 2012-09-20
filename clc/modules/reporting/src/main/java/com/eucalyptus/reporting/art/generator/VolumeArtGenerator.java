@@ -15,6 +15,8 @@ import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeUsageArtEntity;
 import com.eucalyptus.reporting.art.util.AttachDurationCalculator;
+import com.eucalyptus.reporting.art.util.DurationCalculator;
+import com.eucalyptus.reporting.art.util.StartEndTimes;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
@@ -84,7 +86,7 @@ public class VolumeArtGenerator
 			long endTime = Math.min(deleteEvent.getTimestampMs(), report.getEndMs());
 			if (endTime >= report.getBeginMs() && volStartEndTimes.containsKey(deleteEvent.getUuid())) {
 				StartEndTimes startEndTimes = volStartEndTimes.get(deleteEvent.getUuid());
-				startEndTimes.setEndTimeMs(endTime);
+				startEndTimes.setEndTime(endTime);
 				volumeEntities.remove(deleteEvent.getUuid());
 				volStartEndTimes.remove(deleteEvent.getUuid());
 			}
@@ -99,7 +101,9 @@ public class VolumeArtGenerator
 				log.error("volume without corresponding start end times:" + uuid);
 				continue;
 			}
-			volume.getUsage().setGBSecs(startEndTimes.getDurationMs()*volume.getUsage().getSizeGB());
+			long duration = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
+					startEndTimes.getStartTime(), startEndTimes.getEndTime());
+			volume.getUsage().setGBSecs(duration*volume.getUsage().getSizeGB());
 		}
 		
 
@@ -181,38 +185,6 @@ public class VolumeArtGenerator
 
 	}
 
-	private static class StartEndTimes
-	{
-		private long startTimeMs;
-		private long endTimeMs;
-
-		private StartEndTimes(long startTimeMs, long endTimeMs )
-		{
-			this.startTimeMs = startTimeMs;
-			this.endTimeMs = endTimeMs;
-		}
-		
-		public long getStartTimeMs()
-		{
-			return startTimeMs;
-		}
-		
-		public long getEndTimeMs()
-		{
-			return endTimeMs;
-		}
-		
-		public void setEndTimeMs(long endTimeMs)
-		{
-			this.endTimeMs = endTimeMs;
-		}
-		
-		public long getDurationMs()
-		{
-			return endTimeMs - startTimeMs;
-		}
-	}
-	
 	/**
 	 * Addition with the peculiar semantics for null we need here
 	 */
@@ -228,20 +200,5 @@ public class VolumeArtGenerator
 		
 	}
 	
-	/**
-	 * Subtraction with the peculiar semantics we need here: previous value of null means zero
-	 *    whereas current value of null returns null.
-	 */
-	private static Long subtract(Long currCumul, Long prevCumul)
-	{
-		if (currCumul==null) {
-			return null;
-		} else if (prevCumul==null) {
-			return currCumul;
-		} else {
-		    return new Long(currCumul.longValue()-prevCumul.longValue());	
-		}
-	}
-
 
 }
