@@ -86,10 +86,7 @@
 
          buttons: thisObj._makeButtons(),
       });
-      this.element.tooltip({
-        delay: 0,
-        predelay: 500
-      });
+      this.element.qtip();
     },
 
     _getButtonId : function(buttonDomId, buttonId) {
