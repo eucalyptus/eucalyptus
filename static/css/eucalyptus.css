@@ -1328,6 +1328,8 @@ tr.selected-row td.sorting_1
   background-position: left -400px;
 }
 
+/* Legend icons - Instances status */
+
 /* == Pagination == */
 
 .dataTables_paginate {
@@ -1716,10 +1718,9 @@ li.disabled a {
     padding: 1px 1px;
     margin: 1px;
 }
-div.instance-id{
-
+div.twist{
 }
-div.instance-id.expanded {
+div.twist.expanded {
     /* arrow  */ 
     background : yellow;
 }

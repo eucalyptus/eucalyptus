@@ -164,6 +164,10 @@
          'precise':new RegExp('(precise|ubuntu.12[\\W\\s]04)','ig'),
          'ubuntu':new RegExp('ubuntu','ig'),
          'debian' :new RegExp('debian','ig'), 
+         'fedora' : new RegExp('fedora','ig'),
+         'opensuse' : new RegExp('opensuse','ig'),
+         'suse' : new RegExp('suse', 'ig'),
+         'gentoo' : new RegExp('gentoo', 'ig'),
          'linux' : new RegExp('linux','ig'),
          'windows' :new RegExp('windows','ig'),
         };
@@ -226,18 +230,22 @@
              { // platform
                "fnRender" : function(oObj) { 
                  var nameMap = {
-                   'rhel5' : 'RHEL 5',
-                   'rhel6' : 'RHEL 6',
-                   'rhel' : 'RHEL',
-                   'centos5' : 'CENTOS 5',
-                   'centos6' : 'CENTOS 6',
-                   'centos' : 'CENTOS',
-                   'lucid' : 'UBUNTU LUCID(10.04)',
-                   'precise' : 'UBUNTU PRECISE(12.04)',
-                   'ubuntu' : 'UBUNTU',
-                   'debian' : 'DEBIAN',
-                   'linux' : 'LINUX',
-                   'windows' : 'WINDOWS' ,
+                   'rhel5' : 'Red Hat 5',
+                   'rhel6' : 'Red Hat 6',
+                   'rhel' : 'Red Hat',
+                   'centos5' : 'CENT OS 5',
+                   'centos6' : 'CENT OS 6',
+                   'centos' : 'CENT OS',
+                   'lucid' : 'Ubuntu Lucid(10.04)',
+                   'precise' : 'Ubuntu Precise(12.04)',
+                   'ubuntu' : 'Ubuntu',
+                   'debian' : 'Debian',
+                   'fedora' : 'Fedora',
+                   'opensuse' : 'Open Suse',
+                   'suse' : 'Suse Linux',
+                   'gentoo' : 'Gentoo',
+                   'linux' : 'Linux',
+                   'windows' : 'Windows' ,
                  };
                  var emi = oObj.aData.id;
                  var desc = oObj.aData.description ? oObj.aData.description : oObj.aData.location;

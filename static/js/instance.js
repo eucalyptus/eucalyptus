@@ -62,10 +62,14 @@
                }
             },
             { "fnRender" : function(oObj){
-                 return $('<div>').append($('<div>').addClass('instance-id').text(oObj.aData.id)).html();
+                 return $('<div>').append($('<div>').addClass('twist').text(oObj.aData.id)).html();
               }
             },
-            { "mDataProp": "state" },
+            { 
+              "fnRender": function(oObj) { 
+                 return '<div class="table-row-status status-'+oObj.aData.state+'">&nbsp;</div>';
+               },
+            },
             { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, // TODO: placement==zone?
             { "mDataProp": "ip_address" },
@@ -77,6 +81,10 @@
               "bVisible": false,
               "mDataProp": "root_device_type"
             },
+            {
+              "bVisible": false,
+              "mDataProp":"state"
+            }
           ]
         },
         text : {
@@ -119,8 +127,9 @@
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:3}, 
+        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
+        legend : ['running','pending','stopping','stopped','shutting down','terminated']
       }) //end of eucatable
       thisObj.tableWrapper.appendTo(thisObj.element);
     },
@@ -573,8 +582,11 @@
               done: function (e, data) {
                 $.each(data.result, function (index, result) {
                   thisObj.instPassword[result.instance] = result.password;
-                  thisObj.connectDialog.find('a').last().html(result.password);
-                  thisObj.connectDialog.find('a').unbind('click');
+                  var parent = thisObj.connectDialog.find('a').last().parent();
+                  parent.find('a').remove();
+                  parent.html(result.password);
+                  //thisObj.connectDialog.find('a').last().html(result.password);
+                  //thisObj.connectDialog.find('a').unbind('click');
                 });
               },
               fail : function (e, data) {
@@ -586,8 +598,11 @@
               $fileSelector.trigger('click'); 
             });
           }else {
-            thisObj.connectDialog.find('a').last().html(thisObj.instPassword[instance]);
-            thisObj.connectDialog.find('a').unbind('click');
+            var parent = thisObj.connectDialog.find('a').last().parent();
+            parent.find('a').remove();
+            parent.html(thisObj.instPassword[instance]);
+            //thisObj.connectDialog.find('a').last().html(
+            //thisObj.connectDialog.find('a').unbind('click');
           }
         }
         else{
@@ -812,6 +827,7 @@
     },
 /**** Public Methods ****/
     close: function() {
+      this.tableWrapper.eucatable('close');
       this._super('close');
     },
 /**** End of Public Methods ****/

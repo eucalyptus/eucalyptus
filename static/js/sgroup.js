@@ -44,14 +44,18 @@
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sWidth": "20px",
             },
-            { "mDataProp": "name" },
+            { 
+              "fnRender" : function(oObj) { 
+                 return $('<div>').append($('<div>').addClass('twist').text(oObj.aData.name)).html();
+              }
+            },
             { "mDataProp": "description" },
-            {
+         /*   {
               "bSortable": false,
               "fnRender": function(oObj) { return '<a href="#">Show rules</a>' },
               "sWidth": "200px",
               "sClass": "table_center_cell",
-            }
+            }*/
           ],
         },
         text : {
@@ -67,6 +71,9 @@
         context_menu_actions : function(state) { 
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
                  "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
+        },
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
         menu_click_create : function (args) { thisObj.rulesList=null; $('#sgroup-rules-list').html(''); thisObj.addDialog.eucadialog('open')},
         help_click : function(evt) {
@@ -411,7 +418,7 @@
       var thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var sgroupName = rowsToDelete[i];
+        var sgroupName = $(rowsToDelete[i]).html();
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteSecurityGroup&GroupName=" + sgroupName,
@@ -517,6 +524,7 @@
       rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
       var matrix = [];
       $.each(rowsToDelete,function(idx, group){
+        group = $(group).html();
         matrix.push([group]);
       });
 
@@ -540,8 +548,69 @@
       thisObj._refreshRulesList(thisObj.editDialog);
     },
 
+    _expandCallback : function(row){ 
+      var thisObj = this;
+      var groupName = row[1];
+      var results = describe('sgroup');
+      var group = null;
+      for(i in results){
+        if (results[i].name === groupName){
+          group = results[i];
+          break;
+        }
+      }
+      if(!group)
+        return null;
+      var $wrapper = null;
+      if(group.rules && group.rules.length > 0){
+        $wrapper = $('<div>').append($('<ul>').addClass('sgroup-expanded').text(sgroup_table_expanded_title));
+        $wrapper = $wrapper.find('ul');
+        $.each(group.rules, function (idx, rule){
+          var protocol = rule['ip_protocol'];
+          var port = rule['from_port'];
+          if(rule['to_port'] !== rule['from_port'])
+            port += '-'+rule['to_port']; 
+          var type = '';
+          if(protocol === 'icmp'){
+            // TODO : define icmp type
+            ;
+          }
+          var portOrType = type ? type: port;
+          var portOrTypeTitle = type ? sgroup_table_expanded_type : sgroup_table_expanded_port;
+
+          var src = [];
+          var grants = rule['grants'];
+          $.each(grants, function(idx, grant){
+            if(grant.cidr_ip && grant.cidr_ip.length>0){
+              src.push(grant.cidr_ip);
+            }else if(grant.owner_id && grant.owner_id.length>0){
+              if(group.owner_id === grant.owner_id)
+                src.push(grant.groupName);
+              else
+                src.push(grant.owner_id+'/'+grant.groupName);
+            }
+          });
+          src = src.join(', '); 
+ 
+          $wrapper.append(
+            $('<ul>').text(sgroup_table_expanded_rule).append(
+              $('<li>').append( 
+                $('<div>').addClass('expanded-value').text(protocol),
+                $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol)),
+              $('<li>').append( 
+                $('<div>').addClass('expanded-value').text(portOrType),
+                $('<div>').addClass('expanded-title').text(portOrTypeTitle)),
+              $('<li>').append( 
+                $('<div>').addClass('expanded-value').text(src),
+                $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source))));
+        });
+      }
+      return $wrapper;
+    },
+
 /**** Public Methods ****/
     close: function() {
+      this.tableWrapper.eucatable('close');
       this._super('close');
     },
 
