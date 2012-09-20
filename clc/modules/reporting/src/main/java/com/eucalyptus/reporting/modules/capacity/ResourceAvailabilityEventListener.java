@@ -72,7 +72,7 @@ public class ResourceAvailabilityEventListener implements EventListener<Resource
     for ( final Tag tag : tags ) {
       if ( tag instanceof Dimension && "availabilityZone".equals(tag.getType()) ) {
         model = getReportingComputeDomainModelForZone( tag.getValue() );
-      } else if ( tag instanceof Type ) {
+      } else if ( tag instanceof Type && !tag.getType().equals("vm-type")) {
         return null;
       }
     }

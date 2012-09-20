@@ -34,7 +34,7 @@ class GenerateReport(ReportsRequest):
         Param(name='Type',
             short_name='t', long_name='type',
             ptype='enum',
-            choices=['capacity', 'elastic-ip', 'instance', 's3', 'snapshot', 'volume'],
+            choices=['compute', 'elastic-ip', 'instance', 's3', 'snapshot', 'volume'],
             doc='the report type to generate'),
         Param(name='Format',
             short_name='f', long_name='format',
