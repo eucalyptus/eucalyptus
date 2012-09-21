@@ -65,7 +65,6 @@ import java.util.*;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.*;
 import com.eucalyptus.reporting.art.util.DurationCalculator;
 import com.eucalyptus.reporting.art.util.StartEndTimes;
@@ -73,55 +72,54 @@ import com.eucalyptus.reporting.domain.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 
-public class InstanceArtGenerator
-	implements ArtGenerator
+public class InstanceArtGenerator extends AbstractArtGenerator
 {
-    private static Logger log = Logger.getLogger( InstanceArtGenerator.class );
+	private static final Logger log = Logger.getLogger( InstanceArtGenerator.class );
 
-    /* Metric names */
-    private static final String METRIC_NET_IN_BYTES   = "NetworkIn";
-    private static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
-    private static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
-    private static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
-    private static final String METRIC_CPU_USAGE_MS   = "CPUUtilizationMs";
-    
-    private static final String DIM_TOTAL     = "total";
-    private static final String DIM_ROOT	  = "root";
-    private static final String DIM_INTERNAL  = "internal";
-    private static final String DIM_DEFAULT   = "default";
-    private static final String DIM_EPHEMERAL = "ephemeral";
-    
-    
-    public InstanceArtGenerator()
-	{
-		
-	}
-	
+	/* Metric names */
+	private static final String METRIC_NET_IN_BYTES   = "NetworkIn";
+	private static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
+	private static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
+	private static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
+	private static final String METRIC_DISK_READ_OPS  = "DiskReadOps";
+	private static final String METRIC_DISK_WRITE_OPS = "DiskWriteOps";
+	private static final String METRIC_CPU_USAGE_MS   = "CPUUtilization";
+	private static final String METRIC_VOLUME_READ    = "VolumeTotalReadTime";
+	private static final String METRIC_VOLUME_WRITE   = "VolumeTotalWriteTime";
+
+	private static final String DIM_TOTAL     = "total";
+	private static final String DIM_DEFAULT   = "default";
+	private static final String DIM_ROOT      = "root";
+	private static final String DIM_INTERNAL  = "internal";
+	private static final String DIM_EPHEMERAL = "ephemeral";
+
+	@Override
 	public ReportArtEntity generateReportArt(ReportArtEntity report)
 	{
 		log.debug("GENERATING REPORT ART");
-		EntityWrapper wrapper = EntityWrapper.get( ReportingInstanceCreateEvent.class );
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance usage nodes at the bottom.
 		 */
 		Map<String,InstanceUsageArtEntity> usageEntities = new HashMap<String,InstanceUsageArtEntity>();
-		Iterator iter = wrapper.scanWithNativeQuery( "scanInstanceCreateEvents" );
-		while (iter.hasNext()) {
-			ReportingInstanceCreateEvent createEvent = (ReportingInstanceCreateEvent) iter.next();
+		Iterator<ReportingInstanceCreateEvent> createEventIterator = getInstanceCreateEventIterator();
+		while (createEventIterator.hasNext()) {
+			ReportingInstanceCreateEvent createEvent = createEventIterator.next();
 
 			if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
 				report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
 			}
 			AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
 			
-			ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
+			ReportingUser reportingUser = getUserById(createEvent.getUserId());
 			if (reportingUser==null) {
 				log.error("No user corresponding to event:" + createEvent.getUserId());
+				continue;
 			}
-			ReportingAccount reportingAccount = ReportingAccountDao.getInstance().getReportingAccount(reportingUser.getAccountId());
+			ReportingAccount reportingAccount = getAccountById(reportingUser.getAccountId());
 			if (reportingAccount==null) {
 				log.error("No account corresponding to user:" + reportingUser.getAccountId());
+				continue;
 			}
 			if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
 				zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
@@ -148,10 +146,9 @@ public class InstanceArtGenerator
 			new HashMap<UsageEventKey,ReportingInstanceUsageEvent>();
 		Map<String,StartEndTimes> startEndTimes =
 			new HashMap<String,StartEndTimes>();
-		iter = wrapper.scanWithNativeQuery( "scanInstanceUsageEvents" );
-		while (iter.hasNext()) {
-
-			ReportingInstanceUsageEvent usageEvent = (ReportingInstanceUsageEvent) iter.next();
+		final Iterator<ReportingInstanceUsageEvent> usageEventIterator = getInstanceUsageEventIterator();
+		while (usageEventIterator.hasNext()) {
+			final ReportingInstanceUsageEvent usageEvent = usageEventIterator.next();
 
 			/* Update instance start and end times */
 			if (! startEndTimes.containsKey(usageEvent.getUuid())) {
@@ -264,6 +261,13 @@ public class InstanceArtGenerator
 		return report;
 	}
 
+	protected Iterator<ReportingInstanceCreateEvent> getInstanceCreateEventIterator() {
+		return getEventIterator( ReportingInstanceCreateEvent.class, "scanInstanceCreateEvents" );
+	}
+
+	protected Iterator<ReportingInstanceUsageEvent> getInstanceUsageEventIterator() {
+		return getEventIterator( ReportingInstanceUsageEvent.class, "scanInstanceUsageEvents" );
+	}
 
 	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)
 	{

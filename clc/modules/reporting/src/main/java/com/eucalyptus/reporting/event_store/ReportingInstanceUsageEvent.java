@@ -42,46 +42,34 @@ public class ReportingInstanceUsageEvent
 	
 	@Column(name="uuid", nullable=false)
 	protected String uuid;
-	@Column(name="resource_name", nullable=true)
-	protected String resourceName;
-	@Column(name="metric", nullable=true)
+	@Column(name="metric", nullable=false)
 	protected String metric;
-	@Column(name="sequenceNum", nullable=true)
-	protected int sequenceNum;
-	@Column(name="dimension", nullable=true)
+	@Column(name="sequenceNum", nullable=false)
+	protected Integer sequenceNum;
+	@Column(name="dimension", nullable=false)
 	protected String dimension;
-	@Column(name="value", nullable=true)
+	@Column(name="value", nullable=false)
 	protected Double value;
-	@Column(name="valueTimestamp", nullable=true)
-	protected Long valueTimestamp;
-	
-
 
 	protected ReportingInstanceUsageEvent()
 	{
-	  
 	}
 
-	ReportingInstanceUsageEvent(final String uuid, final long timestamp, final String resourceName,
-		    final String metric, final int sequenceNum, final String dimension,
-		    final Double value, final long valueTimestamp) {
+	ReportingInstanceUsageEvent( final String uuid, final String metric, final Integer sequenceNum,
+		    final String dimension, final Double value, final Long valueTimestamp ) {
 
 		assertThat(uuid, notNullValue());
-		assertThat(timestamp, notNullValue());
-		assertThat(resourceName, notNullValue());
 		assertThat(metric, notNullValue());
 		assertThat(sequenceNum, notNullValue());
 		assertThat(dimension, notNullValue());
 		assertThat(value, notNullValue());
 		assertThat(valueTimestamp, notNullValue());
 		this.uuid = uuid;
-		this.timestampMs = timestamp;
-		this.resourceName = resourceName;
+		this.timestampMs = valueTimestamp;
 		this.metric = metric;
 		this.sequenceNum = sequenceNum;
 		this.dimension = dimension;
 		this.value = value;
-		this.valueTimestamp = valueTimestamp;
 	}
 
 	
@@ -94,10 +82,6 @@ public class ReportingInstanceUsageEvent
 
 	public String getUuid() {
 	    return uuid;
-	}
-
-	public String getResourceName() {
-	    return resourceName;
 	}
 
 	public String getMetric() {
@@ -116,17 +100,13 @@ public class ReportingInstanceUsageEvent
 	    return value;
 	}
 
-	public Long getValueTimestamp() {
-	    return valueTimestamp;
-	}
-
 	@Override
 	public String toString() {
-	    return "ReportingInstanceUsageEvent [uuid=" + uuid
-		    + ", resourceName=" + resourceName + ", metric=" + metric
-		    + ", sequenceNum=" + sequenceNum + ", dimension="
-		    + dimension + ", value=" + value + ", valueTimestamp="
-		    + valueTimestamp + "]";
+			return "ReportingInstanceUsageEvent [uuid=" + uuid
+				+ ", metric=" + metric
+				+ ", sequenceNum=" + sequenceNum + ", dimension="
+				+ dimension + ", value=" + value + ", timestamp="
+				+ timestampMs + "]";
 	}
 
 }

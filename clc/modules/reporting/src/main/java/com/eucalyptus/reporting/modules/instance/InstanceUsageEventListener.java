@@ -107,13 +107,11 @@ public class InstanceUsageEventListener implements EventListener<InstanceUsageEv
 	        final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
 	        eventStore.insertUsageEvent(
 	            event.getUuid(),
-	            receivedEventMs,
-	            event.getResourceName(),
+              event.getValueTimestamp(),
 	            event.getMetric(),
 	            event.getSequenceNum(),
 	            event.getDimension(),
-	            event.getValue(),
-	            event.getValueTimestamp()
+	            event.getValue()
 	        );
       } catch ( ConstraintViolationException ex ) {
 	        log.debug( ex, ex ); // info already exists for instance
