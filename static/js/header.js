@@ -96,7 +96,7 @@
      
 */
        //user area
-       var user_menus = {'help':{text:menu_help, options:KEEP_VIEW}, 'preference':{text:menu_user_preferences},'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
+       var user_menus = {'help':{text:menu_help, options:KEEP_VIEW}, 'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
 
        var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
        var $userArea = this.element.find('#euca-user');
