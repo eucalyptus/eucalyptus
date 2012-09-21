@@ -488,7 +488,8 @@
 
 /**** Public Methods ****/
     close: function() {
-      this.tableWrapper.eucatable('close');
+      //this.tableWrapper.eucatable('close');
+      cancelRepeat(tableRefreshCallback);
       this._super('close');
     },
 

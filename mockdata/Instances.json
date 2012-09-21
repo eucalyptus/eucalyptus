@@ -35,7 +35,34 @@
         "virtualization_type": null, 
         "root_device_name": "/dev/sda1", 
         "ramdisk": "eri-121B3BE8", 
-        "block_device_mapping": {}, 
+        "block_device_mapping": {
+          "/dev/sdb": {
+          "status": "attached", 
+          "__obj_name__": "BlockDeviceType", 
+          "attach_time": "2012-09-18T06:38:07.087Z", 
+          "no_device": false, 
+          "snapshot_id": null, 
+          "connection": null, 
+          "volume_id": "vol-6E463B31", 
+          "ephemeral_name": null, 
+          "ebs": "", 
+          "delete_on_termination": true, 
+          "size": null
+          },
+          "/dev/sdc": {
+          "status": "attached", 
+          "__obj_name__": "BlockDeviceType", 
+          "attach_time": "2012-09-18T06:38:07.087Z", 
+          "no_device": false, 
+          "snapshot_id": null, 
+          "connection": null, 
+          "volume_id": "vol-4AA63B31",
+          "ephemeral_name": null, 
+          "ebs": "", 
+          "delete_on_termination": true, 
+          "size": null
+          }
+        }, 
         "key_name": "tmpkey", 
         "interfaces": [], 
         "image_id": "emi-BCD33EA4", 

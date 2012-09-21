@@ -155,7 +155,7 @@ var help_about = {
 
 var help_launcher = {
   load : function(arg) {
-    loadHtml('help/'+arg.language+'/console_manage_launcher.html', function(data){help_launcher.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_create_instances.html', function(data){help_launcher.landing_content=data})
   },
   landing_content: "", 
 }

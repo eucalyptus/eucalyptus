@@ -1682,6 +1682,35 @@ span.on-error {
 #launch-wizard-advanced-storage input[type='checkbox']{
   width: 10px;
 }
+
+ul.launch-wizard-type-size{
+    margin: 0 auto;
+    padding: 0;
+}
+ul.launch-wizard-type-size li{
+    text-align: left;
+    float: left;
+    list-style: none;
+    padding: 4px 4px;
+    margin: 1px;
+}
+div#launch-wizard-type-size-legend{
+    clear: left;
+}
+
+.launcher-group-rule ul{
+    margin: 0 auto;
+    padding: 0;
+    clear: left;
+}
+.launcher-group-rule ul li{
+    text-align: left;
+    float: left;
+    list-style: none;
+    padding: 3px 3px;
+    margin: 1px;
+}
+
 /* END Sang-min */
 .spin-wheel { /* positioning the spin-wheel during the log-in */
   position: absolute;
@@ -1715,6 +1744,7 @@ li.disabled a {
 .expanded ul{
     margin: 0 auto;
     padding: 0;
+    clear: left;
 }
 .expanded ul li{
     text-align: left;
