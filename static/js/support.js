@@ -137,17 +137,20 @@ function clearRepeat() {
 function describe(resource){
   return $('html body').eucadata('get', resource);
 }
-
-function addKeypair(){
-  $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).keypair();
-  $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair');
+function refresh(resource){
+  return $('html body').eucadata('refresh', resource);
 }
 
-function addGroup(){
+function addKeypair(callback){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).keypair();
+  $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair',callback);
+}
+
+function addGroup(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
   $('html body').find(DOM_BINDING['hidden']).sgroup();
-  $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup');
+  $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup',callback);
 }
 
 function addSnapshot(volume){

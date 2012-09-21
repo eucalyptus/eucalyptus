@@ -202,8 +202,10 @@
       this._super('close');
     },
 
-    dialogAddKeypair : function() {
+    dialogAddKeypair : function(callback) {
       var thisObj = this;
+      if(callback)
+        thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')
     }, 
 /**** End of Public Methods ****/

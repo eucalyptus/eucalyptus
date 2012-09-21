@@ -615,10 +615,12 @@
       this._super('close');
     },
 
-    dialogAddGroup : function() {
+    dialogAddGroup : function(callback) {
       var thisObj = this;
       thisObj.rulesList=null; 
       $('#sgroup-rules-list').html(''); 
+      if(callback)
+        thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')
     },
 /**** End of Public Methods ****/

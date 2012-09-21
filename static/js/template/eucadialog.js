@@ -29,6 +29,7 @@
        on_open: null, // {spin: True, callback: function(){}}
        user_val: null, // for user use...
        help_icon_class : 'help-link',
+       on_close: null,
     },
     $error_div : null,
     help_flipped : false,
@@ -84,7 +85,14 @@
                }
              }
          },
-
+         close: function(event, ui) { 
+           $.each(ui, function(k,v){
+             alert(k+':'+v);
+           });
+           if( thisObj.options.on_close) { 
+             thisObj.options.on_close.callback();
+           }
+         },
          buttons: thisObj._makeButtons(),
       });
       this.element.qtip();
