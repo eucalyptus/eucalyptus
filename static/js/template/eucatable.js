@@ -34,17 +34,20 @@
       context_menu_actions : null,
       draw_cell_callback : null,  // if we want to customize how the cell is drawn (e.g., map EMI to manifest)
                                   // {column: 3, callback: function(){ } }
+      expand_callback : null,
       filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
       legend : null, // e.g., ['available', 'attaching', 'attached', ...]
       show_only : null, // e.g, {filter_value: 'machine', filter_col: 7}
     },
 
     table : null, // jQuery object to the table
-
+    tableArg : null, 
+    refreshCallback : null,
     _init : function() {
       var thisObj = this; // 
       // add draw call back
       var dtArg = this._getTableParam();
+      thisObj.tableArg = dtArg;
       this.table = this.element.find('table').dataTable(dtArg);
       var $header = this._decorateHeader();
       this._decorateSearchBar();
@@ -60,6 +63,9 @@
             return thisObj.options.show_only.filter_value === aData[thisObj.options.show_only.filter_col];
           });
       }
+
+      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
+      tableRefreshCallback = thisObj.refreshCallback;
     },
 
     _create : function() {
@@ -122,17 +128,43 @@
         var $currentRow = $(tr);
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
           $currentRow.unbind('click').bind('click', function (e) {
+            if(thisObj.options.expand_callback){
+              if(!$currentRow.next().hasClass('expanded') && !($(e.target).is('input')) && !($(e.target).find('input').length >0)){
+                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+                thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
+                var allTds = thisObj.table.fnGetTds($currentRow[0]);      
+                var row = [];
+                var i =0; 
+                $(allTds).each(function(){ 
+                  row[i++] = $(this).text();
+                }); 
+                var $expand = thisObj.options.expand_callback(row);
+                if($expand && $expand.length > 0){
+                  $currentRow.after($('<tr>').addClass('expanded').append(
+                                  $('<td>').attr('colspan', $currentRow.find('td').length).append(
+                                    $expand)));
+                  $currentRow.find('div.twist').addClass('expanded');
+                }
+              }else{
+                thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
+                thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
+              }
+            }  
           // checked/uncheck on checkbox
+            thisObj._onRowClick();
+            thisObj._trigger('row_click', e);
+          });
+
+          $currentRow.find('input[type="checkbox"]').unbind('click').bind('click', function(e){
+            thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+            thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
             var $selectedRow = $currentRow; //$(e.target).parents('tr');
             $selectedRow.toggleClass('selected-row');
-            $rowCheckbox = $(e.target).parents('tr').find(':input[type="checkbox"]');
+            var $rowCheckbox = $(e.target);
             if($selectedRow.hasClass('selected-row'))
               $rowCheckbox.attr('checked', true);
             else
               $rowCheckbox.attr('checked', false);
-            //e.stopPropagation();
-            thisObj._onRowClick();
-            thisObj._trigger('row_click', e);
           });
         }
 
@@ -159,6 +191,10 @@
             $(td).html(newVal);
         });
       }
+     /* if(this.element.find('table tbody').find('.dataTables_empty').length <= 0){
+        oSettings.oLanguage = { "sProcessing": "&nbsp;", 
+                             "sLoadingRecords": ""};
+      } */
     },
 
     _onRowClick : function() {
@@ -333,7 +369,7 @@
               $.each(menu_actions, function (key, menu){
                 $ul.append(
                   $('<li>').attr('id', thisObj.options.id + '-' + key).append(
-                    $('<a>').attr('href','#').text(menu.name).click( menu.callback)));
+                    $('<a>').attr('href','#').text(menu.name).unbind('click').bind('click', menu.callback)));
               });
               $menuDiv.append($ul);
             }
@@ -343,7 +379,7 @@
                 if(menu.disabled){
                   $ul.find('#'+thisObj.options.id + '-'+key).addClass('disabled').find('a').removeAttr('href').unbind('click');
                 }else{
-                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').click(menu.callback);
+                  $ul.find('#'+thisObj.options.id + '-'+key).removeClass('disabled').find('a').attr('href','#').unbind('click').bind('click',menu.callback);
                 }
               }); 
               $('html body').eucaevent('add_click', 'table:instance', e);
@@ -430,6 +466,14 @@
       });
     },
 
+    _refreshTableInterval : function() {
+      var tbody = this.element.find('table tbody'); 
+      if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0)
+        return;
+
+      this.table.fnReloadAjax();
+    },
+
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
@@ -443,7 +487,7 @@
       setTimeout( function() { thisObj._glowRow(val, cId, found); }, 1000);
       // wait till next refresh if needed
       if ( !found )
-        setTimeout( function() { thisObj._glowRow(val, cId); }, (RERFRESH_INTERVAL_SEC + 2) * 1000);
+        setTimeout( function() { thisObj._glowRow(val, cId); }, (REFRESH_INTERVAL_SEC + 2) * 1000);
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
@@ -465,6 +509,9 @@
       }
       return selectedRows;
     },
+    close : function() {
+      ; // cancelRepeat(this.refreshCallback);
+    }
 /**** End of Public Methods ****/ 
   });
 })(jQuery,

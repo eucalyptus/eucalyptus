@@ -61,8 +61,15 @@
                  return "linux";
                }
             },
-            { "mDataProp": "id" },
-            { "mDataProp": "state" },
+            { "fnRender" : function(oObj){
+                 return $('<div>').append($('<div>').addClass('twist').text(oObj.aData.id)).html();
+              }
+            },
+            { 
+              "fnRender": function(oObj) { 
+                 return '<div class="table-row-status status-'+oObj.aData.state+'">&nbsp;</div>';
+               },
+            },
             { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, // TODO: placement==zone?
             { "mDataProp": "ip_address" },
@@ -74,6 +81,10 @@
               "bVisible": false,
               "mDataProp": "root_device_type"
             },
+            {
+              "bVisible": false,
+              "mDataProp":"state"
+            }
           ]
         },
         text : {
@@ -96,13 +107,14 @@
           // TODO: make this a reusable operation
           thisObj._flipToHelp(evt,$instHelp);
         },
-        draw_cell_callback : function(row, col, val){
+        draw_cell_callback : null, 
+        /*function(row, col, val){
           if(col===4){
             if(!thisObj.emiToManifest[val])
               return val; // in case of error, print EMI
             else{
               var manifest = thisObj.emiToManifest[val];
-              var newManifest = ''; /* hack to deal with overflow */
+              var newManifest = ''; 
               for(i=0; i<manifest.length/25; i++){
                 newManifest += manifest.substring(i*25, Math.min(i*25+25, manifest.length)) + '\n';
               } 
@@ -111,10 +123,15 @@
             }
           }else
             return val;
+        },*/
+        expand_callback : function(row){ // row = [col1, col2, ..., etc]
+          return thisObj._expandCallback(row);
         },
-        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:3}, 
+        filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
+        legend : ['running','pending','stopping','stopped','shutting down','terminated']
       }) //end of eucatable
+      
       thisObj.tableWrapper.appendTo(thisObj.element);
     },
     _create : function() { 
@@ -369,6 +386,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
+          id = $(id).html();
           matrix.push([id]);
         });
         if ($.inArray('ebs',rootType)>=0){
@@ -420,6 +438,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
+          id = $(id).html();
           matrix.push([id]);
         });
         thisObj.rebootDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
@@ -459,6 +478,7 @@
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
+          id = $(id).html();
           matrix.push([id]);
         });
         thisObj.stopDialog.eucadialog('setSelectedResources', {title: [instance_label], contents: matrix});
@@ -502,10 +522,14 @@
     _startInstances : function(){
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
+      $.each(instances, function(idx, instance){
+        instances[idx] = $(instance).html();
+      });
       var toStart = instances.slice(0);
       var instIds = '';
       for(i=0; i<instances.length; i++)
-        instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
+        instIds+= '&InstanceId.'+parseInt(i+1)+'='+(instances[i]);
+
       $.ajax({
         type:"GET",
         url:"/ec2?Action=StartInstances"+instIds, 
@@ -540,12 +564,14 @@
       var oss = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       var keyname = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
       var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6);
+      var group = thisObj.tableWrapper.eucatable('getSelectedRows', 9);
       if ( instances.length > 0 ) {
         // connect is for one instance 
         var instance = instances[0];
+        instance = $(instance).html();
         var os = oss[0]; 
         if(os === 'windows'){ 
-          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_windows_text', keyname));
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_windows_text', group, keyname));
           thisObj.connectDialog.eucadialog('addNote','instance-connect-uname-password', 
             ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span>'+ip+'\\Administrator </span></td> <td> <span> <a href="#">'+$.i18n.prop('instance_dialog_connect_getpassword', keyname)+'</a></span></td> </tr> </tbody> </table>');
           if (!thisObj.instPassword[instance]){
@@ -557,8 +583,11 @@
               done: function (e, data) {
                 $.each(data.result, function (index, result) {
                   thisObj.instPassword[result.instance] = result.password;
-                  thisObj.connectDialog.find('a').last().html(result.password);
-                  thisObj.connectDialog.find('a').unbind('click');
+                  var parent = thisObj.connectDialog.find('a').last().parent();
+                  parent.find('a').remove();
+                  parent.html(result.password);
+                  //thisObj.connectDialog.find('a').last().html(result.password);
+                  //thisObj.connectDialog.find('a').unbind('click');
                 });
               },
               fail : function (e, data) {
@@ -570,12 +599,15 @@
               $fileSelector.trigger('click'); 
             });
           }else {
-            thisObj.connectDialog.find('a').last().html(thisObj.instPassword[instance]);
-            thisObj.connectDialog.find('a').unbind('click');
+            var parent = thisObj.connectDialog.find('a').last().parent();
+            parent.find('a').remove();
+            parent.html(thisObj.instPassword[instance]);
+            //thisObj.connectDialog.find('a').last().html(
+            //thisObj.connectDialog.find('a').unbind('click');
           }
         }
         else{
-          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_linux_text', keyname, ip));
+          thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_linux_text', group, keyname, ip));
         }
 
         thisObj.connectDialog.eucadialog('open');
@@ -585,6 +617,7 @@
       var thisObj = this;
       var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 2);
       instances=instances[0];
+      instances = $(instances).html();
       $.when( 
         $.ajax({
           type:"GET",
@@ -609,12 +642,14 @@
     _attachAction : function() {
       var thisObj = this;
       var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      instanceToAttach=$(instanceToAttach).html();
       attachVolume(null, instanceToAttach);
     },
 
     _initDetachDialog : function(dfd) {  // should resolve dfd object
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      instance = $(instance).html();
       var $volumeSelector = this.detachDialog.find('#volume-detach-volume-selector').html('');
       $volumeSelector.append($('<option>').attr('value', '').text($.i18n.map['select_a_volume']));
       $.each(results, function(idx, volume){
@@ -632,6 +667,7 @@
 
     _detachAction : function(){
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      instance = $(instance).html();
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -677,6 +713,7 @@
     _associateAction : function(){
       var thisObj = this;
       var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      instance = $(instance).html();
       associateIp(instance);
     },
     _disassociateAction : function(){
@@ -695,6 +732,7 @@
     },
     _launchMore : function(){
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      id = $(id).html();
       var filter = {};
       var result = describe('instance');
       var instance = null;
@@ -713,8 +751,85 @@
       filter['advanced'] = {'kernel':instance.kernel, 'ramdisk':instance.ramdisk};
       startLaunchWizard(filter);      
     },
+    _expandCallback : function(row){
+      var thisObj = this;
+      var instId = row[2];
+      var results = describe('instance');
+      var instance = null; 
+      for(i in results){
+        if(results[i].id === instId){
+          instance = results[i];
+          break;
+        }
+      }
+      if(!instance)
+        return null; 
+      var $wrapper = $('<div>');
+      var prodCode = ''; 
+      if(instance['product_codes'] && instance['product_codes'].length > 0)
+        prodCode = instance['product_codes'].join(' ');
+
+      var $instInfo = $('<ul>').addClass('instance-expanded').text(instance_table_expanded_instance).append(
+        $('<li>').append( 
+          $('<div>').addClass('expanded-value').text(instance['instance_type']),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_type)),
+        $('<li>').append(
+          $('<div>').addClass('expanded-value').text(instance['kernel']),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel)),
+        $('<li>').append(
+          $('<div>').addClass('expanded-value').text(instance['ramdisk']),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk)),
+      /*  $('<li>').append(
+          $('<div>').addClass('expanded-value').text(prodCode),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_product)),*/
+        $('<li>').append(
+          $('<div>').addClass('expanded-value').text(instance['root_device_type']),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_root)),
+        $('<li>').append(
+          $('<div>').addClass('expanded-value').text(instance['reservation_id']),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation)),
+        $('<li>').append(
+          $('<div>').addClass('expanded-value').text(instance['owner_id']),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_account)),
+        $('<li>').append(
+          $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']]),
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest)));
+
+      var $volInfo = null;
+      if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
+        results = describe('volume');
+        var attachedVols = {};
+        for (i in results){
+          var vol = results[i];
+          if(vol.attach_data && vol.attach_data.instance_id ===instId) 
+            attachedVols[vol.id] = vol;
+        }
+        $volInfo = $('<ul>').addClass('instance-volume-expanded').text(instance_table_expanded_volume);
+        $.each(instance.block_device_mapping, function(key, mapping){
+          var creationTime = '';
+          creationTime = attachedVols[mapping.volume_id].create_time;
+          creationTime = formatDateTime(creationTime); 
+          $volInfo.append($('<ul>').append(
+             $('<li>').append(
+               $('<div>').addClass('expanded-value').text(mapping.volume_id),
+               $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
+             $('<li>').append(
+               $('<div>').addClass('expanded-value').text(key),
+               $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap)),
+             $('<li>').append(
+               $('<div>').addClass('expanded-value').text(creationTime),
+               $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime))));
+        });
+      } 
+      $wrapper.append($instInfo);
+      if($volInfo)
+        $wrapper.append($volInfo);
+      return $wrapper;
+    },
 /**** Public Methods ****/
     close: function() {
+    //  this.tableWrapper.eucatable('close'); // shouldn't reference eucatable b/c flippy help changes the this.element dom
+      cancelRepeat(tableRefreshCallback);
       this._super('close');
     },
 /**** End of Public Methods ****/

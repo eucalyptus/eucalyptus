@@ -25,6 +25,7 @@
     _init : function() {
       var thisObj = this;
       // the 'x' box should be an image. text is added here for testing
+      this.element.find('#euca-notification-close').find('a').remove();
       this.element.find('#euca-notification-close').append(
         $('<a>').attr('href','#').text('X').click( function(evt) {
           if(thisObj.element.hasClass('toggle-on')){

@@ -1008,15 +1008,16 @@ tr.selected-row td.sorting_1
 }
 
 .help-link,
-.help-return {
+.help-return,
+.help-euca {
   float: right;
   height: 16px;
   margin: 3px 20px 0 0;
 }
 
 .help-link a,
-.help-return a
- {
+.help-return a,
+.help-euca a {
   display: inline-block;
   height: 18px; /* To match the height of the optional header text */
   width: 16px;
@@ -1028,6 +1029,10 @@ tr.selected-row td.sorting_1
 
 .help-return a {
   background-position: left -170px;
+}
+
+.help-euca a {
+  background: transparent url(../images/euca.png) no-repeat;
 }
 
 .help-content {
@@ -1327,6 +1332,8 @@ tr.selected-row td.sorting_1
 .status-failed {
   background-position: left -400px;
 }
+
+/* Legend icons - Instances status */
 
 /* == Pagination == */
 
@@ -1675,6 +1682,35 @@ span.on-error {
 #launch-wizard-advanced-storage input[type='checkbox']{
   width: 10px;
 }
+
+ul.launch-wizard-type-size{
+    margin: 0 auto;
+    padding: 0;
+}
+ul.launch-wizard-type-size li{
+    text-align: left;
+    float: left;
+    list-style: none;
+    padding: 4px 4px;
+    margin: 1px;
+}
+div#launch-wizard-type-size-legend{
+    clear: left;
+}
+
+.launcher-group-rule ul{
+    margin: 0 auto;
+    padding: 0;
+    clear: left;
+}
+.launcher-group-rule ul li{
+    text-align: left;
+    float: left;
+    list-style: none;
+    padding: 3px 3px;
+    margin: 1px;
+}
+
 /* END Sang-min */
 .spin-wheel { /* positioning the spin-wheel during the log-in */
   position: absolute;
@@ -1704,6 +1740,24 @@ span.on-error {
 li.disabled a {
   color: gray;
   text-decoration: none;
+}
+.expanded ul{
+    margin: 0 auto;
+    padding: 0;
+    clear: left;
+}
+.expanded ul li{
+    text-align: left;
+    float: left;
+    list-style: none;
+    padding: 1px 1px;
+    margin: 1px;
+}
+div.twist{
+}
+div.twist.expanded {
+    /* arrow  */ 
+    background : yellow;
 }
 
 /* END Sang-min */

@@ -27,6 +27,7 @@
       @import "lib/jquery-table.css";
       @import "lib/jquery.contextMenu.css";
       @import "lib/jquery-ui-1.9.0-beta1.css";
+      @import "lib/jquery.qtip.min.css";
       @import "css/eucalyptus.css";
     </style>
 
@@ -41,7 +42,8 @@
     <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
     <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/dataTables.fnGetTds.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
@@ -50,6 +52,7 @@
     <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.fileupload.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.watermark.min.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.qtip.min.js"></script>
     <script type="text/javascript" language="javascript" src="lib/moment.min.js"></script>
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
@@ -333,7 +336,6 @@
                   </th>
                   <th>{{!>sgroup_tbl_hdr_name}}</th>
                   <th>{{!>sgroup_tbl_hdr_description}}</th>
-                  <th>{{!>sgroup_tbl_hdr_rules}}</th>
                 </tr>
                </thead>
                <tbody>
@@ -363,11 +365,11 @@
                 <p>{{!: sgroup_dialog_add_group }}</p>
                 <div class="form-row">
                   <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
-                  <input type="text" id="sgroup-name" class="required" title="{{!: sgroups_dialog_create_flh_name }}"/>
+                  <input type="text" id="sgroup-name" class="required" title="{{!: sgroup_dialog_add_name_tip }}"/>
                 </div>
                 <div class="form-row">    
                   <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
-                  <input type="text" id="sgroup-description" class="required" title="{{!: sgroups_dialog_create_flh_description }}"/>
+                  <input type="text" id="sgroup-description" class="required" title="{{!: sgroup_dialog_add_description_tip }}"/>
                 </div>  
             </div>
             <div class="rules inner-box clearfix">
@@ -375,7 +377,7 @@
                 <p>{{!: sgroup_dialog_add_rules }}</p>
                 <div class="form-row"> 
                   <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                  <select id="sgroup-template" title="{{!: sgroups_dialog_create_flh_template }}">
+                  <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
                     <option value="none">Select protocol</option>
                     <optgroup label="">
                     <option>SSH (TCP port 22, for terminal access)</option>
@@ -402,21 +404,21 @@
                 <div id="sgroup-more-rules" style='display: none;'>
                   <div class="form-row"> 
                     <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                    <input type="text" id="sgroup-ports" class="required" title="{{!: sgroups_dialog_create_flh_ports }}"/>
+                    <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
                     <div class="dialog-notifications"></div>
                   </div>  
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroups_dialog_create_flh_allow_ip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroups_dialog_create_flh_allow_group }}"/>
+                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                   </div>
   
                   <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroups_dialog_create_flh_allow_instances }}"/>{{!>sgroup_dialog_add_allow_instances}}
+                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroup_dialog_add_allow_instances_tip }}"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
@@ -657,16 +659,16 @@
               <p>{{!: volume_dialog_add_text }}</p>
               <div class="form-row">
                 <label for="volume-add-snapshot-selector">{{!: volume_dialog_snapshot_label }}</label>
-                <select title="{{!: volume_dialog_create_flh_snapshot_selector }}" id="volume-add-snapshot-selector"></select>
+                <select title="{{!: volume_dialog_snapshot_tip }}" id="volume-add-snapshot-selector"></select>
               </div>
               <div class="form-row">
                 <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
-                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_create_flh_volume_size }}"/>
+                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_size_tip }}"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
               <div class="form-row">
                 <label for="volume-add-az-selector" class="required-label">{{!: volume_dialog_az_label }}</label>
-                <select title="{{!: volume_dialog_create_flh_az_selector }}" id="volume-add-az-selector"></select>
+                <select title="{{!: volume_dialog_az_tip }}" id="volume-add-az-selector"></select>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -690,15 +692,15 @@
             <div class="dialog-inner-content">
               <div class="form-row">
                 <label for="volume-attach-volume-id" class="required-label">{{!: volume_dialog_attach_volume_label }}</label>
-                <input type="text" id="volume-attach-volume-id" class="required"/>
+                <input type="text" id="volume-attach-volume-id" class="required" title="{{!: volume_attach_volume_id_text_tip }}"/>
               </div>
               <div class="form-row">
                 <label for="volume-attach-instance-id" class="required-label">{{!: volume_dialog_attach_instance_label }}</label>
-                <input type="text" id="volume-attach-instance-id" class="required"/>
+                <input type="text" id="volume-attach-instance-id" class="required" title="{{!: volume_attach_instance_id_text_tip }}"/>
               </div>
               <div class="form-row">
                 <label for="volume-attach-device-name" class="required-label">{{!: volume_dialog_attach_device_label }}</label>
-                <input type="text" id="volume-attach-device-name" class="required"/>
+                <input type="text" id="volume-attach-device-name" class="required" title="{{!: volume_attach_device_name_text_tip }}"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -763,11 +765,11 @@
               <p>{{!: snapshot_create_dialog_text }}</p>
               <div class="form-row" id="snapshot-create-dialog-vol-id">
                 <label for="snapshot-create-volume-id" class="required-label">{{!: snapshot_create_dialog_volume_label }}</label>
-                <input type="text" id="snapshot-create-volume-id" class="required"/>
+                <input type="text" id="snapshot-create-volume-id" class="required" title="{{!: snapshot_create_dialog_volume_tip }}"/>
               </div>
               <div class="form-row" id="snapshot-create-dialog-desc">
                 <label for="snapshot-create-description">{{!: snapshot_create_dialog_description_label }}</label>
-                <textarea id="snapshot-create-description" class="description"/>
+                <textarea id="snapshot-create-description" class="description" title="{{!: snapshot_create_dialog_description_tip }}"/>
               </div>
               </div>
               <div id="snapshot-create-dialog-no-volumes" style="display:none">
@@ -849,7 +851,7 @@
               <p>{{!: eip_allocate_dialog_text }}</p>
               <div class="form-row">
                 <label for="eip-allocate-count" class="required-label long-label">{{!: eip_allocate_dialog_count_label }}</label>
-                <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="3"/>
+                <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="3" title="{{!: eip_allocate_dialog_count_tip }}"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>
@@ -893,7 +895,7 @@
             <div class="dialog-inner-content">
               <div class="form-row">
                 <label for="eip-associate-instance-id" class="required-label" id="eip-associate-instance-txt"></label>
-                <input type="text" id="eip-associate-instance-id" class="required"> </input>
+                <input type="text" id="eip-associate-instance-id" class="required" title="{{!: eip_associate_dialog_instance_tip }}"> </input>
               </div>
               <label style="display:none" id="to-associate"> </label>
             </div>
@@ -948,7 +950,7 @@
                   <th>{{!>inst_tbl_hdr_os}}</th>
                   <th>{{!>inst_tbl_hdr_id}}</th>
                   <th>{{!>inst_tbl_hdr_state}}</th>
-                  <th>{{!>inst_tbl_hdr_manifest}}</th>
+                  <th>{{!>inst_tbl_hdr_image_id}}</th>
                   <th>{{!>inst_tbl_hdr_availability_zone}}</th>
                   <th>{{!>inst_tbl_hdr_public_ip}}</th>
                   <th>{{!>inst_tbl_hdr_private_ip}}</th>
@@ -1088,6 +1090,7 @@
                 <tr>
                   <th>&nbsp;</th>
                   <th>{{!>img_tbl_hdr_name}}</th>
+                  <th>{{!>img_tbl_hdr_os}}</th>
                   <th>{{!>img_tbl_hdr_status}}</th>
                   <th>{{!>img_tbl_hdr_architecture}}</th>
                   <th>{{!>img_tbl_hdr_description}}</th>
@@ -1111,11 +1114,30 @@
         </div>
       </script>
 
+      <script id="aboutCloundDlgTmpl" type="text/x-jsrender">
+        <div id="aboutcloud-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: about_dialog_version }}&nbsp;<span id="version"/></p>
+              <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" id="admin-url">{{!: about_dialog_link_lable }}</a>.</p>
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#"> {{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <!-- Launch Wizard & Help --> 
       <script id="launchWizardTmpl" type="text/x-jsrender">
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 
           <div id="launch-wizard" class="launcher_wrapper">
-            <div id="launch-wizard-header" class="box-header"> {{!> launch_instance_header }} </div>
+            <div id="launch-wizard-header" class="box-header"><span> {{!> launch_instance_header }} </span></div>
             
             <!-- Wizard Wrapper -->
             <div class="wizard-wrapper clearfix">

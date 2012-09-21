@@ -24,7 +24,9 @@ var RETURN_KEY_CODE = 13;
 var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
-var RERFRESH_INTERVAL_SEC = 10;
+/* CONFIGURABLE */
+var REFRESH_INTERVAL_SEC = 10;
+var TABLE_REFRESH_INTERVAL_SEC = 30;
 
 var ID_SEPARATOR = ',';
 
@@ -39,7 +41,7 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
 var KEY_PATTERN = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 
-var OPEN_NEW_WINDOW = 'new_window';
+var KEEP_VIEW = 'keep_view';
 
 function escapeHTML(input) {
   return $('<div/>').text(input).html();
@@ -135,17 +137,20 @@ function clearRepeat() {
 function describe(resource){
   return $('html body').eucadata('get', resource);
 }
-
-function addKeypair(){
-  $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).keypair();
-  $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair');
+function refresh(resource){
+  return $('html body').eucadata('refresh', resource);
 }
 
-function addGroup(){
+function addKeypair(callback){
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).keypair();
+  $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair',callback);
+}
+
+function addGroup(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
   $('html body').find(DOM_BINDING['hidden']).sgroup();
-  $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup');
+  $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup',callback);
 }
 
 function addSnapshot(volume){
@@ -192,3 +197,5 @@ function startLaunchWizard(filter) {
   var $container = $('html body').find(DOM_BINDING['main']);
   $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
 }
+
+var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
