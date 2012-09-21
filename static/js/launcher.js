@@ -526,9 +526,11 @@
     },
     _initTypeSection : function(){
       var thisObj = this;
-      this.element.find('#launch-wizard-type').find('ul.launch-wizard-type-size li a').first().trigger('click');
-      this.element.find('#launch-wizard-type').find('input#launch-instance-type-num-instance').val('1').trigger('change');
-      this.element.find('#launch-wizard-type').find('select#launch-instance-type-az').trigger('change');
+      if(! thisObj.options.type){
+        this.element.find('#launch-wizard-type').find('ul.launch-wizard-type-size li a').first().trigger('click');
+        this.element.find('#launch-wizard-type').find('input#launch-instance-type-num-instance').val('1').trigger('change');
+        this.element.find('#launch-wizard-type').find('select#launch-instance-type-az').trigger('change');
+      }
       thisObj._enableTypeLink();
     },
 
@@ -700,8 +702,10 @@
     _initSecuritySection : function(){
       var thisObj = this;
       thisObj._enableSecurityLink();
-      thisObj.element.find('#launch-wizard-security').find('select#launch-wizard-security-keypair-selector').trigger('change');
-      thisObj.element.find('#launch-wizard-security').find('select#launch-wizard-security-sg-selector').trigger('change');
+      if(!thisObj.options.security){
+        thisObj.element.find('#launch-wizard-security').find('select#launch-wizard-security-keypair-selector').trigger('change');
+        thisObj.element.find('#launch-wizard-security').find('select#launch-wizard-security-sg-selector').trigger('change');
+      }
     },
 
     _makeAdvancedSection : function($section) { 
