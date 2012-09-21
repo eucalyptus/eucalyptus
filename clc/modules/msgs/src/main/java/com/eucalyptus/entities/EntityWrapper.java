@@ -190,6 +190,27 @@ public class EntityWrapper<TYPE> {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
+  // Fix for EUCA-3453
+  /**
+   * Returns a list of results from the database that exactly match <code>example</code>. This method does not use <i><code>enableLike</code></i> match while the 
+   * {@link #query(Object)} does. <i><code>enableLike</code></i> criteria trips hibernate when special characters are involved. So it has been replaced by "=" (equals to)
+   * 
+   * @param example
+   * @return
+   */
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public <T> List<T> queryEscape( final T example ) {
+    final Example qbe = Example.create( example );
+    final List<T> resultList = this.getSession( )
+                                   .createCriteria( example.getClass( ) )
+                                   .setLockMode( LockMode.NONE )
+                                   .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+                                   .setCacheable( true )
+                                   .add( qbe )
+                                   .list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
+  
   public <T> T lookupAndClose( final T example ) throws NoSuchElementException {
     T ret = null;
     try {
@@ -206,6 +227,27 @@ public class EntityWrapper<TYPE> {
   public <T> T uniqueResult( final T example ) throws TransactionException {
     try {
       return this.recast( ( Class<T> ) example.getClass( ) ).getUnique( example );
+    } catch ( final RuntimeException ex ) {
+      throw new TransactionInternalException( ex.getMessage( ), ex );
+    } catch ( final EucalyptusCloudException ex ) {
+      throw new TransactionExecutionException( ex.getMessage( ), ex );
+    }
+  }
+  
+  
+  //Fix for EUCA-3453
+  /**
+   * Returns the unique result from the database that exactly matches <code>example</code>. This method is same as {@link #uniqueResult(Object)}
+   * but calls {@link #getUniqueEscape(Object)} instead of {@link #getUnique(Object)}
+   * 
+   * @param example
+   * @return
+   * @throws TransactionException
+   */
+  @SuppressWarnings( "unchecked" )
+  public <T> T uniqueResultEscape( final T example ) throws TransactionException {
+    try {
+      return this.recast( ( Class<T> ) example.getClass( ) ).getUniqueEscape( example );
     } catch ( final RuntimeException ex ) {
       throw new TransactionInternalException( ex.getMessage( ), ex );
     } catch ( final EucalyptusCloudException ex ) {
@@ -249,6 +291,66 @@ public class EntityWrapper<TYPE> {
                                 .setFetchSize( 1 )
                                 .setFirstResult( 0 )
                                 .add( Example.create( example ).enableLike( MatchMode.EXACT ) )
+                                .uniqueResult( );
+        if ( ret == null ) {
+          throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
+        }
+        return ret;
+      }
+    } catch ( final NonUniqueResultException ex ) {
+      throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + ex.getMessage( ), ex );
+    } catch ( final NoSuchElementException ex ) {
+      throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " using " + ex.getMessage( ), ex );
+    } catch ( final Exception ex ) {
+      final Exception newEx = PersistenceExceptions.throwFiltered( ex );
+      throw new EucalyptusCloudException( "Get unique failed for " + example.getClass( ).getSimpleName( ) + " because " + newEx.getMessage( ), newEx );
+    }
+  }
+  
+  //Fix for EUCA-3453
+  /**
+   * Returns the unique result from the database that exactly matches <code>example</code>. The differences between this method and {@link #getUnique(Object)} are:
+   * <ol><li>{@link #getUnique(Object)} uses <i><code>enableLike</code></i> match and this method does not. <i><code>enableLike</code></i> criteria trips hibernate when 
+   * special characters are involved. So it has been replaced by exact "=" (equals to)</li>  
+   * <li>Unique result logic is correctly implemented in this method. If the query returns more than one result, this method correctly throws an exception 
+   * wrapping <code>NonUniqueResultException</code>. {@link #getUnique(Object)} does not throw an exception in this case and returns a result as long as it finds
+   * one or more matching results (because of the following properties set on the query: <code>setMaxResults(1)</code>, <code>setFetchSize(1)</code> and 
+   * <code>setFirstResult(0)</code>)</li></ol>
+   * 
+   * @param example
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  @SuppressWarnings( "unchecked" )
+  public <T> T getUniqueEscape( final T example ) throws EucalyptusCloudException {
+    try {
+      Object id = null;
+      try {
+        id = this.getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
+      } catch ( final Exception ex ) {}
+      if ( id != null ) {
+        final T res = ( T ) this.getEntityManager( ).find( example.getClass( ), id );
+        if ( res == null ) {
+          throw new NoSuchElementException( "@Id: " + id );
+        } else {
+          return res;
+        }
+      } else if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
+        final String natId = ( ( HasNaturalId ) example ).getNaturalId( );
+        final T ret = ( T ) this.createCriteria( example.getClass( ) )
+                                .setLockMode( LockMode.NONE )
+                                .setCacheable( true )
+                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
+                                .uniqueResult( );
+        if ( ret == null ) {
+          throw new NoSuchElementException( "@NaturalId: " + natId );
+        }
+        return ret;
+      } else {
+        final T ret = ( T ) this.createCriteria( example.getClass( ) )
+                                .setLockMode( LockMode.NONE )
+                                .setCacheable( true )
+                                .add( Example.create( example ) )
                                 .uniqueResult( );
         if ( ret == null ) {
           throw new NoSuchElementException( "example: " + LogUtil.dumpObject( example ) );
