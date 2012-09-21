@@ -455,9 +455,9 @@
 
     _createMenuActions : function() {
       var thisObj = this;
-      var volumeStates = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
+      var volumes = thisObj.baseTable.eucatable('getSelectedRows');
       var itemsList = {};
-    
+
       (function(){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
         itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
@@ -466,22 +466,48 @@
       })();
 
       // add attach action
-      if ( volumeStates.length === 1 && volumeStates.indexOf('available') === 0 ){
+      if ( volumes.length === 1 && volumes[0].status === 'available' ){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
       }
       // detach actions
-      if ( volumeStates.length > 0  && onlyInArray('in-use', volumeStates))
-        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
-
+      if ( volumes.length > 0 ) {
+        addOption = true;
+        for (v in volumes) {
+          if ( volumes[v].status !== 'in-use' ) {
+            addOption = false;
+            break;
+          }
+          // do not allow to detach ebs root volume
+          if (volumes[v].attach_data.instance_id) {
+            var instance = getResource('instance', volumes[v].attach_data.instance_id);
+            if ( instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
+              var rootVolume = instance.block_device_mapping[instance.root_device_name];
+              if ( rootVolume.volume_id == volumes[v].id ) {
+                addOption = false;
+                break;
+              }
+            }
+          }
+        }
+        if (addOption)
+          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
+      }
       // create snapshot-action
-      if ( volumeStates.length  === 1) { 
-         if ( volumeStates[0] === 'in-use' || volumeStates[0] === 'available' )
+      if ( volumes.length === 1) {
+         if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' )
             itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
       }
-
       // add delete action
-      if ( volumeStates.length > 0 && onlyInArray('available', volumeStates)){
-        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+      if ( volumes.length > 0 ) {
+        addOption = true;
+        for (v in volumes) {
+          if (volumes[v].status !== 'available') {
+            addOption = false;
+            break;
+          }
+        }
+        if (addOption)
+          itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;
     },

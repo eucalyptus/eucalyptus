@@ -137,6 +137,12 @@ function clearRepeat() {
 function describe(resource){
   return $('html body').eucadata('get', resource);
 }
+
+function getResource(resourceType, resourceId){
+  res = $('html body').eucadata('get', resourceType, resourceId);
+  return res ? res[0] : res;
+}
+
 function refresh(resource){
   return $('html body').eucadata('refresh', resource);
 }
