@@ -81,6 +81,7 @@ import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.troubleshooting.LoggingResetter;
 import com.eucalyptus.troubleshooting.TestFaultTrigger;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
+import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck;
 import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck;
 import com.eucalyptus.troubleshooting.resourcefaults.MXBeanMemoryResourceCheck;
 import com.eucalyptus.troubleshooting.resourcefaults.SimpleMemoryResourceCheck;
@@ -104,7 +105,8 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	    File logFileDir = BaseDirectory.LOG.getFile();
 	    check.addLocationInfo(logFileDir, (long) (0.02 * logFileDir.getTotalSpace()));
 	    check.start();
-//	    new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K left, also arbitrary
+	    new DBResourceCheck().start();
+	    //	    new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K left, also arbitrary
 	    //new MXBeanMemoryResourceCheck().start(); // 512K left, also arbitrary
 	    FaultSubsystem.init();
 	    return true;
