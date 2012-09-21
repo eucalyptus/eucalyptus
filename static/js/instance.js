@@ -76,7 +76,10 @@
             { "mDataProp": "private_ip_address" },
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
-            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) } },
+            { 
+              "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) },
+              "iDataSort": 13,
+            },
             {
               "bVisible": false,
               "mDataProp": "root_device_type"
@@ -84,6 +87,11 @@
             {
               "bVisible": false,
               "mDataProp":"state"
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "launch_time",
+              "sType": "date"
             }
           ]
         },

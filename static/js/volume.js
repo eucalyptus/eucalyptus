@@ -58,10 +58,18 @@
             { "mDataProp": "attach_data.instance_id" },
             { "mDataProp": "snapshot_id" },
             { "mDataProp": "zone" },
-            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); } },
+            { 
+              "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
+              "iDataSort": 9
+            },
             {
               "bVisible": false,
               "mDataProp": "status"
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "create_time",
+              "sType": "date"
             }
           ],
         },
