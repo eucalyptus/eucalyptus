@@ -61,6 +61,81 @@ class ComputeHandler(server.BaseHandler):
                 val = self.get_argument(pattern % (index), None)
         return ret
 
+    def handleRunInstances(self, action, clc, user_data_file):
+        image_id = self.get_argument('ImageId')
+        min = self.get_argument('MinCount', '1')
+        max = self.get_argument('MaxCount', '1')
+        key = self.get_argument('KeyName', None)
+        groups = self.get_argument_list('SecurityGroup')
+        sec_group_ids = self.get_argument_list('SecurityGroupId')
+        if user_data_file:
+            user_data = user_data_file
+        else:
+            user_data = self.get_argument('UserData', None)
+        addr_type = self.get_argument('AddressingType', None)
+        vm_type = self.get_argument('InstanceType', None)
+        placement = self.get_argument('Placement.AvailabilityZone', None)
+        placement_group = self.get_argument('Placement.GroupName', None)
+        tenancy = self.get_argument('Placement.Tenancy', None)
+        kernel = self.get_argument('KernelId', None)
+        ramdisk = self.get_argument('RamdiskId', None)
+        monitoring=False
+        if self.get_argument('Monitoring.Enabled', '') == 'true':
+            monitoring=True
+        subnet = self.get_argument('SubnetId', None);
+        private_ip = self.get_argument('PrivateIpAddress', None);
+        # get block device mappings
+        bdm = []
+        mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
+        idx = 1
+        while mapping:
+            pre = 'BlockDeviceMapping.%d' % idx
+            block_dev_mapping = BlockDeviceMapping()
+            block_dev_mapping.dev_name = mapping
+            block_dev_mapping.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
+            if not(block_dev_mapping.ephemeral_name):
+                block_dev_mapping.no_device = \
+                    (self.get_argument('%s.NoDevice' % pre, '') == 'true')
+                block_dev_mapping.snapshot_id = \
+                        self.get_argument('%s.Ebs.SnapshotId' % pre, None)
+                block_dev_mapping.size = \
+                        self.get_argument('%s.Ebs.VolumeSize' % pre, None)
+                block_dev_mapping.delete_on_termination = \
+                        (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
+            bdm.append(block_dev_mapping)
+            idx += 1
+            mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
+        if len(bdm) == 0:
+            bdm = None
+            
+        api_termination=False
+        if self.get_argument('DisableApiTermination', '') == 'true':
+            api_termination=True
+        instance_shutdown=False
+        if self.get_argument('InstanceInitiatedShutdownBehavior', '') == 'true':
+            instance_shutdown=True
+        token = self.get_argument('ClientToken', None);
+        addition_info = self.get_argument('AdditionInfo', None);
+        instance_profile_name = self.get_argument('IamInstanceProfile.Name', None);
+        instance_profile_arn = self.get_argument('IamInstanceProfile.Arn', None);
+
+        return self.__normalize_instances__([clc.run_instances(image_id, min_count=min, max_count=max,
+                            key_name=key, security_groups=groups,
+                            user_data=user_data, addressing_type=addr_type,
+                            instance_type=vm_type, placement=placement,
+                            kernel_id=kernel, ramdisk_id=ramdisk,
+                            monitoring_enabled=monitoring, subnet_id=subnet,
+                            block_device_map=bdm,
+                            disable_api_termination=api_termination,
+                            instance_initiated_shutdown_behavior=instance_shutdown,
+                            private_ip_address=private_ip,
+                            placement_group=placement_group, client_token=token,
+                            security_group_ids=sec_group_ids,
+                            additional_info=addition_info,
+                            instance_profile_name=instance_profile_name,
+                            instance_profile_arn=instance_profile_arn,
+                            tenancy=tenancy)])
+
     def handleImages(self, action, clc):
         if action == 'DescribeImages':
             return clc.get_all_images()
@@ -86,76 +161,7 @@ class ComputeHandler(server.BaseHandler):
             instances = clc.get_all_instances()
             return self.__normalize_instances__(instances)
         elif action == 'RunInstances':
-            image_id = self.get_argument('ImageId');
-            min = self.get_argument('MinCount', '1');
-            max = self.get_argument('MaxCount', '1');
-            key = self.get_argument('KeyName', None);
-            groups = self.get_argument_list('SecurityGroup')
-            sec_group_ids = self.get_argument_list('SecurityGroupId')
-            user_data = self.get_argument('UserData', None);
-            addr_type = self.get_argument('AddressingType', None);
-            vm_type = self.get_argument('InstanceType', None);
-            placement = self.get_argument('Placement.AvailabilityZone', None);
-            placement_group = self.get_argument('Placement.GroupName', None);
-            tenancy = self.get_argument('Placement.Tenancy', None);
-            kernel = self.get_argument('KernelId', None);
-            ramdisk = self.get_argument('RamdiskId', None);
-            monitoring=False
-            if self.get_argument('Monitoring.Enabled', '') == 'true':
-                monitoring=True
-            subnet = self.get_argument('SubnetId', None);
-            private_ip = self.get_argument('PrivateIpAddress', None);
-            # get block device mappings
-            bdm = []
-            mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
-            idx = 1
-            while mapping:
-                pre = 'BlockDeviceMapping.%d' % idx
-                block_dev_mapping = BlockDeviceMapping()
-                block_dev_mapping.dev_name = mapping
-                block_dev_mapping.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
-                if not(block_dev_mapping.ephemeral_name):
-                    block_dev_mapping.no_device = \
-                            (self.get_argument('%s.NoDevice' % pre, '') == 'true')
-                    block_dev_mapping.snapshot_id = \
-                            self.get_argument('%s.Ebs.SnapshotId' % pre, None)
-                    block_dev_mapping.size = \
-                            self.get_argument('%s.Ebs.VolumeSize' % pre, None)
-                    block_dev_mapping.delete_on_termination = \
-                            (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
-                bdm.append(block_dev_mapping)
-                idx += 1
-                mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
-            if len(bdm) == 0:
-                bdm = None
-                
-            api_termination=False
-            if self.get_argument('DisableApiTermination', '') == 'true':
-                api_termination=True
-            instance_shutdown=False
-            if self.get_argument('InstanceInitiatedShutdownBehavior', '') == 'true':
-                instance_shutdown=True
-            token = self.get_argument('ClientToken', None);
-            addition_info = self.get_argument('AdditionInfo', None);
-            instance_profile_name = self.get_argument('IamInstanceProfile.Name', None);
-            instance_profile_arn = self.get_argument('IamInstanceProfile.Arn', None);
-
-            return self.__normalize_instances__([clc.run_instances(image_id, min_count=min, max_count=max,
-                                key_name=key, security_groups=groups,
-                                user_data=user_data, addressing_type=addr_type,
-                                instance_type=vm_type, placement=placement,
-                                kernel_id=kernel, ramdisk_id=ramdisk,
-                                monitoring_enabled=monitoring, subnet_id=subnet,
-                                block_device_map=bdm,
-                                disable_api_termination=api_termination,
-                                instance_initiated_shutdown_behavior=instance_shutdown,
-                                private_ip_address=private_ip,
-                                placement_group=placement_group, client_token=token,
-                                security_group_ids=sec_group_ids,
-                                additional_info=addition_info,
-                                instance_profile_name=instance_profile_name,
-                                instance_profile_arn=instance_profile_arn,
-                                tenancy=tenancy)])
+            return self.handleRunInstances(action, clc, None)
         elif action == 'TerminateInstances':
             instance_ids = self.get_argument_list('InstanceId')
             return clc.terminate_instances(instance_ids)
@@ -361,7 +367,17 @@ class ComputeHandler(server.BaseHandler):
 
         try:
             action = self.get_argument("Action")
-            if action == 'GetPassword':
+            if action == 'RunInstances':
+                user_data_file = []
+                try:
+                    user_data_file = self.request.files['user_data_file']
+                except KeyError:
+                    pass
+                if len(user_data_file) > 0:
+                    ret = self.handleRunInstances(action, self.user_session.clc, user_data_file[0].body)
+                else:
+                    ret = self.handleRunInstances(action, self.user_session.clc, None)
+            elif action == 'GetPassword':
                 instanceid = self.get_argument('InstanceId')
                 passwd_data = self.user_session.clc.get_password_data(instanceid)
                 priv_key_file = self.request.files['priv_key']
@@ -369,8 +385,8 @@ class ComputeHandler(server.BaseHandler):
                 string_to_decrypt = base64.b64decode(passwd_data)
                 ret = user_priv_key.private_decrypt(string_to_decrypt, RSA.pkcs1_padding)
                 ret = Response({'instance':instanceid, 'password': ret}) # wrap all responses in an object for security purposes
-                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-                self.write(data)
+            data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+            self.write(data)
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0])
             self.set_status(err.status);

@@ -36,6 +36,7 @@
       kernel: null,
       ramdisk: null,
       data: null,
+      data_file: null,
       private_addressing: false,
       device_map : [],
     },
@@ -517,27 +518,13 @@
         $('<div>').append(
           $('<span>').text(launch_instance_advanced_userdata),
           $('<input>').attr('id','launch-wizard-advanced-input-userdata').attr('type','text')),
-        $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_advanced_attachfile).click(function(e){
-          var $input = $userdata.find('#launch-wizard-advanced-input-userfile'); 
-          $input.trigger('click');
-        })),
-        $('<div>').hide().append(
+        $('<div>').append('Or. ').append(
           $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
-      // needs proxy-side support 
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
-      $input.fileupload({
-        dataType: 'json',
-        url: "../ec2",
-        fileInput: null,
-        formData: [{name: 'Action', value: 'PutInstanceData'}, {name:'InstanceId', value:''}, {name:'_xsrf', value:$.cookie('_xsrf')}],  
-      });
       $input.change(function(e){
-        $input.fileupload('add', {
-          files: e.target.files || [{name: this.value}],
-          fileInput: $(this)
-        });
+          thisObj.launchParam['data_file'] = this.files;
       });
-        
+ 
       $kernel.append(
         $('<div>').attr('id', 'launch-wizard-advanced-kernel').append(
           $('<span>').text(launch_instance_advanced_kernel),
@@ -794,6 +781,9 @@
           dataAdded = true;
           thisObj.launchParam['data'] = $userdata.find('#launch-wizard-advanced-input-userdata').val();
         }
+        if($userdata.find('#launch-wizard-advanced-input-userfile').val().length > 0){
+          dataAdded = true;
+        }
         var kernelChanged = false; 
         if($kernel.find('#launch-wizard-advanced-kernel-selector').val() !== 'default'){
           kernelChanged = true;
@@ -902,71 +892,84 @@
         return thisObj._showError('security'); 
    
       //prepare for the actual request parameters
-      var reqParam = 'ImageId='+param['emi'];
-      reqParam += '&InstanceType='+param['type'];
-      reqParam += '&MinCount='+param['number'];
-      reqParam += '&MaxCount='+param['number'];
+      var reqParam = new Array();
+      reqParam.push({name: 'Action', value: 'RunInstances'});
+      reqParam.push({name: 'ImageId', value: param['emi']});
+      reqParam.push({name: 'InstanceType', value: param['type']});
+      reqParam.push({name: 'MinCount', value: param['number']});
+      reqParam.push({name: 'MaxCount', value: param['number']});
+
       if(param['zone'].toLowerCase() !== 'any')
-        reqParam += '&Placement.AvailabilityZone='+param['zone'];
-      reqParam += '&Placement.GroupName='+param['sgroup'];
-      reqParam += '&KeyName='+param['keypair'];
+        reqParam.push({name: 'Placement.AvailabilityZone', value: param['zone']});
+      reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
+      reqParam.push({name: 'KeyName', value: param['keypair']});
       if(param['kernel'] && param['kernel'].length > 0)
-        reqParam += '&KernelId='+param['kernel'];
+        reqParam.push({name: 'KernelId', value: param['kernel']});
       if(param['ramdisk'] && param['ramdisk'].length > 0)
-        reqParam += '&RamdiskId='+param['ramdisk']; 
+        reqParam.push({name: 'RamdiskId', value: param['ramdisk']}); 
       if(param['data'] && param['data'].length > 0)
-        reqParam += '&UserData='+param['data'];
+        reqParam.push({name: 'UserData', value: param['data']});
       if(param['private_addressing'])
-        reqParam += '&AddressingType=private';
+        reqParam.push({name: 'AddressingType', value: 'private'});
       if(param['device_map'] && param['device_map'].length>0){
         $.each(param['device_map'], function(idx, mapping){
           if(mapping['volume'] === 'ebs'){
-           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.DeviceName='+mapping['dev'];
-           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize='+mapping['size'];
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.DeviceName', value: mapping['dev']});
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize', value: mapping['size']});
            if(mapping['snapshot'])
-             reqParam += '&BlockDeviceMapping.'+(idx+1)+'.Ebs.SnapshotId='+mapping['snapshot'];
-           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination='+mapping['delOnTerm'];
+             reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.SnapshotId', value: mapping['snapshot']});
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination', value: mapping['delOnTerm']});
           }else if(mapping['volume'].indexOf('ephemeral')>=0){
-           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.DeviceName='+mapping['dev'];
-           reqParam += '&BlockDeviceMapping.'+(idx+1)+'.VirtualName='+mapping['volume'];
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.DeviceName', value: mapping['dev']});
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.VirtualName', value: mapping['volume']});
           }
         });
       }
+      reqParam.push({name: '_xsrf', value: $.cookie('_xsrf')});
           
-      $.ajax({
-          type:"GET",
-          url:"/ec2?Action=RunInstances&" + reqParam,
-          data:"_xsrf="+$.cookie('_xsrf'),
-          dataType:"json",
-          async:true,
-          success: function(data, textStatus, jqXHR){
-            if ( data.results ){
-              var instances ='';
-              $.each(data.results, function(idx, instance){
-                instances += instance.id+' ';
-              });
-              instances = $.trim(instances);
-              notifySuccess(null, $.i18n.prop('instance_run_success', instances));
-              //TODO: move to instance page?
-              var $container = $('html body').find(DOM_BINDING['main']);
-              $container.maincontainer("changeSelected",null, {selected:'instance'});
+      $('#fileupload').fileupload({
+        dataType: 'json',
+        url: "../ec2",
+        fileInput: null,
+        formData: reqParam,  
+        paramName: 'user_data_file',
+      });
 
-            } else {
-              notifyError(null, $.i18n.prop('instance_run_error'));
-              //TODO: clear launch-instance wizard?
-              var $container = $('html body').find(DOM_BINDING['main']);
-              $container.maincontainer("clearSelected");
-              $container.maincontainer("changeSelected",null, {selected:'launcher'});
+      // it turns out that simply passing null for the file causes fileupload to complain. passing a bogus
+      // string instead is the ticket.
+      file_param = "none";
+      if (param['data_file'] != null) {
+        file_param = param['data_file']
+      }
 
-            }
-          },
-          error: function(jqXHR, textStatus, errorThrown){
-            notifyError(null, $.i18n.prop('instance_run_error'));
-            var $container = $('html body').find(DOM_BINDING['main']);
-            $container.maincontainer("clearSelected");
-            $container.maincontainer("changeSelected",null, {selected:'launcher'});
-          }
-        });
+      var jqXHR = $('#fileupload').fileupload('send', {files: file_param})
+                .success(function (result, textStatus, jqXHR) {
+                    if ( results ){
+                      var instances ='';
+                      $.each(results, function(idx, instance){
+                        instances += instance.id+' ';
+                      });
+                      instances = $.trim(instances);
+                      notifySuccess(null, $.i18n.prop('instance_run_success', instances));
+                      //TODO: move to instance page?
+                      var $container = $('html body').find(DOM_BINDING['main']);
+                      $container.maincontainer("changeSelected",null, {selected:'instance'});
+
+                    } else {
+                      notifyError(null, $.i18n.prop('instance_run_error'));
+                      //TODO: clear launch-instance wizard?
+                      var $container = $('html body').find(DOM_BINDING['main']);
+                      $container.maincontainer("clearSelected");
+                      $container.maincontainer("changeSelected",null, {selected:'launcher'});
+
+                    }
+                })
+                .error(function (jqXHR, textStatus, errorthrown) {
+                    notifyError(null, $.i18n.prop('instance_run_error'));
+                    var $container = $('html body').find(DOM_BINDING['main']);
+                    $container.maincontainer("clearSelected");
+                    $container.maincontainer("changeSelected",null, {selected:'launcher'});
+                });
     },
  
     _showError : function(step){

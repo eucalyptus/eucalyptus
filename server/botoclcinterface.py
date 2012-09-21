@@ -102,7 +102,10 @@ class BotoClcInterface(ClcInterface):
 
     # returns console output
     def get_console_output(self, instance_id):
-        return self.conn.get_console_output(instance_id)
+        obj = self.conn.get_console_output(instance_id)
+        if self.saveclcdata:
+            self.__save_json__(obj, "mockdata/ConsoleOutput.json")
+        return obj
 
     # returns password data
     def get_password_data(self, instance_id):
