@@ -100,7 +100,7 @@ public class ReportServlet
 			throw new RuntimeException("User was null");
 		}
 
-		if (user.isSystemAdmin()) {
+		if ( !user.isSystemAdmin() ) {
 			throw new RuntimeException("Only admins can generate reports");
 		}
 
