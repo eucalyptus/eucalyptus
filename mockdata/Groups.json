@@ -44,6 +44,27 @@
         ], 
         "ipRanges": "", 
         "groups": ""
+      },
+      {
+        "from_port": "5985", 
+        "ip_protocol": "tcp", 
+        "parent": null, 
+        "to_port": "5986", 
+        "__obj_name__": "IPPermissions", 
+        "item": "", 
+        "grants": [
+          {
+            "__obj_name__": "GroupOrCIDR", 
+            "name": null, 
+            "item": "", 
+            "group_id": null, 
+            "groupName" : "MySecurityGroup",
+            "cidr_ip": null,
+            "owner_id": "123456789" 
+          }
+        ], 
+        "ipRanges": "", 
+        "groups": ""
       }
     ], 
     "region": {
