@@ -22,6 +22,9 @@ package com.eucalyptus.cluster.callback;
 
 import java.util.ArrayList;
 
+import java.util.List;
+
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -34,6 +37,10 @@ import com.eucalyptus.reporting.event.InstanceUsageEvent;
 
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
+
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.collect.Lists;
 
@@ -53,6 +60,7 @@ public class DescribeSensorCallback extends
     private int collectionIntervalTimeMs;
     ArrayList<String> sensorIds = new ArrayList<String>();
     ArrayList<String> instanceIds = new ArrayList<String>();
+    final ListenerRegistry listener = ListenerRegistry.getInstance();
 
     public DescribeSensorCallback(int historySize,
 	    int collectionIntervalTimeMS, ArrayList<String> sensorIds,
@@ -106,6 +114,15 @@ public class DescribeSensorCallback extends
 
 	try {
 
+	    List<VmInstance> vmIntList = VmInstances.list();
+	    List<String> uuidList = new ArrayList<String>();
+
+	    for (VmInstance vmInt : vmIntList) {
+		if (vmInt.getState().equals(VmState.RUNNING)) {
+		    uuidList.add(vmInt.getInstanceUuid());
+		}
+	    }
+
 	    String resourceName, resourceUuid, metricName, dimensionName = "";
 	    int sequenceNum = -1;
 	    long valueDatestamp = -1;
@@ -134,8 +151,8 @@ public class DescribeSensorCallback extends
 				value = valueType.getValue();
 				valueDatestamp = valueType.getTimestamp()
 					.getTime();
-				if (!resourceUuid.isEmpty()
-					&& !resourceName.isEmpty()) {
+
+				if (uuidList.contains(resourceUuid)) {
 				    fireUsageEvent(new com.eucalyptus.reporting.event.InstanceUsageEvent(
 					    resourceUuid,
 					    System.currentTimeMillis(),
@@ -158,7 +175,7 @@ public class DescribeSensorCallback extends
     private void fireUsageEvent(InstanceUsageEvent instanceUsageEvent) {
 
 	try {
-	    ListenerRegistry.getInstance().fireEvent(instanceUsageEvent);
+	    listener.fireEvent(instanceUsageEvent);
 	} catch (EventFailedException e) {
 	    LOG.debug("Failed to fire instance usage event"
 		    + instanceUsageEvent, e);
