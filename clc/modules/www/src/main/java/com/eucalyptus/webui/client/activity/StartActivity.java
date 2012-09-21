@@ -70,7 +70,7 @@ import com.eucalyptus.webui.client.view.StartView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
-import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.SimplePanel;
 
 /**
  * Showing the start page, providing guides for first-time users,
@@ -109,8 +109,8 @@ public class StartActivity extends AbstractActivity {
       new CloudRegistrationActivity( clientFactory ).start( view.getCloudRegSnippetDisplay( ), eventBus );
       new GenericGuideActivity( clientFactory, SERVICE_SNIPPET ).start( view.getServiceSnippetDisplay( ), eventBus );
     } else { // reset in case of log off and log in with lower permissions
-      view.getCloudRegSnippetDisplay( ).setWidget( new Widget() );
-      view.getServiceSnippetDisplay().setWidget( clientFactory.createItemView( ) );
+      view.getCloudRegSnippetDisplay( ).setWidget( new SimplePanel() );
+      view.getServiceSnippetDisplay().setWidget( new SimplePanel() );
     }
     new DownloadActivity( clientFactory ).start( view.getDownloadSnippetDisplay( ), eventBus );
     new GenericGuideActivity( clientFactory, IAM_SNIPPET ).start( view.getIamSnippetDisplay( ), eventBus );
