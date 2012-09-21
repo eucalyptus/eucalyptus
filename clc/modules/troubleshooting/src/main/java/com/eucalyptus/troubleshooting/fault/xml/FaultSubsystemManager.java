@@ -78,13 +78,12 @@ import org.apache.log4j.RollingFileAppender;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.system.SubDirectory;
 
 public class FaultSubsystemManager {
 	private static final Logger LOG = Logger.getLogger(FaultSubsystemManager.class);
 	private Map<String, FaultLogger> loggerMap = new ConcurrentHashMap<String, FaultLogger>();
 	private FaultRegistry faultRegistry = null;
-	private File systemFaultDir = BaseDirectory.HOME.getChildFile("/usr/share/eucalyptus/faults"); 
-	private File customFaultDir = BaseDirectory.HOME.getChildFile("/etc/eucalyptus/faults"); 
 	private static final String DEFAULT_LOCALE = "en_US";
 
 	public FaultSubsystemManager() {
@@ -92,19 +91,19 @@ public class FaultSubsystemManager {
 		String locale = System.getenv("LOCALE");
 		
 		// Start with the system default locale fault dir
-		faultRegistry.crawlDirectory(new File(systemFaultDir, DEFAULT_LOCALE));
+		faultRegistry.crawlDirectory(SubDirectory.SYSFAULTS.getChildFile(DEFAULT_LOCALE));
 
 		// Add the system locale-specific fault dir
 		if (locale != null && !locale.equals(DEFAULT_LOCALE)) {
-			faultRegistry.crawlDirectory(new File(systemFaultDir, locale));
+			faultRegistry.crawlDirectory(SubDirectory.SYSFAULTS.getChildFile(locale));
 		}
 		// next check the custom default locale fault dir
 
-		faultRegistry.crawlDirectory(new File(customFaultDir, "en_US"));
+		faultRegistry.crawlDirectory(SubDirectory.CUSTOMFAULTS.getChildFile(DEFAULT_LOCALE));
 
 		// Add the system locale-specific fault dir
-		if (locale != null && !locale.equals("DEFAULT_LOCALE")) {
-			faultRegistry.crawlDirectory(new File(customFaultDir, locale));
+		if (locale != null && !locale.equals(DEFAULT_LOCALE)) {
+			faultRegistry.crawlDirectory(SubDirectory.CUSTOMFAULTS.getChildFile(locale));
 		}
 	}
 	

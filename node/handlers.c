@@ -504,8 +504,8 @@ monitoring_thread (void *arg)
         
         sem_p (inst_sem);
         
-        snprintf(nfile, MAX_PATH, "%s/var/log/eucalyptus/local-net.stage", nc_state.home);
-        snprintf(nfilefinal, MAX_PATH, "%s/var/log/eucalyptus/local-net", nc_state.home);
+        snprintf(nfile, MAX_PATH, EUCALYPTUS_LOG_DIR "/local-net.stage", nc_state.home);
+        snprintf(nfilefinal, MAX_PATH, EUCALYPTUS_LOG_DIR "/local-net", nc_state.home);
         FP=fopen(nfile, "w");
         if (!FP) {
             logprintfl(EUCAWARN, "monitoring_thread(): could not open file %s for writing\n", nfile);
@@ -949,7 +949,7 @@ static int init (void)
     }
 
 	// set the minimum log for now
-	snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/nc.log", nc_state.home);
+	snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", nc_state.home);
     log_file_set(logFile);
     logprintfl (EUCAINFO, "spawning Eucalyptus node controller %s\n", compile_timestamp_str);
 	if (do_warn) 
@@ -1448,7 +1448,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	char *file_name;
 	FILE *f;
 	long long used_mem, used_disk, used_cores;
-#define NC_MONIT_FILENAME "/var/run/eucalyptus/nc-stats"
+#define NC_MONIT_FILENAME EUCALYPTUS_RUN_DIR "/nc-stats"
     
 	if (init())
 		return 1;
@@ -1514,7 +1514,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 		return ret;
 	}
     
-	sprintf(file_name, "%s/%s", nc_state.home, NC_MONIT_FILENAME);
+	sprintf(file_name, NC_MONIT_FILENAME, nc_state.home);
 	if (!strcmp(meta->userId, EUCALYPTUS_ADMIN)) {
 		f = fopen(file_name, "w");
 		if (!f) {

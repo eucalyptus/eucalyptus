@@ -75,6 +75,8 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -104,6 +106,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
 
   // The certificate
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "auth_certificate_pem" )
   String pem;
   

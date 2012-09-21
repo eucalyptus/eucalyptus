@@ -70,6 +70,8 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Type;
+import org.hibernate.type.StringClobType;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
@@ -84,6 +86,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @Column( name = "config_static_field_name", nullable = false, unique = true )
   private final String fieldName;
   @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "config_static_field_value" )
   private String       value;
   @Column( name = "config_static_prop_name", nullable = false, unique = true )

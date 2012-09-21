@@ -71,7 +71,10 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 
 
 public enum SubDirectory {
-  DB( BaseDirectory.VAR, "db" ){
+	SYSFAULTS (BaseDirectory.LIB, "faults"),
+	CUSTOMFAULTS (BaseDirectory.HOME, "/etc/eucalyptus/faults"), 
+
+  DB( BaseDirectory.STATE, "db" ){
       @Override
       protected void assertPermissions() {
   	
@@ -83,7 +86,7 @@ public enum SubDirectory {
   	 }
       }
   },
-  TX( BaseDirectory.HOME, "/var/run/eucalyptus/tx" ) { 
+  TX( BaseDirectory.RUN, "/tx" ) { 
 	@Override
 	protected void assertPermissions() {
 
@@ -95,10 +98,10 @@ public enum SubDirectory {
 	    }
 	}
     },
-  CLASSCACHE( BaseDirectory.HOME, "/var/run/eucalyptus/classcache" ),
+  CLASSCACHE( BaseDirectory.RUN, "/classcache" ),
   WWW( BaseDirectory.CONF, "www" ),
-  WEBAPPS( BaseDirectory.VAR, "webapps" ),
-  KEYS( BaseDirectory.VAR, "keys" ){ 
+  WEBAPPS( BaseDirectory.STATE, "webapps" ),
+  KEYS( BaseDirectory.STATE, "keys" ){ 
       @Override
       protected void assertPermissions() {
   	
@@ -118,8 +121,8 @@ public enum SubDirectory {
   REPORTS( BaseDirectory.CONF, "reports" ),
   CONF( BaseDirectory.CONF, "conf" ),
   QUEUE( BaseDirectory.VAR, "queue" ),
-  LIB( BaseDirectory.HOME, "/usr/share/eucalyptus" ),
-  RUNDB( BaseDirectory.HOME, "/var/run/eucalyptus/db") {
+  LIB( BaseDirectory.LIB, "" ),
+  RUNDB( BaseDirectory.RUN, "/db") {
 
     @Override
     protected void assertPermissions() {

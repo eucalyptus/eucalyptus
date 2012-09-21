@@ -94,6 +94,8 @@
 #include <handlers-state.h>
 #include "fault.h"
 
+#include <eucalyptus.h>
+
 #define SUPERUSER "eucalyptus"
 #define MAX_SENSOR_RESOURCES MAXINSTANCES 
 
@@ -1906,9 +1908,9 @@ int powerUp(ccResource *res) {
     rc = 0;
     ret = 0;
     if (strcmp(res->mac, "00:00:00:00:00:00")) {
-      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
+      snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
     } else if (strcmp(res->ip, "0.0.0.0")) {
-      snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
+      snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
     } else {
       ret = rc = 1;
     }
@@ -2389,10 +2391,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	    if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
 	      //if (strstr(platform, "windows")) {
 	      char cdir[MAX_PATH];
-
-	      snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/", config->eucahome);
+	      snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
 	      if (check_directory(cdir)) mkdir(cdir, 0700);
-	      snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/", config->eucahome, instId);
+	      snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
 	      if (check_directory(cdir)) mkdir(cdir, 0700);
 	      if (check_directory(cdir)) {
 		logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache directory '%s'\n", cdir);
@@ -2537,7 +2538,7 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
     if (!strstr(resourceCacheLocal.resources[i].ncURL, "EucalyptusNC")) {
             char pwfile[MAX_PATH];
             *outConsoleOutput = NULL;
-            snprintf(pwfile, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/console.append.log", config->eucahome, instId);
+            snprintf(pwfile, MAX_PATH, EUCALYPTUS_STATE_DIR  "/windows/%s/console.append.log", config->eucahome, instId);
 
             char *rawconsole=NULL;
             if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted password in it)
@@ -2689,7 +2690,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
 	  char cdir[MAX_PATH];
 	  char cfile[MAX_PATH];
-	  snprintf(cdir, MAX_PATH, "%s/var/lib/eucalyptus/windows/%s/", config->eucahome, instId);
+	  snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
 	  if (!check_directory(cdir)) {
 	    snprintf(cfile, MAX_PATH, "%s/floppy", cdir);
 	    if (!check_file(cfile)) unlink(cfile);
@@ -2855,9 +2856,9 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, c
 
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-      snprintf(path, MAX_PATH, "/var/lib/eucalyptus/CC/%s", bufname);
+      snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", bufname);
     } else {
-      snprintf(path, MAX_PATH, "%s/var/lib/eucalyptus/CC/%s", tmpstr, bufname);
+      snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
     }
     fd = open(path, O_RDWR | O_CREAT, 0600);
     if (fd<0) {
@@ -3070,13 +3071,13 @@ int ccCheckState(int clcTimer) {
 
   // shellouts
   {
-    snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap", config->eucahome);
+    snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     if (check_file(cmd)) {
       logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
       ret++;
     }
 
-    snprintf(cmd, MAX_PATH, "%s/usr/share/eucalyptus/dynserv.pl", config->eucahome);
+    snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl", config->eucahome);
     if (check_file(cmd)) {
       logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
       ret++;
@@ -3349,8 +3350,7 @@ void *monitor_thread(void *in) {
 	if (rc) {
 	  logprintfl(EUCAERROR, "monitor_thread(): cannot invalidate image cache\n");
 	}
-
-	snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/httpd-dynserv.pid", config->eucahome);
+	snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/httpd-dynserv.pid", config->eucahome);
 	pidstr = file2str(pidfile);
 	if (pidstr) {
 	  if (check_process(atoi(pidstr), "dynserv-httpd.conf")) {
@@ -3481,7 +3481,7 @@ int init_log(void)
 
         snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
         snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-        snprintf(logFile, MAX_PATH, "%s/var/log/eucalyptus/cc.log", home);
+        snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
 
         configInitValues(configKeysRestartCC, configKeysNoRestartCC); // initialize config subsystem
         readConfigFile(configFiles, 2);
@@ -3700,7 +3700,7 @@ int init_config(void) {
   snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
   snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
   snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
-  snprintf(policyFile, MAX_PATH, "%s/var/lib/eucalyptus/keys/nc-client-policy.xml", home);
+  snprintf(policyFile, MAX_PATH, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", home);
   snprintf(eucahome, MAX_PATH, "%s/", home);
 
   sem_mywait(INIT);
@@ -4127,14 +4127,14 @@ int init_config(void) {
     snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
     free(tmpstr);
   } else {
-    snprintf(proxyPath, MAX_PATH, "%s/var/lib/eucalyptus/dynserv", eucahome);
+    snprintf(proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv", eucahome);
   }
 
   sem_mywait(CONFIG);
   // set up the current config
   safe_strncpy(config->eucahome, eucahome, MAX_PATH);
   safe_strncpy(config->policyFile, policyFile, MAX_PATH);
-  //  snprintf(config->proxyPath, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data", config->eucahome);
+  //  snprintf(config->proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv/data", config->eucahome);
   snprintf(config->proxyPath, MAX_PATH, "%s", proxyPath);
   config->use_proxy = use_proxy;
   config->proxy_max_cache_size = proxy_max_cache_size;
@@ -4370,7 +4370,7 @@ int maintainNetworkState() {
   }
 
   sem_mywait(CONFIG);
-  snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/net/euca-dhcp.pid", config->eucahome);
+  snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
   if (!check_file(pidfile)) {
     pidstr = file2str(pidfile);
   } else {
@@ -4541,7 +4541,7 @@ int reconfigureNetworkFromCLC() {
   if(users) free(users);
   if(nets) free(nets);
 
-  snprintf(cmd, MAX_PATH, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
+  snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
   rc = system(cmd);
   if (rc) {
     logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot run command '%s'\n", cmd);
@@ -5348,8 +5348,8 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
     strcat(nodestr, res[i].hostname);
     strcat(nodestr, " ");
   }
-
-  snprintf(cmd, MAX_PATH, "%s/usr/share/eucalyptus/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
+  
+  snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
   logprintfl(EUCADEBUG, "image_cache_proxykick(): running cmd '%s'\n", cmd);
   rc = system(cmd);
 
