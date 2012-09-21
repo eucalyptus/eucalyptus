@@ -103,10 +103,13 @@ public class StartActivity extends AbstractActivity {
   }
   
   private void loadSnippets( StartView view, EventBus eventBus ) {
-	boolean isSystemAdmin = this.clientFactory.getSessionData( ).getLoginUser( ).isSystemAdmin( );
+    boolean isSystemAdmin = this.clientFactory.getSessionData( ).getLoginUser( ).isSystemAdmin( );
     if ( isSystemAdmin ) {
       new CloudRegistrationActivity( clientFactory ).start( view.getCloudRegSnippetDisplay( ), eventBus );
       new GenericGuideActivity( clientFactory, SERVICE_SNIPPET ).start( view.getServiceSnippetDisplay( ), eventBus );
+    } else { // reset in case of log off and log in with lower permissions
+      clientFactory.getCloudRegistrationView().display( "", " ");
+      view.getServiceSnippetDisplay().setWidget( clientFactory.createItemView( ) );
     }
     new DownloadActivity( clientFactory ).start( view.getDownloadSnippetDisplay( ), eventBus );
     new GenericGuideActivity( clientFactory, IAM_SNIPPET ).start( view.getIamSnippetDisplay( ), eventBus );
