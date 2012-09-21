@@ -54,7 +54,8 @@ extern int init_eucafaults (char *);
  * Usage: log_eucafault_map (FAULT_ID, parameter_map)
  *
  * ...where the parameter map is a set of param/paramText key/value
- * pairs in struct form as defined in wc.h.
+ * pairs in struct form as defined in wc.h and assembled using
+ * c_varmap_alloc().
  *
  * Will call init_eucafaults() internally to ensure fault registry has
  * been loaded.

@@ -54,9 +54,7 @@
  * FIXME: Make some or all of them configuration-file options?
  * FIXME: Make paths relative to some configurable base directory?
  */
-#define FAULTLOGDIR "/var/log/eucalyptus"
-#define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
-#define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
+#define FAULT_LOGFILE_SUFFIX "-fault.log"
 #define DEFAULT_LOCALIZATION "en_US"
 #define LOCALIZATION_ENV_VAR "LOCALE"
 #define XML_SUFFIX ".xml"
@@ -495,7 +493,8 @@ initialize_faultlog (const char *fileprefix)
     if (fileprefix == NULL) {
         // FIXME: program_infocation_short_name is a GNU'ism and is not
         // portable--should wrap with an autoconf check.
-        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base, FAULTLOGDIR,
+        snprintf (faultlogpath, PATH_MAX, EUCALYPTUS_LOG_DIR "/%s"
+                  FAULT_LOGFILE_SUFFIX, euca_base,
                   program_invocation_short_name);
     } else {
         // Prune any leading directores from path.
@@ -504,8 +503,8 @@ initialize_faultlog (const char *fileprefix)
         if (fileprefix_i != NULL) {
             fileprefix = fileprefix_i + 1;
         }
-        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base,
-                  FAULTLOGDIR, fileprefix);
+        snprintf (faultlogpath, PATH_MAX, EUCALYPTUS_LOG_DIR "/%s"
+                  FAULT_LOGFILE_SUFFIX, euca_base, fileprefix);
     }
     PRINTF (("Initializing faultlog using %s\n", faultlogpath));
     faultlog = fopen (faultlogpath, "a+");
@@ -565,21 +564,22 @@ init_eucafaults (char *fileprefix)
 
     /* Cycle through list of faultdirs in priority order, noting any missing. */
     if (locale != NULL) {
-        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX, "%s%s/%s/",
-                  euca_base, CUSTOM_FAULTDIR, locale);
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX,
+                  EUCALYPTUS_CUSTOM_FAULT_DIR "/%s/", euca_base, locale);
     } else {
         faultdirs[CUSTOM_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX, "%s%s/%s/",
-              euca_base, CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX,
+              EUCALYPTUS_CUSTOM_FAULT_DIR "/%s/", euca_base,
+              DEFAULT_LOCALIZATION);
     if (locale != NULL) {
-        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, "%s%s/%s/",
-                  euca_base, DISTRO_FAULTDIR, locale);
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, EUCALYPTUS_FAULT_DIR
+                  "/%s/", euca_base, locale);
     } else {
         faultdirs[DISTRO_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX, "%s%s/%s/",
-              euca_base, DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX,
+              EUCALYPTUS_FAULT_DIR "/%s/", euca_base, DEFAULT_LOCALIZATION);
 
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {

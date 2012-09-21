@@ -307,7 +307,7 @@ public class WalrusManager {
 			searchBucket.setOwnerId(account.getAccountNumber());
 			searchBucket.setHidden(false);
 
-			List<BucketInfo> bucketInfoList = db.query(searchBucket);
+			List<BucketInfo> bucketInfoList = db.queryEscape(searchBucket);
 
 			ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
@@ -387,7 +387,7 @@ public class WalrusManager {
 				&& !Contexts.lookup().hasAdministrativePrivileges()) {
 			BucketInfo searchBucket = new BucketInfo();
 			searchBucket.setOwnerId(account.getAccountNumber());
-			List<BucketInfo> bucketList = db.query(searchBucket);
+			List<BucketInfo> bucketList = db.queryEscape(searchBucket);
 			if (bucketList.size() >= WalrusInfo.getWalrusInfo().getStorageMaxBucketsPerAccount()) {
 				db.rollback();
 				throw new TooManyBucketsException(bucketName);
@@ -395,7 +395,7 @@ public class WalrusManager {
 		}
 
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			if (bucketList.get(0).getOwnerId().equals(account.getAccountNumber())) {
@@ -518,7 +518,7 @@ public class WalrusManager {
 		Account account = ctx.getAccount();
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo searchBucket = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(searchBucket);
+		List<BucketInfo> bucketList = db.queryEscape(searchBucket);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucketFound = bucketList.get(0);
@@ -534,13 +534,13 @@ public class WalrusManager {
 				ObjectInfo searchObject = new ObjectInfo();
 				searchObject.setBucketName(bucketName);
 				searchObject.setDeleted(false);
-				List<ObjectInfo> objectInfos = dbObject.query(searchObject);
+				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObject);
 				if (objectInfos.size() == 0) {
 					//check if the bucket contains any images
 					EntityWrapper<ImageCacheInfo> dbIC = db.recast(ImageCacheInfo.class);
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
 					searchImageCacheInfo.setBucketName(bucketName);
-					List<ImageCacheInfo> foundImageCacheInfos = dbIC.query(searchImageCacheInfo);
+					List<ImageCacheInfo> foundImageCacheInfos = dbIC.queryEscape(searchImageCacheInfo);
 
 					if (foundImageCacheInfos.size() > 0) {
 						db.rollback();
@@ -550,7 +550,7 @@ public class WalrusManager {
 					ObjectInfo searchDeleteMarker = new ObjectInfo();
 					searchDeleteMarker.setBucketName(bucketName);
 					searchDeleteMarker.setDeleted(true);
-					List<ObjectInfo> deleteMarkers = dbObject.query(searchDeleteMarker);
+					List<ObjectInfo> deleteMarkers = dbObject.queryEscape(searchDeleteMarker);
 					for(ObjectInfo deleteMarker : deleteMarkers) {
 						dbObject.delete(deleteMarker);
 					}
@@ -609,7 +609,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		AccessControlListType accessControlList = new AccessControlListType();
 		BucketLogData logData;
@@ -769,7 +769,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -814,7 +814,7 @@ public class WalrusManager {
 					searchObject.setVersionId(versionId);							
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					try {
-						ObjectInfo foundObject = dbObject.getUnique(searchObject);
+						ObjectInfo foundObject = dbObject.getUniqueEscape(searchObject);
 						if (!foundObject.canWrite(account.getAccountNumber())) {
 							//Found existing object, but don't have write access
 							db.rollback();
@@ -938,7 +938,7 @@ public class WalrusManager {
 							EntityWrapper<ObjectInfo> dbObject = EntityWrapper.get(ObjectInfo.class);
 							ObjectInfo foundObject;
 							try {
-								foundObject = dbObject.getUnique(searchObject);
+								foundObject = dbObject.getUniqueEscape(searchObject);
 								if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 									foundObject.addGrants(account.getAccountNumber(), bucketOwnerId, grantInfos, accessControlList);
@@ -947,7 +947,7 @@ public class WalrusManager {
 								if (WalrusProperties.enableTorrents) {
 									EntityWrapper<TorrentInfo> dbTorrent = dbObject.recast(TorrentInfo.class);
 									TorrentInfo torrentInfo = new TorrentInfo(bucketName, objectKey);
-									List<TorrentInfo> torrentInfos = dbTorrent.query(torrentInfo);
+									List<TorrentInfo> torrentInfos = dbTorrent.queryEscape(torrentInfo);
 									if (torrentInfos.size() > 0) {
 										TorrentInfo foundTorrentInfo = torrentInfos.get(0);
 										TorrentClient torrentClient = Torrents.getClient(bucketName + objectKey);
@@ -1031,7 +1031,7 @@ public class WalrusManager {
 							}
 
 							dbObject = EntityWrapper.get(ObjectInfo.class);
-							List<ObjectInfo> objectInfos = dbObject.query(new ObjectInfo(bucketName, objectKey));
+							List<ObjectInfo> objectInfos = dbObject.queryEscape(new ObjectInfo(bucketName, objectKey));
 							for(ObjectInfo objInfo : objectInfos) {
 								if (!success) {
 									if (objInfo.getLast()) {
@@ -1052,7 +1052,7 @@ public class WalrusManager {
 							deleteMarker.setDeleted(true);
 							ObjectInfo foundDeleteMarker = null;			
 							try {
-								foundDeleteMarker = dbObject.getUnique(deleteMarker);
+								foundDeleteMarker = dbObject.getUniqueEscape(deleteMarker);
 								dbObject.delete(foundDeleteMarker);
 							} catch(Exception ex) {
 								if(foundDeleteMarker != null) {
@@ -1133,7 +1133,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo(bucketName);
 			BucketInfo bucket = null;
 			try {
-				bucket = db.getUnique(searchBucket);
+				bucket = db.getUniqueEscape(searchBucket);
 			} catch (EucalyptusCloudException ex) {
 				LOG.error(ex);
 				throw new NoSuchBucketException(bucketName);
@@ -1248,7 +1248,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -1274,7 +1274,7 @@ public class WalrusManager {
 				searchObjectInfo.setBucketName(bucketName);
 
 				ObjectInfo foundObject = null;
-				List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 				for (ObjectInfo objectInfo : objectInfos) {
 					if (objectInfo.getObjectKey().equals(objectKey)) {
 						// key (object) exists. check perms
@@ -1431,7 +1431,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -1446,7 +1446,7 @@ public class WalrusManager {
 						.recast(ObjectInfo.class);
 				ObjectInfo searchObjectInfo = new ObjectInfo();
 				searchObjectInfo.setBucketName(bucketName);
-				List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 				for (ObjectInfo objectInfo : objectInfos) {
 					if (objectInfo.getObjectKey().equals(key)) {
 						// key (object) exists.
@@ -1490,7 +1490,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfos = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfos);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfos);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucketInfo = bucketList.get(0);
@@ -1510,7 +1510,7 @@ public class WalrusManager {
 					ObjectInfo searchDeletedObjectInfo = new ObjectInfo(bucketName, objectKey);
 					searchDeletedObjectInfo.setDeleted(true);
 					try {
-						dbObject.getUnique(searchDeletedObjectInfo);
+						dbObject.getUniqueEscape(searchDeletedObjectInfo);
 						db.rollback();
 						//Delete marker already exists, can't double delete
 						throw new NoSuchEntityException(objectKey, logData);
@@ -1519,7 +1519,7 @@ public class WalrusManager {
 					} catch(EucalyptusCloudException ex) {
 						ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 						searchObjectInfo.setLast(true);
-						List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+						List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 						for(ObjectInfo objInfo : objectInfos) {
 							objInfo.setLast(false);
 						}
@@ -1546,7 +1546,7 @@ public class WalrusManager {
 					//searchObjectInfo.setVersionId(WalrusProperties.NULL_VERSION_ID);
 					searchObjectInfo.setLast(true);
 					searchObjectInfo.setDeleted(false);
-					List<ObjectInfo>objectInfos = dbObject.query(searchObjectInfo);
+					List<ObjectInfo>objectInfos = dbObject.queryEscape(searchObjectInfo);
 
 					if (objectInfos.size() > 0) {
 						if(objectInfos.size() > 1) {
@@ -1640,7 +1640,7 @@ public class WalrusManager {
 			BucketInfo searchBucket = new BucketInfo(bucketName);
 			BucketInfo bucket = null;
 			try {
-				bucket = db.getUnique(searchBucket);
+				bucket = db.getUniqueEscape(searchBucket);
 			} catch (EucalyptusCloudException ex) {
 				LOG.error(ex);
 				throw new NoSuchBucketException(bucketName);
@@ -1719,7 +1719,7 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		bucketInfo.setHidden(false);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		Hashtable<String,PrefixEntry> prefixes = new Hashtable<String,PrefixEntry>();
 
@@ -1947,7 +1947,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 		BucketLogData logData;
 
 		AccessControlListType accessControlList = new AccessControlListType();
@@ -1963,7 +1963,7 @@ public class WalrusManager {
 				searchObjectInfo.setLast(true);						
 			}
 			searchObjectInfo.setDeleted(false);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if (ctx.hasAdministrativePrivileges( ) || (
@@ -2028,7 +2028,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2084,7 +2084,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2137,7 +2137,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2151,7 +2151,7 @@ public class WalrusManager {
 					}				
 
 					searchObjectInfo.setDeleted(false);
-					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+					List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (!ctx.hasAdministrativePrivileges() && !(
@@ -2181,7 +2181,7 @@ public class WalrusManager {
 								TorrentInfo torrentInfo = new TorrentInfo(bucketName,
 										objectKey);
 								List<TorrentInfo> torrentInfos = dbTorrent
-										.query(torrentInfo);
+										.queryEscape(torrentInfo);
 								if (torrentInfos.size() > 0) {
 									TorrentInfo foundTorrentInfo = torrentInfos.get(0);
 									TorrentClient torrentClient = Torrents
@@ -2233,7 +2233,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2247,7 +2247,7 @@ public class WalrusManager {
 					}
 
 					searchObjectInfo.setDeleted(false);
-					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+					List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (!ctx.hasAdministrativePrivileges() && !(
@@ -2279,7 +2279,7 @@ public class WalrusManager {
 								TorrentInfo torrentInfo = new TorrentInfo(bucketName,
 										objectKey);
 								List<TorrentInfo> torrentInfos = dbTorrent
-										.query(torrentInfo);
+										.queryEscape(torrentInfo);
 								if (torrentInfos.size() > 0) {
 									TorrentInfo foundTorrentInfo = torrentInfos.get(0);
 									TorrentClient torrentClient = Torrents
@@ -2341,7 +2341,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2357,7 +2357,7 @@ public class WalrusManager {
 			if(request.getVersionId() == null) {
 				searchObjectInfo.setLast(true);
 			}
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if (ctx.hasAdministrativePrivileges() || (
@@ -2386,7 +2386,7 @@ public class WalrusManager {
 							TorrentInfo foundTorrentInfo;
 							String absoluteObjectPath = storageManager.getObjectPath(bucketName, objectName);
 							try {
-								foundTorrentInfo = dbTorrent.getUnique(torrentInfo);
+								foundTorrentInfo = dbTorrent.getUniqueEscape(torrentInfo);
 							} catch (EucalyptusCloudException ex) {
 								String torrentFile = objectName + ".torrent";
 								String torrentFilePath = storageManager.getObjectPath(bucketName, torrentFile);
@@ -2585,7 +2585,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2597,7 +2597,7 @@ public class WalrusManager {
 					}
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+					List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 
@@ -2763,7 +2763,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
@@ -2819,7 +2819,7 @@ public class WalrusManager {
 		}
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(sourceBucket);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -2828,7 +2828,7 @@ public class WalrusManager {
 			if(sourceVersionId == null) {
 				searchObjectInfo.setLast(true);
 			}
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				ObjectInfo sourceObjectInfo = objectInfos.get(0);
 				if (ctx.hasAdministrativePrivileges() || (
@@ -2876,7 +2876,7 @@ public class WalrusManager {
 						}
 					}
 					BucketInfo destinationBucketInfo = new BucketInfo(destinationBucket);
-					List<BucketInfo> destinationBuckets = db.query(destinationBucketInfo);
+					List<BucketInfo> destinationBuckets = db.queryEscape(destinationBucketInfo);
 					if (destinationBuckets.size() > 0) {
 						BucketInfo foundDestinationBucketInfo = destinationBuckets.get(0);
 						if (ctx.hasAdministrativePrivileges() || (
@@ -2897,7 +2897,7 @@ public class WalrusManager {
 								destinationVersionId = WalrusProperties.NULL_VERSION_ID;
 							}
 							destSearchObjectInfo.setVersionId(destinationVersionId);
-							List<ObjectInfo> destinationObjectInfos = dbObject.query(destSearchObjectInfo);
+							List<ObjectInfo> destinationObjectInfos = dbObject.queryEscape(destSearchObjectInfo);
 							if (destinationObjectInfos.size() > 0) {
 								destinationObjectInfo = destinationObjectInfos.get(0);
 								if (!destinationObjectInfo.canWrite(account.getAccountNumber())) {
@@ -3007,7 +3007,7 @@ public class WalrusManager {
 							ObjectInfo deleteMarker = new ObjectInfo(destinationBucket, destinationKey);
 							deleteMarker.setDeleted(true);
 							try {
-								ObjectInfo foundDeleteMarker = dbObject.getUnique(deleteMarker);
+								ObjectInfo foundDeleteMarker = dbObject.getUniqueEscape(deleteMarker);
 								dbObject.delete(foundDeleteMarker);
 							} catch(EucalyptusCloudException ex) {
 								//no delete marker found.
@@ -3058,7 +3058,7 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo, targetBucketInfo;
 		try {
-			bucketInfo = db.getUnique(new BucketInfo(bucket));
+			bucketInfo = db.getUniqueEscape(new BucketInfo(bucket));
 		} catch (EucalyptusCloudException ex) {
 			db.rollback();
 			throw new NoSuchBucketException(bucket);
@@ -3075,7 +3075,7 @@ public class WalrusManager {
 			if (targetPrefix == null)
 				targetPrefix = "";
 			try {
-				targetBucketInfo = db.getUnique(new BucketInfo(targetBucket));
+				targetBucketInfo = db.getUniqueEscape(new BucketInfo(targetBucket));
 			} catch (EucalyptusCloudException ex) {
 				db.rollback();
 				throw new NoSuchBucketException(targetBucket);
@@ -3139,12 +3139,12 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		try {
-			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));
+			BucketInfo bucketInfo = db.getUniqueEscape(new BucketInfo(bucket));
 			if (bucketInfo.getLoggingEnabled()) {
 				String targetBucket = bucketInfo.getTargetBucket();
 				ArrayList<Grant> grants = new ArrayList<Grant>();
 				try {
-					BucketInfo targetBucketInfo = db.getUnique(new BucketInfo(
+					BucketInfo targetBucketInfo = db.getUniqueEscape(new BucketInfo(
 							targetBucket));
 					List<GrantInfo> grantInfos = targetBucketInfo.getGrants();
 
@@ -3186,7 +3186,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		try {
-			BucketInfo bucketInfo = db.getUnique(new BucketInfo(bucket));
+			BucketInfo bucketInfo = db.getUniqueEscape(new BucketInfo(bucket));
 			if (ctx.hasAdministrativePrivileges() ||
 					Lookups.checkPrivilege(PolicySpec.S3_GETBUCKETVERSIONING,
 							PolicySpec.VENDOR_S3,
@@ -3225,7 +3225,7 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo;
 		try {
-			bucketInfo = db.getUnique(new BucketInfo(bucket));
+			bucketInfo = db.getUniqueEscape(new BucketInfo(bucket));
 		} catch (EucalyptusCloudException ex) {
 			db.rollback();
 			throw new NoSuchBucketException(bucket);
@@ -3280,7 +3280,7 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		bucketInfo.setHidden(false);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		Hashtable<String,PrefixEntry> prefixes = new Hashtable<String,PrefixEntry>();
 
@@ -3356,7 +3356,7 @@ public class WalrusManager {
 							markerObj.setBucketName(bucketName);
 							markerObj.setVersionId(versionMarker);
 							markerObj.setObjectKey(keyMarker);									
-							ObjectInfo lastFromPrevObj = dbObject.uniqueResult(markerObj);
+							ObjectInfo lastFromPrevObj = dbObject.uniqueResultEscape(markerObj);
 							if(lastFromPrevObj != null && lastFromPrevObj.getLastModified() != null) {
 								resumeDate = lastFromPrevObj.getLastModified();
 							}
@@ -3518,7 +3518,7 @@ public class WalrusManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfos = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfos);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfos);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucketInfo = bucketList.get(0);
@@ -3531,7 +3531,7 @@ public class WalrusManager {
 				throw new EucalyptusCloudException("versionId is null");
 			}
 			searchObjectInfo.setVersionId(request.getVersionid());
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				foundObject = objectInfos.get(0);
 			}
@@ -3610,7 +3610,7 @@ public class WalrusManager {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		try {
 			BucketInfo searchBucket = new BucketInfo(bucket);
-			db.getUnique(searchBucket);
+			db.getUniqueEscape(searchBucket);
 			return WalrusProperties.getWalrusAddress();
 		} catch (EucalyptusCloudException ex) {
 			throw ex;
@@ -3624,14 +3624,14 @@ public class WalrusManager {
 		String objectKey = request.getKey();
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfos = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfos);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfos);
 		if (bucketList.size() > 0) {
 			BucketInfo bucketInfo = bucketList.get(0);
 			BucketLogData logData = bucketInfo.getLoggingEnabled() ? request.getLogData() : null;
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 			searchObjectInfo.setVersionId(WalrusProperties.NULL_VERSION_ID);
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-			List<ObjectInfo>objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo>objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if (objectInfos.size() > 0) {
 				ObjectInfo foundObject = objectInfos.get(0);
 				dbObject.delete(foundObject);
@@ -3677,7 +3677,7 @@ public class WalrusManager {
 		String bucketName = request.getBucket();
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo searchBucket = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(searchBucket);
+		List<BucketInfo> bucketList = db.queryEscape(searchBucket);
 
 		if (bucketList.size() > 0) {
 			BucketInfo bucketFound = bucketList.get(0);
@@ -3686,7 +3686,7 @@ public class WalrusManager {
 			ObjectInfo searchObject = new ObjectInfo();
 			searchObject.setBucketName(bucketName);
 			searchObject.setDeleted(false);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObject);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObject);
 			if (objectInfos.size() == 0) {
 				db.delete(bucketFound);
 				// Actually remove the bucket from the backing store

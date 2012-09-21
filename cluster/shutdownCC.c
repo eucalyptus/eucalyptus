@@ -84,14 +84,11 @@ int main(int argc, char **argv) {
   mymeta.servicesLen = 0;
   euca_home = getenv("EUCALYPTUS");
   if (!euca_home) {
-    snprintf(configFile, 1024, "/etc/eucalyptus/eucalyptus.conf");
-    snprintf(policyFile, 1024, "/var/lib/eucalyptus/keys/cc-client-policy.xml");
-    snprintf(logFile, 1024, "/var/log/eucalyptus/shutdownCC_axis2c.log");
-  } else {
-    snprintf(configFile, 1024, "%s/etc/eucalyptus/eucalyptus.conf", euca_home);
-    snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/cc-client-policy.xml", euca_home);
-    snprintf(logFile, 1024, "%s/var/log/eucalyptus/shutdownCC_axis2c.log", euca_home);
+    euca_home = "";
   }
+  snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
+  snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/cc-client-policy.xml", euca_home);
+  snprintf(logFile, 1024, EUCALYPTUS_LOG_DIR "/shutdownCC_axis2c.log", euca_home);
 
   if (argc != 2 || !argv[1]) {
     printf("must supply argument <host>:<port>\n");
