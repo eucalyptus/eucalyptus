@@ -1,6 +1,6 @@
 [
   {
-    "status": "available",
+    "status": "in-use",
     "__obj_name__": "Volume",
     "zone": "PARTI00",
     "tags": {},
@@ -12,13 +12,14 @@
       "connection_cls": null
     },
     "attach_data": {
-      "status": null,
-      "instance_id": null,
-      "__obj_name__": "AttachmentSet",
-      "attachmentSet": "",
-      "attach_time": null,
-      "device": null,
-      "id": null
+      "status": "attached", 
+      "instance_id": "i-26A543C6", 
+      "__obj_name__": "AttachmentSet", 
+      "attachmentSet": "", 
+      "attach_time": "2012-09-18T06:38:07.087Z", 
+      "item": "", 
+      "device": "/dev/sdb", 
+      "id": "vol-6E463B31"
     },
     "connection": [],
     "create_time": "2012-06-28T16:25:36.227Z",
