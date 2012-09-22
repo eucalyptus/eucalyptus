@@ -171,10 +171,10 @@
                     thisObj._refreshRulesList(thisObj.addDialog);
         },
       });
-      this.addDialog.eucadialog('onKeypress', 'sgroup-name', createButtonId, function () {
+      this.addDialog.eucadialog('buttonOnKeyup', $add_dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateForm(createButtonId);
       });
-      this.addDialog.eucadialog('onKeypress', 'sgroup-description', createButtonId, function () {
+      this.addDialog.eucadialog('buttonOnKeyup', $add_dialog.find('#sgroup-description'), createButtonId, function () {
          thisObj._validateForm(createButtonId);
       });
       this.addDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {

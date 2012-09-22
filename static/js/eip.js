@@ -123,11 +123,8 @@
          },
          help: { content: $eip_allocate_dialog_help },
        });
-      var $ip_count_edit = this.allocateDialog.find('#eip-allocate-count');
-      this.allocateDialog.eucadialog('buttonOnFocus', $ip_count_edit,  allocateButtonId, function(){
-        return $ip_count_edit.val() == parseInt($ip_count_edit.val());
-      });
-      this.allocateDialog.eucadialog('onKeypress', 'eip-allocate-count',  allocateButtonId, function(){
+      var $ip_count_edit = $eip_allocate_dialog.find('#eip-allocate-count');
+      $eip_allocate_dialog.eucadialog('buttonOnKeyup', $ip_count_edit,  allocateButtonId, function(){
         return $ip_count_edit.val() == parseInt($ip_count_edit.val());
       });
       // allocate eip dialog end

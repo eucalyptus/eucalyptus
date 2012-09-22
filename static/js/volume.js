@@ -154,9 +154,10 @@
            return dfd.promise();
          }},
        });
-       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
-         var inst = thisObj.attachDialog.find('#volume-attach-instance-selector').val();
-         return inst != '';
+       $instance_id = $attach_dialog.find('#volume-attach-instance-id');
+       $device_name = $attach_dialog.find('#volume-attach-device-name');
+       $attach_dialog.eucadialog('buttonOnKeyup', $device_name, attachButtonId, function () {
+         return $instance_id.val() != '';
        });
 
       // attach dialog end
@@ -205,12 +206,11 @@
        });
        var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');
        var $vol_size_edit = thisObj.addDialog.find('#volume-size');
-
-       this.addDialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
-         return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
+       $add_dialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
+         return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
        }); 
-       this.addDialog.eucadialog('buttonOnChange', $vol_size_edit,  createButtonId, function(){
-         return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
+       $add_dialog.eucadialog('buttonOnKeyup', $vol_size_edit,  createButtonId, function(){
+         return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
        });
        // volume create dialog end
     },
@@ -262,7 +262,9 @@
           this.attachDialog.eucadialog('showError', no_running_instances);
 
         $instanceSelector.autocomplete({
-          source: inst_ids
+          source: inst_ids,
+       // select: function() { console.log('Selected an instance'); }
+       // TODO: add attach button activation/deactivation
         });
         $instanceSelector.watermark(instance_id_watermark);
       }
@@ -279,7 +281,9 @@
         if (vol_ids.length == 0 )
           this.attachDialog.eucadialog('showError', no_available_volume);
         $volumeSelector.autocomplete( {
-          source: vol_ids
+          source: vol_ids,
+       // select: function() { console.log('Selected a volume'); }
+       // TODO: add attach button activation/deactivation
         });
         $volumeSelector.watermark(volume_id_watermark);
       }

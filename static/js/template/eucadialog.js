@@ -324,29 +324,13 @@
           button.prop('disabled',true).addClass('ui-state-disabled');
       });
     },
-  
-    onChange : function(evt_src_id, button_id, checkFunction) {
+      
+    buttonOnKeyup : function(evtSrc, buttonId, checkFunction){
       var thisObj = this;
-      evt_src_id = evt_src_id.replace('#','');
-      var $evt_src = this.element.find('#'+evt_src_id);
-
-      $evt_src.change( function(e){
-         if ( isFunction(checkFunction) ) {
-           checkFunction.call(this);
-         }
-      });
-    },
-
-    onKeypress : function(evt_src_id, button_id, checkFunction) {
-      var thisObj = this;
-      evt_src_id = evt_src_id.replace('#','');
-      button_id = button_id.replace('#','');
-      var $evt_src = this.element.find('#'+evt_src_id);
       var $button = null;
-
-      $evt_src.keypress( function(e){
+      evtSrc.keyup( function(e){
         if( $button==null )
-          $button = thisObj.element.parent().find('#'+button_id);
+          $button = thisObj.element.parent().find('#'+buttonId.replace('#',''));
         if( e.which === RETURN_KEY_CODE || e.which === RETURN_MAC_KEY_CODE ) {
            if ( isFunction(checkFunction) ) {
              if ( checkFunction.call(this) )
@@ -355,7 +339,7 @@
                $button.trigger('click');
            }
         } else if ( e.which === 0 ) {
-        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 1 ) {
+        } else if ( e.which === BACKSPACE_KEY_CODE && $(this).val().length == 0 ) {
           $button.prop("disabled", true).addClass("ui-state-disabled");
         } else {
            if ( isFunction(checkFunction) ) {
@@ -365,6 +349,17 @@
              $button.prop("disabled", false).removeClass("ui-state-disabled");
            }
         }
+      });
+    },
+
+    onChange : function(evt_src_id, button_id, checkFunction) {
+      evt_src_id = evt_src_id.replace('#','');
+      var $evt_src = this.element.find('#'+evt_src_id);
+
+      $evt_src.change( function(e){
+         if ( isFunction(checkFunction) ) {
+           checkFunction.call(this);
+         }
       });
     },
 

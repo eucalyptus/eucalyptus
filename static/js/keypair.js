@@ -110,7 +110,7 @@
         },
         help : { content: $add_help },
       });
-      $add_dialog.eucadialog('onKeypress', 'key-name', createButtonId); 
+      $add_dialog.eucadialog('buttonOnKeyup', $add_dialog.find('#key-name'), createButtonId); 
     },
 
     _destroy : function() {
