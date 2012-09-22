@@ -24,12 +24,12 @@ import java.util.ArrayList;
 
 import java.util.List;
 
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cluster.Clusters;
+
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
@@ -116,7 +116,6 @@ public class DescribeSensorCallback extends
 
 	    List<VmInstance> vmIntList = VmInstances.list();
 	    List<String> uuidList = new ArrayList<String>();
-
 	    for (VmInstance vmInt : vmIntList) {
 		if (vmInt.getState().equals(VmState.RUNNING)) {
 		    uuidList.add(vmInt.getInstanceUuid());
@@ -132,27 +131,30 @@ public class DescribeSensorCallback extends
 		resourceName = sensorData.getResourceName();
 		resourceUuid = sensorData.getResourceUuid();
 
-		for (MetricsResourceType metricType : sensorData.getMetrics()) {
-		    metricName = metricType.getMetricName();
+		if (uuidList.contains(resourceUuid)) {
 
-		    for (MetricCounterType counterType : metricType
-			    .getCounters()) {
-			sequenceNum = Integer.parseInt(counterType
-				.getSequenceNum().toString());
+		    for (MetricsResourceType metricType : sensorData
+			    .getMetrics()) {
+			metricName = metricType.getMetricName();
 
-			for (MetricDimensionsType dimensionType : counterType
-				.getDimensions()) {
+			for (MetricCounterType counterType : metricType
+				.getCounters()) {
+			    sequenceNum = Integer.parseInt(counterType
+				    .getSequenceNum().toString());
 
-			    dimensionName = dimensionType.getDimensionName();
+			    for (MetricDimensionsType dimensionType : counterType
+				    .getDimensions()) {
 
-			    for (MetricDimensionsValuesType valueType : dimensionType
-				    .getValues()) {
+				dimensionName = dimensionType
+					.getDimensionName();
 
-				value = valueType.getValue();
-				valueDatestamp = valueType.getTimestamp()
-					.getTime();
+				for (MetricDimensionsValuesType valueType : dimensionType
+					.getValues()) {
 
-				if (uuidList.contains(resourceUuid)) {
+				    value = valueType.getValue();
+				    valueDatestamp = valueType.getTimestamp()
+					    .getTime();
+
 				    fireUsageEvent(new com.eucalyptus.reporting.event.InstanceUsageEvent(
 					    resourceUuid,
 					    System.currentTimeMillis(),
@@ -170,6 +172,7 @@ public class DescribeSensorCallback extends
 	    LOG.debug("Unable to fire describe sensors call back", ex);
 
 	}
+
     }
 
     private void fireUsageEvent(InstanceUsageEvent instanceUsageEvent) {
