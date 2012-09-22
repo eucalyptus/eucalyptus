@@ -137,7 +137,7 @@
         },
         filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
-        legend : ['running','pending','stopping','stopped','shutting down','terminated']
+        legend : ['running','pending','stopping','stopped','shutting-down','terminated']
       }) //end of eucatable
       
       thisObj.tableWrapper.appendTo(thisObj.element);

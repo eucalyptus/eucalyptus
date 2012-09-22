@@ -200,12 +200,12 @@
                  <option value="all">{{!>dashboard_az_all}}</option>
                </select>
               </div>
-              <div id="dashboard-instance-running" class="status-running clearfix">
+              <div id="dashboard-instance-running" class="db-instances-running clearfix">
                 <div class="status-readout">
                   <span></span> {{!>dashboard_instance_running}}
                 </div>
               </div>
-              <div id="dashboard-instance-stopped" class="status-stopped clearfix">
+              <div id="dashboard-instance-stopped" class="db-instances-stopped clearfix">
                 <div class="status-readout">
                   <span></span> {{!>dashboard_instance_stopped}}
                 </div>
@@ -286,7 +286,7 @@
         <div id="keys-add-dialog-wrapper">
           <div id="keys-add-dialog" class="add-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: keypair_dialog_add_text }}</p>
+              {{!: keypair_dialog_add_text }}
               <div class="form-row">
                 <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
                 <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_create_flh_name }}"/>
@@ -309,7 +309,7 @@
         <div id="keys-euca-dialog-wrapper">
           <div id="keys-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: keypair_dialog_del_text }}</p>
+              {{!: keypair_dialog_del_text }}
               <div class="selected-resources"></div>
             </div>
           </div>

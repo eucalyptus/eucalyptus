@@ -426,40 +426,30 @@ a:hover {
 .notification-box {
   display: none;
   position: absolute;
-  background-color: #fff;
-  border: 1px solid #aaabab;
+  width: 960px;
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
   font-family: 'PlayRegular', Arial, sans-serif;
   text-align: center;
-  width: 960px;
+  border: 2px solid #aaabab;
+  background-color: #fff;
 
-  -webkit-border-radius: 2px;
-  -moz-border-radius: 2px;
   border-radius: 2px;
 
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 .success-msg {
   border: 2px solid #aac684;
   background-color: #E7FFC6;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 .error-msg {
   border: 2px solid #efa4a4;
   background-color: #fedddf;  
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 #euca-notification-title {
@@ -476,7 +466,7 @@ a:hover {
   position: relative;
   top: -7px;
   left: -10px;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -230px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -270px;
   width: 16px;
   height: 16px;
   text-decoration: none;
@@ -703,7 +693,7 @@ a:hover {
   position: absolute;
   top: 14px;
   left: -8px;
-  padding: 6px 8px;
+  padding: 6px 8px 4px;
   width: 100%;
 
   -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
@@ -830,19 +820,19 @@ a:hover {
   width: 190px;
 }
 
-.status-running,
-.status-stopped {
+.db-instances-running,
+.db-instances-stopped {
   float: left;
   background: transparent url(../images/css-sprites.png) no-repeat left -200px;
   margin-top: 10px;
 }
 
-.status-stopped {
+.db-instances-stopped {
   background-position: left -260px;
 }
 
-.status-running .status-readout,
-.status-stopped .status-readout {
+.db-instances-running .status-readout,
+.db-instances-stopped .status-readout {
   margin: 5px 0 5px 32px;
 }
 
@@ -987,6 +977,50 @@ tr.selected-row td.sorting_1
   background-color: #f1ffe3;
 }
 
+/* ======= Expanded rows of the jQuery tables ======= */
+
+.twist {
+  background-color: cyan;
+}
+.twist.expanded {
+    /* TODO: Add arrow image */ 
+  background-color: yellow;
+}
+
+.expanded {}
+
+.expanded ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  clear: left;
+}
+
+.expanded ul li {
+  float: left;
+  width: 100px;
+  margin: 0;
+  background-color: wheat;
+}
+
+.expanded ul li:last-child {
+  width: 200px;
+}
+
+.expanded-value {
+  padding: 2px 4px;
+  background-color: paleturquoise;
+}
+
+.expanded-title {
+  padding: 2px 4px;
+  background-color: palegreen;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  color: #02405f;
+}
+
+
+
 /* ======= Help page related ===== */
 
 .help-page-wrapper {
@@ -1011,7 +1045,7 @@ tr.selected-row td.sorting_1
 .help-return,
 .help-euca {
   float: right;
-  height: 16px;
+  /*height: 16px;*/
   margin: 3px 20px 0 0;
 }
 
@@ -1019,8 +1053,8 @@ tr.selected-row td.sorting_1
 .help-return a,
 .help-euca a {
   display: inline-block;
-  height: 18px; /* To match the height of the optional header text */
-  width: 16px;
+  height: 20px; /* To match the height of the optional header text */
+  width: 23px;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
   text-indent: 100%;
   white-space: nowrap;
@@ -1028,7 +1062,7 @@ tr.selected-row td.sorting_1
 }
 
 .help-return a {
-  background-position: left -170px;
+  background-position: left -180px;
 }
 
 .help-euca a {
@@ -1078,7 +1112,7 @@ tr.selected-row td.sorting_1
 
 .dataTables_filter input {
   /* This element shares styling with .input-field */
-  background: transparent url(../images/css-sprites-small.png) no-repeat right -250px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat right -294px;
   margin-left: 3px;
 }
 
@@ -1090,7 +1124,7 @@ tr.selected-row td.sorting_1
   font-size: 12px;
   line-height: 27px;
   color: #73a434;
-  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -190px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -236px;
   text-decoration: none;
 }
 
@@ -1260,7 +1294,7 @@ tr.selected-row td.sorting_1
 .legend-item {
   display: inline-block;
   margin-left: 15px;
-  padding-left: 22px;
+  padding-left: 23px;
   font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 11px;
   color: #02405f;
@@ -1270,7 +1304,7 @@ tr.selected-row td.sorting_1
 
 .table-row-status {
   height: 26px;
-  width: 18px;
+  width: 19px;
   margin: 0 auto;
   background: transparent url(../images/css-sprites-small.png) no-repeat left 100px;
 }
@@ -1282,58 +1316,87 @@ tr.selected-row td.sorting_1
 }
 
 
-/*  Legend icons */
+/*  Legend & Status icons */
 
 .legend-creating,
-.status-creating {
-  background-position: left -310px;
+.legend-pending {
+  background-position: left -324px;
+}
+
+.status-creating,
+.status-pending {
+  background-position: left -325px;
 }
 
 .legend-available,
-.status-available {
-  background-position: left -280px;
+.legend-running,
+.legend-completed {
+  background-position: left -355px;
 }
 
-.legend-in-use,
+.status-available,
+.status-running,
+.status-completed {
+  background-position: left -356px;
+}
+
+.legend-in-use {
+  background-position: left -385px;
+}
+
 .status-in-use {
-  background-position: left -340px;
+  background-position: left -386px;
+}
+
+.legend-stopping {
+  background-position: left -415px;
+}
+
+.status-stopping {
+  background-position: left -416px; 
+}
+
+.legend-stopped {
+  background-position: left -445px;
+}
+
+.status-stopped {
+  background-position: left -446px; 
 }
 
 .legend-deleting,
-.status-deleting {
-  background-position: left -370px;
+.legend-terminating,
+.legend-shutting-down {
+  background-position: left -475px;
+}
+
+.status-deleting,
+.status-terminating,
+.status-shutting-down {
+  background-position: left -476px;
 }
 
 .legend-deleted,
-.status-deleted {
-  background-position: left -430px;
+.legend-terminated {
+  background-position: left -505px;
 }
 
+.status-deleted,
+.status-terminated {
+  background-position: left -506px;
+}
+
+/* Rename class as '-failed' in code to match label text */
 .legend-error,
-.status-error {
-  background-position: left -400px;
+.legend-failed {
+  background-position: left -535px;
 }
 
-/*  Legend icons - Snapshot status */
-
-.legend-pending,
-.status-pending {
-  background-position: left -310px;
-}
-
-.legend-completed,
-.status-completed {
-  background-position: left -280px;
-}
-
-/* Legend icons - Images status */
-
-.legend-failed,
+.status-error,
 .status-failed {
-  background-position: left -400px;
+  background-position: left -536px;
 }
 
-/* Legend icons - Instances status */
 
 /* == Pagination == */
 
@@ -1741,24 +1804,7 @@ li.disabled a {
   color: gray;
   text-decoration: none;
 }
-.expanded ul{
-    margin: 0 auto;
-    padding: 0;
-    clear: left;
-}
-.expanded ul li{
-    text-align: left;
-    float: left;
-    list-style: none;
-    padding: 1px 1px;
-    margin: 1px;
-}
-div.twist{
-}
-div.twist.expanded {
-    /* arrow  */ 
-    background : yellow;
-}
+
 
 /* END Sang-min */
 /* Vasya: temporary styling. Style me. Move me! */
