@@ -129,6 +129,10 @@
         thisObj._selectedSection.slideToggle('fast');
         imgSection.slideToggle('fast');
         thisObj._selectedSection = imgSection;
+        $header.addClass('expanded');
+        thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
       }));
     },
     _enableTypeLink : function() {
@@ -140,6 +144,10 @@
         thisObj._selectedSection.slideToggle('fast');
         typeSection.slideToggle('fast');
         thisObj._selectedSection = typeSection;
+        $header.addClass('expanded');
+        thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
       }));
     },
     _enableSecurityLink : function() {
@@ -151,6 +159,10 @@
         thisObj._selectedSection.slideToggle('fast');
         secSection.slideToggle('fast');
         thisObj._selectedSection = secSection;
+        $header.addClass('expanded');
+        thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
       }));
     },
     _enableAdvancedLink : function (){
@@ -162,6 +174,10 @@
         thisObj._selectedSection.slideToggle('fast');
         advSection.slideToggle('fast');
         thisObj._selectedSection = advSection;
+        $header.addClass('expanded');
+        thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+        thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       }));
     },
     _makeSectionButton : function($launcher) {
@@ -257,7 +273,10 @@
               var imgName = $selectedRow.find('.image-name').first().html();
               var emi = $selectedRow.find('.image-id-arch').children().first().text();
               thisObj.launchParam['emi'] = emi;
-              $summary =  $('<div>').addClass(imgClass).addClass('summary').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(imgName));
+              $summary =  $('<div>').addClass(imgClass).addClass('summary').append(
+                            $('<div>').text(launch_instance_summary_image), $('<span>').text(emi),
+                            $('<div>').text(launch_instance_summary_platform), $('<span>').text(imgName)
+                          );
               thisObj._setSummary('image', $summary);
             });
           }
@@ -418,6 +437,10 @@
     },
     _initImageSection : function(){ 
       this._enableImageLink();
+      thisObj.element.find('#launch-wizard-image-header').addClass('expanded');
+      thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
     },
    
     _makeTypeSection : function($section){
@@ -532,6 +555,10 @@
         this.element.find('#launch-wizard-type').find('input#launch-instance-type-num-instance').val('1').trigger('change');
         this.element.find('#launch-wizard-type').find('select#launch-instance-type-az').trigger('change');
       }
+      thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-type-header').addClass('expanded');
+      thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
       thisObj._enableTypeLink();
     },
 
@@ -554,7 +581,7 @@
       var populateKeypair = function(){
         var $kp_selector = $keypair.find('select');
         var results = describe('keypair');
-        var numOptions = $kp_selector.find('option').length;
+        var numOptions = $kp_selector.find('option').length - 1; // none is always appended
         if (numOptions === results.length)
           return;
         $kp_selector.children().detach();
@@ -562,6 +589,7 @@
           var kpName = results[res].name;
           $kp_selector.append($('<option>').attr('value', kpName).text(kpName));
         }
+        $kp_selector.append($('<option>').attr('value', 'none').text(launch_instance_security_keypair_none));
         $kp_selector.change(function(e){
           var $summary = summarize(); 
           thisObj._setSummary('security', $summary.clone().children()); 
@@ -648,7 +676,8 @@
           addKeypair( function(){ 
             var numKeypairs = $section.find('#launch-wizard-security-keypair-selector').find('option').length;
             refresh('keypair'); 
-            thisObj._keypairCallback = runRepeat(function(){ populateKeypair(); 
+            thisObj._keypairCallback = runRepeat(function(){
+              populateKeypair(); 
               if($section.find('#launch-wizard-security-keypair-selector').find('option').length  > numKeypairs){
                 cancelRepeat(thisObj._keypairCallback);
               }
@@ -668,7 +697,8 @@
           addGroup( function() {
             var numGroups = $section.find('#launch-wizard-security-sg-selector').find('option').length;
             refresh('sgroup');
-            thisObj._sgCallback = runRepeat(function(){ populateSGroup();
+            thisObj._sgCallback = runRepeat(function(){ 
+              populateSGroup();
               if($section.find('#launch-wizard-security-sg-selector').find('option').length > numGroups){
                 cancelRepeat(thisObj._sgCallback);
               }  
@@ -707,6 +737,10 @@
         thisObj.element.find('#launch-wizard-security').find('select#launch-wizard-security-keypair-selector').trigger('change');
         thisObj.element.find('#launch-wizard-security').find('select#launch-wizard-security-sg-selector').trigger('change');
       }
+      thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-security-header').addClass('expanded');
+      thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
     },
 
     _makeAdvancedSection : function($section) { 
@@ -1094,6 +1128,10 @@
       var thisObj = this;
       thisObj._enableAdvancedLink();
       thisObj.element.find('#launch-wizard-advanced').find('input#launch-wizard-advanced-input-userdata').trigger('change');
+      thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-advanced-header').addClass('expanded');
     },
     _setSummary : function(section, content){
       var thisObj = this;
@@ -1133,7 +1171,9 @@
       if(param['zone'].toLowerCase() !== 'any')
         reqParam.push({name: 'Placement.AvailabilityZone', value: param['zone']});
       reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
-      reqParam.push({name: 'KeyName', value: param['keypair']});
+      if (param['keypair'] !== 'none')
+        reqParam.push({name: 'KeyName', value: param['keypair']});
+
       if(param['kernel'] && param['kernel'].length > 0)
         reqParam.push({name: 'KernelId', value: param['kernel']});
       if(param['ramdisk'] && param['ramdisk'].length > 0)
