@@ -19,23 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.util.Set;
 import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.entities.AbstractPersistent;
-
-@SuppressWarnings("serial")
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_instance_usage_events")
 public class ReportingInstanceUsageEvent
-	extends AbstractPersistent 
+	extends ReportingEventSupport
 {
+	private static final long serialVersionUID = 1L;
+
 	@Column(name="uuid", nullable=false)
 	protected String uuid;
-	@Column(name="timestamp_ms", nullable=false)
-	protected Long timestampMs;
 	@Column(name="cumulative_net_incoming_megs_within_zone", nullable=true)
 	protected Long cumulativeNetIncomingMegsWithinZone;
 	@Column(name="cumulative_net_incoming_megs_between_zones", nullable=true)
@@ -56,17 +54,6 @@ public class ReportingInstanceUsageEvent
 
 	protected ReportingInstanceUsageEvent()
 	{
-		//hibernate will override these thru reflection despite finality
-		this.uuid = null;
-		this.timestampMs = null;
-		this.cumulativeNetIncomingMegsBetweenZones = null;
-		this.cumulativeNetIncomingMegsWithinZone = null;
-		this.cumulativeNetIncomingMegsPublic = null;
-		this.cumulativeNetOutgoingMegsBetweenZones = null;
-		this.cumulativeNetOutgoingMegsWithinZone = null;
-		this.cumulativeNetOutgoingMegsPublic = null;
-		this.cumulativeDiskIoMegs = null;
-		this.cpuUtilizationPercent = null;
 	}
 
 	ReportingInstanceUsageEvent(String uuid, Long timestampMs, Long cumulativeDiskIoMegs,
@@ -95,12 +82,6 @@ public class ReportingInstanceUsageEvent
 	{
 		return uuid;
 	}
-	
-	public Long getTimestampMs()
-	{
-		return timestampMs;
-	}
-	
 	
 	/**
 	 * @return Can return null, which indicates unknown usage and not zero usage.
@@ -165,6 +146,13 @@ public class ReportingInstanceUsageEvent
 	public Integer getCpuUtilizationPercent()
 	{
 		return cpuUtilizationPercent;
+	}
+
+	@Override
+	public Set<EventDependency> getDependencies() {
+		return withDependencies()
+				.relation( ReportingInstanceCreateEvent.class, "uuid", uuid )
+				.set();
 	}
 
 	@Override

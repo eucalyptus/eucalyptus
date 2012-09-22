@@ -139,7 +139,7 @@ int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *v
     return doCreateImage (meta, instanceId, volumeId, remoteDev);
 }
 
-int ncDescribeSensorsStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+int ncDescribeSensorsStub (ncStub *stub, ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
-  return doDescribeSensors (meta, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+  return doDescribeSensors (meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
 }

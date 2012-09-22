@@ -63,8 +63,14 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.ComponentId.PublicService;
 import com.eucalyptus.empyrean.Empyrean;
 
+@PublicService
 @Partition( Empyrean.class )
-public class Reporting extends ComponentId {}
+@FaultLogPrefix( "cloud" )
+public class Reporting extends ComponentId {
+  private static final long serialVersionUID = 1L;
+}

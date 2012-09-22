@@ -138,13 +138,13 @@ public class LoggingResetter {
 			LOG.info("Finished resetting log levels");
 		} catch (IOException ex) { // nothing we can really do here...
 			LOG.error(ex);
-			LOG.info("Unable to reset log levels");
+			LOG.warn("Unable to reset log levels");
 		} catch (ParserConfigurationException ex) { // nothing we can really do here...
 			LOG.error(ex);
-			LOG.info("Unable to reset log levels");
+			LOG.warn("Unable to reset log levels");
 		} catch (SAXException ex) { // nothing we can really do here...
 			LOG.error(ex);
-			LOG.info("Unable to reset log levels");
+			LOG.warn("Unable to reset log levels");
 		} finally {
 			if (in != null) {
 				try {
@@ -163,10 +163,10 @@ public class LoggingResetter {
 		}
 		Level level = smallLoggingConfiguration.rootLogLevel; 
 		if (level != null) {
-			LOG.info("Resetting root logger level to " + level);
+			LOG.debug("Resetting root logger level to " + level);
 			rootLogger.setLevel(level);
 		} else {
-			LOG.info("Root logger level unspecified, leaving as is.");
+			LOG.debug("Root logger level unspecified, leaving as is.");
 		}
 		Enumeration appenders = rootLogger.getAllAppenders();
 		while (appenders.hasMoreElements()) {
@@ -185,10 +185,10 @@ public class LoggingResetter {
 		}
 		Level level = smallLoggingConfiguration.loggerLoggingLevels.get(name);
 		if (level != null) {
-			LOG.info("Resetting logger " + name + " level to " + level);
+			LOG.debug("Resetting logger " + name + " level to " + level);
 			logger.setLevel(level);
 		} else {
-			LOG.info("Logger " + name + " level unspecified, leaving as is.");
+			LOG.debug("Logger " + name + " level unspecified, leaving as is.");
 		}
 		Enumeration appenders = logger.getAllAppenders();
 		while (appenders.hasMoreElements()) {
@@ -208,13 +208,13 @@ public class LoggingResetter {
 		Level level = smallLoggingConfiguration.appenderThresholdLevels.get(name);
 		if (!(appender instanceof AppenderSkeleton)) {
 			// TODO: set via reflection?
-			LOG.info("Unable to set threshold of appender " + name + ", class " + appender.getClass() + " not an AppenderSkeletion");
+			LOG.debug("Unable to set threshold of appender " + name + ", class " + appender.getClass() + " not an AppenderSkeletion");
 		}
 		if (level != null) {
-			LOG.info("Resetting appender threshold " + name + " level to " + level);
+			LOG.debug("Resetting appender threshold " + name + " level to " + level);
 			((AppenderSkeleton) appender).setThreshold(level);
 		} else {
-			LOG.info("Appender " + name + " threshold unspecified, leaving as is.");
+			LOG.debug("Appender " + name + " threshold unspecified, leaving as is.");
 		}
 	}
 

@@ -120,6 +120,9 @@ import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.cloud.BucketNotEmptyException;
 import edu.ucsb.eucalyptus.cloud.ContentMismatchException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
+import edu.ucsb.eucalyptus.cloud.HeadAccessDeniedException;
+import edu.ucsb.eucalyptus.cloud.HeadNoSuchBucketException;
+import edu.ucsb.eucalyptus.cloud.HeadNoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.InlineDataTooLargeException;
 import edu.ucsb.eucalyptus.cloud.InvalidBucketNameException;
 import edu.ucsb.eucalyptus.cloud.InvalidRangeException;
@@ -2345,6 +2348,11 @@ public class WalrusManager {
 		if (getMetaData == null) {
 			getMetaData = false;
 		}
+		
+		Boolean getData = request.getGetData();
+		if(getData == null){
+			getData = false;
+		}
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -2537,19 +2545,33 @@ public class WalrusManager {
 					return reply;
 				} else {
 					//Permissions not sufficient
+					//Fix for EUCA-2782. Different exceptions are thrown based on the request type so that the downstream logic can differentiate
 					db.rollback();
-					throw new AccessDeniedException("Key", objectKey, logData);
+					if (getData) {
+						throw new AccessDeniedException("Key", objectKey, logData);
+					} else {
+						throw new HeadAccessDeniedException("Key", objectKey, logData);
+					}
 				}
 			} else {
 				//Key not found
+				//Fix for EUCA-2782. Different exceptions are thrown based on the request type so that the downstream logic can differentiate
 				db.rollback();
-				//throw new AccessDeniedException("Key", objectKey, logData);
-				throw new NoSuchEntityException(objectKey);
+				if (getData) {
+					throw new NoSuchEntityException(objectKey);
+				} else {
+					throw new HeadNoSuchEntityException(objectKey);
+				}
 			}
 		} else {
 			//Bucket doesn't exist
+			//Fix for EUCA-2782. Different exceptions are thrown based on the request type so that the downstream logic can differentiate
 			db.rollback();
-			throw new NoSuchBucketException(bucketName);
+			if (getData) {
+				throw new NoSuchBucketException(bucketName);
+			} else {
+				throw new HeadNoSuchBucketException(bucketName);
+			}
 		}
 	}
 
@@ -2566,6 +2588,11 @@ public class WalrusManager {
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
 		Status status = new Status();
+		
+		Boolean getData = request.getGetData();
+		if(getData == null){
+			getData = false;
+		}
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -2708,15 +2735,30 @@ public class WalrusManager {
 							}
 						} else {
 							db.rollback();
-							throw new AccessDeniedException("Key", objectKey, logData);
+							//Fix for EUCA-2782. Different exceptions are thrown based on the request type so that the downstream logic can differentiate
+							if (getData) {
+								throw new AccessDeniedException("Key", objectKey, logData);
+							} else {
+								throw new HeadAccessDeniedException("Key", objectKey, logData);
+							}
 						}
 					} else {
 						db.rollback();
-						throw new AccessDeniedException("Key", objectKey, logData);
+						//Fix for EUCA-2782. Different exceptions are thrown based on the request type so that the downstream logic can differentiate
+						if (getData) {
+							throw new NoSuchEntityException(objectKey);
+						} else {
+							throw new HeadNoSuchEntityException(objectKey);
+						}
 					}
 		} else {
 			db.rollback();
-			throw new NoSuchBucketException(bucketName);
+			//Fix for EUCA-2782. Different exceptions are thrown based on the request type so that the downstream logic can differentiate
+			if (getData) {
+				throw new NoSuchBucketException(bucketName);
+			} else {
+				throw new HeadNoSuchBucketException(bucketName);
+			}
 		}
 	}
 

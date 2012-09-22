@@ -135,7 +135,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
     private int runProcess( List<String> args ) {
         PrintStream outstream = null
         PrintStream errstream = null
-        LOG.debug("Postgres 9.1 command : " + args.toString( ) )
+        LOG.debug("Postgres 9.X command : " + args.toString( ) )
         try {
             ProcessBuilder pb = new ProcessBuilder(args)
             Process p = pb.start()
@@ -259,11 +259,12 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
         }
     }
 
-    // Version check to ensure only Postgres 9.1.X creates the db.
+    // Version check to ensure only Postgres 9.X creates the db.
     private boolean versionCheck( ) {
         try {
             String cmd = PG_INITDB + " --version"
-            return cmd.execute( ).text.contains("9.1")
+            def pattern = ~/.*\s+9\.[1-9]\d*(\.\d+)*$/
+            return pattern.matcher( cmd.execute( ).text.trim( ) ).matches( )
         } catch ( Exception e ) {
             LOG.fatal("Unable to find the initdb command")
             return false
@@ -340,6 +341,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             final Map<String,String> requiredProperties = [
                     max_connections: '8192',
                     unix_socket_directory: "'" + SubDirectory.DB.getChildPath( EUCA_DB_DIR ) + "'",
+                    unix_socket_directories: "'" + SubDirectory.DB.getChildPath( EUCA_DB_DIR ) + "'",
                     ssl: PG_USE_SSL ? 'on' : 'off',
                     ssl_ciphers: '\'AES128-SHA:AES256-SHA\''
             ]
@@ -627,7 +629,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 
     @Override
     public String getServicePath( String... pathParts ) {
-        return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus"
+        return pathParts != null && pathParts.length > 0 ? Joiner.on("/"). join((List) pathParts) : "eucalyptus"
     }
 
     @Override

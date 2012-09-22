@@ -68,6 +68,8 @@
 #include <cc-client-marshal.h>
 #include <sensor.h>
 
+#include <eucalyptus.h>
+
 #ifndef MODE
 #define MODE 0
 #endif
@@ -106,12 +108,10 @@ int main(int argc, char **argv) {
   
   euca_home = getenv("EUCALYPTUS");
   if (!euca_home) {
-    snprintf(configFile, 1024, "/etc/eucalyptus/eucalyptus.conf");
-    snprintf(policyFile, 1024, "/var/lib/eucalyptus/keys/cc-client-policy.xml");
-  } else {
-    snprintf(configFile, 1024, "%s/etc/eucalyptus/eucalyptus.conf", euca_home);
-    snprintf(policyFile, 1024, "%s/var/lib/eucalyptus/keys/cc-client-policy.xml", euca_home);
+    euca_home = "";
   }
+  snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
+  snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/cc-client-policy.xml", euca_home);
 
   rc = get_conf_var(configFile, "CC_PORT", &tmpstr);
   if (rc != 1) {
@@ -366,7 +366,7 @@ int main(int argc, char **argv) {
         sensorResource ** res;
         int resSize;
 
-	rc = cc_describeSensors(NULL, 0, NULL, 0, &res, &resSize, env, stub);
+	rc = cc_describeSensors(20, 5000, NULL, 0, NULL, 0, &res, &resSize, env, stub);
         if (rc != 0) {
 	  printf("cc_describeSensors() failed: error=%d\n", rc);
 	  exit(1);
@@ -374,6 +374,9 @@ int main(int argc, char **argv) {
         char buf [10240];
         sensor_res2str (buf, sizeof(buf), res, resSize);
         printf ("resources: %d\n%s\n", resSize, buf);
+    } else {
+      printf("unrecognized operation '%s'\n", argv[2]);
+      exit(1);
     }
   }
   

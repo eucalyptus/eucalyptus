@@ -71,16 +71,13 @@ import javax.crypto.Cipher;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.StorageProperties;
+import com.eucalyptus.crypto.Ciphers;
 
 public class BlockStorageUtil {
 	private static Logger LOG = Logger.getLogger(BlockStorageUtil.class);
@@ -94,7 +91,7 @@ public class BlockStorageUtil {
       } else {
         ServiceConfiguration clusterConfig = clusterList.get( 0 );
         PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        Cipher cipher = Ciphers.RSA_PKCS1.get();
         cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
         return new String(Base64.encode(cipher.doFinal(password.getBytes())));
       }
@@ -108,7 +105,7 @@ public class BlockStorageUtil {
 		PublicKey scPublicKey = SystemCredentials.lookup(Storage.class).getKeyPair().getPublic();
 		Cipher cipher;
 		try {
-			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher = Ciphers.RSA_PKCS1.get();
 			cipher.init(Cipher.ENCRYPT_MODE, scPublicKey);
 			return new String(Base64.encode(cipher.doFinal(password.getBytes())));	      
 		} catch (Exception e) {
@@ -120,7 +117,7 @@ public class BlockStorageUtil {
 	public static String decryptSCTargetPassword(String encryptedPassword) throws EucalyptusCloudException {
 		PrivateKey scPrivateKey = SystemCredentials.lookup(Storage.class).getPrivateKey();
 		try {
-			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			Cipher cipher = Ciphers.RSA_PKCS1.get();
 			cipher.init(Cipher.DECRYPT_MODE, scPrivateKey);
 			return new String(cipher.doFinal(Base64.decode(encryptedPassword)));
 		} catch(Exception ex) {

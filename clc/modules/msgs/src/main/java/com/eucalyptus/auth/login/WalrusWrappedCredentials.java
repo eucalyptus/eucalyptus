@@ -62,22 +62,35 @@
 
 package com.eucalyptus.auth.login;
 
+import javax.annotation.Nullable;
+
 public class WalrusWrappedCredentials extends WrappedCredentials<String> {
-	private String queryId;
-	private String signature;
+  private final String queryId;
+  private final String signature;
+  private final String securityToken;
 
-	public WalrusWrappedCredentials(String correlationId, String data,
-			String accessKeyId, String signature) {
-		super( correlationId, data );
-		this.queryId = accessKeyId;
-		this.signature = signature;
-	}
+  public WalrusWrappedCredentials(
+      final String correlationId,
+      final String data,
+      final String accessKeyId,
+      final String signature,
+      final String securityToken ) {
+    super( correlationId, data );
+    this.queryId = accessKeyId;
+    this.signature = signature;
+    this.securityToken = securityToken;
+  }
 
-	public String getQueryId() {
-		return this.queryId;
-	}
+  public String getQueryId() {
+    return this.queryId;
+  }
 
-	public String getSignature() {
-		return this.signature;
-	}
+  public String getSignature() {
+    return this.signature;
+  }
+
+  @Nullable
+  public String getSecurityToken() {
+    return securityToken;
+  }
 }

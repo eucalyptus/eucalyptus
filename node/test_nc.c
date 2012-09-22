@@ -96,7 +96,7 @@ static char* find_conf_value(const char* eucahome, const char* param)
     if (!eucahome || !param)
         return NULL;
     
-    snprintf (conf_path, 1024, "%s/etc/eucalyptus/eucalyptus.conf", eucahome); 
+    snprintf (conf_path, 1024, EUCALYPTUS_CONF_LOCATION, eucahome); 
     f_conf = fopen (conf_path, "r");
     if (!f_conf){ 
     	return NULL;
@@ -221,9 +221,9 @@ int main (int argc, char * argv[])
     // ensure hypervisor information is available
     fprintf (stderr, "ok\n\nchecking the hypervisor...\n");
     if (!strcmp(hypervisor, "kvm")) {
-        snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_sys_info", eucahome, eucahome);
+        snprintf(cmd, 1024, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_sys_info", eucahome, eucahome);
     } else {
-        snprintf(cmd, 1024, "%s/usr/lib/eucalyptus/euca_rootwrap %s/usr/share/eucalyptus/get_xen_info", eucahome, eucahome);
+        snprintf(cmd, 1024, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_xen_info", eucahome, eucahome);
     }
     if (system(cmd)) {
         fprintf (stderr, "error: could not run '%s'\n", cmd);

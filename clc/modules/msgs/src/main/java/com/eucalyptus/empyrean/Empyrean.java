@@ -70,6 +70,7 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.AdminService;
+import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -81,6 +82,7 @@ import com.google.common.base.Predicate;
 @Partition( Empyrean.class )
 @GenerateKeys
 @AdminService
+@FaultLogPrefix( "cloud" )
 public class Empyrean extends ComponentId {
   private static final long    serialVersionUID = 1L;
   private static Logger        LOG              = Logger.getLogger( Empyrean.class );
@@ -88,6 +90,7 @@ public class Empyrean extends ComponentId {
                                                                                       
   @Partition( value = { Empyrean.class },
               manyToOne = true )
+  @FaultLogPrefix( "cloud" )
 //  @InternalService
   public static class Arbitrator extends ComponentId {
 
@@ -100,6 +103,7 @@ public class Empyrean extends ComponentId {
   
   @Partition( Empyrean.class )
   @AdminService
+  @FaultLogPrefix( "cloud" )
   public static class PropertiesService extends ComponentId {
     
     private static final long serialVersionUID = 1L;

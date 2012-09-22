@@ -61,15 +61,16 @@
   -->
 
 <project name="eucalyptus-reporting" basedir=".">
-    <import file="../module-inc.xml"/>
-	<target name="build-csvchecker-jar" depends="builder-test">
-		<echo message="${build.dir}"/>
-		<jar destfile="${build.dir}/CsvChecker.jar"
-			baseDir="${build.dir}"
-			includes="com/eucalyptus/reporting/CsvCheck*.class">
-			<manifest>
-				<attribute name="Main-Class" value="com.eucalyptus.reporting.CsvChecker"/>
-			</manifest>
-		</jar>
-	</target>
+  <property name="builder.suffix" value="groovy" />
+  <import file="../module-inc.xml"/>
+  <target name="build-csvchecker-jar" depends="builder-test">
+    <echo message="${build.dir}"/>
+    <jar destfile="${build.dir}/CsvChecker.jar"
+         baseDir="${build.dir}"
+         includes="com/eucalyptus/reporting/CsvCheck*.class">
+      <manifest>
+        <attribute name="Main-Class" value="com.eucalyptus.reporting.CsvChecker"/>
+      </manifest>
+    </jar>
+  </target>
 </project>

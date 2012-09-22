@@ -36,7 +36,7 @@
  * argv[0] (program_invocation_shortname).
  *
  * Strictly speaking, an application does not need to call this
- * initialization function, as log_eucafault() and log_eucafault_v()
+ * initialization function, as log_eucafault_map() and log_eucafault()
  * also call it and try to determine a filename prefix based upon
  * process name. However, calling this during application startup will
  * ensure the fault-reporting system is properly initialized prior to
@@ -51,20 +51,21 @@
 extern int init_eucafaults (char *);
 
 /*
- * Usage: log_eucafault (FAULT_ID, parameter_map)
+ * Usage: log_eucafault_map (FAULT_ID, parameter_map)
  *
  * ...where the parameter map is a set of param/paramText key/value
- * pairs in struct form as defined in wc.h.
+ * pairs in struct form as defined in wc.h and assembled using
+ * c_varmap_alloc().
  *
  * Will call init_eucafaults() internally to ensure fault registry has
  * been loaded.
  *
  * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
-extern boolean log_eucafault (const char *, const char_map **);
+extern boolean log_eucafault_map (const char *, const char_map **);
 
 /*
- * Usage: log_eucafault_v (FAULT_ID, param1, param1text, param2, param2text,
+ * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text,
  *                         ..., NULL)
  *
  * ...where the text of each named parameter will replace that parameter
@@ -77,9 +78,9 @@ extern boolean log_eucafault (const char *, const char_map **);
  * been loaded.
  *
  * Returns the number of substitution parameters it was called with,
- * returning it as a negative number if the underlying log_eucafault()
- * call returned FALSE.
+ * returning it as a negative number if the underlying
+ * log_eucafault_map() call returned FALSE.
  */
-extern int log_eucafault_v (const char *, ...);
+extern int log_eucafault (const char *, ...);
 
 #endif // INCLUDE_FAULT_H

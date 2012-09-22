@@ -54,9 +54,7 @@
  * FIXME: Make some or all of them configuration-file options?
  * FIXME: Make paths relative to some configurable base directory?
  */
-#define FAULTLOGDIR "/var/log/eucalyptus"
-#define DISTRO_FAULTDIR "/usr/share/eucalyptus/faults"
-#define CUSTOM_FAULTDIR "/etc/eucalyptus/faults"
+#define FAULT_LOGFILE_SUFFIX "-fault.log"
 #define DEFAULT_LOCALIZATION "en_US"
 #define LOCALIZATION_ENV_VAR "LOCALE"
 #define XML_SUFFIX ".xml"
@@ -122,6 +120,13 @@ static pthread_mutex_t fault_mutex = PTHREAD_MUTEX_INITIALIZER;
 // base install directory ($EUCALYPTUS) or '\0' if root
 static char euca_base [PATH_MAX] = "";
 
+// Linked list of faults being deliberately suppressed.
+struct suppress_list {
+    char *id;
+    struct suppress_list *next;
+};
+static struct suppress_list *suppressed = NULL;
+
 /*
  * Function prototypes
  */
@@ -137,6 +142,8 @@ static char *get_common_var (const char *);
 static char *get_fault_var (const char *, const xmlNode *);
 static boolean format_eucafault (const char *, const char_map **);
 static boolean initialize_faultlog (const char *);
+static boolean check_eucafault_suppression (const char *, const char *);
+static boolean is_suppressed_eucafault (const char *);
 
 #ifndef HAVE_XMLFIRSTELEMENTCHILD
 static xmlNodePtr xmlFirstElementChild (xmlNodePtr);
@@ -224,6 +231,89 @@ static xmlNodePtr xmlFirstElementChild (xmlNodePtr parent)
  */
 
 /*
+ * Returns TRUE if fault_id is being suppressed, FALSE otherwise.
+ */
+static boolean
+is_suppressed_eucafault (const char *fault_id)
+{
+    if (fault_id == NULL) {
+        logprintfl (EUCAWARN, "is_suppressed_eucafault() called with NULL argument...ignoring.\n");
+        return FALSE;
+    }
+    struct suppress_list *suppose = suppressed;
+
+    while (suppose) {
+        if (!strcmp (fault_id, suppose->id)) {
+            PRINTF (("is_suppressed_eucafault() returning TRUE for %s.\n",
+                     fault_id));
+            return TRUE;
+        }
+        suppose = suppose->next;
+    }
+    PRINTF (("is_suppressed_eucafault() returning FALSE for %s.\n", fault_id));
+    return FALSE;
+}
+
+/*
+ * Returns TRUE if fault_id is being suppressed, FALSE otherwise.
+ *
+ * If second argument (fault_file) is non-NULL, checks path specified in
+ * arg for a zero-length file. If one is found, the specified fault_id
+ * will be added to the suppression list.
+ *
+ * If second argument is NULL, simply checks for presence of fault_id in
+ * suppression list by calling is_suppressed_eucafault().
+ */
+static boolean
+check_eucafault_suppression (const char *fault_id, const char *fault_file)
+{
+    if ((fault_id == NULL) && (fault_file == NULL)) {
+        logprintfl (EUCAWARN, "check_eucafault_suppression() called with two NULL arguments...ignoring.\n");
+        return FALSE;
+    }
+    if (fault_file == NULL) {
+        // Degenerate case.
+        return is_suppressed_eucafault (fault_id);
+    } else {
+        if (is_suppressed_eucafault (fault_id)) {
+            PRINTF (("Detected already-suppressed fault id %s\n", fault_id));
+            return TRUE;
+        }
+        struct stat st;
+
+        if (stat (fault_file, &st) != 0) {
+            logprintfl (EUCAWARN, "stat() problem with %s: %s\n", fault_file,
+                        strerror (errno));
+            return FALSE;
+        }
+        if (st.st_size == 0) {
+            logprintfl (EUCAINFO, "Suppressing fault id %s.\n", fault_id);
+
+            struct suppress_list *new_supp =
+                (struct suppress_list *)malloc (sizeof (struct suppress_list));
+
+            if (new_supp == NULL) {
+                logprintfl (EUCAERROR, "struct malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
+                return FALSE;
+            }
+            if ((new_supp->id = (char *)strdup (fault_id)) == NULL) {
+                logprintfl (EUCAERROR, "string malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
+                free (new_supp);
+            }
+            // Insert at beginning of list.
+            new_supp->next = suppressed;
+            suppressed = new_supp;
+            return TRUE;
+        } else {
+            return FALSE;
+        }
+    }
+    PRINTF (("check_eucafault_suppression() returning FALSE for %s, %s\n",
+             fault_id, fault_file));
+    return FALSE;
+}
+
+/*
  * Return an XML doc containing fault information for a given fault id.
  *
  * Assumes--indeed REQUIRES--that fault id matches filename prefix!
@@ -240,6 +330,11 @@ read_eucafault (const char *faultdir, const char *fault_id)
 
     if (get_eucafault (fault_id, NULL) != NULL) {
         PRINTF (("Looks like fault %s already exists.\n", fault_id));
+        return NULL;
+    }
+    if (check_eucafault_suppression (fault_id, fault_file)) {
+        PRINTF (("Looks like fault %s is being deliberately suppressed.\n",
+                 fault_id));
         return NULL;
     }
     my_doc = xmlParseFile (fault_file);
@@ -398,7 +493,8 @@ initialize_faultlog (const char *fileprefix)
     if (fileprefix == NULL) {
         // FIXME: program_infocation_short_name is a GNU'ism and is not
         // portable--should wrap with an autoconf check.
-        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base, FAULTLOGDIR,
+        snprintf (faultlogpath, PATH_MAX, EUCALYPTUS_LOG_DIR "/%s"
+                  FAULT_LOGFILE_SUFFIX, euca_base,
                   program_invocation_short_name);
     } else {
         // Prune any leading directores from path.
@@ -407,8 +503,8 @@ initialize_faultlog (const char *fileprefix)
         if (fileprefix_i != NULL) {
             fileprefix = fileprefix_i + 1;
         }
-        snprintf (faultlogpath, PATH_MAX, "%s%s/%s-faults.log", euca_base,
-                  FAULTLOGDIR, fileprefix);
+        snprintf (faultlogpath, PATH_MAX, EUCALYPTUS_LOG_DIR "/%s"
+                  FAULT_LOGFILE_SUFFIX, euca_base, fileprefix);
     }
     PRINTF (("Initializing faultlog using %s\n", faultlogpath));
     faultlog = fopen (faultlogpath, "a+");
@@ -468,21 +564,22 @@ init_eucafaults (char *fileprefix)
 
     /* Cycle through list of faultdirs in priority order, noting any missing. */
     if (locale != NULL) {
-        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX, "%s%s/%s/",
-                  euca_base, CUSTOM_FAULTDIR, locale);
+        snprintf (faultdirs[CUSTOM_LOCALIZED], PATH_MAX,
+                  EUCALYPTUS_CUSTOM_FAULT_DIR "/%s/", euca_base, locale);
     } else {
         faultdirs[CUSTOM_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX, "%s%s/%s/",
-              euca_base, CUSTOM_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[CUSTOM_DEFAULT_LOCALIZATION], PATH_MAX,
+              EUCALYPTUS_CUSTOM_FAULT_DIR "/%s/", euca_base,
+              DEFAULT_LOCALIZATION);
     if (locale != NULL) {
-        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, "%s%s/%s/",
-                  euca_base, DISTRO_FAULTDIR, locale);
+        snprintf (faultdirs[DISTRO_LOCALIZED], PATH_MAX, EUCALYPTUS_FAULT_DIR
+                  "/%s/", euca_base, locale);
     } else {
         faultdirs[DISTRO_LOCALIZED][0] = 0;
     }
-    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX, "%s%s/%s/",
-              euca_base, DISTRO_FAULTDIR, DEFAULT_LOCALIZATION);
+    snprintf (faultdirs[DISTRO_DEFAULT_LOCALIZATION], PATH_MAX,
+              EUCALYPTUS_FAULT_DIR "/%s/", euca_base, DEFAULT_LOCALIZATION);
 
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
@@ -743,6 +840,7 @@ format_eucafault (const char *fault_id, const char_map **map)
     }
     // Bottom border.
     fprintf (faultlog, "%s\n\n", STARS);
+    fflush (faultlog);
     return TRUE;
 }
 
@@ -754,12 +852,16 @@ format_eucafault (const char *fault_id, const char_map **map)
  * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
 boolean
-log_eucafault (const char *fault_id, const char_map **map)
+log_eucafault_map (const char *fault_id, const char_map **map)
 {
     int load = init_eucafaults (NULL);
 
     PRINTF1 (("init_eucafaults() returned %d\n", load));
 
+    if (is_suppressed_eucafault (fault_id)) {
+        logprintfl (EUCADEBUG, "Fault %s detected, but it is being actively suppressed.\n", fault_id);
+        return FALSE;
+    }
     return format_eucafault (fault_id, map);
 }
 
@@ -769,11 +871,11 @@ log_eucafault (const char *fault_id, const char_map **map)
  * Logs a fault, initializing the fault registry, if necessary.
  *
  * Returns the number of substitution parameters it was called with,
- * returning it as a negative number if the underlying log_eucafault()
+ * returning it as a negative number if the underlying log_eucafault_map()
  * call returned FALSE.
  */
 int
-log_eucafault_v (const char *fault_id, ...)
+log_eucafault (const char *fault_id, ...)
 {
     va_list argv;
     char *token[2];
@@ -793,10 +895,10 @@ log_eucafault_v (const char *fault_id, ...)
     va_end (argv);
 
     if (count % 2) {
-        logprintfl (EUCAWARN, "log_eucafault_v() called with an odd (unmatched) number of substitution parameters: %d\n", count);
+        logprintfl (EUCAWARN, "log_eucafault() called with an odd (unmatched) number of substitution parameters: %d\n", count);
     }
-    if (!log_eucafault (fault_id, (const char_map **)m)) {
-        PRINTF (("log_eucafault() returned FALSE inside log_eucafault_v()\n"));
+    if (!log_eucafault_map (fault_id, (const char_map **)m)) {
+        PRINTF (("log_eucafault_map() returned FALSE inside log_eucafault()\n"));
         count *= -1;
     }
     c_varmap_free (m);
@@ -862,19 +964,19 @@ main (int argc, char **argv)
         m = c_varmap_alloc (m, "brokerIp", "127.0.0.2");
         m = c_varmap_alloc (m, "endpointIp", "127.0.0.3");
         PRINTF1 (("argv[1st of %d]: %s\n", argc - optind, argv[optind]));
-        log_eucafault (argv[optind], (const char_map **)m);
+        log_eucafault_map (argv[optind], (const char_map **)m);
         c_varmap_free (m);
 
         // Now log to stdout for the remainder of the test.
         faultlog = stdout;
 
         // Reusing & abusing opt. :)
-        opt = log_eucafault_v (argv[optind], "daemon", "Balrog",
+        opt = log_eucafault (argv[optind], "daemon", "Balrog",
                                "hostIp", "127.0.0.1",
                                "brokerIp", "127.0.0.2",
                                "endpointIp", "127.0.0.3",
                                "unmatched!", NULL);
-        PRINTF (("log_eucafault_v args returned: %d\n", opt));
+        PRINTF (("log_eucafault args returned: %d\n", opt));
 
         // This allows substitution-argument pairs for unit test to be
         // passed in on command line.
@@ -887,12 +989,12 @@ main (int argc, char **argv)
             }
         }
         if (m != NULL) {
-            log_eucafault (argv[optind], (const char_map **)m);
+            log_eucafault_map (argv[optind], (const char_map **)m);
             c_varmap_free (m);
         } else {
-            log_eucafault (argv[optind], NULL);
+            log_eucafault_map (argv[optind], NULL);
         }
-        log_eucafault_v (argv[optind], NULL); // Deliberately call w/NULL.
+        log_eucafault (argv[optind], NULL); // Deliberately call w/NULL.
     }
     if (dump) {
         dump_eucafaults_db ();

@@ -96,6 +96,8 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   private String   volumePartition;
   @Column( name = "metadata_snapshot_progress" )
   private String   progress;
+  @Column( name =  "metadata_snapshot_description", updatable = false )
+  private String   description;
   
   private Snapshot( ) {
     super( );
@@ -105,8 +107,15 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super( ownerFullName, displayName );
   }
   
-  Snapshot( final OwnerFullName ownerFullName, final String displayName, final String parentVolume, Integer volumeSize, final String volumeScName, final String volumePartition ) {
+  Snapshot( final OwnerFullName ownerFullName,
+            final String displayName,
+            final String description,
+            final String parentVolume,
+            final Integer volumeSize,
+            final String volumeScName,
+            final String volumePartition ) {
     this( ownerFullName, displayName );
+    this.description = description;
     this.parentVolume = parentVolume;
     this.volumeSc = volumeScName;
     this.volumePartition = volumePartition;
@@ -151,6 +160,7 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   
   public edu.ucsb.eucalyptus.msgs.Snapshot morph( final edu.ucsb.eucalyptus.msgs.Snapshot snap ) {
     snap.setSnapshotId( this.getDisplayName( ) );
+    snap.setDescription( this.getDescription() );
     snap.setStatus( this.mapState( ) );
     snap.setStartTime( this.getCreationTimestamp( ) );
     snap.setVolumeId( this.getParentVolume( ) );
@@ -162,7 +172,11 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     }
     return snap;
   }
-  
+
+  public String getDescription() {
+    return description;
+  }
+
   public String getParentVolume( ) {
     return parentVolume;
   }

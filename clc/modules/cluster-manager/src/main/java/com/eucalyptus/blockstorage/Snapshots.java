@@ -241,17 +241,18 @@ public class Snapshots {
     
   }
   
-  static Snapshot initializeSnapshot( UserFullName userFullName, Volume vol, ServiceConfiguration sc ) throws EucalyptusCloudException {
-    String newId = null;
-    Snapshot snap = null;
-    EntityTransaction db = Entities.get( Snapshot.class );
+  static Snapshot initializeSnapshot( final UserFullName userFullName,
+                                      final Volume vol,
+                                      final ServiceConfiguration sc,
+                                      final String description ) throws EucalyptusCloudException {
+    final EntityTransaction db = Entities.get( Snapshot.class );
     try {
       while ( true ) {
-        newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
+        final String newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
         try {
           Entities.uniqueResult( Snapshot.named( null, newId ) );
         } catch ( NoSuchElementException e ) {
-          snap = new Snapshot( userFullName, newId, vol.getDisplayName( ), vol.getSize( ), sc.getName( ), sc.getPartition( ) );
+          final Snapshot snap = new Snapshot( userFullName, newId, description, vol.getDisplayName( ), vol.getSize( ), sc.getName( ), sc.getPartition( ) );
           Entities.persist( snap );
           db.commit( );
           return snap;
@@ -294,7 +295,7 @@ public class Snapshots {
   }
   
   public static Snapshot lookup( OwnerFullName accountFullName, String snapshotId ) throws ExecutionException {
-    return Transactions.find( Snapshot.named( accountFullName, snapshotId ) );
+    return Transactions.find(Snapshot.named(accountFullName, snapshotId));
   }
   
   public static List<Snapshot> list( ) throws TransactionException {

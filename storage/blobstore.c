@@ -4522,7 +4522,7 @@ int main (int argc, char * argv[])
         char * instance_path = getConfString(euca_confs, 2, INSTANCE_PATH);
         if (instance_path == NULL) {
             char path [MAX_PATH];
-            snprintf (path, sizeof (path), "%s/var/lib/eucalyptus/instances", euca_home);
+            snprintf (path, sizeof (path), EUCALYPTUS_STATE_DIR "/instances", euca_home);
             instance_path = strdup (path);
             fprintf (stderr, "warning: failed to obtain %s from eucalyptus.conf, will try '%s'\n", INSTANCE_PATH, instance_path);
         }

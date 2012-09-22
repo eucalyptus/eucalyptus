@@ -70,6 +70,7 @@ core
 postgresql
 wsstack
 euare
+tokens
 component
 cluster-manager
 notifications
@@ -80,3 +81,4 @@ storage-controller
 dns
 www
 troubleshooting
+datawarehouse

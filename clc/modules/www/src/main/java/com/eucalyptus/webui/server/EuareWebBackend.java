@@ -68,9 +68,9 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.LdapException;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.PasswordAuthentication;
 import com.eucalyptus.auth.Privileged;
-import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -211,7 +211,7 @@ public class EuareWebBackend {
   }
   
   private static boolean authenticateWithLdap( User user ) {
-	  return LdapSync.enabled( ) && !user.isSystemAdmin( ) && !user.isAccountAdmin( );
+    return PasswordAuthentication.authenticateWithLdap( user );
   }
   
   public static User getUser( String userName, String accountName ) throws EucalyptusServiceException {
@@ -269,27 +269,13 @@ public class EuareWebBackend {
   }
   
   public static void checkPassword( User user, String password ) throws EucalyptusServiceException {
-    if ( authenticateWithLdap( user ) ) {
-      authenticateLdap( user, password );
-    } else {
-      authenticateLocal( user, password );
-    }
-  }
-  
-  private static void authenticateLdap( User user, String password ) throws EucalyptusServiceException {
     try {
-      LdapSync.authenticate( user, password );
-    } catch ( LdapException e ) {
+      PasswordAuthentication.authenticate( user, password );
+    } catch ( final AuthException e ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     }
   }
-  
-  private static void authenticateLocal( User user, String password ) throws EucalyptusServiceException {
-    if ( !Strings.isNullOrEmpty( user.getPassword( ) ) && !Crypto.verifyPassword( password, user.getPassword( ) ) ) {
-      throw new EucalyptusServiceException( "Incorrect password" );
-    }    
-  }
-  
+
   public static User changeUserPasswordAndEmail( final User requestUser,
                                                  final String userId,
                                                  final String oldPass,
@@ -305,7 +291,7 @@ public class EuareWebBackend {
         throw new EucalyptusServiceException( "The new password must not be the same as the old password." );
       }
       // Anyone want to change some other people's password must authenticate himself first
-      if ( Strings.isNullOrEmpty( requestUser.getPassword( ) ) || !Crypto.verifyPassword( oldPass, requestUser.getPassword( ) ) ) {
+      if ( !Crypto.verifyPassword( oldPass, requestUser.getPassword( ) ) ) {
         throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
       }
       Privileged.changeUserPasswordAndEmail( requestUser, user.getAccount( ), user, newPass, email );

@@ -72,7 +72,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
@@ -94,7 +93,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.Handlers;
-import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
 
 @ChannelPipelineCoverage( "one" )
@@ -110,7 +108,7 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
         lookupPipeline( ctx, e );
       } else if ( e.getMessage( ) instanceof MappingHttpRequest ) {
         MappingHttpRequest httpRequest = ( MappingHttpRequest ) e.getMessage( );
-        if ( doKeepAlive( httpRequest ) ) {
+        if ( isPersistentConnection( httpRequest ) ) {
           this.pipeline.set( null );
           ChannelHandler p;
           while ( ( p = ctx.getPipeline( ).getLast( ) ) != this ) {
@@ -133,9 +131,11 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
     }
   }
   
-  public boolean doKeepAlive( MappingHttpRequest httpRequest ) {
-    return httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
-           || ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 )
+  public static boolean isPersistentConnection( final MappingHttpRequest httpRequest ) {
+    return
+        ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_1 )
+            && !HttpHeaders.Values.CLOSE.equalsIgnoreCase( httpRequest.getHeader( HttpHeaders.Names.CONNECTION ) ) ) ||
+        ( httpRequest.getProtocolVersion( ).equals( HttpVersion.HTTP_1_0 )
              && HttpHeaders.Values.KEEP_ALIVE.equalsIgnoreCase( httpRequest.getHeader( HttpHeaders.Names.CONNECTION ) ) );
   }
   

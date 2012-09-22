@@ -63,23 +63,16 @@
 package com.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateWalrusConfigurationType;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Walrus;
-import com.eucalyptus.config.Configuration;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 
 import java.net.*;
-import java.util.List;
-import java.util.Collections;
 
 public class WalrusProperties {
 	private static Logger LOG = Logger.getLogger(WalrusProperties.class);
@@ -140,15 +133,16 @@ public class WalrusProperties {
 	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
 	public static final String NULL_VERSION_ID = "null";
 
+  public static final String X_AMZ_SECURITY_TOKEN = "x-amz-security-token";
+
 	public static final String TRACKER_BINARY = "bttrack";
 	public static final String TORRENT_CREATOR_BINARY = "btmakemetafile";
 	public static final String TORRENT_CLIENT_BINARY = "btdownloadheadless";
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
-	public static final String eucaHome = System.getProperty("euca.home");
-	public static final String EUCA_ROOT_WRAPPER = "/usr/lib/eucalyptus/euca_rootwrap";
-	public static final String EUCA_MOUNT_WRAPPER = "/usr/lib/eucalyptus/euca_mountwrap";
+	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
+	public static final String EUCA_MOUNT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_mountwrap";
 	public static final String EUCA_USER = System.getProperty("euca.user");
 
 	//15 minutes
