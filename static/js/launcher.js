@@ -1198,7 +1198,7 @@
       }
       reqParam.push({name: '_xsrf', value: $.cookie('_xsrf')});
           
-      $('#fileupload').fileupload({
+      this.element.find('#launch-wizard-advanced-input-userfile').fileupload({
         dataType: 'json',
         url: "../ec2",
         fileInput: null,
@@ -1212,35 +1212,34 @@
       if (param['data_file'] != null) {
         file_param = param['data_file']
       }
-
-      var jqXHR = $('#fileupload').fileupload('send', {files: file_param})
-                .success(function (result, textStatus, jqXHR) {
-                    if ( results ){
-                      var instances ='';
-                      $.each(results, function(idx, instance){
-                        instances += instance.id+' ';
-                      });
-                      instances = $.trim(instances);
-                      notifySuccess(null, $.i18n.prop('instance_run_success', instances));
-                      //TODO: move to instance page?
-                      var $container = $('html body').find(DOM_BINDING['main']);
-                      $container.maincontainer("changeSelected",null, {selected:'instance'});
-
-                    } else {
-                      notifyError(null, $.i18n.prop('instance_run_error'));
-                      //TODO: clear launch-instance wizard?
-                      var $container = $('html body').find(DOM_BINDING['main']);
-                      $container.maincontainer("clearSelected");
-                      $container.maincontainer("changeSelected",null, {selected:'launcher'});
-
-                    }
-                })
-                .error(function (jqXHR, textStatus, errorthrown) {
-                    notifyError(null, $.i18n.prop('instance_run_error'));
-                    var $container = $('html body').find(DOM_BINDING['main']);
-                    $container.maincontainer("clearSelected");
-                    $container.maincontainer("changeSelected",null, {selected:'launcher'});
-                });
+      this.element.find('#launch-wizard-advanced-input-userfile').fileupload('send', {
+        files: file_param,
+        success: function (results, textStatus, jqXHR) {
+          if ( results ){
+            var instances ='';
+            $.each(results, function(idx, instance){
+              instances += instance.id+' ';
+            });
+            instances = $.trim(instances);
+            notifySuccess(null, $.i18n.prop('instance_run_success', instances));
+            //TODO: move to instance page?
+            var $container = $('html body').find(DOM_BINDING['main']);
+              $container.maincontainer("changeSelected",null, {selected:'instance'});
+          } else {
+            notifyError(null, $.i18n.prop('instance_run_error'));
+            //TODO: clear launch-instance wizard?
+            var $container = $('html body').find(DOM_BINDING['main']);
+            $container.maincontainer("clearSelected");
+            $container.maincontainer("changeSelected",null, {selected:'launcher'});
+          }
+        },
+        error: function (jqXHR, textStatus, errorthrown) {
+          notifyError(null, $.i18n.prop('instance_run_error'));
+          var $container = $('html body').find(DOM_BINDING['main']);
+          $container.maincontainer("clearSelected");
+          $container.maincontainer("changeSelected",null, {selected:'launcher'});
+        }
+      });
     },
  
     _showError : function(step){
