@@ -538,10 +538,6 @@ a:hover {
   margin-right: 13px;
 }
 
-.short-textinput {
-  width: 45px;
-}
-
 .checkbox-row {
   padding-top: 3px;
 }
@@ -557,6 +553,7 @@ a:hover {
   width: auto;
 }
 
+input[type='text'],
 .input-field,
 .dataTables_filter input {
   background-color: #f3f6f9;
@@ -574,6 +571,7 @@ a:hover {
   box-shadow: inset 0 0 3px #a8b9c8;
 }
 
+input[type='text']:focus,
 .input-field:focus,
 .dataTables_filter input:focus {
   border-color: #6699cc;
@@ -581,7 +579,12 @@ a:hover {
   -moz-box-shadow: inset 0 0 4px #6699cc;
   -webkit-box-shadow: inset 0 0 4px #6699cc;
   box-shadow: inset 0 0 4px #6699cc;
-} 
+}
+
+input[type='text'].short-textinput {
+  width: 40px;
+  text-align: center;
+}
 
 .password-help {
   color: #666;
@@ -680,27 +683,6 @@ a:hover {
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
 }
 
-.box-header,
-.euca-table-header,
-.euca-dialog-container .ui-dialog-titlebar {
-  background-color: #eaf2f5;
-  border-top: 1px solid #e7e5e5;
-  color: #02405f;
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 18px;
-  font-weight: normal;
-  margin: 0 0 20px;
-  position: absolute;
-  top: 14px;
-  left: -8px;
-  padding: 6px 8px 4px;
-  width: 100%;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
-}
-
 /* This style of container box is used on several classes */
 /* Grouped here to make global changes. Differences are usually just margin and padding */
 
@@ -726,6 +708,31 @@ a:hover {
 
 .dataTables_wrapper {
   min-height: 400px;
+}
+
+/* Ribbon headers */
+
+.box-header,
+.euca-table-header,
+.euca-dialog-container .ui-dialog-titlebar {
+  background-color: #eaf2f5;
+  border-top: 1px solid #e2e0e0;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 18px;
+  min-height: 22px;
+  margin: 0 0 20px;
+  position: absolute;
+  top: 14px;
+  left: -8px;
+  padding: 6px 8px 4px;
+  width: 100%;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.3);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.3);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.3);    
 }
 
 /* Ribbon corners */
@@ -1037,16 +1044,19 @@ tr.selected-row td.sorting_1
 #eip-table,
 #sgroups-table,
 #instances-table,
-#snapshot-table {
+#snapshot-table,
+#images-table {
   background-color: transparent !important;
 }
 
 .help-link,
 .help-return,
 .help-euca {
-  float: right;
-  /*height: 16px;*/
-  margin: 3px 20px 0 0;
+  /*float: right;*/
+  position: absolute;
+  top: 6px;
+  right: 25px;
+ /* margin: 3px 20px 0 0;*/
 }
 
 .help-link a,
@@ -1506,10 +1516,10 @@ tr.selected-row td.sorting_1
 }
 
 .euca-dialog-container .ui-dialog-titlebar {
-  padding: 4px 8px;
+  /*padding: 4px 8px;*/
   border-radius: 0;
   background-image: none;
-  font-size: 15px;
+  /*font-size: 15px;*/
   left: -9px;
 }
 

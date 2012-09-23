@@ -504,7 +504,7 @@
       $list = $('<ul>').addClass('launch-wizard-type-option').html(launch_instance_type_option_header);
       $list.append(
         $('<li>').append(
-          launch_instance_type_option_numinstance,$('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').change( function(e) {
+          launch_instance_type_option_numinstance,$('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
             numInstances = $(this).val(); 
             instanceChanged = true;
             thisObj._setSummary('type', summarize());
