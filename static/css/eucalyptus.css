@@ -860,7 +860,7 @@ input[type='text'].short-textinput {
 #dashboard-netsec-img {
   float: left;
   margin: 2px 18px 0 0;
-  height: 85px;
+  height: 87px;
   width: 110px;
   background: transparent url(../images/css-sprites.png) no-repeat -150px -325px;
 }
@@ -917,6 +917,11 @@ input[type='text'].short-textinput {
   color: #222;
   font-size: 28px;
   font-weight: bold;
+}
+
+a:hover .status-readout,
+a:hover .status-readout span {
+  color: #73a434;
 }
 
 .status-readout img {
