@@ -274,7 +274,7 @@ ol li {
 
 .header-nav ul li {
   border-top: 1px solid #ccc;
-  min-width: 125px;
+  min-width: 135px;
 }
 
 .header-nav ul li:first-child {
