@@ -991,6 +991,12 @@ table.display thead th {
   border-bottom: 1px solid #dae2e8;
   border-top: 0;
   background-color: #e1e1e1;
+
+  background-image: -webkit-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: -moz-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: -o-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: -ms-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: linear-gradient(to bottom, #f6f6f6, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
 }
 
 table.display tr.heading2 td {
