@@ -133,6 +133,10 @@ a:hover {
   padding: 10px 0;
 }
 
+.euca-hidden-container {
+  display : none;
+}
+
 /* ==== NOTE: The inner-container class determines the content area within all major layout sections ==== */
 
 .inner-container {
@@ -515,8 +519,19 @@ a:hover {
   margin: 0 35px 30px 20px;
 }
 
+.spin-wheel { /* positioning the spin-wheel during the log-in */
+  position: absolute;
+  top: 196px;
+  left: 480px;
+}
+
 .form-row {
   margin-bottom: 10px;
+}
+
+.top-form-row {
+  /* Used to get consistent layout in the dialog boxes where there is no <p> above the first form-row */
+  margin-top: 16px;
 }
 
 .form-row label {
@@ -530,8 +545,17 @@ a:hover {
 }
 
 .form-row label.long-label {
-  width: 320px;
+  width: 195px;
 }
+
+.form-row label.extra-long-label {
+  width: 215px;
+}
+
+.form-row label.mega-long-label {
+  width: 360px;
+}
+
 
 #login .form-row label {
   width: 90px;
@@ -554,6 +578,7 @@ a:hover {
 }
 
 input[type='text'],
+textarea,
 .input-field,
 .dataTables_filter input {
   background-color: #f3f6f9;
@@ -572,6 +597,7 @@ input[type='text'],
 }
 
 input[type='text']:focus,
+textarea:focus,
 .input-field:focus,
 .dataTables_filter input:focus {
   border-color: #6699cc;
@@ -585,6 +611,15 @@ input[type='text'].short-textinput {
   width: 40px;
   text-align: center;
 }
+
+ input[disabled] {
+  border: 1px solid #eaeaea;
+  background-color: #fff;
+
+  -moz-box-shadow: inset 0 0 0px #6699cc;
+  -webkit-box-shadow: inset 0 0 0px #6699cc;
+  box-shadow: inset 0 0 0px #6699cc;
+ }
 
 .password-help {
   color: #666;
@@ -1004,13 +1039,18 @@ table.display thead th.checkbox-cell {
   text-align: center;
 }
 
+.glow {
+  color: orange; /* TODO - Update this with a more subtle color */
+}
+
 /* ======= Expanded rows of the jQuery tables ======= */
 
 .twist {
-  background-color: cyan;
+  /* TODO: Add a down arrow image */
+  /*background-color: cyan;*/
 }
 .twist.expanded {
-    /* TODO: Add arrow image */ 
+  /* TODO: Add an up arrow image */ 
   background-color: yellow;
 }
 
@@ -1182,16 +1222,17 @@ tr.expanded {
 }
 
 .actionmenu {
+  position: relative;
   margin-left: 15px;
+  z-index: 10;
 }
 
-/* Commented out by Sang-min
-.actionmenu a {
-*/
+.actionmenu a.button {
+
   /* These are the differences from the button styles in order to accomodate the arrow */
   /* If button gradients are changed, they will need to be changed here as well */
-/*
-  cursor: default;
+
+  cursor: pointer;
   padding: 5px 30px 5px 17px;
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -1201,15 +1242,10 @@ tr.expanded {
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 }
 
-.actionmenu a:hover {
-  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
-}
-*/
 .actionmenu a.inactive-menu {
+
+  cursor: default;
+  padding: 5px 30px 5px 17px;
   border: 1px solid rgba(128, 128, 128, 0.4);
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
@@ -1219,6 +1255,61 @@ tr.expanded {
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
 
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.euca-table-action .button {
+  z-index: 10;
+}
+
+.euca-table-action ul {
+  position: absolute;
+  min-width: 138px;
+  top: 30px;
+  left: 4px;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  background-color: #fff;
+  z-index: 2;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+
+  display: block;
+}
+
+.euca-table-action li {
+  margin: 0;
+  border-top: 1px solid #ccc;
+}
+
+.euca-table-action li:first-child {
+  border: 0;
+}
+
+.euca-table-action li a {
+  padding: 9px 12px;
+  color: #02405F;
+  display: block;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+  outline: 0 none;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.euca-table-action li a:hover {
+  color: #73a434;
+  text-decoration: none;
+}
+
+.euca-table-action li.disabled a {
+  color: #ccc;
+  text-decoration: none;
+  cursor: default;
 }
 
 /* Overrides for jQuery context menu styles */
@@ -1533,7 +1624,7 @@ tr.expanded {
 .euca-dialog-container {
   /* Class added to each jQuery dialog, so we can target elements */
   margin: 0 8px;
-  padding: 47px 0 5px 0;
+  padding: 50px 0 5px;
   overflow: visible;
   min-height: 50px;
 }
@@ -1761,7 +1852,8 @@ span.on-error {
   display:none;
 }
 
-/* Sang-min: temporary styling for launch wizard */
+/* ======= Sang-min: temporary styling for launch wizard ======= */
+
 #launch-wizard-advanced-storage th {
   font-size: 11px;
 }
@@ -1807,48 +1899,5 @@ div#launch-wizard-type-size-legend{
     margin: 1px;
 }
 
-/* END Sang-min */
-.spin-wheel { /* positioning the spin-wheel during the log-in */
-  position: absolute;
-  top: 196px;
-  left: 480px;
-}
+/* ======= END Sang-min ======= */
 
-/* Sang-min : change related to more actions menu */
-.euca-table-action ul{
-  list-style-type: none;
-  background-color: #fff;
-  padding: 5px;
-  position: absolute;
-  top: 135px;
-  left: 238px;
-  width: 138px;
-  z-index: 2;
-  -webkit-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
-  -moz-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50); 
-  box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
-}
-
-.euca-table-action ul li{
-  margin : 2px;
-}
-
-li.disabled a {
-  color: gray;
-  text-decoration: none;
-}
-
-
-/* END Sang-min */
-/* Vasya: temporary styling. Style me. Move me! */
-.label_required:before {
-  content: "* ";
-}
-.glow {
-  color: orange;
-}
-/* END Vasya */
-
-.euca-hidden-container {
-  display : none;
-}
