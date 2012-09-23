@@ -47,13 +47,14 @@ Green links: #73a434
 /* ======== Base HTML styles ======= */
 
 body {
-  background: #fff;
-  border-top: 10px solid #02405f;
-  color: #444;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 13px;
   margin: 0;
   padding: 0;
+  border-top: 10px solid #02405f;
+  background: #fff;
+  color: #444;
+  font-size: 13px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  line-height: 1.5;
 }
 
 a {
@@ -64,6 +65,10 @@ a {
 a:hover {
   color: #73a434;
   text-decoration: underline;
+}
+
+ol li {
+  margin-bottom: .6em;
 }
 
 /* ======= Helper classes ======= */
@@ -549,7 +554,7 @@ a:hover {
 }
 
 .form-row label.extra-long-label {
-  width: 260px;
+  width: auto;
 }
 
 .form-row label.mega-long-label {
