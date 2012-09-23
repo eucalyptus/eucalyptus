@@ -942,8 +942,8 @@ a:hover .status-readout span {
 
 table.display {
   background-color: #fff;
-  border-bottom: 2px solid #dae2e8;
-  border-right: 0px solid #dae2e8;
+  border: 1px solid #dae2e8;
+  border-width: 1px 0;
 }
 
 table.display thead th {
@@ -953,28 +953,28 @@ table.display thead th {
   font-weight: normal;
   color: #7aa92a;
   text-transform: uppercase;
-  border-top: 2px solid #dae2e8;
-  border-left: 1px solid #dae2e8;
-  border-bottom: 0;
+  border-bottom: 1px solid #dae2e8;
+  border-top: 0;
+  background-color: #e1e1e1;
 }
 
 table.display tr.heading2 td {
-  border-bottom: 1px solid #aaa;
+  /*border-bottom: 1px solid #aaa;*/
 }
 
 table.display td {
   padding: 5px 8px;
-  border-top: 2px solid #dae2e8;
-  border-left: 1px solid #dae2e8;
+  /*border-top: 2px solid #dae2e8;
+  border-left: 1px solid #dae2e8;*/
   font-size: 11px;
 }
 
 tr.odd,
-tr.even {
+tr.odd td.sorting_1 {
   background-color: #fff;
 }
 
-tr.odd td.sorting_1,
+tr.even,
 tr.even td.sorting_1 {
   background-color: #f0f7f7;
 }
@@ -989,6 +989,21 @@ tr.selected-row td.sorting_1
   background-color: #f1ffe3;
 }
 
+.checkbox-cell,
+table.display thead th.checkbox-cell {
+  width: 20px;
+  padding: 0;
+  text-align: center;
+}
+
+.narrow-cell {
+  width: 20px;
+}
+
+.centered-cell {
+  text-align: center;
+}
+
 /* ======= Expanded rows of the jQuery tables ======= */
 
 .twist {
@@ -999,7 +1014,10 @@ tr.selected-row td.sorting_1
   background-color: yellow;
 }
 
-.expanded {}
+tr.expanded {
+  border: 1px solid #ccc;
+  border-width: 1px 0;
+}
 
 .expanded ul {
   margin: 0;

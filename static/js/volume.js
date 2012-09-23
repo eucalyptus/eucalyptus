@@ -43,18 +43,21 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell"
             },
             { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
                  return '<div class="table-row-status status-'+oObj.aData.status+'">&nbsp;</div>';
                },
-              "sWidth": "20px",
+              "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 8, // sort on hidden status column
             },
-            { "mDataProp": "size" },
+            { 
+              "mDataProp": "size",
+              "sClass": "centered-cell"
+            },
             { "mDataProp": "attach_data.instance_id" },
             { "mDataProp": "snapshot_id" },
             { "mDataProp": "zone" },

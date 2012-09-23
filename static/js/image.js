@@ -37,6 +37,7 @@
           "aoColumns": [
             {
               "bSortable": false,
+              "sClass": "centered-cell",
               "fnRender": function(oObj) { return '<a href="#" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'});">' + image_launch_btn +'</a>' },
             },
             { 
@@ -53,7 +54,7 @@
               "fnRender": function(oObj) { 
                  return '<div class="table-row-status status-'+oObj.aData.state+'">&nbsp;</div>';
                },
-              "sWidth": "20px",
+              "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 6, // sort on hidden status column
             },
