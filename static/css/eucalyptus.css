@@ -612,7 +612,10 @@ input[type='text'].short-textinput {
   text-align: center;
 }
 
- input[disabled] {
+ input[type='text'][disabled] { 
+
+  /* Used in several of the dialog modals */
+  
   border: 1px solid #eaeaea;
   background-color: #fff;
 
@@ -1643,7 +1646,7 @@ tr.expanded {
   /*padding: 4px 8px;*/
   border-radius: 0;
   background-image: none;
-  /*font-size: 15px;*/
+  font-size: 15px;
   left: -9px;
 }
 
@@ -1703,6 +1706,7 @@ tr.expanded {
 .ui-widget-content .ui-state-disabled,
 .ui-widget-content .ui-state-disabled:hover {
 
+/* Disabled buttons in the jQuery dialog modals */
 /* Uses the same gradient as the 'actionmenu span.inactive-menu' */
 
   cursor: default;
