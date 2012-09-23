@@ -549,7 +549,7 @@ a:hover {
 }
 
 .form-row label.extra-long-label {
-  width: 215px;
+  width: 260px;
 }
 
 .form-row label.mega-long-label {
@@ -1002,6 +1002,10 @@ table.display td {
   /*border-top: 2px solid #dae2e8;
   border-left: 1px solid #dae2e8;*/
   font-size: 11px;
+}
+
+table.display td.dataTables_empty {
+  padding: 10px;
 }
 
 tr.odd,
