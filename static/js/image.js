@@ -130,57 +130,60 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
         snapshot = image.block_device_mapping['snapshot_id'];
  
       var $wrapper = $('<div>');
-      var $imgInfo = $('<ul>').addClass('image-expanded').text(image_table_expanded_machine).append(
-        $('<li>').append( 
-          $('<div>').addClass('expanded-value').text(image['id']),
-          $('<div>').addClass('expanded-title').text(image_table_expanded_image_id)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(snapshot),
-          $('<div>').addClass('expanded-title').text(image_table_expanded_snapshot_id)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(image['owner_id']),
-          $('<div>').addClass('expanded-title').text(image_table_expanded_account)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(image['location']),
-          $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)));
+      var $imgInfo = $('<div>').addClass('image-table-expanded-machine').append(
+                       $('<span>').text(image_table_expanded_machine).after($('<ul>').addClass('image-expanded').append(
+                         $('<li>').append( 
+                           $('<div>').addClass('expanded-value').text(image['id']),
+                           $('<div>').addClass('expanded-title').text(image_table_expanded_image_id)),
+                         $('<li>').append(
+                           $('<div>').addClass('expanded-value').text(snapshot),
+                           $('<div>').addClass('expanded-title').text(image_table_expanded_snapshot_id)),
+                         $('<li>').append(
+                           $('<div>').addClass('expanded-value').text(image['owner_id']),
+                           $('<div>').addClass('expanded-title').text(image_table_expanded_account)),
+                         $('<li>').append(
+                           $('<div>').addClass('expanded-value').text(image['location']),
+                           $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)))));
 
       var $kernelInfo = null;
       if(kernel){
-        $kernelInfo = $('<ul>').addClass('kernel-expanded').text(image_table_expanded_kernel).append(
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(kernel['id']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_kernel_id)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(kernel['name']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_name)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(kernel['architecture']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_arch)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(kernel['location']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(kernel['description']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_desc)));
+        $kernelInfo = $('<div>').addClass('image-table-expanded-kernel').append(
+                        $('<span>').text(image_table_expanded_kernel).after($('<ul>').addClass('kernel-expanded').append(
+                          $('<li>').append(
+                            $('<div>').addClass('expanded-value').text(kernel['id']),
+                            $('<div>').addClass('expanded-title').text(image_table_expanded_kernel_id)),
+                          $('<li>').append(
+                            $('<div>').addClass('expanded-value').text(kernel['name']),
+                            $('<div>').addClass('expanded-title').text(image_table_expanded_name)),
+                          $('<li>').append(
+                            $('<div>').addClass('expanded-value').text(kernel['architecture']),
+                            $('<div>').addClass('expanded-title').text(image_table_expanded_arch)),
+                          $('<li>').append(
+                            $('<div>').addClass('expanded-value').text(kernel['location']),
+                            $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)),
+                          $('<li>').append(
+                            $('<div>').addClass('expanded-value').text(kernel['description']),
+                            $('<div>').addClass('expanded-title').text(image_table_expanded_desc)))));
       }
       var $ramdiskInfo = null;
       if(ramdisk){
-        $ramdiskInfo = $('<ul>').addClass('ramdisk-expanded').text(image_table_expanded_ramdisk).append(
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(ramdisk['id']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_ramdisk_id)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(ramdisk['name']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_name)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(ramdisk['architecture']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_arch)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(ramdisk['location']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)),
-          $('<li>').append(
-            $('<div>').addClass('expanded-value').text(ramdisk['description']),
-            $('<div>').addClass('expanded-title').text(image_table_expanded_desc)));
+        $ramdiskInfo = $('<div>').addClass('image-table-expanded-ramdisk').append(
+                         $('<span>').text(image_table_expanded_ramdisk).after($('<ul>').addClass('ramdisk-expanded').append(
+                           $('<li>').append(
+                             $('<div>').addClass('expanded-value').text(ramdisk['id']),
+                             $('<div>').addClass('expanded-title').text(image_table_expanded_ramdisk_id)),
+                           $('<li>').append(
+                             $('<div>').addClass('expanded-value').text(ramdisk['name']),
+                             $('<div>').addClass('expanded-title').text(image_table_expanded_name)),
+                           $('<li>').append(
+                             $('<div>').addClass('expanded-value').text(ramdisk['architecture']),
+                             $('<div>').addClass('expanded-title').text(image_table_expanded_arch)),
+                           $('<li>').append(
+                             $('<div>').addClass('expanded-value').text(ramdisk['location']),
+                             $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)),
+                           $('<li>').append(
+                             $('<div>').addClass('expanded-value').text(ramdisk['description']),
+                             $('<div>').addClass('expanded-title').text(image_table_expanded_desc)))));
       }
       $wrapper.append($imgInfo);
       if($kernelInfo)

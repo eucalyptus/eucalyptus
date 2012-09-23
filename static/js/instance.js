@@ -779,7 +779,9 @@
       if(instance['product_codes'] && instance['product_codes'].length > 0)
         prodCode = instance['product_codes'].join(' ');
 
-      var $instInfo = $('<ul>').addClass('instance-expanded').text(instance_table_expanded_instance).append(
+      var $instInfo = $('<div>').addClass('instance-table-expanded-instance').append(
+      $('<span>').text(instance_table_expanded_instance),
+      $('<ul>').addClass('instance-expanded').append(
         $('<li>').append( 
           $('<div>').addClass('expanded-value').text(instance['instance_type']),
           $('<div>').addClass('expanded-title').text(instance_table_expanded_type)),
@@ -803,7 +805,7 @@
           $('<div>').addClass('expanded-title').text(instance_table_expanded_account)),
         $('<li>').append(
           $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']]),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest)));
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest))));
 
       var $volInfo = null;
       if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
@@ -814,21 +816,23 @@
           if(vol.attach_data && vol.attach_data.instance_id ===instId) 
             attachedVols[vol.id] = vol;
         }
-        $volInfo = $('<ul>').addClass('instance-volume-expanded').text(instance_table_expanded_volume);
+        $volInfo = $('<div>').addClass('instance-table-expanded-volume').append(
+            $('<span>').text(instance_table_expanded_volume));
         $.each(instance.block_device_mapping, function(key, mapping){
           var creationTime = '';
           creationTime = attachedVols[mapping.volume_id].create_time;
           creationTime = formatDateTime(creationTime); 
-          $volInfo.append($('<ul>').append(
-             $('<li>').append(
-               $('<div>').addClass('expanded-value').text(mapping.volume_id),
-               $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
-             $('<li>').append(
-               $('<div>').addClass('expanded-value').text(key),
-               $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap)),
-             $('<li>').append(
-               $('<div>').addClass('expanded-value').text(creationTime),
-               $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime))));
+          $volInfo.append(
+            $('<ul>').addClass('volume-expanded').append(
+              $('<li>').append(
+                $('<div>').addClass('expanded-value').text(mapping.volume_id),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
+              $('<li>').append(
+                $('<div>').addClass('expanded-value').text(key),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap)),
+              $('<li>').append(
+                $('<div>').addClass('expanded-value').text(creationTime),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime))));
         });
       } 
       $wrapper.append($instInfo);
