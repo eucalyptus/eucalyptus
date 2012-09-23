@@ -1381,13 +1381,13 @@ tr.selected-row td.sorting_1
 
 .legend-deleting,
 .legend-terminating,
-.legend-shutting-down {
+.legend-shuttingdown {
   background-position: left -475px;
 }
 
 .status-deleting,
 .status-terminating,
-.status-shutting-down {
+.status-shuttingdown {
   background-position: left -476px;
 }
 
