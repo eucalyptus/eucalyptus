@@ -303,7 +303,7 @@ ol li {
 
 .resources-nav li a {
   display: block;
-  background-image: url(../images/explorer-icon-sprites.png);
+  background-image: url(../images/resources-nav-sprites.png);
   background-repeat: no-repeat;
   border-left: 1px solid #e3e1e1;
   color: #02405f;
@@ -331,45 +331,45 @@ ol li {
 /* ==== Link specific styling (including hover and selected states) ==== */
 
 .lnk-dashboard {
-  background-position: center 0;
+  background-position: 0 0;
 }
 .resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
-  background-position: center -75px;
+  background-position: 0 -125px;
 }
 
 .lnk-image {
-  background-position: center -150px;
+  background-position: -200px 0;
 }
 .resources-nav li:hover a.lnk-image,
 .lnk-image:hover {
-  background-position: center -225px;
+  background-position: -200px -121px;
 }
 
 .lnk-instance {
-  background-position: center -300px;
+  background-position: -400px 0;
 }
 .resources-nav li:hover a.lnk-instance,
 .lnk-instance:hover {
-  background-position: center -375px;
+  background-position: -400px -107px;
 }
 
 .lnk-storage {
-  background-position: center -450px;
+  background-position: -600px 0;
 }
 .resources-nav li:hover a.lnk-storage,
 .resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
-  background-position: center -525px;
+  background-position: -600px -125px;
 }
 
 .lnk-netsec {
-  background-position: center -600px;
+  background-position: -800px 0;
 }
 .resources-nav li:hover a.lnk-netsec,
 .resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: center -675px;
+  background-position: -800px -129px;
 }
 
 
