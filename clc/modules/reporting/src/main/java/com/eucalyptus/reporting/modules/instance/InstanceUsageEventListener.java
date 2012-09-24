@@ -62,28 +62,17 @@
 
 package com.eucalyptus.reporting.modules.instance;
 
-
-import java.util.concurrent.atomic.AtomicLong;
-
-
 import javax.annotation.Nonnull;
 import org.apache.log4j.*;
 import org.hibernate.exception.ConstraintViolationException;
 
-import com.eucalyptus.configurable.ConfigurableClass;
-import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 
-@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class InstanceUsageEventListener implements EventListener<InstanceUsageEvent> {
   private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
-
-  @ConfigurableField( initial = "1200", description = "How often the reporting system writes instance snapshots" )
-  public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
-  private final AtomicLong lastWriteMs = new AtomicLong( 0L );
 
   public static void register( ) {
     final InstanceUsageEventListener listener = new InstanceUsageEventListener( );
@@ -95,15 +84,7 @@ public class InstanceUsageEventListener implements EventListener<InstanceUsageEv
 
     log.debug("Received instance usage event:" + event);
 
-    final String uuid = event.getUuid();
-    if ( uuid == null ) {
-      log.warn("Received null uuid");
-      return;
-    }
-
-    if ( receivedEventMs > ( lastWriteMs.get() + (DEFAULT_WRITE_INTERVAL_SECS * 1000) ) ) {
       try {
-	  log.info( "Wrote Reporting Instance:" + uuid );
 	        final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
 	        eventStore.insertUsageEvent(
 	            event.getUuid(),
@@ -119,7 +100,6 @@ public class InstanceUsageEventListener implements EventListener<InstanceUsageEv
         log.error( ex, ex ); 
       }
     }
-  }
 
   protected ReportingInstanceEventStore getReportingInstanceEventStore() {
     return ReportingInstanceEventStore.getInstance();
