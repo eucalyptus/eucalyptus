@@ -384,6 +384,9 @@
             }
         }
         if (rule.protocol == 'icmp') {
+            var icmp_type = dialog.find('#sgroup-type').val();
+            rule.from_port = icmp_type;
+            rule.to_port = icmp_type;
         }
         else { // gather port details
             var port_range = dialog.find('#sgroup-ports').val();
