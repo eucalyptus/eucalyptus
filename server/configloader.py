@@ -1,5 +1,4 @@
 import os
-import sys
 import ConfigParser
 
 # List of config file locations
@@ -9,10 +8,10 @@ CONFIG_FILE_LIST = ['console.ini',
 
 class ConfigLoader:
     @staticmethod
-    def getParser():
+    def getParser(config_file=None):
         parser = ConfigParser.ConfigParser()
-        if '-c' in sys.argv:
-            CONFIG_FILE_LIST.insert(0, sys.argv[sys.argv.index('-c') + 1]);
+        if config_file:
+            CONFIG_FILE_LIST.insert(0, config_file);
         for config in CONFIG_FILE_LIST:
             if os.path.isfile(config):
                 parser.read(config)
