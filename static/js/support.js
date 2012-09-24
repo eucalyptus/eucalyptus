@@ -204,4 +204,12 @@ function startLaunchWizard(filter) {
   $container.maincontainer("changeSelected", null, { selected:'launcher', filter: filter});
 }
 
+function getErrorMessage(jqXHR) {
+  if (jqXHR && jqXHR.responseText) {
+    response = jQuery.parseJSON(jqXHR.responseText);
+    return response.message ? response.message[1] : undefined_error;
+  } else {
+    return undefined_error;
+  }
+}
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help

@@ -152,12 +152,12 @@
             thisObj.tableWrapper.eucatable('refreshTable');
             thisObj.tableWrapper.eucatable('glowRow', keyName);
           } else {
-            notifyError(null, $.i18n.prop('keypair_create_error', keyName));
+            notifyError($.i18n.prop('keypair_create_error', keyName), undefined_error);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          notifyError(null, $.i18n.prop('keypair_delete_error', keyName));
+          notifyError($.i18n.prop('keypair_create_error', keyName), getErrorMessage(jqXHR));
         }
       });
     },
@@ -181,14 +181,14 @@
                 notifySuccess(null, $.i18n.prop('keypair_delete_success', keyName));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('keypair_delete_error', keyName));
+                notifyError($.i18n.prop('keypair_delete_error', keyName), undefined_error);
               }
            }
           })(keyName),
           error:
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('keypair_delete_error', keyName));
+              notifyError($.i18n.prop('keypair_delete_error', keyName), getErrorMessage(jqXHR));
             }
           })(keyName)
         });

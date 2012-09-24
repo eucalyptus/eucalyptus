@@ -38,7 +38,7 @@
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
-          notifyError(null, "The server is not available");
+          notifyError($.i18n.prop('server_unavailable'));
           logout();
         }
       })).done(function(out){

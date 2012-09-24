@@ -428,17 +428,17 @@
               });
 
               if(toTerminate.length <=0){
-                notifySuccess(null, instance_terminate_success + ' ' + instances);
+                notifySuccess(null, $.i18n.prop('instance_terminate_success', instances));
                 thisObj.tableWrapper.eucatable('refreshTable');
               }else{
-                notifyError(null, instance_terminate_error + ' ' + toTerminate);
+                notifyError($.i18n.prop('instance_terminate_error', toTerminate), undefined_error);
               }
             } else {
-              notifyError(null, instance_terminate_error + ' ' + instances);
+              notifyError($.i18n.prop('instance_terminate_error', instances), undefined_error);
             }
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError(null, instance_terminate_error + ' ' + instances);
+            notifyError($.i18n.prop('instance_terminate_error', instances), getErrorMessage(jqXHR));
           }
         });
     },
@@ -471,14 +471,14 @@
           async:true,
           success: function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
-              notifySuccess(null, instance_reboot_success + ' ' + instances);
+              notifySuccess(null, $.i18n.prop('instance_reboot_success', instances));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, instance_reboot_error + ' ' + instances);
+              notifyError($.i18n.prop('instance_reboot_error', instances), undefined_error);
             }
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError(null, instance_reboot_error + ' ' + instances);
+            notifyError($.i18n.prop('instance_reboot_error', instances), getErrorMessage(jqXHR));
           }
         });
     },
@@ -516,16 +516,16 @@
                   toStop.splice(stopIdx, 1);
               });
               if(toStop.length <=0){
-                notifySuccess(null, instance_stop_success + ' ' + instances);
+                notifySuccess($.i18n.prop('instance_stop_success', instances));
                 thisObj.tableWrapper.eucatable('refreshTable');
               }else{
-                notifyError(null, instance_stop_error + ' ' + toStop);
+                notifyError($.i18n.prop('instance_stop_error', toStop), undefined_error);
               }
             }else
-              notifyError(null, instance_stop_error + ' ' + instances);
+              notifyError($.i18n.prop('instance_stop_error', instances), undefined_error);
           },
           error: function(jqXHR, textStatus, errorThrown){
-            notifyError(null, instance_stop_error + ' ' + instances);
+            notifyError($.i18n.prop('instance_stop_error', instances), getErrorMessage(jqXHR));
           }
         });
     },
@@ -557,14 +557,14 @@
               notifySuccess(null, $.i18n.prop('instance_start_success',instances));
               thisObj.tableWrapper.eucatable('refreshTable');
             }else{
-              notifyError(null, instance_start_error + ' ' + toStart);
+              notifyError($.i18n.prop('instance_start_error', toStart), undefined_error);
             }
           }else {
-            notifyError(null, instance_start_error + ' ' + instances);
+            notifyError($.i18n.prop('instance_start_error', instances), undefined_error);
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
-          notifyError(null, instance_start_error + ' ' + instances);
+          notifyError($.i18n.prop('instance_start_error', instances), getErrorMessage(jqXHR));
         }
       });
     },
@@ -643,10 +643,10 @@
             thisObj.consoleDialog.eucadialog('addNote', 'instance-console-output', consoleOutput); 
             thisObj.consoleDialog.eucadialog('open');
           }else{
-            notifyError(null, instance_console_error + ' ' + instances);
+            notifyError($.i18n.prop('instance_console_error', instances), undefined_error);
           }
         }).fail(function(out){
-          notifyError(null, instance_console_error + ' ' + instances);
+          notifyError($.i18n.prop('instance_console_error', instances), getErrorMessage(out));
         });
     },
     _attachAction : function() {
@@ -704,18 +704,18 @@
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               if (force)
-                notifyError(null, volume_force_detach_error(volumeId));
+                notifyError($.i18n.prop('volume_force_detach_error', volumeId),  undefined_error);
               else
-                notifyError(null, volume_detach_error(volumeId));
+                notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
             }
            }
          })(volumeId),
          error: (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, volume_force_detach_error(volumeId));
+                notifyError($.i18n.prop('volume_force_detach_error', volumeId), getErrorMessage(jqXHR));
               else
-                notifyError(null, volume_detach_error(volumeId));
+                notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
             }
           })(volumeId)
       });

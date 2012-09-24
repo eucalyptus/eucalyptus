@@ -21,7 +21,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.eucadata', $.eucalyptus.eucawidget, {
     options : {  
-      refresh_interval_sec : REFRESH_INTERVAL_SEC,
+      refresh_interval_sec : REFRESH_INTERVAL_SEC * 20,
       endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
                   {name:'image', url: '/ec2?Action=DescribeImages'},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},

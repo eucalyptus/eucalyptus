@@ -1226,7 +1226,7 @@
             var $container = $('html body').find(DOM_BINDING['main']);
               $container.maincontainer("changeSelected",null, {selected:'instance'});
           } else {
-            notifyError(null, $.i18n.prop('instance_run_error'));
+            notifyError($.i18n.prop('instance_run_error'), undefined_error);
             //TODO: clear launch-instance wizard?
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
@@ -1234,7 +1234,7 @@
           }
         },
         error: function (jqXHR, textStatus, errorthrown) {
-          notifyError(null, $.i18n.prop('instance_run_error'));
+          notifyError($.i18n.prop('instance_run_error'), getErrorMessage(jqXHR));
           var $container = $('html body').find(DOM_BINDING['main']);
           $container.maincontainer("clearSelected");
           $container.maincontainer("changeSelected",null, {selected:'launcher'});

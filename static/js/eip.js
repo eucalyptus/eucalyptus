@@ -230,14 +230,14 @@
                 notifySuccess(null, $.i18n.prop('eip_release_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('eip_release_error', eipId));
+                notifyError($.i18n.prop('eip_release_error', eipId), undefined_error);
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_release_error', eipId));
+              notifyError($.i18n.prop('eip_release_error', eipId), getErrorMessage(jqXHR));
             }
           })(eipId)
         });
@@ -263,14 +263,14 @@
                 notifySuccess(null, $.i18n.prop('eip_disassociate_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('eip_disassociate_error', eipId));
+                notifyError($.i18n.prop('eip_disassociate_error', eipId), undefined_error);
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_disassociate_error', eipId));
+              notifyError($.i18n.prop('eip_disassociate_error', eipId), getErrorMessage(jqXHR));
             }
           })(eipId)
         });
@@ -295,12 +295,12 @@
                 thisObj.tableWrapper.eucatable('refreshTable');
                 thisObj.tableWrapper.eucatable('glowRow', ip);
               } else {
-                notifyError(null, $.i18n.prop('eip_allocate_error'));
+                notifyError($.i18n.prop('eip_allocate_error'), undefined_error);
               }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_allocate_error'));
+              notifyError($.i18n.prop('eip_allocate_error'), getErrorMessage(jqXHR));
             }
         });
     },
@@ -320,12 +320,12 @@
               notifySuccess(null, $.i18n.prop('eip_associate_success', publicIp, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId), getErrorMessage(jqXHR));
           }
       });
     },

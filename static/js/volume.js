@@ -310,14 +310,14 @@
                 notifySuccess(null, $.i18n.prop('volume_delete_success', volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('volume_delete_error', volumeId));
+                notifyError($.i18n.prop('volume_delete_error', volumeId), undefined_error);
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('volume_delete_error', volumeId));
+              notifyError($.i18n.prop('volume_delete_error', volumeId), getErrorMessage(jqXHR));
             }
           })(volumeId)
         });
@@ -338,12 +338,12 @@
               notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, $.i18n.prop('volume_attach_error', volumeId, instanceId));
+              notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, $.i18n.prop('volume_attach_error', volumeId, instanceId));
+            notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));
           }
       });
     },
@@ -365,12 +365,12 @@
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', volId);
             } else {
-              notifyError(null, $.i18n.prop('volume_create_error'));
+              notifyError($.i18n.prop('volume_create_error'), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, $.i18n.prop('volume_create_error'));
+            notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
           }
       });
     },
@@ -398,9 +398,9 @@
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 if (force)
-                  notifyError(null, $.i18n.prop('volume_force_detach_error', volumeId));
+                  notifyError($.i18n.prop('volume_force_detach_error', volumeId), undefined_error);
                 else
-                  notifyError(null, $.i18n.prop('volume_detach_error', volumeId));
+                  notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
               }
            }
           })(volumeId),
@@ -408,9 +408,9 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, $.i18n.prop('volume_force_detach_error', volumeId));
+                notifyError($.i18n.prop('volume_force_detach_error', volumeId), getErrorMessage(jqXHR));
               else
-                notifyError(null, $.i18n.prop('volume_detach_error', volumeId));
+                notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
             }
           })(volumeId)
         });

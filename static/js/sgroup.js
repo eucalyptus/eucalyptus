@@ -152,12 +152,12 @@
                               $add_dialog.eucadialog("close");
                           }
                       } else {
-                          notifyError(null, $.i18n.prop('sgroup_add_rule_error', name));
+                          notifyError($.i18n.prop('sgroup_add_rule_error', name), undefined_error);
                           $add_dialog.eucadialog("close");
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    notifyError(null, $.i18n.prop('sgroup_create_error', name));
+                    notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                     dfd.reject();
                     $add_dialog.eucadialog("close");
                   }
@@ -478,7 +478,7 @@
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
                 thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('sgroup_delete_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_delete_error', sgroupName), undefined_error);
               }
            }
           })(sgroupName),
@@ -520,7 +520,7 @@
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError(null, $.i18n.prop('sgroup_add_rule_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
                 dialog.eucadialog("close");
             }
         }),
@@ -554,7 +554,7 @@
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError(null, $.i18n.prop('sgroup_revoke_rule_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
                 dialog.eucadialog("close");
             }
         }),
