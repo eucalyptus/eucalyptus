@@ -267,7 +267,10 @@
 
         $instanceSelector.autocomplete({
           source: inst_ids,
-          select: function() { thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId); }
+          select: function() {
+            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+              thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
+          }
         });
         $instanceSelector.watermark(instance_id_watermark);
       }
@@ -285,7 +288,10 @@
           this.attachDialog.eucadialog('showError', no_available_volume);
         $volumeSelector.autocomplete( {
           source: vol_ids,
-          select: function() { thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId); }
+          select: function() {
+            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+              thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
+          }
         });
         $volumeSelector.watermark(volume_id_watermark);
       }
