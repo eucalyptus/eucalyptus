@@ -84,6 +84,7 @@
     },
 
     updateSelected : function (selected, filter, options) {
+      thisObj = this;
       if(this._curSelected === selected){
         //$('html body').trigger('click'); // Manage resources --> uncomment this line
         return;
