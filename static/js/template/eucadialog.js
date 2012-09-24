@@ -352,6 +352,11 @@
       });
     },
 
+    activateButton : function(buttonId) {
+      $button = this.element.parent().find('#'+buttonId.replace('#',''));
+      $button.prop("disabled", false).removeClass("ui-state-disabled");
+    },
+
     onChange : function(evt_src_id, button_id, checkFunction) {
       evt_src_id = evt_src_id.replace('#','');
       var $evt_src = this.element.find('#'+evt_src_id);

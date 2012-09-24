@@ -190,7 +190,8 @@
           this.createDialog.find('#snapshot-create-dialog-some-volumes').show();
           this.createDialog.find('#snapshot-create-dialog-no-volumes').hide(); 
           $volSelector.autocomplete({
-            source: volume_ids
+            source: volume_ids,
+            select: function() { thisObj.createDialog.eucadialog('activateButton', thisObj.createSnapButtonId); }
           });
           $volSelector.watermark(volume_id_watermark);
         }

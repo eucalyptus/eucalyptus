@@ -29,6 +29,7 @@
     allocateDialog : null,
     associateDialog : null,
     disassociateDialog : null,
+    associateBtnId : 'eip-associate-btn',
 
     _init : function() {
       var thisObj = this;
@@ -137,7 +138,7 @@
          id: 'eip-associate',
          title: eip_associate_dialog_title,
          buttons: {
-           'associate': { text: eip_associate_dialog_associate_btn, click: function() {
+           'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
                if(thisObj.options.from_instance){
                  thisObj._associateIp(
                    $eip_associate_dialog.find('#eip-associate-instance-id').val(),
@@ -152,7 +153,7 @@
                $eip_associate_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus: true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
          help: { content: $eip_associate_dialog_help },
          on_open: {spin: true, callback: function(args) {
@@ -345,7 +346,8 @@
         if ( inst_ids.length === 0 )
           this.associateDialog.eucadialog('showError', no_running_instances);
         $selector.autocomplete({
-            source: inst_ids
+          source: inst_ids,
+          select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(instance_id_watermark);
       }else{ // called from instance landing page
@@ -361,7 +363,8 @@
         if (addresses.length ===0 )
           this.associateDialog.eucadialog('showError', no_available_address);
         $selector.autocomplete({
-          source: addresses
+          source: addresses,
+          select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(address_watermark);
       }
