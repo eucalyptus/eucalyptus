@@ -51,7 +51,7 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell",
             },
             { // platform
               "fnRender" : function(oObj) { 
@@ -67,7 +67,9 @@
             },
             { 
               "fnRender": function(oObj) { 
-                 return '<div class="table-row-status status-'+oObj.aData.state+'">&nbsp;</div>';
+                 var state = oObj.aData.state;
+                 state = state.replace('-','');  // '-' has an issue with Messages.properties; shutting-down -> shuttingdown
+                 return '<div class="table-row-status status-'+state+'">&nbsp;</div>';
                },
             },
             { "mDataProp": "image_id"},
@@ -76,7 +78,10 @@
             { "mDataProp": "private_ip_address" },
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
-            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) } },
+            { 
+              "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) },
+              "iDataSort": 13,
+            },
             {
               "bVisible": false,
               "mDataProp": "root_device_type"
@@ -84,6 +89,11 @@
             {
               "bVisible": false,
               "mDataProp":"state"
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "launch_time",
+              "sType": "date"
             }
           ]
         },
@@ -129,7 +139,7 @@
         },
         filters : [{name:"inst_state", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
-        legend : ['running','pending','stopping','stopped','shutting down','terminated']
+        legend : ['running','pending','stopping','stopped','shuttingdown','terminated']
       }) //end of eucatable
       
       thisObj.tableWrapper.appendTo(thisObj.element);
@@ -769,7 +779,9 @@
       if(instance['product_codes'] && instance['product_codes'].length > 0)
         prodCode = instance['product_codes'].join(' ');
 
-      var $instInfo = $('<ul>').addClass('instance-expanded').text(instance_table_expanded_instance).append(
+      var $instInfo = $('<div>').addClass('instance-table-expanded-instance').append(
+      $('<span>').text(instance_table_expanded_instance),
+      $('<ul>').addClass('instance-expanded').append(
         $('<li>').append( 
           $('<div>').addClass('expanded-value').text(instance['instance_type']),
           $('<div>').addClass('expanded-title').text(instance_table_expanded_type)),
@@ -793,7 +805,7 @@
           $('<div>').addClass('expanded-title').text(instance_table_expanded_account)),
         $('<li>').append(
           $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']]),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest)));
+          $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest))));
 
       var $volInfo = null;
       if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
@@ -804,21 +816,23 @@
           if(vol.attach_data && vol.attach_data.instance_id ===instId) 
             attachedVols[vol.id] = vol;
         }
-        $volInfo = $('<ul>').addClass('instance-volume-expanded').text(instance_table_expanded_volume);
+        $volInfo = $('<div>').addClass('instance-table-expanded-volume').append(
+            $('<span>').text(instance_table_expanded_volume));
         $.each(instance.block_device_mapping, function(key, mapping){
           var creationTime = '';
           creationTime = attachedVols[mapping.volume_id].create_time;
           creationTime = formatDateTime(creationTime); 
-          $volInfo.append($('<ul>').append(
-             $('<li>').append(
-               $('<div>').addClass('expanded-value').text(mapping.volume_id),
-               $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
-             $('<li>').append(
-               $('<div>').addClass('expanded-value').text(key),
-               $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap)),
-             $('<li>').append(
-               $('<div>').addClass('expanded-value').text(creationTime),
-               $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime))));
+          $volInfo.append(
+            $('<ul>').addClass('volume-expanded').append(
+              $('<li>').append(
+                $('<div>').addClass('expanded-value').text(mapping.volume_id),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
+              $('<li>').append(
+                $('<div>').addClass('expanded-value').text(key),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap)),
+              $('<li>').append(
+                $('<div>').addClass('expanded-value').text(creationTime),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime))));
         });
       } 
       $wrapper.append($instInfo);

@@ -1,26 +1,25 @@
-<!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; version 3 of the License.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see http://www.gnu.org/licenses/.
-
-  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
-  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
-  additional information or have any questions.
-  -->
-
 <!DOCTYPE html>
 <html>
   <head>
+    <!--
+    Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; version 3 of the License.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see http://www.gnu.org/licenses/.
+
+    Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+    CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+    additional information or have any questions.
+    --> 
     <title>Eucalyptus</title>
     <style type="text/css" title="currentStyle">
       @import "lib/jquery.css";
@@ -166,7 +165,7 @@
         <div id="login-euca-dialog-wrapper">
           <div id="login-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: login_failure }}
+              <p>{{!: login_failure }}</p>
             </div>
           </div>
           <div id="instances-euca-dialog-help" class="dialog-help">
@@ -174,7 +173,7 @@
               {{!: dialog_login_failure_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -200,12 +199,12 @@
                  <option value="all">{{!>dashboard_az_all}}</option>
                </select>
               </div>
-              <div id="dashboard-instance-running" class="status-running clearfix">
+              <div id="dashboard-instance-running" class="db-instances-running clearfix">
                 <div class="status-readout">
                   <span></span> {{!>dashboard_instance_running}}
                 </div>
               </div>
-              <div id="dashboard-instance-stopped" class="status-stopped clearfix">
+              <div id="dashboard-instance-stopped" class="db-instances-stopped clearfix">
                 <div class="status-readout">
                   <span></span> {{!>dashboard_instance_stopped}}
                 </div>
@@ -286,7 +285,7 @@
         <div id="keys-add-dialog-wrapper">
           <div id="keys-add-dialog" class="add-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: keypair_dialog_add_text }}</p>
+              {{!: keypair_dialog_add_text }}
               <div class="form-row">
                 <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
                 <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_create_flh_name }}"/>
@@ -299,7 +298,7 @@
               {{!: dialog_add_content }}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -309,7 +308,7 @@
         <div id="keys-euca-dialog-wrapper">
           <div id="keys-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: keypair_dialog_del_text }}</p>
+              {{!: keypair_dialog_del_text }}
               <div class="selected-resources"></div>
             </div>
           </div>
@@ -318,7 +317,7 @@
               {{!: dialog_delete_content}}
             </div>
              <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div> 
       </script>
@@ -401,7 +400,7 @@
                     </optgroup>
                   </select>
                 </div>
-                <div id="sgroup-more-rules" style='display: none;'>
+                <div id="sgroup-more-rules" style="display: none;">
                   <div class="form-row"> 
                     <div id="sgroup-port-option">
                       <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
@@ -470,7 +469,7 @@
                 {{!: dialog_add_content }}
             </div>
             <div class="help-revert-button">
-                <a href="#"> {{!>revert_button}}</a>
+                <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -585,7 +584,7 @@
                 {{!: dialog_edit_content }}
               </div>
               <div class="help-revert-button">
-                <a href="#"> {{!>revert_button}}</a>
+                <a href="#">{{!>revert_button}}</a>
               </div>
           </div>
         </div>
@@ -604,7 +603,7 @@
                 {{!: dialog_delete_content }}
             </div>
             <div class="help-revert-button">
-                <a href="#"> {{!>revert_button}}</a>
+                <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -665,7 +664,7 @@
               {{!: dialog_delete_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -687,7 +686,7 @@
               {{!: dialog_detach_content}}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -701,7 +700,7 @@
               <p>{{!: volume_dialog_detach_text }}</p>
               <div class="form-row">
                 <label for="volume-detach-instance-id">{{!: instance_label }}</label>
-                <input id="volume-detach-instance-id" disabled='disabled'/ >
+                <input type="text" id="volume-detach-instance-id" disabled='disabled'/ >
               </div>
               <div class="form-row">
                 <label for="volume-detach-volume-selector">{{!: volume_label }}</label>
@@ -715,7 +714,7 @@
               {{!: dialog_detach_content}}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -733,7 +732,7 @@
               </div>
               <div class="form-row">
                 <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
-                <input type="text" id="volume-size" class="required" title="{{!: volume_dialog_size_tip }}"/>
+                <input type="text" id="volume-size" class="short-textinput required" title="{{!: volume_dialog_size_tip }}"/>
               </div>
               <p>{{!: volume_dialog_az_text }}</p>
               <div class="form-row">
@@ -749,7 +748,7 @@
               {{!: dialog_add_content }}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -760,7 +759,7 @@
         <div id="volumes-attach-dialog-wrapper">
           <div id="volumes-attach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <div class="form-row">
+              <div class="form-row top-form-row">
                 <label for="volume-attach-volume-id" class="required-label">{{!: volume_dialog_attach_volume_label }}</label>
                 <input type="text" id="volume-attach-volume-id" class="required" title="{{!: volume_attach_volume_id_text_tip }}"/>
               </div>
@@ -781,7 +780,7 @@
               {{!: dialog_attach_content}}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -854,7 +853,7 @@
               {{!: dialog_create_content}}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -865,7 +864,7 @@
           
           <div id="snapshot-delete-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: snapshot_delete_dialog_text }}</p>
+              {{!: snapshot_delete_dialog_text }}
               <div class="selected-resources"></div>
             </div>
           </div>
@@ -875,7 +874,7 @@
               {{!: dialog_delete_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -918,9 +917,9 @@
         <div id="eip-allocate-dialog-wrapper">
           <div id="eip-allocate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: eip_allocate_dialog_text }}</p>
+              {{!: eip_allocate_dialog_text }}
               <div class="form-row">
-                <label for="eip-allocate-count" class="required-label long-label">{{!: eip_allocate_dialog_count_label }}</label>
+                <label for="eip-allocate-count" class="required-label mega-long-label">{{!: eip_allocate_dialog_count_label }}</label>
                 <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="3" title="{{!: eip_allocate_dialog_count_tip }}"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
@@ -931,7 +930,7 @@
               {{!: dialog_allocate_content}}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -941,7 +940,7 @@
 
           <div id="eip-release-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: eip_release_dialog_text }}</p>
+              {{!: eip_release_dialog_text }}
               <div class="selected-resources"></div>
             </div>
           </div>
@@ -951,7 +950,7 @@
               {{!: dialog_release_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -963,8 +962,8 @@
           
           <div id="eip-associate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <div class="form-row">
-                <label for="eip-associate-instance-id" class="required-label" id="eip-associate-instance-txt"></label>
+              <div class="form-row top-form-row">
+                <label for="eip-associate-instance-id" class="required-label extra-long-label" id="eip-associate-instance-txt"></label>
                 <input type="text" id="eip-associate-instance-id" class="required" title="{{!: eip_associate_dialog_instance_tip }}"> </input>
               </div>
               <label style="display:none" id="to-associate"> </label>
@@ -976,7 +975,7 @@
               {{!: dialog_associate_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -988,7 +987,7 @@
           
           <div id="eip-disassociate-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: eip_disassociate_dialog_text }}</p>
+              {{!: eip_disassociate_dialog_text }}
               <div class="selected-resources"></div>
             </div>
           </div>
@@ -998,7 +997,7 @@
               {{!: dialog_disassociate_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -1052,7 +1051,7 @@
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <div id="ebs-backed-warning"> </div>
-              <p>{{!: instance_dialog_term_text }}</p>
+              {{!: instance_dialog_term_text }}
               <div class="selected-resources"> </div>
             </div>
           </div>
@@ -1062,7 +1061,7 @@
               {{!: dialog_terminate_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -1073,7 +1072,7 @@
           
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: instance_dialog_reboot_text }}</p>
+              {{!: instance_dialog_reboot_text }}
               <div class="selected-resources"></div>
             </div>
           </div>
@@ -1083,7 +1082,7 @@
               {{!: dialog_reboot_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -1094,8 +1093,8 @@
           
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: instance_dialog_stop_text }}</p>
-              <div class="selected-resources"> </div>
+              {{!: instance_dialog_stop_text }}
+              <div class="selected-resources"></div>
             </div>
           </div>
 
@@ -1104,7 +1103,7 @@
               {{!: dialog_stop_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
 
@@ -1125,7 +1124,7 @@
               {{!: dialog_connect_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -1143,7 +1142,7 @@
               {{!: dialog_console_content}}
             </div>
             <div class="help-revert-button"> 
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -1189,7 +1188,7 @@
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: about_dialog_version }}&nbsp;<span id="version"/></p>
-              <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" id="admin-url">{{!: about_dialog_link_lable }}</a>.</p>
+              <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" target="_blank" id="admin-url">{{!: about_dialog_link_lable }}</a>.</p>
             </div>
           </div>
           <div id="instances-euca-dialog-help" class="dialog-help">
@@ -1197,7 +1196,7 @@
               {{!: dialog_content}}
             </div>
             <div class="help-revert-button">
-              <a href="#"> {{!>revert_button}}</a>
+              <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
         </div>
@@ -1217,7 +1216,7 @@
                 <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
                 <div id="launch-wizard-required"> {{!> launch_instance_required }} </div> 
                 <div id="launch-wizard-image" class="wizard-step"> 
-                  <div id="launch-wizard-image-header"> </div>
+                  <div id="launch-wizard-image-header" class="twist"> </div>
                   <div id="launch-wizard-image-contents" class="launch-wizard-section">
                     <div id="launch-wizard-image-main-contents">
                       <div id="launch-wizard-image-table">
@@ -1232,7 +1231,7 @@
                 </div>
             
                 <div id="launch-wizard-type" class="wizard-step"> 
-                  <div id="launch-wizard-type-header"> </div>
+                  <div id="launch-wizard-type-header" class="twist"> </div>
                   <div id="launch-wizard-type-contents" class="launch-wizard-section">
                     <div id="launch-wizard-type-main-contents">
                       <div id="launch-wizard-type-size"> </div>
@@ -1243,7 +1242,7 @@
                 </div>
             
                 <div id="launch-wizard-security" class="wizard-step">
-                  <div id="launch-wizard-security-header"> </div>
+                  <div id="launch-wizard-security-header" class="twist"> </div>
                   <div id="launch-wizard-security-contents" class="launch-wizard-section">
                     <div id="launch-wizard-security-main-contents">
                       <div id="launch-wizard-security-keypair"> </div>
@@ -1254,7 +1253,7 @@
                 </div>
             
                 <div id="launch-wizard-advanced" class="wizard-step">
-                  <div id="launch-wizard-advanced-header"> </div>
+                  <div id="launch-wizard-advanced-header" class="twist"> </div>
                   <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
                     <div id="launch-wizard-advanced-main-contents">
                       <div id="launch-wizard-advanced-userdata"> </div>

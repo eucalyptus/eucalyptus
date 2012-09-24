@@ -46,7 +46,7 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell",
             },
             { "mDataProp": "id" },
             {
@@ -55,17 +55,25 @@
                  $div.append(oObj.aData.status=='pending' ?  oObj.aData.progress : '&nbsp;');
                  return asHTML($div);
                },
-              "sWidth": "20px",
+              "sClass": "narrow-cell",
               "bSearchable": false,
-              "iDataSort": 7, // sort on hiden status column
+              "iDataSort": 7, // sort on hidden status column
             },
             { "mDataProp": "volume_size" },
             { "mDataProp": "volume_id" },
             { "mDataProp": "description" },
-            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); } },
+            { 
+              "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); },
+              "iDataSort": 8,
+            },
             {
               "bVisible": false,
               "mDataProp": "status"
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "start_time",
+              "sType": "date"
             }
           ],
         },

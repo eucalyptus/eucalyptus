@@ -43,25 +43,36 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell"
             },
             { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
                  return '<div class="table-row-status status-'+oObj.aData.status+'">&nbsp;</div>';
                },
-              "sWidth": "20px",
+              "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 8, // sort on hidden status column
             },
-            { "mDataProp": "size" },
+            { 
+              "mDataProp": "size",
+              "sClass": "centered-cell"
+            },
             { "mDataProp": "attach_data.instance_id" },
             { "mDataProp": "snapshot_id" },
             { "mDataProp": "zone" },
-            { "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); } },
+            { 
+              "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
+              "iDataSort": 9
+            },
             {
               "bVisible": false,
               "mDataProp": "status"
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "create_time",
+              "sType": "date"
             }
           ],
         },
@@ -447,9 +458,9 @@
 
     _createMenuActions : function() {
       var thisObj = this;
-      var volumeStates = thisObj.baseTable.eucatable('getSelectedRows', 8); // 8th column=status (this is volume's knowledge)
+      var volumes = thisObj.baseTable.eucatable('getSelectedRows');
       var itemsList = {};
-    
+
       (function(){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) {;}, disabled: function(){ return true;} } 
         itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) {;}, disabled: function(){ return true;} }
@@ -458,22 +469,48 @@
       })();
 
       // add attach action
-      if ( volumeStates.length === 1 && volumeStates.indexOf('available') === 0 ){
+      if ( volumes.length === 1 && volumes[0].status === 'available' ){
         itemsList['attach'] = { "name": volume_action_attach, callback: function(key, opt) { thisObj._attachAction(); } }
       }
       // detach actions
-      if ( volumeStates.length > 0  && onlyInArray('in-use', volumeStates))
-        itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
-
+      if ( volumes.length > 0 ) {
+        addOption = true;
+        for (v in volumes) {
+          if ( volumes[v].status !== 'in-use' ) {
+            addOption = false;
+            break;
+          }
+          // do not allow to detach ebs root volume
+          if (volumes[v].attach_data.instance_id) {
+            var instance = getResource('instance', volumes[v].attach_data.instance_id);
+            if ( instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
+              var rootVolume = instance.block_device_mapping[instance.root_device_name];
+              if ( rootVolume.volume_id == volumes[v].id ) {
+                addOption = false;
+                break;
+              }
+            }
+          }
+        }
+        if (addOption)
+          itemsList['detach'] = { "name": volume_action_detach, callback: function(key, opt) { thisObj._detachAction(); } }
+      }
       // create snapshot-action
-      if ( volumeStates.length  === 1) { 
-         if ( volumeStates[0] === 'in-use' || volumeStates[0] === 'available' )
+      if ( volumes.length === 1) {
+         if ( volumes[0].status === 'in-use' || volumes[0].status === 'available' )
             itemsList['create_snapshot'] = { "name": volume_action_create_snapshot, callback: function(key, opt) { thisObj._createSnapshotAction(); } }
       }
-
       // add delete action
-      if ( volumeStates.length > 0 && onlyInArray('available', volumeStates)){
-        itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+      if ( volumes.length > 0 ) {
+        addOption = true;
+        for (v in volumes) {
+          if (volumes[v].status !== 'available') {
+            addOption = false;
+            break;
+          }
+        }
+        if (addOption)
+          itemsList['delete'] = { "name": volume_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       return itemsList;
     },

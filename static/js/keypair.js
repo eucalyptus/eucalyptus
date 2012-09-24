@@ -41,7 +41,7 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell",
             },
             { "mDataProp": "name" },
             { "mDataProp": "fingerprint", "bSortable": false }

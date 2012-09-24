@@ -42,7 +42,7 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell",
             },
             { 
               "fnRender" : function(oObj) { 
@@ -607,7 +607,7 @@
         return null;
       var $wrapper = null;
       if(group.rules && group.rules.length > 0){
-        $wrapper = $('<div>').append($('<ul>').addClass('sgroup-expanded').text(sgroup_table_expanded_title));
+        $wrapper = $('<div>').append($('<span>').text(sgroup_table_expanded_title), $('<ul>').addClass('sgroup-expanded'));
         $wrapper = $wrapper.find('ul');
         $.each(group.rules, function (idx, rule){
           var protocol = rule['ip_protocol'];
@@ -637,16 +637,18 @@
           src = src.join(', '); 
  
           $wrapper.append(
-            $('<ul>').text(sgroup_table_expanded_rule).append(
-              $('<li>').append( 
-                $('<div>').addClass('expanded-value').text(protocol),
-                $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol)),
-              $('<li>').append( 
-                $('<div>').addClass('expanded-value').text(portOrType),
-                $('<div>').addClass('expanded-title').text(portOrTypeTitle)),
-              $('<li>').append( 
-                $('<div>').addClass('expanded-value').text(src),
-                $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source))));
+            $('<li>').append(
+              $('<span>').text(sgroup_table_expanded_rule),
+              $('<ul>').addClass('sgroup-table-expanded-rule').append(
+                $('<li>').append( 
+                  $('<div>').addClass('expanded-value').text(protocol),
+                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol)),
+                $('<li>').append( 
+                  $('<div>').addClass('expanded-value').text(portOrType),
+                  $('<div>').addClass('expanded-title').text(portOrTypeTitle)),
+                $('<li>').append( 
+                  $('<div>').addClass('expanded-value').text(src),
+                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source)))));
         });
       }
       return $wrapper;

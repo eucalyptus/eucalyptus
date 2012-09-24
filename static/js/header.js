@@ -66,39 +66,11 @@
        // navigation area   
        //var $naviArea = this.element.find('#euca-navigator');
        //$naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));
-       
-       //help area 
-/*       var $helpArea = this.element.find('#euca-help');
 
-       var help_menus = {'documentation':menu_help_documentation,'forum':menu_help_forum,'report':menu_help_report}
-       var $help_menus = $('<ul>');
-       $.each(help_menus, function(k, v){
-         $('<li>').append(
-           $('<a>').attr('href','#').text(v).click(function(e,src){
-             if(src!=='triggered')
-               thisObj._trigger('select',e, {selected:k, options:KEEP_VIEW});
-            })).appendTo($help_menus);
-       });
-       $helpArea.append(
-         $('<ul>').addClass('header-nav').append(
-           $('<li>').append(
-             $('<a>').attr('href','#').text(menu_help).click(function(evt, src){ 
-               	$helpArea.find('.header-nav ul').slideToggle('fast'); 
-	        $(this).toggleClass('toggle-on');
-                $('html body').trigger('click','help');
-                if ($(this).hasClass('toggle-on'))
-                  $('html body').eucaevent('add_click', 'help', evt);
-                else
-                  $('html body').eucaevent('del_click', 'help');
-                return false;
-             }),
-             $help_menus)));
-     
-*/
        //user area
-       var user_menus = {'help':{text:menu_help, options:KEEP_VIEW}, 'preference':{text:menu_user_preferences},'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
+       var user_menus = {'help':{text:menu_help, options:KEEP_VIEW}, 'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
 
-       var uname =$.eucaData.u_session['account']+'/'+ $.eucaData.u_session['username'];
+       var uname = $.eucaData.u_session['username'] + '@' + $.eucaData.u_session['account'];
        var $userArea = this.element.find('#euca-user');
       
        var $user_menus = $('<ul>');

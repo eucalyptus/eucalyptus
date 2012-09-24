@@ -49,7 +49,7 @@
             {
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
-              "sWidth": "20px",
+              "sClass": "checkbox-cell"
             },
             { "mDataProp": "public_ip" },
             { "mDataProp": "instance_id" },
