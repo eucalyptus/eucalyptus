@@ -648,14 +648,14 @@
               $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
                 $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
                   $('<li>').append( 
-                    $('<div>').addClass('expanded-value').text(protocol),
-                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol)),
+                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),
+                    $('<div>').addClass('expanded-value').text(protocol)),
                   $('<li>').append( 
-                    $('<div>').addClass('expanded-value').text(portOrType),
-                    $('<div>').addClass('expanded-title').text(portOrTypeTitle)),
+                    $('<div>').addClass('expanded-title').text(portOrTypeTitle),
+                    $('<div>').addClass('expanded-value').text(portOrType)),
                   $('<li>').append( 
-                    $('<div>').addClass('expanded-value').text(src),
-                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source))))));
+                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
+                    $('<div>').addClass('expanded-value').text(src))))));
         });
       }
       return $('<div>').append($wrapper);

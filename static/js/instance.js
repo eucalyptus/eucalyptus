@@ -784,26 +784,26 @@
       $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
         $('<ul>').addClass('instance-expanded').addClass('clearfix').append(
           $('<li>').append( 
-            $('<div>').addClass('expanded-value').text(instance['instance_type']),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_type)),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_type),
+            $('<div>').addClass('expanded-value').text(instance['instance_type'])),
           $('<li>').append(
-            $('<div>').addClass('expanded-value').text(instance['kernel']),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel)),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel),
+            $('<div>').addClass('expanded-value').text(instance['kernel'])),
           $('<li>').append(
-            $('<div>').addClass('expanded-value').text(instance['ramdisk']),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk)),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk),
+            $('<div>').addClass('expanded-value').text(instance['ramdisk'])),
           $('<li>').append(
-            $('<div>').addClass('expanded-value').text(instance['root_device_type']),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_root)),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_root),
+            $('<div>').addClass('expanded-value').text(instance['root_device_type'])),
           $('<li>').append(
-            $('<div>').addClass('expanded-value').text(instance['reservation_id']),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation)),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation),
+            $('<div>').addClass('expanded-value').text(instance['reservation_id'])),
           $('<li>').append(
-            $('<div>').addClass('expanded-value').text(instance['owner_id']),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_account)),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_account),
+            $('<div>').addClass('expanded-value').text(instance['owner_id'])),
           $('<li>').append(
-            $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']]),
-            $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest)))));
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest),
+            $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']])))));
 
       var $volInfo = null;
       if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
@@ -824,14 +824,14 @@
           $volInfo.find('.expanded-section-content').append(
             $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
               $('<li>').append(
-                $('<div>').addClass('expanded-value').text(mapping.volume_id),
-                $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_volid),
+                $('<div>').addClass('expanded-value').text(mapping.volume_id)),
               $('<li>').append(
-                $('<div>').addClass('expanded-value').text(key),
-                $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap)),
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap),
+                $('<div>').addClass('expanded-value').text(key)),
               $('<li>').append(
-                $('<div>').addClass('expanded-value').text(creationTime),
-                $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime))));
+                $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime),
+                $('<div>').addClass('expanded-value').text(creationTime))));
         });
       } 
       $wrapper.append($instInfo);
