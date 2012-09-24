@@ -1077,37 +1077,48 @@ tr.expanded {
   border-width: 1px 0;
 }
 
+.expanded-section-label {
+  float: left;
+  width: 110px;
+}
+
+.expanded-section-content {
+  float: left;
+}
+
 .expanded ul {
   margin: 0;
   padding: 0;
   list-style-type: none;
-  clear: left;
 }
 
 .expanded ul li {
   float: left;
-  width: 100px;
   margin: 0;
-  background-color: wheat;
+  width: 110px;
 }
 
 .expanded ul li:last-child {
-  width: 200px;
+  width: 260px;
+}
+
+/* TODO: Dave - remove this class and the marker colors when layout HTML has been updated */
+
+ul.volume-expanded li:last-child {
+  width: 240px;
 }
 
 .expanded-value {
   padding: 2px 4px;
-  background-color: paleturquoise;
+  background-color: Lightcyan; 
 }
 
 .expanded-title {
   padding: 2px 4px;
-  background-color: palegreen;
-  font-family: 'PlayRegular', Arial, sans-serif;
+  background-color: Lavender;
   color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
 }
-
-
 
 /* ======= Help page related ===== */
 
