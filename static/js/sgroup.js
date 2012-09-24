@@ -194,6 +194,17 @@
             }
             else
                 $('#sgroup-ports').val('');
+            if (templ.indexOf('TCP') > -1)
+                thisObj._setPortOption(thisObj.addDialog);
+            else {
+                if (templ.indexOf('UDP') > -1)
+                    thisObj._setPortOption(thisObj.addDialog);
+                else {
+                    if (templ.indexOf('ICMP') > -1) {
+                        thisObj._setTypeOption(thisObj.addDialog);
+                    }
+                }
+            }
          }
       });
       this.addDialog.find('#sgroup-ip-check').click(function () {
@@ -235,7 +246,6 @@
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].deletethis == true) {
-                      alert("revoking rule for port "+thisObj.rulesList[rule].from_port+" cidr:"+thisObj.rulesList[rule].ipaddr);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -254,7 +264,6 @@
               var fromGroup = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
-                      alert("adding rule for port "+thisObj.rulesList[rule].from_port+" cidr:"+thisObj.rulesList[rule].ipaddr);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -297,6 +306,16 @@
             }
             else
                 thisObj.editDialog.find('#sgroup-ports').val('');
+            if (templ.indexOf('TCP') > -1)
+                thisObj._setPortOption(thisObj.editDialog);
+            else {
+                if (templ.indexOf('UDP') > -1)
+                    thisObj._setPortOption(thisObj.editDialog);
+                else {
+                    if (templ.indexOf('ICMP') > -1)
+                        thisObj._setTypeOption(thisObj.editDialog);
+                }
+            }
          }
       });
       this.editDialog.find('#sgroup-add-rule').click(function () {
@@ -334,23 +353,47 @@
          $button.prop("disabled", false).addClass("ui-state-disabled");
     },
 
+    _setPortOption : function(dialog) {
+        dialog.find('#sgroup-port-option').css('display','block')
+        dialog.find('#sgroup-type-option').css('display','none')
+    },
+
+    _setTypeOption : function(dialog) {
+        dialog.find('#sgroup-port-option').css('display','none')
+        dialog.find('#sgroup-type-option').css('display','block')
+    },
+
     // this function is used to take an ingress rule from the form and move it to the rulesList
     _storeRule : function(dialog) {
         if (this.rulesList == null) {
             this.rulesList = new Array();
         }
         // if nothing selected, don't save
-        if (dialog.find('#sgroup-template').val() == 'none')
+        template = dialog.find('#sgroup-template').val();
+        if (template == 'none')
             return;
         var rule = new Object();
-        rule.protocol = 'tcp';
-        var port_range = dialog.find('#sgroup-ports').val();
-        // if no port named, don't save
-        if (port_range == '')
-            return;
-        var ports = port_range.split('-');
-        rule.from_port = ports[0];
-        rule.to_port = ports[ports.length-1];
+        if (template.indexOf('TCP') > -1)
+            rule.protocol = 'tcp';
+        else {
+            if (template.indexOf('UDP') > -1)
+                rule.protocol = 'udp';
+            else {
+                if (template.indexOf('ICMP') > -1)
+                    rule.protocol = 'icmp';
+            }
+        }
+        if (rule.protocol == 'icmp') {
+        }
+        else { // gather port details
+            var port_range = dialog.find('#sgroup-ports').val();
+            // if no port named, don't save
+            if (port_range == '')
+                return;
+            var ports = port_range.split('-');
+            rule.from_port = ports[0];
+            rule.to_port = ports[ports.length-1];
+        }
         if (dialog.find("input[@name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = dialog.find('#allow-ip').val();
         }
@@ -458,6 +501,7 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
+      alert("add rule: "+req_params);
       var sgroupName = groupName;
       $.ajax({
         type:"GET",

@@ -403,8 +403,43 @@
                 </div>
                 <div id="sgroup-more-rules" style='display: none;'>
                   <div class="form-row"> 
-                    <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                    <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                    <div id="sgroup-port-option">
+                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                      <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                    </div>
+                    <div id="sgroup-type-option" style="display: none;">
+                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                      <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
+                        <option>Echo reply</option>
+                        <option>Destination unreachable</option>
+                        <option>Source quench</option>
+                        <option>Redirect message</option>
+                        <option>Alternate host address</option>
+                        <option>Echo request</option>
+                        <option>Router advertisement</option>
+                        <option>Router solicitation</option>
+                        <option>Timeout exceeded</option>
+                        <option>Parameter problem: Bad IP header</option>
+                        <option>Timestamp</option>
+                        <option>Timestamp reply</option>
+                        <option>Information request</option>
+                        <option>Infromation reply</option>
+                        <option>Address mask request</option>
+                        <option>Address mask reply</option>
+                        <option>Traceroute</option>
+                        <option>Diagram conversion error</option>
+                        <option>Mobile host redirect</option>
+                        <option>Where are you</option>
+                        <option>Here I am</option>
+                        <option>Mobile registration request</option>
+                        <option>Mobile registration reply</option>
+                        <option>Domain name request</option>
+                        <option>Domain name reply</option>
+                        <option>SKIP algorithm discovery protocol</option>
+                        <option>Photuris, security failures</option>
+                        <option>All</option>
+                      </select>
+                    </div>
                     <div class="dialog-notifications"></div>
                   </div>  
                   
@@ -484,8 +519,43 @@
   
                 <div id="sgroup-more-rules" style='display: none;'>
                   <div class="form-row">
-                    <label for="sgroup-ports" class="required-label">{{!>sgroup_dialog_add_ports}}</label>
-                    <input type="text" id="sgroup-ports" class="required"/>
+                    <div id="sgroup-port-option">
+                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                      <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                    </div>
+                    <div id="sgroup-type-option" style="display: none;">
+                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                      <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
+                        <option>Echo reply</option>
+                        <option>Destination unreachable</option>
+                        <option>Source quench</option>
+                        <option>Redirect message</option>
+                        <option>Alternate host address</option>
+                        <option>Echo request</option>
+                        <option>Router advertisement</option>
+                        <option>Router solicitation</option>
+                        <option>Timeout exceeded</option>
+                        <option>Parameter problem: Bad IP header</option>
+                        <option>Timestamp</option>
+                        <option>Timestamp reply</option>
+                        <option>Information request</option>
+                        <option>Infromation reply</option>
+                        <option>Address mask request</option>
+                        <option>Address mask reply</option>
+                        <option>Traceroute</option>
+                        <option>Diagram conversion error</option>
+                        <option>Mobile host redirect</option>
+                        <option>Where are you</option>
+                        <option>Here I am</option>
+                        <option>Mobile registration request</option>
+                        <option>Mobile registration reply</option>
+                        <option>Domain name request</option>
+                        <option>Domain name reply</option>
+                        <option>SKIP algorithm discovery protocol</option>
+                        <option>Photuris, security failures</option>
+                        <option>All</option>
+                      </select>
+                    </div>
                     <div class="dialog-notifications"></div>
                   </div>
   
