@@ -133,36 +133,33 @@ public class ReportingEventTest {
     final long valueTimestamp = timestamp - 2000L;
     final InstanceUsageEvent event = new InstanceUsageEvent(
             uuid( "i-00000001" ),
-            timestamp,
-            "resource",
+            "i-00000001",
             "metric",
-            1,
+            1L,
             "dimension",
             12.17,
             valueTimestamp
         );
 
     assertEquals( "uuid", uuid( "i-00000001" ), event.getUuid() );
-    assertEquals( "timestamp", timestamp, event.getTimestamp() );
-    assertEquals( "resource", "resource", event.getResourceName() );
+    assertEquals( "id", "i-00000001", event.getInstanceId() );
     assertEquals( "metric", "metric", event.getMetric() );
-    assertEquals( "sequence", 1, event.getSequenceNum() );
+    assertEquals( "sequence", (Long)1L, event.getSequenceNum() );
     assertEquals( "dimension", "dimension", event.getDimension() );
     assertEquals( "value", (Double)12.17, event.getValue() );
-    assertEquals( "event string", "InstanceUsageEvent [uuid=51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0, timestamp=1347987263899, resourceName=resource, metric=metric, sequenceNum=1, dimension=dimension, value=12.17, valueTimestamp=1347987261899]", event.toString() );
+    assertEquals( "event string", "InstanceUsageEvent [uuid=51b56c1f-8c0d-3096-8c5e-e78ae6c8f4c0, instanceId=i-00000001, metric=metric, sequenceNum=1, dimension=dimension, value=12.17, valueTimestamp=1347987261899]", event.toString() );
   }
 
   @Test(expected=AssertionError.class)
   public void testInstanceEventCreationFailure() {
     new InstanceUsageEvent(
         uuid( "i-00000001" ),
-        System.currentTimeMillis(),
+        "i-00000001",
         null,
         null,
-        1,
         null,
         null,
-        System.currentTimeMillis() - 2000
+        System.currentTimeMillis()
     );
   }
 

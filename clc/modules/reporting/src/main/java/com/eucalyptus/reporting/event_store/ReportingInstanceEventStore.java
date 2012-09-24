@@ -60,7 +60,7 @@ public class ReportingInstanceEventStore extends EventStoreSupport {
   public void insertUsageEvent( @Nonnull final String uuid,
                                 @Nonnull final Long timestamp,
                                 @Nonnull final String metric,
-                                @Nonnull final Integer sequenceNum,
+                                @Nonnull final Long sequenceNum,
                                 @Nonnull final String dimension,
                                 @Nonnull final Double value ) {
 

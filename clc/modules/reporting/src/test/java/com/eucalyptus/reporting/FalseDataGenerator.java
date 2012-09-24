@@ -219,23 +219,23 @@ public class FalseDataGenerator
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0, "total", oneMB*periodNum);
+										timeMs, "NetworkIn", 0L, "total", oneMB*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0, "internal", oneMB*2*periodNum);
+										timeMs, "NetworkIn", 0L, "internal", oneMB*2*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0, "total", oneMB*3*periodNum);
+										timeMs, "NetworkOut", 0L, "total", oneMB*3*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0, "internal", oneMB*4*periodNum);
+										timeMs, "NetworkOut", 0L, "internal", oneMB*4*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskReadBytes", 0, "root", oneMB*5*periodNum);
+										timeMs, "DiskReadBytes", 0L, "root", oneMB*5*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskWriteBytes", 0, "root", oneMB*6*periodNum);
+										timeMs, "DiskWriteBytes", 0L, "root", oneMB*6*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskReadBytes", 0, "ephemeral0", oneMB*7*periodNum);
+										timeMs, "DiskReadBytes", 0L, "ephemeral0", oneMB*7*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskWriteBytes", 0, "ephemeral0", oneMB*8*periodNum);
+										timeMs, "DiskWriteBytes", 0L, "ephemeral0", oneMB*8*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "CPUUtilizationMs", 0, "default", (double)(PERIOD_DURATION/2));
+										timeMs, "CPUUtilizationMs", 0L, "default", (double)(PERIOD_DURATION/2));
 							}
 
 							/* Generate volume usage in this period for every volume that was created before */

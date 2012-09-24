@@ -266,18 +266,15 @@ public class DescribeSensorsType extends CloudClusterMessage {
     ArrayList<String> sensorIds = new ArrayList<String>();
     @HttpParameterMapping (parameter = "instanceId")
     ArrayList<String> instanceIds = new ArrayList<String>();
-    String nameServer;
-    ArrayList<String> clusterControllers = new ArrayList<String>();
- 
+
     def DescribeSensorsType(){}
     
     def DescribeSensorsType (Integer historySize, Integer collectionIntervalTimeMs, ArrayList<String> sensorIds, ArrayList<String> instanceIds ) {
-	this.historySize = historySize;
-	this.collectionIntervalTimeMs = collectionIntervalTimeMs;
-	this.sensorIds = sensorIds;
-	this.instanceIds = instanceIds;
+      this.historySize = historySize;
+      this.collectionIntervalTimeMs = collectionIntervalTimeMs;
+      this.sensorIds = sensorIds;
+      this.instanceIds = instanceIds;
     }
-
 }
 
 public class DescribeSensorsResponse extends CloudClusterMessage {

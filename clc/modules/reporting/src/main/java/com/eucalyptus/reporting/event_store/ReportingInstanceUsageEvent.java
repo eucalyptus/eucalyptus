@@ -45,7 +45,7 @@ public class ReportingInstanceUsageEvent
 	@Column(name="metric", nullable=false)
 	protected String metric;
 	@Column(name="sequenceNum", nullable=false)
-	protected Integer sequenceNum;
+	protected Long sequenceNum;
 	@Column(name="dimension", nullable=false)
 	protected String dimension;
 	@Column(name="value", nullable=false)
@@ -55,7 +55,7 @@ public class ReportingInstanceUsageEvent
 	{
 	}
 
-	ReportingInstanceUsageEvent( final String uuid, final String metric, final Integer sequenceNum,
+	ReportingInstanceUsageEvent( final String uuid, final String metric, final Long sequenceNum,
 		    final String dimension, final Double value, final Long valueTimestamp ) {
 
 		assertThat(uuid, notNullValue());
@@ -88,7 +88,7 @@ public class ReportingInstanceUsageEvent
 	    return metric;
 	}
 
-	public int getSequenceNum() {
+	public Long getSequenceNum() {
 	    return sequenceNum;
 	}
 

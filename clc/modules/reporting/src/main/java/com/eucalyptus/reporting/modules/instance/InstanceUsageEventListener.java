@@ -75,38 +75,33 @@ public class InstanceUsageEventListener implements EventListener<InstanceUsageEv
   private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
 
   public static void register( ) {
-    final InstanceUsageEventListener listener = new InstanceUsageEventListener( );
-    Listeners.register( InstanceUsageEvent.class, listener );
+    Listeners.register( InstanceUsageEvent.class, new InstanceUsageEventListener( ) );
   }
 
+  @Override
   public void fireEvent( @Nonnull final InstanceUsageEvent event ) {
-    final long receivedEventMs = getCurrentTimeMillis();
-
-    log.debug("Received instance usage event:" + event);
-
-      try {
-	        final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
-	        eventStore.insertUsageEvent(
-	            event.getUuid(),
-              event.getValueTimestamp(),
-	            event.getMetric(),
-	            event.getSequenceNum(),
-	            event.getDimension(),
-	            event.getValue()
-	        );
-      } catch ( ConstraintViolationException ex ) {
-	        log.debug( ex, ex ); // info already exists for instance
-      } catch ( Exception ex ) {
-        log.error( ex, ex ); 
-      }
+    if ( log.isDebugEnabled() ) {
+      log.debug("Received instance usage event:" + event);
     }
+
+    try {
+      final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
+      eventStore.insertUsageEvent(
+          event.getUuid(),
+          event.getValueTimestamp(),
+          event.getMetric(),
+          event.getSequenceNum(),
+          event.getDimension(),
+          event.getValue()
+      );
+    } catch ( ConstraintViolationException ex ) {
+      log.debug( ex, ex ); // info already exists for instance
+    } catch ( Exception ex ) {
+      log.error( ex, ex );
+    }
+  }
 
   protected ReportingInstanceEventStore getReportingInstanceEventStore() {
     return ReportingInstanceEventStore.getInstance();
   }
-
-  protected long getCurrentTimeMillis() {
-    return System.currentTimeMillis();
-  }
-
 }

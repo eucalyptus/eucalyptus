@@ -100,7 +100,7 @@ class InstanceRenderer implements Renderer {
             .addValCol("Disk Time", 2, "center");
         doc.newRow().addValCol("InstanceId")
             .addValCol("Type").addValCol("#").addValCol("Time").addValCol("CpuUsage%")
-            .addValCol("In").addValCol("Out").addValCol("In").addValCol("Out")
+            .addValCol("In").addValCol("Out")
             .addValCol("Read").addValCol("Write")
             .addValCol("Read").addValCol("Write")
             .addValCol("Read").addValCol("Write");
@@ -137,11 +137,11 @@ class InstanceRenderer implements Renderer {
 
         doc.tableOpen();
         doc.newRow()
-            .addValCol("m1.Small", 2, "center")
-            .addValCol("c1.Medium", 2, "center")
-            .addValCol("m1.Large", 2, "center")
-            .addValCol("c1.Large", 2, "center")
-            .addValCol("m1.XLarge", 2, "center");
+            .addValCol("m1.small", 2, "center")
+            .addValCol("c1.medium", 2, "center")
+            .addValCol("m1.large", 2, "center")
+            .addValCol("c1.large", 2, "center")
+            .addValCol("m1.xlarge", 2, "center");
         doc.newRow()
             .addValCol("num", 1, "center").addValCol("time", 1, "center")
             .addValCol("num", 1, "center").addValCol("time", 1, "center")

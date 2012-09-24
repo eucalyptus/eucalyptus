@@ -62,15 +62,32 @@
 
 package com.eucalyptus.util;
 
+import com.google.common.base.Function;
+
 /**
  * Object has a permanent globally unique identifier unrelated to its user visible name or primary
  * key.
  */
 public interface HasNaturalId {
+
   /**
    * Get the natural id.
-   * 
-   * @return
    */
-  public abstract String getNaturalId( );
+  String getNaturalId( );
+
+  static class Utils {
+    public static Function<HasNaturalId, String> toNaturalId() {
+      return NaturalId.INSTANCE;
+    }
+
+
+    private enum NaturalId implements Function<HasNaturalId, String> {
+      INSTANCE;
+
+      @Override
+      public String apply( final HasNaturalId hasNaturalId ) {
+        return hasNaturalId!=null ? hasNaturalId.getNaturalId() : null;
+      }
+    }
+  }
 }
