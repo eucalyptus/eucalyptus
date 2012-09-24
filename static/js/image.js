@@ -42,7 +42,7 @@
             },
             { 
               "fnRender" : function(oObj) { 
-                 return $('<div>').append($('<span>').text(oObj.aData.name), $('<div>').addClass('twist').append($('<a>').attr('href','#').text('twist'))).html();
+                 return $('<div>').append($('<a>').addClass('twist').attr('href','#').text(oObj.aData.name)).html();
               }
             },
             { 
@@ -166,7 +166,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                 $('<div>').addClass('expanded-value').text(kernel['location']),
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)),
                               $('<li>').append(
-                                $('<div>').addClass('expanded-value').text(kernel['description']),
+                                $('<div>').addClass('expanded-value').html(kernel['description'] ? kernel['description'] : '&nbsp;'),
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_desc))))));
       }
       var $ramdiskInfo = null;
@@ -188,7 +188,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                  $('<div>').addClass('expanded-value').text(ramdisk['location']),
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_manifest)),
                                $('<li>').append(
-                                 $('<div>').addClass('expanded-value').text(ramdisk['description']),
+                                 $('<div>').addClass('expanded-value').html(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'),
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_desc))))));
       }
       $wrapper.append($imgInfo);

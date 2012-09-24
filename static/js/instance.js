@@ -62,7 +62,7 @@
                }
             },
             { "fnRender" : function(oObj){
-                 return $('<div>').append($('<span>').text(oObj.aData.id), $('<div>').addClass('twist').append($('<a>').attr('href','#').text('twist'))).html();
+                 return $('<div>').append($('<a>').addClass('twist').attr('href','#').text(oObj.aData.id)).html();
               }
             },
             { 

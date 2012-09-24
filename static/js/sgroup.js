@@ -46,7 +46,7 @@
             },
             { 
               "fnRender" : function(oObj) { 
-                 return $('<div>').append($('<span>').text(oObj.aData.name), $('<div>').addClass('twist').append($('<a>').attr('href','#').text('twist'))).html();
+                 return $('<div>').append($('<a>').attr('href','#').addClass('twist').text(oObj.aData.name)).html();
               }
             },
             { "mDataProp": "description" },
@@ -658,7 +658,7 @@
                     $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source))))));
         });
       }
-      return $wrapper;
+      return $('<div>').append($wrapper);
     },
 
 /**** Public Methods ****/
