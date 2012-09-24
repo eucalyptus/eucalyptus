@@ -1185,6 +1185,36 @@ ul.volume-expanded li:last-child {
   padding-right: 20px;
 }
 
+.dialog-help-content h1,
+.help-content h1,
+.dialog-help-content h2,
+.help-content h2 {
+  color: #02405f;
+  font-weight: normal;
+  font-size: 28px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  margin: .4em 0 .2em;
+}
+
+.dialog-help-content h1 {
+  font-size: 24px;
+}
+
+.dialog-help-content h2,
+.help-content h2 {
+  font-size: 22px;
+  margin: 1em 0 0;
+}
+
+.dialog-help-content h2 {
+  font-size: 20px;
+}
+
+.dialog-help-content p,
+.help-content p {
+  margin: .3em 0 1em;
+}  
+
 /* ==== Search and optional filters will appear before the table ==== */
 
 /* == Optional filters == */
