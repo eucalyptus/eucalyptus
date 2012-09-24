@@ -58,6 +58,8 @@
       $('html body').find(DOM_BINDING['footer']).footer();
 
       $('html body').keypress(function(e){
+        if (!(e.ctrlKey && e.shiftKey))
+          return true;
         if($(e.target).is('input'))
           return true;
         if($(e.target).is('select'))

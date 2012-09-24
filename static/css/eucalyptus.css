@@ -47,13 +47,14 @@ Green links: #73a434
 /* ======== Base HTML styles ======= */
 
 body {
-  background: #fff;
-  border-top: 10px solid #02405f;
-  color: #444;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 13px;
   margin: 0;
   padding: 0;
+  border-top: 10px solid #02405f;
+  background: #fff;
+  color: #444;
+  font-size: 13px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  line-height: 1.5;
 }
 
 a {
@@ -64,6 +65,10 @@ a {
 a:hover {
   color: #73a434;
   text-decoration: underline;
+}
+
+ol li {
+  margin-bottom: .6em;
 }
 
 /* ======= Helper classes ======= */
@@ -131,6 +136,10 @@ a:hover {
   margin-bottom: 20px;
   min-height: 30px;
   padding: 10px 0;
+}
+
+.euca-hidden-container {
+  display : none;
 }
 
 /* ==== NOTE: The inner-container class determines the content area within all major layout sections ==== */
@@ -265,7 +274,7 @@ a:hover {
 
 .header-nav ul li {
   border-top: 1px solid #ccc;
-  min-width: 125px;
+  min-width: 135px;
 }
 
 .header-nav ul li:first-child {
@@ -294,7 +303,7 @@ a:hover {
 
 .resources-nav li a {
   display: block;
-  background-image: url(../images/explorer-icon-sprites.png);
+  background-image: url(../images/resources-nav-sprites.png);
   background-repeat: no-repeat;
   border-left: 1px solid #e3e1e1;
   color: #02405f;
@@ -322,45 +331,45 @@ a:hover {
 /* ==== Link specific styling (including hover and selected states) ==== */
 
 .lnk-dashboard {
-  background-position: center 0;
+  background-position: 0 0;
 }
 .resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
-  background-position: center -75px;
+  background-position: 0 -125px;
 }
 
 .lnk-image {
-  background-position: center -150px;
+  background-position: -200px 0;
 }
 .resources-nav li:hover a.lnk-image,
 .lnk-image:hover {
-  background-position: center -225px;
+  background-position: -200px -121px;
 }
 
 .lnk-instance {
-  background-position: center -300px;
+  background-position: -400px 0;
 }
 .resources-nav li:hover a.lnk-instance,
 .lnk-instance:hover {
-  background-position: center -375px;
+  background-position: -400px -107px;
 }
 
 .lnk-storage {
-  background-position: center -450px;
+  background-position: -600px 0;
 }
 .resources-nav li:hover a.lnk-storage,
 .resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
-  background-position: center -525px;
+  background-position: -600px -125px;
 }
 
 .lnk-netsec {
-  background-position: center -600px;
+  background-position: -800px 0;
 }
 .resources-nav li:hover a.lnk-netsec,
 .resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: center -675px;
+  background-position: -800px -129px;
 }
 
 
@@ -426,40 +435,30 @@ a:hover {
 .notification-box {
   display: none;
   position: absolute;
-  background-color: #fff;
-  border: 1px solid #aaabab;
+  width: 960px;
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
   font-family: 'PlayRegular', Arial, sans-serif;
   text-align: center;
-  width: 960px;
+  border: 2px solid #aaabab;
+  background-color: #fff;
 
-  -webkit-border-radius: 2px;
-  -moz-border-radius: 2px;
   border-radius: 2px;
 
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 8px rgba(44,46,50,0.32);
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 .success-msg {
   border: 2px solid #aac684;
   background-color: #E7FFC6;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 .error-msg {
   border: 2px solid #efa4a4;
   background-color: #fedddf;  
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
 }
 
 #euca-notification-title {
@@ -476,7 +475,7 @@ a:hover {
   position: relative;
   top: -7px;
   left: -10px;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -230px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -270px;
   width: 16px;
   height: 16px;
   text-decoration: none;
@@ -525,8 +524,19 @@ a:hover {
   margin: 0 35px 30px 20px;
 }
 
+.spin-wheel { /* positioning the spin-wheel during the log-in */
+  position: absolute;
+  top: 196px;
+  left: 480px;
+}
+
 .form-row {
   margin-bottom: 10px;
+}
+
+.top-form-row {
+  /* Used to get consistent layout in the dialog boxes where there is no <p> above the first form-row */
+  margin-top: 16px;
 }
 
 .form-row label {
@@ -540,16 +550,21 @@ a:hover {
 }
 
 .form-row label.long-label {
-  width: 320px;
+  width: 195px;
 }
+
+.form-row label.extra-long-label {
+  width: auto;
+}
+
+.form-row label.mega-long-label {
+  width: 360px;
+}
+
 
 #login .form-row label {
   width: 90px;
   margin-right: 13px;
-}
-
-.short-textinput {
-  width: 45px;
 }
 
 .checkbox-row {
@@ -567,6 +582,8 @@ a:hover {
   width: auto;
 }
 
+input[type='text'],
+textarea,
 .input-field,
 .dataTables_filter input {
   background-color: #f3f6f9;
@@ -584,6 +601,8 @@ a:hover {
   box-shadow: inset 0 0 3px #a8b9c8;
 }
 
+input[type='text']:focus,
+textarea:focus,
 .input-field:focus,
 .dataTables_filter input:focus {
   border-color: #6699cc;
@@ -591,7 +610,24 @@ a:hover {
   -moz-box-shadow: inset 0 0 4px #6699cc;
   -webkit-box-shadow: inset 0 0 4px #6699cc;
   box-shadow: inset 0 0 4px #6699cc;
-} 
+}
+
+input[type='text'].short-textinput {
+  width: 40px;
+  text-align: center;
+}
+
+ input[type='text'][disabled] { 
+
+  /* Used in several of the dialog modals */
+  
+  border: 1px solid #eaeaea;
+  background-color: #fff;
+
+  -moz-box-shadow: inset 0 0 0px #6699cc;
+  -webkit-box-shadow: inset 0 0 0px #6699cc;
+  box-shadow: inset 0 0 0px #6699cc;
+ }
 
 .password-help {
   color: #666;
@@ -690,27 +726,6 @@ a:hover {
   box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
 }
 
-.box-header,
-.euca-table-header,
-.euca-dialog-container .ui-dialog-titlebar {
-  background-color: #eaf2f5;
-  border-top: 1px solid #e7e5e5;
-  color: #02405f;
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 18px;
-  font-weight: normal;
-  margin: 0 0 20px;
-  position: absolute;
-  top: 14px;
-  left: -8px;
-  padding: 6px 8px;
-  width: 100%;
-
-  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
-  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.16);
-  box-shadow: 0px 2px 3px rgba(3,3,3,0.16);    
-}
-
 /* This style of container box is used on several classes */
 /* Grouped here to make global changes. Differences are usually just margin and padding */
 
@@ -736,6 +751,31 @@ a:hover {
 
 .dataTables_wrapper {
   min-height: 400px;
+}
+
+/* Ribbon headers */
+
+.box-header,
+.euca-table-header,
+.euca-dialog-container .ui-dialog-titlebar {
+  background-color: #eaf2f5;
+  border-top: 1px solid #e2e0e0;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 18px;
+  min-height: 22px;
+  margin: 0 0 20px;
+  position: absolute;
+  top: 14px;
+  left: -8px;
+  padding: 6px 8px 4px;
+  width: 100%;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.3);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.3);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.3);    
 }
 
 /* Ribbon corners */
@@ -830,19 +870,19 @@ a:hover {
   width: 190px;
 }
 
-.status-running,
-.status-stopped {
+.db-instances-running,
+.db-instances-stopped {
   float: left;
   background: transparent url(../images/css-sprites.png) no-repeat left -200px;
   margin-top: 10px;
 }
 
-.status-stopped {
-  background-position: left -260px;
+.db-instances-stopped {
+  background-position: -150px -200px;
 }
 
-.status-running .status-readout,
-.status-stopped .status-readout {
+.db-instances-running .status-readout,
+.db-instances-stopped .status-readout {
   margin: 5px 0 5px 32px;
 }
 
@@ -863,7 +903,7 @@ a:hover {
 #dashboard-netsec-img {
   float: left;
   margin: 2px 18px 0 0;
-  height: 85px;
+  height: 87px;
   width: 110px;
   background: transparent url(../images/css-sprites.png) no-repeat -150px -325px;
 }
@@ -922,6 +962,11 @@ a:hover {
   font-weight: bold;
 }
 
+a:hover .status-readout,
+a:hover .status-readout span {
+  color: #73a434;
+}
+
 .status-readout img {
   display: inline-block;
   /* Margin will need to change if a different indicator image is used */
@@ -940,8 +985,8 @@ a:hover {
 
 table.display {
   background-color: #fff;
-  border-bottom: 2px solid #dae2e8;
-  border-right: 0px solid #dae2e8;
+  border: 1px solid #dae2e8;
+  border-width: 1px 0;
 }
 
 table.display thead th {
@@ -951,28 +996,38 @@ table.display thead th {
   font-weight: normal;
   color: #7aa92a;
   text-transform: uppercase;
-  border-top: 2px solid #dae2e8;
-  border-left: 1px solid #dae2e8;
-  border-bottom: 0;
+  border-bottom: 1px solid #dae2e8;
+  border-top: 0;
+  background-color: #e1e1e1;
+
+  background-image: -webkit-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: -moz-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: -o-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: -ms-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+  background-image: linear-gradient(to bottom, #f6f6f6, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
 }
 
 table.display tr.heading2 td {
-  border-bottom: 1px solid #aaa;
+  /*border-bottom: 1px solid #aaa;*/
 }
 
 table.display td {
   padding: 5px 8px;
-  border-top: 2px solid #dae2e8;
-  border-left: 1px solid #dae2e8;
+  /*border-top: 2px solid #dae2e8;
+  border-left: 1px solid #dae2e8;*/
   font-size: 11px;
 }
 
+table.display td.dataTables_empty {
+  padding: 10px;
+}
+
 tr.odd,
-tr.even {
+tr.odd td.sorting_1 {
   background-color: #fff;
 }
 
-tr.odd td.sorting_1,
+tr.even,
 tr.even td.sorting_1 {
   background-color: #f0f7f7;
 }
@@ -985,6 +1040,84 @@ tr.selected-row,
 tr.selected-row td.sorting_1
  {
   background-color: #f1ffe3;
+}
+
+.checkbox-cell,
+table.display thead th.checkbox-cell {
+  width: 20px;
+  padding: 0;
+  text-align: center;
+}
+
+.narrow-cell {
+  width: 20px;
+}
+
+.centered-cell {
+  text-align: center;
+}
+
+.glow {
+  color: orange; /* TODO - Update this with a more subtle color */
+}
+
+/* ======= Expanded rows of the jQuery tables ======= */
+
+.twist {
+  /* TODO: Add a down arrow image */
+  /*background-color: cyan;*/
+}
+.twist.expanded {
+  /* TODO: Add an up arrow image */ 
+  background-color: yellow;
+}
+
+tr.expanded {
+  border: 1px solid #ccc;
+  border-width: 1px 0;
+}
+
+.expanded-section-label {
+  float: left;
+  width: 110px;
+}
+
+.expanded-section-content {
+  float: left;
+}
+
+.expanded ul {
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+}
+
+.expanded ul li {
+  float: left;
+  margin: 0;
+  width: 110px;
+}
+
+.expanded ul li:last-child {
+  width: 260px;
+}
+
+/* TODO: Dave - remove this class and the marker colors when layout HTML has been updated */
+
+ul.volume-expanded li:last-child {
+  width: 240px;
+}
+
+.expanded-value {
+  padding: 2px 4px;
+  background-color: Lightcyan; 
+}
+
+.expanded-title {
+  padding: 2px 4px;
+  background-color: Lavender;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
 }
 
 /* ======= Help page related ===== */
@@ -1003,24 +1136,27 @@ tr.selected-row td.sorting_1
 #eip-table,
 #sgroups-table,
 #instances-table,
-#snapshot-table {
+#snapshot-table,
+#images-table {
   background-color: transparent !important;
 }
 
 .help-link,
 .help-return,
 .help-euca {
-  float: right;
-  height: 16px;
-  margin: 3px 20px 0 0;
+  /*float: right;*/
+  position: absolute;
+  top: 6px;
+  right: 25px;
+ /* margin: 3px 20px 0 0;*/
 }
 
 .help-link a,
 .help-return a,
 .help-euca a {
   display: inline-block;
-  height: 18px; /* To match the height of the optional header text */
-  width: 16px;
+  height: 20px; /* To match the height of the optional header text */
+  width: 23px;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
   text-indent: 100%;
   white-space: nowrap;
@@ -1028,7 +1164,7 @@ tr.selected-row td.sorting_1
 }
 
 .help-return a {
-  background-position: left -170px;
+  background-position: left -180px;
 }
 
 .help-euca a {
@@ -1078,7 +1214,7 @@ tr.selected-row td.sorting_1
 
 .dataTables_filter input {
   /* This element shares styling with .input-field */
-  background: transparent url(../images/css-sprites-small.png) no-repeat right -250px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat right -294px;
   margin-left: 3px;
 }
 
@@ -1090,7 +1226,7 @@ tr.selected-row td.sorting_1
   font-size: 12px;
   line-height: 27px;
   color: #73a434;
-  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -190px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -236px;
   text-decoration: none;
 }
 
@@ -1115,16 +1251,17 @@ tr.selected-row td.sorting_1
 }
 
 .actionmenu {
+  position: relative;
   margin-left: 15px;
+  z-index: 10;
 }
 
-/* Commented out by Sang-min
-.actionmenu a {
-*/
+.actionmenu a.button {
+
   /* These are the differences from the button styles in order to accomodate the arrow */
   /* If button gradients are changed, they will need to be changed here as well */
-/*
-  cursor: default;
+
+  cursor: pointer;
   padding: 5px 30px 5px 17px;
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
@@ -1134,15 +1271,10 @@ tr.selected-row td.sorting_1
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
 }
 
-.actionmenu a:hover {
-  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
-  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
-}
-*/
 .actionmenu a.inactive-menu {
+
+  cursor: default;
+  padding: 5px 30px 5px 17px;
   border: 1px solid rgba(128, 128, 128, 0.4);
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
@@ -1152,6 +1284,61 @@ tr.selected-row td.sorting_1
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
 
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.euca-table-action .button {
+  z-index: 10;
+}
+
+.euca-table-action ul {
+  position: absolute;
+  min-width: 138px;
+  top: 30px;
+  left: 4px;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  background-color: #fff;
+  z-index: 2;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+
+  display: block;
+}
+
+.euca-table-action li {
+  margin: 0;
+  border-top: 1px solid #ccc;
+}
+
+.euca-table-action li:first-child {
+  border: 0;
+}
+
+.euca-table-action li a {
+  padding: 9px 12px;
+  color: #02405F;
+  display: block;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+  outline: 0 none;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.euca-table-action li a:hover {
+  color: #73a434;
+  text-decoration: none;
+}
+
+.euca-table-action li.disabled a {
+  color: #ccc;
+  text-decoration: none;
+  cursor: default;
 }
 
 /* Overrides for jQuery context menu styles */
@@ -1260,7 +1447,7 @@ tr.selected-row td.sorting_1
 .legend-item {
   display: inline-block;
   margin-left: 15px;
-  padding-left: 22px;
+  padding-left: 23px;
   font-family: 'PlayRegular', Arial, sans-serif;
   font-size: 11px;
   color: #02405f;
@@ -1270,7 +1457,7 @@ tr.selected-row td.sorting_1
 
 .table-row-status {
   height: 26px;
-  width: 18px;
+  width: 19px;
   margin: 0 auto;
   background: transparent url(../images/css-sprites-small.png) no-repeat left 100px;
 }
@@ -1282,58 +1469,87 @@ tr.selected-row td.sorting_1
 }
 
 
-/*  Legend icons */
+/*  Legend & Status icons */
 
 .legend-creating,
-.status-creating {
-  background-position: left -310px;
+.legend-pending {
+  background-position: left -324px;
+}
+
+.status-creating,
+.status-pending {
+  background-position: left -325px;
 }
 
 .legend-available,
-.status-available {
-  background-position: left -280px;
+.legend-running,
+.legend-completed {
+  background-position: left -355px;
 }
 
-.legend-in-use,
+.status-available,
+.status-running,
+.status-completed {
+  background-position: left -356px;
+}
+
+.legend-in-use {
+  background-position: left -385px;
+}
+
 .status-in-use {
-  background-position: left -340px;
+  background-position: left -386px;
+}
+
+.legend-stopping {
+  background-position: left -415px;
+}
+
+.status-stopping {
+  background-position: left -416px; 
+}
+
+.legend-stopped {
+  background-position: left -445px;
+}
+
+.status-stopped {
+  background-position: left -446px; 
 }
 
 .legend-deleting,
-.status-deleting {
-  background-position: left -370px;
+.legend-terminating,
+.legend-shuttingdown {
+  background-position: left -475px;
+}
+
+.status-deleting,
+.status-terminating,
+.status-shuttingdown {
+  background-position: left -476px;
 }
 
 .legend-deleted,
-.status-deleted {
-  background-position: left -430px;
+.legend-terminated {
+  background-position: left -505px;
 }
 
+.status-deleted,
+.status-terminated {
+  background-position: left -506px;
+}
+
+/* Rename class as '-failed' in code to match label text */
 .legend-error,
-.status-error {
-  background-position: left -400px;
+.legend-failed {
+  background-position: left -535px;
 }
 
-/*  Legend icons - Snapshot status */
-
-.legend-pending,
-.status-pending {
-  background-position: left -310px;
-}
-
-.legend-completed,
-.status-completed {
-  background-position: left -280px;
-}
-
-/* Legend icons - Images status */
-
-.legend-failed,
+.status-error,
 .status-failed {
-  background-position: left -400px;
+  background-position: left -536px;
 }
 
-/* Legend icons - Instances status */
 
 /* == Pagination == */
 
@@ -1437,13 +1653,13 @@ tr.selected-row td.sorting_1
 .euca-dialog-container {
   /* Class added to each jQuery dialog, so we can target elements */
   margin: 0 8px;
-  padding: 47px 0 5px 0;
+  padding: 50px 0 5px;
   overflow: visible;
   min-height: 50px;
 }
 
 .euca-dialog-container .ui-dialog-titlebar {
-  padding: 4px 8px;
+  /*padding: 4px 8px;*/
   border-radius: 0;
   background-image: none;
   font-size: 15px;
@@ -1506,6 +1722,7 @@ tr.selected-row td.sorting_1
 .ui-widget-content .ui-state-disabled,
 .ui-widget-content .ui-state-disabled:hover {
 
+/* Disabled buttons in the jQuery dialog modals */
 /* Uses the same gradient as the 'actionmenu span.inactive-menu' */
 
   cursor: default;
@@ -1665,7 +1882,8 @@ span.on-error {
   display:none;
 }
 
-/* Sang-min: temporary styling for launch wizard */
+/* ======= Sang-min: temporary styling for launch wizard ======= */
+
 #launch-wizard-advanced-storage th {
   font-size: 11px;
 }
@@ -1711,65 +1929,5 @@ div#launch-wizard-type-size-legend{
     margin: 1px;
 }
 
-/* END Sang-min */
-.spin-wheel { /* positioning the spin-wheel during the log-in */
-  position: absolute;
-  top: 196px;
-  left: 480px;
-}
+/* ======= END Sang-min ======= */
 
-/* Sang-min : change related to more actions menu */
-.euca-table-action ul{
-  list-style-type: none;
-  background-color: #fff;
-  padding: 5px;
-  position: absolute;
-  top: 135px;
-  left: 238px;
-  width: 138px;
-  z-index: 2;
-  -webkit-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
-  -moz-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50); 
-  box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
-}
-
-.euca-table-action ul li{
-  margin : 2px;
-}
-
-li.disabled a {
-  color: gray;
-  text-decoration: none;
-}
-.expanded ul{
-    margin: 0 auto;
-    padding: 0;
-    clear: left;
-}
-.expanded ul li{
-    text-align: left;
-    float: left;
-    list-style: none;
-    padding: 1px 1px;
-    margin: 1px;
-}
-div.twist{
-}
-div.twist.expanded {
-    /* arrow  */ 
-    background : yellow;
-}
-
-/* END Sang-min */
-/* Vasya: temporary styling. Style me. Move me! */
-.label_required:before {
-  content: "* ";
-}
-.glow {
-  color: orange;
-}
-/* END Vasya */
-
-.euca-hidden-container {
-  display : none;
-}
