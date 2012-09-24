@@ -303,7 +303,7 @@ ol li {
 
 .resources-nav li a {
   display: block;
-  background-image: url(../images/explorer-icon-sprites.png);
+  background-image: url(../images/resources-nav-sprites.png);
   background-repeat: no-repeat;
   border-left: 1px solid #e3e1e1;
   color: #02405f;
@@ -331,45 +331,45 @@ ol li {
 /* ==== Link specific styling (including hover and selected states) ==== */
 
 .lnk-dashboard {
-  background-position: center 0;
+  background-position: 0 0;
 }
 .resources-nav li:hover a.lnk-dashboard,
 .lnk-dashboard:hover {
-  background-position: center -75px;
+  background-position: 0 -125px;
 }
 
 .lnk-image {
-  background-position: center -150px;
+  background-position: -200px 0;
 }
 .resources-nav li:hover a.lnk-image,
 .lnk-image:hover {
-  background-position: center -225px;
+  background-position: -200px -121px;
 }
 
 .lnk-instance {
-  background-position: center -300px;
+  background-position: -400px 0;
 }
 .resources-nav li:hover a.lnk-instance,
 .lnk-instance:hover {
-  background-position: center -375px;
+  background-position: -400px -107px;
 }
 
 .lnk-storage {
-  background-position: center -450px;
+  background-position: -600px 0;
 }
 .resources-nav li:hover a.lnk-storage,
 .resources-nav li.toggle-on a.lnk-storage,
 .lnk-storage:hover {
-  background-position: center -525px;
+  background-position: -600px -125px;
 }
 
 .lnk-netsec {
-  background-position: center -600px;
+  background-position: -800px 0;
 }
 .resources-nav li:hover a.lnk-netsec,
 .resources-nav li.toggle-on a.lnk-netsec,
 .lnk-netsec:hover {
-  background-position: center -675px;
+  background-position: -800px -129px;
 }
 
 
@@ -878,7 +878,7 @@ input[type='text'].short-textinput {
 }
 
 .db-instances-stopped {
-  background-position: left -260px;
+  background-position: -150px -200px;
 }
 
 .db-instances-running .status-readout,
@@ -1077,37 +1077,48 @@ tr.expanded {
   border-width: 1px 0;
 }
 
+.expanded-section-label {
+  float: left;
+  width: 110px;
+}
+
+.expanded-section-content {
+  float: left;
+}
+
 .expanded ul {
   margin: 0;
   padding: 0;
   list-style-type: none;
-  clear: left;
 }
 
 .expanded ul li {
   float: left;
-  width: 100px;
   margin: 0;
-  background-color: wheat;
+  width: 110px;
 }
 
 .expanded ul li:last-child {
-  width: 200px;
+  width: 260px;
+}
+
+/* TODO: Dave - remove this class and the marker colors when layout HTML has been updated */
+
+ul.volume-expanded li:last-child {
+  width: 240px;
 }
 
 .expanded-value {
   padding: 2px 4px;
-  background-color: paleturquoise;
+  background-color: Lightcyan; 
 }
 
 .expanded-title {
   padding: 2px 4px;
-  background-color: palegreen;
-  font-family: 'PlayRegular', Arial, sans-serif;
+  background-color: Lavender;
   color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
 }
-
-
 
 /* ======= Help page related ===== */
 
