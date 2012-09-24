@@ -878,7 +878,7 @@ input[type='text'].short-textinput {
 }
 
 .db-instances-stopped {
-  background-position: left -260px;
+  background-position: -150px -200px;
 }
 
 .db-instances-running .status-readout,
