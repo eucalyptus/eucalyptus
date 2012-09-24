@@ -755,12 +755,13 @@
       $userdata.append(
         $('<div>').append(
           $('<span>').text(launch_instance_advanced_userdata),
-        $('<div>').append('Or. ').append(
+        $('<div>').append(
           $('<input>').attr('id','launch-wizard-advanced-input-userdata').attr('type','text').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone().children()); 
           })),
-          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
+        $('<div>').append('Or. ').append(
+          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file'))));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
       $input.change(function(e){
           thisObj.launchParam['data_file'] = this.files;

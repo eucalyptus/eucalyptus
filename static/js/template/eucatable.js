@@ -128,15 +128,15 @@
         var $currentRow = $(tr);
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
           $currentRow.unbind('click').bind('click', function (e) {
-            if(thisObj.options.expand_callback){
-              if(!$currentRow.next().hasClass('expanded') && !($(e.target).is('input')) && !($(e.target).find('input').length >0)){
+            if($(e.target).is('a') && $(e.target).parents().hasClass('twist') && thisObj.options.expand_callback){
+              if(!$currentRow.next().hasClass('expanded')){
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
                 var allTds = thisObj.table.fnGetTds($currentRow[0]);      
                 var row = [];
                 var i =0; 
                 $(allTds).each(function(){ 
-                  row[i++] = $(this).text();
+                  row[i++] = $(this).html();
                 }); 
                 var $expand = thisObj.options.expand_callback(row);
                 if($expand && $expand.length > 0){
@@ -149,13 +149,25 @@
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded 
                 thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
               }
+            }else{
+              var $selectedRow = $currentRow; 
+              var $rowCheckbox = $selectedRow.find('input[type="checkbox"]');
+              if($rowCheckbox && $rowCheckbox.length > 0){
+               // thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
+               //thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
+                $selectedRow.toggleClass('selected-row');
+                if($selectedRow.hasClass('selected-row'))
+                  $rowCheckbox.attr('checked', true);
+                else
+                  $rowCheckbox.attr('checked', false);
+              }
             }  
           // checked/uncheck on checkbox
             thisObj._onRowClick();
             thisObj._trigger('row_click', e);
           });
 
-          $currentRow.find('input[type="checkbox"]').unbind('click').bind('click', function(e){
+          /*$currentRow.find('input[type="checkbox"]').unbind('click').bind('click', function(e){
             thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
             thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
             var $selectedRow = $currentRow; //$(e.target).parents('tr');
@@ -165,7 +177,7 @@
               $rowCheckbox.attr('checked', true);
             else
               $rowCheckbox.attr('checked', false);
-          });
+          });*/
         }
 
         if (DEPRECATE && thisObj.options.context_menu_actions) {
@@ -224,7 +236,7 @@
       $header.append(
         $('<span>').text(thisObj.options.text.header_title).append(
           $('<div>').addClass('help-link').append(
-            $('<a>').attr('href','#').text('?').click( function(evt){
+            $('<a>').attr('href','#').html('&nbsp;').click( function(evt){
               thisObj._trigger('help_click', evt);
             }))));
       return $header;

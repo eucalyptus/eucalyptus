@@ -62,7 +62,7 @@
                }
             },
             { "fnRender" : function(oObj){
-                 return $('<div>').append($('<div>').addClass('twist').text(oObj.aData.id)).html();
+                 return $('<div>').append($('<span>').text(oObj.aData.id), $('<div>').addClass('twist').append($('<a>').attr('href','#').text('twist'))).html();
               }
             },
             { 
@@ -763,7 +763,7 @@
     },
     _expandCallback : function(row){
       var thisObj = this;
-      var instId = row[2];
+      var instId = $(row[2]).html();
       var results = describe('instance');
       var instance = null; 
       for(i in results){
@@ -779,33 +779,31 @@
       if(instance['product_codes'] && instance['product_codes'].length > 0)
         prodCode = instance['product_codes'].join(' ');
 
-      var $instInfo = $('<div>').addClass('instance-table-expanded-instance').append(
-      $('<span>').text(instance_table_expanded_instance),
-      $('<ul>').addClass('instance-expanded').append(
-        $('<li>').append( 
-          $('<div>').addClass('expanded-value').text(instance['instance_type']),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_type)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(instance['kernel']),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(instance['ramdisk']),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk)),
-      /*  $('<li>').append(
-          $('<div>').addClass('expanded-value').text(prodCode),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_product)),*/
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(instance['root_device_type']),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_root)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(instance['reservation_id']),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(instance['owner_id']),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_account)),
-        $('<li>').append(
-          $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']]),
-          $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest))));
+      var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
+      $('<div>').addClass('expanded-section-label').text(instance_table_expanded_instance),
+      $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
+        $('<ul>').addClass('instance-expanded').addClass('clearfix').append(
+          $('<li>').append( 
+            $('<div>').addClass('expanded-value').text(instance['instance_type']),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_type)),
+          $('<li>').append(
+            $('<div>').addClass('expanded-value').text(instance['kernel']),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel)),
+          $('<li>').append(
+            $('<div>').addClass('expanded-value').text(instance['ramdisk']),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_ramdisk)),
+          $('<li>').append(
+            $('<div>').addClass('expanded-value').text(instance['root_device_type']),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_root)),
+          $('<li>').append(
+            $('<div>').addClass('expanded-value').text(instance['reservation_id']),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_reservation)),
+          $('<li>').append(
+            $('<div>').addClass('expanded-value').text(instance['owner_id']),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_account)),
+          $('<li>').append(
+            $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']]),
+            $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest)))));
 
       var $volInfo = null;
       if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){
@@ -816,14 +814,15 @@
           if(vol.attach_data && vol.attach_data.instance_id ===instId) 
             attachedVols[vol.id] = vol;
         }
-        $volInfo = $('<div>').addClass('instance-table-expanded-volume').append(
-            $('<span>').text(instance_table_expanded_volume));
+        $volInfo = $('<div>').addClass('instance-table-expanded-volume').addClass('clearfix').append(
+            $('<div>').addClass('expanded-section-label').text(instance_table_expanded_volume),
+            $('<div>').addClass('expanded-section-content').addClass('clearfix'));
         $.each(instance.block_device_mapping, function(key, mapping){
           var creationTime = '';
           creationTime = attachedVols[mapping.volume_id].create_time;
           creationTime = formatDateTime(creationTime); 
-          $volInfo.append(
-            $('<ul>').addClass('volume-expanded').append(
+          $volInfo.find('div').last().append(
+            $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
               $('<li>').append(
                 $('<div>').addClass('expanded-value').text(mapping.volume_id),
                 $('<div>').addClass('expanded-title').text(instance_table_expanded_volid)),
