@@ -29,7 +29,9 @@
       this._setInstSummary($dashboard.find('#dashboard-content .instances'));
       this._setStorageSummary($dashboard.find('#dashboard-content .storage'));
       this._setNetSecSummary($dashboard.find('#dashboard-content .netsec')); 
-      $dashboard.appendTo(this.element);
+      var $wrapper = $('<div>').addClass('dashboard-wrapper');
+      $dashboard.appendTo($wrapper);
+      $wrapper.appendTo(this.element);
       this._addHelp($help);
     },
 

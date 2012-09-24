@@ -38,7 +38,7 @@
 function getLandingHelpHeader(args){
   var $helpHeader = $('<div>').addClass('euca-table-header').append(
                      $('<div>').addClass('help-link').append(
-                       $('<a>').attr('href','#').html('&larr;')));
+                       $('<a>').attr('href','#').html('&nbsp;')));
   return $helpHeader;
 }
 

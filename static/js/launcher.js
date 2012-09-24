@@ -54,8 +54,6 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
       var $launcher = $wrapper.children().first();
       var $launcherHelp = $wrapper.children().last();
-      thisObj.element.addClass('launch-wizard');
-
       // make section headers
       thisObj._makeSectionHeader($launcher);
  
@@ -72,7 +70,10 @@
         var $container = $('html body').find(DOM_BINDING['main']);
         $container.maincontainer("changeSelected", e, {selected:'instance'});
       });
-      $launcher.appendTo(thisObj.element);
+      var $wrapper = $('<div>').addClass('launch-wizard-wrapper');
+      $launcher.appendTo($wrapper);
+     // $launcherHelp.appendTo($wrapper);
+      $wrapper.appendTo(this.element);
 
       thisObj._addHelp($launcherHelp);
 
@@ -755,12 +756,13 @@
       $userdata.append(
         $('<div>').append(
           $('<span>').text(launch_instance_advanced_userdata),
-        $('<div>').append('Or. ').append(
+        $('<div>').append(
           $('<input>').attr('id','launch-wizard-advanced-input-userdata').attr('type','text').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone().children()); 
           })),
-          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
+        $('<div>').append('Or. ').append(
+          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file'))));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
       $input.change(function(e){
           thisObj.launchParam['data_file'] = this.files;
