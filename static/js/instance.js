@@ -821,7 +821,7 @@
           var creationTime = '';
           creationTime = attachedVols[mapping.volume_id].create_time;
           creationTime = formatDateTime(creationTime); 
-          $volInfo.find('div').last().append(
+          $volInfo.find('.expanded-section-content').append(
             $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
               $('<li>').append(
                 $('<div>').addClass('expanded-value').text(mapping.volume_id),
