@@ -74,7 +74,7 @@ def start_console():
 
     # default webroot location for development
     webroot = os.path.join(os.path.dirname(__file__), 'static')
-    server.config = ConfigLoader.getParser()
+    server.config = ConfigLoader().getParser()
 
     # When staticpath is in the config we will assume that it is
     # not a relative path
@@ -142,6 +142,9 @@ if __name__ == "__main__":
                 usage()
     except getopt.GetoptError:
         usage()
+
+    if config_file:
+        ConfigLoader().getParser(config_file)
 
     if daemon:
         daemonize(start_console)
