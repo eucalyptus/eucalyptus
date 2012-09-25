@@ -39,7 +39,7 @@
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
           email = out.email;
-          if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
+/*          if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
               newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port + '/?hostname='+out.hostname;
@@ -47,6 +47,7 @@
               newLocation = location.protocol + '//' + out.ipaddr + '/?hostname='+out.hostname;
             location.href = newLocation;
           }
+            */
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
