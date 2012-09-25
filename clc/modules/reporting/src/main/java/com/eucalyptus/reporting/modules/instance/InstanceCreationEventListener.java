@@ -31,50 +31,50 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 import com.google.common.base.Preconditions;
 
 public class InstanceCreationEventListener implements
-	EventListener<InstanceCreationEvent> {
+    EventListener<InstanceCreationEvent> {
 
-    public static void register() {
-	Listeners.register(InstanceCreationEvent.class,
-		new InstanceCreationEventListener());
-    }
+  public static void register() {
+    Listeners.register( InstanceCreationEvent.class,
+        new InstanceCreationEventListener() );
+  }
 
-    @Override
-    public void fireEvent(@Nonnull final InstanceCreationEvent event) {
-	Preconditions.checkNotNull(event, "Event is required");
+  @Override
+  public void fireEvent( @Nonnull final InstanceCreationEvent event ) {
+    Preconditions.checkNotNull( event, "Event is required" );
 
-	final long timestamp = getCurrentTimeMillis();
+    final long timestamp = getCurrentTimeMillis();
 
-	// Ensure account / user info is present and up to date
-	getReportingAccountCrud().createOrUpdateAccount(event.getAccountId(),
-		event.getAccountName());
-	getReportingUserCrud().createOrUpdateUser(event.getUserId(),
-		event.getAccountId(), event.getUserName());
-	ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
-	eventStore.insertCreateEvent(event.getUuid(), timestamp,
-		event.getInstanceId(), event.getInstanceType(),
-		event.getUserId(), event.getUserName(), event.getAccountName(),
-		event.getAccountId(), event.getAvailabilityZone());
+    // Ensure account / user info is present and up to date
+    getReportingAccountCrud().createOrUpdateAccount( event.getAccountId(),
+        event.getAccountName() );
+    getReportingUserCrud().createOrUpdateUser( event.getUserId(),
+        event.getAccountId(), event.getUserName() );
 
-    }
+    // Record creation
+    ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
+    eventStore.insertCreateEvent( event.getUuid(), event.getInstanceId(), timestamp,
+        event.getInstanceType(), event.getUserId(), event.getAvailabilityZone() );
 
-    protected ReportingAccountCrud getReportingAccountCrud() {
-	return ReportingAccountCrud.getInstance();
-    }
+  }
 
-    protected ReportingUserCrud getReportingUserCrud() {
-	return ReportingUserCrud.getInstance();
-    }
+  protected ReportingAccountCrud getReportingAccountCrud() {
+    return ReportingAccountCrud.getInstance();
+  }
 
-    protected ReportingInstanceEventStore getReportingInstanceEventStore() {
-	return ReportingInstanceEventStore.getInstance();
-    }
+  protected ReportingUserCrud getReportingUserCrud() {
+    return ReportingUserCrud.getInstance();
+  }
 
-    /**
-     * Get the current time which will be used for recording when an event
-     * occurred. This can be overridden if you have some alternative method of
-     * timekeeping (synchronized, test times, etc).
-     */
-    protected long getCurrentTimeMillis() {
-	return System.currentTimeMillis();
-    }
+  protected ReportingInstanceEventStore getReportingInstanceEventStore() {
+    return ReportingInstanceEventStore.getInstance();
+  }
+
+  /**
+   * Get the current time which will be used for recording when an event
+   * occurred. This can be overridden if you have some alternative method of
+   * timekeeping (synchronized, test times, etc).
+   */
+  protected long getCurrentTimeMillis() {
+    return System.currentTimeMillis();
+  }
 }

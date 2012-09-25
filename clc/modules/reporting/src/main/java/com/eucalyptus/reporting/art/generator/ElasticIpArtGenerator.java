@@ -6,7 +6,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
 import com.eucalyptus.reporting.art.entity.ElasticIpArtEntity;
 import com.eucalyptus.reporting.art.entity.ElasticIpUsageArtEntity;
@@ -14,9 +13,7 @@ import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.domain.ReportingAccount;
-import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
-import com.eucalyptus.reporting.domain.ReportingUserDao;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent;
@@ -26,7 +23,7 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class ElasticIpArtGenerator implements ArtGenerator
+public class ElasticIpArtGenerator extends AbstractArtGenerator
 {
 	private static Logger log = Logger.getLogger( ElasticIpArtGenerator.class );
 
@@ -48,6 +45,9 @@ public class ElasticIpArtGenerator implements ArtGenerator
 			final Long deleteTime = findTimeAfter( ipToDeleteTimesMap, createEvent.getUuid(), createEvent.getTimestampMs() );
 			if ( deleteTime < report.getBeginMs() ) {
 				continue; // usage not relevant for this report
+			}
+			if ( createEvent.getTimestampMs() > report.getEndMs() ) {
+				break; // end of relevant events for this report
 			}
 			final ReportingUser reportingUser = getUserById( createEvent.getUserId() );
 			if (reportingUser==null) {
@@ -97,6 +97,9 @@ public class ElasticIpArtGenerator implements ArtGenerator
 		final Iterator<ReportingInstanceCreateEvent> instanceIterator = getInstanceCreateEventIterator();
 		while ( instanceIterator.hasNext() ) {
 			final ReportingInstanceCreateEvent createEvent = instanceIterator.next();
+			if ( createEvent.getTimestampMs() > report.getEndMs() ) {
+				break; // end of relevant events for this report
+			}
 			final InstanceArtEntity instance = new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId());
 			instanceEntities.put(createEvent.getUuid(), instance);
 		}
@@ -114,6 +117,9 @@ public class ElasticIpArtGenerator implements ArtGenerator
 			final Long detachTime = Math.min( deleteTime, findTimeAfter( ipToDetachTimesMap, attachEvent.getIpUuid(), attachEvent.getTimestampMs() ));
 			if ( detachTime < report.getBeginMs() ) {
 				continue; // usage not relevant for this report
+			}
+			if ( attachEvent.getTimestampMs() > report.getEndMs() ) {
+				break; // end of relevant events for this report
 			}
 			final Long attachmentDuration = calculateDuration( report, attachEvent.getTimestampMs(), detachTime );
 			final ElasticIpArtEntity entity = findEntityForTimestamp( report, ipUuidToAllocationListMap, attachEvent.getIpUuid(), attachEvent.getTimestampMs() );
@@ -188,6 +194,8 @@ public class ElasticIpArtGenerator implements ArtGenerator
 				} else {
 					endTimes.add( event.getTimestampMs() );
 				}
+			} else {
+				break; // end of relevant data
 			}
 		}
 		return ipToTimesMap;
@@ -236,20 +244,6 @@ public class ElasticIpArtGenerator implements ArtGenerator
 
 	protected Iterator<ReportingInstanceCreateEvent> getInstanceCreateEventIterator() {
 		return getEventIterator( ReportingInstanceCreateEvent.class, "scanInstanceCreateEvents" );
-	}
-
-	protected ReportingUser getUserById( final String userId ) {
-		return ReportingUserDao.getInstance().getReportingUser( userId );
-	}
-
-	protected ReportingAccount getAccountById( final String accountId ) {
-		return ReportingAccountDao.getInstance().getReportingAccount( accountId );
-	}
-
-	@SuppressWarnings( "unchecked" )
-	private <ET> Iterator<ET> getEventIterator( final Class<ET> eventClass, final String queryName ) {
-		final EntityWrapper<ET> wrapper = EntityWrapper.get( eventClass );
-		return (Iterator<ET> ) wrapper.scanWithNativeQuery( queryName );
 	}
 
 	private static void updateUsageTotals( ElasticIpUsageArtEntity totalEntity, ElasticIpUsageArtEntity newEntity ) {

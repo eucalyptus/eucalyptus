@@ -33,6 +33,15 @@ class ElasticIpArtGeneratorTest {
   private static String INSTANCE2 = "i-00000002"
 
   @Test
+  void testGenerationNoDataInPeriod(){
+    ElasticIpArtGenerator generator = testGenerator( false, false );
+    ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-08-01T00:00:00"), millis("2012-08-01T12:00:00") ) )
+    assertEquals( "Accounts", Collections.emptySet(), art.getAccounts().keySet() )
+    assertEquals( "Zones", Collections.emptySet(), art.getZones().keySet() )
+    assertEquals( "Total usage count", 0L, art.getUsageTotals().getElasticIpTotals().getIpNum() )
+  }
+
+  @Test
   void testBasicGeneration() {
     ElasticIpArtGenerator generator = testGenerator( false, false );
     ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
@@ -209,7 +218,7 @@ class ElasticIpArtGeneratorTest {
 
   @SuppressWarnings("GroovyAccessibility")
   private ReportingInstanceCreateEvent instance( String instanceId, String userId ) {
-    new ReportingInstanceCreateEvent( uuid(instanceId), millis("2012-09-01T00:00:00"), instanceId, "m1.small", userId, name(userId), name(ACCOUNT1), ACCOUNT1, "PARTI00" )
+    new ReportingInstanceCreateEvent( uuid(instanceId), instanceId, millis("2012-09-01T00:00:00"), "m1.small", userId, "PARTI00" )
   }
 
   @SuppressWarnings("GroovyAccessibility")
@@ -297,12 +306,12 @@ class ElasticIpArtGeneratorTest {
       }
 
       @Override
-      protected ReportingUser getUserById(final String userId) {
+      protected ReportingUser getUserById(String userId) {
         return user( userId, ACCOUNT1 )
       }
 
       @Override
-      protected ReportingAccount getAccountById(final String accountId) {
+      protected ReportingAccount getAccountById(String accountId) {
         return account( accountId )
       }
     }

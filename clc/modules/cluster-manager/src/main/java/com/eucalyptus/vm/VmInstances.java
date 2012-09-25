@@ -112,6 +112,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -120,6 +121,7 @@ import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -667,7 +669,11 @@ public class VmInstances {
       return VmInstance.Transform.INSTANCE.apply( vm );
     }
   }
-  
+
+  public static Function<VmInstance,String> toInstanceUuid() {
+    return Functions.compose( HasNaturalId.Utils.toNaturalId(), Functions.<VmInstance>identity() );
+  }
+
   enum PersistentLookup implements Function<String, VmInstance> {
     INSTANCE;
     

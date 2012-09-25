@@ -76,11 +76,7 @@ public class Units
 	public static String DEFAULT_SIZE_TIME_TIME_UNIT = "DAYS";
 	@ConfigurableField(initial = "GB", description = "Default size-time size unit (GB-days, etc)")
 	public static String DEFAULT_SIZE_TIME_SIZE_UNIT = "GB";
-	@ConfigurableField(initial = "30000", description = "Default collection interval time in milliseconds.")
-	public static Integer COLLECTION_INTERVAL_TIME_MS = 30000;
-	@ConfigurableField(initial = "1", description = "Default history item size.")
-	public static Integer HISTORY_SIZE = 1;
-	
+
 	public static Units getDefaultDisplayUnits()
 	{
 		return new Units(TimeUnit.valueOf(DEFAULT_TIME_UNIT),
