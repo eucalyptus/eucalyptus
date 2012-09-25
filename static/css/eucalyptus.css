@@ -1880,13 +1880,17 @@ ul.volume-expanded li:last-child {
 
 /* ======= Reusable Wizard styles ======= */
 
+.launcher_wrapper {
+  padding: 15px;
+  float: left;
+  width: 630px;
+}
+
 .wizard-wrapper {
   padding: 15px;
 }
 
 .wizard-steps {
-  float: left;
-  width: 610px;
   background-color: #eee; /* To temporarily mark the defined area */
 }
 

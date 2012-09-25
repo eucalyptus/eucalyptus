@@ -109,7 +109,7 @@
       </div>
       <div class="euca-main-outercontainer">
         <div class="inner-container">
-          <div id="euca-main-container">
+          <div id="euca-main-container" class="clearfix">
           </div>
         </div>       
       </div>
@@ -1202,14 +1202,15 @@
         </div>
       </script>
 
-      <!-- Launch Wizard & Help --> 
-      <script id="launchWizardTmpl" type="text/x-jsrender">
+      <!-- Launch Wizard & Help -->
+      <script id="launchWizardTmpl" type="text/x-jsrender"> 
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 
-          <div id="launch-wizard" class="launcher_wrapper">
-            <div id="launch-wizard-header" class="box-header"><span> {{!> launch_instance_header }} </span></div>
+          
+          <div id="launch-wizard">
             
             <!-- Wizard Wrapper -->
-            <div class="wizard-wrapper clearfix">
+            <div class="wizard-wrapper launcher_wrapper clearfix">
+            <div id="launch-wizard-header" class="box-header"><span> {{!> launch_instance_header }} </span></div>
 
               <!-- Launch Wizard Steps -->
               <div class="wizard-steps">
@@ -1268,27 +1269,27 @@
               </div>
               <!-- END Launch Wizard Steps -->
 
-              <!-- Launch Wizard Summary -->
-              <div id="launch-wizard-summary-wrapper" class="wizard-summary-wrapper">
-                <div id="launch-wizard-summary" class="wizard-summary">
-                  <div class="summary-title">{{!>launch_instance_summary_header}}</div>
-                  <div id="summary-image"> </div>
-                  <div id="summary-type"> </div>
-                  <div id="summary-security"> </div>
-                  <div id="summary-advanced"> </div>
-                </div>
-                <div id="launch-wizard-cancel" class="wizard-cancel">
-                  <span>[<a href="#">{{!> launch_instance_cancel}}</a>]</span>
-                </div>
-              </div>
-              <!-- END Launch Wizard Summary -->
-
             </div>
-            <!-- END Wizard Wrapper -->                  
+            <!-- END Wizard Wrapper -->
+            
+            <!-- Launch Wizard Summary -->
+            <div id="launch-wizard-summary-wrapper" class="wizard-summary-wrapper">
+              <div id="launch-wizard-summary" class="wizard-summary">
+                <div class="summary-title">{{!>launch_instance_summary_header}}</div>
+                <div id="summary-image"> </div>
+                <div id="summary-type"> </div>
+                <div id="summary-security"> </div>
+                <div id="summary-advanced"> </div>
+              </div>
+              <div id="launch-wizard-cancel" class="wizard-cancel">
+                <span>[<a href="#">{{!> launch_instance_cancel}}</a>]</span>
+              </div>
+            </div>
+            <!-- END Launch Wizard Summary -->    
 
           </div>
           <!-- END launch-wizard -->
-          
+
           <div id="launch-wizard-help">
             <div class="help-content">
               {{!: landing_content }}
