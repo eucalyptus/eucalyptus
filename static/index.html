@@ -1269,16 +1269,16 @@
               <!-- END Launch Wizard Steps -->
 
               <!-- Launch Wizard Summary -->
-              <div id="launch-wizard-summary-wrapper">
+              <div id="launch-wizard-summary-wrapper" class="wizard-summary-wrapper">
                 <div id="launch-wizard-summary" class="wizard-summary">
-                  <span> {{!>launch_instance_summary_header}} </span>
+                  <div class="summary-title">{{!>launch_instance_summary_header}}</div>
                   <div id="summary-image"> </div>
                   <div id="summary-type"> </div>
                   <div id="summary-security"> </div>
                   <div id="summary-advanced"> </div>
                 </div>
-                <div id="launch-wizard-cancel">
-                  <a href="#"> {{!> launch_instance_cancel}} </a>
+                <div id="launch-wizard-cancel" class="wizard-cancel">
+                  <span>[<a href="#">{{!> launch_instance_cancel}}</a>]</span>
                 </div>
               </div>
               <!-- END Launch Wizard Summary -->
