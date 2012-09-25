@@ -97,7 +97,7 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 	@Override
 	public ReportArtEntity generateReportArt(ReportArtEntity report)
 	{
-		log.debug("GENERATING REPORT ART");
+		log.debug("Generating report ART");
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance usage nodes at the bottom.
@@ -141,8 +141,6 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			usageEntities.put(createEvent.getUuid(), instance.getUsage());
 		}
 
-		
-		
 		/* Scan through instance usage and update instance usage nodes. Also,
 		 * find start and end times.
 		 */

@@ -224,6 +224,7 @@ class InstanceArtGeneratorTest {
   }
 
   private void assertUsage( String description, InstanceUsageArtEntity usage, int diskUsageMultiplier=1 ) {
+    assertEquals( description + " duration", ms(12), usage.getDurationMs() );
     assertEquals( description + " usage net in", 100, usage.getNetTotalInMegs() )
     assertEquals( description + " usage net out", 200, usage.getNetTotalOutMegs() )
     assertEquals( description + " usage cpu ms", ms(6), usage.getCpuUtilizationMs() )
