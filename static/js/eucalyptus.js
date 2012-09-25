@@ -25,6 +25,7 @@
   }
   var email = '';
   var initData = '';
+  var redirected = false;
   $(document).ready(function() {
     if (! isValidIp(location.hostname)) // hostname is given 
       initData = "action=init&host="+location.hostname;
@@ -46,6 +47,7 @@
             else 
               newLocation = location.protocol + '//' + out.ipaddr + '/?hostname='+out.hostname;
             location.href = newLocation;
+            redirected = true;
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
@@ -54,6 +56,8 @@
           logout();
         }
       })).done(function(out){
+        if(redirected)
+          return;
         // check cookie
         if ($.cookie('session-id')) {
           $.ajax({
@@ -70,7 +74,7 @@
               logout();
 	    }
           });
-        } else {
+        } else{
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
           $main.login({ 'email' : email, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
