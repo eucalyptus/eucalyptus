@@ -709,7 +709,7 @@ input[type='text'].short-textinput {
 .content-box,
 .euca-dialog-container,
 .help-page-wrapper,
-.launcher_wrapper {
+.launcher-wrapper {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
@@ -1069,7 +1069,7 @@ table.display thead th.checkbox-cell {
 }
 .twist.expanded {
   /* TODO: Add an up arrow image */ 
-  background-color: yellow;
+  background-color: lemonchiffon;
 }
 
 /* Have to target these instances specifically, as the same class is used elsewhere */
@@ -1880,13 +1880,15 @@ ul.volume-expanded li:last-child {
 
 /* ======= Reusable Wizard styles ======= */
 
-.launcher_wrapper {
+
+
+.wizard-wrapper {
   float: left;
   width: 720px;
 }
 
-.wizard-wrapper {
-  padding: 5px;
+.launcher-wrapper {
+  /* This is the rounded corner box inside the wizard wrapper */
 }
 
 .wizard-steps {
@@ -1933,7 +1935,7 @@ span.on-error {
 
 /* ===== Instance Launch Wizard ===== */
 
-.launcher_wrapper {
+.launcher-wrapper {
   /* NOTE: Some common styles are set above with the page-content-box */
   /* Only the differences are placed here */
   margin: 0 8px 35px;
