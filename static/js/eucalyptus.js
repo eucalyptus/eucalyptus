@@ -24,10 +24,9 @@
 	$.eucaData = {};
   }
   var email = '';
- 
+  var initData = '';
   $(document).ready(function() {
-    var initData = '';
-    if (! isValidIp(location.hostname))
+    if (! isValidIp(location.hostname)) // hostname is given 
       initData = "action=init&host="+location.hostname;
     else
       initData = "action=init";
@@ -39,10 +38,14 @@
         async:"false", // async option deprecated as of jQuery 1.8
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
-          eucalyptus.help({'language':out.language}); // loads help files
           email = out.email;
           if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
-            location.hostname = out.ipaddr;
+            var newLocation = '';
+            if(location.port && location.port > 0)
+              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port + '/?hostname='+out.hostname;
+            else 
+              newLocation = location.protocol + '//' + out.ipaddr + '/?hostname='+out.hostname;
+            location.href = newLocation;
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
@@ -60,6 +63,7 @@
 	    async:"false",
 	    success: function(out, textStatus, jqXHR){
 	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+              eucalyptus.help({'language':out.global_session.language}); // loads help files
               eucalyptus.main($.eucaData);
             },
 	    error: function(jqXHR, textStatus, errorThrown){
@@ -86,6 +90,7 @@
 	        async:"false",
 	        success: function(out, textStatus, jqXHR) {
 	          $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+                  eucalyptus.help({'language':out.global_session.language}); // loads help files
                   args.onSuccess($.eucaData); // call back to login UI
                 },
                 error: function(jqXHR, textStatus, errorThrown){

@@ -63,6 +63,9 @@
 
     _create : function(){
        var thisObj = this;
+       thisObj.element.find('a#euca-logo').click(function(e){
+         location.reload();
+       });
        // navigation area   
        //var $naviArea = this.element.find('#euca-navigator');
        //$naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));

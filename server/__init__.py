@@ -267,7 +267,7 @@ class InitProcessor(ProxyProcessor):
               ip_str = (addr[4])[0]; 
               ip = ip_str.split('.');
               if (len(ip) == 4):
-                return InitResponse(language, email, ip_str)
+                return InitResponse(language, email, ip_str, host)
             raise Exception
           except:
             return InitResponse(language, email)
@@ -299,10 +299,11 @@ class LoginResponse(ProxyResponse):
                 'user_session': self.user_session.get_session()}
 
 class InitResponse(ProxyResponse):
-    def __init__(self, lang, email, ip=''):
+    def __init__(self, lang, email, ip='', hostname=''):
         self.language = lang
         self.email = email
         self.ip = ip
+        self.hostname = hostname
 
     def get_response(self):
-        return {'language': self.language, 'email': self.email, 'ipaddr': self.ip}
+        return {'language': self.language, 'email': self.email, 'ipaddr': self.ip, 'hostname': self.hostname}
