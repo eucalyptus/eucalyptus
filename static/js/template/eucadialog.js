@@ -156,17 +156,23 @@
               if(!thisObj.help_flipped){
                 $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
                 $helpLink.html('&nbsp;');
-                $buttonPane.hide(); 
                 $resourcePane.hide();
                 $titleBar.find('span').text('');
                 thisObj.help_flipped =true;
-              } else{
+              } else {
                 $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
                 $helpLink.html('&nbsp;');
                 $buttonPane.show();
                 $resourcePane.show();
                 $titleBar.find('span').text(thisObj.options.title);
                 thisObj.help_flipped=false;
+              }
+              $titleBar.show();
+            },
+            onBefore: function() {
+              if(!thisObj.help_flipped){
+                $buttonPane.hide();
+                $titleBar.hide();
               }
             }
           });
