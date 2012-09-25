@@ -83,19 +83,19 @@ sub old_euca_ipt() {
     } else {
 	return(1);
     }
-    
+
     $rulefile = shift @_;
     if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
 	$rulefile = $1; #data is now untainted
     } else {
 	return(1);
     }
-    
+
     if (!$table || !$rulefile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile) {dodie("cannot verify commandline parameters\n");}
-    
+
     @workingfiles = ("$rulefile.orig", "$rulefile.new");
-    
-    open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or dodie ("iptables-save failed: $!\n");
+
+    open my $fh, '-|' or exec 'iptables-save', ("-c", "-t", "$table") or dodie ("iptables-save failed: $!\n");
     open(OFH, ">$rulefile.orig") or dodie ("cannot open $rulefile.orig");
     $outbuf = "";
     while(<$fh>) {
@@ -107,7 +107,7 @@ sub old_euca_ipt() {
     }
     close($fh) || dodie ("iptables-save failed\n");
     close(OFH);
-    
+
     $added=0;
     $outbuf = "";
     open(FH, "$rulefile.orig");
@@ -130,7 +130,7 @@ sub old_euca_ipt() {
 		    $added=1;
 		}
 	    }
-	    close(RFH);	
+	    close(RFH);
 	}
 	if ($line ne "" && !$rulehash{$line}) {
 	    $buf .= "$line\n";
@@ -138,20 +138,20 @@ sub old_euca_ipt() {
 	}
     }
     close(FH);
-    
+
     if (!$added) {
 	return(0);
     }
-    
+
     open (OFH, ">$rulefile.new");
     print OFH "$buf\n";
     close(OFH);
     if (!-f "$rulefile.new") {
 	dodie("cannot find $rulefile.new");
     }
-    
-    
-    $rc = system("cat $rulefile.new | iptables-restore");
+
+
+    $rc = system("cat $rulefile.new | iptables-restore -c");
     if ($rc) {
 	print STDERR "iptables-restore failed: rulefile contents:\n";
 	system("cat $rulefile.new 1>&2");
@@ -165,7 +165,7 @@ sub old_euca_ipt() {
 #    }
 #    close($fh) || dodie( "iptables-restore failed\n");
 #    close(IFH);
-    
+
     return(0);
 }
 
@@ -176,7 +176,7 @@ sub new_euca_ipt() {
     } else {
 	return(1);
     }
-    
+
     $rulefile = shift @_;
     if ($rulefile =~ /^([ &:#-\@\w.]+)$/) {
 	$rulefile = $1; #data is now untainted
@@ -190,13 +190,13 @@ sub new_euca_ipt() {
     } else {
 	return(1);
     }
-    
+
     if (!$table || !$rulefile || !$chainmapfile || !($table eq "filter" || $table eq "nat") || $rulefile eq "" || !-f $rulefile || $chainmapfile eq "" || !-f $chainmapfile) {dodie("cannot verify commandline options");}
-    
+
     my %newchains, %oldchains, %chainmap, %allchains;
     my $ofile = "/tmp/euca_ipt_intermediate.$$";
     @workingfiles = ($ofile);
-    
+
     open(FH, "$chainmapfile") || dodie("cannot open $chainmap");
     while(<FH>) {
 	chomp;
@@ -211,7 +211,7 @@ sub new_euca_ipt() {
 	}
     }
     close(FH);
-    
+
     open(FH, "$rulefile") || dodie("cannot open $rulefile");
     while(<FH>) {
 	chomp;
@@ -225,16 +225,16 @@ sub new_euca_ipt() {
 		if ($allchains{$chain}){
                     $newchains{$chain} .= ",,," . join(" ", @rule);
 		}
-#               $allchains{$chain} = 1;                                                                                 
+#               $allchains{$chain} = 1;
 	    }
 	} elsif ($line =~ /^\s*GROUP/) {
 	    my ($add, $chainuser, @ips) = split(/\s+/, $line);
-	    
+
 	}
     }
     close(FH);
-    
-    open(RFH, "iptables-save -t $table|") || dodie("iptables-save failed\n");
+
+    open(RFH, "iptables-save -c -t $table|") || dodie("iptables-save failed\n");
     while(<RFH>) {
 	chomp;
 	my $line = $_;
@@ -254,13 +254,13 @@ sub new_euca_ipt() {
 	}
     }
     close(RFH);
-    
+
     $ncl = keys(%newchains);
     $ocl = keys(%oldchains);
     $cml = keys(%chainmap);
     if ($ncl <= 0 || $ocl <= 0 || $cml <= 0) {
-    }    
-    
+    }
+
     foreach $chain (keys(%newchains)) {
 #	print STDERR "INCHAIN($chain): $newchains{$chain}\n";
 	my @inrules = split(',,,', $newchains{$chain});
@@ -280,7 +280,7 @@ sub new_euca_ipt() {
 	$oldchains{$chain} = $newchain;
 #	print STDERR "CHAINMAP($chain): $chainmap{$chain}\n\n\n";
     }
-    
+
     foreach $chain (keys(%chainmap)) {
 	if (!$newchains{$chain}) {
 	    $oldchains{$chain} = "";
@@ -291,14 +291,14 @@ sub new_euca_ipt() {
     open(OFH, ">$ofile") || dodie("cannot write to file $ofile");
 # write out the header
     print OFH "*filter\n:INPUT ACCEPT [0:0]\n:FORWARD DROP [0:0]\n:OUTPUT ACCEPT [0:0]\n";
-    
+
 #write out eucalyptus chains
     foreach $chain (keys(%allchains)) {
 	if ($chain && $chain ne "" && $chain ne "FORWARD" && $chain ne "INPUT" && $chain ne "OUTPUT" && $chain ne "PREROUTING" && $chain ne "POSTROUTING") {
 	    print OFH ":$chain - [0:0]\n";
 	}
     }
-    
+
 #restore non-eucalyptus chains
     foreach $chain (keys(%oldchains)) {
 	if (!$chainmap{$chain}) {
@@ -310,7 +310,7 @@ sub new_euca_ipt() {
 	    }
 	}
     }
-    
+
 #install eucalyptus chains
     foreach $chain (keys(%oldchains)) {
 	if ($chainmap{$chain}) {
@@ -326,19 +326,19 @@ sub new_euca_ipt() {
 	    }
 	}
     }
-    
+
     print OFH "COMMIT\n";
     close(OFH);
-    
+
     if ( -f "$ofile" ) {
-	$rc = system("cat $ofile | iptables-restore");
+	$rc = system("cat $ofile | iptables-restore -c");
 	if ($rc) {
 	    print STDERR "[EUCAERROR] euca_ipt: could not run iptables-restore\n";
 	}
     } else {
 	$rc = 1;
     }
-    
+
     return($rc);
 }
 
@@ -406,7 +406,7 @@ sub rule_convert() {
 	$ret .= "-j ACCEPT";
 	@retrules = (@retrules, $ret);
     } else {
-	
+
     }
     return(@retrules);
 }
@@ -425,7 +425,7 @@ sub doexit {
     }
 
     exit($ret);
-}    
+}
 
 sub dodie {
     $msg = shift @_;
