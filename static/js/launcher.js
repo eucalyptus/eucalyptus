@@ -184,7 +184,7 @@
     _makeSectionButton : function($launcher) {
       var thisObj = this;
       var $imageBtn = $launcher.find('#launch-wizard-buttons-image');
-      $imageBtn.append($('<button>').attr('id', 'launch-wizard-buttons-image-next').html(launch_instance_btn_next_type).click( function(e){
+      $imageBtn.append($('<button>').attr('id', 'launch-wizard-buttons-image-next').addClass('button').html(launch_instance_btn_next_type).click( function(e){
         var typeSection = $launcher.find('#launch-wizard-type-contents');
         thisObj._selectedSection.slideToggle('fast');
         typeSection.slideToggle('fast');
@@ -192,7 +192,7 @@
         thisObj._initTypeSection();
       }));
       var $typeBtn = $launcher.find('#launch-wizard-buttons-type');
-      $typeBtn.append($('<button>').attr('id', 'launch-wizard-buttons-type-next').html(launch_instance_btn_next_security).click( function(e){
+      $typeBtn.append($('<button>').attr('id', 'launch-wizard-buttons-type-next').addClass('button').html(launch_instance_btn_next_security).click( function(e){
         var secSection = $launcher.find('#launch-wizard-security-contents');
         thisObj._selectedSection.slideToggle('fast');
         secSection.slideToggle('fast');
@@ -202,7 +202,7 @@
       var $securityBtn = $launcher.find('#launch-wizard-buttons-security');
       $securityBtn.append(
         $('<ul>').append(
-          $('<li>').append($('<button>').attr('id','launch-wizard-buttons-security-launch').html(launch_instance_btn_launch).click( function(e){
+          $('<li>').append($('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         })),
           $('<li>').append($('<span>').text('Or:'), $('<a>').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
             var advSection = $launcher.find('#launch-wizard-advanced-contents');
@@ -213,7 +213,7 @@
         })))); 
       var $advancedBtn = $launcher.find('#launch-wizard-buttons-advanced');
       $advancedBtn.append(
-        $('<button>').attr('id', 'launch-wizard-buttons-advanced-launch').html(launch_instance_btn_launch).click( function(e){
+        $('<button>').attr('id', 'launch-wizard-buttons-advanced-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         })); 
     },
     _selectedSection : null,
