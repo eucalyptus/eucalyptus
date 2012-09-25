@@ -1072,14 +1072,33 @@ table.display thead th.checkbox-cell {
   background-color: yellow;
 }
 
+/* Have to target these instances specifically, as the same class is used elsewhere */
+
+.dataTables_wrapper .twist {
+  display: block;
+  padding: 3px 13px 3px 0;
+  background: transparent url(../images/css-sprites-small.png) no-repeat right -576px;
+}
+
+.dataTables_wrapper .twist.expanded {
+   background-color: transparent;
+   background-position: right -595px;
+}
+
 tr.expanded td {
-  padding: 0 10px 5px;
-  border: 1px solid #ccc;
-  border-width: 1px 0;
+  padding: 0;
+  border-top: 1px solid #a9a9a9;
+  background: #fdfdfd url(../images/expanded-row-shadows.png) no-repeat left top;
+}
+
+.expanded-row-inner-wrapper {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid #a9a9a9;
+  background: transparent url(../images/expanded-row-shadows.png) no-repeat right bottom;
 }
 
 .expanded-section-label {
-  padding: 7px 3px 2px;
+  padding: 8px 3px 2px;
   color: #02405f;
   font-weight: bold;
   font-size: 12px;
@@ -1091,6 +1110,7 @@ tr.expanded td {
 }
 
 .expanded ul {
+  float: left;
   margin: 0 0 5px;
   padding: 0;
   list-style-type: none;
@@ -1106,23 +1126,19 @@ tr.expanded td {
   width: 320px;
 }
 
-/* TODO: Dave - remove this class and the marker colors when layout HTML has been updated */
-
 ul.volume-expanded li:last-child {
   width: 200px;
 }
 
-.expanded-value {
-  padding: 2px 4px;
-  /*background-color: Lightcyan;*/ 
-}
-
 .expanded-title {
-  padding: 2px 4px;
-  /*background-color: Lavender;*/
+  padding: 0 4px;
   color: #02405f;
   font-size: 10px;
   font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.expanded-value {
+  padding: 0 4px;
 }
 
 /* ======= Help page related ===== */
