@@ -1182,8 +1182,14 @@ ul.volume-expanded li:last-child {
 
 .help-revert-button {
   float: right;
-  padding-right: 20px;
+  padding: 0 25px 5px 0;
 }
+
+.dialog-inner-content .help-revert-button {
+  padding: 0 0 10px 0;
+}
+
+/* ==== Page help and dialog help content ==== */
 
 .dialog-help-content h1,
 .help-content h1,
@@ -1191,27 +1197,33 @@ ul.volume-expanded li:last-child {
 .help-content h2 {
   color: #02405f;
   font-weight: normal;
-  font-size: 28px;
   font-family: 'PlayRegular', Arial, sans-serif;
-  margin: .4em 0 .2em;
 }
+
+.help-content h1 {
+  font-size: 28px;
+  margin: .3em 0 .2em;
+}
+
+.help-content h2 {
+  font-size: 22px;
+  margin: .8em 0 0;
+}
+
+.help-content p {
+  margin: 0 0 1em;
+}  
 
 .dialog-help-content h1 {
   font-size: 24px;
-}
-
-.dialog-help-content h2,
-.help-content h2 {
-  font-size: 22px;
-  margin: 1em 0 0;
+  margin: .7em 0 0;
 }
 
 .dialog-help-content h2 {
   font-size: 20px;
 }
 
-.dialog-help-content p,
-.help-content p {
+.dialog-help-content p {
   margin: .3em 0 1em;
 }  
 
