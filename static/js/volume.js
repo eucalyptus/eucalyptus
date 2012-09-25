@@ -28,6 +28,7 @@
     //forceDetachDialog : null, // forceDetach is not supported
     addDialog : null,
     attachDialog : null,
+    attachButtonId : 'volume-attach-btn',
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #volumeTblTmpl').clone();
@@ -131,7 +132,6 @@
        });
       // volume detach dialog end
       // attach dialog start
-      var attachButtonId = 'volume-attach-btn';
       $tmpl = $('html body').find('.templates #volumeAttachDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $attach_dialog = $rendered.children().first();
@@ -140,7 +140,7 @@
          id: 'volumes-attach',
          title: volume_dialog_attach_title,
          buttons: {
-           'attach': { domid: attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
+           'attach': { domid: thisObj.attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
                 volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
                 instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
@@ -157,9 +157,10 @@
            return dfd.promise();
          }},
        });
-       this.attachDialog.eucadialog('onKeypress', 'volume-attach-device-name', attachButtonId, function () {
-         var inst = thisObj.attachDialog.find('#volume-attach-instance-selector').val();
-         return inst != '';
+       $instance_id = $attach_dialog.find('#volume-attach-instance-id');
+       $device_name = $attach_dialog.find('#volume-attach-device-name');
+       $attach_dialog.eucadialog('buttonOnKeyup', $device_name, thisObj.attachButtonId, function () {
+         return $instance_id.val() != '';
        });
 
       // attach dialog end
@@ -208,12 +209,11 @@
        });
        var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');
        var $vol_size_edit = thisObj.addDialog.find('#volume-size');
-
-       this.addDialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
-         return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
+       $add_dialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
+         return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
        }); 
-       this.addDialog.eucadialog('buttonOnChange', $vol_size_edit,  createButtonId, function(){
-         return $az_selector.val() !== '' &&  $vol_size_edit.val() && $vol_size_edit.val().length>0;
+       $add_dialog.eucadialog('buttonOnKeyup', $vol_size_edit,  createButtonId, function(){
+         return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
        });
        // volume create dialog end
     },
@@ -248,6 +248,7 @@
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
+      thisObj = this;
       var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id');
       var $volumeSelector = this.attachDialog.find('#volume-attach-volume-id');
 
@@ -265,7 +266,11 @@
           this.attachDialog.eucadialog('showError', no_running_instances);
 
         $instanceSelector.autocomplete({
-          source: inst_ids
+          source: inst_ids,
+          select: function() {
+            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+              thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
+          }
         });
         $instanceSelector.watermark(instance_id_watermark);
       }
@@ -282,7 +287,11 @@
         if (vol_ids.length == 0 )
           this.attachDialog.eucadialog('showError', no_available_volume);
         $volumeSelector.autocomplete( {
-          source: vol_ids
+          source: vol_ids,
+          select: function() {
+            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+              thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
+          }
         });
         $volumeSelector.watermark(volume_id_watermark);
       }
@@ -307,14 +316,14 @@
                 notifySuccess(null, $.i18n.prop('volume_delete_success', volumeId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('volume_delete_error', volumeId));
+                notifyError($.i18n.prop('volume_delete_error', volumeId), undefined_error);
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('volume_delete_error', volumeId));
+              notifyError($.i18n.prop('volume_delete_error', volumeId), getErrorMessage(jqXHR));
             }
           })(volumeId)
         });
@@ -335,12 +344,12 @@
               notifySuccess(null, $.i18n.prop('volume_attach_success', volumeId, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, $.i18n.prop('volume_attach_error', volumeId, instanceId));
+              notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, $.i18n.prop('volume_attach_error', volumeId, instanceId));
+            notifyError($.i18n.prop('volume_attach_error', volumeId, instanceId), getErrorMessage(jqXHR));
           }
       });
     },
@@ -362,12 +371,12 @@
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', volId);
             } else {
-              notifyError(null, $.i18n.prop('volume_create_error'));
+              notifyError($.i18n.prop('volume_create_error'), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, $.i18n.prop('volume_create_error'));
+            notifyError($.i18n.prop('volume_create_error'), getErrorMessage(jqXHR));
           }
       });
     },
@@ -395,9 +404,9 @@
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
                 if (force)
-                  notifyError(null, $.i18n.prop('volume_force_detach_error', volumeId));
+                  notifyError($.i18n.prop('volume_force_detach_error', volumeId), undefined_error);
                 else
-                  notifyError(null, $.i18n.prop('volume_detach_error', volumeId));
+                  notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
               }
            }
           })(volumeId),
@@ -405,9 +414,9 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               if (force)
-                notifyError(null, $.i18n.prop('volume_force_detach_error', volumeId));
+                notifyError($.i18n.prop('volume_force_detach_error', volumeId), getErrorMessage(jqXHR));
               else
-                notifyError(null, $.i18n.prop('volume_detach_error', volumeId));
+                notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
             }
           })(volumeId)
         });

@@ -46,7 +46,7 @@
             },
             { 
               "fnRender" : function(oObj) { 
-                 return $('<div>').append($('<div>').addClass('twist').text(oObj.aData.name)).html();
+                 return $('<div>').append($('<a>').attr('href','#').addClass('twist').text(oObj.aData.name)).html();
               }
             },
             { "mDataProp": "description" },
@@ -152,12 +152,12 @@
                               $add_dialog.eucadialog("close");
                           }
                       } else {
-                          notifyError(null, $.i18n.prop('sgroup_add_rule_error', name));
+                          notifyError($.i18n.prop('sgroup_add_rule_error', name), undefined_error);
                           $add_dialog.eucadialog("close");
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    notifyError(null, $.i18n.prop('sgroup_create_error', name));
+                    notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                     dfd.reject();
                     $add_dialog.eucadialog("close");
                   }
@@ -171,10 +171,10 @@
                     thisObj._refreshRulesList(thisObj.addDialog);
         },
       });
-      this.addDialog.eucadialog('onKeypress', 'sgroup-name', createButtonId, function () {
+      this.addDialog.eucadialog('buttonOnKeyup', $add_dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateForm(createButtonId);
       });
-      this.addDialog.eucadialog('onKeypress', 'sgroup-description', createButtonId, function () {
+      this.addDialog.eucadialog('buttonOnKeyup', $add_dialog.find('#sgroup-description'), createButtonId, function () {
          thisObj._validateForm(createButtonId);
       });
       this.addDialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
@@ -495,7 +495,7 @@
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
                 thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('sgroup_delete_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_delete_error', sgroupName), undefined_error);
               }
            }
           })(sgroupName),
@@ -537,7 +537,7 @@
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError(null, $.i18n.prop('sgroup_add_rule_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
                 dialog.eucadialog("close");
             }
         }),
@@ -571,7 +571,7 @@
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError(null, $.i18n.prop('sgroup_revoke_rule_error', sgroupName));
+                notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
                 dialog.eucadialog("close");
             }
         }),
@@ -626,7 +626,7 @@
 
     _expandCallback : function(row){ 
       var thisObj = this;
-      var groupName = row[1];
+      var groupName = $(row[1]).html();
       var results = describe('sgroup');
       var group = null;
       for(i in results){
@@ -639,8 +639,11 @@
         return null;
       var $wrapper = null;
       if(group.rules && group.rules.length > 0){
-        $wrapper = $('<div>').append($('<span>').text(sgroup_table_expanded_title), $('<ul>').addClass('sgroup-expanded'));
-        $wrapper = $wrapper.find('ul');
+        $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
+          $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title), 
+          $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
+            $('<ul>').addClass('sgroup-expanded').addClass('clearfix')));
+        $ul = $wrapper.find('ul');
         $.each(group.rules, function (idx, rule){
           var protocol = rule['ip_protocol'];
           var port = rule['from_port'];
@@ -668,22 +671,23 @@
           });
           src = src.join(', '); 
  
-          $wrapper.append(
+          $ul.append(
             $('<li>').append(
-              $('<span>').text(sgroup_table_expanded_rule),
-              $('<ul>').addClass('sgroup-table-expanded-rule').append(
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-value').text(protocol),
-                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol)),
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-value').text(portOrType),
-                  $('<div>').addClass('expanded-title').text(portOrTypeTitle)),
-                $('<li>').append( 
-                  $('<div>').addClass('expanded-value').text(src),
-                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source)))));
+              $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_rule),
+              $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
+                $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
+                  $('<li>').append( 
+                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),
+                    $('<div>').addClass('expanded-value').text(protocol)),
+                  $('<li>').append( 
+                    $('<div>').addClass('expanded-title').text(portOrTypeTitle),
+                    $('<div>').addClass('expanded-value').text(portOrType)),
+                  $('<li>').append( 
+                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
+                    $('<div>').addClass('expanded-value').text(src))))));
         });
       }
-      return $wrapper;
+      return $('<div>').append($wrapper);
     },
 
 /**** Public Methods ****/

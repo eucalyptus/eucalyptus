@@ -190,7 +190,8 @@
           this.createDialog.find('#snapshot-create-dialog-some-volumes').show();
           this.createDialog.find('#snapshot-create-dialog-no-volumes').hide(); 
           $volSelector.autocomplete({
-            source: volume_ids
+            source: volume_ids,
+            select: function() { thisObj.createDialog.eucadialog('activateButton', thisObj.createSnapButtonId); }
           });
           $volSelector.watermark(volume_id_watermark);
         }
@@ -226,14 +227,14 @@
                 notifySuccess(null,$.i18n.prop('snapshot_delete_success', snapshotId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('snapshot_delete_error', snapshotId));
+                notifyError($.i18n.prop('snapshot_delete_error', snapshotId), undefined_error);
               }
            }
           })(snapshotId),
           error:
           (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('snapshot_delete_error', snapshotId));
+              notifyError($.i18n.prop('snapshot_delete_error', snapshotId), getErrorMessage(jqXHR));
             }
           })(snapshotId)
         });
@@ -256,12 +257,12 @@
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
-              notifyError(null, $.i18n.prop('snapshot_create_error', volumeId));
+              notifyError($.i18n.prop('snapshot_create_error', volumeId), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError(null, $.i18n.prop('snapshot_create_error', volumeId));
+            notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));
           }
       });
     },

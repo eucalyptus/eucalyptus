@@ -54,8 +54,6 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_launcher)));
       var $launcher = $wrapper.children().first();
       var $launcherHelp = $wrapper.children().last();
-      thisObj.element.addClass('launch-wizard');
-
       // make section headers
       thisObj._makeSectionHeader($launcher);
  
@@ -72,7 +70,10 @@
         var $container = $('html body').find(DOM_BINDING['main']);
         $container.maincontainer("changeSelected", e, {selected:'instance'});
       });
-      $launcher.appendTo(thisObj.element);
+      var $wrapper = $('<div>').addClass('launch-wizard-wrapper');
+      $launcher.appendTo($wrapper);
+     // $launcherHelp.appendTo($wrapper);
+      $wrapper.appendTo(this.element);
 
       thisObj._addHelp($launcherHelp);
 
@@ -183,7 +184,7 @@
     _makeSectionButton : function($launcher) {
       var thisObj = this;
       var $imageBtn = $launcher.find('#launch-wizard-buttons-image');
-      $imageBtn.append($('<button>').attr('id', 'launch-wizard-buttons-image-next').html(launch_instance_btn_next_type).click( function(e){
+      $imageBtn.append($('<button>').attr('id', 'launch-wizard-buttons-image-next').addClass('button').html(launch_instance_btn_next_type).click( function(e){
         var typeSection = $launcher.find('#launch-wizard-type-contents');
         thisObj._selectedSection.slideToggle('fast');
         typeSection.slideToggle('fast');
@@ -191,7 +192,7 @@
         thisObj._initTypeSection();
       }));
       var $typeBtn = $launcher.find('#launch-wizard-buttons-type');
-      $typeBtn.append($('<button>').attr('id', 'launch-wizard-buttons-type-next').html(launch_instance_btn_next_security).click( function(e){
+      $typeBtn.append($('<button>').attr('id', 'launch-wizard-buttons-type-next').addClass('button').html(launch_instance_btn_next_security).click( function(e){
         var secSection = $launcher.find('#launch-wizard-security-contents');
         thisObj._selectedSection.slideToggle('fast');
         secSection.slideToggle('fast');
@@ -201,7 +202,7 @@
       var $securityBtn = $launcher.find('#launch-wizard-buttons-security');
       $securityBtn.append(
         $('<ul>').append(
-          $('<li>').append($('<button>').attr('id','launch-wizard-buttons-security-launch').html(launch_instance_btn_launch).click( function(e){
+          $('<li>').append($('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         })),
           $('<li>').append($('<span>').text('Or:'), $('<a>').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
             var advSection = $launcher.find('#launch-wizard-advanced-contents');
@@ -212,7 +213,7 @@
         })))); 
       var $advancedBtn = $launcher.find('#launch-wizard-buttons-advanced');
       $advancedBtn.append(
-        $('<button>').attr('id', 'launch-wizard-buttons-advanced-launch').html(launch_instance_btn_launch).click( function(e){
+        $('<button>').attr('id', 'launch-wizard-buttons-advanced-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         })); 
     },
     _selectedSection : null,
@@ -755,12 +756,13 @@
       $userdata.append(
         $('<div>').append(
           $('<span>').text(launch_instance_advanced_userdata),
-        $('<div>').append('Or. ').append(
+        $('<div>').append(
           $('<input>').attr('id','launch-wizard-advanced-input-userdata').attr('type','text').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone().children()); 
           })),
-          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
+        $('<div>').append('Or. ').append(
+          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file'))));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
       $input.change(function(e){
           thisObj.launchParam['data_file'] = this.files;
@@ -1226,7 +1228,7 @@
             var $container = $('html body').find(DOM_BINDING['main']);
               $container.maincontainer("changeSelected",null, {selected:'instance'});
           } else {
-            notifyError(null, $.i18n.prop('instance_run_error'));
+            notifyError($.i18n.prop('instance_run_error'), undefined_error);
             //TODO: clear launch-instance wizard?
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
@@ -1234,7 +1236,7 @@
           }
         },
         error: function (jqXHR, textStatus, errorthrown) {
-          notifyError(null, $.i18n.prop('instance_run_error'));
+          notifyError($.i18n.prop('instance_run_error'), getErrorMessage(jqXHR));
           var $container = $('html body').find(DOM_BINDING['main']);
           $container.maincontainer("clearSelected");
           $container.maincontainer("changeSelected",null, {selected:'launcher'});

@@ -151,7 +151,7 @@
       var status = 'online';
       var numOff = 0;
       $.each(thisObj._data, function(resource, data){
-        if(!data || !data.results)
+        if(!data)
           numOff++;
       });
       if(numOff >= 2) 

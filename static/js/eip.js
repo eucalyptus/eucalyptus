@@ -29,6 +29,7 @@
     allocateDialog : null,
     associateDialog : null,
     disassociateDialog : null,
+    associateBtnId : 'eip-associate-btn',
 
     _init : function() {
       var thisObj = this;
@@ -123,11 +124,8 @@
          },
          help: { content: $eip_allocate_dialog_help },
        });
-      var $ip_count_edit = this.allocateDialog.find('#eip-allocate-count');
-      this.allocateDialog.eucadialog('buttonOnFocus', $ip_count_edit,  allocateButtonId, function(){
-        return $ip_count_edit.val() == parseInt($ip_count_edit.val());
-      });
-      this.allocateDialog.eucadialog('onKeypress', 'eip-allocate-count',  allocateButtonId, function(){
+      var $ip_count_edit = $eip_allocate_dialog.find('#eip-allocate-count');
+      $eip_allocate_dialog.eucadialog('buttonOnKeyup', $ip_count_edit,  allocateButtonId, function(){
         return $ip_count_edit.val() == parseInt($ip_count_edit.val());
       });
       // allocate eip dialog end
@@ -140,7 +138,7 @@
          id: 'eip-associate',
          title: eip_associate_dialog_title,
          buttons: {
-           'associate': { text: eip_associate_dialog_associate_btn, click: function() {
+           'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
                if(thisObj.options.from_instance){
                  thisObj._associateIp(
                    $eip_associate_dialog.find('#eip-associate-instance-id').val(),
@@ -155,7 +153,7 @@
                $eip_associate_dialog.eucadialog("close");
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, focus: true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
          help: { content: $eip_associate_dialog_help },
          on_open: {spin: true, callback: function(args) {
@@ -232,14 +230,14 @@
                 notifySuccess(null, $.i18n.prop('eip_release_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('eip_release_error', eipId));
+                notifyError($.i18n.prop('eip_release_error', eipId), undefined_error);
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_release_error', eipId));
+              notifyError($.i18n.prop('eip_release_error', eipId), getErrorMessage(jqXHR));
             }
           })(eipId)
         });
@@ -265,14 +263,14 @@
                 notifySuccess(null, $.i18n.prop('eip_disassociate_success', eipId));
                 thisObj.tableWrapper.eucatable('refreshTable');
               } else {
-                notifyError(null, $.i18n.prop('eip_disassociate_error', eipId));
+                notifyError($.i18n.prop('eip_disassociate_error', eipId), undefined_error);
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_disassociate_error', eipId));
+              notifyError($.i18n.prop('eip_disassociate_error', eipId), getErrorMessage(jqXHR));
             }
           })(eipId)
         });
@@ -297,12 +295,12 @@
                 thisObj.tableWrapper.eucatable('refreshTable');
                 thisObj.tableWrapper.eucatable('glowRow', ip);
               } else {
-                notifyError(null, $.i18n.prop('eip_allocate_error'));
+                notifyError($.i18n.prop('eip_allocate_error'), undefined_error);
               }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_allocate_error'));
+              notifyError($.i18n.prop('eip_allocate_error'), getErrorMessage(jqXHR));
             }
         });
     },
@@ -322,12 +320,12 @@
               notifySuccess(null, $.i18n.prop('eip_associate_success', publicIp, instanceId));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-              notifyError(null, $.i18n.prop('eip_associate_error', publicIp, instanceId));
+              notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId), getErrorMessage(jqXHR));
           }
       });
     },
@@ -348,7 +346,8 @@
         if ( inst_ids.length === 0 )
           this.associateDialog.eucadialog('showError', no_running_instances);
         $selector.autocomplete({
-            source: inst_ids
+          source: inst_ids,
+          select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(instance_id_watermark);
       }else{ // called from instance landing page
@@ -364,7 +363,8 @@
         if (addresses.length ===0 )
           this.associateDialog.eucadialog('showError', no_available_address);
         $selector.autocomplete({
-          source: addresses
+          source: addresses,
+          select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(address_watermark);
       }
