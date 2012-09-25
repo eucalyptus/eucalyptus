@@ -20,10 +20,6 @@
 
 package com.eucalyptus.cluster.callback;
 
-import java.util.ArrayList;
-
-import java.util.List;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -42,7 +38,6 @@ import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
@@ -59,21 +54,15 @@ public class DescribeSensorCallback extends
   private static final String RESOURCE_TYPE_INSTANCE = "instance";
   private final int historySize;
   private final int collectionIntervalTimeMs;
-  private final ArrayList<String> sensorIds;
-  private final ArrayList<String> instanceIds;
   private final ListenerRegistry listener = ListenerRegistry.getInstance();
 
   public DescribeSensorCallback( final int historySize,
-                                 final int collectionIntervalTimeMS,
-                                 final List<String> sensorIds,
-                                 final List<String> instanceIds ) {
+                                 final int collectionIntervalTimeMS ) {
     this.historySize = historySize;
     this.collectionIntervalTimeMs = collectionIntervalTimeMS;
-    this.sensorIds = Lists.newArrayList( sensorIds );
-    this.instanceIds = Lists.newArrayList( instanceIds );
 
-    final DescribeSensorsType msg = new DescribeSensorsType( this.historySize,
-        this.collectionIntervalTimeMs, this.sensorIds, this.instanceIds );
+    final DescribeSensorsType msg =
+        new DescribeSensorsType( this.historySize, this.collectionIntervalTimeMs );
 
     try {
       msg.setUser( Accounts.lookupSystemAdmin() );
@@ -90,8 +79,7 @@ public class DescribeSensorCallback extends
 
   @Override
   public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> newInstance() {
-    return new DescribeSensorCallback( this.historySize,
-        this.collectionIntervalTimeMs, this.sensorIds, this.instanceIds );
+    return new DescribeSensorCallback( this.historySize, this.collectionIntervalTimeMs );
   }
 
   @Override

@@ -167,7 +167,6 @@ class InstanceRenderer implements Renderer {
         doc.close();
   }
 
-
   public static Document addUsageCols( final Document doc,
                                        final InstanceUsageArtEntity entity,
                                        final Units units )

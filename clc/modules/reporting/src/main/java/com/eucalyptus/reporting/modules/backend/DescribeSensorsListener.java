@@ -43,41 +43,37 @@ import com.eucalyptus.event.Listeners;
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
-    @ConfigurableField(initial = "1200", description = "How often the reporting system requests information from the cluster controller")
-    public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
-    private static Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
+  @ConfigurableField(initial = "1200", description = "How often the reporting system requests information from the cluster controller")
+  public static long DEFAULT_WRITE_INTERVAL_SECS = 1200;
+  @ConfigurableField(initial = "30000", description = "Default collection interval time in milliseconds.")
+  public static Integer COLLECTION_INTERVAL_TIME_MS = 30000;
+  @ConfigurableField(initial = "1", description = "Default history item size.")
+  public static Integer HISTORY_SIZE = 1;
 
-    public static void register() {
-	Listeners.register(Hertz.class, new DescribeSensorsListener());
+  private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
+
+  public static void register() {
+    Listeners.register( Hertz.class, new DescribeSensorsListener() );
+  }
+
+  @Override
+  public void fireEvent( Hertz event ) {
+    try {
+      if ( event.isAsserted( DEFAULT_WRITE_INTERVAL_SECS ) ) {
+        if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+
+          for ( final ServiceConfiguration ccConfig :
+              Topology.enabledServices( ClusterController.class ) ) {
+
+            AsyncRequests.newRequest(
+                new DescribeSensorCallback( HISTORY_SIZE, COLLECTION_INTERVAL_TIME_MS ) )
+                .dispatch( ccConfig );
+            LOG.debug( "DecribeSensorCallback has been successfully executed" );
+          }
+        }
+      }
+    } catch ( Exception ex ) {
+      LOG.error( "Unable to listen for describe sensors events", ex );
     }
-
-    @Override
-    public void fireEvent(Hertz event) {
-
-	ArrayList<String> fakeSensorIds = new ArrayList<String>();
-	ArrayList<String> fakeInstanceIds = new ArrayList<String>();
-	fakeSensorIds.add("SensorId"); // future feature
-	fakeInstanceIds.add("InstanceIds"); // future feature
-
-	try {
-
-	    if (event.isAsserted(DEFAULT_WRITE_INTERVAL_SECS)) {
-		if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
-
-		    for (final ServiceConfiguration ccConfig : Topology
-			    .enabledServices(ClusterController.class)) {
-
-			AsyncRequests.newRequest(
-				new DescribeSensorCallback(Units.HISTORY_SIZE,
-					Units.COLLECTION_INTERVAL_TIME_MS,
-					fakeSensorIds, fakeInstanceIds))
-				.dispatch(ccConfig);
-			LOG.debug("DecribeSensorCallback has been successfully executed");
-		    }
-		}
-	    }
-	} catch (Exception ex) {
-	    LOG.error("Unable to listen for describe sensors events", ex);
-	}
-    }
+  }
 }
