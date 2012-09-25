@@ -213,3 +213,16 @@ function getErrorMessage(jqXHR) {
   }
 }
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
+
+function isValidIp(s) {
+  var arr = s.split('.');
+  if(!arr || arr.length!==4)
+    return false;
+  for(i in arr){
+    var n = parseInt(arr[i]);
+    if (!(n >=0 && n<=255)){
+      return false;
+    }
+  }
+  return true;
+}

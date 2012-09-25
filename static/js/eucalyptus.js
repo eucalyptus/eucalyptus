@@ -24,17 +24,26 @@
 	$.eucaData = {};
   }
   var email = '';
+ 
   $(document).ready(function() {
+    var initData = '';
+    if (! isValidIp(location.hostname))
+      initData = "action=init&host="+location.hostname;
+    else
+      initData = "action=init";
     $.when( // this is to synchronize a chain of ajax calls 
       $.ajax({
         type:"POST",
-        data:"action=lang",
+        data:initData,
         dataType:"json",
         async:"false", // async option deprecated as of jQuery 1.8
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
           eucalyptus.help({'language':out.language}); // loads help files
           email = out.email;
+          if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
+            location.hostname = out.ipaddr;
+          }
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
