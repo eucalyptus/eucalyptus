@@ -1881,27 +1881,27 @@ ul.volume-expanded li:last-child {
 /* ======= Reusable Wizard styles ======= */
 
 .launcher_wrapper {
-  padding: 15px;
   float: left;
-  width: 630px;
+  width: 720px;
 }
 
 .wizard-wrapper {
-  padding: 15px;
+  padding: 5px;
 }
 
 .wizard-steps {
-  background-color: #eee; /* To temporarily mark the defined area */
+  padding: 15px;
 }
 
 .wizard-step {
-  margin: 10px 0;
-  background-color: #d7d7d7; /* To temporarily mark the defined area */
+  margin: 20px 0;
+  padding: 10px 10px 15px;
+  background-color: #e9e9e9; /* To temporarily mark the defined area */
 }
 
 .wizard-summary-wrapper {
   float: right;
-  width: 285px;
+  width: 200px;
 }
 
 .wizard-summary {
