@@ -70,10 +70,10 @@
         var $container = $('html body').find(DOM_BINDING['main']);
         $container.maincontainer("changeSelected", e, {selected:'instance'});
       });
-      var $wrapper = $('<div>').addClass('launch-wizard-wrapper');
-      $launcher.appendTo($wrapper);
+      //var $wrapper = $('<div>').addClass('launch-wizard-wrapper');
+      $launcher.appendTo(this.element); //$wrapper);
      // $launcherHelp.appendTo($wrapper);
-      $wrapper.appendTo(this.element);
+      //$wrapper.appendTo(this.element);
 
       thisObj._addHelp($launcherHelp);
 
@@ -83,10 +83,11 @@
     _addHelp : function(help){
       var thisObj = this;
       var $header = this.element.find('.box-header');
+      var $target = this.element.find('.wizard-wrapper');
       $header.find('span').append(
           $('<div>').addClass('help-link').append(
             $('<a>').attr('href','#').text('?').click( function(evt){
-              thisObj._flipToHelp(evt,help);
+              thisObj._flipToHelp(evt,help, $target);
             })));
       return $header;
     },
