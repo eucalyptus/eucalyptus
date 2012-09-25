@@ -75,7 +75,7 @@
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
-        menu_click_create : function (args) { thisObj.rulesList=null; $('#sgroup-rules-list').html(''); thisObj.addDialog.eucadialog('open')},
+        menu_click_create : function (args) { thisObj._createAction(); },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $sgroupHelp);
         },
@@ -83,7 +83,7 @@
       this.tableWrapper.appendTo(this.element);
     },
 
-    _create : function() { 
+    _create : function() {
       var thisObj = this;
       $("#sgroups-selector").change( function() { thisObj.reDrawTable() } );
 
@@ -206,6 +206,23 @@
                 }
             }
          }
+      });
+      this.addDialog.find('#sgroup-allow-ip').change(function () {
+        thisObj.addDialog.find('#allow-ip').prop('disabled', false);
+        thisObj.addDialog.find('#sgroup-ip-check').prop('disabled', false);
+        thisObj.addDialog.find('#allow-group').prop('disabled', true);
+      });
+      this.addDialog.find('#sgroup-allow-group').change(function () {
+        thisObj.addDialog.find('#allow-ip').prop('disabled', true);
+        thisObj.addDialog.find('#sgroup-ip-check').prop('disabled', true);
+        thisObj.addDialog.find('#allow-group').prop('disabled', false);
+      });
+      this.addDialog.find('#allow-ip').change(function () {
+        var val = thisObj.addDialog.find('#allow-ip').val();
+        if (val.match('^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$') != null)
+            thisObj.addDialog.find('#allow-ip-error').html("");
+        else
+            thisObj.addDialog.find('#allow-ip-error').html("doesn't match");
       });
       this.addDialog.find('#sgroup-ip-check').click(function () {
         $.ajax({
@@ -334,7 +351,7 @@
             contentType: 'text/plain; charset=utf-8',
             dataType: "text",
             success: function(data, textStatus, jqXHR) {
-                         thisObj.editDialog.find('#allow-ip').val(jqXHR.responseText+"/32")
+                         thisObj.editDialog.find('#allow-ip').val(jqXHR.responseText+"/32");
                      }
         });
       });
@@ -581,6 +598,16 @@
       }
     },
 
+    _createAction : function() {
+      var thisObj = this;
+      thisObj.rulesList=null;
+      $('#sgroup-rules-list').html('');
+      thisObj.addDialog.eucadialog('open');
+      thisObj.addDialog.find('input[id=sgroup-name]').focus();
+      thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
+      thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
+    },
+
     _editAction : function() {
       //TODO: add hide menu
       var thisObj = this;
@@ -593,6 +620,8 @@
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
       thisObj._refreshRulesList(thisObj.editDialog);
+      thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
+      thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
     },
 
     _expandCallback : function(row){ 

@@ -444,15 +444,12 @@
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><div id="allow-ip-error" style="fgcolor:#ff000000;"></div>
+                    <a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
                     <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
-                  </div>
-  
-                  <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroup_dialog_add_allow_instances_tip }}"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
@@ -566,10 +563,6 @@
   
                   <div class="form-row"> 
                     <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
-                  </div>
-  
-                  <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
