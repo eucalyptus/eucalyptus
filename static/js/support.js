@@ -17,7 +17,6 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-
 /* Constants */
 var DEPRECATE = false; 
 var RETURN_KEY_CODE = 13;
@@ -191,7 +190,21 @@ function disassociateIp(address){
 
 function logout(){
   $.cookie('session-id',''); 
-  location.href='/';
+  var hostname = null;
+  if (location.href && location.href.indexOf('hostname=') >= 0){
+    hostname = location.href.substring(location.href.indexOf('hostname=')); 
+    hostname= hostname.replace('hostname=','');
+    hostname= hostname.replace('#','');
+    hostname= hostname.replace('/','');
+  }
+  if(!hostname)
+    hostname = location.hostname;
+  var href = '';
+  if(location.port && location.port > 0)
+    href = location.protocol + '//' + hostname + ':' + location.port + '/';
+  else
+    href = location.protocol + '//' + hostname + '/'; 
+  location.href=href;
 }
 
 function formatDateTime(data) {
@@ -213,3 +226,17 @@ function getErrorMessage(jqXHR) {
   }
 }
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
+
+function isValidIp(s) {
+  var arr = s.split('.');
+  if(!arr || arr.length!==4)
+    return false;
+  for(i in arr){
+    var n = parseInt(arr[i]);
+    if (!(n >=0 && n<=255)){
+      return false;
+    }
+  }
+  return true;
+}
+

@@ -7,6 +7,7 @@ import random
 import sys
 import tornado.web
 import traceback
+import socket
 
 from token import TokenAuthenticator
 
@@ -162,9 +163,9 @@ class RootHandler(BaseHandler):
                 except Exception, err:
                     traceback.print_exc(file=sys.stdout)
                     raise EuiException(401, 'not authorized')
-            elif action == 'lang':
+            elif action == 'init':
                 try:
-                    response = LanguageProcessor.post(self)
+                    response = InitProcessor.post(self)
                 except Exception, err:
                     traceback.print_exc(file=sys.stdout)
                     raise EuiException(401, 'not authorized')
@@ -193,7 +194,7 @@ class RootHandler(BaseHandler):
 
     def check_xsrf_cookie(self):
         action = self.get_argument("action")
-        if action == 'login' or action == 'lang':
+        if action == 'login' or action == 'init':
             xsrf = self.xsrf_token
         else:
             super(RootHandler, self).check_xsrf_cookie()
@@ -253,13 +254,25 @@ class LoginProcessor(ProxyProcessor):
 
         return LoginResponse(sessions[sid])
 
-class LanguageProcessor(ProxyProcessor):
+class InitProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
         language = config.get('locale','language')
         email = config.get('locale','email')
-
-        return LanguageResponse(language,email)
+        if web_req.get_argument('host', False): 
+          try:
+            host = web_req.get_argument('host')
+            ip_list = socket.getaddrinfo(host, 0, 0, 0, socket.SOL_TCP)
+            for addr in ip_list:
+              ip_str = (addr[4])[0]; 
+              ip = ip_str.split('.');
+              if (len(ip) == 4):
+                return InitResponse(language, email, ip_str, host)
+            raise Exception
+          except:
+            return InitResponse(language, email)
+        else:
+          return InitResponse(language, email)
 
 class SessionProcessor(ProxyProcessor):
     @staticmethod
@@ -285,10 +298,12 @@ class LoginResponse(ProxyResponse):
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}
 
-class LanguageResponse(ProxyResponse):
-    def __init__(self, lang, email):
+class InitResponse(ProxyResponse):
+    def __init__(self, lang, email, ip='', hostname=''):
         self.language = lang
         self.email = email
+        self.ip = ip
+        self.hostname = hostname
 
     def get_response(self):
-        return {'language': self.language, 'email': self.email}
+        return {'language': self.language, 'email': self.email, 'ipaddr': self.ip, 'hostname': self.hostname}

@@ -87,7 +87,7 @@
     <div class="euca-container">
       <div class="euca-header-container">
         <div class="inner-container clearfix">
-          <a id="euca-logo" class="hide-text" href="/">Eucalyptus</a>
+          <a id="euca-logo" class="hide-text" href="#">Eucalyptus</a>
           <div id="euca-navigator"></div>
           <div id="euca-help"></div>
           <div id="euca-user"></div>
@@ -109,7 +109,7 @@
       </div>
       <div class="euca-main-outercontainer">
         <div class="inner-container">
-          <div id="euca-main-container">
+          <div id="euca-main-container" class="clearfix">
           </div>
         </div>       
       </div>
@@ -444,15 +444,12 @@
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><div id="allow-ip-error" style="fgcolor:#ff000000;"></div>
+                    <a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
                     <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
-                  </div>
-  
-                  <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances" title="{{!: sgroup_dialog_add_allow_instances_tip }}"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
@@ -566,10 +563,6 @@
   
                   <div class="form-row"> 
                     <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
-                  </div>
-  
-                  <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-instances" value="instances"/>{{!>sgroup_dialog_add_allow_instances}}
                   </div>
   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
@@ -1202,93 +1195,99 @@
         </div>
       </script>
 
-      <!-- Launch Wizard & Help --> 
-      <script id="launchWizardTmpl" type="text/x-jsrender">
+      <!-- Launch Wizard & Help -->
+      <script id="launchWizardTmpl" type="text/x-jsrender"> 
         <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 
-          <div id="launch-wizard" class="launcher_wrapper">
-            <div id="launch-wizard-header" class="box-header"><span> {{!> launch_instance_header }} </span></div>
+          
+          <div id="OLD-launch-wizard">
             
-            <!-- Wizard Wrapper -->
-            <div class="wizard-wrapper clearfix">
+            <!-- Wizard Wrapper (left side) -->
+            <div class="wizard-wrapper">
 
-              <!-- Launch Wizard Steps -->
-              <div class="wizard-steps">
-                <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
-                <div id="launch-wizard-required"> {{!> launch_instance_required }} </div> 
-                <div id="launch-wizard-image" class="wizard-step"> 
-                  <div id="launch-wizard-image-header" class="twist"> </div>
-                  <div id="launch-wizard-image-contents" class="launch-wizard-section">
-                    <div id="launch-wizard-image-main-contents">
-                      <div id="launch-wizard-image-table">
-                        <table id="launch-images" class="display">
-                          <tbody>
-                          </tbody>
-                        </table>
+              <div id="launch-wizard" class="launcher-wrapper">
+                <div id="launch-wizard-header" class="box-header"><span> {{!> launch_instance_header }} </span></div>
+
+                <!-- Launch Wizard Steps -->
+                <div class="wizard-steps">
+                  <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
+                  <div id="launch-wizard-required"> {{!> launch_instance_required }} </div> 
+                  <div id="launch-wizard-image" class="wizard-step"> 
+                    <div id="launch-wizard-image-header" class="twist"> </div>
+                    <div id="launch-wizard-image-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-image-main-contents">
+                        <div id="launch-wizard-image-table">
+                          <table id="launch-images" class="display">
+                            <tbody>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
+                      <div id="launch-wizard-buttons-image" class="launch-wizard-buttons"> </div>
                     </div>
-                    <div id="launch-wizard-buttons-image" class="launch-wizard-buttons"> </div>
                   </div>
-                </div>
-            
-                <div id="launch-wizard-type" class="wizard-step"> 
-                  <div id="launch-wizard-type-header" class="twist"> </div>
-                  <div id="launch-wizard-type-contents" class="launch-wizard-section">
-                    <div id="launch-wizard-type-main-contents">
-                      <div id="launch-wizard-type-size"> </div>
-                      <div id="launch-wizard-type-options"> </div>
+              
+                  <div id="launch-wizard-type" class="wizard-step"> 
+                    <div id="launch-wizard-type-header" class="twist"> </div>
+                    <div id="launch-wizard-type-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-type-main-contents">
+                        <div id="launch-wizard-type-size"> </div>
+                        <div id="launch-wizard-type-options"> </div>
+                      </div>
+                      <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"></div>
                     </div>
-                    <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"></div>
                   </div>
-                </div>
-            
-                <div id="launch-wizard-security" class="wizard-step">
-                  <div id="launch-wizard-security-header" class="twist"> </div>
-                  <div id="launch-wizard-security-contents" class="launch-wizard-section">
-                    <div id="launch-wizard-security-main-contents">
-                      <div id="launch-wizard-security-keypair"> </div>
-                      <div id="launch-wizard-security-sgroup"> </div>
+              
+                  <div id="launch-wizard-security" class="wizard-step">
+                    <div id="launch-wizard-security-header" class="twist"> </div>
+                    <div id="launch-wizard-security-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-security-main-contents">
+                        <div id="launch-wizard-security-keypair"> </div>
+                        <div id="launch-wizard-security-sgroup"> </div>
+                      </div>
+                      <div id="launch-wizard-buttons-security" class="launch-wizard-buttons"> </div>
                     </div>
-                    <div id="launch-wizard-buttons-security" class="launch-wizard-buttons"> </div>
                   </div>
-                </div>
-            
-                <div id="launch-wizard-advanced" class="wizard-step">
-                  <div id="launch-wizard-advanced-header" class="twist"> </div>
-                  <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
-                    <div id="launch-wizard-advanced-main-contents">
-                      <div id="launch-wizard-advanced-userdata"> </div>
-                      <div id="launch-wizard-advanced-kernelramdisk"> </div>
-                      <div id="launch-wizard-advanced-network"> </div>
-                      <div id="launch-wizard-advanced-storage"> </div>
+              
+                  <div id="launch-wizard-advanced" class="wizard-step">
+                    <div id="launch-wizard-advanced-header" class="twist"> </div>
+                    <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-advanced-main-contents">
+                        <div id="launch-wizard-advanced-userdata"> </div>
+                        <div id="launch-wizard-advanced-kernelramdisk"> </div>
+                        <div id="launch-wizard-advanced-network"> </div>
+                        <div id="launch-wizard-advanced-storage"> </div>
+                      </div>
+                      <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> </div>
                     </div>
-                    <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> </div>
                   </div>
-                </div>
 
-              </div>
-              <!-- END Launch Wizard Steps -->
-
-              <!-- Launch Wizard Summary -->
-              <div id="launch-wizard-summary-wrapper">
-                <div id="launch-wizard-summary" class="wizard-summary">
-                  <span> {{!>launch_instance_summary_header}} </span>
-                  <div id="summary-image"> </div>
-                  <div id="summary-type"> </div>
-                  <div id="summary-security"> </div>
-                  <div id="summary-advanced"> </div>
                 </div>
-                <div id="launch-wizard-cancel">
-                  <a href="#"> {{!> launch_instance_cancel}} </a>
-                </div>
+                <!-- END Launch Wizard Steps -->
+                
               </div>
-              <!-- END Launch Wizard Summary -->
+              <!-- END launcher-wrapper -->
 
             </div>
-            <!-- END Wizard Wrapper -->                  
+            <!-- END Wizard Wrapper -->
+            
+            <!-- Launch Wizard Summary (right side) -->
+            <div id="launch-wizard-summary-wrapper" class="wizard-summary-wrapper">
+              <div id="launch-wizard-summary" class="wizard-summary">
+                <div class="summary-title">{{!>launch_instance_summary_header}}</div>
+                <div id="summary-image"> </div>
+                <div id="summary-type"> </div>
+                <div id="summary-security"> </div>
+                <div id="summary-advanced"> </div>
+              </div>
+              <div id="launch-wizard-cancel" class="wizard-cancel">
+                <span>[<a href="#">{{!> launch_instance_cancel}}</a>]</span>
+              </div>
+            </div>
+            <!-- END Launch Wizard Summary -->    
 
           </div>
-          <!-- END launch-wizard -->
-          
+          <!-- END OLD-launch-wizard -->
+
           <div id="launch-wizard-help">
             <div class="help-content">
               {{!: landing_content }}
