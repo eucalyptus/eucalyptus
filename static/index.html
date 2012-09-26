@@ -404,7 +404,7 @@
                   <div class="form-row"> 
                     <div id="sgroup-port-option">
                       <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                      <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                      <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/><span id="sgroup-ports-error" style="foreground:#ff000000;"></span>
                     </div>
                     <div id="sgroup-type-option" style="display: none;">
                       <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
@@ -444,12 +444,12 @@
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><div id="allow-ip-error" style="fgcolor:#ff000000;"></div>
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}<input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" style="fgcolor:#ff000000;"></span>
                     <a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    <input type="radio" name="allow-group" id="sgroup-allow-group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
@@ -557,12 +557,12 @@
   
                   <div class="form-row">
                     <label for="sgroup-allow-ip">{{!>sgroup_dialog_add_allow}}</label>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" value="ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes"/>{{!>sgroup_dialog_add_allow_ip}}
                     <input type="text" id="allow-ip"/><a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" value="group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
+                    <input type="radio" name="allow-group" id="sgroup-allow-group"/>{{!>sgroup_dialog_add_allow_group}}<br/><input type="text" id="allow-group"/>
                   </div>
   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
