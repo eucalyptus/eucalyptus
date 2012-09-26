@@ -173,7 +173,7 @@ public class VolumeArtGenerator extends AbstractArtGenerator
 		/* Scan instance entities so we can get the instance id from the uuid
 		 */
 		final Map<String,InstanceArtEntity> instanceEntities = new HashMap<String,InstanceArtEntity>();
-		foreachInstanceCreateEvent( report.getBeginMs(), new Predicate<ReportingInstanceCreateEvent>() {
+		foreachInstanceCreateEvent( report.getEndMs(), new Predicate<ReportingInstanceCreateEvent>() {
 			@Override
 			public boolean apply( final ReportingInstanceCreateEvent createEvent ) {
 				InstanceArtEntity instance = new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId());
@@ -182,44 +182,44 @@ public class VolumeArtGenerator extends AbstractArtGenerator
 			}
 		});
 
-		/* Find attachment start times
+		/* Find attachment end times
 		 */
 		final AttachDurationCalculator<String,String> durationCalc = new AttachDurationCalculator<String,String>(report.getBeginMs(), report.getEndMs());
-		foreachReportingVolumeAttachEvent( report.getBeginMs(), new Predicate<ReportingVolumeAttachEvent>() {
+		foreachReportingVolumeDetachEvent( report.getEndMs(), new Predicate<ReportingVolumeDetachEvent>() {
 			@Override
-			public boolean apply( final ReportingVolumeAttachEvent attachEvent ) {
-				durationCalc.attach(attachEvent.getInstanceUuid(), attachEvent.getVolumeUuid(),
-					attachEvent.getTimestampMs());
+			public boolean apply( final ReportingVolumeDetachEvent detachEvent ) {
+				durationCalc.detach( detachEvent.getInstanceUuid(), detachEvent.getVolumeUuid(),
+						detachEvent.getTimestampMs() );
 				return true;
 			}
 		} );
 
 		/* Find attachment end times and set durations
 		 */
-		foreachReportingVolumeDetachEvent( report.getBeginMs(), new Predicate<ReportingVolumeDetachEvent>() {
+		foreachReportingVolumeAttachEvent( report.getEndMs(), new Predicate<ReportingVolumeAttachEvent>() {
 			@Override
-			public boolean apply( final ReportingVolumeDetachEvent detachEvent ) {
-				long durationMs = durationCalc.detach(detachEvent.getInstanceUuid(),
-				detachEvent.getVolumeUuid(), detachEvent.getTimestampMs());
+			public boolean apply( final ReportingVolumeAttachEvent attachEvent ) {
+				long durationMs = durationCalc.attach(attachEvent.getInstanceUuid(),
+						attachEvent.getVolumeUuid(), attachEvent.getTimestampMs());
 				if (durationMs==0) return true;
-				if (! volumeEntities.containsKey(detachEvent.getVolumeUuid())) return true;
-				VolumeArtEntity volume = volumeEntities.get(detachEvent.getVolumeUuid());
+				if (! volumeEntities.containsKey(attachEvent.getVolumeUuid())) return true;
+				VolumeArtEntity volume = volumeEntities.get(attachEvent.getVolumeUuid());
 				long gbsecs = ((durationMs/1000) * volume.getUsage().getSizeGB());
 				/* If a volume is repeatedly attached to and detached from an instance,
 				 * add up the total attachment time.
 				 */
-				if (volume.getInstanceAttachments().containsKey(detachEvent.getInstanceUuid())) {
-					gbsecs += volume.getInstanceAttachments().get(detachEvent.getInstanceUuid()).getGBSecs();
+				if (volume.getInstanceAttachments().containsKey(attachEvent.getInstanceUuid())) {
+					gbsecs += volume.getInstanceAttachments().get(attachEvent.getInstanceUuid()).getGBSecs();
 				}
 				VolumeUsageArtEntity usage = new VolumeUsageArtEntity();
 				usage.setGBSecs(gbsecs);
 				usage.setSizeGB(volume.getUsage().getSizeGB());
 				usage.setVolumeCnt(1);
-				if (instanceEntities.keySet().contains(detachEvent.getInstanceUuid())) {
-					String instanceId = instanceEntities.get(detachEvent.getInstanceUuid()).getInstanceId();
+				if (instanceEntities.keySet().contains(attachEvent.getInstanceUuid())) {
+					String instanceId = instanceEntities.get(attachEvent.getInstanceUuid()).getInstanceId();
 					volume.getInstanceAttachments().put(instanceId, usage);
 				} else {
-					log.error("instance uuid in detach events without corresponding instance:" + detachEvent.getInstanceUuid());
+					log.error("instance uuid in attach events without corresponding instance:" + attachEvent.getInstanceUuid());
 				}
 				return true;
 			}
@@ -357,7 +357,6 @@ public class VolumeArtGenerator extends AbstractArtGenerator
 		totalEntity.setGBSecs(totalEntity.getGBSecs()+newEntity.getGBSecs());
 		totalEntity.setVolumeCnt(totalEntity.getVolumeCnt()+1);
 		totalEntity.setSizeGB(plus(totalEntity.getSizeGB(), newEntity.getSizeGB()));
-
 	}
 
 	/**
