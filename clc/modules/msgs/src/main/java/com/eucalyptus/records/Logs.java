@@ -73,19 +73,28 @@ import java.util.HashMap;
 import java.util.ResourceBundle;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Appender;
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.Priority;
 import org.apache.log4j.RollingFileAppender;
 import org.apache.log4j.spi.Configurator;
+import org.apache.log4j.spi.DefaultRepositorySelector;
 import org.apache.log4j.spi.LoggerRepository;
 import org.apache.log4j.spi.LoggingEvent;
+import org.apache.log4j.spi.RepositorySelector;
+import org.apache.log4j.xml.DOMConfigurator;
+
 import com.eucalyptus.bootstrap.SystemBootstrapper;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.system.EucaHierarchy;
 import com.eucalyptus.system.EucaLayout;
+import com.eucalyptus.system.EucaRootLogger;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Joiner;
@@ -93,6 +102,23 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
 public class Logs {
+  static {
+	  // Some things were done here to add %i (ThreadID) to the PatternLayout class in log4j.
+	  // It was a bit complicated, requiring creating new LoggerFactory, Logger, and Hierarchy
+	  // classes among other things.  Also, default initialization of log4j (basically anywhere
+	  // Logger.getLogger() is called will initialize everything with default values, with no
+	  // easy way to change references to things already created.
+	  // Hence, we force the simplest initialization of the normal log4j. (creating only the root logger)
+	  BasicConfigurator.configure();
+	  
+	  // Then we run the DOMConfigurator on a new LoggerRepository
+	  URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
+	  Hierarchy eucaHierarchy = new EucaHierarchy(new EucaRootLogger(Level.DEBUG));
+	  new DOMConfigurator().doConfigure(url, eucaHierarchy);
+
+      // Then we hook the new logger repository into the LogManager. 
+	  LogManager.setRepositorySelector(new DefaultRepositorySelector(eucaHierarchy), null);
+  }
   private static Logger       LOG                     = Logger.getLogger( Logs.class );
   /**
    * <pre>
