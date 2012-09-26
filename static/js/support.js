@@ -225,6 +225,18 @@ function getErrorMessage(jqXHR) {
     return undefined_error;
   }
 }
+
+function isRootVolume(instanceId, volumeId) {
+  var instance = getResource('instance', instanceId);
+  if ( instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
+    var rootVolume = instance.block_device_mapping[instance.root_device_name];
+    if ( rootVolume.volume_id == volumeId ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
 
 function isValidIp(s) {

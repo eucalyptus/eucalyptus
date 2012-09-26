@@ -690,15 +690,10 @@
         <div id="volumes-detach-dialog-wrapper">
           <div id="volumes-detach-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <p>{{!: volume_dialog_detach_text }}</p>
-              <div class="form-row">
-                <label for="volume-detach-instance-id">{{!: instance_label }}</label>
-                <input type="text" id="volume-detach-instance-id" disabled='disabled'/ >
-              </div>
-              <div class="form-row">
-                <label for="volume-detach-volume-selector">{{!: volume_label }}</label>
-                <select id="volume-detach-volume-selector"/>
-              </div>
+              <p><span id="volume-detach-msg"/></p>
+              <p id="volume-detach-select-all"/></p>
+              <table id="volume-detach-grid">
+              </table>
             </div>
           </div> 
 

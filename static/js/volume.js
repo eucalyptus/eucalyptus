@@ -491,14 +491,9 @@
           }
           // do not allow to detach ebs root volume
           if (volumes[v].attach_data.instance_id) {
-            var instance = getResource('instance', volumes[v].attach_data.instance_id);
-            if ( instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
-              var rootVolume = instance.block_device_mapping[instance.root_device_name];
-              if ( rootVolume.volume_id == volumes[v].id ) {
-                addOption = false;
-                break;
-              }
-            }
+            addOption = !isRootVolume(volumes[v].attach_data.instance_id, volumes[v].id);
+            if (!addOption)
+              break;
           }
         }
         if (addOption)
