@@ -106,6 +106,10 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 		// locate relevant usage events
 		final Map<String, UsageCollator> usageCollators = findUsageEventsForReport( report );
 
+		// cache for user/account info
+		final Map<String,ReportingUser> reportingUsersById = Maps.newHashMap();
+		final Map<String,String> accountNamesById = Maps.newHashMap();
+
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance usage nodes at the bottom.
 		 */
@@ -122,23 +126,23 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 				}
 				final AvailabilityZoneArtEntity zone = report.getZones().get( createEvent.getAvailabilityZone() );
 
-				final ReportingUser reportingUser = getUserById( createEvent.getUserId() );
+				final ReportingUser reportingUser = getUserById( reportingUsersById, createEvent.getUserId() );
 				if (reportingUser==null) {
 					log.error("No user corresponding to event:" + createEvent.getUserId());
 					usageCollators.remove( createEvent.getUuid() );
 					return true;
 				}
-				final ReportingAccount reportingAccount = getAccountById(reportingUser.getAccountId());
-				if (reportingAccount==null) {
+				final String accountName = getAccountNameById( accountNamesById, reportingUser.getAccountId() );
+				if (accountName==null) {
 					log.error("No account corresponding to user:" + reportingUser.getAccountId());
 					usageCollators.remove( createEvent.getUuid() );
 					return true;
 				}
 				usageCollators.get(createEvent.getUuid()).created( report.getBeginMs(), createEvent.getTimestampMs() );
-				if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
-					zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
+				if (! zone.getAccounts().containsKey(accountName)) {
+					zone.getAccounts().put(accountName, new AccountArtEntity());
 				}
-				final AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
+				final AccountArtEntity account = zone.getAccounts().get(accountName);
 				if (! account.getUsers().containsKey(reportingUser.getName())) {
 					account.getUsers().put(reportingUser.getName(), new UserArtEntity());
 				}
@@ -512,8 +516,8 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 				if ( lastReportUsage == null ) {
 					lastReportUsage = firstReportUsage;
 				}
-				firstReportUsage = Iterables.getFirst( this, null )
-						.zero( Math.min( firstReportUsage.getTimestampMs(), timestampMs ) );
+				final ReportingInstanceUsageEvent followingEvent = Iterables.getFirst( this, null );
+				firstReportUsage = followingEvent.zero( Math.min( followingEvent.getTimestampMs(), timestampMs ) );
 			} else if ( preReportUsage == null ) {
 				preReportUsage = Iterables.getFirst( this, null ).zero( timestampMs );
 			}

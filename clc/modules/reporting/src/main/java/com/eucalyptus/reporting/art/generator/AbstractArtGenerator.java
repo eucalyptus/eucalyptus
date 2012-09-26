@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.generator;
 
+import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.hibernate.CacheMode;
 import org.hibernate.ScrollMode;
@@ -39,12 +40,37 @@ public abstract class AbstractArtGenerator implements ArtGenerator {
 
   protected static final String TIMESTAMP_MS = "timestampMs";
 
-	protected ReportingUser getUserById( final String userId ) {
+  protected ReportingUser getUserById( final String userId ) {
     return ReportingUserDao.getInstance().getReportingUser( userId );
   }
 
   protected ReportingAccount getAccountById( final String accountId ) {
     return ReportingAccountDao.getInstance().getReportingAccount( accountId );
+  }
+
+  protected ReportingUser getUserById( final Map<String, ReportingUser> reportingUsersById,
+                                       final String userId ) {
+    ReportingUser reportingUser;
+    if ( reportingUsersById.containsKey( userId ) ) {
+      reportingUser = reportingUsersById.get( userId );
+    } else {
+      reportingUser = getUserById( userId );
+      reportingUsersById.put( userId, reportingUser );
+    }
+    return reportingUser;
+  }
+
+  protected String getAccountNameById( final Map<String, String> accountNamesById,
+                                       final String accountId ) {
+    String accountName;
+    if ( accountNamesById.containsKey( accountId ) ) {
+      accountName = accountNamesById.get( accountId );
+    } else {
+      final ReportingAccount account = getAccountById( accountId );
+      accountName = account == null ? null : account.getName();
+      accountNamesById.put( accountId, accountName );
+    }
+    return accountName;
   }
 
   @SuppressWarnings( "unchecked" )

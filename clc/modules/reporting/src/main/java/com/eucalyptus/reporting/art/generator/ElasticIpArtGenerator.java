@@ -12,7 +12,6 @@ import com.eucalyptus.reporting.art.entity.ElasticIpUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
-import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpAttachEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpCreateEvent;
@@ -37,9 +36,13 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 		final Map<String,List<Long>> ipToDeleteTimesMap = Maps.newHashMap();
 		foreachElasticIpDeleteEvent( buildTimestampMap( report, ipToDeleteTimesMap ) );
 
+	// cache for user/account info
+	final Map<String,ReportingUser> reportingUsersById = Maps.newHashMap();
+	final Map<String,String> accountNamesById = Maps.newHashMap();
+
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
-				 * and create a Map of the instance nodes at the bottom.
-				 */
+		 * and create a Map of the instance nodes at the bottom.
+		 */
 		final Map<String,List<ElasticIpAllocation>> ipUuidToAllocationListMap = Maps.newHashMap();
 		foreachElasticIpCreateEvent( new Predicate<ReportingElasticIpCreateEvent>() {
 			@Override
@@ -51,13 +54,13 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 				if ( createEvent.getTimestampMs() > report.getEndMs() ) {
 					return false; // end of relevant events for this report
 				}
-				final ReportingUser reportingUser = getUserById( createEvent.getUserId() );
+				final ReportingUser reportingUser = getUserById( reportingUsersById, createEvent.getUserId() );
 				if (reportingUser==null) {
 					log.error("No user corresponding to event:" + createEvent.getUserId() + " " + createEvent.getNaturalId());
 					return true;
 				}
-				final ReportingAccount reportingAccount = getAccountById( reportingUser.getAccountId() );
-				if (reportingAccount==null) {
+				final String accountName = getAccountNameById( accountNamesById, reportingUser.getAccountId() );
+				if (accountName==null) {
 					log.error("No account corresponding to user:" + reportingUser.getAccountId()+ " " + createEvent.getNaturalId());
 					return true;
 				}
@@ -66,13 +69,13 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 					allocations = Lists.newArrayList();
 					ipUuidToAllocationListMap.put( createEvent.getUuid(), allocations );
 				}
-				allocations.add( new ElasticIpAllocation( reportingAccount.getName(), reportingUser.getName(), createEvent.getIp(), createEvent.getTimestampMs(), deleteTime ) );
+				allocations.add( new ElasticIpAllocation( accountName, reportingUser.getName(), createEvent.getIp(), createEvent.getTimestampMs(), deleteTime ) );
 				final AccountArtEntity account;
-				if (!report.getAccounts().containsKey(reportingAccount.getName())) {
+				if (!report.getAccounts().containsKey(accountName)) {
 					account = new AccountArtEntity();
-					report.getAccounts().put(reportingAccount.getName(), account);
+					report.getAccounts().put(accountName, account);
 				} else {
-					account = report.getAccounts().get(reportingAccount.getName());
+					account = report.getAccounts().get(accountName);
 				}
 				final UserArtEntity user;
 				if (!account.getUsers().containsKey(reportingUser.getName())) {
