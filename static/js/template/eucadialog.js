@@ -138,6 +138,10 @@
       $resourcePane = this.element.find('.selected-resources');
 
       $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
+      if(!thisObj.options.help || !thisObj.options.help.content || thisObj.options.help.content.find('.dialog-help-content').html().trim().length <= 0){
+        $helpLink.remove();
+        return;
+      }
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
           $contentPane.flip({
