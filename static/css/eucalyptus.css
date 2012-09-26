@@ -1151,7 +1151,6 @@ ul.volume-expanded li:last-child {
 }
 
 /* To override the background-color inline style added by the jQuery Flip */
-
 #volumes-table,
 #keys-table,
 #eip-table,
@@ -1165,23 +1164,21 @@ ul.volume-expanded li:last-child {
 .help-link,
 .help-return,
 .help-euca {
-  /*float: right;*/
   position: absolute;
-  top: 6px;
+  top: 4px;
   right: 25px;
- /* margin: 3px 20px 0 0;*/
 }
 
 .help-link a,
 .help-return a,
 .help-euca a {
   display: inline-block;
-  height: 20px; /* To match the height of the optional header text */
-  width: 23px;
+  overflow: hidden;
+  width: 24px;
+  height: 24px;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
   text-indent: 100%;
   white-space: nowrap;
-  overflow: hidden;
 }
 
 .help-return a {
