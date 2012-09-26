@@ -2021,5 +2021,23 @@ div#launch-wizard-type-size-legend{
     margin: 1px;
 }
 
+#launch-more-summary-contents {
+  width : 580px;
+  height: 70px;
+}
+.launch-more-summary-section {
+    float : left;
+    margin: 5px 20px;
+}
+.launch-more {
+  height: 350px;
+}
+.launch-more-summary-section input[type='text']{
+    width: 20px;
+    height: 12px;
+}
+input#launch-more-sgroup-input {
+    width: 150px;
+}
 /* ======= END Sang-min ======= */
 

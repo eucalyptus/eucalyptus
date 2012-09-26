@@ -64,7 +64,7 @@
       thisObj._makeImageSection($launcher.find('#launch-wizard-image'));
       thisObj._makeTypeSection($launcher.find('#launch-wizard-type'));
       thisObj._makeSecuritySection($launcher.find('#launch-wizard-security'));
-      thisObj._makeAdvancedSection($launcher.find('#launch-wizard-advanced'));
+      thisObj.makeAdvancedSection($launcher.find('#launch-wizard-advanced'));
 
       $launcher.find('#launch-wizard-cancel').find('a').click( function(e){
         var $container = $('html body').find(DOM_BINDING['main']);
@@ -719,7 +719,7 @@
       $section.find('#launch-wizard-buttons-security').find('ul button').click(function(e){
         var $summary = summarize(); 
         thisObj._setSummary('security', $summary.clone().children()); 
-        thisObj._launch();  /// launch button
+        thisObj.launch();  /// launch button
       });
 
       if(thisObj.options['security']){
@@ -745,10 +745,11 @@
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
     },
 
-    _makeAdvancedSection : function($section) { 
+    makeAdvancedSection : function($section) { 
       var thisObj = this;
       var $content = $section.find('#launch-wizard-advanced-main-contents');
-      $content.prepend($('<span>').html(launch_instance_advanced_header));
+      if(! $content.children().first().is('span'))
+        $content.prepend($('<span>').html(launch_instance_advanced_header));
       var $userdata = $content.find('#launch-wizard-advanced-userdata');
       var $kernel = $content.find('#launch-wizard-advanced-kernelramdisk');
       var $network = $content.find('#launch-wizard-advanced-network');
@@ -1114,7 +1115,7 @@
 
         var $summary = summarize(); 
         thisObj._setSummary('advanced', $summary.clone().children()); 
-        thisObj._launch();
+        thisObj.launch();
         // and launch
       });
 
@@ -1144,8 +1145,13 @@
       $section.children().detach(); 
       $section.append(content);
     },
+    
+    updateLaunchParam : function(key, val) {
+      var thisObj = this;
+      thisObj.launchParam[key] = val;
+    },
 
-    _launch : function(){
+    launch : function(){
       // validate
       var thisObj = this;
       var param = thisObj.launchParam;
@@ -1162,7 +1168,7 @@
         return thisObj._showError('security');
       if(!param['sgroup'])
         return thisObj._showError('security'); 
-   
+
       //prepare for the actual request parameters
       var reqParam = new Array();
       reqParam.push({name: 'Action', value: 'RunInstances'});
