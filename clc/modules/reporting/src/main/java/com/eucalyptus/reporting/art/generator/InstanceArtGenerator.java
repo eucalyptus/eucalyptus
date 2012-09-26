@@ -504,14 +504,14 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 
 		public void created( final Long beginMs, final Long timestampMs ) {
 			// Add a ZERO usage event at create time
-			ReportingInstanceUsageEvent zeroEvent = Iterables.getFirst( this, null ).zero( timestampMs );
 			if ( timestampMs > beginMs ) {
 				if ( lastReportUsage == null ) {
 					lastReportUsage = firstReportUsage;
 				}
-				firstReportUsage = zeroEvent;
+				firstReportUsage = Iterables.getFirst( this, null )
+						.zero( Math.min( firstReportUsage.getTimestampMs(), timestampMs ) );
 			} else if ( preReportUsage == null ) {
-				preReportUsage = zeroEvent;
+				preReportUsage = Iterables.getFirst( this, null ).zero( timestampMs );
 			}
 		}
 
