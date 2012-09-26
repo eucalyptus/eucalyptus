@@ -125,13 +125,13 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 				final ReportingUser reportingUser = getUserById( createEvent.getUserId() );
 				if (reportingUser==null) {
 					log.error("No user corresponding to event:" + createEvent.getUserId());
-					usageEntities.remove( createEvent.getUuid() );
+					usageCollators.remove( createEvent.getUuid() );
 					return true;
 				}
 				final ReportingAccount reportingAccount = getAccountById(reportingUser.getAccountId());
 				if (reportingAccount==null) {
 					log.error("No account corresponding to user:" + reportingUser.getAccountId());
-					usageEntities.remove( createEvent.getUuid() );
+					usageCollators.remove( createEvent.getUuid() );
 					return true;
 				}
 				usageCollators.get(createEvent.getUuid()).created( report.getBeginMs(), createEvent.getTimestampMs() );
@@ -160,14 +160,18 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			final String instanceUuid = usageCollatorEntry.getKey();
 			final UsageCollator usageCollator = usageCollatorEntry.getValue();
 			final InstanceUsageArtEntity usage = usageEntities.get( instanceUuid );
+			if ( usage == null ) {
+				log.error( "Missing create event for instance: " + instanceUuid);
+				continue;
+			}
 
 			/* Update duration
 			 */
 			usage.setDurationMs( usageCollator.getDuration( report.getBeginMs(), report.getEndMs() ) );
 
-			for ( final Map.Entry<UsageMetricDimensionKey,UsageMetricDimension> mericsEntry : usageCollator.usage.entrySet() ) {
-				final UsageMetricDimensionKey key = mericsEntry.getKey();
-				final UsageMetricDimension usageMetricDimension = mericsEntry.getValue();
+			for ( final Map.Entry<UsageMetricDimensionKey,UsageMetricDimension> metricsEntry : usageCollator.usage.entrySet() ) {
+				final UsageMetricDimensionKey key = metricsEntry.getKey();
+				final UsageMetricDimension usageMetricDimension = metricsEntry.getValue();
 				final String metric = key.metric;
 				final String dim    = key.dimension;
 
@@ -629,7 +633,8 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 		private long findLastUsageTime() {
 			long time = 0;
 			for( final UsageMetricDimension usageMetricDimension : usage.values() ) {
-				time = Math.max( time, usageMetricDimension.lastReportUsage.getTimestampMs() );
+				time = usageMetricDimension.lastReportUsage == null ?
+						time : Math.max( time, usageMetricDimension.lastReportUsage.getTimestampMs() );
 			}
 			return time;
 		}
@@ -637,7 +642,10 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 		private long findFirstUsageTime() {
 			long time = Long.MAX_VALUE;
 			for( final UsageMetricDimension usageMetricDimension : usage.values() ) {
-				time = Math.min( time, usageMetricDimension.firstReportUsage.getTimestampMs() );
+				ReportingInstanceUsageEvent event = usageMetricDimension.firstReportUsage != null ?
+						usageMetricDimension.firstReportUsage :
+						usageMetricDimension.lastReportUsage;
+				time = event == null ? time : Math.min( time, event.getTimestampMs() );
 			}
 			return time == Long.MAX_VALUE ? 0 : time;
 		}

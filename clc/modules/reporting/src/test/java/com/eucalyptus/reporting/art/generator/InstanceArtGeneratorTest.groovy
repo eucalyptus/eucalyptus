@@ -134,6 +134,13 @@ class InstanceArtGeneratorTest {
     assertArt( art  )
   }
 
+  @Test
+  void testCreatedAfterUsage() {
+    InstanceArtGenerator generator = testGeneratorWith( createdBeforeUsage(), "2012-09-01T06:30:00" )
+    ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
+    assertArt( art, 1, 0.5  )
+  }
+
   @SuppressWarnings("GroovyAccessibility")
   private ReportingInstanceCreateEvent instanceCreate(
       String instanceId,
@@ -640,6 +647,35 @@ class InstanceArtGeneratorTest {
         "DiskWriteBytes": mbd(2000),
         "VolumeTotalReadTime": 16000,
         "VolumeTotalWriteTime": 8000,
+    ] ] )
+    instanceUsageList
+  }
+
+  private List<ReportingInstanceUsageEvent> createdBeforeUsage() {
+    List<ReportingInstanceUsageEvent> instanceUsageList = []
+    addUsage( instanceUsageList, INSTANCE1, "2012-09-01T06:00:00", 0, [
+      "NetworkIn": mbd(100),
+      "NetworkOut": mbd(200),
+      "CPUUtilization": msd(6),
+    ], [ "vda": [
+        "DiskReadOps": 50000,
+        "DiskWriteOps": 20000,
+        "DiskReadBytes": mbd(2000),
+        "DiskWriteBytes": mbd(1000),
+        "VolumeTotalReadTime": 8000,
+        "VolumeTotalWriteTime": 4000,
+    ] ] )
+    addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 1, [
+      "NetworkIn": mbd(100),
+      "NetworkOut": mbd(200),
+      "CPUUtilization": msd(6),
+    ], [ "vda": [
+        "DiskReadOps": 50000,
+        "DiskWriteOps": 20000,
+        "DiskReadBytes": mbd(2000),
+        "DiskWriteBytes": mbd(1000),
+        "VolumeTotalReadTime": 8000,
+        "VolumeTotalWriteTime": 4000,
     ] ] )
     instanceUsageList
   }
