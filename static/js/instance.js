@@ -30,6 +30,7 @@
     connectDialog : null,
     consoleDialog : null,
     detachDialog : null,
+    launchMoreDialog : null,
     emiToManifest : {},
     emiToPlatform : {},
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
@@ -236,6 +237,26 @@
          }},
        });
       // volume detach dialog end
+      // launch more instances like this dialog
+      $tmpl = $('html body').find('.templates #instanceLaunchMoreDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_launch_more)));
+      var $launchmore_dialog = $rendered.children().first();
+      var $launchmore_help = $rendered.children().last();  
+    
+      this.launchMoreDialog = $launchmore_dialog.eucadialog({
+         id: 'launch-more-instances',
+         title: instance_dialog_launch_more_title,
+         buttons: {
+           'launch': {text: instance_dialog_launch_btn, domid: 'btn-launch-more', click: function() { thisObj._launchMore(); $launchmore_dialog.eucadialog("close");}},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $launchmore_dialog.eucadialog("close");}} 
+         },
+         help: {title: null, content: $launchmore_help},
+         on_open: {callback: function(args) {
+           thisObj._initLaunchMoreDialog(); // pulls instance info from server
+         }},
+         width: 700
+      });
+      // end launch more dialog
     },
 
     _destroy : function() { },
@@ -318,7 +339,7 @@
      }
 
      if(numSelected == 1){
-       menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMore(); }}
+       menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMoreAction(); }}
      }
   
      if(numSelected >= 1){ // TODO: no state check for terminate?
@@ -513,7 +534,7 @@
                   toStop.splice(stopIdx, 1);
               });
               if(toStop.length <=0){
-                notifySuccess($.i18n.prop('instance_stop_success', instances));
+                notifySuccess(null, $.i18n.prop('instance_stop_success', instances));
                 thisObj.tableWrapper.eucatable('refreshTable');
               }else{
                 notifyError($.i18n.prop('instance_stop_error', toStop), undefined_error);
@@ -761,7 +782,12 @@
       if(addr)
         disassociateIp(addr);
     },
+    _launchMoreAction : function(){
+      this.launchMoreDialog.eucadialog('open');
+    },
+
     _launchMore : function(){
+      var thisObj = this;
       var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
       id = $(id).html();
       var filter = {};
@@ -776,11 +802,116 @@
       }
       if (!instance)
         return;
-      filter['image'] = instance.image_id;
-      filter['type'] = {'instance_type': instance.instance_type, 'zone': instance.placement};
-      filter['security'] = {'keypair':instance.key_name, 'sgroup':instance.group_name};
-      filter['advanced'] = {'kernel':instance.kernel, 'ramdisk':instance.ramdisk};
-      startLaunchWizard(filter);      
+
+      var emi = instance.image_id;
+      var type = thisObj.launchMoreDialog.find('#summary-type-insttype').children().last().text();
+      var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
+      var inst_num = thisObj.launchMoreDialog.find('input#launch-more-num-instance').val();
+      var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
+      var sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
+
+      $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
+      $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);
+      $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'zone', zone);
+      $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'number', inst_num);
+      $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'keypair', keyname);
+      $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'sgroup', sgroup);
+      
+      $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+    },
+    _initLaunchMoreDialog : function(){
+      var thisObj = this;
+      var id = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
+      id = $(id).html();
+      var filter = {};
+      var result = describe('instance');
+      var instance = null;
+      for( i in result){
+        var inst = result[i];
+        if(inst.id === id){
+          instance = inst;
+          break;
+        }
+      }
+      if (!instance)
+        return;
+      result = describe('image');
+      var image = null;
+      for (i in result){
+        if(instance.image_id === result[i].id){
+          image = result[i];
+          break;
+        }
+      }
+      if (!image)
+        return;
+
+      var $header = thisObj.launchMoreDialog.find('#launch-more-summary-header');
+      $header.children().detach();
+      $header.append($('<span>').html($.i18n.prop('instance_dialog_launch_more_summary', instance.image_id)));
+
+      $header = thisObj.launchMoreDialog.find('#launch-wizard-advanced-header');
+      $header.children().detach();
+      $header.append($('<a>').attr('href', '#').html('*'+launch_instance_section_header_advanced).click( function(e) {
+        var $advSection = thisObj.launchMoreDialog.find('#launch-wizard-advanced-contents');
+        $advSection.slideToggle('fast');
+        $header.toggleClass('expanded');
+      }));
+
+      if($header.hasClass('expanded'))
+        $header.find('a').trigger('click');
+
+      var platform = image.platform ? image.platform : 'linux';
+      var $summary = $('<div>').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(platform));
+      var $image = thisObj.launchMoreDialog.find('#launch-more-summary-image');
+      $image.children().detach();
+      $image.append($summary.children());
+
+      var selectedType = instance.instance_type;
+      var zone = instance.placement;
+      $summary = $('<div>').append(
+          $('<div>').attr('id','summary-type-insttype').append($('<span>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
+          $('<div>').attr('id','summary-type-zone').append($('<span>').text(launch_instance_summary_zone), $('<span>').text(zone)),
+          $('<div>').attr('id','summary-type-numinst').append($('<span>').text(launch_instance_summary_instances), $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1')));
+      var $type = thisObj.launchMoreDialog.find('#launch-more-summary-type');
+      $type.addClass(selectedType);
+      $type.children().detach();
+      $type.append($summary.children());
+      $type.find('#launch-more-num-instance').focus();
+
+      var selectedKp = instance.key_name;
+      var selectedSg = instance.group_name;
+      var $sg = $('<div>').attr('id','summary-security-sg');
+      if(selectedSg && selectedSg.length > 0)
+        $sg.append($('<span>').text(launch_instance_summary_sg), $('<span>').text(selectedSg));
+      else{
+        var groupList = [];
+        var result = describe('sgroup');
+        for (i in result){
+          groupList.push(result[i].name);
+        }
+        $sg.append($('<span>').text(launch_instance_summary_sg), $('<input>').attr('type','text').attr('id','launch-more-sgroup-input'));
+        $sg.find('input').autocomplete({
+          source: groupList,
+        });
+        $sg.find('input').watermark(instance_dialog_launch_more_enter_sgroup);
+      }
+      $summary = $('<div>').append(
+                   $('<div>').attr('id','summary-security-keypair').append($('<span>').text(launch_instance_summary_keypair),$('<span>').text(selectedKp)),
+                   $sg);
+      var $security = thisObj.launchMoreDialog.find('#launch-more-summary-security');
+      $security.children().detach();
+      $security.append($summary.children());
+      // summary area
+      $('html body').find(DOM_BINDING['hidden']).children().detach();
+      $('html body').find(DOM_BINDING['hidden']).launcher();
+
+      var $advanced = thisObj.launchMoreDialog.find('#launch-wizard-advanced');
+      $advanced.find('#launch-wizard-advanced-userdata').children().detach();
+      $advanced.find('#launch-wizard-advanced-kernelramdisk').children().detach();
+      $advanced.find('#launch-wizard-advanced-network').children().detach();
+      $advanced.find('#launch-wizard-advanced-storage').children().detach();
+      $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
     },
     _expandCallback : function(row){
       var thisObj = this;

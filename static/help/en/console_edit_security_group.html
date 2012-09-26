@@ -26,16 +26,64 @@
     <div class="body taskbody"><p class="shortdesc"> This dialog allows you to edit a security group. </p>
 </div>
 
-    <div class="topic task nested1" id="edit_sgroup_ui_help_steps">
-        <h2 class="title topictitle2">Edit Security Group</h2>
+    <div class="topic task nested1" id="edit_sgroup_add_rule_steps">
+        <h2 class="title topictitle2">Add Security Group Rules</h2>
 
         
         <div class="body taskbody"><p class="shortdesc"/>
 
-            <div class="li step p">
-                    <span class="ph cmd"> Something wonderful happens.</span>
-                </div>
 
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Select a protocol for the rule from the <span class="ph uicontrol">Protocol</span>
+                        drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Enter a port range for the rule in the <span class="ph uicontrol">Port range</span>
+                        text box. </span>
+                </li>
+<li class="li step">
+
+                    <span class="ph cmd"> Select the type of inbound traffic for the rule using the radio buttons: </span>
+                     
+                        <p class="p">To grant access to an IP address or range of IP addresses, select the
+                                <span class="ph uicontrol">IP Address</span> radio button and enter a CIDR
+                            range in the text box.</p>
+
+                        <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation, please see the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation">CIDR
+                                notation Wikipedia article</a>.</div>
+
+                        <p class="p">To grant access to another security group, select the <span class="ph uicontrol">Other
+                                security group</span> radio button and enter the name of the
+                            security group in the text box.</p>
+
+                        <p class="p">To grant access to only to other instances in this security group, select
+                            the <span class="ph uicontrol">Other instances in this security group</span> radio
+                            button.</p>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">TBD</span> button.</span>
+                </li>
+</ol>
+
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="edit_sgroup_delete_rule_steps">
+        <h2 class="title topictitle2">Delete Security Group Rules</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            
+            <div class="li step p">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Delete</span>
+                        link next to the existing rule you want to delete. </span>
+                </div>
+          
         </div>
 
     </div>

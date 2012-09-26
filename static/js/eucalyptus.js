@@ -25,6 +25,7 @@
   }
   var email = '';
   var initData = '';
+  var redirected = false;
   $(document).ready(function() {
     if (! isValidIp(location.hostname)) // hostname is given 
       initData = "action=init&host="+location.hostname;
@@ -39,15 +40,15 @@
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
           email = out.email;
-/*          if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
+          if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
               newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port + '/?hostname='+out.hostname;
             else 
               newLocation = location.protocol + '//' + out.ipaddr + '/?hostname='+out.hostname;
             location.href = newLocation;
+            redirected = true;
           }
-            */
         },
         error: function(jqXHR, textStatus, errorThrown){
           //TODO: should present error screen; can we use notification?
@@ -55,6 +56,8 @@
           logout();
         }
       })).done(function(out){
+        if(redirected)
+          return;
         // check cookie
         if ($.cookie('session-id')) {
           $.ajax({
@@ -71,11 +74,11 @@
               logout();
 	    }
           });
-        } else {
+        } else{
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
           $main.login({ 'email' : email, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
-              var hash = btoa(tok);
+              var hash = $.base64.encode(tok);  // btoa(tok) --> not supported on ie9
               var remember = (args.param.remember!=null)?"yes":"no";
 	      $.ajax({
 	        type:"POST",
