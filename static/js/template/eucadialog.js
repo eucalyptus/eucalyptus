@@ -30,6 +30,7 @@
        user_val: null, // for user use...
        help_icon_class : 'help-link',
        on_close: null,
+       width : null,
     },
     $error_div : null,
     help_flipped : false,
@@ -43,7 +44,7 @@
       this.element.dialog({
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
-         width: 600,
+         width: thisObj.options.width ? thisObj.options.width : 600,
          dialogClass: 'euca-dialog-container',
          show: 'fade',
          // don't add hide: 'fade' here b/c it causes an issue with positioning the dialog next to another dialog
@@ -138,6 +139,11 @@
       $resourcePane = this.element.find('.selected-resources');
 
       $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
+      var $help = thisObj.options.help;
+      if(!$help || !$help.content || !$help.content.find('.dialog-help-content').html() || $help.content.find('.dialog-help-content').html().trim().length <= 0){
+        $helpLink.remove();
+        return;
+      }
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
           $contentPane.flip({

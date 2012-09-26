@@ -159,3 +159,7 @@ var help_launcher = {
   },
   landing_content: "", 
 }
+
+var help_launch_more = {
+  dialog_launchmore_content: "",
+}

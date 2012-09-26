@@ -37,13 +37,16 @@
     
 
     _help_flipped : false,
-    _flipToHelp : function(evt, helpContent ) {
+    _flipToHelp : function(evt, helpContent, $target ) {
        var thisObj  = this;
        var $helpWrapper = $('<div>'); // this one gets stripped off
        var $helpContainer = $('<div>').addClass('help-page-wrapper clearfix').append(getLandingHelpHeader(), helpContent);
        $helpWrapper.append($helpContainer);
+       
+       if(! $target)
+         $target = thisObj.element.children();
 
-       thisObj.element.children().flip({
+       $target.flip({
          direction : 'lr',
          speed : 300,
          bgColor : 'white',
@@ -53,10 +56,10 @@
          content : $helpWrapper,
          onEnd : function() {
             thisObj.element.find('.help-revert-button a').click( function(evt) {
-              thisObj.element.children().revertFlip();
+              $target.revertFlip();
             });
             thisObj.element.find('.help-link a').click( function(evt) {
-              thisObj.element.children().revertFlip();
+              $target.revertFlip();
             });       
             if(!thisObj._help_flipped){
                thisObj._help_flipped = true;
