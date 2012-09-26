@@ -279,7 +279,11 @@ public class Entities {
       throw new TransactionInternalException( newEx.getMessage( ), newEx );
     }
   }
-  
+
+  public static void evict( final Object obj  ) {
+    getTransaction( obj ).getTxState( ).getSession( ).evict( obj );
+  }
+
   private static <T> String resolveNaturalId( final T example ) {
     if ( ( example instanceof HasNaturalId ) && ( ( ( HasNaturalId ) example ).getNaturalId( ) != null ) ) {
       return ( ( HasNaturalId ) example ).getNaturalId( );
@@ -287,7 +291,7 @@ public class Entities {
       return null;
     }
   }
-  
+
   private static <T> T maybeDefinitelyExample( final T example ) throws HibernateException, NoSuchElementException {
     @SuppressWarnings( "unchecked" )
     final T ret = ( T ) Entities.getTransaction( example )

@@ -18,6 +18,7 @@ import com.google.common.collect.Sets
 import java.util.concurrent.TimeUnit
 import java.text.SimpleDateFormat
 import com.eucalyptus.reporting.art.entity.UserArtEntity
+import com.google.common.base.Predicate
 
 /**
  * Unit test for Elastic IP ART generator
@@ -281,28 +282,28 @@ class ElasticIpArtGeneratorTest {
 
     new ElasticIpArtGenerator() {
       @Override
-      protected Iterator<ReportingElasticIpCreateEvent> getElasticIpCreateEventIterator() {
-        return createList.iterator()
+      protected void foreachElasticIpCreateEvent(final Predicate<? super ReportingElasticIpCreateEvent> callback) {
+        createList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingElasticIpDeleteEvent> getElasticIpDeleteEventIterator() {
-        return deleteList.iterator()
+      protected void foreachElasticIpDeleteEvent(final Predicate<? super ReportingElasticIpDeleteEvent> callback) {
+        deleteList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingElasticIpAttachEvent> getElasticIpAttachEventIterator() {
-        return attachList.iterator()
+      protected void foreachElasticIpAttachEvent(final Predicate<? super ReportingElasticIpAttachEvent> callback) {
+        attachList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingElasticIpDetachEvent> getElasticIpDetachEventIterator() {
-        return detachList.iterator()
+      protected void foreachElasticIpDetachEvent(final Predicate<? super ReportingElasticIpDetachEvent> callback) {
+        detachList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingInstanceCreateEvent> getInstanceCreateEventIterator() {
-        return instanceCreateList.iterator()
+      protected void foreachInstanceCreateEvent(final Predicate<? super ReportingInstanceCreateEvent> callback) {
+        instanceCreateList.every { event -> callback.apply( event ) }
       }
 
       @Override

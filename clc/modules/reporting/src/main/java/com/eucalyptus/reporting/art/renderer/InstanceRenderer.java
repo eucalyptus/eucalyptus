@@ -181,7 +181,7 @@ class InstanceRenderer implements Renderer {
     doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteMegs(), SizeUnit.MB, units.getSizeUnit()));
     doc.addValCol(entity.getDiskReadOps()==null?null:entity.getDiskReadOps()/(entity.getDurationMs()/1000));
     doc.addValCol(entity.getDiskWriteOps()==null?null:entity.getDiskWriteOps()/(entity.getDurationMs()/1000));
-    doc.addValCol(UnitUtil.convertTime(entity.getDiskReadTime(), TimeUnit.MS, TimeUnit.SECS)); //TODO:STEVE: how should this be represented?
+    doc.addValCol(UnitUtil.convertTime(entity.getDiskReadTime(), TimeUnit.MS, TimeUnit.SECS));
     doc.addValCol(UnitUtil.convertTime(entity.getDiskWriteTime(), TimeUnit.MS, TimeUnit.SECS));
 
     return doc;

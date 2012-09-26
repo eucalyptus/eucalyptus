@@ -19,30 +19,62 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.generator;
 
-import java.util.Iterator;
-import com.eucalyptus.entities.EntityWrapper;
+import javax.persistence.EntityTransaction;
+import org.hibernate.CacheMode;
+import org.hibernate.ScrollMode;
+import org.hibernate.ScrollableResults;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.Order;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.domain.ReportingUserDao;
+import com.google.common.base.Predicate;
 
 /**
  *
  */
 public abstract class AbstractArtGenerator implements ArtGenerator {
 
+  protected static final String TIMESTAMP_MS = "timestampMs";
+
 	protected ReportingUser getUserById( final String userId ) {
-		return ReportingUserDao.getInstance().getReportingUser( userId );
-	}
+    return ReportingUserDao.getInstance().getReportingUser( userId );
+  }
 
-	protected ReportingAccount getAccountById( final String accountId ) {
-		return ReportingAccountDao.getInstance().getReportingAccount( accountId );
-	}
+  protected ReportingAccount getAccountById( final String accountId ) {
+    return ReportingAccountDao.getInstance().getReportingAccount( accountId );
+  }
 
-	@SuppressWarnings( "unchecked" )
-	protected <ET> Iterator<ET> getEventIterator( final Class<ET> eventClass, final String queryName ) {
-		final EntityWrapper<ET> wrapper = EntityWrapper.get( eventClass );
-		return (Iterator<ET> ) wrapper.scanWithNativeQuery( queryName );
-	}
+  @SuppressWarnings( "unchecked" )
+  protected <ET> void foreach( final Class<ET> eventClass,
+                               final Criterion criterion,
+                               final boolean ascending,
+                               final Predicate<? super ET> callback ) {
+    final EntityTransaction transaction = Entities.get( eventClass );
+    ScrollableResults results = null;
+    try {
+      results = Entities.createCriteria( eventClass )
+          .setReadOnly( true )
+          .setCacheable( false )
+          .setCacheMode( CacheMode.IGNORE )
+          .setFetchSize( 100 )
+          .add( criterion )
+          .addOrder( ascending ? Order.asc( TIMESTAMP_MS ) : Order.desc( TIMESTAMP_MS ) )
+          .scroll( ScrollMode.FORWARD_ONLY );
+
+      while ( results.next() ) {
+        final ET event = (ET) results.get( 0 );
+        if ( !callback.apply( event ) ) {
+          break;
+        }
+        Entities.evict( event );
+      }
+    } finally {
+      if (results != null) try { results.close(); } catch( Exception e ) { }
+      transaction.rollback();
+    }
+  }
 
 }
