@@ -113,5 +113,4 @@ public abstract class AbstractArtGenerator implements ArtGenerator {
       transaction.rollback();
     }
   }
-
 }

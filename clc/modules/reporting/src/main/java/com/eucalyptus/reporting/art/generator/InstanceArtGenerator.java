@@ -328,12 +328,12 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			@Override
 			public boolean apply( final ReportingInstanceUsageEvent event ) {
 				if ( event == null ||
-						 event.getTimestampMs() == null ||
-						 event.getDimension() == null ||
-						 event.getMetric() == null ||
-						 event.getSequenceNum() == null ||
-						 event.getUuid() == null ||
-						 event.getValue() == null ) {
+						event.getTimestampMs() == null ||
+						event.getDimension() == null ||
+						event.getMetric() == null ||
+						event.getSequenceNum() == null ||
+						event.getUuid() == null ||
+						event.getValue() == null ) {
 					log.debug("Ignoring invalid usage event: " + event);
 					return true;
 				}
@@ -348,12 +348,12 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			@Override
 			public boolean apply( final ReportingInstanceCreateEvent event ) {
 				if ( event == null ||
-						 event.getTimestampMs() == null ||
-						 event.getAvailabilityZone() == null ||
-						 event.getInstanceId() == null ||
-						 event.getInstanceType() == null ||
-						 event.getUserId() == null ||
-						 event.getUuid() == null ) {
+						event.getTimestampMs() == null ||
+						event.getAvailabilityZone() == null ||
+						event.getInstanceId() == null ||
+						event.getInstanceType() == null ||
+						event.getUserId() == null ||
+						event.getUuid() == null ) {
 					log.debug("Ignoring invalid create event: " + event);
 					return true;
 				}
@@ -366,17 +366,17 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 	{
 		final InstanceUsageArtEntity totalEntity = totals.getInstanceTotals();
 		final InstanceUsageArtEntity usage = instance.getUsage();
-		
+
 		/* Update metrics */
 		addUsage( totalEntity, usage );
-		
+
 		/* Update total running time and type count for this instance type */
 		final Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
 		if (!typeTotals.containsKey(instance.getInstanceType())) {
 			typeTotals.put(instance.getInstanceType(), new InstanceUsageArtEntity());
 		}
 		final InstanceUsageArtEntity typeTotal =
-			typeTotals.get(instance.getInstanceType());
+				typeTotals.get(instance.getInstanceType());
 
 		addUsage( typeTotal, usage );
 	}
@@ -402,7 +402,7 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 	private static Double interpolate(long repBegin, long repEnd, long perBegin, long perEnd, Double currValue)
 	{
 		if (currValue==null) return null;
-		
+
 		final double periodDuration = (perEnd-perBegin);
 		double factor;
 		if (perEnd <= repBegin || perBegin >= repEnd) {
@@ -413,7 +413,7 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			factor = ((double)perEnd-repBegin)/periodDuration;
 		} else if (perBegin >= repBegin && perEnd >= repEnd) {
 			//Period begin lies within report but period end comes after it
-			 factor = ((double)repEnd-perBegin)/periodDuration;
+			factor = ((double)repEnd-perBegin)/periodDuration;
 		} else if (perBegin >= repBegin && perEnd <= repEnd) {
 			//Period falls entirely within report
 			factor = 1d;
@@ -425,7 +425,7 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 		}
 
 		if (factor < 0 || factor > 1) throw new IllegalStateException("factor<0 || factor>1");
-		
+
 //		log.debug(String.format("remainingFactor, report:%d-%d (%d), period:%d-%d (%d), factor:%f",
 //				repBegin, repEnd, repEnd-repBegin, perBegin, perEnd, perEnd-perBegin, factor));
 

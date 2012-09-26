@@ -20,7 +20,7 @@ import com.eucalyptus.reporting.art.entity.UsageTotalsArtEntity
 import com.google.common.base.Predicate
 
 /**
- * 
+ *
  */
 class InstanceArtGeneratorTest {
   private static String ACCOUNT1 = "account1"
@@ -269,9 +269,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> usageBeforeReportPeriod() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-08-01T01:00:01", 0, [
-      "NetworkIn": 0,
-      "NetworkOut": 0,
-      "CPUUtilization": 0,
+        "NetworkIn": 0,
+        "NetworkOut": 0,
+        "CPUUtilization": 0,
     ], [ "vda": [
         "DiskReadOps": 0,
         "DiskWriteOps": 0,
@@ -286,9 +286,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> basicUsageInReportPeriod() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 1, [
-      "NetworkIn": 0,
-      "NetworkOut": 0,
-      "CPUUtilization": 0,
+        "NetworkIn": 0,
+        "NetworkOut": 0,
+        "CPUUtilization": 0,
     ], [ "vda": [
         "DiskReadOps": 0,
         "DiskWriteOps": 0,
@@ -298,9 +298,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 0,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 2, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,
@@ -316,9 +316,9 @@ class InstanceArtGeneratorTest {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     [ INSTANCE1, INSTANCE2 ].each{ instance ->
       addUsage( instanceUsageList, instance, "2012-09-01T00:00:00", 1, [
-        "NetworkIn": 0,
-        "NetworkOut": 0,
-        "CPUUtilization": 0,
+          "NetworkIn": 0,
+          "NetworkOut": 0,
+          "CPUUtilization": 0,
       ], [ "vda": [
           "DiskReadOps": 0,
           "DiskWriteOps": 0,
@@ -328,9 +328,9 @@ class InstanceArtGeneratorTest {
           "VolumeTotalWriteTime": 0,
       ] ] )
       addUsage( instanceUsageList, instance, "2012-09-01T12:00:00", 2, [
-        "NetworkIn": mbd(100),
-        "NetworkOut": mbd(200),
-        "CPUUtilization": msd(6),
+          "NetworkIn": mbd(100),
+          "NetworkOut": mbd(200),
+          "CPUUtilization": msd(6),
       ], [ "vda": [
           "DiskReadOps": 50000,
           "DiskWriteOps": 20000,
@@ -346,9 +346,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> basicUsageInReportPeriodWithMultipleDisks() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 1, [
-      "NetworkIn": 0,
-      "NetworkOut": 0,
-      "CPUUtilization": 0,
+        "NetworkIn": 0,
+        "NetworkOut": 0,
+        "CPUUtilization": 0,
     ], [ "vda": [
         "DiskReadOps": 0,
         "DiskWriteOps": 0,
@@ -365,9 +365,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 0,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 2, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,
@@ -389,9 +389,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> basicUsageMultipleEvents() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 3, [
-      "NetworkIn": 0,
-      "NetworkOut": 0,
-      "CPUUtilization": 0,
+        "NetworkIn": 0,
+        "NetworkOut": 0,
+        "CPUUtilization": 0,
     ], [ "vda": [
         "DiskReadOps": 0,
         "DiskWriteOps": 0,
@@ -401,9 +401,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 0,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 4, [
-      "NetworkIn": mbd(12),
-      "NetworkOut": mbd(23),
-      "CPUUtilization": msd(1),
+        "NetworkIn": mbd(12),
+        "NetworkOut": mbd(23),
+        "CPUUtilization": msd(1),
     ], [ "vda": [
         "DiskReadOps": 5000,
         "DiskWriteOps": 0000,
@@ -413,9 +413,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 200,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T06:00:00", 5, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(100),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(100),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -425,9 +425,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 2000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T09:00:00", 6, [
-      "NetworkIn": mbd(80),
-      "NetworkOut": mbd(140),
-      "CPUUtilization": msd(4),
+        "NetworkIn": mbd(80),
+        "NetworkOut": mbd(140),
+        "CPUUtilization": msd(4),
     ], [ "vda": [
         "DiskReadOps": 45000,
         "DiskWriteOps": 17000,
@@ -437,9 +437,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 3000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 7, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,
@@ -456,9 +456,9 @@ class InstanceArtGeneratorTest {
                                                                         int multiplier ) {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, usage1Timestamp, 1, [
-      "NetworkIn": 0,
-      "NetworkOut": 0,
-      "CPUUtilization": 0,
+        "NetworkIn": 0,
+        "NetworkOut": 0,
+        "CPUUtilization": 0,
     ], [ "vda": [
         "DiskReadOps": 0,
         "DiskWriteOps": 0,
@@ -468,9 +468,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 0,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, usage2Timestamp, 2, [
-      "NetworkIn": mbd(multiplier * 100),
-      "NetworkOut": mbd(multiplier * 200),
-      "CPUUtilization": msd(multiplier * 6),
+        "NetworkIn": mbd(multiplier * 100),
+        "NetworkOut": mbd(multiplier * 200),
+        "CPUUtilization": msd(multiplier * 6),
     ], [ "vda": [
         "DiskReadOps": multiplier * 50000,
         "DiskWriteOps": multiplier * 20000,
@@ -485,9 +485,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> sequenceResetUsageExiting() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 100, [
-      "NetworkIn": 0,
-      "NetworkOut": 0,
-      "CPUUtilization": 0,
+        "NetworkIn": 0,
+        "NetworkOut": 0,
+        "CPUUtilization": 0,
     ], [ "vda": [
         "DiskReadOps": 0,
         "DiskWriteOps": 0,
@@ -497,9 +497,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 0,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T06:00:00", 101, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(100),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(100),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -509,9 +509,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 2000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 1, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(100),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(100),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -526,9 +526,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> sequenceResetUsage() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 1, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(50),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(50),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -538,9 +538,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 2000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T06:00:00", 0, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(100),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(100),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -550,9 +550,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 2000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T09:00:00", 0, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(100),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(100),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -562,9 +562,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 2000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 1, [
-      "NetworkIn": mbd(50),
-      "NetworkOut": mbd(100),
-      "CPUUtilization": msd(3),
+        "NetworkIn": mbd(50),
+        "NetworkOut": mbd(100),
+        "CPUUtilization": msd(3),
     ], [ "vda": [
         "DiskReadOps": 25000,
         "DiskWriteOps": 10000,
@@ -579,9 +579,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> sequenceResetUsageEntering() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-08-31T23:00:00", 100, [
-      "NetworkIn": mbd(500000),
-      "NetworkOut": mbd(500000),
-      "CPUUtilization": msd(3000),
+        "NetworkIn": mbd(500000),
+        "NetworkOut": mbd(500000),
+        "CPUUtilization": msd(3000),
     ], [ "vda": [
         "DiskReadOps": 1000000,
         "DiskWriteOps": 1000000,
@@ -591,9 +591,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 1000000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T01:00:00", 0, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,
@@ -603,9 +603,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 4000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 1, [
-      "NetworkIn": mbd(150),
-      "NetworkOut": mbd(300),
-      "CPUUtilization": msd(9),
+        "NetworkIn": mbd(150),
+        "NetworkOut": mbd(300),
+        "CPUUtilization": msd(9),
     ], [ "vda": [
         "DiskReadOps": 75000,
         "DiskWriteOps": 30000,
@@ -620,9 +620,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> createdInReportUsage() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 0, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,
@@ -637,9 +637,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> createdEnteringReportUsage() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 0, [
-      "NetworkIn": mbd(200),
-      "NetworkOut": mbd(400),
-      "CPUUtilization": msd(12),
+        "NetworkIn": mbd(200),
+        "NetworkOut": mbd(400),
+        "CPUUtilization": msd(12),
     ], [ "vda": [
         "DiskReadOps": 100000,
         "DiskWriteOps": 40000,
@@ -654,9 +654,9 @@ class InstanceArtGeneratorTest {
   private List<ReportingInstanceUsageEvent> createdBeforeUsage() {
     List<ReportingInstanceUsageEvent> instanceUsageList = []
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T06:00:00", 0, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,
@@ -666,9 +666,9 @@ class InstanceArtGeneratorTest {
         "VolumeTotalWriteTime": 4000,
     ] ] )
     addUsage( instanceUsageList, INSTANCE1, "2012-09-01T12:00:00", 1, [
-      "NetworkIn": mbd(100),
-      "NetworkOut": mbd(200),
-      "CPUUtilization": msd(6),
+        "NetworkIn": mbd(100),
+        "NetworkOut": mbd(200),
+        "CPUUtilization": msd(6),
     ], [ "vda": [
         "DiskReadOps": 50000,
         "DiskWriteOps": 20000,

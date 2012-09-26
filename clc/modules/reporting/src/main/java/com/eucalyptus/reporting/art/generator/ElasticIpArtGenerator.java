@@ -97,9 +97,9 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 			}
 		} );
 
-		
+
 		/* Scan instance entities so we can get the instance id from the uuid
-		 */
+				 */
 		final Map<String,InstanceArtEntity> instanceEntities = Maps.newHashMap();
 		foreachInstanceCreateEvent( new Predicate<ReportingInstanceCreateEvent>() {
 			@Override
@@ -245,7 +245,7 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 
 	protected void foreachElasticIpDeleteEvent( final Predicate<? super ReportingElasticIpDeleteEvent> callback ) {
 		foreach( ReportingElasticIpDeleteEvent.class, Restrictions.conjunction(), true, callback );
-  }
+	}
 
 	protected void foreachElasticIpAttachEvent( final Predicate<? super ReportingElasticIpAttachEvent> callback ) {
 		foreach( ReportingElasticIpAttachEvent.class, Restrictions.conjunction(), true, callback );
