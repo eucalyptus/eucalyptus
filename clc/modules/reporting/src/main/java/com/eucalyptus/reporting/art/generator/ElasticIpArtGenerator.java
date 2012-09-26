@@ -36,9 +36,9 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 		final Map<String,List<Long>> ipToDeleteTimesMap = Maps.newHashMap();
 		foreachElasticIpDeleteEvent( buildTimestampMap( report, ipToDeleteTimesMap ) );
 
-	// cache for user/account info
-	final Map<String,ReportingUser> reportingUsersById = Maps.newHashMap();
-	final Map<String,String> accountNamesById = Maps.newHashMap();
+		// cache for user/account info
+		final Map<String,ReportingUser> reportingUsersById = Maps.newHashMap();
+		final Map<String,String> accountNamesById = Maps.newHashMap();
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance nodes at the bottom.

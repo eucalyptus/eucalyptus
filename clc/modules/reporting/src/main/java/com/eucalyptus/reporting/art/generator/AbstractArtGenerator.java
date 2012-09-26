@@ -26,6 +26,7 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
@@ -71,6 +72,16 @@ public abstract class AbstractArtGenerator implements ArtGenerator {
       accountNamesById.put( accountId, accountName );
     }
     return accountName;
+  }
+
+  protected Criterion between( final Long beginInclusive, final Long endExclusive ) {
+    return Restrictions.conjunction()
+        .add( Restrictions.ge( TIMESTAMP_MS, beginInclusive ) )
+        .add( before( endExclusive ) );
+  }
+
+  protected Criterion before( final Long endExclusive ) {
+    return Restrictions.lt( TIMESTAMP_MS, endExclusive );
   }
 
   @SuppressWarnings( "unchecked" )

@@ -302,16 +302,6 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 		return usageCollators;
 	}
 
-	private Criterion between( final Long beginInclusive, final Long endExclusive ) {
-		return Restrictions.conjunction()
-				.add( Restrictions.ge( TIMESTAMP_MS, beginInclusive ) )
-				.add( before( endExclusive ) );
-	}
-
-	private Criterion before( final Long endExclusive ) {
-		return Restrictions.lt( TIMESTAMP_MS, endExclusive );
-	}
-
 	protected void foreachInstanceCreateEventInReverse(
 			final long endExclusive,
 			final Predicate<? super ReportingInstanceCreateEvent> callback ) {
@@ -338,6 +328,7 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			@Override
 			public boolean apply( final ReportingInstanceUsageEvent event ) {
 				if ( event == null ||
+						 event.getTimestampMs() == null ||
 						 event.getDimension() == null ||
 						 event.getMetric() == null ||
 						 event.getSequenceNum() == null ||
@@ -357,11 +348,12 @@ public class InstanceArtGenerator extends AbstractArtGenerator
 			@Override
 			public boolean apply( final ReportingInstanceCreateEvent event ) {
 				if ( event == null ||
-						event.getAvailabilityZone() == null ||
-						event.getInstanceId() == null ||
-						event.getInstanceType() == null ||
-						event.getUserId() == null ||
-						event.getUuid() == null ) {
+						 event.getTimestampMs() == null ||
+						 event.getAvailabilityZone() == null ||
+						 event.getInstanceId() == null ||
+						 event.getInstanceType() == null ||
+						 event.getUserId() == null ||
+						 event.getUuid() == null ) {
 					log.debug("Ignoring invalid create event: " + event);
 					return true;
 				}
