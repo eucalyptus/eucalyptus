@@ -5,7 +5,7 @@ import tornado.web
 import server
 import json
 import time
-from boto.ec2.blockdevicemapping import BlockDeviceMapping
+from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
 
 from boto.ec2.ec2object import EC2Object
@@ -85,24 +85,24 @@ class ComputeHandler(server.BaseHandler):
         subnet = self.get_argument('SubnetId', None);
         private_ip = self.get_argument('PrivateIpAddress', None);
         # get block device mappings
-        bdm = []
+        bdm = BlockDeviceMapping()
         mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
         idx = 1
         while mapping:
             pre = 'BlockDeviceMapping.%d' % idx
-            block_dev_mapping = BlockDeviceMapping()
-            block_dev_mapping.dev_name = mapping
-            block_dev_mapping.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
-            if not(block_dev_mapping.ephemeral_name):
-                block_dev_mapping.no_device = \
+            dev_name = mapping
+            block_dev_type = BlockDeviceType()
+            block_dev_type.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
+            if not(block_dev_type.ephemeral_name):
+                block_dev_type.no_device = \
                     (self.get_argument('%s.NoDevice' % pre, '') == 'true')
-                block_dev_mapping.snapshot_id = \
+                block_dev_type.snapshot_id = \
                         self.get_argument('%s.Ebs.SnapshotId' % pre, None)
-                block_dev_mapping.size = \
+                block_dev_type.size = \
                         self.get_argument('%s.Ebs.VolumeSize' % pre, None)
-                block_dev_mapping.delete_on_termination = \
+                block_dev_type.delete_on_termination = \
                         (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
-            bdm.append(block_dev_mapping)
+            bdm[dev_name] = block_dev_type
             idx += 1
             mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
         if len(bdm) == 0:
