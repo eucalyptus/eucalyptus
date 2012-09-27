@@ -227,7 +227,7 @@ function startLaunchWizard(filter) {
 function getErrorMessage(jqXHR) {
   if (jqXHR && jqXHR.responseText) {
     response = jQuery.parseJSON(jqXHR.responseText);
-    return response.message ? response.message[1] : undefined_error;
+    return response.message ? response.message : undefined_error;
   } else {
     return undefined_error;
   }

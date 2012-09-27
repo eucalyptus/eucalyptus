@@ -347,7 +347,7 @@ class ComputeHandler(server.BaseHandler):
                 pass
             self.write(data)
         except EC2ResponseError as err:
-            ret = ClcError(err.status, err.reason, err.errors[0])
+            ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
             self.finish(json.dumps(ret, cls=BotoJsonEncoder))
 
@@ -388,6 +388,6 @@ class ComputeHandler(server.BaseHandler):
             data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
             self.write(data)
         except EC2ResponseError as err:
-            ret = ClcError(err.status, err.reason, err.errors[0])
+            ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
             self.finish(json.dumps(ret, cls=BotoJsonEncoder))
