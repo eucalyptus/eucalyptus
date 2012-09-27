@@ -112,11 +112,13 @@ var help_volume = {
   load : function(arg){
     loadHtml('help/'+arg.language+'/console_manage_volumes.html', function(data){help_volume.landing_content=data})
     loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.dialog_add_content=data})
+    loadHtml('help/'+arg.language+'/console_attach_volume.html', function(data){help_volume.dialog_attach_content=data})
     loadHtml('help/'+arg.language+'/console_detach_volume.html', function(data){help_volume.dialog_detach_content=data})
     loadHtml('help/'+arg.language+'/console_delete_volumes.html', function(data){help_volume.dialog_delete_content=data})
   },
   landing_content: "",
   dialog_add_content: "",
+  dialog_attach_content: "",
   dialog_detach_content: "",
   dialog_delete_content: ""
 };
