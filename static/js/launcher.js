@@ -825,15 +825,18 @@
         // TODO: create and use generic error dialog
           
         if($.inArray(mapping, usedMappings) >= 0){
-          alert(launch_instance_advanced_error_dev_dup);
+          thisObj.element.find('.field-error').remove();
+          $($cells[1]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_dup));
           return false;
         }
         if(mapping.replace('/dev/','').length <= 0){
-          alert(launch_instance_advanced_error_dev_none);
+          thisObj.element.find('.field-error').remove();
+          $($cells[1]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_none));
           return false;
         }
         if(size.length <= 0 || (volume === 'ebs' && parseInt(size)<=0)){
-          alert(launch_instance_advanced_error_dev_size_none);
+          thisObj.element.find('.field-error').remove();
+          $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size_none));
           return false;
         }
         if(volume === 'ebs'){
@@ -843,13 +846,15 @@
             var s = result[i]; 
             if(s.id === snapshot){
               if(s.volume_size > size){
-                alert(launch_instance_advanced_error_dev_size);
+                thisObj.element.find('.field-error').remove();
+                $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size));
                 return false;
               }else
                 break; 
             }
           }
         } 
+        thisObj.element.find('.field-error').remove();
         return true;
       }
  
@@ -1225,15 +1230,16 @@
         files: file_param,
         success: function (results, textStatus, jqXHR) {
           if ( results ){
-            var instances ='';
+            var inst_ids = [];
             $.each(results, function(idx, instance){
-              instances += instance.id+' ';
+              inst_ids.push(instance.id);
             });
-            instances = $.trim(instances);
+            var instances = inst_ids.join(' ');
             notifySuccess(null, $.i18n.prop('instance_run_success', instances));
             //TODO: move to instance page?
             var $container = $('html body').find(DOM_BINDING['main']);
-              $container.maincontainer("changeSelected",null, {selected:'instance'});
+            $container.maincontainer("changeSelected",null, {selected:'instance'});
+            $container.instance('glowNewInstance', inst_ids);
           } else {
             notifyError($.i18n.prop('instance_run_error'), undefined_error);
             //TODO: clear launch-instance wizard?

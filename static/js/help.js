@@ -139,6 +139,9 @@ var help_sgroup = {
 var help_instance = {
   load : function(arg){
     loadHtml('help/'+arg.language+'/console_manage_instances.html', function(data){help_instance.landing_content=data})
+    loadHtml('help/'+arg.language+'/console_reboot_instances.html', function(data){help_instance.dialog_reboot_content=data})
+    loadHtml('help/'+arg.language+'/console_stop_instances.html', function(data){help_instance.dialog_stop_content=data})
+    loadHtml('help/'+arg.language+'/console_terminate_instances.html', function(data){help_instance.dialog_terminate_content=data})
   },
   landing_content: "",
   dialog_add_content: "",
@@ -147,6 +150,7 @@ var help_instance = {
   dialog_start_content: "",
   dialog_stop_content: "",
   dialog_connect_content: "",
+  dialog_terminate_content: "",
   dialog_console_content: "",
   dialog_password_content: ""
 }

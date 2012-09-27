@@ -25,7 +25,8 @@ var BACKSPACE_KEY_CODE = 8;
 
 /* CONFIGURABLE */
 var REFRESH_INTERVAL_SEC = 10;
-var TABLE_REFRESH_INTERVAL_SEC = 30;
+var TABLE_REFRESH_INTERVAL_SEC = 20;
+var GLOW_DURATION_SEC = 10;
 
 var ID_SEPARATOR = ',';
 
@@ -186,12 +187,6 @@ function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
   $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
-}
-
-function launcheInstance() {
-  $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).instance();
-  $('html body').find(DOM_BINDING['hidden']).instance('launcheInstance');
 }
 
 function allocateIP() {

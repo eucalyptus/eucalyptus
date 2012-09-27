@@ -2039,5 +2039,9 @@ div#launch-wizard-type-size-legend{
 input#launch-more-sgroup-input {
     width: 150px;
 }
+
+.field-error {
+  color: red;
+}
 /* ======= END Sang-min ======= */
 

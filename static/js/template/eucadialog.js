@@ -59,14 +59,16 @@
                $titleBar.append($('<div>').addClass(thisObj.options.help_icon_class).append($('<a>').attr('href','#').text('?')));
 
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){
-               var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
+               var btn_dom_id = thisObj._getButtonId(btn_prop.domid, btn_id);
+               var $btn = thisObj.element.parent().find("#"+btn_dom_id);
                if (!$btn || $btn.length<=0) {
                  $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
-                 $btn.attr('id', thisObj._getButtonId(btn_prop.domid, btn_id))
+                 $btn.attr('id', btn_dom_id);
                };
                $btn.find('span').text(btn_prop.text);
-               if(btn_prop.focus !== undefined && btn_prop.focus)
+               if(btn_prop.focus !== undefined && btn_prop.focus){
                  $btn.focus();
+               }
                if(btn_prop.disabled !== undefined && btn_prop.disabled){
                  $btn.prop("disabled", true).addClass("ui-state-disabled");
                }
@@ -87,9 +89,6 @@
              }
          },
          close: function(event, ui) { 
-           $.each(ui, function(k,v){
-             alert(k+':'+v);
-           });
            if( thisObj.options.on_close) { 
              thisObj.options.on_close.callback();
            }
@@ -225,8 +224,7 @@
         thisObj.element.find('#'+id).children().detach();
       });
       thisObj._note_divs = [];
-
-      this.$error_div.children().detach();
+      this.element.find('.dialog-error').children().detach();
     },
 
     hideButton : function(buttonDomId, buttonId) {

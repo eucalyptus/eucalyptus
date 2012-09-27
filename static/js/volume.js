@@ -189,9 +189,13 @@
                   isValid = false;
                   $add_dialog.eucadialog('showError', volume_dialog_snapshot_error_msg);
                 }
+                if( parseInt(size) <= 0) {
+                  isValid = false; 
+                  $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
+                }
               } else {
-                isValid = false; 
-                $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
+                  isValid = false; 
+                  $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
               }
               if ( az === '' ) {
                 isValid = false;

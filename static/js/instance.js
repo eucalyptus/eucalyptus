@@ -51,6 +51,7 @@
           "oLanguage": {
             "sZeroRecords": instance_no_records
           },
+          "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {
               "bSortable": false,
@@ -85,6 +86,7 @@
             { 
               "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) },
               "iDataSort": 13,
+              "asSorting" : [ 'desc', 'asc' ],
             },
             {
               "bVisible": false,
@@ -95,13 +97,14 @@
               "mDataProp":"state"
             },
             {
+              "asSorting" : [ 'desc', 'asc' ],
               "bVisible": false,
               "mDataProp": "launch_time",
               "sType": "date"
             }
           ]
         },
-        create_new_function : function() { launcheInstance(); },
+        create_new_function : function() { thisObj.launchInstance(); },
         text : {
           header_title : instance_h_title,
           create_resource : instance_create,
@@ -346,7 +349,7 @@
        menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMoreAction(); }}
      }
   
-     if(numSelected >= 1){ // TODO: no state check for terminate?
+     if(numSelected >= 1){ // TODO: no state check for terminate? A: terminating terminated instances will delete records
        menuItems['terminate'] = {"name":instance_action_terminate, callback: function(key, opt){ thisObj._terminateAction(); }}
      }
 
@@ -1002,10 +1005,17 @@
       this._super('close');
     },
 
-    launcheInstance : function(){
+    launchInstance : function(){
       var $container = $('html body').find(DOM_BINDING['main']);
       $container.maincontainer("changeSelected", e, {selected:'launcher'});
     },
+   
+    glowNewInstance : function(inst_ids){
+      var thisObj = this;
+      for( i in inst_ids){
+        thisObj.tableWrapper.eucatable('glowRow', inst_ids[i], 2); 
+      }
+    } 
 /**** End of Public Methods ****/
   });
 })(jQuery,
