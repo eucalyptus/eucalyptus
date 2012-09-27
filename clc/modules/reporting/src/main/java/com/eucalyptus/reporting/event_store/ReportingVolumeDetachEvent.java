@@ -31,11 +31,6 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="detachVolumeEventMap",
-        entities=@EntityResult(entityClass=ReportingVolumeDetachEvent.class))
-@NamedNativeQuery(name="scanVolumeDetachEvents",
-     query="select * from reporting_volume_detach_events order by timestamp_ms",
-     resultSetMapping="detachVolumeEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_detach_events")
 public class ReportingVolumeDetachEvent
@@ -49,7 +44,6 @@ public class ReportingVolumeDetachEvent
 	private String instanceUuid;
 	@Column(name="size_gb", nullable = false)
 	private Long sizeGB;
-
 	
 	ReportingVolumeDetachEvent()
 	{

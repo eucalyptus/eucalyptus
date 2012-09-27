@@ -25,11 +25,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="createVolumeEventMap",
-        entities=@EntityResult(entityClass=ReportingVolumeCreateEvent.class))
-@NamedNativeQuery(name="scanVolumeCreateEvents",
-     query="select * from reporting_volume_create_events order by timestamp_ms",
-     resultSetMapping="createVolumeEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_create_events")
 public class ReportingVolumeCreateEvent
@@ -47,7 +42,6 @@ public class ReportingVolumeCreateEvent
 	private String availabilityZone;
 	@Column(name="sizeGB", nullable=false)
 	private Long sizeGB;
-
 
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingVolumeCrud class.
@@ -75,11 +69,6 @@ public class ReportingVolumeCreateEvent
 		return this.uuid;
 	}
 	
-	void setUuid(String uuid)
-	{
-		this.uuid = uuid;
-	}
-
 	public String getVolumeId()
 	{
 		return this.volumeId;
@@ -137,6 +126,4 @@ public class ReportingVolumeCreateEvent
 	{
 		return "[uuid:" + this.uuid+ " volumeId:" + this.volumeId + " userId:" + this.userId + "]";
 	}
-
-
 }

@@ -20,6 +20,9 @@
 
 package com.eucalyptus.cluster.callback;
 
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -36,8 +39,11 @@ import com.eucalyptus.util.async.BroadcastCallback;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
@@ -105,20 +111,15 @@ public class DescribeSensorCallback extends
           for ( final MetricCounterType counterType : metricType.getCounters() ) {
             for ( final MetricDimensionsType dimensionType : counterType.getDimensions() ) {
               // find and fire most recent value for metric/dimension
-              Double value = null;
-              long valueTimestamp = 0;
+              final List<MetricDimensionsValuesType> values =
+                  Lists.newArrayList( dimensionType.getValues() );
+              Collections.sort( values, Ordering.natural().onResultOf( GetTimestamp.INSTANCE ) );
 
-              for ( final MetricDimensionsValuesType valueType : dimensionType .getValues() ) {
-                if ( valueType.getTimestamp()!=null && (valueTimestamp==0 ||
-                    valueTimestamp < valueType.getTimestamp().getTime() ) ) {
-                  valueTimestamp = valueType.getTimestamp().getTime();
-                  value = valueType.getValue();
-                }
-              }
-
-              if ( value != null ) {
-                final Double usageValue = value;
-                final Long usageTimestamp = valueTimestamp;
+              if ( !values.isEmpty() ) {
+                final MetricDimensionsValuesType latestValue = Iterables.getLast( values );
+                final Double usageValue = latestValue.getValue();
+                final Long usageTimestamp = latestValue.getTimestamp().getTime();
+                final long sequenceNumber = counterType.getSequenceNum() + (values.size() - 1);
                 fireUsageEvent( new Supplier<InstanceUsageEvent>(){
                   @Override
                   public InstanceUsageEvent get() {
@@ -126,7 +127,7 @@ public class DescribeSensorCallback extends
                         sensorData.getResourceUuid(),
                         sensorData.getResourceName(),
                         metricType.getMetricName(),
-                        counterType.getSequenceNum(),
+                        sequenceNumber,
                         dimensionType.getDimensionName(),
                         usageValue,
                         usageTimestamp );
@@ -153,4 +154,12 @@ public class DescribeSensorCallback extends
     }
   }
 
+  private enum GetTimestamp implements Function<MetricDimensionsValuesType,Date> {
+    INSTANCE;
+
+    @Override
+    public Date apply(  final MetricDimensionsValuesType metricDimensionsValuesType ) {
+      return metricDimensionsValuesType.getTimestamp();
+    }
+  }
 }
