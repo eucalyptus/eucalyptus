@@ -93,6 +93,7 @@
 	<classpathentry kind="src" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/reports"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
+	<classpathentry kind="src" path="modules/troubleshooting/src/main/java"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
 	<classpathentry kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/ant-1.7.jar"/>
