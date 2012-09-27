@@ -34,7 +34,6 @@
     },
     $error_div : null,
     help_flipped : false,
-
     _init : function() {
       var thisObj = this;
       /// create div for displaying errors
@@ -80,11 +79,24 @@
              if ( thisObj.options.on_open ){
                if(thisObj.options.on_open['spin']){
                  thisObj._activateSpinWheel();
-                 $.when(thisObj.options.on_open.callback()).done( function(){ thisObj._removeSpinWheel(); }
-                  ).fail( function(){ thisObj.element.dialog('close'); }
-                 );
+                 if ($.type(thisObj.options.on_open.callback) === 'array'){
+                   $.each(thisObj.options.on_open.callback, function(idx, callback){
+                     $.when(callback()).done( function(){ thisObj._removeSpinWheel(); }
+                       ).fail( function(){ thisObj.element.dialog('close'); }
+                     );
+                   });
+                 }else{
+                   $.when(thisObj.options.on_open.callback()).done( function(){ thisObj._removeSpinWheel(); }
+                     ).fail( function(){ thisObj.element.dialog('close'); }
+                   );
+                 }
                } else {
-                 thisObj.options.on_open.callback();
+                 if ($.type(thisObj.options.on_open.callback) === 'array'){
+                   $.each(thisObj.options.on_open.callback, function(idx, callback){
+                     callback();
+                   });
+                 }else
+                   thisObj.options.on_open.callback();
                }
              }
          },
@@ -136,7 +148,6 @@
       $titleBar = $dialog.find('.ui-dialog-titlebar');
       $contentPane =  this.element.find('.dialog-inner-content');
       $resourcePane = this.element.find('.selected-resources');
-
       $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
       var $help = thisObj.options.help;
       if(!$help || !$help.content || !$help.content.find('.dialog-help-content').html() || $help.content.find('.dialog-help-content').html().trim().length <= 0){
@@ -155,10 +166,10 @@
             content : thisObj.options.help.content,
             onEnd : function(){
               thisObj.element.find('.help-revert-button a').click( function(evt) {
-                  $contentPane.revertFlip();
+                $contentPane.revertFlip();
               });
               // at the end of flip/revertFlip, change the ?/x button
-              if(!thisObj.help_flipped){
+              if(!thisObj.help_flipped){ 
                 $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
                 $helpLink.html('&nbsp;');
                 $resourcePane.hide();
@@ -171,13 +182,16 @@
                 $resourcePane.show();
                 $titleBar.find('span').text(thisObj.options.title);
                 thisObj.help_flipped=false;
+                thisObj.element.dialog('close');
+                thisObj.element.dialog('option', 'show', null); 
+                thisObj.element.dialog('open');
+                thisObj.element.dialog('option', 'show', 'fade'); 
               }
               $titleBar.show();
             },
             onBefore: function() {
               if(!thisObj.help_flipped){
                 $buttonPane.hide();
-                $titleBar.hide();
               }
             }
           });
