@@ -2043,5 +2043,10 @@ input#launch-more-sgroup-input {
 .field-error {
   color: red;
 }
+textarea.console-output {
+  width: 600px;
+  height: 400px;
+  margin: 10px;
+}
 /* ======= END Sang-min ======= */
 

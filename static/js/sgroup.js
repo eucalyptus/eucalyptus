@@ -39,7 +39,8 @@
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
           "oLanguage": {
-            "sZeroRecords": sgroup_no_records
+            "sZeroRecords": sgroup_no_records,
+            "sEmptyTable": sgroup_empty_data
           },
           "aoColumns": [
             {

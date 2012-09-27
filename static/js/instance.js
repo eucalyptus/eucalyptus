@@ -49,7 +49,8 @@
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeInstances",
           "oLanguage": {
-            "sZeroRecords": instance_no_records
+            "sZeroRecords": instance_no_records,
+            "sEmptyTable": instance_empty_data
           },
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
@@ -221,6 +222,7 @@
           'close': {text: dialog_close_btn, focus:true, click: function() { $console_dialog.eucadialog("close");}}
         },
         help: {content: $console_help},
+        width: 680,
       });
 
   // volume detach dialog start
@@ -664,7 +666,9 @@
             consoleOutput = data.results.output;   
             var newTitle = $.i18n.prop('instance_dialog_console_title', instances);
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
-            thisObj.consoleDialog.eucadialog('addNote', 'instance-console-output', consoleOutput); 
+            thisObj.consoleDialog.find('#instance-console-output').children().detach();
+            thisObj.consoleDialog.find('#instance-console-output').append(
+              $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').val(consoleOutput));
             thisObj.consoleDialog.eucadialog('open');
           }else{
             notifyError($.i18n.prop('instance_console_error', instances), undefined_error);
