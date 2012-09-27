@@ -48,6 +48,9 @@
         id : 'instances', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeInstances",
+          "oLanguage": {
+            "sZeroRecords": instance_no_records
+          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -98,6 +101,7 @@
             }
           ]
         },
+        create_new_function : function() { launcheInstance(); },
         text : {
           header_title : instance_h_title,
           create_resource : instance_create,
@@ -996,6 +1000,11 @@
     //  this.tableWrapper.eucatable('close'); // shouldn't reference eucatable b/c flippy help changes the this.element dom
       cancelRepeat(tableRefreshCallback);
       this._super('close');
+    },
+
+    launcheInstance : function(){
+      var $container = $('html body').find(DOM_BINDING['main']);
+      $container.maincontainer("changeSelected", e, {selected:'launcher'});
     },
 /**** End of Public Methods ****/
   });

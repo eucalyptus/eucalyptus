@@ -38,6 +38,9 @@
         id : 'sgroups', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
+          "oLanguage": {
+            "sZeroRecords": sgroup_no_records
+          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -58,6 +61,7 @@
             }*/
           ],
         },
+        create_new_function : function() { addGroup(); },
         text : {
           header_title : sgroup_h_title,
           create_resource : sgroup_create,

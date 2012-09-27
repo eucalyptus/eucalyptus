@@ -46,6 +46,9 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
+          "oLanguage": {
+            "sZeroRecords": eip_no_records
+          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -62,6 +65,7 @@
             }
           ],
         },
+        create_new_function : function() { allocateIP(); },
         text : {
           header_title : eip_h_title,
           create_resource : eip_allocate,
@@ -74,7 +78,7 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
-        menu_click_create : function (args) { thisObj._createAction() },
+        menu_click_create : function (args) { thisObj.createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, $eipHelp);
         },
@@ -397,10 +401,6 @@
       thisObj.dialogAssociateIp(eipsToAssociate[0], null);
     },
 
-    _createAction : function() {
-      this.allocateDialog.eucadialog('open');
-    },
-
 /**** Public Methods ****/
     dialogAssociateIp : function(ip, instance){
       var thisObj = this;
@@ -424,6 +424,9 @@
         thisObj.disassociateDialog.eucadialog('setSelectedResources', {title: [ip_address_label, instance_label], contents: matrix});
         thisObj.disassociateDialog.dialog('open');
       }
+    },
+    createAction : function() {
+      this.allocateDialog.eucadialog('open');
     },
     close: function() {
 //      this.tableWrapper.eucatable('close');

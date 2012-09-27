@@ -40,6 +40,9 @@
         id : 'volumes', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeVolumes",
+          "oLanguage": {
+            "sZeroRecords": volume_no_records
+          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -77,6 +80,7 @@
             }
           ],
         },
+        create_new_function : function() { addVolume(); },
         text : {
           header_title : volume_h_title,
           create_resource : volume_create,

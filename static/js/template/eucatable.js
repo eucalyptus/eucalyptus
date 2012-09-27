@@ -38,6 +38,7 @@
       filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
       legend : null, // e.g., ['available', 'attaching', 'attached', ...]
       show_only : null, // e.g, {filter_value: 'machine', filter_col: 7}
+      create_new_function : function() {} // function() { addSnapshot(); }
     },
 
     table : null, // jQuery object to the table
@@ -205,10 +206,14 @@
             $(td).html(newVal);
         });
       }
-     /* if(this.element.find('table tbody').find('.dataTables_empty').length <= 0){
-        oSettings.oLanguage = { "sProcessing": "&nbsp;", 
-                             "sLoadingRecords": ""};
-      } */
+      $emptyDataTd = this.element.find('table tbody').find('.dataTables_empty');
+      if( $emptyDataTd ){
+        $createNew = $('<a>').text(thisObj.options.text.create_resource);
+        $createNew.click( function() { thisObj.options.create_new_function.call(); });
+        text = $emptyDataTd.html();
+        $emptyDataTd.html('');
+        $emptyDataTd.append(text, '&nbsp;', $createNew);
+      }
     },
 
     _onRowClick : function() {

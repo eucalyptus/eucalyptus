@@ -42,6 +42,9 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
+          "oLanguage": {
+            "sZeroRecords": snapshot_no_records
+          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -77,6 +80,7 @@
             }
           ],
         },
+        create_new_function : function() { addSnapshot(); },
         text : {
           header_title : snapshot_h_title,
           create_resource : snapshot_create,
@@ -302,6 +306,7 @@
       if(volume)
         this.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
     },
+
 /**** End of Public Methods ****/
   });
 })

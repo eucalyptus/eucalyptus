@@ -37,6 +37,9 @@
         id : 'keys', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
+          "oLanguage": {
+            "sZeroRecords": keypair_no_records
+          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -47,6 +50,7 @@
             { "mDataProp": "fingerprint", "bSortable": false }
           ],
         },
+        create_new_function : function() { addKeypair(); },
         text : {
           header_title : keypair_h_title,
           create_resource : keypair_create,

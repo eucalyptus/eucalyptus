@@ -188,6 +188,18 @@ function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
 }
 
+function launcheInstance() {
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).instance();
+  $('html body').find(DOM_BINDING['hidden']).instance('launcheInstance');
+}
+
+function allocateIP() {
+  $('html body').find(DOM_BINDING['hidden']).children().detach();
+  $('html body').find(DOM_BINDING['hidden']).eip();
+  $('html body').find(DOM_BINDING['hidden']).eip('createAction');
+}
+
 function logout(){
   $.cookie('session-id',''); 
   var hostname = null;
