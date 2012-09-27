@@ -39,7 +39,8 @@
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
           "oLanguage": {
-            "sZeroRecords": sgroup_no_records
+            "sZeroRecords": sgroup_no_records,
+            "sEmptyTable": sgroup_empty_data
           },
           "aoColumns": [
             {
@@ -156,14 +157,14 @@
                               $add_dialog.eucadialog("close");
                           }
                       } else {
-                          notifyError($.i18n.prop('sgroup_add_rule_error', name), undefined_error);
                           $add_dialog.eucadialog("close");
+                          notifyError($.i18n.prop('sgroup_add_rule_error', name), undefined_error);
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
+                    $add_dialog.eucadialog("close");
                     notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                     dfd.reject();
-                    $add_dialog.eucadialog("close");
                   }
               });
             }},

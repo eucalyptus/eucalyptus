@@ -14,4 +14,6 @@ class ClcError(object):
     def __init__(self, status, summary, message):
         self.status = status
         self.summary = summary
-        self.message = message
+        # trim up message so we don't overload the browser, trim starting at "Caused by"
+        idx = message.find("Caused by")
+        self.message = (message if (idx == -1) else message[:idx-1])

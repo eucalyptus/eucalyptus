@@ -49,7 +49,8 @@
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeInstances",
           "oLanguage": {
-            "sZeroRecords": instance_no_records
+            "sZeroRecords": instance_no_records,
+            "sEmptyTable": instance_empty_data
           },
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
