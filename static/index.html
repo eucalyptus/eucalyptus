@@ -445,13 +445,14 @@
                   
                   <div class="form-row">
                     <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/>{{!>sgroup_dialog_add_allow_ip}}
+                    <input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/>{{!>sgroup_dialog_add_allow_ip}}
                     <input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" style="fgcolor:#ff000000;"></span>
                     <a href="#" id='sgroup-ip-check'>my ip</a>
                   </div>
   
                   <div class="form-row">
-                    <input type="radio" name="allow-group" id="sgroup-allow-group"/>{{!>sgroup_dialog_add_allow_group}} <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/>{{!>sgroup_dialog_add_allow_group}} 
+                    <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                   </div>
                   
                   <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
