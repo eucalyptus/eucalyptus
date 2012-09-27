@@ -288,10 +288,10 @@
       this.addDialog.find('#sgroup-add-rule').click(function () {
         thisObj._storeRule(thisObj.addDialog);
         // now reset form
-        $('#sgroup-template').val('none');
-        $('#sgroup-ports').val('');
-        $('#allow-ip').val('');
-        $('#allow-group').val('');
+        thisObj.addDialog.find('#sgroup-template').val('none');
+        thisObj.addDialog.find('#sgroup-ports').val('');
+        thisObj.addDialog.find('#allow-ip').val('');
+        thisObj.addDialog.find('#allow-group').val('');
         thisObj._refreshRulesList(thisObj.addDialog);
       });
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
@@ -575,10 +575,10 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[@name='allow-group']:checked").val() == 'ip') {
+        if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-ip') {
             rule.ipaddr = dialog.find('#allow-ip').val();
         }
-        else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
+        else if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-group') {
             rule.group = dialog.find('#allow-group').val();
         }
         rule.isnew = true;
@@ -682,6 +682,7 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
+      alert("adding rule:"+req_params);
       var sgroupName = groupName;
       $.ajax({
         type:"GET",
@@ -764,6 +765,7 @@
       $('#sgroup-rules-list').html('');
       thisObj.addDialog.eucadialog('open');
       thisObj.addDialog.find('input[id=sgroup-name]').focus();
+      thisObj.addDialog.find('#sgroup-template').val('none');
       thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.addDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
@@ -779,6 +781,7 @@
       thisObj.editDialog.dialog('open');
       thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
+      thisObj.editDialog.find('#sgroup-template').val('none');
       thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);

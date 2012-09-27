@@ -34,7 +34,6 @@
     },
     $error_div : null,
     help_flipped : false,
-
     _init : function() {
       var thisObj = this;
       /// create div for displaying errors
@@ -59,14 +58,16 @@
                $titleBar.append($('<div>').addClass(thisObj.options.help_icon_class).append($('<a>').attr('href','#').text('?')));
 
              $.each(thisObj.options.buttons, function (btn_id, btn_prop){
-               var $btn = thisObj.element.parent().find("#"+thisObj._getButtonId(btn_id, btn_prop));
+               var btn_dom_id = thisObj._getButtonId(btn_prop.domid, btn_id);
+               var $btn = thisObj.element.parent().find("#"+btn_dom_id);
                if (!$btn || $btn.length<=0) {
                  $btn = thisObj.element.parent().find(":button:contains('"+ btn_id +"')");
-                 $btn.attr('id', thisObj._getButtonId(btn_prop.domid, btn_id))
+                 $btn.attr('id', btn_dom_id);
                };
                $btn.find('span').text(btn_prop.text);
-               if(btn_prop.focus !== undefined && btn_prop.focus)
+               if(btn_prop.focus !== undefined && btn_prop.focus){
                  $btn.focus();
+               }
                if(btn_prop.disabled !== undefined && btn_prop.disabled){
                  $btn.prop("disabled", true).addClass("ui-state-disabled");
                }
@@ -78,18 +79,28 @@
              if ( thisObj.options.on_open ){
                if(thisObj.options.on_open['spin']){
                  thisObj._activateSpinWheel();
-                 $.when(thisObj.options.on_open.callback()).done( function(){ thisObj._removeSpinWheel(); }
-                  ).fail( function(){ thisObj.element.dialog('close'); }
-                 );
+                 if ($.type(thisObj.options.on_open.callback) === 'array'){
+                   $.each(thisObj.options.on_open.callback, function(idx, callback){
+                     $.when(callback()).done( function(){ thisObj._removeSpinWheel(); }
+                       ).fail( function(){ thisObj.element.dialog('close'); }
+                     );
+                   });
+                 }else{
+                   $.when(thisObj.options.on_open.callback()).done( function(){ thisObj._removeSpinWheel(); }
+                     ).fail( function(){ thisObj.element.dialog('close'); }
+                   );
+                 }
                } else {
-                 thisObj.options.on_open.callback();
+                 if ($.type(thisObj.options.on_open.callback) === 'array'){
+                   $.each(thisObj.options.on_open.callback, function(idx, callback){
+                     callback();
+                   });
+                 }else
+                   thisObj.options.on_open.callback();
                }
              }
          },
          close: function(event, ui) { 
-           $.each(ui, function(k,v){
-             alert(k+':'+v);
-           });
            if( thisObj.options.on_close) { 
              thisObj.options.on_close.callback();
            }
@@ -137,7 +148,6 @@
       $titleBar = $dialog.find('.ui-dialog-titlebar');
       $contentPane =  this.element.find('.dialog-inner-content');
       $resourcePane = this.element.find('.selected-resources');
-
       $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
       var $help = thisObj.options.help;
       if(!$help || !$help.content || !$help.content.find('.dialog-help-content').html() || $help.content.find('.dialog-help-content').html().trim().length <= 0){
@@ -156,10 +166,10 @@
             content : thisObj.options.help.content,
             onEnd : function(){
               thisObj.element.find('.help-revert-button a').click( function(evt) {
-                  $contentPane.revertFlip();
+                $contentPane.revertFlip();
               });
               // at the end of flip/revertFlip, change the ?/x button
-              if(!thisObj.help_flipped){
+              if(!thisObj.help_flipped){ 
                 $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
                 $helpLink.html('&nbsp;');
                 $resourcePane.hide();
@@ -172,13 +182,16 @@
                 $resourcePane.show();
                 $titleBar.find('span').text(thisObj.options.title);
                 thisObj.help_flipped=false;
+                thisObj.element.dialog('close');
+                thisObj.element.dialog('option', 'show', null); 
+                thisObj.element.dialog('open');
+                thisObj.element.dialog('option', 'show', 'fade'); 
               }
               $titleBar.show();
             },
             onBefore: function() {
               if(!thisObj.help_flipped){
                 $buttonPane.hide();
-                $titleBar.hide();
               }
             }
           });
@@ -225,8 +238,7 @@
         thisObj.element.find('#'+id).children().detach();
       });
       thisObj._note_divs = [];
-
-      this.$error_div.children().detach();
+      this.element.find('.dialog-error').children().detach();
     },
 
     hideButton : function(buttonDomId, buttonId) {

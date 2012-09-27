@@ -43,6 +43,7 @@
           "oLanguage": {
             "sZeroRecords": volume_no_records
           },
+          "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
             {
               "bSortable": false,
@@ -66,6 +67,7 @@
             { "mDataProp": "snapshot_id" },
             { "mDataProp": "zone" },
             { 
+              "asSorting" : [ 'desc', 'asc' ],
               "fnRender": function(oObj) { return formatDateTime(oObj.aData.create_time); },
               "iDataSort": 9
             },
@@ -155,16 +157,16 @@
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
          },
          help: { content: $attach_dialog_help },
-         on_open: {spin: true, callback: function(args) {
+         on_open: {spin: true, callback: [ function(args) {
            var dfd = $.Deferred();
            thisObj._initAttachDialog(dfd); // pulls instance info from server
+           $instance_id = $attach_dialog.find('#volume-attach-instance-id');
+           $device_name = $attach_dialog.find('#volume-attach-device-name');
+           $attach_dialog.eucadialog('buttonOnKeyup', $device_name, thisObj.attachButtonId, function () {
+             return $instance_id.val() != '';
+           });
            return dfd.promise();
-         }},
-       });
-       $instance_id = $attach_dialog.find('#volume-attach-instance-id');
-       $device_name = $attach_dialog.find('#volume-attach-device-name');
-       $attach_dialog.eucadialog('buttonOnKeyup', $device_name, thisObj.attachButtonId, function () {
-         return $instance_id.val() != '';
+         }]},
        });
 
       // attach dialog end
@@ -174,7 +176,7 @@
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_volume)));
       var $add_dialog = $rendered.children().first();
       var $add_help = $rendered.children().last();
-      this.addDialog = $add_dialog.eucadialog({
+      var option = {
          id: 'volumes-add',
          title: volume_dialog_add_title,
          buttons: {
@@ -189,9 +191,13 @@
                   isValid = false;
                   $add_dialog.eucadialog('showError', volume_dialog_snapshot_error_msg);
                 }
+                if( parseInt(size) <= 0) {
+                  isValid = false; 
+                  $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
+                }
               } else {
-                isValid = false; 
-                $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
+                  isValid = false; 
+                  $add_dialog.eucadialog('showError', volume_dialog_size_error_msg);
               }
               if ( az === '' ) {
                 isValid = false;
@@ -205,20 +211,21 @@
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
          },
          help: { content: $add_help },
-         on_open: {spin: true, callback: function(args) {
+         on_open: {spin: true, callback: [ function(args) {
            var dfd = $.Deferred();
+           var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');
+           var $vol_size_edit = thisObj.addDialog.find('#volume-size');
+           $add_dialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
+             return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
+           }); 
+           $add_dialog.eucadialog('buttonOnKeyup', $vol_size_edit,  createButtonId, function(){
+             return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
+           });
            thisObj._initAddDialog(dfd) ; // pulls az and snapshot info from the server
            return dfd.promise();
-         }},
-       });
-       var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');
-       var $vol_size_edit = thisObj.addDialog.find('#volume-size');
-       $add_dialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
-         return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
-       }); 
-       $add_dialog.eucadialog('buttonOnKeyup', $vol_size_edit,  createButtonId, function(){
-         return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
-       });
+         }]},
+       };
+      this.addDialog = $add_dialog.eucadialog(option);
        // volume create dialog end
     },
 
@@ -252,7 +259,7 @@
     },
 
     _initAttachDialog : function(dfd) {  // should resolve dfd object
-      thisObj = this;
+      var thisObj = this;
       var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id');
       var $volumeSelector = this.attachDialog.find('#volume-attach-volume-id');
 
@@ -512,7 +519,7 @@
       if ( volumes.length > 0 ) {
         addOption = true;
         for (v in volumes) {
-          if (volumes[v].status !== 'available') {
+          if (! ( volumes[v].status === 'available'  || volumes[v].status === 'failed')) {
             addOption = false;
             break;
           }
@@ -532,16 +539,21 @@
 
     dialogAttachVolume : function(volume, instance){
       var thisObj = this;
-      if(volume){
-        var $volumeId = this.attachDialog.find('#volume-attach-volume-id');
-        $volumeId.val(volume);
-        $volumeId.attr('disabled', 'disabled');
-      } 
-      if(instance){
-        var $instanceId = this.attachDialog.find('#volume-attach-instance-id');
-        $instanceId.val(instance);
-        $instanceId.attr('disabled', 'disabled');
+      var openCallback = function() {
+        if(volume){
+          var $volumeId = thisObj.attachDialog.find('#volume-attach-volume-id');
+          $volumeId.val(volume);
+          $volumeId.attr('disabled', 'disabled');
+        } 
+        if(instance){
+          var $instanceId = thisObj.attachDialog.find('#volume-attach-instance-id');
+          $instanceId.val(instance);
+          $instanceId.attr('disabled', 'disabled');
+        }
       }
+      var on_open = this.attachDialog.eucadialog('option', 'on_open'); 
+      on_open.callback.push(openCallback);
+      this.attachDialog.eucadialog('option', 'on_open', on_open);
       this.attachDialog.eucadialog('open');
     },
 

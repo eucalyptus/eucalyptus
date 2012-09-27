@@ -2039,5 +2039,14 @@ div#launch-wizard-type-size-legend{
 input#launch-more-sgroup-input {
     width: 150px;
 }
+
+.field-error {
+  color: red;
+}
+textarea.console-output {
+  width: 600px;
+  height: 400px;
+  margin: 10px;
+}
 /* ======= END Sang-min ======= */
 

@@ -97,8 +97,12 @@
       sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
-      dt_arg['oLanguage'] = { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
-                             "sLoadingRecords": ""}
+      if(! dt_arg['oLanguage']) 
+        dt_arg['oLanguage'] = {};
+
+      dt_arg.oLanguage['sProcessing'] = "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>";
+      dt_arg.oLanguage['sLoadingRecords'] =  "";
+
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
         dt_arg[k] = v;
@@ -169,18 +173,6 @@
             thisObj._onRowClick();
             thisObj._trigger('row_click', e);
           });
-
-          /*$currentRow.find('input[type="checkbox"]').unbind('click').bind('click', function(e){
-            thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
-            thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
-            var $selectedRow = $currentRow; //$(e.target).parents('tr');
-            $selectedRow.toggleClass('selected-row');
-            var $rowCheckbox = $(e.target);
-            if($selectedRow.hasClass('selected-row'))
-              $rowCheckbox.attr('checked', true);
-            else
-              $rowCheckbox.attr('checked', false);
-          });*/
         }
 
         if (DEPRECATE && thisObj.options.context_menu_actions) {
@@ -473,23 +465,36 @@
       return selectedRows;
     },
 
-    _glowRow : function(val, columnId, found) {
-      var selector = ':nth-child('+columnId+')';
-      $.each( this.table.fnGetNodes(), function(inx, row) {
-        $td = $(row).find(selector);
-        if (val == $td.text()) {
+    _glowRow : function(val, columnId){
+      var selector = ':nth-child('+(columnId+1)+')';
+      var rows = this.table.fnGetNodes();
+      for ( i in rows){
+        $td = $(rows[i]).find(selector);
+        if ($td.html() && $td.html().indexOf(val) >= 0) {
           $td.parent().addClass('glow');
-          found = true;
-          return;
+          return true;
         }
-      });
+      }
+      return false;
+    },
+
+    _removeGlow : function(val, columnId){
+      var selector = ':nth-child('+(columnId+1)+')';
+      var rows = this.table.fnGetNodes();
+      for ( i in rows){
+        $td = $(rows[i]).find(selector);
+        if (val === $td.text()) {
+          $td.parent().removeClass('glow');
+          return true;
+        }
+      }
+      return false;
     },
 
     _refreshTableInterval : function() {
       var tbody = this.element.find('table tbody'); 
-      if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0)
+      if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0 || tbody.find('tr.glow').length>0 )
         return;
-
       this.table.fnReloadAjax();
     },
 
@@ -501,12 +506,17 @@
 
     glowRow : function(val, columnId) {
       var thisObj = this;
-      var cId = columnId || 2;
-      var found = false;
-      setTimeout( function() { thisObj._glowRow(val, cId, found); }, 1000);
-      // wait till next refresh if needed
-      if ( !found )
-        setTimeout( function() { thisObj._glowRow(val, cId); }, (REFRESH_INTERVAL_SEC + 2) * 1000);
+      var cId = columnId || 1;
+      var token = null; 
+      var counter = 0;
+      token = runRepeat(function(){
+        if ( thisObj._glowRow(val, cId)){
+          cancelRepeat(token);
+          setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
+        } else if (counter++ > 30){ // give up glow effect after 60 seconds
+          cancelRepeat(token);
+        }
+      }, 2000);
     },
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]

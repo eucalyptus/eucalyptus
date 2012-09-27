@@ -51,6 +51,7 @@
           "oLanguage": {
             "sZeroRecords": instance_no_records
           },
+          "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {
               "bSortable": false,
@@ -85,6 +86,7 @@
             { 
               "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) },
               "iDataSort": 13,
+              "asSorting" : [ 'desc', 'asc' ],
             },
             {
               "bVisible": false,
@@ -95,13 +97,14 @@
               "mDataProp":"state"
             },
             {
+              "asSorting" : [ 'desc', 'asc' ],
               "bVisible": false,
               "mDataProp": "launch_time",
               "sType": "date"
             }
           ]
         },
-        create_new_function : function() { launcheInstance(); },
+        create_new_function : function() { thisObj.launchInstance(); },
         text : {
           header_title : instance_h_title,
           create_resource : instance_create,
@@ -218,6 +221,7 @@
           'close': {text: dialog_close_btn, focus:true, click: function() { $console_dialog.eucadialog("close");}}
         },
         help: {content: $console_help},
+        width: 680,
       });
 
   // volume detach dialog start
@@ -346,7 +350,7 @@
        menuItems['launchmore'] = {"name":instance_action_launch_more, callback: function(key, opt){ thisObj._launchMoreAction(); }}
      }
   
-     if(numSelected >= 1){ // TODO: no state check for terminate?
+     if(numSelected >= 1){ // TODO: no state check for terminate? A: terminating terminated instances will delete records
        menuItems['terminate'] = {"name":instance_action_terminate, callback: function(key, opt){ thisObj._terminateAction(); }}
      }
 
@@ -661,7 +665,9 @@
             consoleOutput = data.results.output;   
             var newTitle = $.i18n.prop('instance_dialog_console_title', instances);
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
-            thisObj.consoleDialog.eucadialog('addNote', 'instance-console-output', consoleOutput); 
+            thisObj.consoleDialog.find('#instance-console-output').children().detach();
+            thisObj.consoleDialog.find('#instance-console-output').append(
+              $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').val(consoleOutput));
             thisObj.consoleDialog.eucadialog('open');
           }else{
             notifyError($.i18n.prop('instance_console_error', instances), undefined_error);
@@ -678,22 +684,23 @@
     },
 
     _initDetachDialog : function(dfd) {  // should resolve dfd object
-      thisObj = this;
+      var thisObj = this;
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
       instance = $(instance).html();
       $msg = this.detachDialog.find('#volume-detach-msg');
       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', instance));
-      $p = this.detachDialog.find('#volume-detach-select-all');
-      $selectAll = $('<a>').text(inst_volume_dialog_select_txt).attr('href', '#');
+      var $p = this.detachDialog.find('#volume-detach-select-all');
+      $p.children().detach();
+      $p.html('');
+      var $selectAll = $('<a>').text(inst_volume_dialog_select_txt).attr('href', '#');
       $selectAll.click(function() {
         $.each(thisObj.detachDialog.find(":input[type='checkbox']"), function(idx, checkbox){
           $(checkbox).attr('checked', 'checked');
         });
         thisObj.detachDialog.eucadialog('enableButton',thisObj.detachButtonId);
       });
-      if ($p.html() == '')
-        $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
+      $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
       volumes = [];
       $.each(results, function(idx, volume){
         if ( volume.attach_data && volume.attach_data['status'] ){
@@ -704,7 +711,7 @@
           }
         }
       });
-      $table = this.detachDialog.find('#volume-detach-grid');
+      var $table = this.detachDialog.find('#volume-detach-grid');
       $table.html('');
       COL_IN_ROW = 3;
       for (i=0; i<Math.ceil(volumes.length/COL_IN_ROW); i++) {
@@ -1002,10 +1009,17 @@
       this._super('close');
     },
 
-    launcheInstance : function(){
+    launchInstance : function(){
       var $container = $('html body').find(DOM_BINDING['main']);
       $container.maincontainer("changeSelected", e, {selected:'launcher'});
     },
+   
+    glowNewInstance : function(inst_ids){
+      var thisObj = this;
+      for( i in inst_ids){
+        thisObj.tableWrapper.eucatable('glowRow', inst_ids[i], 2); 
+      }
+    } 
 /**** End of Public Methods ****/
   });
 })(jQuery,

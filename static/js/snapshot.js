@@ -143,11 +143,11 @@
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
          help: { content: $snapshot_dialog_help },
-         on_open: {spin: true, callback: function(args) {
+         on_open: {spin: true, callback: [ function(args) {
            var dfd = $.Deferred();
            thisObj._initCreateDialog(dfd) ; // pulls volumes info from the server
            return dfd.promise();
-         }},
+         }]},
        });
        var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
        this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
@@ -170,8 +170,9 @@
     },
 
     _initCreateDialog : function(dfd) { // method should resolve dfd object
-      thisObj = this;
+      var thisObj = this;
       var $volSelector = this.createDialog.find('#snapshot-create-volume-id');
+      this.createDialog.find('#snapshot-create-description').val('');
       if(!$volSelector.val()){
         var results = describe('volume');
         var volume_ids = [];
@@ -297,14 +298,21 @@
 
     dialogAddSnapshot : function(volume) { 
       var thisObj = this;
-      if(volume){
-        var $volumeId = this.createDialog.find('#snapshot-create-volume-id');
-        $volumeId.val(volume);
-        $volumeId.attr('disabled', 'disabled');
+      var openCallback = function() {
+        if(volume){
+          var $volumeId = thisObj.createDialog.find('#snapshot-create-volume-id');
+          $volumeId.val(volume);
+          $volumeId.attr('disabled', 'disabled');
+        }
+        if(volume)
+          thisObj.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
       }
+      var on_open = this.createDialog.eucadialog('option', 'on_open'); 
+      on_open.callback.push(openCallback);
+      this.createDialog.eucadialog('option', 'on_open', on_open);
       this.createDialog.eucadialog('open');
-      if(volume)
-        this.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
+      //if(volume)
+       // this.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
     },
 
 /**** End of Public Methods ****/
