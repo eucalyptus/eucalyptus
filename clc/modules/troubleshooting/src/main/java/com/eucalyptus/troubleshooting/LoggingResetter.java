@@ -87,6 +87,8 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import com.eucalyptus.records.Logs;
+
 
 
 public class LoggingResetter {
@@ -154,6 +156,7 @@ public class LoggingResetter {
 				}
 			}
 		}
+		Logs.reInit();
 	}
 
 	private static void resetRootLogLevel(Logger rootLogger,

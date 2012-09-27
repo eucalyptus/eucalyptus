@@ -1,4 +1,4 @@
-package com.eucalyptus.system;
+package com.eucalyptus.system.log;
 
 import java.util.Map;
 

@@ -1,4 +1,4 @@
-package com.eucalyptus.system;
+package com.eucalyptus.system.log;
 
 import org.apache.log4j.helpers.FormattingInfo;
 import org.apache.log4j.helpers.PatternConverter;

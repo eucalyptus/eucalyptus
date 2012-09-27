@@ -62,79 +62,77 @@
 
 package com.eucalyptus.system;
 
-import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
 import org.hibernate.exception.GenericJDBCException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.log.EucaLoggingEvent;
+import com.eucalyptus.system.log.EucaPatternLayout;
 
-public class EucaLayout extends PatternLayout {
-  public static int LINE_BYTES = 100;
-  static {
-    try {
-      LINE_BYTES = Integer.parseInt( System.getenv( "COLUMNS" ) );
-    } catch ( NumberFormatException e ) {}
-  }
-  public static String PATTERN = "%d{EEE MMM d HH:mm:ss yyyy} %5p "+(Logs.isExtrrreeeme()?"%C{1}.%M(%F):%L":"%-23.23c{1}")+" | %m%n";
-  private String CONTINUATION = "%m%n";
-  private PatternLayout continuation = null;
-  
+public class EucaLayout extends EucaPatternLayout {
+	
+    private static final String DEFAULT_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.5p | %m%n";
+	private static final String DEBUG_LOG_PATTERN       = "%d{yyyy-MM-dd HH:mm:ss} %5.5p %9.9i %-23.23c{1} | %m%n";
+	private static final String EXTREME_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.9p %9.9i %-23.23c{1} %-27.27F:%-5.5L | %m%n";
+	private String CONTINUATION = "%m%n";
+	private EucaPatternLayout continuation = null;
+	private final EucaPatternLayout extremeLayout;
+	private final EucaPatternLayout debugLayout;
 
-  public EucaLayout( ) {
-    super( PATTERN );
-    
-  }
+	public EucaLayout( ) {
+		super( DEFAULT_LOG_PATTERN );
+		this.debugLayout = new EucaPatternLayout(DEBUG_LOG_PATTERN);
+		this.extremeLayout = new EucaPatternLayout(EXTREME_LOG_PATTERN);
+	}
 
-  public EucaLayout( String pattern ) {
-    super( PATTERN );
-    
-  }
+	private String mainFormat(LoggingEvent e) {
+		if (Logs.isExtrrreeeme()) 
+			return extremeLayout.format(e);
+		else if (Logs.isDebug())
+			return debugLayout.format(e);
+		else 
+			return super.format(e);
+	}
 
-  
-  
-  @Override
-  public String format( LoggingEvent event ) {
-    try {
-      if( event.getThrowableInformation( ) != null ) {
-        Throwable t = event.getThrowableInformation( ).getThrowable( );
-        if( t != null && t instanceof GenericJDBCException ) {
-          return "";
-        }
-      } else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
-        return "";
-      }
-      String renderedMessage = event.getRenderedMessage( );
-      if(renderedMessage != null) {
-String[] messages = renderedMessage.split( "\n" );
-      StringBuffer sb = new StringBuffer( );
-      boolean con = false;
-      for( int i = 0; i < messages.length; i++ ) {
-//      String message= messages[i];
-        String substring= messages[i];
-//      while ( message.length( ) > 0 ) {
-//        int rb = LINE_BYTES>message.length( )?message.length( ):LINE_BYTES;
-//        String substring = message.substring( 0, rb );
-//        message = message.substring( rb );
-          LoggingEvent n = new LoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
-                                             event.getTimeStamp( ), event.getLevel( ), 
-                                             substring, event.getThreadName( ), 
-                                             event.getThrowableInformation( ), null, null, null );
-          sb.append( (!con)?super.format( n ):continuation.format( n ) );
-          if(continuation==null) {
-            continuation = new PatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
-          }
-          con = true;        
-//      }      
-      }    
-      return sb.toString( );
-      }
-    } catch ( Exception ex ) {
-      ex.printStackTrace( );
-    }
-    return null;
-  }
 
-  @Override
-  public boolean ignoresThrowable( ) {
-    return true;
-  }
+
+	@Override
+	public String format( LoggingEvent event ) {
+		try {
+			if( event.getThrowableInformation( ) != null ) {
+				Throwable t = event.getThrowableInformation( ).getThrowable( );
+				if( t != null && t instanceof GenericJDBCException ) {
+					return "";
+				}
+			} else if ( event.getFQNOfLoggerClass( ).matches(".*JDBCExceptionReporter.*") ) {
+				return "";
+			}
+			String renderedMessage = event.getRenderedMessage( );
+			if(renderedMessage != null) {
+				String[] messages = renderedMessage.split( "\n" );
+				StringBuffer sb = new StringBuffer( );
+				boolean con = false;
+				for( int i = 0; i < messages.length; i++ ) {
+					String substring= messages[i];
+					LoggingEvent n = new EucaLoggingEvent( event.getFQNOfLoggerClass( ), event.getLogger( ), 
+							event.getTimeStamp( ), event.getLevel( ), 
+							substring, event.getThreadName( ), 
+							event.getThrowableInformation( ), null, null, null );
+					sb.append( (!con)?mainFormat( n ):continuation.format( n ) );
+					if(continuation==null) {
+						continuation = new EucaPatternLayout(sb.toString( ).split( "\\|" )[0].replaceAll( ".", " " )+"| "+CONTINUATION);
+					}
+					con = true;        
+				}    
+				return sb.toString( );
+			}
+		} catch ( Exception ex ) {
+			ex.printStackTrace( );
+		}
+		return null;
+	}
+
+	@Override
+	public boolean ignoresThrowable( ) {
+		return true;
+	}
 }

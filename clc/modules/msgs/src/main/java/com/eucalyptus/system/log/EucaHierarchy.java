@@ -1,4 +1,4 @@
-package com.eucalyptus.system;
+package com.eucalyptus.system.log;
 
 import org.apache.log4j.Hierarchy;
 import org.apache.log4j.Logger;
