@@ -681,22 +681,23 @@
     },
 
     _initDetachDialog : function(dfd) {  // should resolve dfd object
-      thisObj = this;
+      var thisObj = this;
       var results = describe('volume');
       var instance = this.tableWrapper.eucatable('getSelectedRows', 2)[0];
       instance = $(instance).html();
       $msg = this.detachDialog.find('#volume-detach-msg');
       $msg.html($.i18n.prop('inst_volume_dialog_detach_text', instance));
-      $p = this.detachDialog.find('#volume-detach-select-all');
-      $selectAll = $('<a>').text(inst_volume_dialog_select_txt).attr('href', '#');
+      var $p = this.detachDialog.find('#volume-detach-select-all');
+      $p.children().detach();
+      $p.html('');
+      var $selectAll = $('<a>').text(inst_volume_dialog_select_txt).attr('href', '#');
       $selectAll.click(function() {
         $.each(thisObj.detachDialog.find(":input[type='checkbox']"), function(idx, checkbox){
           $(checkbox).attr('checked', 'checked');
         });
         thisObj.detachDialog.eucadialog('enableButton',thisObj.detachButtonId);
       });
-      if ($p.html() == '')
-        $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
+      $p.append(inst_volume_dialog_select_all_msg, '&nbsp;', $selectAll);
       volumes = [];
       $.each(results, function(idx, volume){
         if ( volume.attach_data && volume.attach_data['status'] ){
@@ -707,7 +708,7 @@
           }
         }
       });
-      $table = this.detachDialog.find('#volume-detach-grid');
+      var $table = this.detachDialog.find('#volume-detach-grid');
       $table.html('');
       COL_IN_ROW = 3;
       for (i=0; i<Math.ceil(volumes.length/COL_IN_ROW); i++) {

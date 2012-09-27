@@ -759,7 +759,7 @@
         $('<div>').append(
           $('<span>').text(launch_instance_advanced_userdata),
         $('<div>').append(
-          $('<input>').attr('id','launch-wizard-advanced-input-userdata').attr('type','text').change(function(e){
+          $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title','Enter userdata').addClass('description').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone().children()); 
           })),
@@ -1136,7 +1136,7 @@
     _initAdvancedSection : function(){
       var thisObj = this;
       thisObj._enableAdvancedLink();
-      thisObj.element.find('#launch-wizard-advanced').find('input#launch-wizard-advanced-input-userdata').trigger('change');
+      thisObj.element.find('#launch-wizard-advanced').find('#launch-wizard-advanced-input-userdata').trigger('change');
       thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
