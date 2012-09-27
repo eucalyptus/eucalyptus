@@ -253,7 +253,7 @@ char * euca_sign_url (const char * verb, const char * date, const char * url)
       logprintfl (EUCAERROR, "error: failed to open private key file %s\n", pk_file);
       RSA_free (rsa);
     } else {
-      logprintfl (EUCADEBUG2, "euca_sign_url(): reading private key file %s\n", pk_file);
+      logprintfl (EUCATRACE, "euca_sign_url(): reading private key file %s\n", pk_file);
       PEM_read_RSAPrivateKey(fp, &rsa, NULL, NULL); /* read the PEM-encoded file into rsa struct */
       if ( rsa==NULL ) {
 	logprintfl (EUCAERROR, "error: failed to read private key file %s\n", pk_file);
@@ -273,14 +273,14 @@ char * euca_sign_url (const char * verb, const char * date, const char * url)
 	  /* finally, SHA1 and sign with PK */
 	  assert ((strlen(verb)+strlen(date)+strlen(url)+4)<=BUFSIZE);
 	  snprintf (input, BUFSIZE, "%s\n%s\n%s\n", verb, date, url);
-	  logprintfl (EUCADEBUG2, "euca_sign_url(): signing input %s\n", get_string_stats(input));	
+	  logprintfl (EUCAEXTREME, "euca_sign_url(): signing input %s\n", get_string_stats(input));	
 	  SHA1 ((unsigned char *)input, strlen(input), sha1);
 	  if ((ret = RSA_sign (NID_sha1, sha1, SHA_DIGEST_LENGTH, sig, &siglen, rsa))!=1) {
 	    logprintfl (EUCAERROR, "error: RSA_sign() failed\n");
 	  } else {
-	    logprintfl (EUCADEBUG2, "euca_sign_url(): signing output %d\n", sig[siglen-1]);	
+	    logprintfl (EUCAEXTREME, "euca_sign_url(): signing output %d\n", sig[siglen-1]);	
 	    sig_str = base64_enc (sig, siglen);
-	    logprintfl (EUCADEBUG2, "euca_sign_url(): base64 signature %s\n", get_string_stats((char *)sig_str));	
+	    logprintfl (EUCAEXTREME, "euca_sign_url(): base64 signature %s\n", get_string_stats((char *)sig_str));	
 	  }
 	  free (sig);
 	}

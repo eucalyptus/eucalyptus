@@ -323,7 +323,7 @@ static int close_and_unlock (int fd)
     int ret = 0;
     { // critical section
         pthread_mutex_lock (&_blobstore_mutex); // grab global lock (we will not block below and we may be deallocating)
-        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: obtained global lock for closing of fd=%d\n", (unsigned int)pthread_self(), fd);
+        logprintfl (EUCATRACE, "{%u} close_and_unlock: obtained global lock for closing of fd=%d\n", (unsigned int)pthread_self(), fd);
         
         blobstore_filelock * path_lock = NULL; // lock struct to which this fd belongs
         int index = -1; // index of this fd entry in the lock struct
@@ -372,11 +372,11 @@ static int close_and_unlock (int fd)
                         * next_ptr = path_lock->next; // remove from LL
                         do_free = TRUE;
                         _locks_list_rem_ctr++;
-                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: unlocked and freed fd=%d path=%s\n", 
+                        logprintfl (EUCATRACE, "{%u} close_and_unlock: unlocked and freed fd=%d path=%s\n", 
                                     (unsigned int)pthread_self(), fd, path_lock->path);
                         
                     } else {
-                        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: kept fd=%d path=%d open/refs=%d/%d\n", 
+                        logprintfl (EUCATRACE, "{%u} close_and_unlock: kept fd=%d path=%d open/refs=%d/%d\n", 
                                     (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
                     }
                     pthread_rwlock_unlock (&(path_lock->lock)); // give up the Posix lock
@@ -408,7 +408,7 @@ static int close_and_unlock (int fd)
         else
             _close_error_ctr++;
         
-        logprintfl (EUCADEBUG2, "{%u} close_and_unlock: releasing global lock for closing of fd=%d ret=%d\n", (unsigned int)pthread_self(), fd, ret);
+        logprintfl (EUCATRACE, "{%u} close_and_unlock: releasing global lock for closing of fd=%d ret=%d\n", (unsigned int)pthread_self(), fd, ret);
         pthread_mutex_unlock (&_blobstore_mutex);
     } // end of critical section
     
@@ -521,7 +521,7 @@ static int open_and_lock (const char * path,
 
     // open/create the file, using Posix file locks for inter-process locking
     int fd = open (path, o_flags, mode);
-    logprintfl (EUCADEBUG2, "{%u} open_and_lock: open fd=%d flags=%0x path=%s\n", (unsigned int)pthread_self(), fd, o_flags, path);
+    logprintfl (EUCATRACE, "{%u} open_and_lock: open fd=%d flags=%0x path=%s\n", (unsigned int)pthread_self(), fd, o_flags, path);
     if (fd == -1) {
         PROPAGATE_ERR (BLOBSTORE_ERROR_UNKNOWN);
         goto error;
@@ -593,7 +593,7 @@ static int open_and_lock (const char * path,
             pthread_mutex_unlock (&_blobstore_mutex);
             goto error;
         }
-        logprintfl (EUCADEBUG2, "{%u} open_and_lock: could not acquire %s lock, sleeping on %s\n", (unsigned int)pthread_self(), (ret==0)?("file"):("posix"), path);
+        logprintfl (EUCATRACE, "{%u} open_and_lock: could not acquire %s lock, sleeping on %s\n", (unsigned int)pthread_self(), (ret==0)?("file"):("posix"), path);
         
         usleep (BLOBSTORE_SLEEP_INTERVAL_USEC);
     }
@@ -618,7 +618,7 @@ static int open_and_lock (const char * path,
         struct flock l;
         fcntl (fd, F_GETLK, flock_whole_file (&l, l_type));
         
-        logprintfl (EUCADEBUG2, "{%u} open_and_lock: locked fd=%d path=%s flags=%d ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
+        logprintfl (EUCATRACE, "{%u} open_and_lock: locked fd=%d path=%s flags=%d ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n", 
                     (unsigned int)pthread_self(), fd, path, o_flags, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
     }
     return fd;
@@ -669,11 +669,11 @@ static int open_and_lock (const char * path,
                 * next_ptr = path_lock->next; // remove from LL                                                                                                         
                 do_free = TRUE;
                 _locks_list_rem_ctr++;
-                logprintfl (EUCADEBUG2, "{%u} open_and_lock: freed fd=%d path=%s\n",
+                logprintfl (EUCATRACE, "{%u} open_and_lock: freed fd=%d path=%s\n",
                             (unsigned int)pthread_self(), fd, path_lock->path);
                 
             } else {
-                logprintfl (EUCADEBUG2, "{%u} open_and_lock: kept fd=%d path=%d open/refs=%d/%d\n",
+                logprintfl (EUCATRACE, "{%u} open_and_lock: kept fd=%d path=%d open/refs=%d/%d\n",
                             (unsigned int)pthread_self(), fd, path_lock->path, open_fds, path_lock->refs);
             }
             
@@ -992,7 +992,7 @@ int blobstore_lock ( blobstore * bs, long long timeout_usec)
     char meta_path [PATH_MAX];
     snprintf (meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
 
-    logprintfl (EUCADEBUG2, "{%u} blobstore_lock: called for %s\n", (unsigned int)pthread_self(), bs->path);
+    logprintfl (EUCATRACE, "{%u} blobstore_lock: called for %s\n", (unsigned int)pthread_self(), bs->path);
     int fd = open_and_lock (meta_path, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM);
     if (fd!=-1)
         bs->fd = fd;
@@ -1004,7 +1004,7 @@ int blobstore_unlock ( blobstore * bs )
 {
     int fd = bs->fd;
     bs->fd = -1;
-    logprintfl (EUCADEBUG2, "{%u} blobstore_unlock: called for %s\n", (unsigned int)pthread_self(), bs->path);
+    logprintfl (EUCATRACE, "{%u} blobstore_unlock: called for %s\n", (unsigned int)pthread_self(), bs->path);
     return close_and_unlock (fd);
 }
 
@@ -1283,7 +1283,7 @@ static int read_array_blockblob_metadata_path (blockblob_path_t path_t, const bl
             break;
         }
 
-        logprintfl(EUCADEBUG2, "%s => [%d] READ LINE %s rdLen %d, n %d\n", __func__, fd, line, rdLen, n);
+        logprintfl(EUCAEXTREME, "%s => [%d] READ LINE %s rdLen %d, n %d\n", __func__, fd, line, rdLen, n);
 
         // Add one more entry to our metadata array
         if((bigger_lines = realloc(lines, ((i + 1) * sizeof(char *)))) == NULL) {
@@ -2094,7 +2094,7 @@ blockblob * blockblob_open ( blobstore * bs,
         return NULL;
     }
 
-    logprintfl (EUCADEBUG2, "{%u} blockblob_open: opening blob id=%s flags=%d timeout=%lld\n", (unsigned int)pthread_self(), id, flags, timeout_usec);
+    logprintfl (EUCATRACE, "{%u} blockblob_open: opening blob id=%s flags=%d timeout=%lld\n", (unsigned int)pthread_self(), id, flags, timeout_usec);
 
     blockblob * bbs = NULL; // a temp LL of blockblobs, used for computing free space and for purging
     blockblob * bb = calloc (1, sizeof (blockblob));
@@ -2350,9 +2350,9 @@ blockblob * blockblob_open ( blobstore * bs,
     }
 
  out:
-    logprintfl (EUCADEBUG2, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
+    logprintfl (EUCATRACE, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
     if (bb==NULL) {
-        logprintfl (EUCADEBUG2, "{%u} blockblob_open: errno=%d msg=%s\n", (unsigned int)pthread_self(), _blobstore_errno, blobstore_get_last_msg());
+        logprintfl (EUCATRACE, "{%u} blockblob_open: errno=%d msg=%s\n", (unsigned int)pthread_self(), _blobstore_errno, blobstore_get_last_msg());
     }
     
     free_bbs (bbs);
@@ -2389,7 +2389,7 @@ int blockblob_close ( blockblob * bb )
         return -1;
     }
     int ret = 0;
-    logprintfl (EUCADEBUG2, "{%u} blockblob_close: closing blob id=%s\n", (unsigned int)pthread_self(), bb->id);
+    logprintfl (EUCATRACE, "{%u} blockblob_close: closing blob id=%s\n", (unsigned int)pthread_self(), bb->id);
 
     // do not remove /dev/loop* if it is used by device mapper 
     // (we do not care about BLOCKBLOB_STATUS_OPENED because 
@@ -4193,7 +4193,7 @@ int main (int argc, char ** argv)
     getcwd (cwd, sizeof (cwd));
     srandom (time(NULL));
 
-    logfile (NULL, EUCADEBUG2, 4);
+    logfile (NULL, EUCATRACE, 4);
     blobstore_set_error_function (dummy_err_fn);    
 
     // if an argument is specified, it is treated as a blob name to create 

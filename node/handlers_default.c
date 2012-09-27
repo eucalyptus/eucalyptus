@@ -353,7 +353,7 @@ doDescribeInstances( struct nc_state_t *nc,
 	ncInstance *instance, *tmp;
 	int total, i, j, k;
     
-	logprintfl(EUCADEBUG, "doDescribeInstances: userId=%s correlationId=%s epoch=%d services[0].name=%s services[0].type=%s services[0].uris[0]=%s\n", 
+	logprintfl(EUCADEBUG, "invoked userId=%s correlationId=%s epoch=%d services[0]{.name=%s .type=%s .uris[0]=%s}\n", 
                SP(meta->userId), 
                SP(meta->correlationId), 
                meta->epoch, 
@@ -456,11 +456,11 @@ doDescribeResource(	struct nc_state_t *nc,
     
     res = allocate_resource ("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
     if (res == NULL) {
-        logprintfl (EUCAERROR, "error: doDescribeResouce: out of memory\n");
+        logprintfl (EUCAERROR, "out of memory\n");
         return 1;
     }
     *outRes = res;
-	logprintfl(EUCADEBUG, "doDescribeResource: cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
+	logprintfl(EUCADEBUG, "returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", 
                cores_free, nc->cores_max,
                mem_free, nc->mem_max,
                disk_free, nc->disk_max,
