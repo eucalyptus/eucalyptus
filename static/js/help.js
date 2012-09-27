@@ -61,7 +61,7 @@ var help_dashboard = {
    load : function(arg){
     loadHtml('help/'+arg.language+'/console_dashboard.html', function(data){help_dashboard.landing_content=data})
    },
-   landing_content: "",
+   landing_content: ""
 }
   //[keypair]
 var help_keypair = {
@@ -79,7 +79,7 @@ var help_image = {
   load : function(arg){
     loadHtml('help/'+arg.language+'/console_manage_images.html', function(data){help_image.landing_content=data})
   },
-  landing_content: "",
+  landing_content: ""
 };
 
 var help_snapshot = {
@@ -113,10 +113,12 @@ var help_volume = {
     loadHtml('help/'+arg.language+'/console_manage_volumes.html', function(data){help_volume.landing_content=data})
     loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.dialog_add_content=data})
     loadHtml('help/'+arg.language+'/console_detach_volume.html', function(data){help_volume.dialog_detach_content=data})
+    loadHtml('help/'+arg.language+'/console_delete_volumes.html', function(data){help_volume.dialog_delete_content=data})
   },
   landing_content: "",
   dialog_add_content: "",
-  dialog_delete_content: "",
+  dialog_detach_content: "",
+  dialog_delete_content: ""
 };
 
 var help_sgroup = {
@@ -129,7 +131,7 @@ var help_sgroup = {
   landing_content: "",
   dialog_add_content: "",
   dialog_edit_content: "",
-  dialog_delete_content: "",
+  dialog_delete_content: ""
 }
 
 var help_instance = {
@@ -144,23 +146,23 @@ var help_instance = {
   dialog_stop_content: "",
   dialog_connect_content: "",
   dialog_console_content: "",
-  dialog_password_content: "",
+  dialog_password_content: ""
 }
 
 var help_about = {
   load : function(arg) {
     loadHtml('help/'+arg.language+'/console_about.html', function(data){help_about.dialog_content=data})
   },
-  dialog_content: "",
+  dialog_content: ""
 }
 
 var help_launcher = {
   load : function(arg) {
     loadHtml('help/'+arg.language+'/console_create_instances.html', function(data){help_launcher.landing_content=data})
   },
-  landing_content: "", 
+  landing_content: "" 
 }
 
 var help_launch_more = {
-  dialog_launchmore_content: "",
+  dialog_launchmore_content: ""
 }
