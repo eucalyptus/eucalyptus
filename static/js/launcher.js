@@ -219,38 +219,6 @@
     },
     _selectedSection : null,
     _imageTable : null,
-    _inferImageName : function(manifest, desc, platform){
-      if(!platform)
-        platform='linux';
-      var name = platform;
-     // Regex '$distro[seperator]$version' 
-      var inferMap = 
-        {'rhel5':new RegExp('(rhel|redhat).5','ig'),
-         'rhel6':new RegExp('(rhel|redhat).6','ig'),
-         'rhel':new RegExp('(rhel|redhat)','ig'),
-         'centos5':new RegExp('centos.5','ig'),
-         'centos6':new RegExp('centos.6','ig'),
-         'centos':new RegExp('centos','ig'),
-         'lucid': new RegExp('(lucid|ubuntu.10[\\W\\s]04)','ig'),
-         'precise':new RegExp('(precise|ubuntu.12[\\W\\s]04)','ig'),
-         'ubuntu':new RegExp('ubuntu','ig'),
-         'debian' :new RegExp('debian','ig'), 
-         'fedora' : new RegExp('fedora','ig'),
-         'opensuse' : new RegExp('opensuse','ig'),
-         'suse' : new RegExp('suse', 'ig'),
-         'gentoo' : new RegExp('gentoo', 'ig'),
-         'linux' : new RegExp('linux','ig'),
-         'windows' :new RegExp('windows','ig'),
-        };
-      for (key in inferMap){
-        var reg = inferMap[key];
-        if(reg.test(manifest) || reg.test(desc)){
-          name = key;
-          break;
-        }
-      }
-      return name;
-    },
 
     _makeImageSection : function($section){ 
       var thisObj = this;
@@ -329,7 +297,7 @@
                  arch=arch.replace('x86_64', '64 bit');
 
                  var name = '';
-                 var imgKey = thisObj._inferImageName(oObj.aData.location, desc, oObj.aData.platform);
+                 var imgKey = inferImageName(oObj.aData.location, desc, oObj.aData.platform);
                  if(imgKey)
                    name = nameMap[imgKey];
                  var $cell = $('<div>').addClass(imgKey).append(
@@ -1156,7 +1124,26 @@
       $section.children().detach(); 
       $section.append(content);
     },
-    
+    _showError : function(step){
+      var thisObj = this;
+      var $summary = thisObj.element.find('#launch-wizard-summary');
+      var $step = $summary.find('#summary-'+step);
+      $step.addClass('required-missing');
+      var header = '';
+      if(step==='image')
+        header = launch_instance_section_header_image+':';
+      else if(step==='type')
+        header = launch_instance_section_header_type+':';
+      else if(step==='security')
+        header = launch_instance_section_header_security+':';
+      else if(step==='advanced')
+        header = launch_instance_section_header_advanced+':';
+      $step.find('.required-missing-message').remove();
+      $step.append($('<div>').addClass('required-missing-message').append($('<span>').html(header), $('<span>').html(launch_instance_required_missing)));
+      return false;
+    },
+  ///////////// PUBLIC METHODS  /////////////////// 
+
     updateLaunchParam : function(key, val) {
       var thisObj = this;
       thisObj.launchParam[key] = val;
@@ -1263,24 +1250,6 @@
       });
     },
  
-    _showError : function(step){
-      var thisObj = this;
-      var $summary = thisObj.element.find('#launch-wizard-summary');
-      var $step = $summary.find('#summary-'+step);
-      $step.addClass('required-missing');
-      var header = '';
-      if(step==='image')
-        header = launch_instance_section_header_image+':';
-      else if(step==='type')
-        header = launch_instance_section_header_type+':';
-      else if(step==='security')
-        header = launch_instance_section_header_security+':';
-      else if(step==='advanced')
-        header = launch_instance_section_header_advanced+':';
-      $step.find('.required-missing-message').remove();
-      $step.append($('<div>').addClass('required-missing-message').append($('<span>').html(header), $('<span>').html(launch_instance_required_missing)));
-      return false;
-    }
   });
 })(jQuery,
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
