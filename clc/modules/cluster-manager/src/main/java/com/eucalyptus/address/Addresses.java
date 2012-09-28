@@ -65,7 +65,6 @@ package com.eucalyptus.address;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Address;
 import java.util.List;
 import java.util.NoSuchElementException;
-import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -74,6 +73,9 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -141,7 +143,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         return arg0.getState( ).isAddressingInitialized( ) && arg0.getState( ).hasPublicAddressing( );
       }
     } );
-    Class<? extends AbstractSystemAddressManager> newManager = null;
+    Class<? extends AbstractSystemAddressManager> newManager;
     if ( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) ) {
       newManager = DynamicSystemAddressManager.class;
     } else {
@@ -219,7 +221,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       }
       return true;
     }
-  };
+  }
   
   public static void system( final VmInstance vm ) {
     try {
@@ -239,15 +241,24 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       if ( addr.isAssigned( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
+          final ServiceConfiguration ccConfig =
+              Topology.lookup( ClusterController.class, vm.lookupPartition() );
           if ( VmStateSet.RUN.apply( vm ) ) {
             AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
               @Override
               public void fire( ) {
                 try {
                   Addresses.system( vm );
-                } catch ( final NoSuchElementException ex ) {}
+                } catch ( final NoSuchElementException ex ) {
+                } finally {
+                  try {
+                    addr.release();
+                  } catch ( Exception e ) {
+                    LOG.error( "Error releasing address after unassign", e );
+                  }
+                }
               }
-            } ).dispatch( vm.getPartition( ) );
+            } ).dispatch( ccConfig );
           }
         } catch ( TerminatedInstanceException ex ) {
         } catch ( NoSuchElementException ex ) {
