@@ -1421,7 +1421,6 @@ public class OverlayManager implements LogicalStorageManager {
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
 			disableLogicalVolume(absoluteLVName);
-			deleteLogicalVolume(loDevName, vgName, absoluteLVName);
 			removeLoopback(loDevName);
 			foundLVMVolumeInfo.setLoDevName(null);
 			volumeManager.finish();
