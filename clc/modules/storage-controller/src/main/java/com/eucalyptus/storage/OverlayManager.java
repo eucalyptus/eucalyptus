@@ -504,6 +504,7 @@ public class OverlayManager implements LogicalStorageManager {
 			createLogicalVolume(loDevName, vgName, lvName);
 			lvmVolumeInfo.setVgName(vgName);
 			lvmVolumeInfo.setLvName(lvName);
+			lvmVolumeInfo.setPvName(loDevName);
 			lvmVolumeInfo.setVolumeId(volumeId);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
@@ -1370,48 +1371,32 @@ public class OverlayManager implements LogicalStorageManager {
 	public String attachVolume(String volumeId, List<String> nodeIqns)
 	throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-
-		String vgName = "vg-" + Hashes.getRandom(4);
-		String lvName = "lv-" + Hashes.getRandom(4);
-		LVMVolumeInfo lvmVolumeInfo = null;
-		if(exportManager instanceof AOEManager) {
-			lvmVolumeInfo = new AOEVolumeInfo();
-		} else {
-			lvmVolumeInfo = new ISCSIVolumeInfo();
-		}
-		volumeManager.finish();
-		String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
+                LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
+                if(lvmVolumeInfo != null) {
 		//create file and attach to loopback device
 		long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
+		String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 		try {
 			String loDevName = createLoopback(rawFileName);
-			//create physical volume, volume group and logical volume
-			createLogicalVolume(loDevName, vgName, lvName);
+			String vgName = lvmVolumeInfo.getVgName();
+			String lvName = lvmVolumeInfo.getLvName();
+			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+			lvmVolumeInfo.setLoDevName(loDevName);
+			enableLogicalVolume(absoluteLVName);
 			//export logical volume
 			try {
 				volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
 			} catch(EucalyptusCloudException ex) {
 				LOG.error(ex);
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				String returnValue = removeLogicalVolume(absoluteLVName);
-				returnValue = removeVolumeGroup(vgName);
-				returnValue = removePhysicalVolume(loDevName);
-				removeLoopback(loDevName);
 				throw ex;
 			}
-			lvmVolumeInfo.setLoDevName(loDevName);
-			lvmVolumeInfo.setPvName(loDevName);
-			lvmVolumeInfo.setVgName(vgName);
-			lvmVolumeInfo.setLvName(lvName);
-			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
-			volumeManager = new VolumeEntityWrapperManager();
-			volumeManager.add(lvmVolumeInfo);
 			volumeManager.finish();
 		} catch(EucalyptusCloudException ex) {
 			String error = "Unable to run command: " + ex.getMessage();
 			volumeManager.abort();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
+		}
 		}
 		return getVolumeProperty(volumeId);
 	}
@@ -1427,21 +1412,10 @@ public class OverlayManager implements LogicalStorageManager {
 			String lvName = foundLVMVolumeInfo.getLvName();
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
-			try {
-				deleteLogicalVolume(loDevName, vgName, absoluteLVName);
-				removeLoopback(loDevName);
-				if(getLoopback(loDevName).length() != 0) {
-					throw new EucalyptusCloudException("Unable to remove loopback device: " + loDevName);
-				} else {
-					LOG.info(loDevName + "was removed.");
-				}
-				volumeManager.finish();
-			} catch(EucalyptusCloudException ex) {
-				volumeManager.abort();
-				String error = "Unable to run command: " + ex.getMessage();
-				LOG.error(error);
-				throw new EucalyptusCloudException(error);
-			}
+                        disableLogicalVolume(absoluteLVName);
+			deleteLogicalVolume(loDevName, vgName, absoluteLVName);
+                        removeLoopback(loDevName);
+			volumeManager.finish();
 		}  else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
