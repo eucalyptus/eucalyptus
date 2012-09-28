@@ -259,3 +259,35 @@ function isValidIp(s) {
   return true;
 }
 
+function inferImageName(manifest, desc, platform) {
+  if(!platform)
+    platform='linux';
+  var name = platform;
+ // Regex '$distro[seperator]$version' 
+  var inferMap = 
+    {'rhel5':new RegExp('(rhel|redhat).5','ig'),
+     'rhel6':new RegExp('(rhel|redhat).6','ig'),
+     'rhel':new RegExp('(rhel|redhat)','ig'),
+     'centos5':new RegExp('centos.5','ig'),
+     'centos6':new RegExp('centos.6','ig'),
+     'centos':new RegExp('centos','ig'),
+     'lucid': new RegExp('(lucid|ubuntu.10[\\W\\s]04)','ig'),
+     'precise':new RegExp('(precise|ubuntu.12[\\W\\s]04)','ig'),
+     'ubuntu':new RegExp('ubuntu','ig'),
+     'debian' :new RegExp('debian','ig'), 
+     'fedora' : new RegExp('fedora','ig'),
+     'opensuse' : new RegExp('opensuse','ig'),
+     'suse' : new RegExp('suse', 'ig'),
+     'gentoo' : new RegExp('gentoo', 'ig'),
+     'linux' : new RegExp('linux','ig'),
+     'windows' :new RegExp('windows','ig'),
+    };
+  for (key in inferMap){
+    var reg = inferMap[key];
+    if(reg.test(manifest) || reg.test(desc)){
+      name = key;
+      break;
+    }
+  }
+  return name;
+}

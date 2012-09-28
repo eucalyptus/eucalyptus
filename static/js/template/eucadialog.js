@@ -144,11 +144,13 @@
 
     _setHelp : function($dialog) {
       var thisObj = this;
-      $buttonPane = $dialog.find('.ui-dialog-buttonpane');
-      $titleBar = $dialog.find('.ui-dialog-titlebar');
-      $contentPane =  this.element.find('.dialog-inner-content');
-      $resourcePane = this.element.find('.selected-resources');
-      $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
+      var $buttonPane = $dialog.find('.ui-dialog-buttonpane');
+      var $titleBar = $dialog.find('.ui-dialog-titlebar');
+      var $contentPane =  this.element.find('.dialog-inner-content');
+      $contentPane.after($('<div>').addClass('dialog-help-content').append(thisObj.options.help.content).hide()); 
+      var $helpPane = this.element.find('.dialog-help-content');
+      var $resourcePane = this.element.find('.selected-resources');
+      var $helpLink = $titleBar.find('.'+thisObj.options.help_icon_class+' a');
       var $help = thisObj.options.help;
       if(!$help || !$help.content || !$help.content.find('.dialog-help-content').html() || $help.content.find('.dialog-help-content').html().trim().length <= 0){
         $helpLink.remove();
@@ -156,7 +158,27 @@
       }
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
-          $contentPane.flip({
+          $contentPane.fadeOut(function(){$helpPane.fadeIn(); thisObj.help_flipped = true;
+            $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
+            $helpLink.html('&nbsp;');
+            $buttonPane.hide();
+            $resourcePane.hide();
+            $titleBar.find('span').text('');
+          });
+        }else{
+          $helpPane.fadeOut(function(){$contentPane.fadeIn(); thisObj.help_flipped = false;
+            $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
+            $helpLink.html('&nbsp;');
+            $buttonPane.show();
+            $resourcePane.show();
+            $titleBar.find('span').text(thisObj.options.title);
+          });
+        }
+      });
+      thisObj.element.find('.help-revert-button a').click( function(evt) {
+        $helpLink.trigger('click');
+      });
+          /*$contentPane.flip({
             direction : 'lr',
             speed : 300,
             color : 'white',
@@ -198,7 +220,7 @@
         }else{ // when flipped to help page
           $contentPane.revertFlip();
         }
-      }); 
+      });*/ 
     },
 
     _makeButtons : function() {

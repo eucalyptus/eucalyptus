@@ -200,7 +200,7 @@
       }
       $emptyDataTd = this.element.find('table tbody').find('.dataTables_empty');
       if( $emptyDataTd && (oSettings.oPreviousSearch.sSearch == undefined || oSettings.oPreviousSearch.sSearch == '') ){
-        $createNew = $('<a>').text(thisObj.options.text.create_resource);
+        var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
         $createNew.click( function() { thisObj.options.create_new_function.call(); });
         text = $emptyDataTd.html();
         $emptyDataTd.html('');
