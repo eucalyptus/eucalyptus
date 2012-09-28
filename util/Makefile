@@ -64,7 +64,7 @@ include ../Makedefs
 
 #DEBUGS = -DDEBUG # -DDEBUG1
 CC += -g
-all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap
+all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap euca-generate-fault
 
 build: all
 
@@ -84,7 +84,10 @@ test_wc: wc.c misc.o log.o ../storage/diskutil.o ipc.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -D_UNIT_TEST -o test_wc wc.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
 test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
-	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o $(LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
+
+euca-generate-fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
+	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
 test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
@@ -96,14 +99,15 @@ test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
 	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
 
 clean:
-	rm -rf *~ *.o test test_fault test_misc test_wc euca_rootwrap euca_mountwrap test_sensor
+	rm -rf *~ *.o test test_fault euca-generate-fault test_misc test_wc euca_rootwrap euca_mountwrap test_sensor
 
 distclean:
 	rm -rf eucalyptus-config.h
 
-install:
+install: all
 	$(INSTALL) -m 0755 euca_rootwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
 	$(INSTALL) -m 0755 euca_mountwrap $(DESTDIR)$(usrdir)/lib/eucalyptus/
+	$(INSTALL) -m 0755 euca-generate-fault $(DESTDIR)$(usrdir)/sbin/
 	$(INSTALL) -d $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
 	$(INSTALL) -m 0644 faults/en_US/common.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
 	$(INSTALL) -m 0644 -v faults/en_US/????.xml $(DESTDIR)$(usrdir)/share/eucalyptus/faults/en_US/
