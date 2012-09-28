@@ -86,7 +86,15 @@
         thisObj._drawCallback(oSettings);
       }
       dt_arg['fnInitComplete'] = function( oSettings ) {
-        oSettings.oLanguage.sZeroRecords = volume_no_records;//TODO: custom
+        oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
+        $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
+        if( $emptyDataTd ){
+          var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
+          $createNew.click( function() { thisObj.options.create_new_function.call(); });
+          text = $emptyDataTd.html();
+          $emptyDataTd.html('');
+          $emptyDataTd.append($.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural), '&nbsp;', $createNew);
+        }
       }
       var sDom = '<"table_'+ this.options.id + '_header">';
       if(thisObj.options.filters){
@@ -105,6 +113,7 @@
       dt_arg.oLanguage['sProcessing'] = "<img src='images/dots32.gif'/> &nbsp; <span>"+processing_data+"</span>";
       dt_arg.oLanguage['sLoadingRecords'] =  please_wait_loading_data;
       dt_arg.oLanguage['sZeroRecords'] = please_wait_loading_data;
+      dt_arg.oLanguage['sEmptyTable'] = $.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural);
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
         dt_arg[k] = v;
@@ -199,14 +208,6 @@
           if(oldVal !== newVal)
             $(td).html(newVal);
         });
-      }
-      $emptyDataTd = this.element.find('table tbody').find('.dataTables_empty');
-      if( $emptyDataTd && (oSettings.oPreviousSearch.sSearch == undefined || oSettings.oPreviousSearch.sSearch == '') ){
-        var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
-        $createNew.click( function() { thisObj.options.create_new_function.call(); });
-        text = $emptyDataTd.html();
-        $emptyDataTd.html('');
-        $emptyDataTd.append(text, '&nbsp;', $createNew);
       }
     },
 

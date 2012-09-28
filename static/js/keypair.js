@@ -37,9 +37,6 @@
         id : 'keys', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
-          "oLanguage": {
-            "sEmptyTable": keypair_empty_data
-          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -56,6 +53,7 @@
           create_resource : keypair_create,
           resource_found : keypair_found,
           resource_search : keypair_search,
+          resource_plural : keypair_plural,
         },
         menu_actions : function(args){ 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};

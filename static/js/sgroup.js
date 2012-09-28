@@ -38,9 +38,6 @@
         id : 'sgroups', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
-          "oLanguage": {
-            "sEmptyTable": sgroup_empty_data
-          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -67,6 +64,7 @@
           create_resource : sgroup_create,
           resource_found : sgroup_found,
           resource_search : sgroup_search,
+          resource_plural : sgroup_plural,
         },
         menu_actions : function(){
           return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
