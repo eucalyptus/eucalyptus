@@ -724,9 +724,15 @@ public class OverlayManager implements LogicalStorageManager {
 			try {
 				//mount volume and loopback and enable
 				String absoluteVolLVName = lvmRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVgName() + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
-				String volLoDevName = createLoopback(DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId);
-				enableLogicalVolume(absoluteVolLVName);
+				String volLoDevName = foundLVMVolumeInfo.getLoDevName();
+				boolean volumeIsMounted = true;
+				if(!logicalVolumeExists(absoluteVolLVName)) {
+					volLoDevName = createLoopback(DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId);
+					enableLogicalVolume(absoluteVolLVName);
+					volumeIsMounted = false;
+				}
 				String loDevName = createLoopback(rawFileName, snapshotSize);
+
 				//create physical volume, volume group and logical volume
 				createSnapshotLogicalVolume(loDevName, vgName, absoluteLVName, lvName);
 
@@ -761,8 +767,10 @@ public class OverlayManager implements LogicalStorageManager {
 				volumeManager.finish();
 
 				//tear down volume
-				disableLogicalVolume(absoluteVolLVName);
-				removeLoopback(volLoDevName);
+				if(!volumeIsMounted) {
+					disableLogicalVolume(absoluteVolLVName);
+					removeLoopback(volLoDevName);
+				}
 			} catch(EucalyptusCloudException ex) {
 				if(volumeManager != null)
 					volumeManager.abort();
@@ -1371,32 +1379,32 @@ public class OverlayManager implements LogicalStorageManager {
 	public String attachVolume(String volumeId, List<String> nodeIqns)
 	throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
-                LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-                if(lvmVolumeInfo != null) {
-		//create file and attach to loopback device
-		long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
-		String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
-		try {
-			String loDevName = createLoopback(rawFileName);
-			String vgName = lvmVolumeInfo.getVgName();
-			String lvName = lvmVolumeInfo.getLvName();
-			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-			lvmVolumeInfo.setLoDevName(loDevName);
-			enableLogicalVolume(absoluteLVName);
-			//export logical volume
+		LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
+		if(lvmVolumeInfo != null) {
+			//create file and attach to loopback device
+			long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
+			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 			try {
-				volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
+				String loDevName = createLoopback(rawFileName);
+				String vgName = lvmVolumeInfo.getVgName();
+				String lvName = lvmVolumeInfo.getLvName();
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				lvmVolumeInfo.setLoDevName(loDevName);
+				enableLogicalVolume(absoluteLVName);
+				//export logical volume
+				try {
+					volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
+				} catch(EucalyptusCloudException ex) {
+					LOG.error(ex);
+					throw ex;
+				}
+				volumeManager.finish();
 			} catch(EucalyptusCloudException ex) {
-				LOG.error(ex);
-				throw ex;
+				String error = "Unable to run command: " + ex.getMessage();
+				volumeManager.abort();
+				LOG.error(error);
+				throw new EucalyptusCloudException(error);
 			}
-			volumeManager.finish();
-		} catch(EucalyptusCloudException ex) {
-			String error = "Unable to run command: " + ex.getMessage();
-			volumeManager.abort();
-			LOG.error(error);
-			throw new EucalyptusCloudException(error);
-		}
 		}
 		return getVolumeProperty(volumeId);
 	}
@@ -1412,9 +1420,10 @@ public class OverlayManager implements LogicalStorageManager {
 			String lvName = foundLVMVolumeInfo.getLvName();
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
-                        disableLogicalVolume(absoluteLVName);
+			disableLogicalVolume(absoluteLVName);
 			deleteLogicalVolume(loDevName, vgName, absoluteLVName);
-                        removeLoopback(loDevName);
+			removeLoopback(loDevName);
+			foundLVMVolumeInfo.setLoDevName(null);
 			volumeManager.finish();
 		}  else {
 			volumeManager.abort();
