@@ -2011,7 +2011,7 @@ div#launch-wizard-type-size-legend{
 .launcher-group-rule ul{
     margin: 0 auto;
     padding: 0;
-    clear: left;
+    clear: left; 
 }
 .launcher-group-rule ul li{
     text-align: left;
@@ -2021,17 +2021,30 @@ div#launch-wizard-type-size-legend{
     margin: 1px;
 }
 
+.wizard-section-label {
+    clear: left;
+}
+
+.launch-wizard-section-header .required-label {
+  display: inline-block;
+  width: auto;
+  text-align: left;
+}
+
 #launch-more-summary-contents {
   width : 580px;
   height: 70px;
 }
+
 .launch-more-summary-section {
     float : left;
     margin: 5px 20px;
 }
+
 .launch-more {
   height: 350px;
 }
+
 .launch-more-summary-section input[type='text']{
     width: 20px;
     height: 12px;

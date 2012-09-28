@@ -111,13 +111,13 @@
 
     _makeSectionHeader : function($launcher) {
       var $header = $launcher.find('#launch-wizard-image-header');
-      $header.append($('<span>').html('*'+launch_instance_section_header_image));
+      $header.append($('<span>').addClass('required-label').html(launch_instance_section_header_image));
 
       $header = $launcher.find('#launch-wizard-type-header');
-      $header.append($('<span>').html('*'+launch_instance_section_header_type));
+      $header.append($('<span>').addClass('required-label').html(launch_instance_section_header_type));
 
       $header = $launcher.find('#launch-wizard-security-header');
-      $header.append($('<span>').html('*'+launch_instance_section_header_security));
+      $header.append($('<span>').addClass('required-label').html(launch_instance_section_header_security));
       
       $header = $launcher.find('#launch-wizard-advanced-header');
       $header.append($('<span>').html(launch_instance_section_header_advanced));
@@ -126,7 +126,7 @@
       var thisObj = this;
       var $header = this.element.find('#launch-wizard-image-header');
       $header.children().detach();
-      $header.append($('<a>').attr('href', '#').html('*'+launch_instance_section_header_image).click( function(e) {
+      $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_image).click( function(e) {
         var imgSection = thisObj.element.find('#launch-wizard-image-contents');
         thisObj._selectedSection.slideToggle('fast');
         imgSection.slideToggle('fast');
@@ -141,7 +141,7 @@
       var thisObj = this;
       var $header = this.element.find('#launch-wizard-type-header');
       $header.children().detach();
-      $header.append($('<a>').attr('href', '#').html('*'+launch_instance_section_header_type).click(function(e) {
+      $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_type).click(function(e) {
         var typeSection = thisObj.element.find('#launch-wizard-type-contents');
         thisObj._selectedSection.slideToggle('fast');
         typeSection.slideToggle('fast');
@@ -156,7 +156,7 @@
       var thisObj = this;
       var $header = this.element.find('#launch-wizard-security-header');
       $header.children().detach();
-      $header.append($('<a>').attr('href', '#').html('*'+launch_instance_section_header_security).click(function(e){
+      $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_security).click(function(e){
         var secSection = thisObj.element.find('#launch-wizard-security-contents');
         thisObj._selectedSection.slideToggle('fast');
         secSection.slideToggle('fast');
@@ -451,7 +451,7 @@
       var $size = $content.find('#launch-wizard-type-size');
       var $option = $content.find('#launch-wizard-type-options');
     
-      var $list = $('<ul>').addClass('launch-wizard-type-size').html(launch_instance_type_size_header);
+      var $list = $('<ul>').addClass('launch-wizard-type-size'); //.html(launch_instance_type_size_header);
       var $legend = $('<div>').attr('id','launch-wizard-type-size-legend');
       var selectedType = 'm1.small';
       var typeSelected = false;
@@ -501,9 +501,12 @@
               thisObj._setSummary('type', summarize());
             })));
       });
-      $size.append($list, $legend); 
 
-      $list = $('<ul>').addClass('launch-wizard-type-option').html(launch_instance_type_option_header);
+      $size.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_size_header),
+                   $('<div>').addClass('wizard-section-content').append($list),
+                   $legend); 
+
+      $list = $('<ul>').addClass('launch-wizard-type-option'); //.html(launch_instance_type_option_header);
       $list.append(
         $('<li>').append(
           launch_instance_type_option_numinstance,$('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
@@ -526,7 +529,9 @@
         var azName = results[res].name;
         $az.append($('<option>').attr('value', azName).text(azName));
       }
-      $option.append($list);
+
+      $option.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_option_header),
+                     $('<div>').addClass('wizard-section-content').append($list));
 
       $section.find('#launch-wizard-buttons-type-next').click(function(e) {
         selectedZone = $az.val();
@@ -654,11 +659,12 @@
               });
               src = src.join(', '); 
  
-              $wrapper.append(
-                $('<ul>').text(launch_instance_security_rule).append(
-                  $('<li>').text(protocol),
-                  $('<li>').text(portOrType),
-                  $('<li>').text(src)));
+              $wrapper.append( $('<div>').addClass('wizard-section-label').html(launch_instance_security_rule),
+                               $('<div>').addClass('wizard-section-content').append(
+                                 $('<ul>').append(
+                                   $('<li>').text(protocol),
+                                   $('<li>').text(portOrType),
+                                   $('<li>').text(src))));
               $rule.append($wrapper);
             });
           } 
