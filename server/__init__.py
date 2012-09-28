@@ -162,7 +162,10 @@ class RootHandler(BaseHandler):
                     response = LoginProcessor.post(self)
                 except Exception, err:
                     traceback.print_exc(file=sys.stdout)
-                    raise EuiException(401, 'not authorized')
+                    if isinstance(err, EuiException):
+                        raise err
+                    else:
+                        raise EuiException(401, 'not authorized')
             elif action == 'init':
                 try:
                     response = InitProcessor.post(self)
@@ -223,12 +226,9 @@ class LoginProcessor(ProxyProcessor):
         if config.getboolean('test', 'usemock') == False:
             auth = TokenAuthenticator(config.get('server', 'clchost'), 3600)
             creds = auth.authenticate(account, user, passwd)
-            if creds:
-                session_token = creds.session_token
-                access_id = creds.access_key
-                secret_key = creds.secret_key
-            else:
-                raise EuiException(401, 'Not Authorized')
+            session_token = creds.session_token
+            access_id = creds.access_key
+            secret_key = creds.secret_key
         else:
             # assign bogus values so we never mistake them for the real thing (who knows?)
             session_token = "Larry"

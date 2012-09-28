@@ -1011,7 +1011,7 @@
 
     launchInstance : function(){
       var $container = $('html body').find(DOM_BINDING['main']);
-      $container.maincontainer("changeSelected", e, {selected:'launcher'});
+      $container.maincontainer("changeSelected", null, {selected:'launcher'});
     },
    
     glowNewInstance : function(inst_ids){
