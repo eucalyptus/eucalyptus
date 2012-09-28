@@ -84,8 +84,10 @@
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
         thisObj._drawCallback(oSettings);
-     }
-
+      }
+      dt_arg['fnInitComplete'] = function( oSettings ) {
+        oSettings.oLanguage.sZeroRecords = volume_no_records;//TODO: custom
+      }
       var sDom = '<"table_'+ this.options.id + '_header">';
       if(thisObj.options.filters){
         $.each(thisObj.options.filters, function(idx, filter){
@@ -97,12 +99,12 @@
       sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
       sDom += 'p<"clear">';
       dt_arg['sDom'] = sDom;  
-      if(! dt_arg['oLanguage']) 
+      if(!dt_arg['oLanguage']) 
         dt_arg['oLanguage'] = {};
 
-      dt_arg.oLanguage['sProcessing'] = "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>";
-      dt_arg.oLanguage['sLoadingRecords'] =  "";
-
+      dt_arg.oLanguage['sProcessing'] = "<img src='images/dots32.gif'/> &nbsp; <span>"+processing_data+"</span>";
+      dt_arg.oLanguage['sLoadingRecords'] =  please_wait_loading_data;
+      dt_arg.oLanguage['sZeroRecords'] = please_wait_loading_data;
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
         dt_arg[k] = v;

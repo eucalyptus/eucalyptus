@@ -38,7 +38,6 @@
         dt_arg : {
           "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
           "oLanguage": {
-            "sZeroRecords": keypair_no_records,
             "sEmptyTable": keypair_empty_data
           },
           "aoColumns": [

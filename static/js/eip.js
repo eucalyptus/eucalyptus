@@ -47,7 +47,6 @@
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "oLanguage": {
-            "sZeroRecords": eip_no_records,
             "sEmptyTable": eip_empty_data
           },
           "aoColumns": [

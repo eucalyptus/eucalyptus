@@ -41,7 +41,6 @@
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeVolumes",
           "oLanguage": {
-            "sZeroRecords": volume_no_records,
             "sEmptyTable": volume_empty_data
           },
           "aaSorting": [[ 7, "desc" ]],

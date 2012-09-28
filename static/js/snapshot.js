@@ -43,7 +43,6 @@
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
           "oLanguage": {
-            "sZeroRecords": snapshot_no_records,
             "sEmptyTable": snapshot_empty_data
           },
           "aoColumns": [
