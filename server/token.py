@@ -1,11 +1,13 @@
 import base64
 import boto
 import sys
+import socket
 import traceback
 import urllib2
 import xml.sax
 
 from boto.sts.credentials import Credentials
+import server
 
 class TokenAuthenticator(object):
 
@@ -13,6 +15,7 @@ class TokenAuthenticator(object):
         # make the call to STS service to authenticate with the CLC
         self.auth_url = "http://%s:8773/services/Tokens?Action=GetSessionToken&DurationSeconds=%d&Version=2011-06-15" % (host, duration)
 
+    # raises EuiExcepiton for "Noth Authorized" or "Timed out"
     def authenticate(self, account, user, passwd):
         try:
             req = urllib2.Request(self.auth_url)
@@ -22,7 +25,7 @@ class TokenAuthenticator(object):
                             passwd)
             encoded_auth = base64.b64encode(auth_string.encode('utf8'))
             req.add_header('Authorization', "Basic %s" % encoded_auth)
-            response = urllib2.urlopen(req)
+            response = urllib2.urlopen(req, timeout=5)
             body = response.read()
 
             # parse AccessKeyId, SecretAccessKey and SessionToken
@@ -31,8 +34,10 @@ class TokenAuthenticator(object):
             xml.sax.parseString(body, h)
             return creds
         except urllib2.URLError, err:
-            print err
             traceback.print_exc(file=sys.stdout)
-            return None
+            if isinstance(err.reason, socket.timeout):
+                raise server.EuiException(504, 'Timed out')
+            else:
+                raise server.EuiException(401, 'Not Authorized')
 
 

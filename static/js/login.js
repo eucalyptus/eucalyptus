@@ -63,6 +63,13 @@
    	      },
           onError: function(args){
             thisObj.errorDialog.eucadialog('open');
+            var msgdiv = thisObj.errorDialog.find("#login-error-message")
+            if (args.search("Timeout")>-1) {
+                msgdiv.html($.i18n.map['login_timeout']);
+            }
+            else {
+                msgdiv.html($.i18n.map['login_failure']);
+            }
           }		     
         });
         return false;
