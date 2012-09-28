@@ -270,7 +270,7 @@ public class LoggingResetter {
 					String paramVal = subst(currentElement.getAttribute(LOG4J_VALUE_ATTRIBUTE));
 					if (paramName != null && paramName.equalsIgnoreCase(LOG4J_THRESHOLD_ATTRIBUTE_VALUE)
 							&& paramVal != null && !paramVal.isEmpty()) {
-						level = Level.toLevel(paramVal);
+						level = Level.toLevel(unExtremify(paramVal));
 					}
 				}
 			}
@@ -299,7 +299,7 @@ public class LoggingResetter {
 				if (tagName.equalsIgnoreCase(LOG4J_PRIORITY_TAG) || tagName.equalsIgnoreCase(LOG4J_LEVEL_TAG)) {
 					String levelStr = subst(currentElement.getAttribute(LOG4J_VALUE_ATTRIBUTE));
 					if ((levelStr != null) && !levelStr.isEmpty()) {
-						level = Level.toLevel(levelStr);
+						level = Level.toLevel(unExtremify(levelStr));
 					}
 				}
 			}
@@ -325,7 +325,7 @@ public class LoggingResetter {
 				if (tagName.equalsIgnoreCase(LOG4J_PRIORITY_TAG) || tagName.equalsIgnoreCase(LOG4J_LEVEL_TAG)) {
 					String levelStr = subst(currentElement.getAttribute(LOG4J_VALUE_ATTRIBUTE));
 					if ((levelStr != null) && !levelStr.isEmpty()) {
-						level = Level.toLevel(levelStr);
+						level = Level.toLevel(unExtremify(levelStr));
 					}
 				}
 			}
@@ -334,4 +334,11 @@ public class LoggingResetter {
 			smallLoggingConfiguration.loggerLoggingLevels.put(name,  level);
 		}
 	}
+	
+	private static String unExtremify(String levelStr) {
+		if ("EXTREME".equalsIgnoreCase(levelStr) || "EXHAUST".equalsIgnoreCase(levelStr)) {
+			return "TRACE";
+		} else return levelStr;
+	}
+	
 }

@@ -145,18 +145,6 @@ public class Logs {
    * </pre>
    */
   
-  private static final String DEFAULT_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.5p | %m%n";
-  private static final String DEBUG_LOG_PATTERN       = "%d{yyyy-MM-dd HH:mm:ss} %5.5p %9.9i %-23.23c{1} | %m%n";
-  private static final String EXTREME_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.9p %9.9i %-23.23c{1} %-27.27F:%-5.5L | %m%n";
-  private static final String DEFAULT_LOG_MAX_BACKUPS = "25";
-  private static final String DEFAULT_LOG_MAX_SIZE    = "10MB";
-  
-  private enum LogProps {
-    threshold,
-    pattern,
-    filesize,
-    maxbackups;
-  }
   private static final Logger nullLogger = new NullEucaLogger();
 
   public static Logger extreme( ) {
@@ -216,10 +204,6 @@ public class Logs {
       String exhaustLevel( ) {
         return this.level( );
       }
-      @Override
-   	  public String pattern( ) {
-  		return EXTREME_LOG_PATTERN;
-  	  }
     },
     EXTREME {
       
@@ -233,25 +217,9 @@ public class Logs {
         return this.level( );
       }
 
-      @Override
-   	  public String pattern( ) {
-  		return EXTREME_LOG_PATTERN;
-  	  }
-      
-      
     },
-    TRACE {
-    	@Override
-    	public String pattern( ) {
-    		return DEBUG_LOG_PATTERN;
-    	}
-    },
-    DEBUG {
-    	@Override
-    	public String pattern( ) {
-    		return DEBUG_LOG_PATTERN;
-    	}
-    },
+    TRACE,
+    DEBUG,
     INFO,
     WARN,
     ERROR,
@@ -286,10 +254,6 @@ public class Logs {
       System.setProperty( "euca.log.exhaustive.external", this.exhaustLevel( ) );
       System.setProperty( "euca.log.exhaustive.user", this.exhaustLevel( ) );
       return this;
-    }
-    
-    public String pattern( ) {
-      return DEFAULT_LOG_PATTERN;
     }
     
     String level( ) {

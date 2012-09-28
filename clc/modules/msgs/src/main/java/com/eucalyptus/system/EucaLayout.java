@@ -72,7 +72,7 @@ public class EucaLayout extends EucaPatternLayout {
 	
     private static final String DEFAULT_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.5p | %m%n";
 	private static final String DEBUG_LOG_PATTERN       = "%d{yyyy-MM-dd HH:mm:ss} %5.5p %9.9i %-23.23c{1} | %m%n";
-	private static final String EXTREME_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.9p %9.9i %-23.23c{1} %-27.27F:%-5.5L | %m%n";
+	private static final String EXTREME_LOG_PATTERN     = "%d{yyyy-MM-dd HH:mm:ss} %5.9p %9.9i %-23.23c{1} %-33.33f | %m%n";
 	private String CONTINUATION = "%m%n";
 	private EucaPatternLayout continuation = null;
 	private final EucaPatternLayout extremeLayout;
