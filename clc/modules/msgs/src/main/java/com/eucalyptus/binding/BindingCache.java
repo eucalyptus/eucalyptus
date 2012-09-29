@@ -471,9 +471,11 @@ public class BindingCache {
                                                       put( Boolean.class.getCanonicalName( ), new BooleanTypeBinding( ) );
                                                       put( String.class.getCanonicalName( ), new StringTypeBinding( ) );
                                                       put( Long.class.getCanonicalName( ), new LongTypeBinding( ) );
+                                                      put( Double.class.getCanonicalName( ), new DoubleTypeBinding( ) );
                                                       put( "boolean", new BooleanTypeBinding( ) );
                                                       put( "int", new IntegerTypeBinding( ) );
                                                       put( "long", new LongTypeBinding( ) );
+                                                      put( "double", new DoubleTypeBinding( ) );
                                                       put( java.util.Date.class.getCanonicalName( ), new StringTypeBinding( ) );
                                                     }
                                                   };
@@ -905,6 +907,13 @@ public class BindingCache {
       @Override
       public String getTypeName( ) {
         return Long.class.getCanonicalName( );
+      }
+    }
+
+    class DoubleTypeBinding extends TypeBinding {
+      @Override
+      public String getTypeName( ) {
+        return Double.class.getCanonicalName( );
       }
     }
     

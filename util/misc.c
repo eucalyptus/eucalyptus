@@ -183,9 +183,9 @@ int verify_helpers (char **helpers, char **helpers_path, int num_helpers)
 
         if (!done) {
             missing_helpers++;
-            logprintfl (EUCADEBUG2, "did not find '%s' in path\n", helpers[i]);
+            logprintfl (EUCATRACE, "did not find '%s' in path\n", helpers[i]);
         } else {
-            logprintfl (EUCADEBUG2, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
+            logprintfl (EUCATRACE, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
 
@@ -614,7 +614,7 @@ char * fp2str (FILE * fp)
         memset(new_buf+buf_current, 0, INCREMENT * sizeof(char));
 
         buf = new_buf;
-        logprintfl (EUCADEBUG3, "fp2str: enlarged buf to %d\n", buf_max);
+        logprintfl (EUCAEXTREME, "fp2str: enlarged buf to %d\n", buf_max);
         
         do { // read in until EOF or buffer is full
             last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
@@ -627,7 +627,7 @@ char * fp2str (FILE * fp)
                     return NULL;
                 }
             }
-            logprintfl (EUCADEBUG3, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+            logprintfl (EUCAEXTREME, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
         } while ( last_read && buf_max > buf_current+1 ); // +1 is needed for fgets() to put \0
         
         buf_max += INCREMENT; // in case it is full
@@ -644,7 +644,7 @@ char * system_output (char * shell_command )
   FILE * fp;
 
   /* forks off command (this doesn't fail if command doesn't exist */
-  logprintfl (EUCADEBUG2, "system_output(): [%s]\n", shell_command);
+  logprintfl (EUCATRACE, "system_output(): [%s]\n", shell_command);
   if ( (fp=popen(shell_command, "r")) == NULL) 
     return NULL; /* caller can check errno */
   buf = fp2str (fp);

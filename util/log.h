@@ -66,30 +66,57 @@
 #ifndef LOG_H
 #define LOG_H
 
-enum {
-    EUCAALL=0,
-    EUCATRACE,
-    EUCADEBUG3,
-    EUCADEBUG2,
-    EUCADEBUG,
-    EUCAINFO,
-    EUCAWARN,
-    EUCAERROR,
-    EUCAFATAL,
-    EUCAOFF
-};
+extern __thread const char * _log_curr_method;
+extern __thread const char * _log_curr_file;
+extern __thread int          _log_curr_line;
+
+#define _EUCA_CONTEXT_SETTER (_log_curr_method=__FUNCTION__,\
+                              _log_curr_file=__FILE__,\
+                              _log_curr_line=__LINE__)
+
+#define EUCAALL     0
+#define EUCAEXTREME (_EUCA_CONTEXT_SETTER, 1)
+#define EUCATRACE   (_EUCA_CONTEXT_SETTER, 2)
+#define EUCADEBUG   (_EUCA_CONTEXT_SETTER, 3)
+#define EUCAINFO    (_EUCA_CONTEXT_SETTER, 4)
+#define EUCAWARN    (_EUCA_CONTEXT_SETTER, 5)
+#define EUCAERROR   (_EUCA_CONTEXT_SETTER, 6)
+#define EUCAFATAL   (_EUCA_CONTEXT_SETTER, 7)
+#define EUCAOFF     8
 
 static char * log_level_names [] = {
     "ALL",
+    "EXTREME",
     "TRACE",
-    "DEBUG3",
-    "DEBUG2",
     "DEBUG",
     "INFO",
     "WARN",
     "ERROR",
     "FATAL",
     "OFF"
+};
+
+/////////////////////// prefix format
+// T = timestamp
+// L = loglevel
+// p = PID
+// t = thread id (same as PID in CC)
+// m = method
+// F = file:line_no
+//
+// p,t,m,F may be followed by (-)NNN,
+//         '-' means left-justified
+//         and NNN is max field size
+/////////////////////////////////////
+static char * log_level_prefix [] = {
+    "",
+    "T L t9 m-24 | ",
+    "T L t9 m-24 | ",
+    "T L t9 m-24 | ",
+    "T L | ",
+    "T L | ",
+    "T L | ",
+    ""
 };
 
 #ifdef DEBUG
@@ -114,6 +141,7 @@ int log_level_int(const char *level);
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char * file);
+int log_prefix_set (const char * log_spec);
 int logfile(char *file, int in_loglevel, int in_logrollnumber);
 int logprintf(const char *format, ...);
 int logprintfl(int level, const char *format, ...);
