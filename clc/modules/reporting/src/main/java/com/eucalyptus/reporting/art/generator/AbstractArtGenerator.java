@@ -113,4 +113,36 @@ public abstract class AbstractArtGenerator implements ArtGenerator {
       transaction.rollback();
     }
   }
+
+  /**
+   * Without sort
+   */
+  @SuppressWarnings( "unchecked" )
+  protected <ET> void foreach( final Class<ET> eventClass,
+                               final Criterion criterion,
+                               final Predicate<? super ET> callback ) {
+    final EntityTransaction transaction = Entities.get( eventClass );
+    ScrollableResults results = null;
+    try {
+      results = Entities.createCriteria( eventClass )
+          .setReadOnly( true )
+          .setCacheable( false )
+          .setCacheMode( CacheMode.IGNORE )
+          .setFetchSize( 100 )
+          .add( criterion )
+          .scroll( ScrollMode.FORWARD_ONLY );
+
+      while ( results.next() ) {
+        final ET event = (ET) results.get( 0 );
+        if ( !callback.apply( event ) ) {
+          break;
+        }
+        Entities.evict( event );
+      }
+    } finally {
+      if (results != null) try { results.close(); } catch( Exception e ) { }
+      transaction.rollback();
+    }
+  }
+
 }
