@@ -91,7 +91,7 @@ public class InstanceArtGenerator
     private static final String DIM_TOTAL     = "total";
     private static final String DIM_DEFAULT   = "default";
     
-    private static final long USAGE_SEARCH_PERIOD = TimeUnit.DAYS.toMillis( 20 );
+    private static final long USAGE_SEARCH_PERIOD = TimeUnit.DAYS.toMillis( 12 );
 
     
     
@@ -187,6 +187,7 @@ public class InstanceArtGenerator
 		for (InstanceMetricDimensionKey key: accumulators.keySet()) {
 			TimestampValueAccumulator acc = accumulators.get(key);
 			
+			/* No usage within report boundaries */
 			if (acc.firstAfterBeginning==null || acc.lastBeforeEnd==null) continue;
 			double val = 0;
 			/* Add all usage which occurs entirely within report boundaries */

@@ -78,12 +78,12 @@ public class ReportingInstanceEventStore extends EventStoreSupport {
     Preconditions.checkNotNull( dimension, "Dimension is required" );
     Preconditions.checkNotNull( value, "value is required" );
 
-    /* insertUsageEvent corrects sensor resets before inserting data into the database. Sensors
-     * occasionally reset when an nc reboots or for some other reason. In which case, the sequence
+    /* Correct sensor resets before inserting data into the database. Sensors occasionally
+     * reset when an nc reboots or for some other reason. In which case, the sequence
      * number resets to 0 and the value resets to 0. We correct this by increasing the value
      * by whatever the last value before reset was (values are cumulative) for every subsequent
      * event for this metric. To do this, we must retain the last value for each metric value, the
-     * last sequence number, and the offsets; the offsets are increased every time there is a sensor
+     * last sequence number, and offsets; the offsets are increased every time there is a sensor
      * reset.
      * 
      * In some circumstances, the CLC will failover and this data will be lost. This will not
@@ -110,7 +110,7 @@ public class ReportingInstanceEventStore extends EventStoreSupport {
     info.lastSequenceNum = sequenceNum;
     info.lastValue = value;
     info.lastEventArrived = System.currentTimeMillis();
-    
+
     if (eventCnt++ % PURGE_EVERY_NUM_EVENTS==0) purgeMetricInfo();
 
     persist( new ReportingInstanceUsageEvent( uuid, metric, sequenceNum+info.sequenceOffset,
