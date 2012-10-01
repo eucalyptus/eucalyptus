@@ -28,6 +28,7 @@
 import optparse
 import inspect
 import os
+import pwd
 import sys
 import boto.utils
 import eucadmin
@@ -862,7 +863,7 @@ class EucaConf(object):
             print "run the following commands on node $NEWNODE:"
             print "sudo -u $EUCA_USER mkdir -p ~${EUCA_USER}/.ssh"
             print "sudo -u $EUCA_USER tee ~${EUCA_USER}/.ssh/authorized_keys > /dev/null <<EOT"
-            print self.ssh_key
+            print ssh_key
             print "EOT"
             print
             print "Be sure that authorized_keys is not group/world readable or writable"
