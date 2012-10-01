@@ -102,7 +102,7 @@ extern struct nc_state_t nc_state;
 
 static void bs_errors (const char * msg) { 
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
-    logprintfl (EUCADEBUG2, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+    logprintfl (EUCATRACE, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 } 
 
 static void stat_blobstore (const char * conf_instances_path, const char * name, blobstore_meta * meta)

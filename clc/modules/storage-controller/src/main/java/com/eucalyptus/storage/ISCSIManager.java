@@ -74,14 +74,25 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
+
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
+import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
@@ -93,6 +104,12 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
 	private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
+	
+	// TODO find out if its okay to not shutdown the service. found something online which explicitly mentioned this
+	private static ExecutorService service = Executors.newSingleThreadExecutor();
+	// TODO define fault IDs in a enum
+	private static final int TGT_HOSED = 2000;
+		
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;
@@ -117,57 +134,95 @@ public class ISCSIManager implements StorageExportManager {
 		SystemUtil.run(new String[]{ROOT_WRAP , "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", "--user", username});
 	}
 
-	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
-		checkAndAddUser();
-		try
-		{
-			Runtime rt = Runtime.getRuntime();
-			Process proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "target", "--tid", String.valueOf(tid), "-T", name});
-			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-			StreamConsumer output = new StreamConsumer(proc.getInputStream());
+	/**
+	 * Separate thread to wait for {@link java.lang.Process Process} to complete and return its exit value
+	 * 
+	 */
+	public static class ProcessMonitor implements Callable<Integer> {
+		private Process process;
+
+		ProcessMonitor(Process process) {
+			this.process = process;
+		}
+
+		public Integer call() throws Exception {
+			process.waitFor();
+			return process.exitValue();
+		}
+	}
+
+	// Implementation of EUCA-3597
+	/**
+	 * Executes the specified command in a separate process. A {@link DirectStorageInfo#timeoutInMillis timeout} is enforced on the process using
+	 * {@link java.util.concurrent.ExecutorService ExecutorService} framework. If the process does not complete with in the timeout, it is cancelled.
+	 * 
+	 * @param runtime
+	 * @param command
+	 * @param timeout
+	 * @throws EucalyptusCloudException
+	 */
+	private void execute(Runtime runtime, String[] command, Long timeout) throws EucalyptusCloudException {
+		Integer exitValue = null;
+		try {
+			Process process = runtime.exec(command);
+			StreamConsumer error = new StreamConsumer(process.getErrorStream());
+			StreamConsumer output = new StreamConsumer(process.getInputStream());
 			error.start();
 			output.start();
-			proc.waitFor();
+			Callable<Integer> processMonitor = new ProcessMonitor(process);
+			Future<Integer> processController = service.submit(processMonitor);
+			try {
+				exitValue = processController.get(timeout, TimeUnit.MILLISECONDS);
+			} catch (TimeoutException tex) {
+				processController.cancel(true);
+				FaultSubsystem.forComponent(new Storage()).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
+				throw new EucalyptusCloudException("No response was received within the timeout for the process: " + buildCommand(command));
+			}
 			output.join();
 			String errorValue = error.getReturnValue();
-			if(errorValue.length() > 0)
+			if (errorValue.length() > 0) {
 				throw new EucalyptusCloudException(errorValue);
-
-			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun), "-b", path});
-			error = new StreamConsumer(proc.getErrorStream());
-			output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
-			output.join();
-			errorValue = error.getReturnValue();
-			if(errorValue.length() > 0)
-				throw new EucalyptusCloudException(errorValue);
-
-			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user});
-			error = new StreamConsumer(proc.getErrorStream());
-			output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
-			output.join();
-			errorValue = error.getReturnValue();
-			if(errorValue.length() > 0)
-				throw new EucalyptusCloudException(errorValue);
-
-			proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid" , String.valueOf(tid), "-I", "ALL"});
-			error = new StreamConsumer(proc.getErrorStream());
-			output = new StreamConsumer(proc.getInputStream());
-			error.start();
-			output.start();
-			proc.waitFor();
-			output.join();
-			errorValue = error.getReturnValue();
-			if(errorValue.length() > 0)
-				throw new EucalyptusCloudException(errorValue);
-		} catch (Exception t) {
-			throw new EucalyptusCloudException(t);
+			}
+			// Should not reach here if the process dint return 0. Previous if condition should have caught the error. This is merely a precaution
+			if (null != exitValue && exitValue != 0) {
+				throw new EucalyptusCloudException("Received non-zero exit value from the execution of: " + buildCommand(command));
+			}
+		} catch (Exception ex) {
+			if (ex instanceof EucalyptusCloudException) {
+				throw (EucalyptusCloudException) ex;
+			} else {
+				throw new EucalyptusCloudException(ex);
+			}
 		}
+	}
+
+	private String buildCommand(String[] command) {
+		StringBuilder builder = new StringBuilder();
+		for (String part : command) {
+			builder.append(part).append(' ');
+		}
+		return builder.toString();
+	}
+
+	// Modified logic for implementing EUCA-3597
+	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
+		checkAndAddUser();
+
+		Runtime rt = Runtime.getRuntime();
+		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
+
+		execute(rt, new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "target", "--tid", String.valueOf(tid), "-T", name },
+				timeout);
+
+		execute(rt,
+				new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun",
+						String.valueOf(lun), "-b", path }, timeout);
+
+		execute(rt, new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user },
+				timeout);
+
+		execute(rt, new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid", String.valueOf(tid), "-I", "ALL" },
+				timeout);
 	}
 
 	public void unexportTarget(int tid, int lun) {

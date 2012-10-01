@@ -1235,16 +1235,25 @@ public class OverlayManager implements LogicalStorageManager {
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 				int max_tries = 10;
 				int i = 0;
+				EucalyptusCloudException ex = null;
 				do {
 					exportManager.allocateTarget(iscsiVolumeInfo);
 					try {
 						((ISCSIManager)exportManager).exportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getStoreName(), iscsiVolumeInfo.getLun(), absoluteLVName, iscsiVolumeInfo.getStoreUser());
-						//it worked. break out.
-						i = max_tries;
+						ex = null;
+						//it worked. break out. may be break is a better way of breaking out?
+						//i = max_tries;
+						break;
 					} catch (EucalyptusCloudException e) {
+						ex = e;
 						LOG.error(e);				
 					}
 				} while (i++ < max_tries);
+				
+				// EUCA-3597 After all retries, check if the process actually completed
+				if (null != ex){
+					throw ex;
+				}
 			}
 		}
 	}

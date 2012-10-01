@@ -31,6 +31,8 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 
+import edu.ucsb.eucalyptus.cloud.entities.WalrusInfo;
+
 /**
  *  Event listener that fires ResourceAvailabilityEvents for the Walrus.
  */
@@ -45,14 +47,17 @@ public class WalrusAvailabilityEventListener implements EventListener<ClockTick>
   public void fireEvent( final ClockTick event ) {
     if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
       try {
-        long total = 100; //TODO:STEVE: Get Walrus storage capacity from somewhere
 
-        ListenerRegistry.getInstance().fireEvent(
-            new ResourceAvailabilityEvent( StorageWalrus, new Availability(
-                total,
-                Math.max( 0, total - (long) Math.ceil( (double) WalrusUtil.countTotalObjectSize() / FileUtils.ONE_GB ) )
-            ) )
-        );
+      	WalrusInfo wInfo = WalrusInfo.getWalrusInfo();
+      	long capacity = 0;
+      	if(wInfo != null) capacity = wInfo.getStorageMaxTotalCapacity();
+
+      	ListenerRegistry.getInstance().fireEvent(
+      			new ResourceAvailabilityEvent( StorageWalrus, new Availability(
+      					capacity,
+      					Math.max( 0, capacity - (long) Math.ceil( (double) WalrusUtil.countTotalObjectSize() / FileUtils.ONE_GB ) )
+      					) )      			
+      			);
       } catch ( Exception ex ) {
         logger.error( ex, ex );
       }

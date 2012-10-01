@@ -28,11 +28,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="instanceUsageEventMap",
-        entities=@EntityResult(entityClass=ReportingInstanceUsageEvent.class))
-@NamedNativeQuery(name="scanInstanceUsageEvents",
-     query="select * from reporting_instance_usage_events order by uuid,timestamp_ms",
-     resultSetMapping="instanceUsageEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_instance_usage_events")
 public class ReportingInstanceUsageEvent
@@ -72,7 +67,17 @@ public class ReportingInstanceUsageEvent
 		this.value = value;
 	}
 
-	
+	public ReportingInstanceUsageEvent zero( final Long timestamp ) {
+		final ReportingInstanceUsageEvent event = new ReportingInstanceUsageEvent();
+		event.uuid = uuid;
+		event.metric = metric;
+		event.dimension = dimension;
+		event.value = 0d;
+		event.timestampMs = timestamp;
+		event.sequenceNum = -1L;
+		return event;
+	}
+
 	@Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()

@@ -475,12 +475,16 @@ update_log_params (void)
     int log_level;
     int log_roll_number;
     long log_max_size_bytes;
+    char * log_prefix;
 
     // read log params from config file and update in-memory configuration
-    configReadLogParams (&log_level, &log_roll_number, &log_max_size_bytes);
+    configReadLogParams (&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
 
     // reconfigure the logging subsystem to use the new values, if any
     log_params_set (log_level, log_roll_number, log_max_size_bytes);
+    log_prefix_set (log_prefix);
+    if (log_prefix)
+        free (log_prefix);
 }
 
 void *
@@ -715,7 +719,7 @@ void *startup_thread (void * arg)
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 
-    logprintfl (EUCADEBUG2, "[%s] instance about to boot\n", instance->instanceId);
+    logprintfl (EUCATRACE, "[%s] instance about to boot\n", instance->instanceId);
     
     boolean created = FALSE;
     for (i=0; i<MAX_CREATE_TRYS; i++) { // retry loop
@@ -1099,10 +1103,15 @@ static int init (void)
 	inst_sem = sem_alloc (1, "mutex");
 	inst_copy_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem) {
+    sem * log_sem = sem_alloc (1, "mutex");
+	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
 	}
+    if (log_sem_set(log_sem) != 0) {
+		logprintfl (EUCAFATAL, "failed to set logging semaphore\n");
+		return ERROR_FATAL;
+    }
 
     if ((loop_sem = diskutil_get_loop_sem())==NULL) { // NC does not need GRUB for now
         logprintfl (EUCAFATAL, "failed to find all dependencies\n");
@@ -1453,7 +1462,7 @@ int doDescribeInstances (ncMetadata *meta, char **instIds, int instIdsLen, ncIns
 	if (init())
 		return 1;
     
-	logprintfl (EUCADEBUG2, "doDescribeInstances: invoked\n");
+	logprintfl (EUCATRACE, "doDescribeInstances: invoked\n"); // response will be at INFO, so this is TRACE
     
 	if (nc_state.H->doDescribeInstances)
 		ret = nc_state.H->doDescribeInstances (&nc_state, meta, instIds, instIdsLen, outInsts, outInstsLen);
@@ -1833,7 +1842,7 @@ doDescribeSensors (ncMetadata *meta,
 	if (init())
 		return 1;
     
-	logprintfl (EUCADEBUG2, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
+	logprintfl (EUCADEBUG, "doDescribeSensors: invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
     
 	if (nc_state.H->doDescribeSensors)
 		ret = nc_state.H->doDescribeSensors (&nc_state, meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);

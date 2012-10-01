@@ -1578,12 +1578,13 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   int i, j, found, lastj, localIpId=-1, rc;
   uint32_t tmpccs[NUMBER_OF_CCS];
-
+  
   if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
     logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
     return(1);
-  }
-
+  }  
+  
+  bzero(tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
   found=0;
   for (i=0; i<ccsLen; i++) {
     logprintfl(EUCADEBUG, "vnetSetCCS(): input CC%d=%s\n", i, ccs[i]);
@@ -1594,72 +1595,25 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
       vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
       vnetconfig->tunnels.localIpId = i;
       found=1;
-    }
+    }    
   }
+  
+  if (memcmp(tmpccs, vnetconfig->tunnels.ccs, sizeof(uint32_t)*NUMBER_OF_CCS)) {
+    // internal list is different from new list, teardown and re-construct tunnels
+    logprintfl(EUCAINFO, "vnetSetCCS(): list of CCs has changed, initiating re-construction of tunnels\n");
+    rc = vnetTeardownTunnels(vnetconfig);
+    if (rc) {
+      logprintfl(EUCAERROR, "vnetSetCCS(); unable to teardown tunnels\n");
+    }
+    memcpy(vnetconfig->tunnels.ccs, tmpccs, sizeof(uint32_t)*NUMBER_OF_CCS);
+  }
+
   if (!found) {
     logprintfl(EUCADEBUG, "vnetSetCCS(): local IP not found in input list of CCs, setting localIpId: %d\n", -1);
     vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
     vnetconfig->tunnels.localIpId = -1;
   }
   return(0);
-
-#if 0
-  for (i=0; i<ccsLen; i++) {
-    logprintfl(EUCADEBUG, "vnetSetCCS(): input CC=%s\n", ccs[i]);
-    found=0;
-    for (j=0; j<NUMBER_OF_CCS && !found; j++) {
-      if (dot2hex(ccs[i]) == vnetconfig->tunnels.ccs[j]) {
-	found=1;
-      }
-    }
-    if (!found) {
-      // exists in new list, but not locally, add it
-      logprintfl(EUCADEBUG, "vnetSetCCS(): adding CC %s\n", ccs[i]);
-      vnetAddCCS(vnetconfig, dot2hex(ccs[i]));
-    }
-  }
-
-  for (i=0; i<NUMBER_OF_CCS; i++) {
-    if (vnetconfig->tunnels.ccs[i] != 0) {
-      found=0;
-      for (j=0; j<ccsLen && !found; j++) {
-	if (vnetconfig->tunnels.ccs[i] == dot2hex(ccs[j])) {
-	  found=1;
-	}
-      }
-      if (!found) {
-	// exists locally, but not in new list, remove it
-	logprintfl(EUCADEBUG, "vnetSetCCS(): removing CC %d\n", i);
-	vnetDelCCS(vnetconfig, vnetconfig->tunnels.ccs[i]);
-      }
-    }
-  }
-
-  localIpId = -1;
-  found=0;
-  for (i=0; i<NUMBER_OF_CCS && !found; i++) {
-    if (vnetconfig->tunnels.ccs[i] != 0) {
-      rc = vnetCheckLocalIP(vnetconfig, vnetconfig->tunnels.ccs[i]);
-      if (!rc) {
-	logprintfl(EUCADEBUG, "vnetSetCCS(): setting localIpId: %d\n", i);
-	localIpId = i;
-	found=1;
-      }
-    }
-  }
-  if (localIpId >= 0) {
-    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
-    vnetconfig->tunnels.localIpId = localIpId;
-  } else {
-    logprintfl(EUCAWARN, "vnetSetCCS(): VNET_LOCALIP is not in list of CCS, tearing down tunnels\n");
-    vnetTeardownTunnels(vnetconfig);
-    bzero(vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS);
-    vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
-    vnetconfig->tunnels.localIpId = -1;
-    return(0);
-  }
-  return(0);
-#endif
 }
 
 int vnetStartInstanceNetwork(vnetConfig *vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr) {

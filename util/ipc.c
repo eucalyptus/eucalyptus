@@ -154,12 +154,19 @@ sem * sem_alloc_posix (sem_t * external_lock)
     return s;
 }
 
-int sem_p (sem * s)
+// Semaphore increment (aka lock acquisition) function.
+// The second parameter tells it not to log the event 
+// (useful for avoiding infinite recursion when locking
+// from the logging code).
+int sem_prolaag (sem * s, boolean do_log)
 {
     int rc;
-    
-    if (s)
-        logprintfl (EUCADEBUG2, "sem_p() %s\n", (s->name)?(s->name):(""));
+
+    if (s && do_log) {
+        char addr [24];
+        snprintf (addr, sizeof (addr), "%lx", (unsigned long)s);
+        logprintfl (EUCAEXTREME, "%s locking\n", (s->name)?(s->name):(addr));
+    }
     
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
@@ -185,12 +192,25 @@ int sem_p (sem * s)
     return -1;
 }
 
-int sem_v (sem * s)
+// The semaphore increment (aka lock acquisition) function used throughout.
+int sem_p (sem * s)
+{
+    return sem_prolaag (s, TRUE);
+}
+
+// Semaphore decrement (aka lock release) function.
+// The second parameter tells it not to log the event 
+// (useful for avoiding infinite recursion when unlocking
+// from the logging code).
+int sem_verhogen (sem * s, boolean do_log)
 {
     int rc;
 
-    if (s)
-        logprintfl (EUCADEBUG2, "sem_v() %s\n", (s->name)?(s->name):(""));
+    if (s && do_log) {
+        char addr [24];
+        snprintf (addr, sizeof (addr), "%lx", (unsigned long)s);
+        logprintfl (EUCAEXTREME, "%s unlocking\n", (s->name)?(s->name):(addr));
+    }
     
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
@@ -212,6 +232,12 @@ int sem_v (sem * s)
     }
     
     return -1;
+}
+
+// The semaphore decrement (aka lock release) function used throughout.
+int sem_v (sem * s)
+{
+    return sem_verhogen (s, TRUE);
 }
 
 void sem_free (sem * s)
