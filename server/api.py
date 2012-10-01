@@ -1,10 +1,11 @@
 import base64
 import ConfigParser
-from M2Crypto import RSA
+import json
 import tornado.web
 import server
-import json
+import socket
 import time
+from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
 
@@ -350,6 +351,15 @@ class ComputeHandler(server.BaseHandler):
             ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
             self.finish(json.dumps(ret, cls=BotoJsonEncoder))
+        except Exception as ex:
+            if isinstance(ex, socket.timeout):
+                ret = ClcError(504, 'Timed out', '')
+                self.set_status(504);
+                self.finish(json.dumps(ret, cls=BotoJsonEncoder))
+            else:
+                ret = ClcError(500, ex.message, '')
+                self.set_status(500);
+                self.finish(json.dumps(ret, cls=BotoJsonEncoder))
 
     def post(self):
         if not self.authorized():
@@ -391,3 +401,12 @@ class ComputeHandler(server.BaseHandler):
             ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
             self.finish(json.dumps(ret, cls=BotoJsonEncoder))
+        except Exception as ex:
+            if isinstance(ex, socket.timeout):
+                ret = ClcError(504, 'Timed out', None)
+                self.set_status(504);
+                self.finish(json.dumps(ret, cls=BotoJsonEncoder))
+            else:
+                ret = ClcError(500, ex.message, None)
+                self.set_status(500);
+                self.finish(json.dumps(ret, cls=BotoJsonEncoder))

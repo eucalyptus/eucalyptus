@@ -52,10 +52,13 @@ class UIProxyClient(object):
                 del params[param]
         params['Action'] = action
         url = 'http://%s:%s/ec2?'%(self.host, self.port) + urllib.urlencode(params)
-        req = urllib2.Request(url)
-        self.__check_logged_in__(req)
-        response = urllib2.urlopen(req)
-        return json.loads(response.read())
+        try:
+            req = urllib2.Request(url)
+            self.__check_logged_in__(req)
+            response = urllib2.urlopen(req)
+            return json.loads(response.read())
+        except urllib2.URLError, err:
+            print "Error! "+str(err.code)
 
     ##
     # Zone methods
