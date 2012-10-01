@@ -1143,10 +1143,15 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 
 		private LVMVolumeInfo getVolumeInfo(LVMVolumeInfo volumeInfo) {
-			List<LVMVolumeInfo> lvmVolumeInfos = entityWrapper.query(volumeInfo);
-			if(lvmVolumeInfos.size() > 0) {
-				return lvmVolumeInfos.get(0);
+			try {
+				List<LVMVolumeInfo> lvmVolumeInfos = entityWrapper.query(volumeInfo);
+				if(lvmVolumeInfos.size() > 0) {
+					return lvmVolumeInfos.get(0);
+				}
+			} catch (Throwable ex) {
+				LOG.info(ex, ex);
 			}
+			LOG.info("NO RESULTS");
 			return null;
 		}
 
