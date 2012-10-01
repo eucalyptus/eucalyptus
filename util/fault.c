@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <wchar.h>
 #include <sys/stat.h>
+#include <ctype.h>
 
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -62,6 +63,7 @@
                                    labels */
 #define LOCALIZED_TAG "localized"
 #define MESSAGE_TAG "message"
+#define STANDARD_FILESTREAM stderr
 
 /*
  * This is the order of priority (highest to lowest) for fault messages
@@ -481,7 +483,7 @@ get_eucafault (const char *id, const xmlDoc *doc)
  * uses that for building up the path.
  *
  * Returns TRUE if fault logfile successfully opened, FALSE otherwise
- * (meaning logging is to stderr).
+ * (meaning logging is to console).
  */
 
 static boolean
@@ -491,6 +493,9 @@ initialize_faultlog (const char *fileprefix)
     char *fileprefix_i;
 
     if (fileprefix == NULL) {
+        faultlog = STANDARD_FILESTREAM;
+        return TRUE;
+    } else if (strlen (fileprefix) == 0) {
         // FIXME: program_infocation_short_name is a GNU'ism and is not
         // portable--should wrap with an autoconf check.
         snprintf (faultlogpath, PATH_MAX, EUCALYPTUS_LOG_DIR "/%s"
@@ -512,8 +517,8 @@ initialize_faultlog (const char *fileprefix)
     if (faultlog == NULL) {
         logprintfl (EUCAERROR, "Cannot open fault log file %s: %s\n",
                     faultlogpath, strerror (errno));
-        logprintfl (EUCAERROR, "Logging faults to stderr...\n");
-        faultlog = stderr;
+        logprintfl (EUCAERROR, "Logging faults to the console...\n");
+        faultlog = STANDARD_FILESTREAM;
         return FALSE;
     } else {
         return TRUE;
@@ -1006,3 +1011,73 @@ main (int argc, char **argv)
     return 0;
 }
 #endif // _UNIT_TEST
+
+#ifdef EUCA_GENERATE_FAULT
+
+static void
+usage (const char *argv0)
+{
+    fprintf (stderr, "Usage: %s [-c component-name] fault-id [param-1 value-1] [param-2 value-1] ...\n", argv0);
+}
+
+int main (int argc, char **argv)
+{
+    log_params_set (EUCAWARN, 0, 0); // set log level
+    log_prefix_set ("L "); // only print log level
+    log_file_set (NULL); // log output goes to STANDARD_FILESTREAM
+
+    char * component = NULL;
+    int opt;
+    while ((opt = getopt (argc, argv, "c:")) != -1) {
+        switch (opt) {
+        case 'c':
+            component = optarg;
+            break;
+        case 'h':
+        default:
+            usage (argv[0]);
+            return 1;
+        }
+    }
+
+    if (argv[optind]==NULL) {
+        logprintfl (EUCAERROR, "no fault ID is specified (try -h for usage)\n");
+        return 1;
+    }
+    int ndigits = 0;
+    for (char * c = argv[optind]; * c != '\0'; c++, ndigits++) {
+        if ( ! isdigit (* c)) {
+            logprintfl (EUCAERROR, "invalid fault ID (must be a number)\n");
+            return 1;
+        }
+    }
+    if (ndigits < 4) {
+        logprintfl (EUCAERROR, "invalid fault ID (must be a 4-digit number)\n");
+        return 1;
+    }
+    int nfaults = init_eucafaults (component);
+    if (nfaults < 1) {
+        logprintfl (EUCAERROR, "failed to locate fault information (is $EUCALYPTUS set?)\n");
+        return 1;
+    }
+
+    // place variable-and-value pairs from command line into the map
+    char_map ** m = NULL;
+    for (int opt = optind + 1; opt < argc; opt++) {
+        logprintfl (EUCADEBUG, "argv[opt]: %s\n", argv[opt]);
+        if ((opt - optind + 1) % 2) {
+            logprintfl (EUCADEBUG, "...now have two, calling c_varmap_alloc()\n");
+            m = c_varmap_alloc (m, argv[opt - 1], argv[opt]);
+        }
+    }
+
+    int ret = 0;
+    if (log_eucafault_map (argv[optind], (const char_map **)m) == FALSE) {
+        ret = 1;
+    }
+    if (m)
+        c_varmap_free (m);
+    
+    return ret;
+}
+#endif // EUCA_GENERATE_FAULT
