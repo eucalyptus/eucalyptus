@@ -1143,18 +1143,9 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 
 		private LVMVolumeInfo getVolumeInfo(LVMVolumeInfo volumeInfo) {
-			if(exportManager instanceof AOEManager) {
-				AOEVolumeInfo AOEVolumeInfo = (AOEVolumeInfo) volumeInfo;
-				List<AOEVolumeInfo> AOEVolumeInfos = entityWrapper.query(AOEVolumeInfo);
-				if(AOEVolumeInfos.size() > 0) {
-					return AOEVolumeInfos.get(0);
-				}
-			} else if(exportManager instanceof ISCSIManager) {
-				ISCSIVolumeInfo ISCSIVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
-				List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
-				if(ISCSIVolumeInfos.size() > 0) {
-					return ISCSIVolumeInfos.get(0);
-				}
+			List<LVMVolumeInfo> lvmVolumeInfos = entityWrapper.query(volumeInfo);
+			if(lvmVolumeInfos.size() > 0) {
+				return lvmVolumeInfos.get(0);
 			}
 			return null;
 		}
