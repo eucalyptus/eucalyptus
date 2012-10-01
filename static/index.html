@@ -1242,12 +1242,18 @@
             <div class="wizard-wrapper">
 
               <div id="launch-wizard" class="launcher-wrapper">
-                <div id="launch-wizard-header" class="box-header"><span> {{!> launch_instance_header }} </span></div>
+                <div id="launch-wizard-header" class="box-header"><span>{{!> launch_instance_header }}</span></div>
+
+                <div class="launch-wizard-intro-text">
+                  <div id="launch-wizard-note">{{!>launch_instance_note}}</div>
+                  <div id="launch-wizard-required" class="required-hint">{{!> launch_instance_required }}</div>
+                </div>
+                
+                <div class="launch-wizard-pointer"></div>       
 
                 <!-- Launch Wizard Steps -->
                 <div class="wizard-steps">
-                  <div id="launch-wizard-note"> {{!>launch_instance_note}} </div>
-                  <div id="launch-wizard-required"> {{!> launch_instance_required }} </div> 
+
                   <div id="launch-wizard-image" class="wizard-step"> 
                     <div id="launch-wizard-image-header" class="twist launch-wizard-section-header"> </div>
                     <div id="launch-wizard-image-contents" class="launch-wizard-section">
