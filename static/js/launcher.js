@@ -435,9 +435,9 @@
         else
           zone = selectedZone;
         var $summary = $('<div>').addClass(selectedType).addClass('summary').append(
-          $('<div>').attr('id','summary-type-insttype').append($('<span>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
-          $('<div>').attr('id','summary-type-numinst').append($('<span>').text(launch_instance_summary_instances), $('<span>').text(numInstances)),
-          $('<div>').attr('id','summary-type-zone').append($('<span>').text(launch_instance_summary_zone), $('<span>').text(zone)));
+          $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
+          $('<div>').attr('id','summary-type-numinst').append($('<div>').text(launch_instance_summary_instances), $('<span>').text(numInstances)),
+          $('<div>').attr('id','summary-type-zone').append($('<div>').text(launch_instance_summary_zone), $('<span>').text(zone)));
         if(!typeSelected)
           $summary.find('#summary-type-insttype').hide();
         if(!instanceChanged)

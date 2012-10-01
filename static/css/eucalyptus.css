@@ -1812,8 +1812,9 @@ ul.volume-expanded li:last-child {
 
 .required-hint:before,
 .required-label:after {
-  content: "*";
   color: #e36f1e;
+  content: "*";
+  font-family: 'Trebuchet MS', Arial, sans-serif;
 }
 
 .required-hint:before {
@@ -1826,9 +1827,9 @@ ul.volume-expanded li:last-child {
 
 .selected-resources {
   color: #02405f;
-  font-family: 'PlayRegular', Arial, sans-serif;
-  font-size: 14px;
   text-align: center;
+  font-size: 14px;
+  font-family: 'PlayRegular', Arial, sans-serif;
 }
 
 .selected-resources table {
@@ -1945,12 +1946,27 @@ ul.volume-expanded li:last-child {
 .wizard-summary {
   margin: 0;
   padding: 10px 15px;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;  
 }
 
 .summary-title {
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 24px; 
   color: #02405f;
+}
+
+.summary {
+  border-top: 1px solid #ccc;
+  padding: 10px 10px 10px 55px;
+}
+
+#summary-image .summary {
+  border: 0;
+}
+
+.summary span {
+  font-family: 'PlayBold', Arial, sans-serif;   
 }
 
 .wizard-cancel {
@@ -2070,7 +2086,7 @@ div#launch-wizard-type-size-legend{
 .wizard-subsection-label {
   color: #02405f;
   font-weight: bold;
-
+  margin-bottom: 3px;
 }
 
 .launch-wizard-section-header {
