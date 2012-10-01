@@ -21,7 +21,7 @@ class S3ObjectUsageEventListenerTest {
 
   @Test
   void testInstantiable() {
-    new S3BucketUsageEventListener()
+    new S3ObjectUsageEventListener()
   }
 
   @Test
@@ -30,9 +30,9 @@ class S3ObjectUsageEventListenerTest {
 
     Object persisted = testEvent( S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectCreate(),
-        uuid("????"),
         "bucket15",
         "object34",
+        "version1",
         Principals.systemFullName(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
@@ -40,8 +40,9 @@ class S3ObjectUsageEventListenerTest {
     assertTrue( "Persisted event is ReportingS3BucketCreateEvent", persisted instanceof ReportingS3ObjectCreateEvent )
     ReportingS3ObjectCreateEvent event = persisted
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
-    assertEquals( "Persisted event object name", "object34", event.getS3ObjectName() )
-    assertEquals( "Persisted event size", Integer.MAX_VALUE.toLong() + 1L, event.getS3ObjectSize() )
+    assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
+    assertEquals( "Persisted event object version", "version1", event.getObjectVersion() )
+    assertEquals( "Persisted event size", Integer.MAX_VALUE.toLong() + 1L, event.getSizeGB() )
     assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getUserId() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -52,9 +53,9 @@ class S3ObjectUsageEventListenerTest {
 
     Object persisted = testEvent( S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectDelete(),
-        uuid("????"),
         "bucket15",
         "object34",
+        null,
         Principals.systemFullName(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
@@ -62,9 +63,8 @@ class S3ObjectUsageEventListenerTest {
     assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectDeleteEvent )
     ReportingS3ObjectDeleteEvent event = persisted
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
-    assertEquals( "Persisted event object name", "object34", event.getS3ObjectName() )
-    assertEquals( "Persisted event size", Integer.MAX_VALUE.toLong() + 1L, event.getS3ObjectSize() )
-    assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getS3ObjectOwnerId() )
+    assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
+    assertNull( "Persisted event object version", event.getObjectVersion() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
 
@@ -74,9 +74,9 @@ class S3ObjectUsageEventListenerTest {
 
     Object persisted = testEvent( S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectGet(),
-        uuid("????"),
         "bucket15",
         "object34",
+        "version2",
         Principals.systemFullName(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
@@ -85,7 +85,7 @@ class S3ObjectUsageEventListenerTest {
     ReportingS3ObjectUsageEvent event = persisted
     assertEquals( "Persisted event bucket name", "bucket15", event.getBucketName() )
     assertEquals( "Persisted event object name", "object34", event.getObjectName() )
-    assertEquals( "Persisted event size", Integer.MAX_VALUE.toLong() + 1L, event.getObject_size() )
+    assertEquals( "Persisted event object version", "version2", event.getObjectVersion() )
     assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getUserId() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }

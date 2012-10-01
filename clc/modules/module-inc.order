@@ -77,8 +77,7 @@ notifications
 storage-common
 reporting
 walrus
+troubleshooting
 storage-controller
 dns
 www
-troubleshooting
-datawarehouse

@@ -61,7 +61,7 @@
             <inbound>
                 <inbound-endpoint ref="ReportingWS" />
             </inbound>
-            <component class="com.eucalyptus.reporting.service.ReportingDataExportService" />
+            <component class="com.eucalyptus.reporting.service.ReportingService" />
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
@@ -84,7 +84,7 @@
                 <inbound-endpoint ref="ReportingInternalWS" />
                 <inbound-endpoint ref="ReportingInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.reporting.service.ReportingDataExportService" />
+            <component class="com.eucalyptus.reporting.service.ReportingService" />
         </service>
     </model>
 

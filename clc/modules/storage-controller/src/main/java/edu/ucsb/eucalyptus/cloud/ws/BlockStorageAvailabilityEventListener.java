@@ -28,12 +28,15 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 
 /**
  * Event listener that fires resource availability events for block storage.
@@ -50,8 +53,15 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
     if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
       final List<Availability> resourceAvailability = Lists.newArrayList();
       for ( final Cluster cluster : Clusters.getInstance().listValues() ) {
-        //TODO:STEVE: Get EBS storage capacity from somewhere
-        resourceAvailability.add( new Availability( 0, StorageUtil.getBlockStorageTotalSize(cluster.getPartition()), Lists.<Tag>newArrayList(
+        long total = 0;
+
+        try {
+          total = Transactions.find( new StorageInfo( cluster.getPartition() ) ).getMaxTotalVolumeSizeInGb();
+        } catch ( TransactionException e ) {
+          logger.debug( "Error finding capacity for " + cluster.getPartition(), e );
+        }
+
+        resourceAvailability.add( new Availability( total, Math.max( total - StorageUtil.getBlockStorageTotalSize(cluster.getPartition()), 0), Lists.<Tag>newArrayList(
             new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
             new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() )
         ) ) );

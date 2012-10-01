@@ -79,7 +79,8 @@ typedef struct {
 
 typedef struct {
     char resourceName [MAX_SENSOR_NAME_LEN];   // e.g. "i-1234567"
-    char resourceType [MAX_SENSOR_NAME_LEN];   // e.g. "instance"
+    char resourceType [10];                    // e.g. "instance"
+    char resourceUuid [64];                    // e.g. "550e8400-e29b-41d4-a716-446655443210"
     sensorMetric metrics [MAX_SENSOR_METRICS]; // array of values (not pointers, to simplify shared-memory region use)
     int metricsLen;                            // size of the array
 } sensorResource;
@@ -108,7 +109,7 @@ int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size,
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
 int sensor_get_config (int *new_history_size, long long * new_collection_interval_time_ms);
 int sensor_get_num_resources (void);
-int sensor_add_resource (const char * resourceName, const char * resourceType);
+int sensor_add_resource (const char * resourceName, const char * resourceType, const char * resourceUuid);
 int sensor_remove_resource (const char * resourceName);
 int sensor_str2type (const char * counterType);
 const char * sensor_type2str (int type);

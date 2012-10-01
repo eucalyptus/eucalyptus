@@ -1039,7 +1039,7 @@ void art_free (artifact * a) // frees the artifact and all its dependencies
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
             art_free (a->deps[i]);
         }
-        logprintfl (EUCADEBUG2, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
+        logprintfl (EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", 
                     a->instanceId, a->seq, a->id, a->size_bytes, a->vbr, a->may_be_cached, a->must_be_file);
         free (a);
     }

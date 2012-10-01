@@ -340,7 +340,7 @@ static void error_handler (void * ctx, const char * fmt, ...)
                 if (buf[i]=='\n' || i==(sizeof(buf)-1)) {
                         size = 0;
                         buf[i]='\0';
-                        logprintfl (EUCADEBUG, "ERROR from XML2/XSLT {%s}\n", buf);
+                        logprintfl (EUCATRACE, "ERROR from XML2/XSLT {%s}\n", buf);
                 }                
                 if (buf[i]=='\0') {
                         break;
@@ -475,7 +475,7 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
     ret = write_xml_file (doc, instance->instanceId, path, "volume")
         || apply_xslt_stylesheet (xslt_path, path, NULL, xml, xml_size);
-    logprintfl (EUCADEBUG2, "XML={%s}\n", xml);
+    logprintfl (EUCATRACE, "XML={%s}\n", xml);
 
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);

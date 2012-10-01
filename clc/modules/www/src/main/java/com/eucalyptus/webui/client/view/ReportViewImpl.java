@@ -91,13 +91,7 @@ public class ReportViewImpl extends Composite implements ReportView {
   
   @UiField
   DateBox toDate;
-  
-  @UiField
-  ListBox criteria;
-  
-  @UiField
-  ListBox groupBy;
-  
+
   @UiField
   ListBox type;
   
@@ -120,16 +114,9 @@ public class ReportViewImpl extends Composite implements ReportView {
     this.contentPanel.add( loadingAnimation );
     this.presenter.generateReport( fromDate.getValue( ),
                                    toDate.getValue( ),
-                                   criteria.getValue( criteria.getSelectedIndex( ) ),
-                                   groupBy.getValue( groupBy.getSelectedIndex( ) ),
                                    type.getValue( type.getSelectedIndex( ) ) );
   }
-  
-  @UiHandler( "pdfButton" )
-  void handlePdfButtonClick( ClickEvent e ) {
-    this.presenter.downloadPdf( );
-  }
-  
+
   @UiHandler( "csvButton" )
   void handleCsvButtonClick( ClickEvent e ) {
     this.presenter.downloadCsv( );
@@ -156,76 +143,10 @@ public class ReportViewImpl extends Composite implements ReportView {
   }
 
   @Override
-  public void init( Date fromDate, Date toDate, String[] criteriaList, String[] groupByList, String[] typeList ) {
-    //this.contentPanel.clear( );
+  public void init( Date fromDate, Date toDate, String[] typeList ) {
     initDate( this.fromDate, fromDate );
     initDate( this.toDate, toDate );
-    initList( this.criteria, criteriaList );
-    initList( this.groupBy, groupByList );
     initList( this.type, typeList );
-    type.addChangeHandler(new ChangeHandler() {
-
-		@Override
-		public void onChange(ChangeEvent arg0)
-		{
-			  /* NOTE: these are hard-coded Strings and do not access the
-			   * various enums, because this is compiled to JS for the browser
-			   * and has no access to the enums.
-			   */
-			  if (type.getSelectedIndex() == 2) {
-				  /* S3 Reports allow only User and Account
-				   */
-				  initList(criteria, new String[] {"User","Account"});
-				  initList(groupBy, new String[] {"None","Account"});
-			  } else {		  
-				  initList(criteria, new String[] {"User","Account","Cluster","Availability Zone"});
-				  initList(groupBy, new String[] {"None","Account","Cluster","Availability Zone"});
-			  }			
-			  groupBy.setSelectedIndex(0);
-			  criteria.setSelectedIndex(0);
-		}
-    	
-    });
-    
-    criteria.addChangeHandler( new ChangeHandler() {
-
-		@Override
-		public void onChange(ChangeEvent arg0)
-		{
-			int oldGroupByInd = groupBy.getSelectedIndex();
-			/* Display only groupBy selections which are appropriate for this
-			 * report type and for the selected report criterion.
-			 */
-			if (type.getSelectedIndex() == 2) {
-				String[] list =
-					(criteria.getSelectedIndex() == 1)
-					? new String[] {"None"}
-					: new String[] {"None","Account"};					
-				initList(groupBy, list);
-				groupBy.setSelectedIndex( 0 );
-			} else {
-				String[] list = null;
-				switch (criteria.getSelectedIndex()) {
-					case 3:
-						list = new String[] {"None"};
-						break;
-					case 2:
-						list = new String[] {"None","Availability Zone"};
-						break;
-					case 1:
-						list = new String[] {"None","Cluster","Availability Zone"};
-						break;
-					default:
-						list = new String[] {"None","Account","Cluster","Availability Zone"};
-						break;
-				}
-				initList(groupBy, list);
-				groupBy.setSelectedIndex( 0 );
-			}			
-		}    	
-    });
-
-
   }
 
   private void initDate( DateBox w, Date date ) {
@@ -235,15 +156,13 @@ public class ReportViewImpl extends Composite implements ReportView {
   }
   
   private void initList( ListBox l, String[] list ) {
-	    l.clear( );
-	    if ( list == null || list.length < 1 ) {
-	      l.addItem( "None" );
-	    } else {
-	      for (int i=0; i<list.length; i++) {
-	        l.addItem( list[i] );
-	      }
-	    }
-	  }
-  
-  
+    l.clear( );
+    if ( list == null || list.length < 1 ) {
+      l.addItem( "None" );
+    } else {
+      for ( final String aList : list ) {
+        l.addItem( aList );
+      }
+    }
+  }
 }

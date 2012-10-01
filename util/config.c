@@ -157,16 +157,17 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
 }
 
 // helper for reading log-related params from eucalyptus.conf
-void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out)
+void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix)
 {
     char * s = configFileValue ("LOGLEVEL");
-    //    assert (s); // we should always have a value, from file or the default
+    assert (s!=NULL); // configFileValue should return default
     * log_level_out = log_level_int (s);
-    free (s);
     
     long l;
     configFileValueLong ("LOGROLLNUMBER", &l);
     * log_roll_number_out = (int)l;
     
     configFileValueLong ("LOGMAXSIZE", log_max_size_bytes_out);
+
+    * log_prefix = configFileValue ("LOGPREFIX");
 }

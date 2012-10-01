@@ -21,12 +21,20 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
+import javax.persistence.EntityResult;
+import javax.persistence.NamedNativeQuery;
 import javax.persistence.PersistenceContext;
+import javax.persistence.SqlResultSetMapping;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
+@SqlResultSetMapping(name="s3ObjectDeleteEventMap",
+        entities=@EntityResult(entityClass=ReportingS3ObjectDeleteEvent.class))
+@NamedNativeQuery(name="scanS3ObjectDeleteEvents",
+     query="select * from reporting_s3_object_delete_events order by timestamp_ms",
+     resultSetMapping="s3ObjectDeleteEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_delete_events")
 public class ReportingS3ObjectDeleteEvent
@@ -36,23 +44,21 @@ public class ReportingS3ObjectDeleteEvent
 
 	@Column(name="s3_bucket_name", nullable=false)
 	private String s3BucketName;
-	@Column(name="s3_object_name", nullable=false)
-	private String s3ObjectName;
-	@Column(name="s3_object_size", nullable=false)
-	private Long s3ObjectSize;
-	@Column(name="s3_object_owner", nullable=false)
-	private String s3ObjectOwnerId;
+	@Column(name="s3_object_key", nullable=false)
+	private String s3ObjectKey;
+	@Column(name="s3_object_version", nullable=true) //version can be null as per disc with Zach
+	protected String objectVersion;
 
 	protected ReportingS3ObjectDeleteEvent()
 	{
 	}
 	
-	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String s3ObjectOwnerId)
+	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+			Long timestampMs)
 	{
 		this.s3BucketName = s3BucketName;
-		this.s3ObjectName = s3ObjectName;
-		this.s3ObjectSize = s3ObjectSize;
-		this.s3ObjectOwnerId = s3ObjectOwnerId;
+		this.s3ObjectKey = s3ObjectName;
+		this.objectVersion = objectVersion;
 		this.timestampMs = timestampMs;
 	}
 
@@ -61,35 +67,27 @@ public class ReportingS3ObjectDeleteEvent
 		return s3BucketName;
 	}
 	
-	public String getS3ObjectName()
+	public String getS3ObjectKey()
 	{
-		return s3ObjectName;
+		return s3ObjectKey;
 	}
 	
-	public Long getS3ObjectSize()
+	public String getObjectVersion()
 	{
-	    	return s3ObjectSize;
+		return objectVersion;
 	}
 	
-	public String getS3ObjectOwnerId()
-	{
-	    	return s3ObjectOwnerId;
-	}
-
 	@Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
-				.user( s3ObjectOwnerId )
-				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
-				.relation( ReportingS3ObjectCreateEvent.class, "s3ObjectName", s3ObjectName )
+				.relation( ReportingS3ObjectCreateEvent.class, "s3ObjectName", s3ObjectKey )
 				.set();
 	}
 
 	@Override
 	public String toString() {
 	    return "ReportingS3ObjectDeleteEvent [s3BucketName=" + s3BucketName
-		    + ", s3ObjectName=" + s3ObjectName + ", s3ObjectSize="
-		    + s3ObjectSize + ", s3ObjectOwnerId=" + s3ObjectOwnerId
+		    + ", s3ObjectKey=" + s3ObjectKey + ", s3ObjectSize="
 		    + ", timestampMs=" + timestampMs + "]";
 	}
 

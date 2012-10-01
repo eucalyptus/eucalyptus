@@ -62,13 +62,10 @@
 
 package com.eucalyptus.util;
 
-import java.util.List;
 import java.util.NoSuchElementException;
-import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Storage;
@@ -77,6 +74,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
+import edu.ucsb.eucalyptus.util.ConfigParser;
+import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 public class StorageProperties {
 
@@ -96,6 +95,7 @@ public class StorageProperties {
 	public static final int MAX_VOLUME_SIZE = 15;
 	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static final boolean zeroFillVolumes = false;
+	public static final long timeoutInMillis = 10000;
 
 	public static boolean enableSnapshots = false;
 	public static boolean enableStorage = false;
@@ -106,12 +106,40 @@ public class StorageProperties {
 	public static Integer ISCSI_LUN = 1;
 	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
-
+	public static final String ISCSI_INITIATOR_NAME_CONF = "/etc/iscsi/initiatorname.iscsi";
+	public static String SC_INITIATOR_IQN = null;
 	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
 	public static final String blockSize = "1M";
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 
+
+	private static String getSCIqn() {
+		try {
+			Runtime rt = Runtime.getRuntime();
+			Process proc = rt.exec(new String[]{ StorageProperties.EUCA_ROOT_WRAPPER, "cat", ISCSI_INITIATOR_NAME_CONF});
+			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
+			ConfigParser output = new ConfigParser(proc.getInputStream());
+			error.start();
+			output.start();
+			output.join();
+			error.join();
+			if(output.getValues() != null && output.getValues().containsKey("InitiatorName")) {
+				return output.getValues().get("InitiatorName");
+			}
+		} catch (Exception t) {
+			LOG.error("Failed to get local SC's initiator iqn from " + ISCSI_INITIATOR_NAME_CONF,t);
+		}
+		return null;		
+	}
+
+	public static String getStorageIqn() {
+		if (SC_INITIATOR_IQN == null) {
+			SC_INITIATOR_IQN = getSCIqn();
+		}
+		return SC_INITIATOR_IQN;
+	}
+	
 	public static void updateName() {
 		try {
 			StorageProperties.NAME = Components.lookup( Storage.class ).getLocalServiceConfiguration( ).getPartition( );
@@ -154,7 +182,7 @@ public class StorageProperties {
 	public enum StorageParameters {
 		EucaSignature, EucaSnapSize, EucaCert, EucaEffectiveUserId
 	}
-
+	
 	public static <T> EntityWrapper<T> getEntityWrapper( ) {
 		return ( EntityWrapper<T> ) EntityWrapper.get( VolumeInfo.class );
 	}

@@ -101,7 +101,6 @@ public class MainActivityMapper implements ActivityMapper {
   private ClientFactory clientFactory;
   
   public MainActivityMapper( ClientFactory clientFactory ) {
-    super( );
     this.clientFactory = clientFactory;
   }
   
@@ -120,7 +119,7 @@ public class MainActivityMapper implements ActivityMapper {
     } else if ( place instanceof VmTypePlace ) {
       return new VmTypeActivity( ( VmTypePlace )place, this.clientFactory );
     } else if ( place instanceof ReportPlace ) {
-      return new ReportActivity( ( ReportPlace )place, this.clientFactory );
+      return new ReportActivity( this.clientFactory );
     } else if ( place instanceof GroupPlace ) {
       return new GroupActivity( ( GroupPlace )place, this.clientFactory );
     } else if ( place instanceof UserPlace ) {

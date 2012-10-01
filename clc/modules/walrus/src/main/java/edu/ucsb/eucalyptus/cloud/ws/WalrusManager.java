@@ -77,6 +77,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
 import javax.persistence.RollbackException;
 
 import org.apache.log4j.Logger;
@@ -99,17 +100,24 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.reporting.event.S3Event;
+import com.eucalyptus.reporting.event.EventActionInfo;
+import com.eucalyptus.reporting.event.S3ObjectEvent;
+import com.eucalyptus.reporting.event.S3ObjectEvent.S3ObjectAction;
+import com.eucalyptus.reporting.event.SnapShotEvent;
+import com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Lookups;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.WalrusProperties;
 import com.eucalyptus.ws.handlers.WalrusRESTBinding;
 
@@ -217,6 +225,7 @@ import edu.ucsb.eucalyptus.util.WalrusMonitor;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.component.id.Walrus;
+
 
 public class WalrusManager {
 	private static Logger LOG = Logger.getLogger(WalrusManager.class);
@@ -447,7 +456,9 @@ public class WalrusManager {
 				}
 
 				/* Send an event to reporting to report this S3 usage. */				
-				reportWalrusEvent(genBucketEvent(ctx, true));
+				//reportWalrusEvent(genBucketEvent(ctx, true));
+				
+				//fireBucketUsageEvent(S3BucketEvent.forS3BucketCreate(), bucket.getNaturalId(), bucket.getBucketName(), ctx.getUserFullName(), bucket.getBucketSize() );
 
 			} else {
 				LOG.error( "Not authorized to create bucket by " + ctx.getUserFullName( ) );
@@ -460,45 +471,7 @@ public class WalrusManager {
 	}
 	
 	/* These functions are for reporting S3 usage */
-	private S3Event genBucketEvent(final Context ctx, final boolean isCreate) {		
-		try {
-			User usr = ctx.getUser();		
-			return new S3Event(isCreate, usr.getUserId(), usr.getName(), usr.getAccount().getAccountNumber(), usr.getAccount().getName());
-		} catch(Exception e) {
-			LOG.error("Non-fatal exception creating S3Event for bucket, isCreate = " + isCreate + " message = " + e.getMessage());
-			return null;
-		}
-	}
-	private S3Event genObjectEvent(final Context ctx, final boolean isCreate, final long sizeInBytes) {		
-		try {
-			User usr = ctx.getUser();
-			return new S3Event(isCreate, sizeInBytes / WalrusProperties.M, usr.getUserId(), usr.getName(), usr.getAccount().getAccountNumber(), usr.getAccount().getName());
-		} catch(Exception e) {
-			LOG.error("Non-fatal exception creating S3Event for bucket, isCreate = " + isCreate + " message = " + e.getMessage());
-			return null;
-		}
-	
-	}
-	private S3Event genBucketEvent(final String usrId, final String usrName, final String accntId, final String accntName, final boolean isCreate) {
-		return new S3Event(isCreate, usrId, usrName, accntId, accntName);
-	}	
-	private S3Event genObjectEvent(final String usrId, final String usrName, final String accntId, final String accntName, final boolean isCreate, final long sizeInBytes) {
-		return new S3Event(isCreate, sizeInBytes / WalrusProperties.M, usrId, usrName, accntId, accntName);
-	}
-	
-	/* Report the event to the reporting system */
-	private void reportWalrusEvent(S3Event event) {
-		if(event != null) {
-			try {
-        ListenerRegistry.getInstance().fireEvent(event);
-			} catch(Exception ex) {
-				LOG.error("Non-fatal exception: Could not send event: " + event.toString() + " Exception = " + ex.getMessage());			
-			}	
-		}
-		else {
-			LOG.error("Non-fatal error: cannot report a null Walrus event.");
-		}
-	}
+
 	
 	private boolean checkBucketName(String bucketName) {
 		if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
@@ -590,8 +563,10 @@ public class WalrusManager {
 						}
 		
 						/* Send an event to reporting to report this S3 usage. */
-						reportWalrusEvent(genBucketEvent(ctx, false));
-						
+							    
+					        //fireBucketUsageEvent(S3BucketAction.BUCKETDELETE, bucketFound.getNaturalId(), 
+					        //	bucketFound.getBucketName(), ctx.getUserFullName(), bucketFound.getBucketSize()); 
+	    
 					} catch (Exception ex) {
 						// set exception code in reply
 						LOG.error(ex);
@@ -1105,7 +1080,10 @@ public class WalrusManager {
 							LOG.info("Transfer complete: " + key);
 
 							/* Send an event to reporting to report this S3 usage. */
-							reportWalrusEvent(genObjectEvent(ctx,true,size));
+	
+							// TODO : Need to validate the naturalId is correct via unit testing 
+							//fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, foundDeleteMarker.getNaturalId(), bucketName, objectName, ctx.getUserFullName(), size);
+								
 							
 							break;
 						} else {
@@ -1204,7 +1182,7 @@ public class WalrusManager {
 		putObject.setStorageClass(request.getStorageClass());
 
 		PutObjectResponseType putObjectResponse = putObject(putObject);
-
+		
 		String etag = putObjectResponse.getEtag();
 		reply.setEtag(etag);
 		reply.setLastModified(putObjectResponse.getLastModified());
@@ -1406,8 +1384,12 @@ public class WalrusManager {
 					}
 
 					/* Send an event to reporting to report this S3 usage. */
-					reportWalrusEvent(genObjectEvent(ctx,true,size));
-
+					
+					//fireUsageEvent For Put Object 
+					//reportWalrusEvent(genObjectEvent(ctx,true,size));
+					//fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE,
+					//	    foundObject.getNaturalId(), foundObject.getBucketName(), 
+					//	    foundObject.getObjectName(), ctx.getUserFullName(), foundObject.getSize());
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -1702,8 +1684,11 @@ public class WalrusManager {
 					walrusStatistics.updateSpaceUsed(-size);
 
 					/* Send an event to reporting to report this S3 usage. */
-					reportWalrusEvent(genObjectEvent(userId,user,accountNumber,account,false,size));
-
+					// //fireUsageEvent For Delete Object 
+					//reportWalrusEvent(genObjectEvent(userId,user,accountNumber,account,false,size));
+					//fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE,
+					//	    Integer.toString(this.hashCode()), this.bucketName, this.objectName, 
+					//	    UserFullName.getInstance(Accounts.lookupUserById(userId)), this.size);
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
 			}
@@ -2506,6 +2491,8 @@ public class WalrusManager {
 								throw new EucalyptusCloudException(e);
 							}
 							reply.setBase64Data(Hashes.base64encode(base64Data));
+							
+							//fireUsageEvent For Get Object 
 						} else {
 							// support for large objects
 							if (WalrusProperties.trackUsageStatistics) {
@@ -2520,6 +2507,8 @@ public class WalrusManager {
 											contentDisposition, request
 											.getIsCompressed(), versionId,
 											logData);
+							
+							//fireUsageEvent For Get Object 
 							return null;
 						}
 					} else {
@@ -2723,6 +2712,8 @@ public class WalrusManager {
 												+ ".000Z"), contentType,
 												contentDisposition, request.getIsCompressed(),
 												versionId, logData);
+								//fireUsageEvent For Get Object (we need the size in regards
+								// to byteRangeStart : byteRangeEnd +1 do math
 								return null;
 							} else {
 								storageManager.sendHeaders(request,
@@ -3717,4 +3708,18 @@ public class WalrusManager {
 		}
 		db.commit();
 	}
+	
+	
+    private static void fireObjectUsageEvent(final S3ObjectAction actionInfo,
+	    String s3bUUID, String bucketName, String objectName, OwnerFullName ownerFullName, Long sizeInBytes) {
+	
+	try {
+	    ListenerRegistry.getInstance().fireEvent(
+		    S3ObjectEvent.with(actionInfo, s3bUUID, bucketName, objectName, ownerFullName, sizeInBytes));
+	    	 
+	} catch (final Exception e) {
+	    LOG.error(e, e);
+	}
+    }
+    
 }

@@ -98,6 +98,8 @@ import com.eucalyptus.util.async.NOOP;
 import com.eucalyptus.util.async.RemoteCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 
 @Entity
@@ -287,12 +289,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       public void bottom( ) {}
       
     } );
-    fireUsageEvent( ownerFullName, AddressEvent.forAllocate() );
+    fireUsageEvent( ownerFullName, Suppliers.ofInstance( AddressEvent.forAllocate() ) );
     return this;
   }
 
   public Address release( ) {
-    fireUsageEvent( AddressEvent.forRelease() );
+    fireUsageEvent( Suppliers.ofInstance( AddressEvent.forRelease() ) );
 
     SplitTransition release = new SplitTransition( Transition.unallocating ) {
       public void top( ) {
@@ -335,7 +337,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   public Address unassign( ) {
-    fireUsageEvent( AddressEvent.forDisassociate( instanceUuid, instanceId ) );
+    fireUsageEvent( new Supplier<EventActionInfo<AddressAction>>() {
+      @Override
+      public EventActionInfo<AddressAction> get() {
+        return AddressEvent.forDisassociate( instanceUuid, instanceId );
+      }
+    } );
 
     SplitTransition unassign = new SplitTransition( Transition.unassigning ) {
       public void top( ) {
@@ -400,7 +407,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     } else {
       this.transition( State.allocated, State.assigned, false, true, assign );
     }
-    fireUsageEvent( AddressEvent.forAssociate( vm.getInstanceUuid(), vm.getInstanceId() ) );
+    fireUsageEvent( new Supplier<EventActionInfo<AddressAction>>() {
+      @Override
+      public EventActionInfo<AddressAction> get() {
+        return AddressEvent.forAssociate( vm.getInstanceUuid(), vm.getInstanceId() );
+      }
+    } );
     return this;
   }
   
@@ -485,7 +497,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public String getInstanceId( ) {
     return this.instanceId;
   }
-  
+
+  public String getInstanceUuid( ) {
+    return this.instanceUuid;
+  }
+
   public String getUserId( ) {
     return this.getOwner( ).getUserId( );
   }
@@ -596,12 +612,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return "eucalyptus";
   }
 
-  private void fireUsageEvent( final EventActionInfo<AddressAction> actionInfo ) {
-    fireUsageEvent( getOwner(), actionInfo );
+  private void fireUsageEvent( final Supplier<EventActionInfo<AddressAction>> actionInfoSupplier ) {
+    fireUsageEvent( getOwner(), actionInfoSupplier );
   }
 
   private void fireUsageEvent( final OwnerFullName ownerFullName,
-                               final EventActionInfo<AddressAction> actionInfo ) {
+                               final Supplier<EventActionInfo<AddressAction>> actionInfoSupplier ) {
     if ( !Principals.isFakeIdentityAccountNumber( ownerFullName.getAccountNumber() ) ) {
       try {
         ListenerRegistry.getInstance().fireEvent(
@@ -610,7 +626,7 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
                 getDisplayName(),
                 ownerFullName,
                 Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),
-                actionInfo ) );
+                actionInfoSupplier.get() ) );
       } catch ( final Exception e ) {
         LOG.error( e, e );
       }

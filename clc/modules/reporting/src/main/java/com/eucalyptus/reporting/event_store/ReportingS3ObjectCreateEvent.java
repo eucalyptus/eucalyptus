@@ -25,6 +25,11 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
+@SqlResultSetMapping(name="s3ObjectCreateEventMap",
+        entities=@EntityResult(entityClass=ReportingS3ObjectCreateEvent.class))
+@NamedNativeQuery(name="scanS3ObjectCreateEvents",
+     query="select * from reporting_s3_object_create_events order by s3_bucket_name, timestamp_ms",
+     resultSetMapping="s3ObjectCreateEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_create_events")
 public class ReportingS3ObjectCreateEvent
@@ -35,11 +40,13 @@ public class ReportingS3ObjectCreateEvent
 	@Column(name="s3_bucket_name", nullable=false)
 	protected String s3BucketName;
 	@Column(name="s3_object_name", nullable=false)
-	protected String s3ObjectName;
+	protected String s3ObjectKey;
+	@Column(name="s3_object_version", nullable=true) //version can be null as per disc with Zach
+	protected String objectVersion;
+	@Column(name="size_gb", nullable=false)
+	protected Long sizeGB;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
-	@Column(name="s3_object_size", nullable=false)
-	protected Long s3ObjectSize;
 	
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
@@ -51,11 +58,13 @@ public class ReportingS3ObjectCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
  	 */
-	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, Long s3ObjectSize, Long timestampMs, String userId)
+	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+			Long sizeGB, Long timestampMs, String userId)
 	{
 		this.s3BucketName = s3BucketName;
-		this.s3ObjectName = s3ObjectName;
-		this.s3ObjectSize = s3ObjectSize;
+		this.s3ObjectKey = s3ObjectName;
+		this.objectVersion = objectVersion;
+		this.sizeGB = sizeGB;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
 	}
@@ -65,9 +74,9 @@ public class ReportingS3ObjectCreateEvent
 		return this.s3BucketName;
 	}
 
-	public String getS3ObjectName()
+	public String getS3ObjectKey()
 	{
-		return this.s3ObjectName;
+		return this.s3ObjectKey;
 	}
 
 	public String getUserId()
@@ -75,21 +84,25 @@ public class ReportingS3ObjectCreateEvent
 		return this.userId;
 	}
 	
-	public Long getS3ObjectSize()
+	public Long getSizeGB()
 	{
-	    	return this.s3ObjectSize;
+	    	return this.sizeGB;
+	}
+
+	public String getObjectVersion()
+	{
+		return objectVersion;
 	}
 
 	@Override
 	public EventDependency asDependency() {
-		return asDependency( "s3ObjectName", s3ObjectName );
+		return asDependency( "s3ObjectName", s3ObjectKey );
 	}
 
   @Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
 				.user( userId )
-				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", s3BucketName )
 				.set();
 	}
 
@@ -100,9 +113,9 @@ public class ReportingS3ObjectCreateEvent
 	    result = prime * result
 		    + ((s3BucketName == null) ? 0 : s3BucketName.hashCode());
 	    result = prime * result
-		    + ((s3ObjectName == null) ? 0 : s3ObjectName.hashCode());
+		    + ((s3ObjectKey == null) ? 0 : s3ObjectKey.hashCode());
 	    result = prime * result
-		    + ((s3ObjectSize == null) ? 0 : s3ObjectSize.hashCode());
+		    + ((sizeGB == null) ? 0 : sizeGB.hashCode());
 	    result = prime * result
 		    + ((timestampMs == null) ? 0 : timestampMs.hashCode());
 	    result = prime * result
@@ -124,15 +137,15 @@ public class ReportingS3ObjectCreateEvent
 		    return false;
 	    } else if (!s3BucketName.equals(other.s3BucketName))
 		return false;
-	    if (s3ObjectName == null) {
-		if (other.s3ObjectName != null)
+	    if (s3ObjectKey == null) {
+		if (other.s3ObjectKey != null)
 		    return false;
-	    } else if (!s3ObjectName.equals(other.s3ObjectName))
+	    } else if (!s3ObjectKey.equals(other.s3ObjectKey))
 		return false;
-	    if (s3ObjectSize == null) {
-		if (other.s3ObjectSize != null)
+	    if (sizeGB == null) {
+		if (other.sizeGB != null)
 		    return false;
-	    } else if (!s3ObjectSize.equals(other.s3ObjectSize))
+	    } else if (!sizeGB.equals(other.sizeGB))
 		return false;
 	    if (timestampMs == null) {
 		if (other.timestampMs != null)
@@ -150,9 +163,9 @@ public class ReportingS3ObjectCreateEvent
 	@Override
 	public String toString() {
 	    return "ReportingS3ObjectCreateEvent [s3BucketName=" + s3BucketName
-		    + ", s3ObjectName=" + s3ObjectName + ", timestampMs="
+		    + ", s3ObjectName=" + s3ObjectKey + ", timestampMs="
 		    + timestampMs + ", userId=" + userId + ", s3ObjectSize="
-		    + s3ObjectSize + "]";
+		    + sizeGB + "]";
 	}
 
 
