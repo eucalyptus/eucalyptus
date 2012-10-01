@@ -96,6 +96,7 @@ public class StorageProperties {
 	public static final int MAX_VOLUME_SIZE = 15;
 	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static final boolean zeroFillVolumes = false;
+	public static final long timeoutInMillis = 10000;
 
 	public static boolean enableSnapshots = false;
 	public static boolean enableStorage = false;
