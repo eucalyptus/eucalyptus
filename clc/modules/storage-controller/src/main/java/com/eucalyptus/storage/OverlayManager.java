@@ -504,7 +504,6 @@ public class OverlayManager implements LogicalStorageManager {
 			createLogicalVolume(loDevName, vgName, lvName);
 			lvmVolumeInfo.setVgName(vgName);
 			lvmVolumeInfo.setLvName(lvName);
-			lvmVolumeInfo.setPvName(loDevName);
 			lvmVolumeInfo.setVolumeId(volumeId);
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
@@ -553,23 +552,14 @@ public class OverlayManager implements LogicalStorageManager {
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 					duplicateLogicalVolume(loFileName, absoluteLVName);
-					//export logical volume
-					try {
-						volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
-					} catch(EucalyptusCloudException ex) {
-						String returnValue = removeLogicalVolume(absoluteLVName);
-						returnValue = removeVolumeGroup(vgName);
-						returnValue = removePhysicalVolume(loDevName);
-						removeLoopback(loDevName);
-						throw ex;
-					}
 					lvmVolumeInfo.setVolumeId(volumeId);
-					lvmVolumeInfo.setLoDevName(loDevName);
-					lvmVolumeInfo.setPvName(loDevName);
 					lvmVolumeInfo.setVgName(vgName);
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 					lvmVolumeInfo.setSize(size);
+					//tear down
+					disableLogicalVolume(absoluteLVName);
+					removeLoopback(loDevName);
 					volumeManager = new VolumeEntityWrapperManager();
 					volumeManager.add(lvmVolumeInfo);
 					volumeManager.finish();
