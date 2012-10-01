@@ -1141,7 +1141,6 @@ public class OverlayManager implements LogicalStorageManager {
 			} catch (Throwable ex) {
 				LOG.info(ex, ex);
 			}
-			LOG.info("NO RESULTS");
 			return null;
 		}
 
