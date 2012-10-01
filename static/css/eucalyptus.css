@@ -2097,6 +2097,7 @@ div#launch-wizard-type-size-legend{
 .launch-wizard-section-header a {
   outline: none;
   color: #02405F;
+  display: inline-block;
   text-decoration: none;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -616px;
   padding-left: 20px;
