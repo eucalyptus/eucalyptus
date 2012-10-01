@@ -707,8 +707,7 @@ input[type='text'].short-textinput {
 /* ======== Content styles ======= */
 
 .content-box,
-.euca-dialog-container,
-.help-page-wrapper {
+.euca-dialog-container {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
@@ -733,7 +732,8 @@ input[type='text'].short-textinput {
 .page-content-box,
 .dataTables_wrapper, 
 .wizard-summary,
-.launcher-wrapper {
+.launcher-wrapper,
+.help-page-wrapper {
   position: relative;
   background-color: #fff;
   border: 1px solid #d7d5d5;
@@ -1140,7 +1140,7 @@ ul.volume-expanded li:last-child {
   /* NOTE: Some common styles are set above with the page-content-box */
   /* Only the differences are placed here */
   margin: 0 8px 35px;
-  padding: 47px 0 15px 0; 
+  padding: 40px 5px 15px; 
 }
 
 /* To override the background-color inline style added by the jQuery Flip */
@@ -1196,6 +1196,10 @@ ul.volume-expanded li:last-child {
 }
 
 /* ==== Page help and dialog help content ==== */
+
+.dialog-help-content {
+  padding: 0 5px;
+}
 
 .dialog-help-content h1,
 .help-content h1,
