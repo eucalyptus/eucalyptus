@@ -398,7 +398,7 @@ class EucaConf(object):
             sys.exit(1)
 
     def warn(self, msg):
-        sys.stderr.write(msg + '\n')
+        print >> sys.stderr, 'warning:', msg
 
     def get_sshkey(self):
         key = None
@@ -652,7 +652,7 @@ class EucaConf(object):
         eucadmin.print_version_if_necessary()
 
     def _get_accesskey_secretkey(self, url):
-        self.warn('No credentials found, attempting local authentication')
+        self.warn('No credentials found; attempting local authentication')
         gc_cls = boto.utils.find_class('eucadmin.getcredentials',
                                        'GetCredentials')
         obj = gc_cls(euca_home=self.config['EUCALYPTUS'],
@@ -686,22 +686,24 @@ class EucaConf(object):
                             port=port, host=host)
         req.cli_formatter(data)
 
+    def _sync_keys_if_necessary(self, fnames, host=None):
+        if self.options.no_sync:
+            return True
+        key_dir = os.path.join(self.config['EUCALYPTUS'],
+                               'var/lib/eucalyptus/keys')
+        file_paths = [os.path.join(key_dir, fname) for fname in fnames]
+        cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
+        req = cls(file_paths, key_dir, (host or self.options.host_name),
+                  use_rsync=(not self.options.no_rsync),
+                  use_scp=(not self.options.no_scp))
+        return req.sync_keys()
+
     def do_register_cloud(self):
         if hasattr(self.options, 'register_cloud'):
             self._do_register('eucadmin.registereucalyptus',
                               'RegisterEucalyptus', None)
-            if not self.options.no_sync:
-                path1 = os.path.join(self.config['EUCALYPTUS'],
-                                     'var/lib/eucalyptus/keys')
-                path2 = os.path.join(path1, self.options.partition_name)
-                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path1, path2], path1,
-                          self.options.host_name, ['euca.p12',
-                                                   'cloud-cert.pem',
-                                                   'cloud-pk.pem'],
-                          use_rsync=(not self.options.no_rsync),
-                          use_scp=(not self.options.no_scp))
-                req.sync()
+            keys = ['euca.p12', 'cloud-cert.pem', 'cloud-pk.pem']
+            self._sync_keys_if_necessary(keys)
 
     def do_register_arbitrator(self):
         if hasattr(self.options, 'register_arbitrator'):
@@ -710,50 +712,31 @@ class EucaConf(object):
                 sys.exit(1)
             self._do_register('eucadmin.registerarbitrator',
                               'RegisterArbitrator', None)
+            # No key sync necessary
 
     def do_register_cluster(self):
         if hasattr(self.options, 'register_cluster'):
             self._do_register('eucadmin.registercluster',
                               'RegisterCluster', 'cc_port')
-            if not self.options.no_sync:
-                path1 = os.path.join(self.config['EUCALYPTUS'],
-                                     'var/lib/eucalyptus/keys')
-                path2 = os.path.join(path1, self.options.partition_name)
-                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path1, path2], path1, self.options.host_name,
-                          ['node-cert.pem',    'node-pk.pem',
-                           'cluster-cert.pem', 'cluster-pk.pem',
-                           'cloud-cert.pem',   'cloud-pk.pem',
-                           'vtunpass'],
-                          use_rsync=(not self.options.no_rsync),
-                          use_scp=(not self.options.no_scp))
-                req.sync()
+            global_keys = ['cloud-cert.pem', 'cloud-pk.pem']
+            partition = self.options.partition_name
+            cluster_keys = [os.path.join(partition, fname) for fname in
+                            ('node-cert.pem',    'node-pk.pem',
+                             'cluster-cert.pem', 'cluster-pk.pem',
+                             'vtunpass')]
+            self._sync_keys_if_necessary(global_keys + cluster_keys)
 
     def do_register_walrus(self):
         if hasattr(self.options, 'register_walrus'):
             self._do_register('eucadmin.registerwalrus',
                               'RegisterWalrus', 'walrus_port')
-            if not self.options.no_sync:
-                path = os.path.join(self.config['EUCALYPTUS'],
-                                     'var/lib/eucalyptus/keys')
-                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path], path, self.options.host_name, ['euca.p12'],
-                          use_rsync=(not self.options.no_rsync),
-                          use_scp=(not self.options.no_scp))
-                req.sync()
+            self._sync_keys_if_necessary(['euca.p12'])
 
     def do_register_sc(self):
         if hasattr(self.options, 'register_sc'):
             self._do_register('eucadmin.registerstoragecontroller',
                               'RegisterStorageController', 'sc_port')
-            if not self.options.no_sync:
-                path = os.path.join(self.config['EUCALYPTUS'],
-                                     'var/lib/eucalyptus/keys')
-                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path], path, self.options.host_name, ['euca.p12'],
-                          use_rsync=(not self.options.no_rsync),
-                          use_scp=(not self.options.no_scp))
-                req.sync()
+            self._sync_keys_if_necessary(['euca.p12'])
 
     def _check_host(self):
         import socket, re
@@ -780,14 +763,8 @@ class EucaConf(object):
                               'RegisterVMwareBroker', None)
             # Make some changes in eucalyptus.conf file
             self.config.update(ConfigBrokerReg)
-            if not self.options.no_sync:
-                path = os.path.join(self.config['EUCALYPTUS'],
-                                     'var/lib/eucalyptus/keys')
-                cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-                req = cls([path], path, self.options.host_name, ['euca.p12'],
-                          use_rsync=(not self.options.no_rsync),
-                          use_scp=(not self.options.no_scp))
-                req.sync()
+
+            self._sync_keys_if_necessary(['euca.p12'])
 
     def _do_deregister(self, option_name, module_name, class_name):
         if hasattr(self.options, option_name):
@@ -839,16 +816,9 @@ class EucaConf(object):
 
 
     def _sync_node(self, node):
-        path = os.path.join(self.config['EUCALYPTUS'],
-                            'var/lib/eucalyptus/keys')
-        # probably need to look in partition directory
-        cls = boto.utils.find_class('eucadmin.synckeys', 'SyncKeys')
-        files = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
-                 'node-pk.pem']
-        req = cls([path], path, node, files,
-                  use_rsync=(not self.options.no_rsync),
-                  use_scp=(not self.options.no_scp))
-        return req.sync()
+        keys = ['node-cert.pem', 'cluster-cert.pem', 'cloud-cert.pem',
+                'node-pk.pem']
+        return self._sync_keys_if_necessary(keys, host=node)
 
     def _print_sync_error(self, node):
         s = 'ERROR: could not synchronize keys with %s\n' % node
