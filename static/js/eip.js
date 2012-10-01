@@ -46,10 +46,6 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "oLanguage": {
-            "sZeroRecords": eip_no_records,
-            "sEmptyTable": eip_empty_data
-          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -72,6 +68,7 @@
           create_resource : eip_allocate,
           resource_found : eip_found,
           resource_search : eip_search,
+          resource_plural : eip_plural,
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();

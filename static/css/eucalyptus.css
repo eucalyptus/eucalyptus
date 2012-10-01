@@ -708,8 +708,7 @@ input[type='text'].short-textinput {
 
 .content-box,
 .euca-dialog-container,
-.help-page-wrapper,
-.launcher-wrapper {
+.help-page-wrapper {
   background-color: #fff;
   border: 1px solid #aaabab;
   min-height: 285px;
@@ -733,7 +732,8 @@ input[type='text'].short-textinput {
 
 .page-content-box,
 .dataTables_wrapper, 
-.wizard-summary {
+.wizard-summary,
+.launcher-wrapper {
   position: relative;
   background-color: #fff;
   border: 1px solid #d7d5d5;
@@ -996,8 +996,8 @@ table.display thead th {
   font-weight: normal;
   color: #7aa92a;
   text-transform: uppercase;
-  border-bottom: 1px solid #dae2e8;
-  border-top: 0;
+  border: 1px solid #dae2e8;
+  border-width: 1px 0;
   background-color: #e1e1e1;
 
   background-image: -webkit-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
@@ -1013,8 +1013,7 @@ table.display tr.heading2 td {
 
 table.display td {
   padding: 5px 8px;
-  /*border-top: 2px solid #dae2e8;
-  border-left: 1px solid #dae2e8;*/
+  border-bottom: 1px solid #e5e5e5;
   font-size: 11px;
 }
 
@@ -1024,12 +1023,12 @@ table.display td.dataTables_empty {
 
 tr.odd,
 tr.odd td.sorting_1 {
-  background-color: #fff;
+  background-color: #f4f4ef;
 }
 
 tr.even,
 tr.even td.sorting_1 {
-  background-color: #f0f7f7;
+  background-color: #fff;
 }
 
 .table_center_cell {
@@ -1057,8 +1056,11 @@ table.display thead th.checkbox-cell {
   text-align: center;
 }
 
-.glow {
-  color: orange; /* TODO - Update this with a more subtle color */
+tr.glow td,
+tr.glow td.sorting_1,
+tr.glow td.sorting_2,
+tr.glow td.sorting_3 {
+  background-color: #ffffdc;
 }
 
 /* ======= Expanded rows of the jQuery tables ======= */
@@ -1881,26 +1883,68 @@ ul.volume-expanded li:last-child {
 
 .wizard-wrapper {
   float: left;
-  width: 720px;
+  width: 730px;
 }
 
 .launcher-wrapper {
   /* This is the rounded corner box inside the wizard wrapper */
 }
 
+.launch-wizard-intro-text {
+  padding: 15px 20px 0; 
+}
+
 .wizard-steps {
-  padding: 15px;
+  margin: 15px 0 0 5px;
+  padding: 0 0 15px 15px;
+  background: transparent url(../images/side-shadow.png) repeat-y left top;
 }
 
 .wizard-step {
-  margin: 20px 0;
-  padding: 10px 10px 15px;
-  background-color: #e9e9e9; /* To temporarily mark the defined area */
+  margin: 0;
+  padding: 20px 10px 25px;
+  position: relative;
 }
+
+/* Have to undo all of the styling used on the landing pages */
+
+.wizard-step .dataTables_wrapper {
+  margin: 0;
+  padding: 0 0 25px;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.wizard-step .dataTables_wrapper table {
+  border: 1px solid #e5e5e5;
+}
+
+
+/* Have to self-clear since I can't add the clearfix class directly */
+
+.wizard-step .dataTables_wrapper:before,
+.wizard-step .dataTables_wrapper:after {
+  content:"";
+  display:table;
+}
+.wizard-step .dataTables_wrapper:after {
+  clear:both;
+}
+
+.image-name {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 14px; 
+  color: #02405f;  
+}
+
+
+
 
 .wizard-summary-wrapper {
   float: right;
-  width: 200px;
+  width: 195px;
 }
 
 .wizard-summary {
@@ -1936,21 +1980,24 @@ span.on-error {
   /* NOTE: Some common styles are set above with the page-content-box */
   /* Only the differences are placed here */
   margin: 0 8px 35px;
-  padding: 47px 0 10px 0;
+  padding: 47px 0 0 0;
 }
 
 .launch-wizard-section {
   display: none;
+  padding: 15px 0 0 5px;
 }
 
 .wizard-step #filter-wrapper {
   float: left;
-  width : 150px;
+  width : 185px;
+  margin-right: 20px;
 }
 .wizard-step #table-wrapper {
   float: left;
-  width : 250px;
+  width : 440px;
 }
+
 .wizard-step .dataTables_filter input {
   background-color: #f3f6f9;
   border-radius: 4px;
@@ -1965,7 +2012,7 @@ span.on-error {
   -webkit-box-shadow: inset 0 0 3px #a8b9c8;
   box-shadow: inset 0 0 3px #a8b9c8;
 }
-.wizard-step .dataTables_wrapper table thead{
+.wizard-step .dataTables_wrapper table thead {
   display:none;
 }
 
@@ -2025,10 +2072,51 @@ div#launch-wizard-type-size-legend{
     clear: left;
 }
 
+.wizard-subsection-label {
+  color: #02405f;
+  font-weight: bold;
+
+}
+
+.launch-wizard-section-header {
+  position: absolute;
+  top: -1px;
+  left: -9px;
+  margin: 0;
+  padding: 0 0 9px 25px;
+  width: 150px;
+  background: transparent url(../images/ribbon-header-bg.png) no-repeat left top;
+  color: #02405F;
+  font-weight: normal;
+  font-size: 13px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.launch-wizard-section-header.expanded {
+  background-color: transparent;
+}  
+
 .launch-wizard-section-header .required-label {
   display: inline-block;
   width: auto;
   text-align: left;
+}
+
+.launch-wizard-section-header a {
+  outline: none;
+  color: #02405F;
+  text-decoration: none;
+}
+
+
+.launch-wizard-pointer {
+  background: transparent url(../images/wizard-pointer.png) no-repeat left top;
+  height: 30px;
+  width: 19px;
+  position: absolute;
+  right: -19px;
+  top: 85px;
 }
 
 #launch-more-summary-contents {

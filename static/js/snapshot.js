@@ -42,10 +42,6 @@
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",
-          "oLanguage": {
-            "sZeroRecords": snapshot_no_records,
-            "sEmptyTable": snapshot_empty_data
-          },
           "aoColumns": [
             {
               "bSortable": false,
@@ -87,6 +83,7 @@
           create_resource : snapshot_create,
           resource_found : snapshot_found,
           resource_search : snapshot_search,
+          resource_plural : snapshot_plural,
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();

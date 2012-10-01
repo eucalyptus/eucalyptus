@@ -71,11 +71,22 @@
          help: { content: $dialog_help },
          help_icon_class : 'help-euca',
        });
-       this._aboutDialog.find('#version').html(this._version);
-       this._aboutDialog.find('#admin-url').attr('href', this._adminURL);
+      this._aboutDialog.find('#version').html(this._version);
+      this._aboutDialog.find('#admin-url').attr('href', this._adminURL);
+      $(window).hashchange( function(){
+        thisObj._windowsHashChanged();
+      });
     },
 
     _destroy : function() {
+    },
+
+    _windowsHashChanged : function() {
+      var hash = location.hash;
+      if (hash)
+        hash= hash.replace(/^#/, '');
+      if (this._curSelected != hash && hash != '')
+       this.updateSelected(hash);
     },
 
     // event receiver for menu selection
@@ -150,8 +161,10 @@
         default:
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
-      if (options != KEEP_VIEW)
+      if (options != KEEP_VIEW) {
         this._curSelected = selected;
+        location.hash = selected;
+      }
     },
 
     clearSelected : function (){

@@ -351,8 +351,8 @@
           };
       this._imageTable = $table.dataTable(dtArg);
     
-      $section.find('#filter-wrapper').prepend($('<span>').html(launch_instance_image_table_refine));
-      $section.find('#table-wrapper').prepend($('<span>').html(launch_instance_image_table_header));
+      $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-subsection-label').html(launch_instance_image_table_refine));
+      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-subsection-label').html(launch_instance_image_table_header));
 
       $.fn.dataTableExt.afnFiltering = [];
       $.fn.dataTableExt.afnFiltering.push(

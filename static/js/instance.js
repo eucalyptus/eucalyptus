@@ -48,10 +48,6 @@
         id : 'instances', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeInstances",
-          "oLanguage": {
-            "sZeroRecords": instance_no_records,
-            "sEmptyTable": instance_empty_data
-          },
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {
@@ -111,6 +107,7 @@
           create_resource : instance_create,
           resource_found : instance_found,
           resource_search : instance_search,
+          resource_plural : instance_plural,
         },
         menu_click_create : function(e) {
           var $container = $('html body').find(DOM_BINDING['main']);

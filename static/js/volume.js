@@ -40,10 +40,6 @@
         id : 'volumes', // user of this widget should customize these options,
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeVolumes",
-          "oLanguage": {
-            "sZeroRecords": volume_no_records,
-            "sEmptyTable": volume_empty_data
-          },
           "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
             {
@@ -89,6 +85,7 @@
           create_resource : volume_create,
           resource_found : volume_found,
           resource_search : volume_search,
+          resource_plural : volume_plural,
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
