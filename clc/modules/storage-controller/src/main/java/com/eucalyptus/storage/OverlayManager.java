@@ -720,17 +720,23 @@ public class OverlayManager implements LogicalStorageManager {
 			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId + Hashes.getRandom(6);
 			//create file and attach to loopback device
 			volumeManager.finish();
-			volumeManager = null;
 			try {
 				//mount volume and loopback and enable
 				String absoluteVolLVName = lvmRootDirectory + PATH_SEPARATOR + foundLVMVolumeInfo.getVgName() + PATH_SEPARATOR + foundLVMVolumeInfo.getLvName();
 				String volLoDevName = foundLVMVolumeInfo.getLoDevName();
-				boolean volumeIsMounted = true;
+				boolean tearDown = false;
 				if(!logicalVolumeExists(absoluteVolLVName)) {
 					volLoDevName = createLoopback(DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId);
 					enableLogicalVolume(absoluteVolLVName);
-					volumeIsMounted = false;
+					tearDown = true;
 				}
+				snapshotInfo.setStatus(StorageProperties.Status.pending.toString());
+				snapshotInfo.setSize(size);
+				snapshotInfo.setSnapshotOf(volumeId);
+				volumeManager = new VolumeEntityWrapperManager();
+				volumeManager.add(snapshotInfo);
+				volumeManager.finish();
+
 				String loDevName = createLoopback(rawFileName, snapshotSize);
 
 				//create physical volume, volume group and logical volume
@@ -757,20 +763,19 @@ public class OverlayManager implements LogicalStorageManager {
 				if(!(new File(rawFileName)).delete()) {
 					LOG.error("Unable to remove temporary snapshot file: " + rawFileName);
 				}
-				snapshotInfo.setLoFileName(snapRawFileName);
-				snapshotInfo.setStatus(StorageProperties.Status.available.toString());
-				snapshotInfo.setSize(size);
-				returnValues.add(snapRawFileName);
-				returnValues.add(String.valueOf(size * WalrusProperties.G));
-				volumeManager = new VolumeEntityWrapperManager();
-				volumeManager.add(snapshotInfo);
-				volumeManager.finish();
-
 				//tear down volume
-				if(!volumeIsMounted) {
+				if(tearDown) {
+					LOG.info("Snapshot complete. Detaching loop device" + volLoDevName);
 					disableLogicalVolume(absoluteVolLVName);
 					removeLoopback(volLoDevName);
 				}
+				returnValues.add(snapRawFileName);
+				returnValues.add(String.valueOf(size * WalrusProperties.G));
+				volumeManager = new VolumeEntityWrapperManager();
+				LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
+				foundSnapshotInfo.setLoFileName(snapRawFileName);
+				foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
+				volumeManager.finish();
 			} catch(EucalyptusCloudException ex) {
 				if(volumeManager != null)
 					volumeManager.abort();
@@ -1102,6 +1107,7 @@ public class OverlayManager implements LogicalStorageManager {
 				}
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
 				((ISCSIManager)manager).unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+				iscsiVolumeInfo.setTid(-1);
 			}			
 		}
 
@@ -1128,6 +1134,23 @@ public class OverlayManager implements LogicalStorageManager {
 				}
 			} else if(exportManager instanceof ISCSIManager) {
 				ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo(volumeId);
+				List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+				if(ISCSIVolumeInfos.size() > 0) {
+					return ISCSIVolumeInfos.get(0);
+				}
+			}
+			return null;
+		}
+
+		private LVMVolumeInfo getVolumeInfo(LVMVolumeInfo volumeInfo) {
+			if(exportManager instanceof AOEManager) {
+				AOEVolumeInfo AOEVolumeInfo = (AOEVolumeInfo) volumeInfo;
+				List<AOEVolumeInfo> AOEVolumeInfos = entityWrapper.query(AOEVolumeInfo);
+				if(AOEVolumeInfos.size() > 0) {
+					return AOEVolumeInfos.get(0);
+				}
+			} else if(exportManager instanceof ISCSIManager) {
+				ISCSIVolumeInfo ISCSIVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
 				List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
 				if(ISCSIVolumeInfos.size() > 0) {
 					return ISCSIVolumeInfos.get(0);
@@ -1420,9 +1443,18 @@ public class OverlayManager implements LogicalStorageManager {
 			String lvName = foundLVMVolumeInfo.getLvName();
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			volumeManager.unexportVolume(foundLVMVolumeInfo);
-			disableLogicalVolume(absoluteLVName);
-			removeLoopback(loDevName);
-			foundLVMVolumeInfo.setLoDevName(null);
+			LVMVolumeInfo volumeInfo = new LVMVolumeInfo();
+			volumeInfo.setSnapshotOf(volumeId);
+			volumeInfo.setStatus(StorageProperties.Status.pending.toString());
+			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo(volumeInfo);
+			if(snapshotInfo == null) {
+				LOG.info("Detaching loop device: " + loDevName);
+				disableLogicalVolume(absoluteLVName);
+				removeLoopback(loDevName);
+				foundLVMVolumeInfo.setLoDevName(null);
+			} else {
+				LOG.info("Snapshot: " + snapshotInfo.getVolumeId() + " in progress. Not detaching loop device.");
+			}
 			volumeManager.finish();
 		}  else {
 			volumeManager.abort();
