@@ -83,6 +83,8 @@ import com.eucalyptus.troubleshooting.TestFaultTrigger;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck;
 import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck;
+import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.Checker;
+import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.LocationInfo;
 import com.eucalyptus.troubleshooting.resourcefaults.MXBeanMemoryResourceCheck;
 import com.eucalyptus.troubleshooting.resourcefaults.SimpleMemoryResourceCheck;
 @Provides(Empyrean.class)
@@ -100,11 +102,13 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	  @Override
 	  public boolean start( ) throws Exception {
 	    LOG.info( "Starting troubleshooting interface." );
-	    DiskResourceCheck check = new DiskResourceCheck();
+	    //DiskResourceCheck check = new DiskResourceCheck();
 	    // TOOD: we should use a property, but for now use 2% of the log directory
 	    File logFileDir = BaseDirectory.LOG.getFile();
-	    check.addLocationInfo(logFileDir, (long) (0.02 * logFileDir.getTotalSpace()));
-	    check.start();
+	    //check.addLocationInfo(logFileDir, (long) (0.02 * logFileDir.getTotalSpace()));
+	    //check.start();
+	    LocationInfo location = new LocationInfo(logFileDir, (long) (0.02 * logFileDir.getTotalSpace()));
+	    DiskResourceCheck.start(new Checker(location));
 	    new DBResourceCheck().start();
 	    //	    new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K left, also arbitrary
 	    //new MXBeanMemoryResourceCheck().start(); // 512K left, also arbitrary
