@@ -49,7 +49,7 @@
             if ( data ) {
               thisObj._version = data.version;
               thisObj._adminURL = data.admin_url;
-              thisObj._helpLink = data.help_page;
+              thisObj._helpLink = data.help_page + data.version;
             }
           },
         error:
