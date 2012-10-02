@@ -114,7 +114,11 @@
          id: 'volumes-delete',
          title: volume_dialog_del_title,
          buttons: {
-           'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.eucadialog("close");}},
+           'delete': {text: volume_dialog_del_btn, click: function() {
+                var volumesToDelete = thisObj.delDialog.eucadialog('getSelectedResources', 0);
+                $del_dialog.eucadialog("close");
+                thisObj._deleteListedVolumes(volumesToDelete);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: { content: $del_help },
@@ -129,7 +133,11 @@
          id: 'volumes-detach',
          title: volume_dialog_detach_title,
          buttons: {
-           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.eucadialog("close");}},
+           'detach': {text: volume_dialog_detach_btn, click: function() {
+                 var volumes =  dialogToUse.eucadialog('getSelectedResources', 0);
+                 $detach_dialog.eucadialog("close");
+                 thisObj._detachListedVolumes(volumes, false);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
          help: { content: $detach_help },
@@ -148,8 +156,8 @@
                 volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
                 instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
-                thisObj._attachVolume(volumeId, instanceId, device);
                 $attach_dialog.eucadialog("close");
+                thisObj._attachVolume(volumeId, instanceId, device);
               } 
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
@@ -202,8 +210,8 @@
                 $add_dialog.eucadialog('showError', volume_dialog_az_error_msg);
               }
               if ( isValid ) {
-                thisObj._createVolume(size, az, $snapshot.val());
                 $add_dialog.eucadialog("close");
+                thisObj._createVolume(size, az, $snapshot.val());
               } 
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
@@ -307,11 +315,10 @@
       dfd.resolve();
     },
 
-    _deleteListedVolumes : function () {
+    _deleteListedVolumes : function (volumesToDelete) {
       var thisObj = this;
-      var $volumesToDelete = this.delDialog.eucadialog('getSelectedResources', 0);
-      for ( i = 0; i<$volumesToDelete.length; i++ ) {
-        var volumeId = $volumesToDelete[i];
+      for ( i = 0; i<volumesToDelete.length; i++ ) {
+        var volumeId = volumesToDelete[i];
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
@@ -390,10 +397,9 @@
       });
     },
 
-    _detachListedVolumes : function (force) {
+    _detachListedVolumes : function (volumes, force) {
       var thisObj = this;
-      dialogToUse = this.detachDialog; 
-      var volumes =  dialogToUse.eucadialog('getSelectedResources', 0);
+      dialogToUse = this.detachDialog;
       for ( i = 0; i<volumes.length; i++ ) {
         var volumeId = volumes[i];
         $.ajax({
