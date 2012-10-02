@@ -454,21 +454,24 @@
                       <div class="dialog-notifications"></div>
                     </div>  
                   
-                    <div class="form-row">
-                      <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                      <input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/>{{!>sgroup_dialog_add_allow_ip}}
-                      <input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" style="fgcolor:#ff000000;"></span>
-                      <a href="#" id='sgroup-ip-check'>my ip</a>
+                    <div class="form-row sg-inline-options">
+                      <span class="field">{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span>
+                      <input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" class="sg-error-msg"></span>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
                     </div>
   
-                    <div class="form-row">
-                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/>{{!>sgroup_dialog_add_allow_group}} 
-                      <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    <div class="form-row sg-options-row">
+                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                     </div>
                   
-                    <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
+                    <div class="section-button-bar">
+                      <a href='#' id='sgroup-add-rule' class="button section-button">Add Another Rule</a>
+                    </div> 
+                     
                     <div id="sgroup-rules-list"></div>
-                </div>
+
+                  </div>
+                  <!-- END #sgroup-more-rules -->
 
                 </div>
                 <!-- END content-section -->   

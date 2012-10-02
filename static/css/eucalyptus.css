@@ -617,6 +617,10 @@ input[type='text'].short-textinput {
   text-align: center;
 }
 
+input[type='text'].medium-textinput {
+  width: 185px;
+}
+
  input[type='text'][disabled] { 
 
   /* Used in several of the dialog modals */
@@ -701,7 +705,17 @@ input[type='text'].short-textinput {
   background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
   background-image: linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
-} 
+}
+
+/* An additional button class used in dialog sections */
+
+.section-button {
+  font-size: 14px;
+}
+
+.section-button-bar {
+  margin: 20px 0 0 10px;
+}
 
 
 /* ======== Content styles ======= */
@@ -1853,6 +1867,50 @@ ul.volume-expanded li:last-child {
   padding: 6px 60px 6px 0;
 }
 
+.sg-inline-options {
+  padding: 15px 0 0 10px;  
+}
+
+.sg-inline-options span {
+  padding: 0 7px;  
+}
+
+.sg-options-row {
+  padding-left: 128px;
+}
+
+.sg-options-row span {
+  padding: 0 7px;  
+}
+
+.sg-options-row input[type='text'].medium-textinput {
+  width: 126px;
+}
+
+.sg-my-ip {
+  display: block;
+  padding: 5px 93px 0 0;
+  text-align: right;
+  outline: none;
+}
+
+.sg-error-msg {
+  color: #ff0000;
+}
+
+.sg-rules-list {
+  margin: 20px 0 0 15px;
+  padding: 0;
+  list-style-type: none;
+}
+
+.sg-rules-list li {
+  margin-bottom: 5px;
+}
+
+.sg-rules-list li a {
+  margin-right: 10px;
+}
 
 /* ======= Footer styles ======= */
 
@@ -1932,6 +1990,10 @@ ul.volume-expanded li:last-child {
   display: inline-block;
   font-family: 'PlayBold', Arial, sans-serif;
   line-height: 1.5;
+}
+
+.content-section .form-row label {
+  width: 140px;
 }
 
 .content-section-label {
