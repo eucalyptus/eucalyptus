@@ -1071,6 +1071,7 @@ tr.glow td.sorting_3 {
   padding: 3px 0 3px 20px;
   background: transparent url(../images/css-sprites-small.png) no-repeat left -615px;
   outline: none;
+  white-space: nowrap;
 }
 
 .dataTables_wrapper .twist.expanded {
