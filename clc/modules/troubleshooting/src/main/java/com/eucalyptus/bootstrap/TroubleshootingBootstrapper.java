@@ -70,7 +70,9 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 
 import org.apache.log4j.Logger;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -82,7 +84,11 @@ import com.eucalyptus.troubleshooting.LoggingResetter;
 import com.eucalyptus.troubleshooting.TestFaultTrigger;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck;
+import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck.DBChecker;
+import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck.DBPoolInfo;
 import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck;
+import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.Checker;
+import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.LocationInfo;
 import com.eucalyptus.troubleshooting.resourcefaults.MXBeanMemoryResourceCheck;
 import com.eucalyptus.troubleshooting.resourcefaults.SimpleMemoryResourceCheck;
 @Provides(Empyrean.class)
@@ -100,12 +106,19 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	  @Override
 	  public boolean start( ) throws Exception {
 	    LOG.info( "Starting troubleshooting interface." );
-	    DiskResourceCheck check = new DiskResourceCheck();
 	    // TOOD: we should use a property, but for now use 2% of the log directory
-	    File logFileDir = BaseDirectory.LOG.getFile();
-	    check.addLocationInfo(logFileDir, (long) (0.02 * logFileDir.getTotalSpace()));
-	    check.start();
-	    new DBResourceCheck().start();
+	    Checker checker = new Checker(new LocationInfo(BaseDirectory.LOG.getFile(), 2.0));
+	    DiskResourceCheck.start(checker);
+	    // Add a check for all db stuff
+	    List<DBPoolInfo> dbPools = new ArrayList<DBPoolInfo>();
+	    String[] aliases = ProxoolFacade.getAliases();
+	    if (aliases != null) {
+	    	for (String alias: aliases) {
+	    		dbPools.add(new DBPoolInfo(alias, 2.0)); // Do 2%
+	    	}
+	    }
+	    DBChecker dbChecker = new DBChecker(dbPools, Eucalyptus.INSTANCE, 10000);
+	    DBResourceCheck.start(dbChecker);
 	    //	    new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K left, also arbitrary
 	    //new MXBeanMemoryResourceCheck().start(); // 512K left, also arbitrary
 	    FaultSubsystem.init();
