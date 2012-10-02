@@ -264,11 +264,37 @@
       dfd.resolve();
     },
 
+    _generateRecommendedDeviceNames : function(count) {
+      possibleNames = {};
+      for(i=0; i<11 && i<=count; i++){ // f..p
+        possibleNames['/dev/sd'+String.fromCharCode(102+i)] = 1;
+      }
+      return possibleNames;
+    },
+
+    _suggestNextDeviceName : function(instanceId) {
+      var instance = getResource('instance', instanceId);
+      if (instance) {
+        var count = 1;
+        for(device in instance.block_device_mapping) count++;
+        possibleNames = this._generateRecommendedDeviceNames(count);
+        for(device in instance.block_device_mapping){
+          possibleNames[device] = 0;
+        }
+        for(n in possibleNames){
+          if (possibleNames[n] == 1){
+            return n;
+          }
+        }
+      }
+      return '';
+    },
+
     _initAttachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
       var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id');
       var $volumeSelector = this.attachDialog.find('#volume-attach-volume-id');
-
+      var $deviceName = thisObj.attachDialog.find('#volume-attach-device-name');
       if(!$instanceSelector.val()){
         var inst_ids = [];
         var results = describe('instance');
@@ -284,8 +310,11 @@
 
         $instanceSelector.autocomplete({
           source: inst_ids,
-          select: function() {
-            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+          select: function(event, ui) {
+            if ($.trim($deviceName.val()) == ''){
+              $deviceName.val(thisObj._suggestNextDeviceName(ui.item.value));
+            }
+            if ($deviceName.val() != '' && $volumeSelector.val() != '')
               thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
           }
         });
@@ -306,7 +335,7 @@
         $volumeSelector.autocomplete( {
           source: vol_ids,
           select: function() {
-            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+            if ($deviceName.val() != '' && $instanceSelector.val() != '')
               thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
           }
         });
@@ -548,14 +577,19 @@
           var $volumeId = thisObj.attachDialog.find('#volume-attach-volume-id');
           $volumeId.val(volume);
           $volumeId.attr('disabled', 'disabled');
+          thisObj.attachDialog.find('#volume-attach-device-name').val('');
         } 
         if(instance){
           var $instanceId = thisObj.attachDialog.find('#volume-attach-instance-id');
           $instanceId.val(instance);
           $instanceId.attr('disabled', 'disabled');
+          thisObj.attachDialog.find('#volume-attach-device-name').val(thisObj._suggestNextDeviceName(instance));
         }
       }
       var on_open = this.attachDialog.eucadialog('option', 'on_open'); 
+      // make sure that there is only one set variables callback function
+      if (on_open.callback.length == 2)
+        on_open.callback.pop();
       on_open.callback.push(openCallback);
       this.attachDialog.eucadialog('option', 'on_open', on_open);
       this.attachDialog.eucadialog('open');

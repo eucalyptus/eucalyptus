@@ -139,8 +139,17 @@ function describe(resource){
 }
 
 function getResource(resourceType, resourceId){
-  res = $('html body').eucadata('get', resourceType, resourceId);
-  return res ? res[0] : res;
+  if (!resourceId)
+    return null;
+  res = $('html body').eucadata('get', resourceType);
+  if (res) {
+    for (i in res){
+      if (res[i].id && res[i].id.toUpperCase() == resourceId.toUpperCase())
+        return res[i];
+    }
+  } else {
+    return null;
+  }
 }
 
 function refresh(resource){
