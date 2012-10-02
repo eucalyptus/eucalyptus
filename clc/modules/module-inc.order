@@ -76,8 +76,8 @@ cluster-manager
 notifications
 storage-common
 reporting
-walrus
 troubleshooting
+walrus
 storage-controller
 dns
 www
