@@ -1845,6 +1845,14 @@ ul.volume-expanded li:last-child {
   font-weight: normal;
 }
 
+.dialog-table-grid {
+  /* No attributes at this time */
+}
+
+.dialog-table-grid td {
+  padding: 6px 60px 6px 0;
+}
+
 
 /* ======= Footer styles ======= */
 
