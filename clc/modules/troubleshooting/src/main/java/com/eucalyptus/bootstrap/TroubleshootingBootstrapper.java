@@ -284,23 +284,23 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 			if (!newLogLevel.isEmpty()) {
 				System.setProperty("euca.log.level", newLogLevel.toUpperCase());
 				LoggingResetter.resetLoggingWithXML();
-				try {
-					for (int j = 0; j < 5; j++) {
-						Class.forName("org.logicalcobwebs.proxool.ProxoolDriver");
-						Connection[] cons = new Connection[505];
-						for (int i = 0; i < 505; i++) {
-							cons[i] = DriverManager
-									.getConnection("proxool.eucalyptus_walrus:net.sf.hajdbc.sql.Driver:jdbc:ha-jdbc:eucalyptus_walrus");
-						}
-						Thread.sleep(30000L);
-						for (int i = 0; i < 505; i++) {
-							cons[i].close();
-						}
-						Thread.sleep(30000L);
-					}
-				} catch (Exception ex) {
-					LOG.error(ex, ex);
-				}
+//				try {
+//					for (int j = 0; j < 5; j++) {
+//						Class.forName("org.logicalcobwebs.proxool.ProxoolDriver");
+//						Connection[] cons = new Connection[505];
+//						for (int i = 0; i < 505; i++) {
+//							cons[i] = DriverManager
+//									.getConnection("proxool.eucalyptus_walrus:net.sf.hajdbc.sql.Driver:jdbc:ha-jdbc:eucalyptus_walrus");
+//						}
+//						Thread.sleep(30000L);
+//						for (int i = 0; i < 505; i++) {
+//							cons[i].close();
+//						}
+//						Thread.sleep(30000L);
+//					}
+//				} catch (Exception ex) {
+//					LOG.error(ex, ex);
+//				}
 			}
 			LOG.fatal("test level FATAL");
 			LOG.error("test level ERROR");
