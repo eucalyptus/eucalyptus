@@ -24,7 +24,7 @@
     message="Running very low db connections in db pool ${alias}">
 
     <condition
-    message="Running very low db connections in db pool ${alias}">
+    message="Running very low db connections in db pool ${alias}"/>
 
     <cause
       message="Not enough db connections on db ${alias}."/>
@@ -33,7 +33,7 @@
       message="${component}"/>
 
     <location
-      message="Memory pool ${name}"/>
+      message="DB pool ${alias}"/>
 
     <resolution>
       <message>

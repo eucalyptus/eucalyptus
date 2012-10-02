@@ -99,6 +99,13 @@ public class DBResourceCheck extends Thread {
 			}
 		}
 
+		public String getURL() throws ProxoolException {
+			return ProxoolFacade.getConnectionPoolDefinition(alias).getCompleteUrl();
+		}
+		
+		public String getDriver() throws ProxoolException {
+			return ProxoolFacade.getConnectionPoolDefinition(alias).getDriver();
+		}
 		/**
 		 * Constructor to be used when free connections is an absolute quantity
 		 * 
