@@ -77,19 +77,42 @@
 
 #include "eucalyptus.h"
 #include "log.h"
+#include "misc.h" // TRUE/FALSE
+#include "ipc.h" // semaphores
 
-#define BUFSIZE 1024
+#define LOGLINEBUF 101024 // enough for a log line, hopefully
+#define MAX_FIELD_LENGTH 100 // any prefix value beyond this will be truncated, even if in spec
+#define DEFAULT_LOG_LEVEL 3 // log level if none is specified (3==DEBUG)
+#define LOGFH_DEFAULT stdout // without a file, this is where log output goes
 
-static int timelog=0; /* change to 1 for TIMELOG entries */
-static int logging=0;
-static FILE *LOGFH=NULL;
-static char logFile[EUCA_MAX_PATH];
+// the log file stream that will remain open:
+// - unless do_close_fd==TRUE
+// - unless log file is moved or removed
+// - unless log file becomes too big and rolls over
+static FILE * LOGFH = NULL;
+static ino_t log_ino = -1; // the current inode
 
-#define DEFAULT_LOG_LEVEL EUCADEBUG
+// parameters, for now unmodifiable
+static const boolean timelog = FALSE; // change to TRUE for 'TIMELOG' entries
+static const boolean do_close_fd = FALSE; // whether to close log fd after each message
+static const boolean do_stat_log = TRUE; // whether to monitor file for changes
+
+// these can be modified through setters
 static int log_level=DEFAULT_LOG_LEVEL;
 static int log_roll_number=4;
 static long log_max_size_bytes=MAXLOGFILESIZE;
+static char log_file_path [EUCA_MAX_PATH] = "";
+static char log_custom_prefix [34] = ""; // non-empty if a custom prefix was specified
+static sem * log_sem = NULL; // if set, the semaphore will be used when logging & rotating logs
 
+// these are set by _EUCA_CONTEXT_SETTER, which is included in log-level macros, such as EUCAWARN
+__thread const char * _log_curr_method = "";
+__thread const char * _log_curr_file   = "";
+__thread int          _log_curr_line   = 0;
+
+// returns log level as integer given the name or
+// -1 if the name is not valid
+// (used for parsing the setting in the config file)
 int log_level_int (const char * level)
 {
     for (int l=0; l<=EUCAOFF; l++) {
@@ -100,64 +123,117 @@ int log_level_int (const char * level)
     return -1;
 }
 
-// log getter, which implements log rotation logic
-FILE * get_file (void)
+// Log FILE pointer getter, which implements log rotation logic
+// and tries to recover from log file being moved away, perhaps
+// by an external log rotation tool.
+//
+// The log file gets re-opened if it is currently closed or if
+// reopening is explicitly requested (do_reopen==TRUE). In case
+// of failure, returns NULL. 
+//
+// To avoid unpredictable behavior due to concurrency, 
+// this function should be called while holding a lock.
+static FILE * get_file (boolean do_reopen)
 {
-    FILE *file = LOGFH;
-    int fd = fileno(file);
-    if (fd < 1)
-        return file;
+    // no log file has been set
+    if (strlen (log_file_path) == 0)
+        return LOGFH_DEFAULT;
 
+    int fd = -1;
+    if (LOGFH != NULL) { // apparently the stream is still open
+        boolean file_changed = FALSE;
+        if (! do_reopen && do_stat_log) { // we are not reopening for every write
+            struct stat statbuf;
+            int err = stat (log_file_path, &statbuf);
+            if (err == -1) { // probably file does not exist, perhaps because it was renamed
+                file_changed = TRUE;
+            } else if (log_ino != statbuf.st_ino) { // inode change, reopen just in case
+                file_changed = TRUE;
+            }
+        }
+        fd = fileno (LOGFH); // try to get the file descriptor
+        if (file_changed || do_reopen || fd < 0) {
+            fclose (LOGFH);
+            LOGFH = NULL;
+        }
+    }
+    
+ retry:
+
+    // open unless it is already is open
+    if (LOGFH == NULL) {
+        LOGFH = fopen (log_file_path, "a+");
+        if (LOGFH == NULL) {
+            return NULL;
+        }
+        fd = fileno (LOGFH);
+        if (fd < 0) {
+            fclose (LOGFH);
+            LOGFH = NULL;
+            return NULL;
+        }
+    }
+    
+    // see if it is time to rotate the log
     struct stat statbuf;
-    int rc = fstat(fd, &statbuf);
-    if (!rc && ((int)statbuf.st_size > log_max_size_bytes)) {
-        int i;
-        char oldFile[EUCA_MAX_PATH], newFile[EUCA_MAX_PATH];
+    int rc = fstat (fd, &statbuf);
+    if (!rc) {
+        log_ino = statbuf.st_ino; // record the inode number of the currently opened log
 
-        rc = stat(logFile, &statbuf);
-        if (!rc && ((int)statbuf.st_size > log_max_size_bytes)) {
-            for (i=log_roll_number-1; i>=0; i--) {
-                snprintf(oldFile, EUCA_MAX_PATH, "%s.%d", logFile, i);
-                snprintf(newFile, EUCA_MAX_PATH, "%s.%d", logFile, i+1);
+        if (((long)statbuf.st_size > log_max_size_bytes) && (log_roll_number > 0)) {
+            char oldFile[EUCA_MAX_PATH], newFile[EUCA_MAX_PATH];
+            for (int i=log_roll_number-1; i>0; i--) {
+                snprintf(oldFile, EUCA_MAX_PATH, "%s.%d", log_file_path, i-1);
+                snprintf(newFile, EUCA_MAX_PATH, "%s.%d", log_file_path, i);
                 rename(oldFile, newFile);
             }
-            snprintf(oldFile, EUCA_MAX_PATH, "%s", logFile);
-            snprintf(newFile, EUCA_MAX_PATH, "%s.%d", logFile, 0);
+            snprintf(oldFile, EUCA_MAX_PATH, "%s", log_file_path);
+            snprintf(newFile, EUCA_MAX_PATH, "%s.%d", log_file_path, 0);
             rename(oldFile, newFile);
-        }
-        fclose(LOGFH);
-        LOGFH = fopen(logFile, "a");
-        if (LOGFH) {
-            file = LOGFH;
-        } else {
-            file = stdout;
+            fclose (LOGFH);
+            LOGFH = NULL;
+            goto retry;
         }
     }
 
-    return file;
+    return LOGFH;
+}
+
+// Log FILE pointer release. Should be called with a lock
+// held in multi-threaded context.
+static void release_file (void)
+{
+    if (do_close_fd && LOGFH != NULL) {
+        fclose (LOGFH);
+        LOGFH = NULL;
+    }
 }
 
 // setter for logging parameters except file path
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in)
 {
+    // update the log level
     if (log_level_in >= EUCAALL && log_level_in <= EUCAOFF) {
         log_level = log_level_in;
     } else {
         log_level = DEFAULT_LOG_LEVEL;
     }
 
-    if (log_roll_number_in > 0 &&
-        log_roll_number_in < 100 &&
+    // update the roll number limit
+    if (log_roll_number_in >= 0 &&   // sanity check
+        log_roll_number_in < 1000 && // sanity check
         log_roll_number != log_roll_number_in) {
 
         log_roll_number = log_roll_number_in;
     }
-
+    
+    // update the max size for any file
     if (log_max_size_bytes_in > 0 &&
         log_max_size_bytes != log_max_size_bytes_in) {
 
         log_max_size_bytes = log_max_size_bytes_in;
-        get_file(); // that will rotate log files if needed
+        if (get_file(FALSE)) // that will rotate log files if needed
+            release_file();
     }
 }
 
@@ -171,23 +247,48 @@ void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_
 
 int log_file_set(const char * file)
 {
-    logging = 0;
-
-    if (LOGFH != NULL) {
-        fclose(LOGFH);
+    if (file==NULL) { // NULL means standard output
+        log_file_path [0] = '\0';
+        return 0;
     }
 
-    if (file == NULL) {
-        LOGFH = NULL;
-    } else {
-        snprintf(logFile, EUCA_MAX_PATH, "%s", file);
-        LOGFH = fopen(file, "a");
-        if (LOGFH) {
-            logging=1;
+    if (strcmp (log_file_path, file) == 0) // hasn't changed
+        return 0;
+
+    strncpy (log_file_path, file, EUCA_MAX_PATH);
+    if (get_file (TRUE) == NULL) {
+        return 1;
+    }
+    release_file();
+    return 0;
+}
+
+int log_prefix_set (const char * log_spec)
+{
+    if (log_spec==NULL)
+        log_custom_prefix [0] = '\0';
+    else
+        strncpy (log_custom_prefix, log_spec, sizeof (log_custom_prefix));
+    return 0;
+}
+
+int log_sem_set (sem * s)
+{
+    if (s==NULL)
+        return 1;
+    
+    if (log_sem!=NULL) {
+        sem * old_log_sem = log_sem;
+        sem_p (old_log_sem);
+        if (log_sem != s) {
+            log_sem = s;
         }
+        sem_v (old_log_sem);
+    } else {
+        log_sem = s;
     }
-
-    return (1-logging);
+    
+    return 0;
 }
 
 int logfile(char *file, int log_level_in, int log_roll_number_in) // TODO: legacy function, to be removed when no longer in use
@@ -196,101 +297,212 @@ int logfile(char *file, int log_level_in, int log_roll_number_in) // TODO: legac
     return log_file_set (file);
 }
 
-// print timestamp in YYYY-MM-DD HH:MM:SS format
-static void print_timestamp (FILE * file)
+// Print timestamp in YYYY-MM-DD HH:MM:SS format.
+// Returns number of characters that it took up or
+// 0 on error.
+static int fill_timestamp (char * buf, int buf_size)
 {
     time_t t = time (NULL);
     struct tm tm;
-    gmtime_r(&t, &tm);
-    char buf[27];
-    if (strftime (buf, sizeof(buf), "%F %T", &tm)) {
-        fprintf(file, "%s ", buf);
-    }
+    localtime_r(&t, &tm);
+    return strftime (buf, buf_size, "%F %T", &tm);
 }
 
-int logprintf(const char *format, ...)
+// This is the function that ultimately dumps a buffer into a log.
+static int log_line (const char * line)
 {
-    va_list ap;
-    int rc;
-    char buf[27], *eol;
-    time_t t;
-    FILE *file;
+    int rc = 1;
 
-    rc = 1;
+    if (log_sem)
+        sem_prolaag (log_sem, FALSE);
+    
+    FILE * file = get_file (FALSE);
+    if (file != NULL) {
+        fprintf(file, "%s", line);
+        fflush(file);
+        release_file();
+        rc = 0;
+    }
+    
+    if (log_sem)
+        sem_verhogen (log_sem, FALSE);
+
+    return rc;
+}
+
+// Log-printing function without a specific log level.
+// It is essentially printf() that will go verbatim, 
+// with just timestamp as prefix and at any log level, 
+// into the current log or stdout, if no log was open.
+int logprintf (const char *format, ...)
+{
+    char buf [LOGLINEBUF];
+
+    // start with current timestamp
+    int offset = fill_timestamp (buf, sizeof (buf));
+
+    // append the log message passed via va_list
+    va_list ap;
     va_start(ap, format);
-
-    if (logging) {
-        file = LOGFH;
-    } else {
-        file = stdout;
-    }
-
-    print_timestamp (file);
-    rc = vfprintf(file, format, ap);
-    fflush(file);
-
+    int rc = vsnprintf (buf + offset, sizeof (buf) - offset - 1, format, ap);
     va_end(ap);
-    return(rc);
+    if (rc<0)
+        return rc;
+        
+    return log_line (buf);
 }
 
-int logprintfl(int level, const char *format, ...)
+static int print_field_truncated (char ** log_spec, char * buf, int left, const char * field)
 {
-    va_list ap;
-    int rc, fd;
-    FILE *file;
+    boolean left_justify = FALSE;
+    int in_field_len = strlen (field);
+    int out_field_len = MAX_FIELD_LENGTH;
+    if (in_field_len < out_field_len) {
+        out_field_len = in_field_len; // unless specified, we'll use length of the field or max
+    }
 
+    // first, look ahead down s[] to see if we have length 
+    // and alignment specified (leading '-' means left-justified)
+    char * nstart = (* log_spec) + 1;
+    if (* nstart == '-') { // a leading zero
+        left_justify = TRUE;
+        nstart++;
+    }
+    char * nend;
+    int i = (int) strtoll (nstart, &nend, 10);
+    if (nstart != nend) { // we have some digits
+        * log_spec = nend - 1; // move the pointer ahead so caller will skip digits
+        if (i > 1 && i <100) { // sanity check
+            out_field_len = i;
+        }
+    }
+
+    // create a format string that would truncate the field
+    // to len and then print the field into 's'
+    if (left < (out_field_len + 1)) { // not enough room left
+        return -1;
+    }
+
+    // when right-justifying, we want to truncate the field on the left
+    // (when left-justifying the snprintf below will truncate on the right)
+    int offset = 0;
+    if (left_justify == FALSE) {
+        offset = in_field_len - out_field_len;
+        if (offset < 0)
+            offset = 0;
+    }
+    char format [10];
+    snprintf (format, sizeof (format), "%%%s%ds", (left_justify) ? "-" : "", out_field_len);
+    if (snprintf (buf, (out_field_len + 1), format, field + offset) < out_field_len)
+        return -1; // error in snprintf
+    
+    return out_field_len;
+}
+
+// Main log-printing function, which will dump a line into
+// a log, with a prefix appropriate for the log level, given
+// that the log level is above the threshold.
+int logprintfl (int level, const char *format, ...)
+{
+    // return if level is invalid or below the threshold
     if (level < log_level) {
-        return (0);
+        return 0;
+    } else if (level < 0 || level > EUCAOFF) {
+        return -1; // unexpected log level
     }
 
-    rc = 1;
+    char buf [LOGLINEBUF];
+    int offset = 0;
+
+    // go over prefix format for the log level (defined in log.h)
+    for (char * prefix_spec = (strlen(log_custom_prefix) > 0) ? log_custom_prefix : log_level_prefix [log_level];
+         * prefix_spec != '\0'; 
+         prefix_spec++) { 
+        
+        char * s = buf + offset;
+        int left = sizeof (buf) - offset - 1;
+        if (left < 1) {
+            return -1; // not enough room in internal buffer for a prefix
+        }
+        
+        int size = 0;
+        switch (* prefix_spec) {
+        case 'T': // timestamp
+            size = fill_timestamp (s, left);
+            break;
+
+        case 'L': { // log-level
+            char l [6];
+            safe_strncpy (l, log_level_names [level], 6); // we want hard truncation
+            size = snprintf (s, left, "%5s", l);
+            break;
+        }
+        case 'p': { // process ID
+            char p [11];
+            snprintf (p, sizeof (p), "%010d", getpid()); // 10 chars is enough for max 32-bit unsigned integer
+            size = print_field_truncated (&prefix_spec, s, left, p);
+            break;
+        }
+        case 't': { // thread ID
+            char t [21];
+            snprintf (t, sizeof (t), "%020d", (pid_t) syscall (SYS_gettid)); // 20 chars is enough for max 64-bit unsigned integer
+            size = print_field_truncated (&prefix_spec, s, left, t);
+            break;
+        }
+        case 'm': // method
+            size = print_field_truncated (&prefix_spec, s, left, _log_curr_method);
+            break;
+
+        case 'F': { // file-and-line
+            char file_and_line [64];
+            snprintf (file_and_line, sizeof (file_and_line), "%s:%d", _log_curr_file, _log_curr_line);
+            size = print_field_truncated (&prefix_spec, s, left, file_and_line);
+            break;
+        }
+        case '?':
+            s [0] = '?'; // not supported currently
+            s [1] = '\0';
+            size = 1;
+            break;
+
+        default:
+            s [0] = * prefix_spec;
+            s [1] = '\0';
+            size = 1;
+        }
+        
+        if (size < 0) {
+            logprintf ("error in prefix construction in logprintfl()\n");
+            return -1; // something went wrong in the snprintf()s above
+        }
+        offset += size;
+    }
+    
+    // append the log message passed via va_list
+    va_list ap;
     va_start(ap, format);
-
-    if (logging) {
-        file = get_file();
-    } else {
-        file = stderr;
-    }
-
-    print_timestamp (file);
-
-    // log level, a 5-char field, indented to the right
-    if (level == EUCATRACE)       { fprintf (file, "%s", "TRACE");}
-    else if (level == EUCADEBUG3) { fprintf (file, "%s", "DBUG3");}
-    else if (level == EUCADEBUG2) { fprintf (file, "%s", "DBUG2");}
-    else if (level == EUCADEBUG)  { fprintf (file, "%s", "DEBUG");}
-    else if (level == EUCAINFO)   { fprintf (file, "%s", " INFO");}
-    else if (level == EUCAWARN)   { fprintf (file, "%s", " WARN");}
-    else if (level == EUCAERROR)  { fprintf (file, "%s", "ERROR");}
-    else if (level == EUCAFATAL)  { fprintf (file, "%s", "FATAL");}
-    else                          { fprintf (file, "%s", "?????");}
-
-    // the PID and thread ID
-    fprintf (file, " %06d:%06d", getpid(), (pid_t) syscall (SYS_gettid));
-
-    // last thing - the separator from free-form part of the log message
-    fprintf (file, " | ");
-
-    rc = vfprintf(file, format, ap);
-    fflush(file);
-
+    int rc = vsnprintf (buf + offset, sizeof (buf) - offset - 1, format, ap);
     va_end(ap);
-    return(rc);
+    if (rc<0)
+        return rc;
+    
+    return log_line (buf);
 }
 
-/* prints contents of a file with logprintf */
-int logcat (int debug_level, const char * file_name)
+// prints contents of an arbitrary file (at file_path)
+// using logprintfl, thus dumping its contents into a log
+int logcat (int debug_level, const char * file_path)
 {
 	int got = 0;
-	char buf [BUFSIZE];
+	char buf [LOGLINEBUF];
 
-	FILE *fp = fopen (file_name, "r");
+	FILE *fp = fopen (file_path, "r");
 	if (!fp) return got;
-    while ( fgets (buf, BUFSIZE, fp) ) {
+    while ( fgets (buf, LOGLINEBUF, fp) ) {
         int l = strlen (buf);
         if ( l<0 )
             break;
-        if ( l+1<BUFSIZE && buf[l-1]!='\n' ) {
+        if ( l+1<LOGLINEBUF && buf[l-1]!='\n' ) {
             buf [l++] = '\n';
             buf [l] = '\0';
         }
@@ -298,9 +510,13 @@ int logcat (int debug_level, const char * file_name)
         got += l;
 	}
     fclose (fp);
+    
 	return got;
 }
 
+// eventlog() was used for some timing measurements, almost exclusively from
+// server-marshal.c, where SOAP requests are getting unmarshalled and mashalled.
+// May be considered a legacy function, given no current need for the measurements.
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other)
 {
   double ts;

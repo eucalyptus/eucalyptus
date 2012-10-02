@@ -20,7 +20,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import static com.eucalyptus.reporting.event.EventActionInfo.InstanceEventActionInfo;
 
 import com.eucalyptus.event.Event;
@@ -59,12 +61,12 @@ public class AddressEvent implements Event {
   }
 
   public static InstanceEventActionInfo<AddressAction> forAssociate( final String instanceUuid,
-                                                 final String instanceId ) {
+                                                                     final String instanceId ) {
     return new InstanceEventActionInfo<AddressAction>( AddressAction.ASSOCIATE, instanceUuid, instanceId );
   }
 
   public static InstanceEventActionInfo<AddressAction> forDisassociate( final String instanceUuid,
-                                                    final String instanceId ) {
+                                                                        final String instanceId ) {
     return new InstanceEventActionInfo<AddressAction>( AddressAction.DISASSOCIATE, instanceUuid, instanceId );
   }
 
@@ -91,12 +93,12 @@ public class AddressEvent implements Event {
                         final String accountId,
                         final String accountName,
                         final EventActionInfo<AddressAction> actionInfo) {
-    assertThat( uuid, notNullValue() );
-    assertThat( address, notNullValue() );
-    assertThat( userId, notNullValue() );
-    assertThat( userName, notNullValue() );
-    assertThat( accountId, notNullValue() );
-    assertThat( accountName, notNullValue() );
+    assertThat( uuid, not( isEmptyOrNullString() ) );
+    assertThat( address, not(isEmptyOrNullString()) );
+    assertThat( userId, not(isEmptyOrNullString()) );
+    assertThat( userName, not(isEmptyOrNullString()) );
+    assertThat( accountId, not(isEmptyOrNullString()) );
+    assertThat( accountName, not(isEmptyOrNullString()) );
     assertThat(actionInfo, notNullValue() );
 
     this.uuid = uuid;

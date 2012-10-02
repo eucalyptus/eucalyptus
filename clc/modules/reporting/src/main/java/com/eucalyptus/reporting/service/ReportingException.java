@@ -26,7 +26,9 @@ import com.eucalyptus.util.EucalyptusCloudException;
  *
  */
 public class ReportingException extends EucalyptusCloudException {
+  public static final String INTERNAL_SERVER_ERROR = "InternalError";
   public static final String NOT_AUTHORIZED = "NotAuthorized";
+  public static final String BAD_REQUEST = "BadRequest";
   private static final long serialVersionUID = 1L;
 
   private final HttpResponseStatus status;

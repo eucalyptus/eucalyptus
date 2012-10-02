@@ -132,6 +132,12 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   public static Volume named( final OwnerFullName fullName, String volumeId ) {
     return new Volume( fullName, volumeId );
   }
+
+  public static Volume naturalId( final String naturalId ) {
+    final Volume volume = new Volume();
+    volume.setNaturalId( naturalId );
+    return volume;
+  }
   
   public String mapState( ) {
     switch ( this.getState( ) ) {

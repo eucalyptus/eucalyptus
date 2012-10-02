@@ -28,51 +28,66 @@ import org.hibernate.annotations.Entity;
 @javax.persistence.Entity
 @PersistenceContext(name = "eucalyptus_reporting")
 @Table(name = "reporting_s3_object_usage_events")
-public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
+public class ReportingS3ObjectUsageEvent
+	extends ReportingEventSupport
+{
     private static final long serialVersionUID = 1L;
 
     @Column(name = "bucket_name", nullable = false)
     protected String bucketName;
     @Column(name = "object_name", nullable = false)
     protected String objectName;
-    @Column(name = "object_size", nullable = false)
-    protected Long object_size;
+	@Column(name="object_version", nullable=true) //version can be null as per disc with Zach
+	protected String objectVersion;
     @Column(name = "user_id", nullable = false)
     protected String userId;
+	@Column(name="get_requests_num_cumulative", nullable=false)
+	protected Long getRequestsNumCumulative;
 
     protected ReportingS3ObjectUsageEvent() {
     }
 
     ReportingS3ObjectUsageEvent(String s3BucketName, String s3ObjectName,
-	    Long s3ObjectSize, Long timestampMs, String userId) {
-	this.bucketName = s3BucketName;
-	this.objectName = s3ObjectName;
-	this.object_size = s3ObjectSize;
-	this.timestampMs = timestampMs;
-	this.userId = userId;
+	    String objectVersion, long getRequestsNumCumulative,
+	    long timestampMs, String userId)
+	{
+    	this.bucketName = s3BucketName;
+    	this.objectName = s3ObjectName;
+    	this.objectVersion = objectVersion;
+    	this.timestampMs = timestampMs;
+    	this.getRequestsNumCumulative = getRequestsNumCumulative;
+    	this.userId = userId;
     }
 
-    public String getBucketName() {
-	return bucketName;
+    public String getBucketName()
+    {
+    	return bucketName;
     }
 
-    public String getObjectName() {
-	return objectName;
+    public String getObjectName()
+    {
+    	return objectName;
     }
 
-    public Long getObject_size() {
-	return object_size;
-    }
+	public Long getGetRequestsNumCumulative()
+	{
+		return getRequestsNumCumulative;
+	}
+	
+	public String getObjectVersion()
+	{
+		return objectVersion;
+	}
 
-    public String getUserId() {
-	return userId;
+    public String getUserId()
+    {
+    	return userId;
     }
 
 	@Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
 				.user( userId )
-				.relation( ReportingS3BucketCreateEvent.class, "s3BucketName", bucketName )
 				.relation( ReportingS3ObjectCreateEvent.class, "s3ObjectName", objectName )
 				.set();
 	}
@@ -80,7 +95,7 @@ public class ReportingS3ObjectUsageEvent extends ReportingEventSupport {
     @Override
     public String toString() {
 	return "ReportingS3ObjectUsageEvent [bucketName=" + bucketName
-		+ ", objectName=" + objectName + ", object_size=" + object_size
+		+ ", objectName=" + objectName
 		+ ", timestampMs=" + timestampMs + ", userId=" + userId + "]";
     }
 

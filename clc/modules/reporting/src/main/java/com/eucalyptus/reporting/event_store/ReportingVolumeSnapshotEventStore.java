@@ -33,6 +33,7 @@ public class ReportingVolumeSnapshotEventStore extends EventStoreSupport
   }
 
   public void insertCreateEvent( final String uuid,
+		  						 final String volumeUuid,
                                  final String volumeSnapshotId,
                                  final long timestampMs,
                                  final String userId,
@@ -41,7 +42,7 @@ public class ReportingVolumeSnapshotEventStore extends EventStoreSupport
     Preconditions.checkNotNull(volumeSnapshotId, "VolumeSnapshotId is required");
     Preconditions.checkNotNull(userId, "UserId is required");
 
-    persist( new ReportingVolumeSnapshotCreateEvent(uuid, volumeSnapshotId, timestampMs, userId, sizeGB ) );
+    persist( new ReportingVolumeSnapshotCreateEvent(uuid, volumeUuid, volumeSnapshotId, timestampMs, userId, sizeGB ) );
   }
 
   public void insertDeleteEvent( final String uuid,

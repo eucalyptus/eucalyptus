@@ -77,12 +77,14 @@ import javax.persistence.RollbackException;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
-import org.mule.RequestContext;
 
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.config.StorageControllerBuilder;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ListenerRegistry;
+import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.LogicalStorageManager;
@@ -91,7 +93,6 @@ import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
 import edu.ucsb.eucalyptus.cloud.EntityTooLargeException;
-import edu.ucsb.eucalyptus.cloud.NoSuchBucketException;
 import edu.ucsb.eucalyptus.cloud.NoSuchEntityException;
 import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
@@ -143,7 +144,7 @@ public class BlockStorage {
 	static BlockStorageStatistics blockStorageStatistics;
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
-
+	
 	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
@@ -735,15 +736,31 @@ public class BlockStorage {
 					}
 				}
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
+				SnapshotInfo snapshotInfo = null;
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
-					SnapshotInfo snapshotInfo = db.getUnique(snapInfo);
+					snapshotInfo = db.getUnique(snapInfo);
 					snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 					snapshotInfo.setProgress("100");
 				} catch(EucalyptusCloudException e) {
 					LOG.error(e);
 				} finally {
 					db.commit();
+				}
+
+				if ( snapshotInfo != null ) try {
+					final long snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
+					final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
+					ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
+							SnapShotEvent.forSnapShotCreate(
+								snapshotSize,
+								volumeUuid,
+								volumeId ),
+							snapshotInfo.getNaturalId(),
+							snapshotInfo.getSnapshotId(),
+							snapshotInfo.getUserName() ) ); // snapshot info user name is user id
+				} catch ( final Exception e ) {
+					LOG.error( e, e  );
 				}
 			} catch(Exception ex) {
 				semaphore.release();
@@ -866,11 +883,8 @@ public class BlockStorage {
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
 						db.commit();			
-						//TODO: Check if backend knows about this
-						//get snapshot size from walrus
-						if(blockManager.getFromBackend(snapshotId)) {
-
-						} else {
+						//This SC does not have the snapshot locally, must be fetched from Walrus
+						if(!blockManager.getFromBackend(snapshotId)) {
 							int sizeExpected;
 							if(size <= 0) {
 								sizeExpected = getSnapshotSize(snapshotId);
@@ -881,7 +895,11 @@ public class BlockStorage {
 							if(snapDestination != null) {
 								getSnapshot(snapshotId, snapDestination);
 							}
+							else {
+								LOG.warn("Block Manager replied that " + snapshotId + " not on backend, but snapshot preparation indicated that the snapshot is already present");
+							}
 						}
+						
 						db = StorageProperties.getEntityWrapper();
 						snapshotInfo = new SnapshotInfo(snapshotId);
 						snapshotInfo.setVolumeId(volumeId);
@@ -890,8 +908,9 @@ public class BlockStorage {
 						snapshotInfo.setStatus(StorageProperties.Status.available.toString());				
 						db.add(snapshotInfo);
 						db.commit();
-						size = blockManager.createVolume(volumeId, snapshotId, size);
+						size = blockManager.createVolume(volumeId, snapshotId, size); //leave the snapshot even on failure here
 					} else {
+						//Snapshot does exist on this SC.
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
 						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
 							success = false;
@@ -907,10 +926,13 @@ public class BlockStorage {
 					LOG.error(ex);
 				}
 			} else {
+				//Not a snapshot-based volume create.
 				try {
 					if(parentVolumeId != null) {
+						//Clone the parent volume.
 						blockManager.cloneVolume(volumeId, parentVolumeId);
 					} else {
+						//Create a regular empty volume
 						blockManager.createVolume(volumeId, size);
 					}
 				} catch(Exception ex) {
@@ -918,6 +940,8 @@ public class BlockStorage {
 					LOG.error(ex,ex);
 				}
 			}
+			
+			//Create the necessary database entries for the newly created volume.
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo volumeInfo = new VolumeInfo(volumeId);
 			try {
@@ -929,7 +953,7 @@ public class BlockStorage {
 							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
 							if((totalVolumeSize + size) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb() ||
 									(size > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB())) {
-								LOG.error("Volume size limit exceeeded");
+								LOG.error("Max Total Volume size limit exceeded creating " + volumeId + ". Removing volume and cancelling operation");
 								db.commit();
 								checker.cleanFailedVolume(volumeId);
 								return;

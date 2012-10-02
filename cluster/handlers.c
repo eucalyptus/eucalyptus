@@ -3485,7 +3485,13 @@ int init_log(void)
 
         configInitValues(configKeysRestartCC, configKeysNoRestartCC); // initialize config subsystem
         readConfigFile(configFiles, 2);
-        configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes));
+
+	char * log_prefix;
+        configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
+	if (log_prefix && strlen(log_prefix)>0) {
+	  safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
+	  free (log_prefix);
+	}
 
         // set the log file path (levels and size limits are set below)
         log_file_set(logFile);
@@ -3496,6 +3502,7 @@ int init_log(void)
     // update log params on every request so that the updated values discovered
     // by monitoring_thread will get picked up by other processes, too
     log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
+    log_prefix_set (config->log_prefix);
 
     return 0;
 }
@@ -3600,9 +3607,16 @@ int update_config(void) {
       logprintfl(EUCAINFO, "update_config(): ingressing new options.\n");
 
       // read log params from config file and update in-memory configuration
-      configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes));
+      char * log_prefix;
+      configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
+      if (log_prefix && strlen(log_prefix)>0) {
+	safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
+	free (log_prefix);
+      }
+
       // reconfigure the logging subsystem to use the new values, if any
       log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
+      log_prefix_set (config->log_prefix);
 
       // NODES
       logprintfl(EUCAINFO, "update_config(): refreshing node list.\n");

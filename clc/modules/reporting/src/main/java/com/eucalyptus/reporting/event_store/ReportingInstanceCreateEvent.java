@@ -24,117 +24,130 @@ import javax.persistence.*;
 
 import org.hibernate.annotations.Entity;
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_reporting")
-@Table(name="reporting_instance_create_events")
-public class ReportingInstanceCreateEvent
-	extends ReportingEventSupport
-{
-	private static final long serialVersionUID = 1L;
+@Entity
+@javax.persistence.Entity
+@SqlResultSetMapping(name = "createEventMap", entities = @EntityResult(entityClass = ReportingInstanceCreateEvent.class))
+@NamedNativeQuery(name = "scanInstanceCreateEvents", query = "select * from reporting_instance_create_events order by timestamp_ms", resultSetMapping = "createEventMap")
+@PersistenceContext(name = "eucalyptus_reporting")
+@Table(name = "reporting_instance_create_events")
+public class ReportingInstanceCreateEvent extends ReportingEventSupport {
+    private static final long serialVersionUID = 1L;
 
-	@Column(name="uuid", nullable=false, unique=true)
-	private String uuid;
-	@Column(name="instance_id", nullable=false)
-	private String instanceId;
-	@Column(name="instance_type", nullable=false)
-	private String instanceType;
-	@Column(name="user_id", nullable=false)
-	private String userId;
-	@Column(name="cluster_name", nullable=false)
-	private String clusterName;
-	@Column(name="availability_zone", nullable=false)
-	private String availabilityZone;
+    @Column(name = "uuid", nullable = false, unique = true)
+    private String uuid;
+    @Column(name = "instance_id", nullable = false)
+    private String instanceId;
+    @Column(name = "instance_type", nullable = false)
+    private String instanceType;
+    @Column(name = "user_id", nullable = false)
+    private String userId;
+    @Column(name = "user_name", nullable = false)
+    private String userName;
+    @Column(name = "account_name", nullable = false)
+    private String accoutName;
+    @Column(name = "account_id", nullable = false)
+    private String accountId;
+    @Column(name = "availability_zone", nullable = false)
+    private String availabilityZone;
 
+    /**
+     * <p>
+     * Do not instantiate this class directly; use the
+     * ReportingInstanceEventStore class.
+     */
+    protected ReportingInstanceCreateEvent() {
+    }
 
-	/**
- 	 * <p>Do not instantiate this class directly; use the ReportingInstanceEventStore class.
- 	 */
-	protected ReportingInstanceCreateEvent()
-	{
-	}
+    /**
+     * <p>
+     * Do not instantiate this class directly; use the
+     * ReportingInstanceEventStore class.
+     */
+    ReportingInstanceCreateEvent(String uuid, Long timestampMs,
+	    String instanceId, String instanceType, String userId,
+	    String userName, String accountName, String accountId,
+	    String availabilityZone) {
+	this.uuid = uuid;
+	this.timestampMs = timestampMs;
+	this.instanceId = instanceId;
+	this.instanceType = instanceType;
+	this.userId = userId;
+	this.userName = userName;
+	this.accoutName = accountName;
+	this.accountId = accountId;
+	this.availabilityZone = availabilityZone;
+    }
 
-	/**
- 	 * <p>Do not instantiate this class directly; use the ReportingInstanceEventStore class.
- 	 */
-	ReportingInstanceCreateEvent(String uuid, Long timestampMs, String instanceId, String instanceType,
-				String userId, String clusterName, String availabilityZone)
-	{
-		this.uuid = uuid;
-		this.timestampMs = timestampMs;
-		this.instanceId = instanceId;
-		this.instanceType = instanceType;
-		this.userId = userId;
-		this.clusterName = clusterName;
-		this.availabilityZone = availabilityZone;
-	}
+    @Override
+    public EventDependency asDependency() {
+	return asDependency("uuid", uuid);
+    }
 
-	public String getUuid()
-	{
-		return this.uuid;
-	}
-	
-	public String getInstanceId()
-	{
-		return this.instanceId;
-	}
+    @Override
+    public Set<EventDependency> getDependencies() {
+	return withDependencies().user(userId).set();
+    }
 
-	public String getInstanceType()
-	{
-		return this.instanceType;
-	}
+    @Override
+    public int hashCode() {
+	return (uuid == null) ? 0 : uuid.hashCode();
+    }
 
-	public String getUserId()
-	{
-		return this.userId;
-	}
-	
-	public String getClusterName()
-	{
-		return this.clusterName;
-	}
+    @Override
+    public boolean equals(Object obj) {
+	if (this == obj)
+	    return true;
+	if (getClass() != obj.getClass())
+	    return false;
+	ReportingInstanceCreateEvent other = (ReportingInstanceCreateEvent) obj;
+	if (uuid == null) {
+	    if (other.uuid != null)
+		return false;
+	} else if (!uuid.equals(other.uuid))
+	    return false;
+	return true;
+    }
 
-	public String getAvailabilityZone()
-	{
-		return this.availabilityZone;
-	}
+    public String getUuid() {
+	return uuid;
+    }
 
-	@Override
-	public EventDependency asDependency() {
-		return asDependency( "uuid", uuid );
-	}
+    public String getInstanceId() {
+	return instanceId;
+    }
 
-  @Override
-	public Set<EventDependency> getDependencies() {
-		return withDependencies()
-				.user( userId )
-				.set();
-	}
+    public String getInstanceType() {
+	return instanceType;
+    }
 
-	@Override
-	public int hashCode()
-	{
-		return (uuid == null) ? 0 : uuid.hashCode();
-	}
+    public String getUserId() {
+	return userId;
+    }
 
-	@Override
-	public boolean equals(Object obj)
-	{
-		if (this == obj) return true;
-		if (getClass() != obj.getClass()) return false;
-		ReportingInstanceCreateEvent other = (ReportingInstanceCreateEvent) obj;
-		if (uuid == null) {
-			if (other.uuid != null)
-				return false;
-		} else if (!uuid.equals(other.uuid))
-			return false;
-		return true;
-	}
+    public String getUserName() {
+	return userName;
+    }
 
-	@Override
-	public String toString()
-	{
-		return "[uuid:" + this.uuid+ " instanceId:" + this.instanceId + " userId:" + this.userId + "]";
-	}
+    public String getAccoutName() {
+	return accoutName;
+    }
+
+    public String getAccountId() {
+	return accountId;
+    }
+
+    public String getAvailabilityZone() {
+	return availabilityZone;
+    }
+
+    @Override
+    public String toString() {
+	return "ReportingInstanceCreateEvent [uuid=" + uuid + ", instanceId="
+		+ instanceId + ", instanceType=" + instanceType + ", userId="
+		+ userId + ", userName=" + userName + ", accoutName="
+		+ accoutName + ", accountId=" + accountId
+		+ ", availabilityZone=" + availabilityZone + "]";
+    }
 
 
 }

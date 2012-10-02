@@ -216,6 +216,7 @@ typedef struct ccConfig_t {
   long log_max_size_bytes;
   int log_roll_number;
   int log_level;
+  char log_prefix[64];
   char proxyPath[MAX_PATH];
   char proxyIp[32];
   int use_proxy;

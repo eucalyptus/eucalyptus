@@ -280,15 +280,16 @@ public class DescribeSensorsType extends CloudClusterMessage {
 
 }
 
-public class DescribeSensorsResponseType extends CloudClusterMessage {
+public class DescribeSensorsResponse extends CloudClusterMessage {
     
-    ArrayList<SensorsResourceType> sensorResources = new ArrayList<SensorsResourceType>();
+    ArrayList<SensorsResourceType> sensorsResources = new ArrayList<SensorsResourceType>();
     
 }
 
 public class SensorsResourceType extends EucalyptusData {
     String resourceName;
     String resourceType;
+    String resourceUuid;
     
     ArrayList<MetricsResourceType> metrics = new ArrayList<MetricsResourceType>();
     

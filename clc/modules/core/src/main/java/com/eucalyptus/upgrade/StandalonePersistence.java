@@ -62,14 +62,15 @@
 
 package com.eucalyptus.upgrade;
 
-import edu.emory.mathcs.backport.java.util.Collections;
 import groovy.sql.Sql;
 import java.io.File;
 import java.security.Security;
 import java.sql.SQLException;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.jboss.netty.util.internal.ConcurrentHashMap;
@@ -79,11 +80,11 @@ import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentDiscovery;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.entities.PersistenceContextDiscovery;
-import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.SubDirectory;
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 public class StandalonePersistence {
@@ -95,22 +96,24 @@ public class StandalonePersistence {
   }
   public static String                      eucaHome, eucaOld, eucaSource, eucaDest, eucaOldVersion, eucaNewVersion;
   public static File                        oldLibDir, newLibDir;
+  @Nullable
   private static DatabaseSource             source;
+  @Nonnull
   private static DatabaseDestination        dest;
   
   public static void main( String[] args ) throws Exception {
     if ( ( eucaHome = System.getProperty( "euca.upgrade.new.dir" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.dir' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.dir' property" );
     } else if ( ( eucaOld = System.getProperty( "euca.upgrade.old.dir" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.dir' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.dir' property" );
     } else if ( ( eucaNewVersion = System.getProperty( "euca.upgrade.new.version" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.version' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.new.version' property" );
     } else if ( ( eucaOldVersion = System.getProperty( "euca.upgrade.old.version" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.version' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.old.version' property" );
     } else if ( ( eucaSource = System.getProperty( "euca.upgrade.source" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.source' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.source' property" );
     } else if ( ( eucaDest = System.getProperty( "euca.upgrade.destination" ) ) == null ) {
-      throw new RuntimeException( "Failed to find required 'euca.upgrade.destination' property: " + eucaHome );
+      throw new RuntimeException( "Failed to find required 'euca.upgrade.destination' property" );
     } else {
       StandalonePersistence.setupSystemProperties( );
       StandalonePersistence.setupConfigurations( );
@@ -137,7 +140,7 @@ public class StandalonePersistence {
   }
   
   public static void runUpgrade( ) {
-    Collections.sort(upgradeScripts);
+    Collections.sort( upgradeScripts );
     LOG.info( upgradeScripts );
     for( UpgradeScript up : upgradeScripts ) {
       up.setLogger(LOG);
@@ -148,10 +151,9 @@ public class StandalonePersistence {
     LOG.info( "=============================" );
   }
   
-  public static Collection<Sql> listConnections( ) {
-    return sqlConnections.values( );
-  }
   public static Sql getConnection( String persistenceContext ) throws SQLException {
+    if ( source == null ) throw new SQLException("Source not available");
+
     Sql newSql = source.getSqlSession( persistenceContext );
     if ( newSql == null ) { return null; }
     Sql conn = sqlConnections.putIfAbsent( persistenceContext, newSql );
@@ -170,34 +172,39 @@ public class StandalonePersistence {
   }
   
   private static void setupOldDatabase( ) throws Exception {
-    if (eucaSource.startsWith("groovy:")) {
-        source = Groovyness.newInstance( eucaSource.replace("groovy:", "") );
+    if ("NONE".equals( eucaSource )) {
+      source = null;
+    } else if (eucaSource.startsWith("groovy:")) {
+      source = Groovyness.newInstance( eucaSource.replace("groovy:", "") );
     } else {
-    	source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
+      source = ( DatabaseSource ) ClassLoader.getSystemClassLoader( ).loadClass( eucaSource ).newInstance( );
     }
-    /** Register a shutdown hook which closes all source-sql sessions **/
-    Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
-      @Override
-      public void run( ) {
-        for ( Sql s : StandalonePersistence.sqlConnections.values( ) ) {
-          try {
-            s.close( );
-          } catch ( Exception e ) {
-            LOG.debug( e, e );
+
+    if ( source != null ) {
+      /** Register a shutdown hook which closes all source-sql sessions **/
+      Runtime.getRuntime( ).addShutdownHook( new Thread( ) {
+        @Override
+        public void run( ) {
+          for ( Sql s : StandalonePersistence.sqlConnections.values( ) ) {
+            try {
+              s.close( );
+            } catch ( Exception e ) {
+              LOG.debug( e, e );
+            }
           }
         }
+      } );
+      /** open connection for each context **/
+      List<String> oldContexts = ServiceJarDiscovery.contextsInDir( oldLibDir );
+      for ( String ctx : oldContexts ) {
+        StandalonePersistence.getConnection( ctx );
       }
-    } );
-    /** open connection for each context **/
-    List<String> oldContexts = ServiceJarDiscovery.contextsInDir( oldLibDir );
-    for ( String ctx : oldContexts ) {
-      StandalonePersistence.getConnection( ctx );
     }
   }
   
   public static void setupNewDatabase( ) throws Exception {
     dest = ( DatabaseDestination ) ClassLoader.getSystemClassLoader( ).loadClass( eucaDest ).newInstance( );
-    dest.initialize( );    
+    dest.initialize( );
   }
   
   public static void setupInitProviders( ) throws Exception {
@@ -221,7 +228,6 @@ public class StandalonePersistence {
     System.setProperty( "euca.conf.dir", eucaHome + "/etc/eucalyptus/cloud.d/" );
     System.setProperty( "euca.log.dir", eucaHome + "/var/log/eucalyptus/" );
     System.setProperty( "euca.lib.dir", eucaHome + "/usr/share/eucalyptus/" );
-    String logLevel = System.getProperty( "euca.log.level", "INFO" ).toUpperCase();
 
     // Keep logs off the console
     // Logger.getRootLogger().removeAllAppenders();
@@ -235,16 +241,15 @@ public class StandalonePersistence {
   }
   
   static void setupConfigurations( ) {
-	ServiceJarDiscovery.doSingleDiscovery( new ComponentDiscovery( ) );
+    ServiceJarDiscovery.doSingleDiscovery( new ComponentDiscovery( ) );
   }
   
   private static File getAndCheckLibDirectory( String eucaHome ) {
-    String eucaLibDirPath;
     File eucaLibDir;
-    if ( ( eucaLibDirPath = eucaHome + "/usr/share/eucalyptus" ) == null ) {
+    if ( eucaHome == null ) {
       throw new RuntimeException( "The source directory has not been specified." );
-    } else if ( !( eucaLibDir = new File( eucaLibDirPath ) ).exists( ) ) {
-      throw new RuntimeException( "The source directory does not exist: " + eucaLibDirPath );
+    } else if ( !( eucaLibDir = new File( eucaHome, "usr/share/eucalyptus" ) ).exists( ) ) {
+      throw new RuntimeException( "The source directory does not exist: " + eucaLibDir.getPath() );
     }
     return eucaLibDir;
   }
@@ -260,7 +265,7 @@ public class StandalonePersistence {
   
   public static void runDiscovery( ) {
     runSetupDiscovery( );
-    for( File script : SubDirectory.UPGRADE.getFile( ).listFiles( ) ) {
+    for( File script : Objects.firstNonNull( SubDirectory.UPGRADE.getFile( ).listFiles( ), new File[0]) ) {
       if (! script.getPath().endsWith(".groovy")) {
         LOG.debug("Skipping " + script.getAbsolutePath( ) + " due to file extension.");
         continue;
@@ -293,5 +298,4 @@ public class StandalonePersistence {
       }
     }
   }
-  
 }

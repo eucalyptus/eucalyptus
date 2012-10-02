@@ -169,13 +169,13 @@ public class WalrusImageManager {
 	private String decryptImage(String bucketName, String objectKey, Account account, boolean isAdministrator) throws EucalyptusCloudException {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 
 		if (bucketList.size() > 0) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(isAdministrator || (
@@ -274,7 +274,7 @@ public class WalrusImageManager {
 					ArrayList<String> qualifiedPaths = new ArrayList<String>();
 					searchObjectInfo = new ObjectInfo();
 					searchObjectInfo.setBucketName(bucketName);
-					List<ObjectInfo> bucketObjectInfos = dbObject.query(searchObjectInfo);
+					List<ObjectInfo> bucketObjectInfos = dbObject.queryEscape(searchObjectInfo);
 
 					for (String part: parts) {
 						for(ObjectInfo object : bucketObjectInfos) {
@@ -361,7 +361,7 @@ public class WalrusImageManager {
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
 		try {
-			bucket = db.getUnique(bucketInfo);
+			bucket = db.getUniqueEscape(bucketInfo);
 		} catch(Exception t) {
 			throw new WalrusException("Unable to get bucket: " + bucketName, t);
 		}
@@ -369,7 +369,7 @@ public class WalrusImageManager {
 		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
@@ -451,7 +451,7 @@ public class WalrusImageManager {
 		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
-			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+			ImageCacheInfo foundImageCacheInfo = db.getUniqueEscape(searchImageCacheInfo);
 			db.commit();
 			if(foundImageCacheInfo.getInCache())
 				return true;
@@ -467,7 +467,7 @@ public class WalrusImageManager {
 		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
 		try {
-			ImageCacheInfo foundImageCacheInfo = db.getUnique(searchImageCacheInfo);
+			ImageCacheInfo foundImageCacheInfo = db.getUniqueEscape(searchImageCacheInfo);
 			String cacheImageKey = foundImageCacheInfo.getImageName().substring(0, foundImageCacheInfo.getImageName().lastIndexOf(".tgz"));
 			long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
 			db.commit();
@@ -484,7 +484,7 @@ public class WalrusImageManager {
 	private void cacheImage(String bucketName, String manifestKey, Account account, boolean isAdministrator) throws EucalyptusCloudException {
 		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-		List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
+		List<ImageCacheInfo> imageCacheInfos = db.queryEscape(searchImageCacheInfo);
 		String decryptedImageKey = null;
 		if(imageCacheInfos.size() != 0) {
 			ImageCacheInfo icInfo = imageCacheInfos.get(0);
@@ -536,7 +536,7 @@ public class WalrusImageManager {
 		EucaSemaphoreDirectory.removeSemaphore(bucketName + "/" + objectKey);
 		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
-		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
+		List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
 
 		if(foundImageCacheInfos.size() > 0) {
 			ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
@@ -557,7 +557,7 @@ public class WalrusImageManager {
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
 		try {
-			bucket = db.getUnique(bucketInfo);
+			bucket = db.getUniqueEscape(bucketInfo);
 		} catch(Exception t) {
 			throw new WalrusException("Unable to get bucket: " + bucketName, t);
 		}
@@ -565,7 +565,7 @@ public class WalrusImageManager {
 		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
@@ -728,7 +728,7 @@ public class WalrusImageManager {
 				}
 				Long oldCacheSize = 0L;
 				EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
-				List<ImageCacheInfo> imageCacheInfos = db.query(new ImageCacheInfo());
+				List<ImageCacheInfo> imageCacheInfos = db.queryEscape(new ImageCacheInfo());
 				for(ImageCacheInfo imageCacheInfo: imageCacheInfos) {
 					if(imageCacheInfo.getInCache()) {
 						oldCacheSize += imageCacheInfo.getSize();
@@ -794,7 +794,7 @@ public class WalrusImageManager {
 				EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
 				searchImageCacheInfo.setInCache(true);
-				List<ImageCacheInfo> imageCacheInfos = db.query(searchImageCacheInfo);
+				List<ImageCacheInfo> imageCacheInfos = db.queryEscape(searchImageCacheInfo);
 				if(imageCacheInfos.size() == 0) {
 					LOG.error("No cached images found to flush. Unable to cache image. Please check the error log and the image cache size.");
 					db.rollback();
@@ -839,7 +839,7 @@ public class WalrusImageManager {
 
 				EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-				List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
+				List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
 				if(foundImageCacheInfos.size() > 0) {
 					ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
 					foundImageCacheInfo.setImageName(imageKey);
@@ -1051,11 +1051,11 @@ public class WalrusImageManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 		if (bucketList.size() > 0) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
@@ -1075,7 +1075,7 @@ public class WalrusImageManager {
 					}
 					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
-					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
+					List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
 					if(foundImageCacheInfos.size() > 0) {
 						ImageCacheInfo imageCacheInfo = foundImageCacheInfos.get(0);
 						if(imageCacheInfo.getInCache() && 
@@ -1083,7 +1083,7 @@ public class WalrusImageManager {
 							db2.delete(imageCacheInfo);
 							db2.commit();
 							db2 = EntityWrapper.get(ImageCacheInfo.class);
-							foundImageCacheInfos = db2.query(searchImageCacheInfo);
+							foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
 						}						
 					}
 					if((foundImageCacheInfos.size() == 0) || 
@@ -1094,7 +1094,7 @@ public class WalrusImageManager {
 						cacheImage(bucketName, objectKey, account, ctx.hasAdministrativePrivileges());
 						//query db again
 						db2 = EntityWrapper.get(ImageCacheInfo.class);
-						foundImageCacheInfos = db2.query(searchImageCacheInfo);
+						foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
 					}
 					ImageCacheInfo foundImageCacheInfo = null;
 					if(foundImageCacheInfos.size() > 0)
@@ -1141,7 +1141,7 @@ public class WalrusImageManager {
 						}
 						//caching may have modified the db. repeat the query
 						db2 = EntityWrapper.get(ImageCacheInfo.class);
-						foundImageCacheInfos = db2.query(searchImageCacheInfo);
+						foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
 						if(foundImageCacheInfos.size() > 0) {
 							foundImageCacheInfo = foundImageCacheInfos.get(0);
 							foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
@@ -1193,7 +1193,7 @@ public class WalrusImageManager {
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		BucketInfo bucket = null;
 		try {
-			bucket = db.getUnique(bucketInfo);
+			bucket = db.getUniqueEscape(bucketInfo);
 		} catch(Exception t) {
 			throw new WalrusException("Unable to get bucket", t);
 		}
@@ -1201,7 +1201,7 @@ public class WalrusImageManager {
 		if (bucket != null) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 				if(ctx.hasAdministrativePrivileges() || (
@@ -1239,12 +1239,12 @@ public class WalrusImageManager {
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
 		if (bucketList.size() > 0) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
-			List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 			if(objectInfos.size() > 0)  {
 				ObjectInfo objectInfo = objectInfos.get(0);
 
@@ -1257,7 +1257,7 @@ public class WalrusImageManager {
 								objectInfo.getOwnerId()))) {
 					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
 					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-					List<ImageCacheInfo> foundImageCacheInfos = db2.query(searchImageCacheInfo);
+					List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
 					db2.commit();
 					if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + manifestKey))) {
 						cacheImage(bucketName, manifestKey, account, Contexts.lookup( ).hasAdministrativePrivileges( ));
@@ -1289,7 +1289,7 @@ public class WalrusImageManager {
 
 		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-		List<ImageCacheInfo> foundImageCacheInfos = db.query(searchImageCacheInfo);
+		List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
 
 		if(foundImageCacheInfos.size() > 0) {
 			ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
@@ -1317,7 +1317,7 @@ public class WalrusImageManager {
 		Account account = ctx.getAccount();
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.query(bucketInfo);
+		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 		if (bucketList.size() > 0) {
 			BucketInfo bucket = bucketList.get(0);
 			BucketLogData logData = bucket.getLoggingEnabled() ? request
@@ -1325,7 +1325,7 @@ public class WalrusImageManager {
 					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
 					searchObjectInfo.setDeleted(false);
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-					List<ObjectInfo> objectInfos = dbObject.query(searchObjectInfo);
+					List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
 					if (objectInfos.size() > 0) {
 						ObjectInfo objectInfo = objectInfos.get(0);
 						if (ctx.hasAdministrativePrivileges() || (

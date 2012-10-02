@@ -125,7 +125,7 @@ import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.InstanceEvent;
+import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -778,6 +778,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
+        vmInst.setNaturalId(token.getInstanceUuid());
         vmInst = Entities.persist( vmInst );
         Entities.flush( vmInst );
         db.commit( );
@@ -948,8 +949,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   void store( ) {
     this.updateTimeStamps( );
-    this.fireUsageEvent( );
     this.firePersist( );
+    this.fireUsageEvent( );
   }
   
   private void firePersist( ) {
@@ -978,7 +979,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final String userId = owner.getUserId();
         final String accountId = owner.getAccountNumber();
 
-        ListenerRegistry.getInstance( ).fireEvent( new InstanceEvent(
+        ListenerRegistry.getInstance( ).fireEvent( new InstanceCreationEvent(
             getInstanceUuid(),
             getDisplayName(),
             this.bootRecord.getVmType().getName(),
@@ -986,10 +987,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             Accounts.lookupUserById(userId).getName(),
             accountId,
             Accounts.lookupAccountById(accountId).getName(),
-            this.placement.getClusterName(),
-            this.placement.getPartitionName(),
-            this.usageStats.getBlockBytes(),
-            0, 0L ,0L ,0L ,0L ,0L ,0L ) ); //TODO Add CPU and network utilization
+            this.placement.getPartitionName())); //TODO Add CPU and network utilization
       } catch ( final Exception ex ) {
         LOG.error( ex, ex );
       }
@@ -1540,7 +1538,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             } else {
               this.updateState( runVm );
             }
-            VmInstance.this.fireUsageEvent( );
+            //VmInstance.this.fireUsageEvent( );
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );

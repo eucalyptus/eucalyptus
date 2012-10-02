@@ -203,17 +203,17 @@ static inline void copy_vm_type_from_adb (virtualMachine * params, adb_virtualMa
   for (i = 0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
     adb_virtualBootRecordType_t * vbr_type = adb_virtualMachineType_get_virtualBootRecord_at (vm_type, env, i);
     safe_strncpy (params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env), CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG2, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
+    logprintfl (EUCATRACE, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
     safe_strncpy (params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG2, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
+    logprintfl (EUCATRACE, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
     params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
-    logprintfl (EUCADEBUG2, "             size: %d\n", params->virtualBootRecord[i].size);
+    logprintfl (EUCATRACE, "             size: %d\n", params->virtualBootRecord[i].size);
     safe_strncpy (params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG2, "           format: %s\n", params->virtualBootRecord[i].formatName);
+    logprintfl (EUCATRACE, "           format: %s\n", params->virtualBootRecord[i].formatName);
     safe_strncpy (params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG2, "               id: %s\n", params->virtualBootRecord[i].id);
+    logprintfl (EUCATRACE, "               id: %s\n", params->virtualBootRecord[i].id);
     safe_strncpy (params->virtualBootRecord[i].typeName, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
-    logprintfl (EUCADEBUG2, "             type: %s\n", params->virtualBootRecord[i].typeName);
+    logprintfl (EUCATRACE, "             type: %s\n", params->virtualBootRecord[i].typeName);
   }
 }
 
@@ -361,6 +361,7 @@ static inline sensorResource * copy_sensor_resource_from_adb (adb_sensorsResourc
     
     safe_strncpy (sr->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof (sr->resourceName));
     safe_strncpy (sr->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof (sr->resourceType));
+    safe_strncpy (sr->resourceUuid, (char *)adb_sensorsResourceType_get_resourceUuid(resource, env), sizeof (sr->resourceUuid));
     
     return sr;
 }
@@ -370,6 +371,7 @@ static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axu
     adb_sensorsResourceType_t * resource = adb_sensorsResourceType_create(env);    
     adb_sensorsResourceType_set_resourceName (resource, env, sr->resourceName);
     adb_sensorsResourceType_set_resourceType (resource, env, sr->resourceType);
+    adb_sensorsResourceType_set_resourceUuid (resource, env, sr->resourceUuid);
     for (int m=0; m<sr->metricsLen; m++) {
         const sensorMetric * sm = sr->metrics + m;
         adb_metricsResourceType_t * metric = adb_metricsResourceType_create(env);
