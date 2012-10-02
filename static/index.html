@@ -361,109 +361,128 @@
 
           <div id="sgroups-add-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <div class="group inner-box clearfix">
-                <h3>Group *</h3>
-                <p>{{!: sgroup_dialog_add_group }}</p>
-                <div class="form-row">
-                  <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
-                  <input type="text" id="sgroup-name" class="required" title="{{!: sgroup_dialog_add_name_tip }}"/>
-                </div>
-                <div class="form-row">    
-                  <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
-                  <input type="text" id="sgroup-description" class="required" title="{{!: sgroup_dialog_add_description_tip }}"/>
-                </div>  
-            </div>
-            <div class="rules inner-box clearfix">
-                <h3>Rules</h3>
-                <p>{{!: sgroup_dialog_add_rules }}</p>
-                <div class="form-row"> 
-                  <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                  <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
-                    <option value="none">Select protocol</option>
-                    <optgroup label="">
-                    <option>SSH (TCP port 22, for terminal access)</option>
-                    <option>RDP (TCP port 3389, for Windows instances)</option>
-                    <option>HTTP (TCP port 80, for web servers)</option>
-                    <option>HTTPS (TCP port 443, for web servers)</option>
-                    <option>MS SQL (TCP port 1433)</option>
-                    <option>MySQL (TCP port 3306)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>POP3 (TCP port 110)</option>
-                    <option>POP3S (TCP port 995)</option>
-                    <option>LDAP (TCP port 389)</option>
-                    <option>IMAP (TCP port 143)</option>
-                    <option>SMTP (TCP port 465)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>Custom TCP</option>
-                    <option>Custom UDP</option>
-                    <option>Custom ICMP</option>
-                    </optgroup>
-                  </select>
-                </div>
-                <div id="sgroup-more-rules" style="display: none;">
-                  <div class="form-row"> 
-                    <div id="sgroup-port-option">
-                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                      <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/><span id="sgroup-ports-error" style="foreground:#ff000000;"></span>
-                    </div>
-                    <div id="sgroup-type-option" style="display: none;">
-                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                      <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
-                        <option value='0'>Echo reply</option>
-                        <option value='3'>Destination unreachable</option>
-                        <option value='4'>Source quench</option>
-                        <option value='5'>Redirect message</option>
-                        <option value='6'>Alternate host address</option>
-                        <option value='8'>Echo request</option>
-                        <option value='9'>Router advertisement</option>
-                        <option value='10'>Router solicitation</option>
-                        <option value='11'>Timeout exceeded</option>
-                        <option value='12'>Parameter problem: Bad IP header</option>
-                        <option value='13'>Timestamp</option>
-                        <option value='14'>Timestamp reply</option>
-                        <option value='15'>Information request</option>
-                        <option value='16'>Infromation reply</option>
-                        <option value='17'>Address mask request</option>
-                        <option value='18'>Address mask reply</option>
-                        <option value='30'>Traceroute</option>
-                        <option value='31'>Diagram conversion error</option>
-                        <option value='32'>Mobile host redirect</option>
-                        <option value='33'>Where are you</option>
-                        <option value='34'>Here I am</option>
-                        <option value='35'>Mobile registration request</option>
-                        <option value='36'>Mobile registration reply</option>
-                        <option value='37'>Domain name request</option>
-                        <option value='38'>Domain name reply</option>
-                        <option value='39'>SKIP algorithm discovery protocol</option>
-                        <option value='40'>Photuris, security failures</option>
-                        <option value='-1'>All</option>
-                      </select>
-                    </div>
-                    <div class="dialog-notifications"></div>
-                  </div>  
-                  
-                  <div class="form-row">
-                    <span class="field">{{!>sgroup_dialog_add_allow}}</span>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/>{{!>sgroup_dialog_add_allow_ip}}
-                    <input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" style="fgcolor:#ff000000;"></span>
-                    <a href="#" id='sgroup-ip-check'>my ip</a>
-                  </div>
-  
-                  <div class="form-row">
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/>{{!>sgroup_dialog_add_allow_group}} 
-                    <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
-                  </div>
-                  
-                  <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
-  
-                </div>
-                <div id="sgroup-rules-list"></div>
+              
+              <div class="intro-text">
                 <p class="required-hint">{{!: required_fields }}</p>
+              </div>  
+              
+              <div class="content-sections-wrapper">
+
+                <div class="group content-section">
+                  <h3 class="required-label">Group</h3>
+                  <div class="content-section-label">{{!: sgroup_dialog_add_group }}</div>
+                  <div class="form-row">
+                    <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
+                    <input type="text" id="sgroup-name" class="required" title="{{!: sgroup_dialog_add_name_tip }}"/>
+                  </div>
+                  <div class="form-row">    
+                    <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
+                    <input type="text" id="sgroup-description" class="required" title="{{!: sgroup_dialog_add_description_tip }}"/>
+                  </div>  
+                </div>
+                <!-- END content-section -->   
+
+                <div class="rules content-section">
+                  <h3>Rules</h3>
+                  <div class="content-section-label">{{!: sgroup_dialog_add_rules }}</div>
+                  <div class="form-row"> 
+                    <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                    <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
+                      <option value="none">Select protocol</option>
+                      <optgroup label="">
+                      <option>SSH (TCP port 22, for terminal access)</option>
+                      <option>RDP (TCP port 3389, for Windows instances)</option>
+                      <option>HTTP (TCP port 80, for web servers)</option>
+                      <option>HTTPS (TCP port 443, for web servers)</option>
+                      <option>MS SQL (TCP port 1433)</option>
+                      <option>MySQL (TCP port 3306)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>POP3 (TCP port 110)</option>
+                      <option>POP3S (TCP port 995)</option>
+                      <option>LDAP (TCP port 389)</option>
+                      <option>IMAP (TCP port 143)</option>
+                      <option>SMTP (TCP port 465)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>Custom TCP</option>
+                      <option>Custom UDP</option>
+                      <option>Custom ICMP</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div id="sgroup-more-rules" style="display: none;">
+                    <div class="form-row"> 
+                      <div id="sgroup-port-option">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/><span id="sgroup-ports-error" class="sg-error-msg"></span>
+                      </div>
+                      <div id="sgroup-type-option" style="display: none;">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
+                          <option value='0'>Echo reply</option>
+                          <option value='3'>Destination unreachable</option>
+                          <option value='4'>Source quench</option>
+                          <option value='5'>Redirect message</option>
+                          <option value='6'>Alternate host address</option>
+                          <option value='8'>Echo request</option>
+                          <option value='9'>Router advertisement</option>
+                          <option value='10'>Router solicitation</option>
+                          <option value='11'>Timeout exceeded</option>
+                          <option value='12'>Parameter problem: Bad IP header</option>
+                          <option value='13'>Timestamp</option>
+                          <option value='14'>Timestamp reply</option>
+                          <option value='15'>Information request</option>
+                          <option value='16'>Infromation reply</option>
+                          <option value='17'>Address mask request</option>
+                          <option value='18'>Address mask reply</option>
+                          <option value='30'>Traceroute</option>
+                          <option value='31'>Diagram conversion error</option>
+                          <option value='32'>Mobile host redirect</option>
+                          <option value='33'>Where are you</option>
+                          <option value='34'>Here I am</option>
+                          <option value='35'>Mobile registration request</option>
+                          <option value='36'>Mobile registration reply</option>
+                          <option value='37'>Domain name request</option>
+                          <option value='38'>Domain name reply</option>
+                          <option value='39'>SKIP algorithm discovery protocol</option>
+                          <option value='40'>Photuris, security failures</option>
+                          <option value='-1'>All</option>
+                        </select>
+                      </div>
+                      <div class="dialog-notifications"></div>
+                    </div>  
+                  
+                    <div class="form-row sg-inline-options">
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" class="sg-error-msg"></span>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
+                    </div>
+  
+                    <div class="form-row sg-options-row">
+                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    </div>
+                  
+                    <div class="section-button-bar">
+                      <a href='#' id='sgroup-add-rule' class="button section-button">Add Another Rule</a>
+                    </div> 
+                     
+                    <div id="sgroup-rules-list"></div>
+
+                  </div>
+                  <!-- END #sgroup-more-rules -->
+
+                </div>
+                <!-- END content-section -->   
+
               </div>
-            </div> 
+              <!-- END content-sections-wrapper -->    
+            
+            </div>
+            <!-- END dialog-inner-content -->
+
           </div>
+          <!-- END #sgroups-add-dialog -->
 
           <div id="sgroup-add-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
@@ -475,108 +494,126 @@
           </div>
 
         </div>
+        <!-- END #sgroups-add-wrapper -->
       </script>
 
       <script id="sgroupEditDlgTmpl" type="text/x-jsrender">
         <div id="sgroups-edit-wrapper">
           <div id="sgroups-edit-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <div class="group inner-box clearfix">
-                <div id="sgroups-edit-group-name"></div>
-                <div id="sgroups-edit-group-desc"></div>
+
+              <div class="sg-name-desc">
+                <div id="sgroups-edit-group-name" class="sg-name"></div>
+                <div id="sgroups-edit-group-desc" class="sg-desc"></div>
                 <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
                 <div id="sgroups-hidden-name" style='display: none;'></div>
               </div>
-              <div class="rules inner-box clearfix">
-                <h3>Rules</h3>
-                <p>{{!: sgroup_dialog_edit_rules }}</p>
-                <div class="form-row">
-                  <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
-                  <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
-                    <option value="none">Select protocol</option>
-                    <optgroup label="">
-                    <option>SSH (TCP port 22, for terminal access)</option>
-                    <option>RDP (TCP port 3389, for Windows instances)</option>
-                    <option>HTTP (TCP port 80, for web servers)</option>
-                    <option>HTTPS (TCP port 443, for web servers)</option>
-                    <option>MS SQL (TCP port 1433)</option>
-                    <option>MySQL (TCP port 3306)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>POP3 (TCP port 110)</option>
-                    <option>POP3S (TCP port 995)</option>
-                    <option>LDAP (TCP port 389)</option>
-                    <option>IMAP (TCP port 143)</option>
-                    <option>SMTP (TCP port 465)</option>
-                    </optgroup>
-                    <optgroup label="----------------">
-                    <option>Custom TCP</option>
-                    <option>Custom UDP</option>
-                    <option>Custom ICMP</option>
-                    </optgroup>
-                  </select>
-                </div>
-  
-                <div id="sgroup-more-rules" style='display: none;'>
+
+              <div class="content-sections-wrapper">
+
+                <div class="rules content-section">
+                  <h3>Rules</h3>
+                  <div class="content-section-label">{{!: sgroup_dialog_edit_rules }}</div>
                   <div class="form-row">
-                    <div id="sgroup-port-option">
-                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                      <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                    <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                    <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
+                      <option value="none">Select protocol</option>
+                      <optgroup label="">
+                      <option>SSH (TCP port 22, for terminal access)</option>
+                      <option>RDP (TCP port 3389, for Windows instances)</option>
+                      <option>HTTP (TCP port 80, for web servers)</option>
+                      <option>HTTPS (TCP port 443, for web servers)</option>
+                      <option>MS SQL (TCP port 1433)</option>
+                      <option>MySQL (TCP port 3306)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>POP3 (TCP port 110)</option>
+                      <option>POP3S (TCP port 995)</option>
+                      <option>LDAP (TCP port 389)</option>
+                      <option>IMAP (TCP port 143)</option>
+                      <option>SMTP (TCP port 465)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>Custom TCP</option>
+                      <option>Custom UDP</option>
+                      <option>Custom ICMP</option>
+                      </optgroup>
+                    </select>
+                  </div>
+    
+                  <div id="sgroup-more-rules" style='display: none;'>
+                    <div class="form-row">
+                      <div id="sgroup-port-option">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                      </div>
+                      <div id="sgroup-type-option" style="display: none;">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
+                          <option value='0'>Echo reply</option>
+                          <option value='3'>Destination unreachable</option>
+                          <option value='4'>Source quench</option>
+                          <option value='5'>Redirect message</option>
+                          <option value='6'>Alternate host address</option>
+                          <option value='8'>Echo request</option>
+                          <option value='9'>Router advertisement</option>
+                          <option value='10'>Router solicitation</option>
+                          <option value='11'>Timeout exceeded</option>
+                          <option value='12'>Parameter problem: Bad IP header</option>
+                          <option value='13'>Timestamp</option>
+                          <option value='14'>Timestamp reply</option>
+                          <option value='15'>Information request</option>
+                          <option value='16'>Infromation reply</option>
+                          <option value='17'>Address mask request</option>
+                          <option value='18'>Address mask reply</option>
+                          <option value='30'>Traceroute</option>
+                          <option value='31'>Diagram conversion error</option>
+                          <option value='32'>Mobile host redirect</option>
+                          <option value='33'>Where are you</option>
+                          <option value='34'>Here I am</option>
+                          <option value='35'>Mobile registration request</option>
+                          <option value='36'>Mobile registration reply</option>
+                          <option value='37'>Domain name request</option>
+                          <option value='38'>Domain name reply</option>
+                          <option value='39'>SKIP algorithm discovery protocol</option>
+                          <option value='40'>Photuris, security failures</option>
+                          <option value='-1'>All</option>
+                        </select>
+                      </div>
+                      <div class="dialog-notifications"></div>
                     </div>
-                    <div id="sgroup-type-option" style="display: none;">
-                      <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
-                      <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
-                        <option value='0'>Echo reply</option>
-                        <option value='3'>Destination unreachable</option>
-                        <option value='4'>Source quench</option>
-                        <option value='5'>Redirect message</option>
-                        <option value='6'>Alternate host address</option>
-                        <option value='8'>Echo request</option>
-                        <option value='9'>Router advertisement</option>
-                        <option value='10'>Router solicitation</option>
-                        <option value='11'>Timeout exceeded</option>
-                        <option value='12'>Parameter problem: Bad IP header</option>
-                        <option value='13'>Timestamp</option>
-                        <option value='14'>Timestamp reply</option>
-                        <option value='15'>Information request</option>
-                        <option value='16'>Infromation reply</option>
-                        <option value='17'>Address mask request</option>
-                        <option value='18'>Address mask reply</option>
-                        <option value='30'>Traceroute</option>
-                        <option value='31'>Diagram conversion error</option>
-                        <option value='32'>Mobile host redirect</option>
-                        <option value='33'>Where are you</option>
-                        <option value='34'>Here I am</option>
-                        <option value='35'>Mobile registration request</option>
-                        <option value='36'>Mobile registration reply</option>
-                        <option value='37'>Domain name request</option>
-                        <option value='38'>Domain name reply</option>
-                        <option value='39'>SKIP algorithm discovery protocol</option>
-                        <option value='40'>Photuris, security failures</option>
-                        <option value='-1'>All</option>
-                      </select>
+  
+                    <div class="form-row sg-inline-options">
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
                     </div>
-                    <div class="dialog-notifications"></div>
-                  </div>
   
-                  <div class="form-row">
-                    <label for="sgroup-allow-ip">{{!>sgroup_dialog_add_allow}}</label>
-                    <input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/>{{!>sgroup_dialog_add_allow_ip}}
-                    <input type="text" id="allow-ip" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><a href="#" id='sgroup-ip-check'>my ip</a>
+                    <div class="form-row sg-options-row"> 
+                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    </div>
+
+                    <div class="section-button-bar">
+                      <a href='#' id='sgroup-add-rule' class="button section-button">Add Another Rule</a>
+                    </div>
+
                   </div>
-  
-                  <div class="form-row"> 
-                    <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}"/>{{!>sgroup_dialog_add_allow_group}}<br/>
-                    <input type="text" id="allow-group" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
-                  </div>
-  
-                  <a href='#' id='sgroup-add-rule' class="button">Add Another Rule</a>
+                  <!-- END #sgroup-more-rules -->
+
+                  <div class="content-section-label">{{!: sgroup_dialog_edit_existing_rules }}</div>
+                  <div id="sgroup-rules-list"></div>
+
                 </div>
-                <p>{{!: sgroup_dialog_edit_existing_rules }}</p>
-                <div id="sgroup-rules-list"></div>
+                <!-- END content-section --> 
+
               </div>
+              <!-- END content-sections-wrapper --> 
+
             </div>
-          </div> 
+            <!-- END dialog-inner-content -->
+
+          </div>
+          <!-- END #sgroups-edit-dialog --> 
+
           <div id="sgroup-edit-dialog-help" class="dialog-help">
               <div class="dialog-help-content">
                 {{!: dialog_edit_content }}
@@ -585,7 +622,9 @@
                 <a href="#">{{!>revert_button}}</a>
               </div>
           </div>
+
         </div>
+        <!-- END #sgroups-edit-wrapper -->
       </script>
 
       <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
@@ -697,7 +736,7 @@
             <div class="dialog-inner-content">
               <p id="volume-detach-msg"></p>
               <p id="volume-detach-select-all"></p>
-              <table id="volume-detach-grid">
+              <table id="volume-detach-grid" class="dialog-table-grid">
               </table>
             </div>
           </div> 

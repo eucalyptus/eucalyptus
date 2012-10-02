@@ -234,6 +234,9 @@ function startLaunchWizard(filter) {
 }
 
 function getErrorMessage(jqXHR) {
+  if (jqXHR.status == 504) {
+    return general_timeout;
+  }
   if (jqXHR && jqXHR.responseText) {
     response = jQuery.parseJSON(jqXHR.responseText);
     return response.message ? response.message : undefined_error;
