@@ -585,7 +585,7 @@
     // this function populates the div where rules are listed based on the rulesList
     _refreshRulesList : function(dialog) {
         if (this.rulesList != null) {
-            var msg = "";
+            var msg = "<ul>";
             var i=0;
             for (rule in this.rulesList) {
                 if (this.rulesList[rule].deletethis == true) continue;
@@ -593,11 +593,12 @@
                 if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
                     ports += "-"+this.rulesList[rule].to_port;
                 }
-                msg += "<a href='#' id='sgroup-rule-number-"+i+"'>Delete</a> Rule: "+this.rulesList[rule].protocol+
+                msg += "<li><a href='#' id='sgroup-rule-number-"+i+"'>Delete</a> Rule: "+this.rulesList[rule].protocol+
                             " ("+ ports+"), "+
-                            this.rulesList[rule].ipaddr+"<br/>";
+                            this.rulesList[rule].ipaddr+"</li>";
                 i += 1;
             }
+            msg += "</ul>";
             dialog.find('#sgroup-rules-list').html(msg);
             i=0;
             for (rule in this.rulesList) {
