@@ -65,6 +65,7 @@ package com.eucalyptus.entities;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import java.lang.ref.WeakReference;
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -188,6 +189,12 @@ public class EntityWrapper<TYPE> {
                                    .add( qbe )
                                    .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
+
+  public Iterator scanWithNativeQuery( final String queryName )
+  {
+	//TODO: we cannot call "iterate()" directly from Query, because Hibernate throws an UnsupportedOperationException since iterate() is not supported from SQL queries. CRAP.
+	return this.getSession().getNamedQuery( queryName ).list().iterator();
   }
   
   // Fix for EUCA-3453

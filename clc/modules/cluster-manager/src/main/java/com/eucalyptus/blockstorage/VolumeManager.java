@@ -277,7 +277,7 @@ public class VolumeManager {
           Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, input ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            Volumes.fireUsageEvent( foundVol, VolumeEvent.forVolumeDelete() );
+            //Volumes.fireUsageEvent( foundVol, VolumeEvent.forVolumeDelete() );
             reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
             return foundVol;
           } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {

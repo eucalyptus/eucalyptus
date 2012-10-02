@@ -68,7 +68,7 @@ import com.google.gwt.user.client.ui.IsWidget;
 
 public interface ReportView extends IsWidget {
 
-  void init( Date fromDate, Date toDate, String[] criteriaList, String[] groupByList, String[] typeList );
+  void init( Date fromDate, Date toDate, String[] typeList );
   
   void loadReport( String url );
   
@@ -76,12 +76,10 @@ public interface ReportView extends IsWidget {
   
   interface Presenter {
     
-    void downloadPdf( );
     void downloadCsv( );
-    void downloadXls( );
     void downloadHtml( );
     
-    void generateReport( Date fromDate, Date toDate, String criteria, String groupBy, String type );
+    void generateReport( Date fromDate, Date toDate, String type );
     
   }
   

@@ -141,7 +141,7 @@ public class SnapshotManager {
     };
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
-    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue() ) );
+    //fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue() ) );
 
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
@@ -277,7 +277,7 @@ public class SnapshotManager {
                                       final EventActionInfo<SnapShotAction> actionInfo ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
-          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner() ));
+          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner().getUserName() ));
     } catch (final Exception e) {
       LOG.error(e, e);
     }

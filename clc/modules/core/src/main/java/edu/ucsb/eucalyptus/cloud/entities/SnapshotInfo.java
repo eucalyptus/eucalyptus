@@ -102,7 +102,7 @@ public class SnapshotInfo extends AbstractPersistent {
 
     public SnapshotInfo(String snapshotId) {
     	this();
-        this.snapshotId = snapshotId;
+    	this.snapshotId = snapshotId;
     }
 
     public String getUserName() {

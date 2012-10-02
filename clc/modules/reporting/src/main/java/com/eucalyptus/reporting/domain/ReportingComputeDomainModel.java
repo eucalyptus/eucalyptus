@@ -61,8 +61,13 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * <p>ReportingComputeDomainModel contains statistics of the total compute resources available,
@@ -77,171 +82,271 @@ import java.util.Map;
  * some external agent calls these static methods to obtain domain model objects and then populates
  * their properties with values based upon the amount of hardware available.
  * 
- * <p>ReportingComputeDomainModel contains a property of how many compute resources are available.
- * This property indicates how many instances could be run, based upon the number of cores. It is a
- * <i>multiplier</i> and you can determine how many instances of various types you can create by
- * dividing it by some integer.
+ * <p>ReportingComputeZoneDomainModel contains a property of how many compute resources are
+ * available. This property indicates how many instances could be run, based upon the number of
+ * cores. It is a <i>multiplier</i> and you can determine how many instances of various types you
+ * can create by dividing it by some integer.
  * 
  */
 public class ReportingComputeDomainModel
 {
-	private static ReportingComputeDomainModel globalModel = null;
-	private static Map<String, ReportingComputeDomainModel> zoneModels; 
+	private static final ReportingComputeDomainModel globalModel = new ReportingComputeDomainModel();
+	private static final ConcurrentMap<String, ReportingComputeZoneDomainModel> zoneModels = Maps.newConcurrentMap();
 	
 	public static ReportingComputeDomainModel getGlobalComputeDomainModel()
 	{
-		if (globalModel == null) {
-			globalModel = new ReportingComputeDomainModel();
-		}
 		return globalModel;
 	}
-	
-	public static ReportingComputeDomainModel getZoneComputeDomainModel(String zoneName)
+
+	public static Set<String> getZones() {
+		return Sets.newTreeSet( zoneModels.keySet() );
+	}
+
+	public static ReportingComputeZoneDomainModel getZoneComputeDomainModel( final String zoneName )
 	{
-		if (zoneModels == null) {
-			zoneModels = new HashMap<String,ReportingComputeDomainModel>();
+		ReportingComputeZoneDomainModel zoneModel = zoneModels.get( zoneName );
+
+		if ( zoneModel == null ) {
+			zoneModel = new ReportingComputeZoneDomainModel();
+			if ( zoneModels.putIfAbsent( zoneName, zoneModel ) != null ) {
+				zoneModel = zoneModels.get( zoneName );
+			}
 		}
 		
-		if (! zoneModels.containsKey(zoneName) ) {
-			zoneModels.put(zoneName, new ReportingComputeDomainModel());
-		}
-		
-		return zoneModels.get(zoneName);
+		return zoneModel;
 	}
 	
-	private ReportingComputeDomainModel()
-	{
-		ec2ComputeUnitsAvailable = null;
-		sizeS3ObjectAvailableGB      = null;
-		sizeEbsAvailableGB           = null;
-		numPublicIpsAvailable        = null;
-	}
-	
-	private Integer ec2ComputeUnitsAvailable;
-	private Integer ec2MemoryUnitsAvailable;
-	private Integer ec2DiskUnitsAvailable;
-	private Long    sizeS3ObjectAvailableGB;
-	private Long    sizeEbsAvailableGB;
-	private Integer numPublicIpsAvailable;
-	
-
-	/**
-	 * <p>Returns the total number of instances which can be created, based upon the amount of
-	 * 	compute resources available in the cloud. This value is a <i>multiplier</i>, and you
-	 *  can determine how many instances of various types you can create by dividing it by some
-	 *  number, as follows:
-	 *  
-	 *  <p>number of m1.small  instances : divide by 1.
-	 *  <p>number of m1.medium instances : divide by 2.
-	 *  <p>number of c1.medium instances : divide by 5.
-	 *  <p>number of m1.large  instances : divide by 4.
-	 *  <p>number of m1.xlarge instances : divide by 8.
-	 *  <p>number of c1.xlarge instances : divide by 20.
-	 *
-	 * See: http://aws.amazon.com/ec2/instance-types/
-	 *  
-	 * @return Total number of ec2 compute units available. 
-	 */
-	public Integer getEc2ComputeUnitsAvailable()
-	{
-		return ec2ComputeUnitsAvailable;
-	}
-
-	/**
-	 * <p>The total number of instances which can be created, based upon the amount of
-	 * 	compute resources available in the cloud. This value is a <i>multiplier</i>, and you
-	 *  can determine how many instances of various types you can create by dividing it by some
-	 *  number, as follows:
-	 *  
-	 *  <p>number of m1.small  instances : divide by 1.
-	 *  <p>number of m1.medium instances : divide by 2.
-	 *  <p>number of c1.medium instances : divide by 5.
-	 *  <p>number of m1.large  instances : divide by 4.
-	 *  <p>number of m1.xlarge instances : divide by 8.
-	 *  <p>number of c1.xlarge instances : divide by 20.
-	 *
-	 * See: http://aws.amazon.com/ec2/instance-types/
-	 */
-	public void setEc2ComputeUnitsAvailable(Integer numM1SmallInstancesAvailable)
-	{
-		this.ec2ComputeUnitsAvailable = numM1SmallInstancesAvailable;
-	}
-	
-	/**
-	 * <p>The total number of instances of various types which could be created based upon the
-	 *  the amount of RAM available in the cloud and its distribution across nodes. This value is
-	 *  a <i>multiplier</i>, and you can determine how many instances of various types you can
-	 *  create by dividing it by some number, as follows:
-	 *  
-	 *  <p>number of m1.small  instances : divide by 1.
-	 *  <p>number of m1.medium instances : divide by 2.
-	 *  <p>number of c1.medium instances : divide by 1.
-	 *  <p>number of m1.large  instances : divide by 4.
-	 *  <p>number of m1.xlarge instances : divide by 8.
-	 *  <p>number of c1.xlarge instances : divide by 4.
-	 * 
-	 */
-	public Integer getEc2MemoryUnitsAvailable()
-	{
-		return ec2MemoryUnitsAvailable;
-	}
-
-	public void setEc2MemoryUnitsAvailable(Integer ec2MemoryUnitsAvailable)
-	{
-		this.ec2MemoryUnitsAvailable = ec2MemoryUnitsAvailable;
-	}
-
-	/**
-	 * <p>The total number of instances of various types which could be created based upon the
-	 *  the amount of disk available in the cloud and its distribution across nodes. This value is
-	 *  a <i>multiplier</i>, and you can determine how many instances of various types you can
-	 *  create by dividing it by some number, as follows:
-	 *  
-	 *  <p>number of m1.small  instances : divide by 1.
-	 *  <p>number of m1.medium instances : divide by 2.
-	 *  <p>number of c1.medium instances : divide by 2.
-	 *  <p>number of m1.large  instances : divide by 4.
-	 *  <p>number of m1.xlarge instances : divide by 8.
-	 *  <p>number of c1.xlarge instances : divide by 8.
-	 * 
-	 */
-	public Integer getEc2DiskUnitsAvailable() {
-		return ec2DiskUnitsAvailable;
-	}
-
-	public void setEc2DiskUnitsAvailable(Integer ec2DiskUnitsAvailable) {
-		this.ec2DiskUnitsAvailable = ec2DiskUnitsAvailable;
-	}
+	private final AtomicReference<Long>    sizeS3ObjectAvailableGB  = new AtomicReference<Long>();
+	private final AtomicReference<Long>    sizeS3ObjectTotalGB  = new AtomicReference<Long>();
+	private final AtomicReference<Integer> numPublicIpsAvailable    = new AtomicReference<Integer>();
+	private final AtomicReference<Integer> numPublicIpsTotal    = new AtomicReference<Integer>();
 
 	public Long getSizeS3ObjectAvailableGB()
 	{
-		return sizeS3ObjectAvailableGB;
+		return sizeS3ObjectAvailableGB.get();
 	}
 
-	public void setSizeS3ObjectAvailableGB(Long sizeS3ObjectAvailableGB)
+	public void setSizeS3ObjectAvailableGB( final Long sizeS3ObjectAvailableGB )
 	{
-		this.sizeS3ObjectAvailableGB = sizeS3ObjectAvailableGB;
+		this.sizeS3ObjectAvailableGB.set( sizeS3ObjectAvailableGB );
 	}
 
-	public Long getSizeEbsAvailableGB()
+	public Long getSizeS3ObjectTotalGB()
 	{
-		return sizeEbsAvailableGB;
+		return sizeS3ObjectTotalGB.get();
 	}
 
-	public void setSizeEbsAvailableGB(Long sizeEbsAvailableGB)
+	public void setSizeS3ObjectTotalGB( final Long sizeS3ObjectTotalGB )
 	{
-		this.sizeEbsAvailableGB = sizeEbsAvailableGB;
+		this.sizeS3ObjectTotalGB.set( sizeS3ObjectTotalGB );
 	}
 
 	public Integer getNumPublicIpsAvailable()
 	{
-		return numPublicIpsAvailable;
+		return numPublicIpsAvailable.get();
 	}
 
-	public void setNumPublicIpsAvailable(Integer numPublicIpsAvailable)
+	public void setNumPublicIpsAvailable( final Integer numPublicIpsAvailable )
 	{
-		this.numPublicIpsAvailable = numPublicIpsAvailable;
+		this.numPublicIpsAvailable.set( numPublicIpsAvailable );
 	}
 
+	public Integer getNumPublicIpsTotal()
+	{
+		return numPublicIpsTotal.get();
+	}
 
+	public void setNumPublicIpsTotal( final Integer numPublicIpsTotal )
+	{
+		this.numPublicIpsTotal.set( numPublicIpsTotal );
+	}
+
+	public static final class ReportingComputeZoneDomainModel {
+		private final AtomicReference<Integer> ec2ComputeUnitsAvailable = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2ComputeUnitsTotal     = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2MemoryUnitsAvailable  = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2MemoryUnitsTotal      = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2DiskUnitsAvailable    = new AtomicReference<Integer>();
+		private final AtomicReference<Integer> ec2DiskUnitsTotal        = new AtomicReference<Integer>();
+		private final AtomicReference<Long>    sizeEbsAvailableGB       = new AtomicReference<Long>();
+		private final AtomicReference<Long>    sizeEbsTotalGB           = new AtomicReference<Long>();
+		private final Map<String,Integer>      ec2VmTypeToAvailable     = Maps.newConcurrentMap();
+		private final Map<String,Integer>      ec2VmTypeToTotal         = Maps.newConcurrentMap();
+
+		/**
+		 * <p>Returns the total number of instances which can be created, based upon the amount of
+		 * 	compute resources available in the cloud. This value is a <i>multiplier</i>, and you
+		 *  can determine how many instances of various types you can create by dividing it by some
+		 *  number, as follows:
+		 *
+		 *  <p>number of m1.small  instances : divide by 1.
+		 *  <p>number of m1.medium instances : divide by 2.
+		 *  <p>number of c1.medium instances : divide by 5.
+		 *  <p>number of m1.large  instances : divide by 4.
+		 *  <p>number of m1.xlarge instances : divide by 8.
+		 *  <p>number of c1.xlarge instances : divide by 20.
+		 *
+		 * See: http://aws.amazon.com/ec2/instance-types/
+		 *
+		 * @return Total number of ec2 compute units available.
+		 */
+		public Integer getEc2ComputeUnitsAvailable()
+		{
+			return ec2ComputeUnitsAvailable.get();
+		}
+
+		/**
+		 * <p>The total number of instances which can be created, based upon the amount of
+		 * 	compute resources available in the cloud. This value is a <i>multiplier</i>, and you
+		 *  can determine how many instances of various types you can create by dividing it by some
+		 *  number, as follows:
+		 *
+		 *  <p>number of m1.small  instances : divide by 1.
+		 *  <p>number of m1.medium instances : divide by 2.
+		 *  <p>number of c1.medium instances : divide by 5.
+		 *  <p>number of m1.large  instances : divide by 4.
+		 *  <p>number of m1.xlarge instances : divide by 8.
+		 *  <p>number of c1.xlarge instances : divide by 20.
+		 *
+		 * See: http://aws.amazon.com/ec2/instance-types/
+		 */
+		public void setEc2ComputeUnitsAvailable( final Integer available )
+		{
+			this.ec2ComputeUnitsAvailable.set( available );
+		}
+
+		public Integer getEc2ComputeUnitsTotal()
+		{
+			return ec2ComputeUnitsTotal.get();
+		}
+
+		public void setEc2ComputeUnitsTotal( final Integer ec2ComputeUnitsTotal )
+		{
+			this.ec2ComputeUnitsTotal.set( ec2ComputeUnitsTotal );
+		}
+
+		/**
+		 * <p>The total number of instances of various types which could be created based upon the
+		 *  the amount of RAM available in the cloud and its distribution across nodes. This value is
+		 *  a <i>multiplier</i>, and you can determine how many instances of various types you can
+		 *  create by dividing it by some number, as follows:
+		 *
+		 *  <p>number of m1.small  instances : divide by 1.
+		 *  <p>number of m1.medium instances : divide by 2.
+		 *  <p>number of c1.medium instances : divide by 1.
+		 *  <p>number of m1.large  instances : divide by 4.
+		 *  <p>number of m1.xlarge instances : divide by 8.
+		 *  <p>number of c1.xlarge instances : divide by 4.
+		 *
+		 */
+		public Integer getEc2MemoryUnitsAvailable()
+		{
+			return ec2MemoryUnitsAvailable.get();
+		}
+
+		public void setEc2MemoryUnitsAvailable( final Integer ec2MemoryUnitsAvailable )
+		{
+			this.ec2MemoryUnitsAvailable.set( ec2MemoryUnitsAvailable );
+		}
+
+		public Integer getEc2MemoryUnitsTotal()
+		{
+			return ec2MemoryUnitsTotal.get();
+		}
+
+		public void setEc2MemoryUnitsTotal( final Integer ec2MemoryUnitsTotal )
+		{
+			this.ec2MemoryUnitsTotal.set( ec2MemoryUnitsTotal );
+		}
+
+		/**
+		 * <p>The total number of instances of various types which could be created based upon the
+		 *  the amount of disk available in the cloud and its distribution across nodes. This value is
+		 *  a <i>multiplier</i>, and you can determine how many instances of various types you can
+		 *  create by dividing it by some number, as follows:
+		 *
+		 *  <p>number of m1.small  instances : divide by 1.
+		 *  <p>number of m1.medium instances : divide by 2.
+		 *  <p>number of c1.medium instances : divide by 2.
+		 *  <p>number of m1.large  instances : divide by 4.
+		 *  <p>number of m1.xlarge instances : divide by 8.
+		 *  <p>number of c1.xlarge instances : divide by 8.
+		 *
+		 */
+		public Integer getEc2DiskUnitsAvailable() {
+			return ec2DiskUnitsAvailable.get();
+		}
+
+		public void setEc2DiskUnitsAvailable( final Integer ec2DiskUnitsAvailable ) {
+			this.ec2DiskUnitsAvailable.set( ec2DiskUnitsAvailable );
+		}
+
+		public Integer getEc2DiskUnitsTotal() {
+			return ec2DiskUnitsTotal.get();
+		}
+
+		public void setEc2DiskUnitsTotal( final Integer ec2DiskUnitsTotal ) {
+			this.ec2DiskUnitsTotal.set( ec2DiskUnitsTotal );
+		}
+
+		public Long getSizeEbsAvailableGB()
+		{
+			return sizeEbsAvailableGB.get();
+		}
+
+		public void setSizeEbsAvailableGB( final Long sizeEbsAvailableGB )
+		{
+			this.sizeEbsAvailableGB.set( sizeEbsAvailableGB );
+		}
+
+		public Long getSizeEbsTotalGB()
+		{
+			return sizeEbsTotalGB.get();
+		}
+
+		public void setSizeEbsTotalGB( final Long sizeEbsTotalGB )
+		{
+			this.sizeEbsTotalGB.set( sizeEbsTotalGB );
+		}
+
+		public Set<String> getVmTypes() {
+			return Sets.newHashSet( Iterables.concat( this.ec2VmTypeToAvailable.keySet(), this.ec2VmTypeToTotal.keySet() ) );
+		}
+
+		public Integer getInstancesAvailableForType( final String vmType ) {
+			return this.ec2VmTypeToAvailable.get( vmType );
+		}
+
+		public void setInstancesAvailableForType( final String vmType, final Integer available ) {
+			this.ec2VmTypeToAvailable.put( vmType, available );
+		}
+
+		public Integer getInstancesTotalForType( final String vmType ) {
+			return this.ec2VmTypeToTotal.get( vmType );
+		}
+
+		public void setInstancesTotalForType( final String vmType, final Integer total ) {
+			this.ec2VmTypeToTotal.put( vmType, total );
+		}
+  }
+
+	public static String dump() {
+		final StringBuilder builder = new StringBuilder( 512 );
+		builder.append("Compute capacity:\n");
+
+		// global compute
+		builder.append("IP Addresses: ").append(globalModel.getNumPublicIpsAvailable()).append( "/" ).append(globalModel.getNumPublicIpsTotal()).append("\n");
+		builder.append("S3 Storage  : ").append(globalModel.getSizeS3ObjectAvailableGB()).append( "/" ).append(globalModel.getSizeS3ObjectTotalGB()).append(" GiB\n");
+
+		// zone compute
+		for ( final Map.Entry<String,ReportingComputeZoneDomainModel> modelEntry : zoneModels.entrySet() ) {
+			builder.append(modelEntry.getKey()).append(":\n");
+			builder.append("\t").append("Cores      : ").append( modelEntry.getValue().getEc2ComputeUnitsAvailable() ).append("/").append(modelEntry.getValue().getEc2ComputeUnitsTotal()).append("\n");
+			builder.append("\t").append("Disk       : ").append( modelEntry.getValue().getEc2DiskUnitsAvailable() ).append("/").append(modelEntry.getValue().getEc2DiskUnitsTotal()).append(" GiB\n");
+			builder.append("\t").append("Memory     : ").append( modelEntry.getValue().getEc2MemoryUnitsAvailable() ).append("/").append(modelEntry.getValue().getEc2MemoryUnitsTotal()).append(" MiB\n");
+			builder.append("\t").append("EBS Storage: ").append( modelEntry.getValue().getSizeEbsAvailableGB() ).append("/").append(modelEntry.getValue().getSizeEbsTotalGB()).append(" GiB\n");
+		}
+
+		return builder.toString();
+	}
 }

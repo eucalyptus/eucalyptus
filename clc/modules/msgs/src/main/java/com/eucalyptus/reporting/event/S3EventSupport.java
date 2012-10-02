@@ -20,7 +20,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.util.OwnerFullName;
@@ -33,25 +35,21 @@ class S3EventSupport<E extends Enum<E>> implements Event {
 
   private final E action;
   private final OwnerFullName ownerFullName;
-  private final String uuid;
   private final Long size;
   private final String bucketName;
 
   S3EventSupport( @Nonnull final E action,
-                  @Nonnull final String uuid,
                   @Nonnull final String bucketName,
                   @Nonnull final OwnerFullName ownerFullName,
                   @Nonnull final Long size ) {
     assertThat(action, notNullValue());
-    assertThat(uuid, notNullValue());
-    assertThat(bucketName, notNullValue());
+    assertThat(bucketName, not(isEmptyOrNullString()));
     assertThat(ownerFullName, notNullValue());
-    assertThat(ownerFullName.getUserId(), notNullValue());
+    assertThat(ownerFullName.getUserId(), not(isEmptyOrNullString()));
     assertThat(size, notNullValue());
 
     this.action = action;
     this.ownerFullName = ownerFullName;
-    this.uuid = uuid;
     this.size = size;
     this.bucketName = bucketName;
   }
@@ -64,11 +62,6 @@ class S3EventSupport<E extends Enum<E>> implements Event {
   @Nonnull
   public OwnerFullName getOwner() {
     return ownerFullName;
-  }
-
-  @Nonnull
-  public String getUuid() {
-    return uuid;
   }
 
   @Nonnull

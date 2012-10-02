@@ -100,6 +100,9 @@ public class DirectStorageInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Should volumes be zero filled.", displayName = "Zero-fill volumes", type = ConfigurableFieldType.BOOLEAN )
 	@Column(name = "zero_fill_volumes")
 	private Boolean zeroFillVolumes;
+	@ConfigurableField( description = "Timeout value in milli seconds for storage operations", displayName = "Timeout in milli seconds")
+	@Column(name = "timeout_in_millis")
+	private Long timeoutInMillis;
 
 	public DirectStorageInfo(){
 		this.name = StorageProperties.NAME;
@@ -113,11 +116,13 @@ public class DirectStorageInfo extends AbstractPersistent {
 	public DirectStorageInfo(final String name, 
 			final String storageInterface, 
 			final String volumesDir,
-			final Boolean zeroFillVolumes) {
+			final Boolean zeroFillVolumes,
+			final Long timeoutInMillis) {
 		this.name = name;
 		this.storageInterface = storageInterface;
 		this.volumesDir = volumesDir;
 		this.zeroFillVolumes = zeroFillVolumes;
+		this.timeoutInMillis = timeoutInMillis;
 	}
 
 	public String getName() {
@@ -150,6 +155,14 @@ public class DirectStorageInfo extends AbstractPersistent {
 
 	public void setZeroFillVolumes(Boolean zeroFillVolumes) {
 		this.zeroFillVolumes = zeroFillVolumes;
+	}
+
+	public Long getTimeoutInMillis() {
+		return timeoutInMillis;
+	}
+
+	public void setTimeoutInMillis(Long timeoutInMillis) {
+		this.timeoutInMillis = timeoutInMillis;
 	}
 
 	@Override
@@ -188,6 +201,11 @@ public class DirectStorageInfo extends AbstractPersistent {
 		DirectStorageInfo conf = null;
 		try {
 			conf = storageDb.getUnique(new DirectStorageInfo(StorageProperties.NAME));
+			// EUCA-3597 Introduced a new column for timeout. Ensure that its populated in the DB the first time
+			if (null == conf.getTimeoutInMillis()) {
+				conf.setTimeoutInMillis(StorageProperties.timeoutInMillis);
+				storageDb.add(conf);
+			}
 			storageDb.commit();
 		}
 		catch ( EucalyptusCloudException e ) {
@@ -195,7 +213,8 @@ public class DirectStorageInfo extends AbstractPersistent {
 			conf =  new DirectStorageInfo(StorageProperties.NAME, 
 					StorageProperties.iface, 
 					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.zeroFillVolumes, 
+					StorageProperties.timeoutInMillis);
 			storageDb.add(conf);
 			storageDb.commit();
 		}
@@ -205,7 +224,8 @@ public class DirectStorageInfo extends AbstractPersistent {
 			return new DirectStorageInfo(StorageProperties.NAME, 
 					StorageProperties.iface, 
 					StorageProperties.storageRootDirectory,
-					StorageProperties.zeroFillVolumes);
+					StorageProperties.zeroFillVolumes, 
+					StorageProperties.timeoutInMillis);
 		}
 		return conf;
 	}

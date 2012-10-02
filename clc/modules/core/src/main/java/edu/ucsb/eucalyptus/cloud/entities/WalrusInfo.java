@@ -62,6 +62,8 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.io.File;
+
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
@@ -70,12 +72,18 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.mortbay.log.Log;
+
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
+import com.google.common.base.Strings;
+
+import edu.ucsb.eucalyptus.util.SystemUtil;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_walrus")
@@ -100,6 +108,9 @@ public class WalrusInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Disk space reserved for snapshots", displayName = "Space reserved for snapshots (GB)" )
 	@Column( name = "storage_snapshot_size_gb" )
 	private Integer storageMaxTotalSnapshotSizeInGb;
+	@ConfigurableField( description = "Total Walrus storage capacity for Objects", displayName = "Walrus object capacity (GB)" )
+	@Column( name = "storage_walrus_total_capacity" )
+	private Integer storageMaxTotalCapacity;
 
 	public WalrusInfo() {}
 
@@ -108,7 +119,8 @@ public class WalrusInfo extends AbstractPersistent {
 			final Integer storageMaxBucketsPerAccount,
 			final Integer storageMaxBucketSizeInMB,
 			final Integer storageMaxCacheSizeInMB,
-			final Integer storageMaxTotalSnapshotSizeInGb)
+			final Integer storageMaxTotalSnapshotSizeInGb,
+			final Integer storageMaxObjectCapacity)
 	{
 		this.name = name;
 		this.storageDir = storageDir;
@@ -116,6 +128,7 @@ public class WalrusInfo extends AbstractPersistent {
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
+		this.storageMaxTotalCapacity = storageMaxObjectCapacity;
 	}
 
 	public String getName() {
@@ -166,6 +179,14 @@ public class WalrusInfo extends AbstractPersistent {
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
 	}
 
+	public Integer getStorageMaxTotalCapacity() {
+		return storageMaxTotalCapacity;
+	}
+	
+	public void setStorageMaxTotalCapacity( final Integer storageMaxTotalCapacity) {
+		this.storageMaxTotalCapacity = storageMaxTotalCapacity;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -193,16 +214,31 @@ public class WalrusInfo extends AbstractPersistent {
 
 	public static WalrusInfo getWalrusInfo() {
 		EntityWrapper<WalrusInfo> db = EntityWrapper.get(WalrusInfo.class);
-		WalrusInfo walrusInfo;
+		WalrusInfo walrusInfo = null;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
 		} catch(Exception ex) {
+			//Load the defaults.
+			//Try to determine available space on the bucket root directory.
+			int capacity = WalrusProperties.DEFAULT_INITIAL_CAPACITY;
+			try {
+				long bytesAvailable = new File(WalrusProperties.bucketRootDirectory).getUsableSpace(); //keep 1GB at least reserved.						
+
+				//Set initial capacity to available space minus 1GB unless there is less than 1GB avaiable.
+				//zhill: The cast to int should only affect systems with more than 2^31-1 GB capacity (2.1 Exabytes), so we should be safe for a while 
+				capacity = (int)(bytesAvailable / WalrusProperties.G);
+				capacity = (capacity > 1 ? capacity - 1 : capacity);
+				
+			} catch(Exception e) {
+				Log.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using Walrus default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
+			}
+
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
 					WalrusProperties.MAX_BUCKETS_PER_ACCOUNT, 
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
-					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE);
+					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,capacity);
 			db.add(walrusInfo);     
 		} finally {
 			db.commit();

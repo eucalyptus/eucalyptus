@@ -140,6 +140,7 @@ static configEntry configKeysNoRestartNC[] = {
     {"LOGLEVEL", "DEBUG"},
     {"LOGROLLNUMBER", "4"},
     {"LOGMAXSIZE", "10485760"},
+    {"LOGPREFIX", ""},
     {NULL, NULL}
 };
 

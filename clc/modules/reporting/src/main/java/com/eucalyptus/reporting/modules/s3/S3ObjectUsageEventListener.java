@@ -61,13 +61,13 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
         final ReportingS3ObjectEventStore eventStore = getReportingS3ObjectEventStore();
         switch (event.getAction()) {
           case OBJECTCREATE:
-            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectName(), event.getSize(), timeInMs, event.getOwner().getUserId());
+            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwner().getUserId());
             break;
           case OBJECTDELETE:
-            eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectName(), event.getSize(), timeInMs, event.getOwner().getUserId());
+            eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), timeInMs);
             break;
           case OBJECTGET:
-            eventStore.insertS3ObjectUsageEvent(event.getBucketName(), event.getObjectName(), event.getSize(), timeInMs, event.getOwner().getUserId());
+            eventStore.insertS3ObjectUsageEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwner().getUserId());
             break;
         }
       } catch (AuthException e) {

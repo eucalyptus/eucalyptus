@@ -245,7 +245,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     assert (strlen(cert64_str)+11<=BUFSIZE);
     char cert_hdr [BUFSIZE];
     snprintf (cert_hdr, BUFSIZE, "EucaCert: %s", cert64_str);
-    logprintfl (EUCADEBUG2, "{%u} walrus_request: base64 certificate, %s\n", (unsigned int)pthread_self(), get_string_stats(cert64_str));
+    logprintfl (EUCATRACE, "{%u} walrus_request: base64 certificate, %s\n", (unsigned int)pthread_self(), get_string_stats(cert64_str));
     headers = curl_slist_append (headers, cert_hdr);
     free (cert64_str);
     free (cert_str);

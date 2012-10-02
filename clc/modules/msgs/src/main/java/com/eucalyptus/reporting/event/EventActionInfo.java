@@ -20,7 +20,9 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import java.io.Serializable;
 
 /**
@@ -47,6 +49,7 @@ public class EventActionInfo<E extends Enum<E>> implements Serializable {
    * Information for an action associated with an (VM) instance.
    */
   public static class InstanceEventActionInfo<E extends Enum<E>> extends EventActionInfo<E> {
+    private static final long serialVersionUID = 1L;
     private final String instanceUuid;
     private final String instanceId;
 
@@ -54,8 +57,8 @@ public class EventActionInfo<E extends Enum<E>> implements Serializable {
                              final String instanceUuid,
                              final String instanceId ) {
       super( action );
-      assertThat( instanceUuid, notNullValue() );
-      assertThat(instanceId, notNullValue());
+      assertThat( instanceUuid, not(isEmptyOrNullString()) );
+      assertThat(instanceId, not(isEmptyOrNullString()) );
       this.instanceUuid = instanceUuid;
       this.instanceId = instanceId;
     }
