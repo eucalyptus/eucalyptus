@@ -73,9 +73,6 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.event.AbstractNamedRegistry;
@@ -241,8 +238,6 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       if ( addr.isAssigned( ) ) {
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
-          final ServiceConfiguration ccConfig =
-              Topology.lookup( ClusterController.class, vm.lookupPartition() );
           if ( VmStateSet.RUN.apply( vm ) ) {
             AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
               @Override
@@ -258,7 +253,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                   }
                 }
               }
-            } ).dispatch( ccConfig );
+            } ).dispatch( vm.getPartition( ) );
           }
         } catch ( TerminatedInstanceException ex ) {
         } catch ( NoSuchElementException ex ) {
