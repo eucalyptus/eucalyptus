@@ -112,7 +112,11 @@
          id: 'snapshots-delete',
          title: snapshot_delete_dialog_title,
          buttons: {
-           'delete': {text: snapshot_dialog_del_btn, click: function() { thisObj._deleteListedSnapshots(); $del_dialog.eucadialog("close");}},
+           'delete': {text: snapshot_dialog_del_btn, click: function() {
+               var snapshotsToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
+               $del_dialog.eucadialog("close");
+               thisObj._deleteListedSnapshots(snapshotsToDelete);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: { content: $del_help },
@@ -131,8 +135,8 @@
                 volumeId = $.trim($snapshot_dialog.find('#snapshot-create-volume-id').val());
                 if (VOL_ID_PATTERN.test(volumeId)) {
                   description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
-                  thisObj._createSnapshot(volumeId, description);
                   $snapshot_dialog.eucadialog("close");
+                  thisObj._createSnapshot(volumeId, description);
                 } else {
                   thisObj.createDialog.eucadialog('showError', snapshot_create_dialog_error_msg);
                 }
@@ -212,9 +216,8 @@
       addVolume();
     },
 
-    _deleteListedSnapshots : function () {
+    _deleteListedSnapshots : function (snapshotsToDelete) {
       var thisObj = this;
-      var snapshotsToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
       for ( i = 0; i<snapshotsToDelete.length; i++ ) {
         var snapshotId = snapshotsToDelete[i];
         $.ajax({
