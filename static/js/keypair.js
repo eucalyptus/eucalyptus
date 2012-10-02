@@ -80,7 +80,11 @@
          id: 'keys-delete',
          title: keypair_dialog_del_title,
          buttons: {
-           'delete': {text: keypair_dialog_del_btn, click: function() { thisObj._deleteSelectedKeyPairs(); $del_dialog.eucadialog("close");}},
+           'delete': {text: keypair_dialog_del_btn, click: function() {
+                var keysToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
+                $del_dialog.eucadialog("close");
+                thisObj._deleteSelectedKeyPairs(keysToDelete);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: { content: $del_help },
@@ -164,10 +168,8 @@
       });
     },
 
-    _deleteSelectedKeyPairs : function () {
+    _deleteSelectedKeyPairs : function (keysToDelete) {
       var thisObj = this;
-      var keysToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
-
       for ( i = 0; i<keysToDelete.length; i++ ) {
         var keyName = keysToDelete[i];
         $.ajax({
