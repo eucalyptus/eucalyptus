@@ -133,6 +133,7 @@
                       fromGroup.push(thisObj.rulesList[rule].fromGroup);
                   }
               }
+              $add_dialog.eucadialog("close");
               $.ajax({
                   type:"GET",
                   url:"/ec2?Action=CreateSecurityGroup",
@@ -142,24 +143,24 @@
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
-                              notifySuccess(null, sgroup_create_success + ' ' + name);
+                              notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
                               thisObj._getTableWrapper().eucatable('refreshTable');
-                              $add_dialog.eucadialog("close");
+//                              $add_dialog.eucadialog("close");
                           }
                           else {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
-                              $add_dialog.eucadialog("close");
+//                              $add_dialog.eucadialog("close");
                           }
                       } else {
-                          $add_dialog.eucadialog("close");
+//                          $add_dialog.eucadialog("close");
                           notifyError($.i18n.prop('sgroup_add_rule_error', name), undefined_error);
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    $add_dialog.eucadialog("close");
+//                    $add_dialog.eucadialog("close");
                     notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                     dfd.reject();
                   }
@@ -303,6 +304,7 @@
         'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
               thisObj._storeRule(thisObj.editDialog);    // flush rule from form into array
               // need to remove rules flagged for deletion, then add new ones to avoid conflicts
+              $edit_dialog.eucadialog("close");
               var name = thisObj.editDialog.find('#sgroups-hidden-name').html();
               var fromPort = new Array();
               var toPort = new Array();
@@ -339,7 +341,6 @@
               if (fromPort.length > 0) {
                   thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
-              $edit_dialog.eucadialog("close");
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
@@ -680,8 +681,8 @@
           if (fromGroup[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
       }
-      alert("adding rule:"+req_params);
       var sgroupName = groupName;
+      dialog.eucadialog("close");
       $.ajax({
         type:"GET",
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
@@ -691,13 +692,13 @@
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', sgroupName));
-                dialog.eucadialog("close");
+//                dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
-                dialog.eucadialog("close");
+//                dialog.eucadialog("close");
             }
         }),
       });
@@ -725,13 +726,13 @@
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', sgroupName));
-                dialog.eucadialog("close");
+//                dialog.eucadialog("close");
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
-                dialog.eucadialog("close");
+//                dialog.eucadialog("close");
             }
         }),
       });
@@ -767,10 +768,10 @@
       thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.addDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
+      thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
     },
 
     _editAction : function() {
-      //TODO: add hide menu
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
       rowsToEdit = $tableWrapper.eucatable('getSelectedRows');
@@ -784,6 +785,7 @@
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
+      thisObj.editDialog.find('#sgroup-more-rules').css('display','none')
       thisObj._refreshRulesList(thisObj.editDialog);
     },
 
