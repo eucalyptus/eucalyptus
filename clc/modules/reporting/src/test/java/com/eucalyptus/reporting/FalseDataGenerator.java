@@ -42,9 +42,10 @@ public class FalseDataGenerator
 	private static final int NUM_CLUSTERS_PER_ZONE        = 4;
 	private static final int NUM_AVAIL_ZONE               = 2;
 	
-	private static final int NUM_PERIODS_PER_OBJECT       = 3;
-	private static final int NUM_PERIODS_PER_BUCKET       = 30;
-	private static final int NUM_PERIODS_PER_SNAPSHOT     = 3;
+	private static final int NUM_PERIODS_PER_OBJECT       = 30;
+	private static final int NUM_VERSIONS_PER_OBJECT      = 3;
+	private static final int NUM_PERIODS_PER_BUCKET       = 90;
+	private static final int NUM_PERIODS_PER_SNAPSHOT     = 30;
 	/* NOTE: In this case "entity" refers to an Instance, Volume, or Elastic IP. There are always
 	 *  the same number of instances, volumes, and elastic IPs, because each volume is repeatedly
 	 *  attached and detached from its associated instance and similarly with IPs.
@@ -53,7 +54,6 @@ public class FalseDataGenerator
 
 	private static final long VOLUME_SIZE   = 2;
 	private static final long SNAPSHOT_SIZE = 2;
-	private static final long BUCKET_SIZE   = 2;
 	private static final long OBJECT_SIZE   = 2;
 
 	private static final long INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD                 = 2;
@@ -207,8 +207,10 @@ public class FalseDataGenerator
 							if (periodNum % NUM_PERIODS_PER_OBJECT == 0) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, objectUuidNum++);
 								log.debug(String.format("  Generating object uuid %s\n", uuid));
-								ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketName, uuid, "0",
+								for (int i=0; i<NUM_VERSIONS_PER_OBJECT; i++) {
+									ReportingS3ObjectEventStore.getInstance().insertS3ObjectCreateEvent(bucketName, uuid, "0",
 										OBJECT_SIZE, timeMs, userId);
+								}
 							}
 
 
@@ -235,7 +237,11 @@ public class FalseDataGenerator
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "DiskWriteBytes", 0L, "ephemeral0", oneMB*8*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "CPUUtilizationMs", 0L, "default", (double)(PERIOD_DURATION/2));
+										timeMs, "VolumeTotalReadTime", 0L, "vda", 100000d*periodNum);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "VolumeTotalWriteTime", 0L, "vda", 200000d*periodNum);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "CPUUtilization", 0L, "default", (double)(PERIOD_DURATION/2)*periodNum);
 							}
 
 							/* Generate volume usage in this period for every volume that was created before */

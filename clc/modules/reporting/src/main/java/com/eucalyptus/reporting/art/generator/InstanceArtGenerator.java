@@ -277,7 +277,7 @@ public class InstanceArtGenerator
     private static void addMetricValueToUsageEntity(InstanceUsageArtEntity usage, String metric, String dim, double val)
     {
     	long value = new Double(val).longValue();
-    	long valueMB = value<<20;
+    	long valueMB = value>>20;
         if (metric.equals(METRIC_NET_IN_BYTES) && dim.equals(DIM_TOTAL)) {
             usage.addNetTotalInMegs(valueMB);
         } else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_TOTAL)) {

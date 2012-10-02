@@ -61,18 +61,28 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.renderer;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.Date;
 import java.util.Map;
 
-import com.eucalyptus.reporting.art.entity.*;
+import com.eucalyptus.reporting.art.entity.AccountArtEntity;
+import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
+import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
+import com.eucalyptus.reporting.art.entity.InstanceUsageArtEntity;
+import com.eucalyptus.reporting.art.entity.ReportArtEntity;
+import com.eucalyptus.reporting.art.entity.UsageTotalsArtEntity;
+import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.renderer.document.Document;
 import com.eucalyptus.reporting.units.SizeUnit;
 import com.eucalyptus.reporting.units.TimeUnit;
 import com.eucalyptus.reporting.units.UnitUtil;
 import com.eucalyptus.reporting.units.Units;
 
-class InstanceRenderer implements Renderer {
+class InstanceRenderer
+	implements Renderer
+{
 	private final Document doc;
 
 	public InstanceRenderer( final Document doc )
@@ -81,9 +91,8 @@ class InstanceRenderer implements Renderer {
 	}
 
 	@Override
-	public void render( final ReportArtEntity report,
-											final OutputStream os,
-											final Units units ) throws IOException
+	public void render( final ReportArtEntity report, final OutputStream os,
+						final Units units ) throws IOException
 	{
 		doc.setWriter(new OutputStreamWriter(os));
 
@@ -99,7 +108,7 @@ class InstanceRenderer implements Renderer {
 				.addValCol("Disk IOPS", 2, "center")
 				.addValCol("Disk Time", 2, "center");
 		doc.newRow().addValCol("InstanceId")
-				.addValCol("Type").addValCol("#").addValCol("Time").addValCol("CpuUsage%")
+				.addValCol("Type").addValCol("#").addValCol(units.getTimeUnit().toString()).addValCol("CpuUsage%")
 				.addValCol("In").addValCol("Out")
 				.addValCol("Read").addValCol("Write")
 				.addValCol("Read").addValCol("Write")
@@ -143,11 +152,11 @@ class InstanceRenderer implements Renderer {
 				.addValCol("c1.large", 2, "center")
 				.addValCol("m1.xlarge", 2, "center");
 		doc.newRow()
-				.addValCol("num", 1, "center").addValCol("time", 1, "center")
-				.addValCol("num", 1, "center").addValCol("time", 1, "center")
-				.addValCol("num", 1, "center").addValCol("time", 1, "center")
-				.addValCol("num", 1, "center").addValCol("time", 1, "center")
-				.addValCol("num", 1, "center").addValCol("time", 1, "center");
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center");
 		for(String zoneName : report.getZones().keySet()) {
 			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
 			doc.newRow().addLabelCol(0, "Zone: " + zoneName);
@@ -168,8 +177,8 @@ class InstanceRenderer implements Renderer {
 	}
 
 	public static Document addUsageCols( final Document doc,
-																			 final InstanceUsageArtEntity entity,
-																			 final Units units )
+				final InstanceUsageArtEntity entity,
+				final Units units )
 			throws IOException
 	{
 		doc.addValCol((long)entity.getInstanceCnt());
@@ -179,8 +188,8 @@ class InstanceRenderer implements Renderer {
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getDiskReadMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(entity.getDiskReadOps()==null?null:entity.getDiskReadOps()/(entity.getDurationMs()/1000));
-		doc.addValCol(entity.getDiskWriteOps()==null?null:entity.getDiskWriteOps()/(entity.getDurationMs()/1000));
+		doc.addValCol(entity.getDiskReadOps());
+		doc.addValCol(entity.getDiskWriteOps());
 		doc.addValCol(UnitUtil.convertTime(entity.getDiskReadTime(), TimeUnit.MS, TimeUnit.SECS));
 		doc.addValCol(UnitUtil.convertTime(entity.getDiskWriteTime(), TimeUnit.MS, TimeUnit.SECS));
 
