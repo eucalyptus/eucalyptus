@@ -1917,7 +1917,6 @@ ul.volume-expanded li:last-child {
   border: 1px solid #e5e5e5;
 }
 
-
 /* Have to self-clear since I can't add the clearfix class directly */
 
 .wizard-step .dataTables_wrapper:before,
@@ -1929,11 +1928,33 @@ ul.volume-expanded li:last-child {
   clear:both;
 }
 
+.wizard-step .euca-table-filter {
+  float: none;
+  margin-bottom: 10px;
+}
+
+.wizard-step .euca-table-filter select {
+  width: 100%;
+}
+
+.wizard-step .dataTables_filter {
+  float: none;
+  text-align: left;
+  width: 100%;
+}
+
+.wizard-step .dataTables_filter label {
+  margin: 0;
+  width: 100%;
+}
+
 .image-name {
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 14px; 
   color: #02405f;  
 }
+
+
 
 
 
@@ -2010,14 +2031,16 @@ span.on-error {
 }
 
 .wizard-step .dataTables_filter input {
-  background-color: #f3f6f9;
+  background: #f3f6f9 url(../images/css-sprites-small.png) no-repeat 4px -294px;
   border-radius: 4px;
   border: 1px solid #9eb1c3;
   color: #666;
   font-size: 12px;
-  padding: 6px;
-  width: 120px;
+  padding: 6px 6px 6px 27px;
+  width: 150px;
   outline: none;
+  position: relative;
+  left: -4px;
 
   -moz-box-shadow: inset 0 0 3px #a8b9c8;
   -webkit-box-shadow: inset 0 0 3px #a8b9c8;
@@ -2026,6 +2049,13 @@ span.on-error {
 .wizard-step .dataTables_wrapper table thead {
   display:none;
 }
+
+.launch-wizard-type-size {
+
+
+}
+
+
 
 .launch-wizard-buttons {
   text-align: right;
@@ -2047,23 +2077,91 @@ span.on-error {
 #launch-wizard-advanced-storage input[type='text']{
   width: 30px;
 }
-#launch-wizard-advanced-storage input[type='checkbox']{
+#launch-wizard-advanced-storage input[type='checkbox'] {
   width: 10px;
 }
 
-ul.launch-wizard-type-size{
-    margin: 0 auto;
+.launch-wizard-type-size {
+    margin: 0 0 10px;
     padding: 0;
+    list-style-type: none;
 }
-ul.launch-wizard-type-size li{
+
+.launch-wizard-type-size li {
     text-align: left;
     float: left;
-    list-style: none;
     padding: 4px 4px;
     margin: 1px;
+    width: 120px;
+    border: 1px solid #fff;
 }
-div#launch-wizard-type-size-legend{
-    clear: left;
+
+.launch-wizard-type-size li:hover {
+  border: 1px solid #d7d5d5;
+  
+  -webkit-box-shadow: inset 0px 0px 10px 15px #e2f4c0;
+  -moz-box-shadow: inset 0px 0px 10px 15px #e2f4c0; 
+  box-shadow: inset 0px 0px 10px 15px #e2f4c0;
+}  
+
+.launch-wizard-type-size li a {
+  text-align: center;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  color: #02405f;
+  background-image: url(../images/wizard-instances.png);
+  background-repeat: no-repeat;
+  padding: 110px 0 0;
+  display: block;
+  text-decoration: none;
+}
+
+.launch-wizard-type-size li a:hover {
+  color: #73a434;
+}
+
+.instance-type-m1_small a {
+  background-position: 0 0;
+}
+
+.instance-type-m1_small a:hover {
+  background-position: 0 -150px;
+}
+
+.instance-type-c1_medium a {
+  background-position: -178px 0;
+}
+
+.instance-type-c1_medium a:hover {
+  background-position: -178px -150px;
+}
+
+.instance-type-m1_large a {
+  background-position: -341px 0;
+}
+
+.instance-type-m1_large a:hover {
+  background-position: -341px -150px;
+}
+
+.instance-type-m1_xlarge a {
+  background-position: -513px 0;
+}
+
+.instance-type-m1_xlarge a:hover {
+  background-position: -513px -150px;
+}
+
+.instance-type-c1_xlarge a {
+  background-position: -678px 0;
+}
+
+.instance-type-c1_xlarge a:hover {
+  background-position: -678px -150px;
+}
+
+.wizard-type-size-legend {
+  color: #666;
+  margin-bottom: 40px;
 }
 
 .launcher-group-rule ul{
@@ -2071,7 +2169,7 @@ div#launch-wizard-type-size-legend{
     padding: 0;
     clear: left; 
 }
-.launcher-group-rule ul li{
+.launcher-group-rule ul li {
     text-align: left;
     float: left;
     list-style: none;
@@ -2080,13 +2178,15 @@ div#launch-wizard-type-size-legend{
 }
 
 .wizard-section-label {
-    clear: left;
-}
+  color: #02405f;
+  font-weight: bold;
+  margin-bottom: 4px;
+ } 
 
 .wizard-subsection-label {
   color: #02405f;
   font-weight: bold;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 
 .launch-wizard-section-header {

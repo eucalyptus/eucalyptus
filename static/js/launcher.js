@@ -419,8 +419,8 @@
       var $size = $content.find('#launch-wizard-type-size');
       var $option = $content.find('#launch-wizard-type-options');
     
-      var $list = $('<ul>').addClass('launch-wizard-type-size'); //.html(launch_instance_type_size_header);
-      var $legend = $('<div>').attr('id','launch-wizard-type-size-legend');
+      var $list = $('<ul>').addClass('launch-wizard-type-size clearfix'); //.html(launch_instance_type_size_header);
+      var $legend = $('<div>').attr('id','launch-wizard-type-size-legend').addClass('wizard-type-size-legend');
       var selectedType = 'm1.small';
       var typeSelected = false;
       var numInstances = 1;
