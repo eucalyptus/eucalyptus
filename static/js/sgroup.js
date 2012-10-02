@@ -114,7 +114,6 @@
         id: 'sgroups-add',
         title: sgroup_dialog_add_title,
         buttons: { 
-        // e.g., add : { domid: sgroup-add-btn, text: "Add new group", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
               var name = $.trim($add_dialog.find('#sgroup-name').val());
               var desc = $.trim($add_dialog.find('#sgroup-description').val());
@@ -156,13 +155,12 @@
                           }
                       } else {
 //                          $add_dialog.eucadialog("close");
-                          notifyError($.i18n.prop('sgroup_add_rule_error', name), undefined_error);
+                          notifyError($.i18n.prop('sgroup_add_rule_error', name), getErrorMessage(jqXHR));
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
 //                    $add_dialog.eucadialog("close");
                     notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
-                    dfd.reject();
                   }
               });
             }},
