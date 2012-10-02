@@ -989,21 +989,23 @@ table.display {
 }
 
 table.display thead th {
-  padding: 8px 18px 8px 10px;
+  padding: 8px 5px 8px 22px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 11px;
   font-weight: normal;
   color: #7aa92a;
   text-transform: uppercase;
   border: 1px solid #dae2e8;
-  border-width: 1px 0;
-  background-color: #e1e1e1;
+  border-width: 2px 0 2px;
+  background: transparent url(../images/table-header-bg.png) repeat-x left center;
+}
 
-  background-image: -webkit-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
-  background-image: -moz-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
-  background-image: -o-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
-  background-image: -ms-linear-gradient(top, #e0e2e2, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
-  background-image: linear-gradient(to bottom, #f6f6f6, #f8f8f8 30%, #f2f2f2 72%, #e0e2e2);
+table.display thead th.sorting_asc {
+  background: transparent url(../images/table-header-sort-asc.png) no-repeat left center;
+}
+
+table.display thead th.sorting_desc {
+  background: transparent url(../images/table-header-sort-desc.png) no-repeat left center;
 }
 
 table.display tr.heading2 td {
@@ -1180,7 +1182,7 @@ ul.volume-expanded li:last-child {
 }
 
 .help-euca a {
-  background: transparent url(../images/euca.png) no-repeat;
+  background: transparent url(../images/euca.png) no-repeat left center;
 }
 
 .help-content {
