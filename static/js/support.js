@@ -211,6 +211,7 @@ function logout(){
     hostname = location.href.substring(location.href.indexOf('hostname='));
     hostname = hostname.replace(/#.+?$/,'');
     hostname = hostname.replace('hostname=','');
+    hostname = hostname.replace('#','');
     hostname = hostname.replace('/','');
   }
   if(!hostname)
