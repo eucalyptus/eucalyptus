@@ -82,7 +82,6 @@ public class StorageProperties {
 
 	private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
-	public static final String eucaHome = "/opt/eucalyptus";
 	public static final String SERVICE_NAME = "StorageController";
 	public static final String DB_NAME             = "eucalyptus_storage";
 	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
