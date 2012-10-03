@@ -241,6 +241,10 @@ public class FalseDataGenerator
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "VolumeTotalWriteTime", 0L, "vda", 200000d*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "DiskReadOps", 0L, "vda", 100000d*periodNum);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
+										timeMs, "DiskWriteOps", 0L, "vda", 200000d*periodNum);
+								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "CPUUtilization", 0L, "default", (double)(PERIOD_DURATION/2)*periodNum);
 							}
 
