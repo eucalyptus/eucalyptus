@@ -188,7 +188,7 @@ public class InstanceArtGenerator
         			usageEntity.setDurationMs(Math.max(usageEntity.getDurationMs(),
 							overlap(report.getBeginMs(), report.getEndMs(), prevData.firstMs, eventMs)));        			
 
-        			if (prevData.lastVal < event.getValue()) {
+        			if (event.getValue() < prevData.lastVal) {
         				/* SENSOR RESET; we lost data; just take whatever amount greater than 0 */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue());        				
@@ -198,6 +198,9 @@ public class InstanceArtGenerator
         				/* Increase total by val minus lastVal */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue()-prevData.lastVal);
+        				log.debug(String.format("event time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f lastVal:%f fraction:%f",
+        						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
+        						event.getDimension(), event.getValue(), prevData.lastVal, fractionalVal));
         				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
         						fractionalVal);
         			}
