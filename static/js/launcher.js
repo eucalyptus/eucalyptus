@@ -128,13 +128,15 @@
       $header.children().detach();
       $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_image).click( function(e) {
         var imgSection = thisObj.element.find('#launch-wizard-image-contents');
-        thisObj._selectedSection.slideToggle('fast');
-        imgSection.slideToggle('fast');
-        thisObj._selectedSection = imgSection;
-        $header.addClass('expanded');
-        thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+        if(! $header.hasClass('expanded')) { 
+          thisObj._selectedSection.slideToggle('fast');
+          imgSection.slideToggle('fast');
+          thisObj._selectedSection = imgSection;
+          $header.addClass('expanded');
+          thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+        }
       }));
     },
     _enableTypeLink : function() {
@@ -143,13 +145,15 @@
       $header.children().detach();
       $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_type).click(function(e) {
         var typeSection = thisObj.element.find('#launch-wizard-type-contents');
-        thisObj._selectedSection.slideToggle('fast');
-        typeSection.slideToggle('fast');
-        thisObj._selectedSection = typeSection;
-        $header.addClass('expanded');
-        thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+        if(! $header.hasClass('expanded')) { 
+          thisObj._selectedSection.slideToggle('fast');
+          typeSection.slideToggle('fast');
+          thisObj._selectedSection = typeSection;
+          $header.addClass('expanded');
+          thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+        }
       }));
     },
     _enableSecurityLink : function() {
@@ -158,13 +162,15 @@
       $header.children().detach();
       $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_security).click(function(e){
         var secSection = thisObj.element.find('#launch-wizard-security-contents');
-        thisObj._selectedSection.slideToggle('fast');
-        secSection.slideToggle('fast');
-        thisObj._selectedSection = secSection;
-        $header.addClass('expanded');
-        thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+        if(! $header.hasClass('expanded')){
+          thisObj._selectedSection.slideToggle('fast');
+          secSection.slideToggle('fast');
+          thisObj._selectedSection = secSection;
+          $header.addClass('expanded');
+          thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+        }
       }));
     },
     _enableAdvancedLink : function (){
@@ -173,13 +179,15 @@
       $header.children().detach();
       $header.append($('<a>').attr('href', '#').html(launch_instance_section_header_advanced).click(function(e){
         var advSection = thisObj.element.find('#launch-wizard-advanced-contents');
-        thisObj._selectedSection.slideToggle('fast');
-        advSection.slideToggle('fast');
-        thisObj._selectedSection = advSection;
-        $header.addClass('expanded');
-        thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
-        thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+        if(! $header.hasClass('expanded')){
+          thisObj._selectedSection.slideToggle('fast');
+          advSection.slideToggle('fast');
+          thisObj._selectedSection = advSection;
+          $header.addClass('expanded');
+          thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+        }
       }));
     },
     _makeSectionButton : function($launcher) {
