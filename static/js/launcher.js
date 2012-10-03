@@ -474,6 +474,8 @@
               typeSelected = true;
               var legend = type +' defaults: ' + size[0] + ' CPUs, '+size[1]+' memory(MB), '+size[2]+' disk(GB,root device)';  
               $size.find('#launch-wizard-type-size-legend').html(legend); 
+              $(this).parent().addClass('selected-type');
+              $(this).parent().siblings().removeClass('selected-type');
               thisObj._setSummary('type', summarize());
             })));
       });
