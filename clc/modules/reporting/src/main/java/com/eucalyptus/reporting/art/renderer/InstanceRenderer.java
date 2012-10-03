@@ -192,8 +192,8 @@ class InstanceRenderer
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getDiskReadMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(entity.getDiskReadOps()/1000000); //TODO: do something about this
-		doc.addValCol(entity.getDiskWriteOps()/1000000);
+		doc.addValCol(entity.getDiskReadOps()==null?null:((double)entity.getDiskReadOps()/1000000d)); //TODO: do something about this
+		doc.addValCol(entity.getDiskWriteOps()==null?null:((double)entity.getDiskWriteOps()/1000000d));
 		doc.addValCol(UnitUtil.convertTime(entity.getDiskReadTime(), TimeUnit.MS, TimeUnit.values()[units.getTimeUnit().ordinal()-1]));
 		doc.addValCol(UnitUtil.convertTime(entity.getDiskWriteTime(), TimeUnit.MS, TimeUnit.values()[units.getTimeUnit().ordinal()-1]));
 
