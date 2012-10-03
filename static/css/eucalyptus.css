@@ -839,9 +839,9 @@ input[type='text'].medium-textinput {
   -moz-border-radius: 5px;
   border-radius: 5px;
 
-  -webkit-box-shadow: inset 0 1px 10px rgba(44,46,50,0.40);
-  -moz-box-shadow: inset 0 1px 10px rgba(44,46,50,0.40);
-  box-shadow: inset 0 1px 10px rgba(44,46,50,0.40);
+  -webkit-box-shadow: inset 0 0 7px rgba(44,46,50,0.40);
+  -moz-box-shadow: inset 0 0 7px rgba(44,46,50,0.40);
+  box-shadow: inset 0 0 7px rgba(44,46,50,0.40);
 }
 
 #euca-main-container {
@@ -2352,14 +2352,15 @@ span.on-error {
   top: 85px;
 }
 
-#launch-more-summary-contents {
-  width : 580px;
-  height: 70px;
+/* ======= Instances - Launch More dialog ======= */
+
+.launch-more-summary-wrapper {
+  margin-top: 15px;
 }
 
 .launch-more-summary-section {
-    float : left;
-    margin: 5px 20px;
+  float : left;
+  margin: 0 20px;
 }
 
 .launch-more {
@@ -2368,8 +2369,9 @@ span.on-error {
 
 .launch-more-summary-section input[type='text']{
     width: 20px;
-    height: 12px;
+    text-align: center;
 }
+
 input#launch-more-sgroup-input {
     width: 150px;
 }
@@ -2377,10 +2379,10 @@ input#launch-more-sgroup-input {
 .field-error {
   color: red;
 }
+
 textarea.console-output {
   width: 600px;
   height: 400px;
   margin: 10px;
 }
-/* ======= END Sang-min ======= */
 

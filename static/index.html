@@ -1184,16 +1184,20 @@
         <div id="instances-euca-dialog-wrapper">
           <div id="instances-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              <div class="wizard-steps">
-                <div id="launch-more-summary" class="wizard-summary"> 
+
+              <div class="content-sections-wrapper">
+
+                <div id="launch-more-summary" class="content-section"> 
                     <div id="launch-more-summary-header" class="twist launch-wizard-section-header"> </div>
-                    <div id="launch-more-summary-contents">
+                    <div id="launch-more-summary-contents" class="launch-more-summary-wrapper clearfix">
                       <div id="launch-more-summary-image" class="launch-more-summary-section"> </div>
                       <div id="launch-more-summary-type" class="launch-more-summary-section"> </div>
                       <div id="launch-more-summary-security" class="launch-more-summary-section"> </div>
                     </div>
                 </div>
-                <div id="launch-wizard-advanced" class="wizard-step">
+                <!-- END content-section -->
+
+                <div id="launch-wizard-advanced" class="content-section">
                   <div id="launch-wizard-advanced-header" class="twist launch-wizard-section-header"> </div>
                     <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
                       <div id="launch-wizard-advanced-main-contents">
@@ -1205,9 +1209,17 @@
                     </div>
                   </div>
                 </div>
-              </div> <!-- END wizard-steps -->
-            </div> <!-- END dialog-inner-content -->
-          </div> <!-- END instances-euca-dialog -->
+                <!-- END content-section -->
+
+              </div>
+              <!-- END content-sections-wrapper -->
+
+            </div>
+            <!-- END dialog-inner-content -->
+
+          </div>
+          <!-- END instances-euca-dialog -->
+
           <div id="instances-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_launchmore_content}}
@@ -1216,7 +1228,9 @@
               <a href="#">{{!>revert_button}}</a>
             </div>
           </div>
-        </div>  <!-- END instances-euca-dialog-wrapper -->
+        </div>
+        <!-- END instances-euca-dialog-wrapper -->
+
       </script>
       <!-- END Instance dialog templates -->
       
