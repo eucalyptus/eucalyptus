@@ -1,11 +1,12 @@
 #!/usr/bin/python -tt
 
+import atexit
 import os
 import sys
 import fcntl
-import signal
-import atexit
 import getopt
+import logging
+import signal
 import tornado.httpserver
 import tornado.ioloop
 import server
@@ -74,7 +75,6 @@ def start_console():
 
     # default webroot location for development
     webroot = os.path.join(os.path.dirname(__file__), 'static')
-    server.config = ConfigLoader().getParser()
 
     # When staticpath is in the config we will assume that it is
     # not a relative path
@@ -144,15 +144,27 @@ if __name__ == "__main__":
         usage()
 
     if config_file:
-        ConfigLoader().getParser(config_file)
+        server.config = ConfigLoader().getParser(config_file)
+    else:
+        server.config = ConfigLoader().getParser()
+
+    # set up logging
+    logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s")
+    loglevel = server.config.get('server', 'loglevel')
+    print "logging level = "+loglevel
+    if loglevel == 'INFO':
+        logging.getLogger().setLevel(logging.INFO)
+    else:
+        if loglevel == 'DEBUG':
+            logging.getLogger().setLevel(logging.DEBUG)
 
     if daemon:
         daemonize(start_console)
     else:
         try:
-            print "Starting Eucalyptus Console"
+            logging.info("Starting Eucalyptus Console")
             start_console()
         except KeyboardInterrupt:
-            print "Interrupted By User"
+            logging.info("Interrupted By User")
             sys.exit(0)
 
