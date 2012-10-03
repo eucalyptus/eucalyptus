@@ -73,8 +73,8 @@
     },
 
     // event receiver for menu selection
-    changeSelected : function (evt, ui) { 
-        this.updateSelected(ui.selected, ui.filter, ui.options);
+    changeSelected : function (evt, ui) {
+      this.updateSelected(ui.selected, ui.filter, ui.options);
     },
 
     updateSelected : function (selected, filter, options) {

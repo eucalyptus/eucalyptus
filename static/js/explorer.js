@@ -91,8 +91,9 @@
         else {
           $menu.find('a').click( 
             function (evt, src) {
-              if(src!=='triggered')
-                header._trigger("select", evt, {selected:menu.key}); 
+              if(src!=='triggered') {
+                header._trigger("select", evt, {selected:menu.key});
+              }
             }
           );
         }
