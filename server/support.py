@@ -4,7 +4,7 @@ import server
 
 from .botojsonencoder import BotoJsonEncoder
 
-class ComputeHandler(tornado.web.RequestHandler):
+class SupportHandler(tornado.web.RequestHandler):
     # TODO: should an authorization be checked? 
     ##
     # This is the main entry point for support calls
@@ -24,8 +24,11 @@ class ComputeHandler(tornado.web.RequestHandler):
     def get(self):
         action = self.get_argument("Action")
         if action == 'About':
-            ret = {'version':'3.2.0', 'admin_url': 'https://' + server.config.get('server', 'clchost') + ':8443', 'help_page': server.config.get('locale', 'help.page')}
-            data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+            ret = {'version':'3.2.0',
+                   'admin_url': 'https://' + server.config.get('server', 'clchost') + ':8443',
+                   'help_page': server.config.get('locale', 'help.page'),
+                   'cloud_admin_page': server.config.get('locale', 'admin.page')}
+            data = json.dumps(ret)
             self.write(data)
         else:
             self.write("What are you doing here?")

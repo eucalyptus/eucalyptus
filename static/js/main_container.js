@@ -26,9 +26,6 @@
 
     _curSelected : null,
     _aboutDialog : null,
-    _version : '',
-    _adminURL : '',
-    _helpLink : '',
 
     _init : function() {
       this.updateSelected(this.options.default_selected);
@@ -38,25 +35,6 @@
     _create : function() {
       // load about cloud
       thisObj = this;
-      $.ajax({
-        type:"GET",
-        url:"/support?Action=About",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:false,
-        success:
-          function(data, textStatus, jqXHR){
-            if ( data ) {
-              thisObj._version = data.version;
-              thisObj._adminURL = data.admin_url;
-              thisObj._helpLink = data.help_page + data.version;
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            // ?
-          }
-      });
       // about cloud dialog
       $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
@@ -71,8 +49,8 @@
          help: { content: $dialog_help },
          help_icon_class : 'help-euca',
        });
-      this._aboutDialog.find('#version').html(this._version);
-      this._aboutDialog.find('#admin-url').attr('href', this._adminURL);
+      this._aboutDialog.find('#version').html(getProxyVersion());
+      this._aboutDialog.find('#admin-url').attr('href', getProxyAdminURL());
       $(window).hashchange( function(){
         thisObj._windowsHashChanged();
       });
@@ -153,7 +131,7 @@
           logout();
           break;
         case 'help':
-          window.open(thisObj._helpLink, '_blank');
+          window.open(getProxyHelpLink(), '_blank');
           break;
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");

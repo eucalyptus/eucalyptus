@@ -65,7 +65,7 @@
             thisObj.errorDialog.eucadialog('open');
             var msgdiv = thisObj.errorDialog.find("#login-error-message")
             if (args.search("Timeout")>-1) {
-                msgdiv.html($.i18n.map['login_timeout']);
+                msgdiv.html($.i18n.prop('login_timeout', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
             }
             else {
                 msgdiv.html($.i18n.map['login_failure']);
@@ -85,6 +85,7 @@
         }
         $form.find('input[name=login]').removeAttr('disabled');
       }
+      $login.find("#password-help").html($.i18n.prop('login_pwd_help', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
       //rendered = $login.render($.i18n.map);
       this.element.append($login);
       $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
