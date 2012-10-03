@@ -64,6 +64,7 @@
     _create : function(){
        var thisObj = this;
        thisObj.element.find('a#euca-logo').click(function(e){
+         location.hash = '';
          location.reload();
        });
        // navigation area   

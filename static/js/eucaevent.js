@@ -29,11 +29,12 @@
       var thisObj = this;
       this.element.click( function (evt, src) {
         $.each(thisObj._clicked, function (k, v){
-           // $(evt.target).parent()[0]
             // e.g., src='navigator:storage:volumes', k = 'storage'
+           // $(evt.target).parent()[0]
           if (!src || src.indexOf(k) == -1)
             $(v.target).trigger('click', ['triggered']);
         });
+        return false; // this will fix hashtag implementation
 //        console.log('num events: '+Object.keys(thisObj._clicked).length);
       });
     },
