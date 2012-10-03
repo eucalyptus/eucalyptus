@@ -23,6 +23,9 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
+
+import org.hibernate.annotations.Index;
+
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingUser;
@@ -36,6 +39,7 @@ public abstract class ReportingEventSupport extends AbstractPersistent {
 
   private static final long serialVersionUID = 1L;
 
+  @Index(name="timestampmsIdx")
   @Column(name="timestamp_ms", nullable=false)
   protected Long timestampMs;
 
