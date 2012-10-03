@@ -58,7 +58,7 @@ class Initialize(object):
         db_dir = os.path.join(self.config['EUCALYPTUS'],
                               'var','lib','eucalyptus','db')
         if os.path.exists(os.path.join(db_dir, 'data/ibdata1')):
-            sys.exit('Database in %s already exists' % db_dir)
+            sys.exit('error: database in %s already exists' % db_dir)
         if self.debug:
             cmd_string = DebugInitCommand % (self.config['EUCALYPTUS'],
                                              self.config['EUCA_USER'],
@@ -70,7 +70,7 @@ class Initialize(object):
         self.init_scripts()
         if 'CLOUD_OPTS' in self.config:
             cmd_string += ' %s' % self.config['CLOUD_OPTS']
-        print 'Initializing Database...'
+        print 'Initializing a new cloud.  This may take a few minutes.'
         cmd = Command(cmd_string)
         if self.debug:
             print '\tStatus=%d' % cmd.status
