@@ -2528,6 +2528,20 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply SNAT rule '%s'\n", cmd);
       ret = 1;
     }
+
+    // For reporting traffic statistics.
+    snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_IN -d %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply EUCA_COUNTERS_IN rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_OUT -s %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply EUCA_COUNTERS_OUT rule '%s'\n", cmd);
+      ret = 1;
+    }
   }
   return(ret);
 }
@@ -2689,6 +2703,20 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
     }
     if (rc) {
       logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove SNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
+
+    // For reporting traffic statistics.
+    snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_IN -d %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_OUT -s %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
       ret = 1;
     }
 
