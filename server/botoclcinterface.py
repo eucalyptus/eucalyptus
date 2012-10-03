@@ -17,7 +17,7 @@ class BotoClcInterface(ClcInterface):
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=8773, path='/services/Eucalyptus',
-                                  is_secure=False, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2012-03-01'
         self.conn.http_connection_kwargs['timeout'] = 10
 

@@ -13,7 +13,7 @@ class TokenAuthenticator(object):
 
     def __init__(self, host, duration):
         # make the call to STS service to authenticate with the CLC
-        self.auth_url = "http://%s:8773/services/Tokens?Action=GetSessionToken&DurationSeconds=%d&Version=2011-06-15" % (host, duration)
+        self.auth_url = "https://%s:8773/services/Tokens?Action=GetSessionToken&DurationSeconds=%d&Version=2011-06-15" % (host, duration)
 
     # raises EuiExcepiton for "Noth Authorized" or "Timed out"
     def authenticate(self, account, user, passwd):
