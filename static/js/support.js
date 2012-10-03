@@ -208,10 +208,10 @@ function logout(){
   $.cookie('session-id',''); 
   var hostname = null;
   if (location.href && location.href.indexOf('hostname=') >= 0){
-    hostname = location.href.substring(location.href.indexOf('hostname=')); 
-    hostname= hostname.replace('hostname=','');
-    hostname= hostname.replace('#','');
-    hostname= hostname.replace('/','');
+    hostname = location.href.substring(location.href.indexOf('hostname='));
+    hostname = hostname.replace(/#.+?$/,'');
+    hostname = hostname.replace('hostname=','');
+    hostname = hostname.replace('/','');
   }
   if(!hostname)
     hostname = location.hostname;
