@@ -235,7 +235,7 @@ sub new_euca_ipt() {
     }
     close(FH);
 
-    open(RFH, "iptables-save -t $table|") || dodie("iptables-save failed\n");
+    open(RFH, "iptables-save -c -t $table|") || dodie("iptables-save failed\n");
     while(<RFH>) {
 	chomp;
 	my $line = $_;
@@ -351,7 +351,7 @@ sub new_euca_ipt() {
     close(OFH);
 
     if ( -f "$ofile" ) {
-	$rc = system("cat $ofile | iptables-restore");
+	$rc = system("cat $ofile | iptables-restore -c");
 	if ($rc) {
 	    print STDERR "[EUCAERROR] euca_ipt: could not run iptables-restore\n";
 	    print STDERR "=====\n";
