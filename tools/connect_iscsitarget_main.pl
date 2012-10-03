@@ -60,17 +60,9 @@
 #   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
-BEGIN {
-  use File::Spec::Functions qw(rel2abs);
-  use File::Basename qw(dirname);
-
-  my $script_abs_path = rel2abs($0);
-  our $script_dir = dirname($script_abs_path);
-}
-
-use lib $script_dir;
-
-require "iscsitarget_common.pl";
+use Crypt::OpenSSL::Random ;
+use Crypt::OpenSSL::RSA ;
+use MIME::Base64;
 
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
@@ -102,6 +94,10 @@ if (is_null_or_empty($euca_home)) {
 $EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
 %conf_iface_map = get_conf_iface_map();
 
+if (is_null_or_empty($user)) {
+  $user = "eucalyptus";
+}
+
 # prepare target paths:
 # <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
 if ((@paths < 1) || ((@paths % 3) != 0)) {
@@ -120,6 +116,10 @@ if (is_null_or_empty($lun)) {
   $lun = -1;
 }
 
+if (!is_null_or_empty($auth_mode)) {
+  $password = $NOT_REQUIRED;
+}
+
 @devices = ();
 # iterate through each path, login/refresh for the new lun
 while (@paths > 0) {
@@ -128,6 +128,30 @@ while (@paths > 0) {
   $store = shift(@paths);
   # get netdev from iface name using eucalyptus.conf
   $netdev = get_netdev_by_conf($conf_iface);
+  # lun based, check if session exists and refresh session
+  if (($lun > -1) && (retry_until_true(\&check_session_exists, [$netdev, $ip, $store], 5) == 1)) {
+    # rescan session
+    run_cmd(1, 1, "$ISCSIADM -m session -R");
+  } else {
+    # prepare password for login target 
+    if ($password ne $NOT_REQUIRED) {
+      $password = decrypt_password($encrypted_password, get_private_key());
+    }
+    if (is_null_or_empty($password)) {
+      print STDERR "Unable to decrypt target password.\n";
+      do_exit(1);
+    }
+    # get/create iface for the path if network device is specified
+    if (!is_null_or_empty($netdev)) {
+      $iface = retry_until_exists(\&ensure_and_get_iface, [$netdev], 5);
+      if (is_null_or_empty($iface)) {
+        print STDERR "Failed to get iface.\n";
+        do_exit(1);
+      }
+    }
+    login_target($iface, $ip, $store, $user, $password);
+    sleep(1);
+  }
   # get dev from lun
   push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
 }
@@ -148,9 +172,73 @@ if ($multipath == 0) {
 } else {
   $localdev = "/dev/mapper/$localdev";
 }
+# make sure device exists on the filesystem
+for ($i = 0; $i < 12; $i++) { 
+  last if (-e "$localdev");
+  sleep(1);
+}
+
 print "$localdev";
 
 ##################################################################
+sub login_target {
+  my ($iface, $ip, $store, $user, $password) = @_;
+  my $prefix;
+  if (is_null_or_empty($iface)) {
+    $prefix = "$ISCSIADM -m node -T $store -p $ip";
+  } else {
+    $prefix = "$ISCSIADM -m node -T $store -p $ip -I $iface";
+  }
+  # add paths
+  run_cmd(1, 1, "$prefix -o new");
+  # set password if necessary
+  if (password ne $NOT_REQUIRED) {
+    run_cmd(1, 1, "$prefix -o update -n node.session.auth.username -v $user");
+    run_cmd(1, 1, "$prefix -o update -n node.session.auth.password -v $password");
+  }
+  # login
+  run_cmd(1, 1, "$prefix -l");
+}
+
+sub ensure_and_get_iface {
+  my ($netdev) = @_;
+  %ifaces = lookup_iface();
+  if (is_null_or_empty($ifaces{$netdev})) {
+    $name = allocate_iface(values %ifaces);
+    create_iface($name, $netdev);
+    %ifaces = lookup_iface();
+  }
+  return $ifaces{$netdev};
+}
+
+sub allocate_iface {
+  my %ifaceset = map {$_ => 1} @_;
+  for ($i = 0; $i < 1024; $i++) {
+    my $newname = "iface$i";
+    return $newname if !$ifaceset{$newname};
+  }
+  print STDERR "Can not create iface anymore.\n";
+  do_exit(1);
+}
+
+sub create_iface {
+  my ($name, $netdev) = @_;
+  run_cmd(1, 1, "$ISCSIADM -m iface -I $name --op=new");
+  run_cmd(1, 1, "$ISCSIADM -m iface -I $name -o update -n iface.net_ifacename -v $netdev");
+}
+
+sub decrypt_password {
+  my ($encrypted_passwd, $private_key) = @_;
+
+  $rsa_priv = Crypt::OpenSSL::RSA->new_private_key($private_key);
+
+  $msg = decode_base64($encrypted_passwd);
+  $rsa_priv->use_pkcs1_padding();
+  $rsa_priv->use_sha1_hash() ;
+
+  return $rsa_priv->decrypt($msg);
+}
+
 sub retry_until_exists {
   my ($func, $args, $retries) = @_;
   for ($i = 0; $i < $retries; $i++) {
@@ -158,5 +246,22 @@ sub retry_until_exists {
     if (!is_null_or_empty($ret)) {
       return $ret;
     }
+    sleep(1);
   }
 }
+
+sub check_session_exists {
+  my ($netdev, $ip, $store) = @_;
+  for $session (lookup_session()) {
+    if (($session->{$SK_TARGET} eq $store) &&
+        ($session->{$SK_PORTAL} eq $ip) &&
+        (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+##############################################
+# needed by module
+return 1;
