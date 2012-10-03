@@ -32,7 +32,7 @@ public class MXBeanMemoryResourceCheck extends Thread {
 			    LOG.debug("Checking memory pool " + name + " of type" + type);
 			    if (usage.getMax() - usage.getUsed() < THRESHOLD) {
 //			    	if (!alreadyFaulted.contains(name + ":" + type.toString())) {
-						FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(MXBEAN_OUT_OF_MEMORY_FAULT_ID).withVar("component", "eucalyptus").withVar("name",  name).log();
+						FaultSubsystem.forComponent(Eucalyptus.class).havingId(MXBEAN_OUT_OF_MEMORY_FAULT_ID).withVar("component", Eucalyptus.INSTANCE.getFaultLogPrefix()).withVar("name",  name).log();
 //						alreadyFaulted.add(name + ":" + type.toString());
 //			    	}
 			    }

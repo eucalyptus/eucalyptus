@@ -46,7 +46,7 @@ public class DBResourceCheck extends Thread {
 	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
 	private static final int OUT_OF_DB_CONNECTIONS_FAULT_ID = 1006;
 	private final static long DEFAULT_POLL_INTERVAL = 60 * 1000;
-	private static final ComponentId DEFAULT_COMPONENT_ID = Eucalyptus.INSTANCE;
+	private static final Class<? extends ComponentId> DEFAULT_COMPONENT_ID_CLASS = Eucalyptus.class;
 
 	/**
 	 * Marking the constructor private on purpose, so that no code can instantiate an object this class
@@ -166,25 +166,25 @@ public class DBResourceCheck extends Thread {
 
 		private Set<DBPoolInfo> dbPools = new HashSet<DBPoolInfo>();
 		private long pollInterval;
-		private ComponentId componentId;
+		private Class<? extends ComponentId> componentIdClass;
 
 		private Set<DBPoolInfo> alreadyFaulted = new HashSet<DBPoolInfo>();
 
 		public DBChecker(DBPoolInfo dbPool) {
 			this.dbPools.add(dbPool);
 			this.pollInterval = DEFAULT_POLL_INTERVAL;
-			this.componentId = DEFAULT_COMPONENT_ID;
+			this.componentIdClass = DEFAULT_COMPONENT_ID_CLASS;
 		}
 
-		public DBChecker(DBPoolInfo dbPool, ComponentId componentId, long pollTime) {
+		public DBChecker(DBPoolInfo dbPool, Class<? extends ComponentId> componentIdClass, long pollTime) {
 			this.dbPools.add(dbPool);
-			this.componentId = componentId;
+			this.componentIdClass = componentIdClass;
 			this.pollInterval = pollTime;
 		}
 
-		public DBChecker(List<DBPoolInfo> dbPools, ComponentId componentId, long pollTime) {
+		public DBChecker(List<DBPoolInfo> dbPools, Class<? extends ComponentId> componentIdClass, long pollTime) {
 			this.dbPools.addAll(dbPools);
-			this.componentId = componentId;
+			this.componentIdClass = componentIdClass;
 			this.pollInterval = pollTime;
 		}
 
@@ -196,8 +196,8 @@ public class DBResourceCheck extends Thread {
 					try {
 						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getMinimumFreeConnections()) {
 							if (!this.alreadyFaulted.contains(dbPool)) {
-								FaultSubsystem.forComponent(this.componentId).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
-										.withVar("component", this.componentId.getName()).withVar("alias", dbPool.getAlias()).log();
+								FaultSubsystem.forComponent(this.componentIdClass).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
+										.withVar("component", this.componentIdClass.getName()).withVar("alias", dbPool.getAlias()).log();
 								this.alreadyFaulted.add(dbPool);
 							} else {
 								// fault has already been logged. do nothing

@@ -122,7 +122,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 				dbPools.add(new DBPoolInfo(alias, 2.0)); // Do 2%
 			}
 		}
-		DBChecker dbChecker = new DBChecker(dbPools, Eucalyptus.INSTANCE, 10000);
+		DBChecker dbChecker = new DBChecker(dbPools, Eucalyptus.class, 10000);
 		DBResourceCheck.start(dbChecker);
 		// new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K
 		// left, also arbitrary

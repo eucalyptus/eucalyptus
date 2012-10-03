@@ -216,7 +216,7 @@ public class WalrusControl {
 		// Implementation for EUCA-3583. Check for available space in Walrus bukkits directory and throw a fault when less than 10% of total space is available
 		try {
 			ScheduledFuture<?> future = DiskResourceCheck.start(new Checker(
-					new LocationInfo(new File(WalrusInfo.getWalrusInfo().getStorageDir()), (double) 10), new Walrus(), (long) 300000));
+					new LocationInfo(new File(WalrusInfo.getWalrusInfo().getStorageDir()), 10.0), Walrus.class, (long) 300000));
 		} catch (Exception ex) {
 			LOG.error("Error starting disk space check for Walrus storage directory.", ex);
 		}

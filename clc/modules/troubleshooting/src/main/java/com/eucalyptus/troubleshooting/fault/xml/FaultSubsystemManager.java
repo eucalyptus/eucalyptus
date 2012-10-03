@@ -144,9 +144,9 @@ public class FaultSubsystemManager {
  */
 	
 
-	public synchronized FaultLogger getFaultLogger(ComponentId componentId) {
-
-		
+	public synchronized FaultLogger getFaultLogger(Class <? extends ComponentId> componentIdClass) {
+		if (componentIdClass == null) throw new IllegalArgumentException("componentIdClass is null");
+		ComponentId componentId = ComponentIds.lookup(componentIdClass);
 		if (componentId == null) throw new IllegalArgumentException("componentId is null");
 		String faultLogPrefix = componentId.getFaultLogPrefix();
 		FaultLogger logger = loggerMap.get(faultLogPrefix);
@@ -236,7 +236,7 @@ public class FaultSubsystemManager {
 		// preload as many appenders as we can right now...
 		for (ComponentId componentId: ComponentIds.list()) {
 			// TODO: don't forget to bridge the components
-			getFaultLogger(componentId);
+			getFaultLogger(componentId.getClass());
 		}
 	}
 

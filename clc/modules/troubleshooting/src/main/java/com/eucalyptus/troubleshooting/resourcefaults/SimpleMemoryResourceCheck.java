@@ -26,7 +26,7 @@ public class SimpleMemoryResourceCheck extends Thread {
 			long availableMemory = Runtime.getRuntime().freeMemory();
 			LOG.debug("availableMemory="+availableMemory);
 			if (availableMemory < minimumFreeMemoryBytes) {
-				FaultSubsystem.forComponent(Eucalyptus.INSTANCE).havingId(OUT_OF_MEMORY_FAULT_ID).withVar("component", "eucalyptus").log();
+				FaultSubsystem.forComponent(Eucalyptus.class).havingId(OUT_OF_MEMORY_FAULT_ID).withVar("component", Eucalyptus.INSTANCE.getFaultLogPrefix()).log();
 				//break; // no need to continue monitoring.  This fault can only be logged once. (TODO: revisit dedup)
 			}
 			try {

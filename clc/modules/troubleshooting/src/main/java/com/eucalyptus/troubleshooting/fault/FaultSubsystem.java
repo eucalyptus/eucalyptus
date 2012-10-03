@@ -70,7 +70,7 @@ public class FaultSubsystem {
 	public static void init() {
 		faultSubsystemManager.init();
 	}
-	public static FaultBuilder forComponent(ComponentId componentId) {
-		return new FaultBuilderImpl(faultSubsystemManager, componentId);
+	public static FaultBuilder forComponent(Class <? extends ComponentId> componentIdClass) {
+		return new FaultBuilderImpl(faultSubsystemManager, componentIdClass);
 	}
 }

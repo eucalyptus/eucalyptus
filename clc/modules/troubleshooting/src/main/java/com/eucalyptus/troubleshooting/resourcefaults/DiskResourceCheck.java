@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 
@@ -35,7 +36,7 @@ public class DiskResourceCheck {
 	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
 	private static final int OUT_OF_DISK_SPACE_FAULT_ID = 1003;
 	private final static long DEFAULT_POLL_INTERVAL = 5 * 1000;
-	private static final ComponentId DEFAULT_COMPONENT_ID = Eucalyptus.INSTANCE;
+	private static final Class <? extends ComponentId> DEFAULT_COMPONENT_ID_CLASS = Eucalyptus.class;
 
 	/**
 	 * Marking the constructor private on purpose, so that no code can instantiate an object this class
@@ -146,25 +147,25 @@ public class DiskResourceCheck {
 
 		private Set<LocationInfo> locations = new HashSet<LocationInfo>();
 		private long pollInterval;
-		private ComponentId componentId;
+		private Class <? extends ComponentId> componentIdClass;
 
 		private Set<LocationInfo> alreadyFaulted = new HashSet<LocationInfo>();
 
 		public Checker(LocationInfo locationInfo) {
 			this.locations.add(locationInfo);
 			this.pollInterval = DEFAULT_POLL_INTERVAL;
-			this.componentId = DEFAULT_COMPONENT_ID;
+			this.componentIdClass = DEFAULT_COMPONENT_ID_CLASS;
 		}
 
-		public Checker(LocationInfo locationInfo, ComponentId componentId, long pollTime) {
+		public Checker(LocationInfo locationInfo, Class <? extends ComponentId> componentIdClass, long pollTime) {
 			this.locations.add(locationInfo);
-			this.componentId = componentId;
+			this.componentIdClass = componentIdClass;
 			this.pollInterval = pollTime;
 		}
 
-		public Checker(List<LocationInfo> locations, ComponentId componentId, long pollTime) {
+		public Checker(List<LocationInfo> locations, Class <? extends ComponentId> componentIdClass, long pollTime) {
 			this.locations.addAll(locations);
-			this.componentId = componentId;
+			this.componentIdClass = componentIdClass;
 			this.pollInterval = pollTime;
 		}
 
@@ -177,8 +178,8 @@ public class DiskResourceCheck {
 						long usableSpace = location.getFile().getUsableSpace();
 						if (usableSpace < location.getMinimumFreeSpace()) {
 							if (!this.alreadyFaulted.contains(location)) {
-								FaultSubsystem.forComponent(this.componentId).havingId(OUT_OF_DISK_SPACE_FAULT_ID)
-										.withVar("component", this.componentId.getName()).withVar("file", location.getFile().getAbsolutePath()).log();
+								FaultSubsystem.forComponent(this.componentIdClass).havingId(OUT_OF_DISK_SPACE_FAULT_ID)
+										.withVar("component", ComponentIds.lookup(this.componentIdClass).getFaultLogPrefix()).withVar("file", location.getFile().getAbsolutePath()).log();
 								this.alreadyFaulted.add(location);
 							} else {
 								// fault has already been logged. do nothing
