@@ -871,7 +871,7 @@
         $header.find('a').trigger('click');
 
       var platform = image.platform ? image.platform : 'linux';
-      var $summary = $('<div>').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(platform));
+      var $summary = $('<div>').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(platform));;
       var $image = thisObj.launchMoreDialog.find('#launch-more-summary-image');
       $image.children().detach();
       $image.append($summary.children());
@@ -879,9 +879,11 @@
       var selectedType = instance.instance_type;
       var zone = instance.placement;
       $summary = $('<div>').append(
-          $('<div>').attr('id','summary-type-insttype').append($('<span>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
-          $('<div>').attr('id','summary-type-zone').append($('<span>').text(launch_instance_summary_zone), $('<span>').text(zone)),
-          $('<div>').attr('id','summary-type-numinst').append($('<span>').text(launch_instance_summary_instances), $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1')));
+          $('<div>').attr('id','summary-type-insttype').append($('<div>').text(launch_instance_summary_type), $('<span>').text(selectedType)),
+          $('<div>').attr('id','summary-type-zone').append($('<div>').text(launch_instance_summary_zone), $('<span>').text(zone)),
+          $('<div>').attr('id','summary-type-numinst').addClass('form-row').addClass('clearfix').append(
+            $('<label>').attr('for','launch-more-num-instance').text(launch_instance_summary_instances),
+            $('<input>').attr('type','text').attr('id','launch-more-num-instance').val('1')));
       var $type = thisObj.launchMoreDialog.find('#launch-more-summary-type');
       $type.addClass(selectedType);
       $type.children().detach();
@@ -892,7 +894,7 @@
       var selectedSg = instance.group_name;
       var $sg = $('<div>').attr('id','summary-security-sg');
       if(selectedSg && selectedSg.length > 0)
-        $sg.append($('<span>').text(launch_instance_summary_sg), $('<span>').text(selectedSg));
+        $sg.append($('<div>').text(launch_instance_summary_sg), $('<span>').text(selectedSg));
       else{
         var groupList = [];
         var result = describe('sgroup');
@@ -906,7 +908,7 @@
         $sg.find('input').watermark(instance_dialog_launch_more_enter_sgroup);
       }
       $summary = $('<div>').append(
-                   $('<div>').attr('id','summary-security-keypair').append($('<span>').text(launch_instance_summary_keypair),$('<span>').text(selectedKp)),
+                   $('<div>').attr('id','summary-security-keypair').append($('<div>').text(launch_instance_summary_keypair),$('<span>').text(selectedKp)),
                    $sg);
       var $security = thisObj.launchMoreDialog.find('#launch-more-summary-security');
       $security.children().detach();
