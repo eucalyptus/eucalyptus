@@ -73,8 +73,9 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
   
   public SingletonDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, String description, String defaultValue,
                                          PropertyTypeParser typeParser,
-                                         Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias ) {
-    super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
+                                         Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias,
+                                         PropertyChangeListener changeListener ) {
+    super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
   }
   
   @Override
@@ -97,10 +98,11 @@ public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty
         String description = annote.description( );
         String defaultValue = annote.initial( );
         PropertyTypeParser p = PropertyTypeParser.get( f.getType( ) );
+        PropertyChangeListener listener = PropertyChangeListeners.getListenerFromClass( annote.changeListener( ) );
         try {
           if ( !Modifier.isStatic( f.getModifiers( ) ) && !f.isAnnotationPresent( Transient.class ) ) {
             ConfigurableProperty prop = new SingletonDatabasePropertyEntry( c, fqPrefix, f, description, defaultValue, p, annote.readonly( ),
-                                                                            annote.displayName( ), annote.type( ), alias );
+                                                                            annote.displayName( ), annote.type( ), alias, listener );
             return prop;
           }
         } catch ( Exception e ) {
