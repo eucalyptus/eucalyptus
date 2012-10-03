@@ -23,6 +23,7 @@ import org.logicalcobwebs.proxool.ProxoolFacade;
 import org.logicalcobwebs.proxool.admin.SnapshotIF;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
@@ -197,7 +198,7 @@ public class DBResourceCheck extends Thread {
 						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getMinimumFreeConnections()) {
 							if (!this.alreadyFaulted.contains(dbPool)) {
 								FaultSubsystem.forComponent(this.componentIdClass).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
-										.withVar("component", this.componentIdClass.getName()).withVar("alias", dbPool.getAlias()).log();
+										.withVar("component", ComponentIds.lookup(componentIdClass).getFaultLogPrefix()).withVar("alias", dbPool.getAlias()).log();
 								this.alreadyFaulted.add(dbPool);
 							} else {
 								// fault has already been logged. do nothing
