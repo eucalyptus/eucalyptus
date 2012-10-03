@@ -103,7 +103,7 @@ def start_console():
             (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'help')}),
             (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
             (r"/ec2", api.ComputeHandler),
-            (r"/support", support.ComputeHandler),
+            (r"/support", support.SupportHandler),
             (r"/checkip", server.CheckIpHandler),
             (r"/(.*)", server.RootHandler),
         ], **settings)
