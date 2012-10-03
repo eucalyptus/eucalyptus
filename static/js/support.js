@@ -139,8 +139,17 @@ function describe(resource){
 }
 
 function getResource(resourceType, resourceId){
-  res = $('html body').eucadata('get', resourceType, resourceId);
-  return res ? res[0] : res;
+  if (!resourceId)
+    return null;
+  res = $('html body').eucadata('get', resourceType);
+  if (res) {
+    for (i in res){
+      if (res[i].id && res[i].id.toUpperCase() == resourceId.toUpperCase())
+        return res[i];
+    }
+  } else {
+    return null;
+  }
 }
 
 function refresh(resource){
@@ -314,7 +323,7 @@ function _checkLoaded() {
             if ( data ) {
               _version = data.version;
               _adminURL = data.admin_url;
-              _helpLink = data.help_page;
+              _helpLink = data.help_page + data.version;
               _cloudAdminLink = data.cloud_admin_page;
             }
           },

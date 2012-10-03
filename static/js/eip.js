@@ -96,7 +96,11 @@
          id: 'eips-release',
          title: eip_release_dialog_title,
          buttons: {
-           'release': {text: eip_release_dialog_release_btn, click: function() { thisObj._releaseListedIps(); $release_dialog.eucadialog("close");}},
+           'release': {text: eip_release_dialog_release_btn, click: function() {
+                var rowsToDelete = this.releaseDialog.eucadialog('getSelectedResources', 0);
+                $release_dialog.eucadialog("close");
+                thisObj._releaseListedIps(rowsToDelete);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.eucadialog("close");}}
          },
          help: { content: $release_help },
@@ -117,8 +121,8 @@
                 if ( numberOfIps != parseInt(numberOfIps) ) {
                   $eip_allocate_dialog.eucadialog('showError', eip_allocate_count_error_msg);
                 } else {
-                  thisObj._allocateIps(numberOfIps);
                   $eip_allocate_dialog.eucadialog("close");
+                  thisObj._allocateIps(numberOfIps);
                 }
               } 
             },
@@ -141,18 +145,14 @@
          title: eip_associate_dialog_title,
          buttons: {
            'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
-               if(thisObj.options.from_instance){
-                 thisObj._associateIp(
-                   $eip_associate_dialog.find('#eip-associate-instance-id').val(),
-                   $eip_associate_dialog.find('#to-associate').html()
-                 );
-               }else{
-                 thisObj._associateIp(
-                   $eip_associate_dialog.find('#to-associate').html(),
-                   $eip_associate_dialog.find('#eip-associate-instance-id').val()
-                 );
-               }
+               fixedValue = $eip_associate_dialog.find('#associate-fixed-value').html();
+               selectedValue = $eip_associate_dialog.find('#associate-selected-value').val();
                $eip_associate_dialog.eucadialog("close");
+               if (thisObj.options.from_instance) {
+                 thisObj._associateIp(selectedValue, fixedValue);
+               } else {
+                 thisObj._associateIp(fixedValue, selectedValue);
+               }
               } 
             },
            'cancel': { text: dialog_cancel_btn, focus: true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
@@ -175,8 +175,9 @@
          title: eip_disassociate_dialog_title,
          buttons: {
            'disassociate': { text: eip_disassociate_dialog_disassociate_btn, click: function() {
-               thisObj._disassociateListedIps();
+               var ipsToDisassociate = this.disassociateDialog.eucadialog('getSelectedResources', 0);
                $eip_disassociate_dialog.eucadialog("close");
+               thisObj._disassociateListedIps(ipsToDisassociate);
               } 
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_disassociate_dialog.eucadialog("close"); } }
@@ -213,9 +214,8 @@
       return itemsList;
     },
 
-    _releaseListedIps : function () {
+    _releaseListedIps : function (rowsToDelete) {
       var thisObj = this;
-      var rowsToDelete = this.releaseDialog.eucadialog('getSelectedResources', 0);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var eipId = rowsToDelete[i];
         $.ajax({
@@ -246,9 +246,8 @@
       }
     },
 
-    _disassociateListedIps : function () {
+    _disassociateListedIps : function (ipsToDisassociate) {
       var thisObj = this;
-      var ipsToDisassociate = this.disassociateDialog.eucadialog('getSelectedResources', 0);
       for ( i = 0; i<ipsToDisassociate.length; i++ ) {
         var eipId = ipsToDisassociate[i];
         $.ajax({
@@ -334,7 +333,7 @@
 
     _initAssociateDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
-      var $selector = thisObj.associateDialog.find('#eip-associate-instance-id').html('');
+      var $selector = thisObj.associateDialog.find('#associate-selected-value').html('');
       if(! thisObj.options.from_instance){ 
         var results = describe('instance');
         var inst_ids = [];
@@ -403,11 +402,11 @@
     dialogAssociateIp : function(ip, instance){
       var thisObj = this;
       if(ip){
-        thisObj.associateDialog.find('#to-associate').html(ip);
+        thisObj.associateDialog.find('#associate-fixed-value').html(ip);
         thisObj.associateDialog.find('#eip-associate-instance-txt').html(eip_associate_dialog_text(ip));
         thisObj.associateDialog.dialog('open');
       }else if(instance){
-        thisObj.associateDialog.find('#to-associate').html(instance);
+        thisObj.associateDialog.find('#associate-fixed-value').html(instance);
         thisObj.associateDialog.find('#eip-associate-instance-txt').html(instance_dialog_associate_ip_text(instance));
         thisObj.associateDialog.dialog('open');
       }

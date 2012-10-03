@@ -585,7 +585,7 @@
     // this function populates the div where rules are listed based on the rulesList
     _refreshRulesList : function(dialog) {
         if (this.rulesList != null) {
-            var msg = "<ul>";
+            var msg = "<ul class='sg-rules-list'>";
             var i=0;
             for (rule in this.rulesList) {
                 if (this.rulesList[rule].deletethis == true) continue;

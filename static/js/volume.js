@@ -114,7 +114,11 @@
          id: 'volumes-delete',
          title: volume_dialog_del_title,
          buttons: {
-           'delete': {text: volume_dialog_del_btn, click: function() { thisObj._deleteListedVolumes(); $del_dialog.eucadialog("close");}},
+           'delete': {text: volume_dialog_del_btn, click: function() {
+                var volumesToDelete = thisObj.delDialog.eucadialog('getSelectedResources', 0);
+                $del_dialog.eucadialog("close");
+                thisObj._deleteListedVolumes(volumesToDelete);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: { content: $del_help },
@@ -129,7 +133,11 @@
          id: 'volumes-detach',
          title: volume_dialog_detach_title,
          buttons: {
-           'detach': {text: volume_dialog_detach_btn, click: function() { thisObj._detachListedVolumes(false); $detach_dialog.eucadialog("close");}},
+           'detach': {text: volume_dialog_detach_btn, click: function() {
+                 var volumes =  dialogToUse.eucadialog('getSelectedResources', 0);
+                 $detach_dialog.eucadialog("close");
+                 thisObj._detachListedVolumes(volumes, false);
+            }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
          help: { content: $detach_help },
@@ -148,8 +156,8 @@
                 volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
                 instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
                 device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
-                thisObj._attachVolume(volumeId, instanceId, device);
                 $attach_dialog.eucadialog("close");
+                thisObj._attachVolume(volumeId, instanceId, device);
               } 
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
@@ -202,8 +210,8 @@
                 $add_dialog.eucadialog('showError', volume_dialog_az_error_msg);
               }
               if ( isValid ) {
-                thisObj._createVolume(size, az, $snapshot.val());
                 $add_dialog.eucadialog("close");
+                thisObj._createVolume(size, az, $snapshot.val());
               } 
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
@@ -256,11 +264,37 @@
       dfd.resolve();
     },
 
+    _generateRecommendedDeviceNames : function(count) {
+      possibleNames = {};
+      for(i=0; i<11 && i<=count; i++){ // f..p
+        possibleNames['/dev/sd'+String.fromCharCode(102+i)] = 1;
+      }
+      return possibleNames;
+    },
+
+    _suggestNextDeviceName : function(instanceId) {
+      var instance = getResource('instance', instanceId);
+      if (instance) {
+        var count = 1;
+        for(device in instance.block_device_mapping) count++;
+        possibleNames = this._generateRecommendedDeviceNames(count);
+        for(device in instance.block_device_mapping){
+          possibleNames[device] = 0;
+        }
+        for(n in possibleNames){
+          if (possibleNames[n] == 1){
+            return n;
+          }
+        }
+      }
+      return '';
+    },
+
     _initAttachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
       var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id');
       var $volumeSelector = this.attachDialog.find('#volume-attach-volume-id');
-
+      var $deviceName = thisObj.attachDialog.find('#volume-attach-device-name');
       if(!$instanceSelector.val()){
         var inst_ids = [];
         var results = describe('instance');
@@ -276,8 +310,11 @@
 
         $instanceSelector.autocomplete({
           source: inst_ids,
-          select: function() {
-            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+          select: function(event, ui) {
+            if ($.trim($deviceName.val()) == ''){
+              $deviceName.val(thisObj._suggestNextDeviceName(ui.item.value));
+            }
+            if ($deviceName.val() != '' && $volumeSelector.val() != '')
               thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
           }
         });
@@ -298,7 +335,7 @@
         $volumeSelector.autocomplete( {
           source: vol_ids,
           select: function() {
-            if (thisObj.attachDialog.find('#volume-attach-device-name').val() != '') 
+            if ($deviceName.val() != '' && $instanceSelector.val() != '')
               thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
           }
         });
@@ -307,11 +344,10 @@
       dfd.resolve();
     },
 
-    _deleteListedVolumes : function () {
+    _deleteListedVolumes : function (volumesToDelete) {
       var thisObj = this;
-      var $volumesToDelete = this.delDialog.eucadialog('getSelectedResources', 0);
-      for ( i = 0; i<$volumesToDelete.length; i++ ) {
-        var volumeId = $volumesToDelete[i];
+      for ( i = 0; i<volumesToDelete.length; i++ ) {
+        var volumeId = volumesToDelete[i];
         $.ajax({
           type:"GET",
           url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
@@ -390,10 +426,9 @@
       });
     },
 
-    _detachListedVolumes : function (force) {
+    _detachListedVolumes : function (volumes, force) {
       var thisObj = this;
-      dialogToUse = this.detachDialog; 
-      var volumes =  dialogToUse.eucadialog('getSelectedResources', 0);
+      dialogToUse = this.detachDialog;
       for ( i = 0; i<volumes.length; i++ ) {
         var volumeId = volumes[i];
         $.ajax({
@@ -542,14 +577,19 @@
           var $volumeId = thisObj.attachDialog.find('#volume-attach-volume-id');
           $volumeId.val(volume);
           $volumeId.attr('disabled', 'disabled');
+          thisObj.attachDialog.find('#volume-attach-device-name').val('');
         } 
         if(instance){
           var $instanceId = thisObj.attachDialog.find('#volume-attach-instance-id');
           $instanceId.val(instance);
           $instanceId.attr('disabled', 'disabled');
+          thisObj.attachDialog.find('#volume-attach-device-name').val(thisObj._suggestNextDeviceName(instance));
         }
       }
       var on_open = this.attachDialog.eucadialog('option', 'on_open'); 
+      // make sure that there is only one set variables callback function
+      if (on_open.callback.length == 2)
+        on_open.callback.pop();
       on_open.callback.push(openCallback);
       this.attachDialog.eucadialog('option', 'on_open', on_open);
       this.attachDialog.eucadialog('open');
