@@ -163,14 +163,14 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	}
 
 	private void mountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_MOUNT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir(), WalrusProperties.EUCA_USER}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "mount", DRBDInfo.getDRBDInfo().getBlockDevice(), WalrusInfo.getWalrusInfo().getStorageDir(), WalrusProperties.EUCA_USER}) != 0) {
 			throw new EucalyptusCloudException("Unable to mount " + DRBDInfo.getDRBDInfo().getBlockDevice() + " as " + WalrusInfo.getWalrusInfo().getStorageDir());
 		}
 		SystemUtil.setEucaReadWriteOnly(WalrusInfo.getWalrusInfo().getStorageDir());
 	}
 
 	private void unmountPrimary() throws ExecutionException, EucalyptusCloudException {
-		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_MOUNT_WRAPPER, "umount", WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "umount", WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
 			throw new EucalyptusCloudException("Unable to unmount " + DRBDInfo.getDRBDInfo().getBlockDevice());
 		}
 	}
