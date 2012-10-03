@@ -28,12 +28,17 @@
     _aboutDialog : null,
 
     _init : function() {
-      this.updateSelected(this.options.default_selected);
+      var hash = location.hash;
+      if (hash)
+        hash = hash.replace(/^#/, '');
+      if (hash != '')
+        this.updateSelected(hash);
+      else
+        this.updateSelected(this.options.default_selected);
       this.element.show();
     },
 
     _create : function() {
-      // load about cloud
       thisObj = this;
       // about cloud dialog
       $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
@@ -62,7 +67,7 @@
     _windowsHashChanged : function() {
       var hash = location.hash;
       if (hash)
-        hash= hash.replace(/^#/, '');
+        hash = hash.replace(/^#/, '');
       if (this._curSelected != hash && hash != '')
        this.updateSelected(hash);
     },
