@@ -78,6 +78,7 @@
       thisObj._addHelp($launcherHelp);
 
       thisObj._initImageSection();
+      this.element.qtip();
      },
 
     _addHelp : function(help){
@@ -380,7 +381,7 @@
         var $filter = $section.find('#'+filter['name']+'-filter');
         $filter.addClass('euca-table-filter');
           $filter.append(
-            $('<select>').attr('id',filter['name']+'-selector'));
+            $('<select>').attr('title', $.i18n.prop('launch_instance_'+filter['name']+'_select_tip')).attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
            
           for (i in filter.options){
@@ -498,7 +499,7 @@
       $list.append(
         $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-az').append(
           $('<label>').attr('for','launch-instance-type-az').text(launch_instance_type_option_az),
-          $('<select>').attr('id','launch-instance-type-az')));
+          $('<select>').attr('title', launch_instance_az_select_tip).attr('id','launch-instance-type-az')));
 
       $list.find('#launch-instance-type-num-instance').val('1');
       var $az = $list.find('#launch-instance-type-az');
@@ -664,7 +665,7 @@
       $keypair.append(
         $('<div>').addClass('form-row').addClass('clearfix').append(
           $('<label>').attr('for','launch-wizard-security-keypair-selector').text(launch_instance_security_keypair),
-          $('<select>').attr('id','launch-wizard-security-keypair-selector')),
+          $('<select>').attr('title', launch_instance_key_select_tip).attr('id','launch-wizard-security-keypair-selector')),
         $('<div>').addClass('form-row').addClass('clearfix').append(
           $('<label>').attr('for','launch-instance-create-keypair-link').text('Or.'),
           $('<a>').attr('id','launch-instance-create-keypair-link').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
@@ -686,7 +687,7 @@
       $sgroup.append(
         $('<div>').addClass('form-row').addClass('clearfix').append(
           $('<label>').attr('for','launch-wizard-security-sg-selector').text(launch_instance_security_sgroup),
-          $('<select>').attr('id','launch-wizard-security-sg-selector')),
+          $('<select>').attr('title', launch_instance_sgroup_select_tip).attr('id','launch-wizard-security-sg-selector')),
         $('<div>').addClass('form-row').addClass('clearfix').append(
           $('<label>').attr('for','launch-instance-create-sg-link').text('Or.'),
           $('<a>').attr('id', 'launch-instance-create-sg-link').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
@@ -769,13 +770,13 @@
       $kernel.append(
         $('<div>').addClass('form-row').addClass('clearfix').attr('id', 'launch-wizard-advanced-kernel').append(
           $('<label>').attr('for','launch-wizard-advanced-kernel-selector').text(launch_instance_advanced_kernel),
-          $('<select>').attr('id', 'launch-wizard-advanced-kernel-selector').change(function(e){
+          $('<select>').attr('title', launch_instance_kernel_select_tip).attr('id', 'launch-wizard-advanced-kernel-selector').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone());
           }).append($('<option>').val('default').text(launch_instance_advanced_usedefault))),
         $('<div>').addClass('form-row').addClass('clearfix').attr('id', 'launch-wizard-advanced-ramdisk').append(
           $('<label>').attr('for','launch-wizard-advanced-ramdisk-selector').text(launch_instance_advanced_ramdisk),
-          $('<select>').attr('id', 'launch-wizard-advanced-ramdisk-selector').change(function(e){
+          $('<select>').attr('title', launch_instance_ramdisk_select_tip).attr('id', 'launch-wizard-advanced-ramdisk-selector').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone());
           }).append($('<option>').val('default').text(launch_instance_advanced_usedefault))));
@@ -857,7 +858,7 @@
           if(snapshot['status'] === 'completed' && $.inArray(snapshot['id'], usedSnapshots) < 0)
             $snapshots.append($('<option>').attr('value',snapshot['id']).text(snapshot['id']));
         }); 
-        var $volume = $('<select>').attr('class','launch-wizard-advanced-storage-volume-selector');
+        var $volume = $('<select>').attr('title', launch_instance_volume_select_tip).attr('class','launch-wizard-advanced-storage-volume-selector');
         if(param && param['volume']){
           $volume.append($('<option>').attr('value', param['volume'][0]).text(param['volume'][1]));
           $volume.attr('disabled','disabled');
@@ -898,7 +899,7 @@
           $mapping.val(param['mapping']);
           $mapping.attr('disabled','disabled');
         } 
-        var $snapshot = $('<select>').attr('class', 'launch-wizard-advanced-storage-snapshot-input');
+        var $snapshot = $('<select>').attr('title',launch_instance_snapshot_select_tip).attr('class', 'launch-wizard-advanced-storage-snapshot-input');
         if(param && param['snapshot']){
           $snapshot.append($('<option>').attr('value',param['snapshot'][0]).text(param['snapshot'][1]));
           $snapshot.attr('disabled','disabled');
