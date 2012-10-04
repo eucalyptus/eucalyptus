@@ -96,7 +96,7 @@ sub old_euca_ipt() {
 
     @workingfiles = ("$rulefile.orig", "$rulefile.new");
 
-    open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or dodie ("iptables-save failed: $!\n");
+    open my $fh, '-|' or exec 'iptables-save', ("-c", "-t", "$table") or dodie ("iptables-save failed: $!\n");
     open(OFH, ">$rulefile.orig") or dodie ("cannot open $rulefile.orig");
     $outbuf = "";
     while(<$fh>) {
@@ -152,7 +152,7 @@ sub old_euca_ipt() {
     }
 
 
-    $rc = system("cat $rulefile.new | iptables-restore");
+    $rc = system("cat $rulefile.new | iptables-restore -c");
     if ($rc) {
 	print STDERR "iptables-restore failed: rulefile contents:\n";
 	system("cat $rulefile.new 1>&2");
@@ -235,7 +235,7 @@ sub new_euca_ipt() {
     }
     close(FH);
 
-    open(RFH, "iptables-save -t $table|") || dodie("iptables-save failed\n");
+    open(RFH, "iptables-save -c -t $table|") || dodie("iptables-save failed\n");
     while(<RFH>) {
 	chomp;
 	my $line = $_;
@@ -351,7 +351,7 @@ sub new_euca_ipt() {
     close(OFH);
 
     if ( -f "$ofile" ) {
-	$rc = system("cat $ofile | iptables-restore");
+	$rc = system("cat $ofile | iptables-restore -c");
 	if ($rc) {
 	    print STDERR "[EUCAERROR] euca_ipt: could not run iptables-restore\n";
 	    print STDERR "=====\n";
