@@ -277,7 +277,7 @@ public class SnapshotManager {
                                       final EventActionInfo<SnapShotAction> actionInfo ) {
     try {
       ListenerRegistry.getInstance().fireEvent(
-          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner().getUserName() ));
+          SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner().getUserId() ));
     } catch (final Exception e) {
       LOG.error(e, e);
     }
