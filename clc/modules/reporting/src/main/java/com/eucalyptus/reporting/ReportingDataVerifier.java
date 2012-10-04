@@ -765,16 +765,16 @@ public final class ReportingDataVerifier {
   }
 
   private static final class S3ObjectKey extends ResourceKey {
-    private final String bucketName;
-    private final String objectKey;
-    private final String objectVersion;
+    @Nonnull  private final String bucketName;
+    @Nonnull  private final String objectKey;
+    @Nullable private final String objectVersion;
 
-    private S3ObjectKey( final String bucketName,
-                         final String objectKey,
-                         final String objectVersion  ) {
+    private S3ObjectKey( @Nonnull  final String bucketName,
+                         @Nonnull  final String objectKey,
+                         @Nullable final String objectVersion  ) {
       this.bucketName = bucketName;
       this.objectKey = objectKey;
-      this.objectVersion = objectVersion; //TODO:STEVE: Will we store "null" or actually null?
+      this.objectVersion = objectVersion;
     }
 
     @SuppressWarnings( "RedundantIfStatement" )
