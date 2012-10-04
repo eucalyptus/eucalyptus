@@ -60,6 +60,7 @@
         <value name="Version" field="version" style="attribute" usage="optional"/>
         <value name="Subtype" field="subType" style="attribute" usage="optional"/>
         <value name="InstanceUuid" field="instanceUuid" style="attribute" usage="optional"/>
+        <value name="VolumeUuid" field="volumeUuid" style="attribute" usage="optional"/>
         <value name="Size" field="size" style="attribute" usage="optional"/>
         <value name="Scope" field="scope" style="attribute" usage="optional"/>
     </mapping>
