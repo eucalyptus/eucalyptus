@@ -70,6 +70,9 @@ BEGIN {
 
 use lib $script_dir;
 
+## Initialize global variables for handling faults
+$euca_component = "SC";
+
 require "iscsitarget_common.pl";
 
 $OPENSSL = untaint(`which openssl`);

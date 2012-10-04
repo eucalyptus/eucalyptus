@@ -71,6 +71,9 @@ $SK_HOSTNUMBER = "hostnumber";
 
 $DELIMITER = ",";
 
+$ERROR_CAUSE = "iscsiadm";
+$ERROR_MESSAGE = "iSCSI driver not found";
+
 sub parse_devstring {
   my ($dev_string) = @_;
   return split($DELIMITER, $dev_string);
@@ -87,10 +90,27 @@ sub run_cmd {
   my ($print_on_error, $exit_on_error, $command) = @_;
   my @outlines = qx($command 2>&1);
   if ($? != 0) {
+    check_and_log_fault($command, @outlines);
     $print_on_error and print STDERR "Failed to run '$command': @outlines";
     $exit_on_error and do_exit(1);
   }
   return @outlines;
+}
+
+sub check_and_log_fault {
+  my ($command, @output) = @_;
+
+  if (!is_null_or_empty($euca_home) && !is_null_or_empty($euca_component) && ($command =~ /\Q$ERROR_CAUSE\E/i)) {
+    my $FAULT_GEN_CMD = $euca_home."/usr/sbin/euca-generate-fault -c ".lc($euca_component)." 2001 component ".$euca_component;
+    
+    foreach (@output) {
+      chomp;
+      if(/\Q$ERROR_MESSAGE\E/i) {
+        qx($FAULT_GEN_CMD 2>&1);
+        last;
+      }
+    }
+  } 
 }
 
 sub do_exit {

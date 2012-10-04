@@ -70,6 +70,9 @@ BEGIN {
 
 use lib $script_dir;
 
+## Initialize global variables for handling faults
+$euca_component = "NC";
+
 require "iscsitarget_common.pl";
 require "connect_iscsitarget_main.pl";
 ##################################################################
