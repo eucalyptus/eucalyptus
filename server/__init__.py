@@ -8,6 +8,7 @@ import sys
 import tornado.web
 import traceback
 import socket
+import logging
 
 from token import TokenAuthenticator
 
@@ -182,6 +183,12 @@ class RootHandler(BaseHandler):
                     except Exception, err:
                         traceback.print_exc(file=sys.stdout)
                         raise EuiException(500, 'can\'t retrieve session info')
+                elif action == 'logout':
+                  try:
+                      response = LogoutProcessor.post(self)
+                  except Exception, err:
+                      traceback.print_exc(file=sys.stdout)
+                      raise EuiException(500, 'unknown error occured')
                 else:
                     raise EuiException(500, 'unknown action')
         except EuiException, err:
@@ -210,6 +217,17 @@ class ProxyProcessor():
     @staticmethod
     def post(web_req):
         raise NotImplementedError("not supported")
+
+class LogoutProcessor(ProxyProcessor):
+    @staticmethod
+    def post(web_req):
+        sid = web_req.get_cookie("session-id")
+        if not sid or sid not in sessions:
+            raise Exception("Session id not found")
+        del sessions[sid] # clean up session info
+        logging.info("Cleared session (%s)" % sid);
+        return LogoutResponse();
+
 
 class LoginProcessor(ProxyProcessor):
     @staticmethod
@@ -285,6 +303,12 @@ class ProxyResponse(object):
 
     def get_response(self):
         raise NotImplementedError( "Should have implemented this" )
+
+class LogoutResponse(ProxyResponse):
+    def __init__(self):
+        pass
+    def get_response(self):
+        return {'result': 'success'}
 
 class LoginResponse(ProxyResponse):
     def __init__(self, session):

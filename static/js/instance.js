@@ -857,7 +857,8 @@
 
       var $header = thisObj.launchMoreDialog.find('#launch-more-summary-header');
       $header.children().detach();
-      $header.append($('<span>').html($.i18n.prop('instance_dialog_launch_more_summary', instance.image_id)));
+      $header.append($('<span>').html(instance.image_id));
+      //$.i18n.prop('instance_dialog_launch_more_summary', instance.image_id)));
 
       $header = thisObj.launchMoreDialog.find('#launch-wizard-advanced-header');
       $header.children().detach();

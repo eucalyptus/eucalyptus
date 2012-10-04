@@ -1203,7 +1203,8 @@
 
       if(param['zone'].toLowerCase() !== 'any')
         reqParam.push({name: 'Placement.AvailabilityZone', value: param['zone']});
-      reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
+      //reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
+      reqParam.push({name: 'SecurityGroup.1', value: param['sgroup']});
       if (param['keypair'] !== 'none')
         reqParam.push({name: 'KeyName', value: param['keypair']});
 
@@ -1257,6 +1258,7 @@
             notifySuccess(null, $.i18n.prop('instance_run_success', instances));
             //TODO: move to instance page?
             var $container = $('html body').find(DOM_BINDING['main']);
+            $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'instance'});
             $container.instance('glowNewInstance', inst_ids);
           } else {
