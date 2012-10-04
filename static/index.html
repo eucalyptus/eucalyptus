@@ -911,6 +911,33 @@
 
         </div>
       </script>
+
+      <script id="snapshotRegDlgTmpl" type="text/x-jsrender">
+        <div id="snapshot-euca-dialog-wrapper">
+          <div id="snapshot-register-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: snapshot_register_dialog_text }}
+              <div class="form-row">
+                <label for="snapshot-register-image-name" class="required-label">{{!: snapshot_register_dialog_image_name }}</label>
+                <input type="text" id="snapshot-register-image-name" class="required medium-textinput"/>
+              </div>
+              <div class="form-row">
+                <label for="snapshot-register-image-desc">{{!: snapshot_register_dialog_image_desc }}</label>
+                <textarea id="snapshot-register-image-desc" class="description" />
+              </div>
+            </div>
+          </div>
+          <div id="snapshot-register-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_register_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <!-- END Snapshot dialog templates -->
 
       <!-- IPs table -->

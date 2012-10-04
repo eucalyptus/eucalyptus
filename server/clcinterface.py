@@ -189,3 +189,6 @@ class ClcInterface(object):
     # returns True if successful
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         raise NotImplementedError("Are you sure you're using the right class?")
+    
+    def register_bfebs(self, snapshot_id, name, description, is_windows):
+        raise NotImplementedError("Are you sure you're using the right class?")

@@ -301,7 +301,16 @@ class ComputeHandler(server.BaseHandler):
             snapshotid = self.get_argument('SnapshotId')
             attribute = self.get_argument('Attribute')
             return clc.reset_snapshot_attribute(snapshotid, attribute)
-
+        elif action == 'RegisterSnapshot':
+            try:
+                snapshotid = self.get_argument('SnapshotId')
+                name = self.get_argument('Name')
+                desc = self.get_argument('Description', None)
+                windows = self.get_argument('Windows', False)
+                result = clc.register_bfebs(snapshotid, name, desc, windows)
+                return result
+            except Exception, err:
+                traceback.print_exc(file=sys.stdout)
     ##
     # This is the main entry point for API calls for EC2 from the browser
     # other calls are delegated to handler methods based on resource type

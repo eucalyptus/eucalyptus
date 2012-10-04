@@ -205,27 +205,35 @@ function allocateIP() {
 }
 
 function logout(){
-  $.cookie('session-id',''); 
-  var hostname = null;
-  if (location.href && location.href.indexOf('hostname=') >= 0){
-    hostname = location.href.substring(location.href.indexOf('hostname='));
-    hostname = hostname.replace(/#.+?$/,'');
-    hostname = hostname.replace('hostname=','');
-    hostname = hostname.replace('#','');
-    hostname = hostname.replace('/','');
-  }
-  if(!hostname)
-    hostname = location.hostname;
-  var href = '';
-  if(location.port && location.port > 0)
-    href = location.protocol + '//' + hostname + ':' + location.port + '/';
-  else
-    href = location.protocol + '//' + hostname + '/'; 
-  location.href=href;
+  $.when( // this is to synchronize a chain of ajax calls 
+    $.ajax({
+      type:"POST",
+      data:"action=logout&_xsrf="+$.cookie('_xsrf'),
+      dataType:"json",
+      async:"false", // async option deprecated as of jQuery 1.8
+    })).always(function(out){
+      $.cookie('session-id',''); 
+      var hostname = null;
+      if (location.href && location.href.indexOf('hostname=') >= 0){
+        hostname = location.href.substring(location.href.indexOf('hostname='));
+        hostname = hostname.replace(/#.+?$/,'');
+        hostname = hostname.replace('hostname=','');
+        hostname = hostname.replace('#','');
+        hostname = hostname.replace('/','');
+      }
+      if(!hostname)
+        hostname = location.hostname;
+      var href = '';
+      if(location.port && location.port > 0)
+        href = location.protocol + '//' + hostname + ':' + location.port + '/';
+      else
+        href = location.protocol + '//' + hostname + '/'; 
+      location.href=href;
+    });
 }
 
 function formatDateTime(data) {
- d = new moment(data);
+ var d = new moment(data);
  return d.format(TIME_FORMAT);
 }
 

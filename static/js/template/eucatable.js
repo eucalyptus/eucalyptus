@@ -90,7 +90,11 @@
         $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
         if( $emptyDataTd ){
           var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
-          $createNew.click( function() { thisObj.options.create_new_function.call(); });
+          $createNew.click( function() { 
+            thisObj.options.create_new_function.call(); 
+            $('html body').trigger('click', 'create-new');
+            return false;
+          });
           text = $emptyDataTd.html();
           $emptyDataTd.html('');
           $emptyDataTd.append($.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural), '&nbsp;', $createNew);
@@ -348,6 +352,8 @@
       // add action to create new
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
+        $('html body').trigger('click', 'create-new');
+        return false;
       });
       return $tableTop;
     },

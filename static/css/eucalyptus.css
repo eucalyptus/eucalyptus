@@ -549,6 +549,7 @@ ol li {
   color: #02405f;
 }
 
+
 .form-row label.long-label {
   width: 195px;
 }
@@ -1113,6 +1114,10 @@ tr.expanded td {
   font-weight: bold;
   font-size: 12px;
   font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.sgroup-expanded-rule .expanded-section-label {
+  float: left;
 }
 
 .expanded-section-content {
@@ -2360,6 +2365,7 @@ span.on-error {
 
 .launch-more-summary-section {
   float : left;
+  width : 150px;
   margin: 0 20px;
 }
 
@@ -2374,6 +2380,11 @@ span.on-error {
 
 input#launch-more-sgroup-input {
     width: 150px;
+}
+
+.launch-more-summary-section .form-row label {
+  text-align: left;
+  width: 80px;
 }
 
 .field-error {

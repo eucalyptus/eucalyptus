@@ -350,3 +350,6 @@ class MockClcInterface(ClcInterface):
     # returns True if successful
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         pass
+    
+    def register_bfebs(self, snapshot_id, name, description, is_windows):
+        pass

@@ -31,7 +31,7 @@
       var hash = location.hash;
       if (hash)
         hash = hash.replace(/^#/, '');
-      if (hash != '')
+      if (hash !== '')
         this.updateSelected(hash);
       else
         this.updateSelected(this.options.default_selected);
@@ -39,7 +39,7 @@
     },
 
     _create : function() {
-      thisObj = this;
+      var thisObj = this;
       // about cloud dialog
       $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
@@ -56,6 +56,7 @@
        });
       this._aboutDialog.find('#version').html(getProxyVersion());
       this._aboutDialog.find('#admin-url').attr('href', getProxyAdminURL());
+
       $(window).hashchange( function(){
         thisObj._windowsHashChanged();
       });
@@ -66,9 +67,10 @@
 
     _windowsHashChanged : function() {
       var hash = location.hash;
-      if (hash)
+      if (hash){
         hash = hash.replace(/^#/, '');
-      if (this._curSelected != hash && hash != '')
+      }
+      if (this._curSelected !== hash && hash !== '')
        this.updateSelected(hash);
     },
 
@@ -78,7 +80,7 @@
     },
 
     updateSelected : function (selected, filter, options) {
-      thisObj = this;
+      var thisObj = this;
       if(this._curSelected === selected){
         //$('html body').trigger('click'); // Manage resources --> uncomment this line
         return;
@@ -86,12 +88,12 @@
 
       if(this._curSelected !== null){
         var $curInstance = this.element.data(this._curSelected);
-        if($curInstance !== undefined && options != KEEP_VIEW){
+        if($curInstance !== undefined && options !== KEEP_VIEW){
           $curInstance.close();
         }
       }
       var $container = $('html body').find(DOM_BINDING['main']);
-      if (options != KEEP_VIEW)
+      if (options !== KEEP_VIEW)
         $container.children().detach();
      // $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
      // Manage resources-->uncomment above
@@ -144,7 +146,7 @@
         default:
           $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
-      if (options != KEEP_VIEW) {
+      if (options !== KEEP_VIEW) {
         this._curSelected = selected;
         location.hash = selected;
       }

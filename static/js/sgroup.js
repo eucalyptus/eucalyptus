@@ -799,15 +799,16 @@
           break;
         }
       }
-      if(!group)
-        return null;
-      var $wrapper = null;
-      if(group.rules && group.rules.length > 0){
-        $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
+      if(!group){
+        return $('<div>').append(
+                 $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
+                  $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title)));
+      }
+      var $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
           $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title), 
-          $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-            $('<ul>').addClass('sgroup-expanded').addClass('clearfix')));
-        $ul = $wrapper.find('ul');
+          $('<div>').addClass('expanded-section-content').addClass('clearfix'));
+      if(group.rules && group.rules.length > 0){
+        var $list = $wrapper.find('div').last();
         $.each(group.rules, function (idx, rule){
           var protocol = rule['ip_protocol'];
           var port = rule['from_port'];
@@ -835,20 +836,19 @@
           });
           src = src.join(', '); 
  
-          $ul.append(
-            $('<li>').append(
+          $list.append(
+            $('<div>').addClass('sgroup-expanded-rule').append(
               $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_rule),
-              $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
-                $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
-                  $('<li>').append( 
-                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),
-                    $('<div>').addClass('expanded-value').text(protocol)),
-                  $('<li>').append( 
-                    $('<div>').addClass('expanded-title').text(portOrTypeTitle),
-                    $('<div>').addClass('expanded-value').text(portOrType)),
-                  $('<li>').append( 
-                    $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
-                    $('<div>').addClass('expanded-value').text(src))))));
+              $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
+                $('<li>').append( 
+                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),
+                  $('<div>').addClass('expanded-value').text(protocol)),
+                $('<li>').append( 
+                  $('<div>').addClass('expanded-title').text(portOrTypeTitle),
+                  $('<div>').addClass('expanded-value').text(portOrType)),
+                $('<li>').append( 
+                  $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
+                  $('<div>').addClass('expanded-value').text(src)))));
         });
       }
       return $('<div>').append($wrapper);

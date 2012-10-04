@@ -210,16 +210,17 @@
       }));
       var $securityBtn = $launcher.find('#launch-wizard-buttons-security');
       $securityBtn.append(
-        $('<ul>').append(
-          $('<li>').append($('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
-        })),
-          $('<li>').append($('<span>').text('Or:'), $('<a>').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
+        $('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
+        }),
+        $('<div>').addClass('form-row').addClass('clearfix').append(  
+          $('<label>').attr('for','launch-wizard-buttons-security-advanced-link').text('Or:'), 
+          $('<a>').attr('id','launch-wizard-buttons-security-advanced-link').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
             var advSection = $launcher.find('#launch-wizard-advanced-contents');
             thisObj._selectedSection.slideToggle('fast');
             advSection.slideToggle('fast');
             thisObj._selectedSection = advSection;
             thisObj._initAdvancedSection();
-        })))); 
+          }))); 
       var $advancedBtn = $launcher.find('#launch-wizard-buttons-advanced');
       $advancedBtn.append(
         $('<button>').attr('id', 'launch-wizard-buttons-advanced-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
@@ -414,6 +415,7 @@
       thisObj._selectedSection = $content;
     },
     _initImageSection : function(){ 
+      var thisObj = this;
       this._enableImageLink();
       thisObj.element.find('#launch-wizard-image-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
@@ -484,15 +486,19 @@
                    $('<div>').addClass('wizard-section-content').append($list),
                    $legend); 
 
-      $list = $('<ul>').addClass('launch-wizard-type-option'); //.html(launch_instance_type_option_header);
+      var $list = $('<div>').addClass('launch-wizard-type-option'); //.html(launch_instance_type_option_header);
       $list.append(
-        $('<li>').append(
-          launch_instance_type_option_numinstance,$('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
+        $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-num-instance').append(
+          $('<label>').attr('for','launch-instance-type-num-instance').text(launch_instance_type_option_numinstance),
+          $('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
             numInstances = $(this).val(); 
             instanceChanged = true;
             thisObj._setSummary('type', summarize());
-           })));
-      $list.append($('<li>').append(launch_instance_type_option_az,$('<select>').attr('id','launch-instance-type-az')));
+         })));
+      $list.append(
+        $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-az').append(
+          $('<label>').attr('for','launch-instance-type-az').text(launch_instance_type_option_az),
+          $('<select>').attr('id','launch-instance-type-az')));
 
       $list.find('#launch-instance-type-num-instance').val('1');
       var $az = $list.find('#launch-instance-type-az');
@@ -508,8 +514,8 @@
         $az.append($('<option>').attr('value', azName).text(azName));
       }
 
-      $option.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_option_header),
-                     $('<div>').addClass('wizard-section-content').append($list));
+      $option.append($('<span>').html(launch_instance_type_option_header),
+                     $list);
 
       $section.find('#launch-wizard-buttons-type-next').click(function(e) {
         selectedZone = $az.val();
@@ -559,9 +565,13 @@
         var selectedSg = $section.find('select#launch-wizard-security-sg-selector').val();
         thisObj.launchParam['keypair'] = selectedKp;
         thisObj.launchParam['sgroup'] = selectedSg;
-        return $('<div>').append(
-          $('<div>').attr('id','summary-security-keypair').text(launch_instance_summary_keypair+' '+selectedKp),
-          $('<div>').attr('id','summary-security-sg').text(launch_instance_summary_sg+' '+selectedSg));
+        return $('<div>').addClass('summary').append(
+          $('<div>').attr('id','summary-security-keypair').append(
+            $('<div>').text(launch_instance_summary_keypair),
+            $('<span>').text(selectedKp)),
+          $('<div>').attr('id','summary-security-sg').append(
+            $('<div>').text(launch_instance_summary_sg),
+            $('<span>').text(selectedSg)));
       }
       var populateKeypair = function(){
         var $kp_selector = $keypair.find('select');
@@ -577,7 +587,7 @@
         $kp_selector.append($('<option>').attr('value', 'none').text(launch_instance_security_keypair_none));
         $kp_selector.change(function(e){
           var $summary = summarize(); 
-          thisObj._setSummary('security', $summary.clone().children()); 
+          thisObj._setSummary('security', $summary.clone());
         });
       }
 
@@ -647,62 +657,64 @@
             });
           } 
           var $summary = summarize(); 
-          thisObj._setSummary('security', $summary.clone().children()); 
+          thisObj._setSummary('security', $summary.clone());
         });
       }
 
       $keypair.append(
-        $('<div>').append(
-          $('<span>').text(launch_instance_security_keypair),
+        $('<div>').addClass('form-row').addClass('clearfix').append(
+          $('<label>').attr('for','launch-wizard-security-keypair-selector').text(launch_instance_security_keypair),
           $('<select>').attr('id','launch-wizard-security-keypair-selector')),
-        $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
-          if(thisObj._keypairCallback)
-            cancelRepeat(thisObj._keypairCallback);
-
-          addKeypair( function(){ 
-            var numKeypairs = $section.find('#launch-wizard-security-keypair-selector').find('option').length;
-            refresh('keypair'); 
-            thisObj._keypairCallback = runRepeat(function(){
-              populateKeypair(); 
-              if($section.find('#launch-wizard-security-keypair-selector').find('option').length  > numKeypairs){
-                cancelRepeat(thisObj._keypairCallback);
-              }
-            }, 2000); 
-          });
+        $('<div>').addClass('form-row').addClass('clearfix').append(
+          $('<label>').attr('for','launch-instance-create-keypair-link').text('Or.'),
+          $('<a>').attr('id','launch-instance-create-keypair-link').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
+            if(thisObj._keypairCallback)
+              cancelRepeat(thisObj._keypairCallback);
+            addKeypair( function(){ 
+              var numKeypairs = $section.find('#launch-wizard-security-keypair-selector').find('option').length;
+              refresh('keypair'); 
+              thisObj._keypairCallback = runRepeat(function(){
+                populateKeypair(); 
+                if($section.find('#launch-wizard-security-keypair-selector').find('option').length  > numKeypairs){
+                  cancelRepeat(thisObj._keypairCallback);
+                }
+              }, 2000); 
+            });
           // TODO: add callback to re-populate the select
         })));
 
       $sgroup.append(
-        $('<div>').append(
-          $('<span>').text(launch_instance_security_sgroup),
+        $('<div>').addClass('form-row').addClass('clearfix').append(
+          $('<label>').attr('for','launch-wizard-security-sg-selector').text(launch_instance_security_sgroup),
           $('<select>').attr('id','launch-wizard-security-sg-selector')),
-        $('<div>').append('Or. ',$('<a>').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
-          if(thisObj._sgCallback)
-            cancelRepeat(thisObj._sgCallback);
-
-          addGroup( function() {
-            var numGroups = $section.find('#launch-wizard-security-sg-selector').find('option').length;
-            refresh('sgroup');
-            thisObj._sgCallback = runRepeat(function(){ 
-              populateSGroup();
-              if($section.find('#launch-wizard-security-sg-selector').find('option').length > numGroups){
-                cancelRepeat(thisObj._sgCallback);
-              }  
-           }, 2000);
-          });
-        })),
+        $('<div>').addClass('form-row').addClass('clearfix').append(
+          $('<label>').attr('for','launch-instance-create-sg-link').text('Or.'),
+          $('<a>').attr('id', 'launch-instance-create-sg-link').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
+            if(thisObj._sgCallback)
+              cancelRepeat(thisObj._sgCallback);
+            addGroup( function() {
+              var numGroups = $section.find('#launch-wizard-security-sg-selector').find('option').length;
+              refresh('sgroup');
+              thisObj._sgCallback = runRepeat(function(){ 
+                populateSGroup();
+                if($section.find('#launch-wizard-security-sg-selector').find('option').length > numGroups){
+                  cancelRepeat(thisObj._sgCallback);
+                }  
+             }, 2000);
+            });
+          })),
         $('<div>').attr('id','launch-wizard-security-sg-detail'));
      
       populateKeypair();
       populateSGroup();
 
-      $section.find('#launch-wizard-buttons-security').find('ul a').click(function(e) { // proceed to advanced
+      $section.find('#launch-wizard-buttons-security').find('a#launch-wizard-buttons-security-advanced-link').click(function(e) { // proceed to advanced
         var $summary = summarize(); 
-        thisObj._setSummary('security', $summary.clone().children());  
+        thisObj._setSummary('security', $summary.clone());
       });
-      $section.find('#launch-wizard-buttons-security').find('ul button').click(function(e){
+      $section.find('#launch-wizard-buttons-security').find('button#launch-wizard-buttons-security-launch').click(function(e){
         var $summary = summarize(); 
-        thisObj._setSummary('security', $summary.clone().children()); 
+        thisObj._setSummary('security', $summary.clone());
         thisObj.launch();  /// launch button
       });
 
@@ -712,7 +724,7 @@
           var sgroup = thisObj.options['security']['sgroup'];
           $section.find('#launch-wizard-security-keypair-selector').val(keypair);
           $section.find('#launch-wizard-security-sg-selector').val(sgroup);
-          $section.find('#launch-wizard-buttons-security').find('ul a').trigger('click');
+          $section.find('#launch-wizard-buttons-security').find('a#launch-wizard-buttons-security-advanced-link').trigger('click');
         }, 200);
       }
     },
@@ -740,38 +752,34 @@
       var $storage = $content.find('#launch-wizard-advanced-storage');
 
       $userdata.append(
-        $('<div>').append(
-          $('<span>').text(launch_instance_advanced_userdata),
-        $('<div>').append(
+        $('<div>').addClass('form-row').addClass('clearfix').append(
+          $('<label>').attr('for','launch-wizard-advanced-input-userdata').text(launch_instance_advanced_userdata),
           $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title','Enter userdata').addClass('description').change(function(e){
             var $summary = summarize(); 
-            thisObj._setSummary('advanced', $summary.clone().children()); 
+            thisObj._setSummary('advanced', $summary.clone());
           })),
-        $('<div>').append('Or. ').append(
-          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file'))));
+        $('<div>').addClass('form-row').addClass('clearfix').append(
+          $('<label>').attr('for','launch-wizard-advanced-input-userfile').text('Or.'),
+          $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
       $input.change(function(e){
           thisObj.launchParam['data_file'] = this.files;
       });
  
       $kernel.append(
-        $('<div>').attr('id', 'launch-wizard-advanced-kernel').append(
-          $('<span>').text(launch_instance_advanced_kernel),
+        $('<div>').addClass('form-row').addClass('clearfix').attr('id', 'launch-wizard-advanced-kernel').append(
+          $('<label>').attr('for','launch-wizard-advanced-kernel-selector').text(launch_instance_advanced_kernel),
           $('<select>').attr('id', 'launch-wizard-advanced-kernel-selector').change(function(e){
             var $summary = summarize(); 
-            thisObj._setSummary('advanced', $summary.clone().children()); 
-          }).append(
-            $('<option>').val('default').text(launch_instance_advanced_usedefault)) 
-        ),
-        $('<div>').attr('id', 'launch-wizard-advanced-ramdisk').append(
-          $('<span>').text(launch_instance_advanced_ramdisk),
+            thisObj._setSummary('advanced', $summary.clone());
+          }).append($('<option>').val('default').text(launch_instance_advanced_usedefault))),
+        $('<div>').addClass('form-row').addClass('clearfix').attr('id', 'launch-wizard-advanced-ramdisk').append(
+          $('<label>').attr('for','launch-wizard-advanced-ramdisk-selector').text(launch_instance_advanced_ramdisk),
           $('<select>').attr('id', 'launch-wizard-advanced-ramdisk-selector').change(function(e){
             var $summary = summarize(); 
-            thisObj._setSummary('advanced', $summary.clone().children()); 
-          }).append(
-            $('<option>').val('default').text(launch_instance_advanced_usedefault)) 
-        )
-      );
+            thisObj._setSummary('advanced', $summary.clone());
+          }).append($('<option>').val('default').text(launch_instance_advanced_usedefault))));
+
       var result = describe('image');
       var $kernelSelector = $kernel.find('#launch-wizard-advanced-kernel-selector');
       var $ramdiskSelector = $kernel.find('#launch-wizard-advanced-ramdisk-selector');
@@ -785,13 +793,13 @@
         } 
       });
 
-      $network.append(
-        $('<span>').text(launch_instance_advanced_network),
+      $network.addClass('form-row').addClass('clearfix').append(
+        $('<label>').attr('for','launch-wizard-advanced-input-network').text(launch_instance_advanced_network),
         $('<input>').attr('id','launch-wizard-advanced-input-network').attr('type','checkbox').change(function(e){
           var $summary = summarize(); 
-          thisObj._setSummary('advanced', $summary.clone().children()); 
+          thisObj._setSummary('advanced', $summary.clone());
         }),
-        $('<span>').text(launch_instance_advanced_network_desc))
+        $('<label>').attr('for', 'launch-wizard-advanced-input-network').text(launch_instance_advanced_network_desc));
       
       var usedSnapshots = []; 
       var usedVolumes = [];
@@ -958,7 +966,7 @@
           var $tr = addNewRow();
           $tbody.append($tr);
           var $summary = summarize(); 
-          thisObj._setSummary('advanced', $summary.clone().children()); 
+          thisObj._setSummary('advanced', $summary.clone());
         });
 
         var $removeBtn = $('<input>').attr('class', 'launch-wizard-advanced-storage-remove-input').attr('type','button').val(launch_instance_advanced_btn_remove);
@@ -980,7 +988,7 @@
           if($rows.length > 1) 
             $rows.last().find('.launch-wizard-advanced-storage-remove-input').show();  
           var $summary = summarize(); 
-          thisObj._setSummary('advanced', $summary.clone().children()); 
+          thisObj._setSummary('advanced', $summary.clone()); 
         });
         var $tr = $('<tr>').append(
           $('<td>').append($volume),
@@ -1083,17 +1091,25 @@
           } 
         });
  
-        var $wrapper = $('<div>').append($('<span>').text(launch_instance_summary_advanced));
+        var $wrapper = $('<div>').addClass('summary').append(
+          $('<div>').text(launch_instance_summary_advanced),
+          $('<ul>'));
+        var $ul = $wrapper.find('ul');
         if(dataAdded)
-          $wrapper.append($('<div>').attr('id','summary-advanced-userdata').text(launch_instance_summary_advanced_userdata));
+          $ul.append(
+            $('<li>').append($('<span>').attr('id','summary-advanced-userdata').text(launch_instance_summary_advanced_userdata)));
         if(kernelChanged)
-          $wrapper.append($('<div>').attr('id','summary-advanced-kernel').text(launch_instance_summary_advanced_kernel));
+          $ul.append(
+            $('<li>').append($('<span>').attr('id','summary-advanced-kernel').text(launch_instance_summary_advanced_kernel)));
         if(ramdiskChanged)
-          $wrapper.append($('<div>').attr('id','summary-advanced-ramdisk').text(launch_instance_summary_advanced_ramdisk));
+          $ul.append(
+            $('<li>').append($('<span>').attr('id','summary-advanced-ramdisk').text(launch_instance_summary_advanced_ramdisk)));
         if(privateAddressing)
-          $wrapper.append($('<div>').attr('id','summary-advanced-addressing').text(launch_instance_summary_advanced_addressing));
+          $ul.append(
+            $('<li>').append($('<span>').attr('id','summary-advanced-addressing').text(launch_instance_summary_advanced_addressing)));
         if(storageConfigured)
-          $wrapper.append($('<div>').attr('id','summary-advanced-storage').text(launch_instance_summary_advanced_storage));
+          $ul.append(
+            $('<li>').append($('<span>').attr('id','summary-advanced-storage').text(launch_instance_summary_advanced_storage)));
         return $wrapper;
       }
 
@@ -1103,7 +1119,7 @@
           return false;
 
         var $summary = summarize(); 
-        thisObj._setSummary('advanced', $summary.clone().children()); 
+        thisObj._setSummary('advanced', $summary.clone()); 
         thisObj.launch();
         // and launch
       });
@@ -1187,7 +1203,8 @@
 
       if(param['zone'].toLowerCase() !== 'any')
         reqParam.push({name: 'Placement.AvailabilityZone', value: param['zone']});
-      reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
+      //reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
+      reqParam.push({name: 'SecurityGroup.1', value: param['sgroup']});
       if (param['keypair'] !== 'none')
         reqParam.push({name: 'KeyName', value: param['keypair']});
 
@@ -1241,6 +1258,7 @@
             notifySuccess(null, $.i18n.prop('instance_run_success', instances));
             //TODO: move to instance page?
             var $container = $('html body').find(DOM_BINDING['main']);
+            $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'instance'});
             $container.instance('glowNewInstance', inst_ids);
           } else {

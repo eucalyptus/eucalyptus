@@ -68,6 +68,7 @@
                             $('<a>').attr('href','#').text(submenu.text).click(
                               function (evt, src){
                                 if(src!=='triggered')
+                                  //location.hash = submenu.key;
                                   header._trigger("select", evt, {selected:submenu.key}); 
                               })));
           });
@@ -92,7 +93,10 @@
           $menu.find('a').click( 
             function (evt, src) {
               if(src!=='triggered') {
+                //  location.hash = menu.key;
                 header._trigger("select", evt, {selected:menu.key});
+                $('html body').trigger('click', 'navigator:'+menu.key);
+                return false;
               }
             }
           );

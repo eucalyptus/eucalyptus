@@ -90,7 +90,8 @@ var help_snapshot = {
   },
   landing_content: "",
   dialog_delete_content: "",
-  dialog_create_content: ""
+  dialog_create_content: "",
+  dialog_register_content: "",
 };
 
 var help_eip = {
