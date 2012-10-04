@@ -148,9 +148,10 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class RootHandler(BaseHandler):
     def get(self, path):
-        if config.has_option('server', 'staticpath'):
-            path = os.path.join(config.get('server', 'staticpath'), "index.html")
-        else:
+        try:
+            path = os.path.join(config.get('paths', 'staticpath'), "index.html")
+        except ConfigParser.Error:
+            print "Caught exception"
             path = '../static/index.html'
         self.render(path)
 
