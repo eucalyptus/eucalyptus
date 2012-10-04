@@ -76,6 +76,9 @@
                if(thisObj.getStatus() !== 'online'){
                  logout();
                }
+               if (jqXHR.status == 504) {
+                 notifyError($.i18n.prop('data_load_timeout'));
+               }
             }
           }});
         }, repeat: null};
