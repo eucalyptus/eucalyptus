@@ -31,18 +31,22 @@ class DeregisterRequest(AWSQueryRequest):
     ServiceName = ''
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Deregister a %s' % ServiceName
+
+    @property
+    def Description(self):
+        return 'De-register a ' + self.ServiceName
+
     Params = [Param(name='Partition',
                     short_name='P',
                     long_name='partition',
                     ptype='string',
                     optional=True,
-                    doc='Partition for the %s' % ServiceName)]
+                    doc='partition in which the component participates')]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
-                  doc='The %s name' % ServiceName)]
+                  doc='component name')]
 
     def get_connection(self, **args):
         if self.connection is None:

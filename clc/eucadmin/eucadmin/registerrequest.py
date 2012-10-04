@@ -62,26 +62,26 @@ class RegisterRequest(AWSQueryRequest):
                     long_name='partition',
                     ptype='string',
                     optional=False,
-                    doc='Partition name for the service'),
+                    doc='partition the component should join'),
               Param(name='Host',
                     short_name='H',
                     long_name='host',
                     ptype='string',
                     optional=False,
-                    doc='Hostname of the service'),
+                    doc="new component's IP address"),
               Param(name='Port',
                     short_name='p',
                     long_name='port',
                     ptype='integer',
                     default=DefaultPort,
                     optional=True,
-                    doc='Port for the service (Default: %d)' % DefaultPort)
+                    doc="new component's port number (default: %d)" % DefaultPort)
               ]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
-                  doc='The name of the service')]
+                  doc='component name (must be unique)')]
 
     def __init__(self, **args):
         self._update_port()
@@ -95,7 +95,7 @@ class RegisterRequest(AWSQueryRequest):
                 break
         if port_param:
             port_param.default = self.DefaultPort
-            port_param.doc = 'Port for the service (default=%d)' % self.DefaultPort
+            port_param.doc = "new component's port number (default: %d)" % self.DefaultPort
 
     def get_connection(self, **args):
         if self.connection is None:
