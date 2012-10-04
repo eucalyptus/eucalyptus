@@ -838,7 +838,7 @@
  
           $list.append(
             $('<div>').addClass('sgroup-expanded-rule').append(
-              $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_rule),
+              $('<div>').addClass('rule-label').text(sgroup_table_expanded_rule),
               $('<ul>').addClass('rule-expanded').addClass('clearfix').append(
                 $('<li>').append( 
                   $('<div>').addClass('expanded-title').text(sgroup_table_expanded_protocol),

@@ -1093,7 +1093,7 @@ tr.glow td.sorting_3 {
 
 .dataTables_wrapper .twist.expanded {
    background-color: transparent;
-   background-position: left -644px;
+   background-position: left -645px;
 }
 
 tr.expanded td {
@@ -1108,7 +1108,8 @@ tr.expanded td {
   background: transparent url(../images/expanded-row-shadows.png) no-repeat right bottom;
 }
 
-.expanded-section-label {
+.expanded-section-label,
+.rule-label {
   padding: 8px 3px 2px;
   color: #02405f;
   font-weight: bold;
@@ -1116,12 +1117,19 @@ tr.expanded td {
   font-family: 'PlayRegular', Arial, sans-serif;
 }
 
-.sgroup-expanded-rule .expanded-section-label {
+.rule-label {
   float: left;
+  padding: 0 3px;
+  width: 60px;
 }
 
 .expanded-section-content {
   float: left;
+}
+
+.sgroup-expanded-rule {
+  float: left;
+  width: 460px;
 }
 
 .expanded ul {
@@ -1143,6 +1151,10 @@ tr.expanded td {
 
 ul.volume-expanded li:last-child {
   width: 200px;
+}
+
+ul.rule-expanded li:last-child {
+  width: 250px;
 }
 
 .expanded-title {
@@ -2328,33 +2340,23 @@ span.on-error {
 }
 
 .launch-wizard-section-header a {
+  display: inline-block;
   outline: 0 none;
   color: #73a434;
-  display: inline-block;
   text-decoration: none;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -616px;
-  padding-left: 20px;
-  position: relative;
-  left: -10px;
 }
 
 .launch-wizard-section-header.expanded a {
-  background-image: none;
   color: #02405F;
-  padding-left: 10px; 
-}
-
-.launch-wizard-section-header span {
-  padding-left: 10px;
 }
 
 .launch-wizard-pointer {
-  background: transparent url(../images/wizard-pointer.png) no-repeat left top;
-  height: 30px;
-  width: 19px;
   position: absolute;
-  right: -19px;
   top: 85px;
+  right: -19px;
+  width: 19px;
+  height: 30px;
+  background: transparent url(../images/wizard-pointer.png) no-repeat left top;
 }
 
 /* ======= Instances - Launch More dialog ======= */
