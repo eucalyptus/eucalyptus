@@ -1057,7 +1057,7 @@ public class OverlayManager implements LogicalStorageManager {
 						LOG.error(e);
 						return null;
 					}
-					return StorageProperties.STORAGE_HOST + "," + storeName + "," + encryptedPassword;
+					return ",,," + encryptedPassword + ",," + StorageProperties.STORAGE_HOST + "," + storeName;
 				}
 			}
 			return null;

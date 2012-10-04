@@ -473,12 +473,17 @@ int check_block (const char *file)
 {
   int rc;
   struct stat mystat;
+  char *rpath;
 
   if (!file) {
     return(1);
   }
-
-  rc = lstat(file, &mystat);
+  rpath = realpath(file, NULL);
+  if (!rpath) {
+    return (1);
+  }
+  rc = lstat(rpath, &mystat);
+  free(rpath);
   if (rc < 0 || !S_ISBLK(mystat.st_mode)) {
     return(1);
   }

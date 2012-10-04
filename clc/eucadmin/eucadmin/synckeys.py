@@ -23,84 +23,70 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
-import sys
+import os.path
 import pwd
-import socket
 import shutil
-from boto.utils import mklist
-from eucadmin.command import Command
-
-SyncMethods = ['local', 'rsync', 'scp', 'smb']
+import socket
+import subprocess
+import sys
 
 class SyncKeys(object):
-    def __init__(self, src_dirs, dst_dir, remote_host, file_names,
-                 use_rsync=True, use_scp=True, use_smb=False,
-                 remote_user='root'):
-        self.src_dirs = mklist(src_dirs)
-        self.src_dirs = [os.path.expanduser(sd) for sd in self.src_dirs]
-        self.src_dirs = [os.path.expandvars(sd) for sd in self.src_dirs]
-        self.dst_dir = dst_dir
+    def __init__(self, src_files, dst_dir, remote_host,
+                 use_rsync=True, use_scp=True, remote_user='root'):
+        self.src_files   = src_files
+        self.dst_dir     = dst_dir
         self.remote_host = remote_host
         self.remote_user = remote_user
-        self.file_names = mklist(file_names)
-        self.use_rsync = use_rsync
-        self.use_scp = use_scp
-        self.use_smb = use_smb
-        self.files = []
-        self.is_local = self.check_local()
+        self.use_rsync   = use_rsync
+        self.use_scp     = use_scp
+
+    def warn(self, msg):
+        print >> sys.stderr, 'warning:', msg
 
     def error(self, msg):
-        print 'Error: %s' % msg
-        sys.exit(1)
+        print >> sys.stderr, 'error:', msg
 
-    def warning(self, msg):
-        print 'Warning: %s' % msg
-
-    def get_file_list(self):
+    def get_extant_src_files(self):
         found = []
-        for fn in self.file_names:
-            for sd in self.src_dirs:
-                path = os.path.join(sd, fn)
-                if os.path.isfile(path):
-                    self.files.append(path)
-                    found.append(fn)
-        not_found = [fn for fn in self.file_names if fn not in found]
-        if not_found:
-            self.warning("Can't find %s in %s" % (not_found, self.src_dirs))
-
-    def check_local(self):
-        if self.remote_host == '127.0.0.1':
-            self.is_remote = True
-        elif self.remote_host == 'localhost':
-            self.is_remote = True
-        elif self.remote_host == socket.gethostname():
-            self.is_remote = True
-
-    def sync_local(self):
-        for fn in self.files:
-            if not os.path.isfile(fn):
-                self.error('cannot find cluster credentials')
+        for src_file in self.src_files:
+            if os.path.isfile(src_file):
+                found.append(src_file)
             else:
-                try:
-                    shutil.copy2(fn, self.dst_dir)
-                except:
-                    self.error('cannot copy %s to %s' % (fn, self.dst_dir))
+                self.warn('unable to sync file %s because it does not exist; '
+                          'services may have trouble communicating' % src_file)
+        return found
 
-    def sync_rsync(self):
-        if not self.use_rsync:
-            return
-        print
-        print 'Trying rsync to sync keys with %s' % self.remote_host
-        cmd = 'rsync -az '
-        cmd += ' '.join(self.files)
-        cmd += ' %s@%s:%s' % (self.remote_user, self.remote_host, self.dst_dir)
-        cmd = Command(cmd)
-        if cmd.status == 0:
-            print 'done'
+    def can_use_local_sync(self):
+        if self.remote_host in ('127.0.0.1', 'localhost',
+                                socket.gethostname()):
             return True
-        else:
-            print 'failed.'
+        return False
+
+    def sync_local(self, src_files):
+        for src_file in src_files:
+            try:
+                shutil.copy2(src_file, self.dst_dir)
+            except Exception as exc:
+                self.error('failed to copy %s to %s: %s' %
+                           (src_file, self.dst_dir, str(exc)))
+                return False
+        return True
+
+    def sync_with_rsync(self, src_files):
+        cmd = ['rsync', '-az'] + src_files
+        cmd.append('%s@%s:%s' % (self.remote_user, self.remote_host,
+                                 self.dst_dir))
+
+        # Check if we need to elevate privileges
+        if any(not os.access(src_file, os.R_OK) for src_file in src_files):
+            print 'elevating privileges with sudo'
+            cmd = ['sudo', '-u', self.get_euca_user()] + cmd
+
+        try:
+            subprocess.check_call(cmd)
+            return True
+        except subprocess.CalledProcessError as err:
+            self.error('key sync using rsync failed: %s' % str(err))
             return False
 
     def get_euca_user(self):
@@ -110,34 +96,34 @@ class SyncKeys(object):
                 pwd.getpwnam('eucalyptus')
                 euca_user = 'eucalyptus'
             except KeyError:
-                self.error('EUCA_USER is not defined!')
+                self.error('EUCA_USER is not defined')
+                sys.exit(1)
         return euca_user
 
-    def sync_scp(self):
-        euca_user = self.get_euca_user()
-        print
-        print 'Trying scp to sync keys with %s (user %s)' % (self.remote_host,
-                                                             euca_user)
-        # TODO: handle sudo password prompt
-        cmd = 'sudo -u %s scp ' % euca_user
-        cmd += ' '.join(self.files)
-        cmd += ' %s@%s:%s' % (euca_user, self.remote_host, self.dst_dir)
-        cmd = Command(cmd)
-        if cmd.status == 0:
-            print 'done'
+    def sync_with_scp(self, src_files):
+        cmd = ['scp'] + src_files
+        cmd.append('%s@%s:%s' % (self.remote_user, self.remote_host,
+                                 self.dst_dir))
+
+        # Check if we need to elevate privileges
+        if any(not os.access(src_file, os.R_OK) for src_file in src_files):
+            print 'elevating privileges with sudo'
+            cmd = ['sudo', '-u', self.get_euca_user()] + cmd
+
+        try:
+            subprocess.check_call(cmd)
             return True
-        else:
-            print 'failed.'
+        except subprocess.CalledProcessError as err:
+            self.error('key sync using scp failed: %s' % str(err))
             return False
 
-    def sync(self):
-        self.get_file_list()
-        if self.check_local():
-            self.sync_local()
-            return True
-        else:
-            if self.use_rsync and self.sync_rsync():
-                return True
-            if self.use_scp and self.sync_scp():
-                return True
-            return False
+    def sync_keys(self):
+        src_files = self.get_extant_src_files()
+        success = False
+        if self.can_use_local_sync():
+            success = self.sync_local(src_files)
+        if not success and self.use_rsync:
+            success = self.sync_with_rsync(src_files)
+        if not success and self.use_scp:
+            success = self.sync_with_scp(src_files)
+        return success
