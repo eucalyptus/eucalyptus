@@ -2411,3 +2411,19 @@ textarea.console-output {
   margin: 10px;
 }
 
+/* ====== Euca credits ====== */
+img.euca-credits {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+div.euca-credits {
+  text-align: center;
+  height:400px;
+  overflow:auto;
+}
+
+ul.euca-credits {
+  list-style-type: none;
+}

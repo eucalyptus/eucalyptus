@@ -31,6 +31,7 @@
        help_icon_class : 'help-link',
        on_close: null,
        width : null,
+       afterHelpFlipped : null,
     },
     $error_div : null,
     help_flipped : false,
@@ -44,6 +45,8 @@
          autoOpen: false,  // assume the three params are fixed for all dialogs
          modal: true,
          width: thisObj.options.width ? thisObj.options.width : 600,
+         maxHeight: thisObj.options.maxHeight ? thisObj.options.maxHeight : false,
+         height: thisObj.options.height ? thisObj.options.height : 'auto',
          dialogClass: 'euca-dialog-container',
          show: 'fade',
          // don't add hide: 'fade' here b/c it causes an issue with positioning the dialog next to another dialog
@@ -158,15 +161,21 @@
       }
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
-          $contentPane.fadeOut(function(){$helpPane.fadeIn(); thisObj.help_flipped = true;
+          $contentPane.fadeOut(function(){
+            $helpPane.fadeIn();
+            thisObj.help_flipped = true;
             $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
             $helpLink.html('&nbsp;');
             $buttonPane.hide();
             $resourcePane.hide();
             $titleBar.find('span').text('');
+            if (thisObj.options.afterHelpFlipped && isFunction(thisObj.options.afterHelpFlipped))
+              thisObj.options.afterHelpFlipped.call();
           });
         }else{
-          $helpPane.fadeOut(function(){$contentPane.fadeIn(); thisObj.help_flipped = false;
+          $helpPane.fadeOut(function(){
+            $contentPane.fadeIn();
+            thisObj.help_flipped = false;
             $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
             $helpLink.html('&nbsp;');
             $buttonPane.show();
