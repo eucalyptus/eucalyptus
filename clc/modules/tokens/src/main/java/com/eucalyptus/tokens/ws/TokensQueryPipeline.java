@@ -179,7 +179,6 @@ public class TokensQueryPipeline extends QueryPipeline {
                 throw e;
               } catch ( LoginException e ){
                 // Challenge user and try again
-                e.printStackTrace();
               }
             }
           }
