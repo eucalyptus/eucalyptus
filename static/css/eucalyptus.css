@@ -2170,10 +2170,6 @@ span.on-error {
   display:none;
 }
 
-.launch-wizard-type-size {
-
-}
-
 .launch-wizard-buttons {
   text-align: right;
   padding-right: 10px;
@@ -2211,7 +2207,8 @@ span.on-error {
     border: 1px solid #fff;
 }
 
-.launch-wizard-type-size li:hover {
+.launch-wizard-type-size li:hover,
+.launch-wizard-type-size li.selected-type {
   border: 1px solid #d7d5d5;
   
   -webkit-box-shadow: inset 0px 0px 10px 15px #e2f4c0;
@@ -2220,14 +2217,15 @@ span.on-error {
 }  
 
 .launch-wizard-type-size li a {
-  text-align: center;
-  font-family: 'PlayRegular', Arial, sans-serif;
-  color: #02405f;
+  display: block;
+  padding: 110px 0 0;
+  outline: 0 none;
   background-image: url(../images/wizard-instances.png);
   background-repeat: no-repeat;
-  padding: 110px 0 0;
-  display: block;
+  color: #02405f;
+  text-align: center;
   text-decoration: none;
+  font-family: 'PlayRegular', Arial, sans-serif;
 }
 
 .launch-wizard-type-size li a:hover {
@@ -2341,7 +2339,9 @@ span.on-error {
 }
 
 .launch-wizard-section-header.expanded a {
-  background-position: left -646px;  
+  background-image: none;
+  color: #02405F;
+  padding-left: 10px; 
 }
 
 .launch-wizard-section-header span {
