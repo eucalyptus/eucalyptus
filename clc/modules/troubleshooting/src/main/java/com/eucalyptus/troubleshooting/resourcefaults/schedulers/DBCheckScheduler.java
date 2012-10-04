@@ -1,4 +1,4 @@
-package com.eucalyptus.bootstrap.listeners;
+package com.eucalyptus.troubleshooting.resourcefaults.schedulers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +33,7 @@ public class DBCheckScheduler {
 							Integer.parseInt(threshold));
 
 				}
-				dbPools.add(info); // Do 2%
+				dbPools.add(info); 
 			}
 		}
 		DBChecker dbChecker = new DBChecker(dbPools, Eucalyptus.class, Long.parseLong(pollTime));

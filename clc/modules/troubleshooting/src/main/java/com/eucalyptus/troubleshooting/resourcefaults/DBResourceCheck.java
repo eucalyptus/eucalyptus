@@ -1,14 +1,7 @@
 package com.eucalyptus.troubleshooting.resourcefaults;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,16 +9,12 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
-import org.logicalcobwebs.proxool.ConnectionPoolDefinitionIF;
-import org.logicalcobwebs.proxool.ConnectionPoolStatisticsIF;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.ProxoolFacade;
-import org.logicalcobwebs.proxool.admin.SnapshotIF;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 
 /**
@@ -92,7 +81,7 @@ public class DBResourceCheck extends Thread {
 			return ProxoolFacade.getSnapshot(alias, true).getActiveConnectionCount();
 		}
 
-		public Integer getMinimumFreeConnections() throws ProxoolException{
+		public Integer getThreshold() throws ProxoolException{
 			if (null != this.minimumFreeConnections) {
 				return this.minimumFreeConnections;
 			} else {
@@ -195,7 +184,8 @@ public class DBResourceCheck extends Thread {
 				for (DBPoolInfo dbPool : this.dbPools) {
 					// Enclose everything between try catch because nothing should throw an exception to the executor upstream or it may halt subsequent tasks
 					try {
-						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getMinimumFreeConnections()) {
+						LOG.debug("Polling dbpool " + pollInterval + " threshold = " + dbPool.getThreshold());
+						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getThreshold()) {
 							if (!this.alreadyFaulted.contains(dbPool)) {
 								FaultSubsystem.forComponent(this.componentIdClass).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
 										.withVar("component", ComponentIds.lookup(componentIdClass).getFaultLogPrefix()).withVar("alias", dbPool.getAlias()).log();

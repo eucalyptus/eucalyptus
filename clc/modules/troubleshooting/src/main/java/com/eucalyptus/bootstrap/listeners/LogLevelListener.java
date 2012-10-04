@@ -49,7 +49,7 @@ public class LogLevelListener implements PropertyChangeListener {
 		if (!newLogLevel.isEmpty()) {
 			System.setProperty("euca.log.level", newLogLevel.toUpperCase());
 			LoggingResetter.resetLoggingWithXML();
-			triggerDBFault();
+			//triggerDBFault();
 		}
 		LOG.fatal("test level FATAL");
 		LOG.error("test level ERROR");

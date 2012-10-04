@@ -1,10 +1,11 @@
-package com.eucalyptus.bootstrap.listeners;
+package com.eucalyptus.troubleshooting.resourcefaults.listeners;
 
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.GarbageCollectionCountCheckScheduler;
 
-public class LogFileDiskCheckPollTimeListener implements PropertyChangeListener {
+public class GarbageCollectionCountCheckNameListener implements PropertyChangeListener {
 	/**
 	 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 	 *      java.lang.Object)
@@ -12,13 +13,9 @@ public class LogFileDiskCheckPollTimeListener implements PropertyChangeListener 
 	@Override
 	public void fireChange(ConfigurableProperty t, Object newValue)
 			throws ConfigurablePropertyException {
-		long pollTime = -1;
-		try {
-			pollTime = Long.parseLong((String) newValue);
-		} catch (Exception ex) {
+		if (newValue == null) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
-		}
-		if (pollTime <=0) {
+		} else if (!(newValue instanceof String)) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
 		}
 		try {
@@ -30,6 +27,6 @@ public class LogFileDiskCheckPollTimeListener implements PropertyChangeListener 
 			e1.printStackTrace();
 			throw new ConfigurablePropertyException(e1);
 		}
-		LogFileDiskCheckScheduler.resetLogFileDiskCheck();
+		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
 	}
 }

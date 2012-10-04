@@ -79,7 +79,7 @@ public class DiskResourceCheck {
 			return file;
 		}
 
-		public Long getMinimumFreeSpace() {
+		public Long getThreshold() {
 			if (null != this.minimumFreeSpace) {
 				return this.minimumFreeSpace;
 			} else {
@@ -173,10 +173,11 @@ public class DiskResourceCheck {
 		public void run() {
 			if (null != locations) {
 				for (LocationInfo location : this.locations) {
+					LOG.debug("Polling disk " + pollInterval + " thrwshold = " + location.getThreshold());
 					// Enclose everything between try catch because nothing should throw an exception to the executor upstream or it may halt subsequent tasks
 					try {
 						long usableSpace = location.getFile().getUsableSpace();
-						if (usableSpace < location.getMinimumFreeSpace()) {
+						if (usableSpace < location.getThreshold()) {
 							if (!this.alreadyFaulted.contains(location)) {
 								FaultSubsystem.forComponent(this.componentIdClass).havingId(OUT_OF_DISK_SPACE_FAULT_ID)
 										.withVar("component", ComponentIds.lookup(this.componentIdClass).getFaultLogPrefix()).withVar("file", location.getFile().getAbsolutePath()).log();

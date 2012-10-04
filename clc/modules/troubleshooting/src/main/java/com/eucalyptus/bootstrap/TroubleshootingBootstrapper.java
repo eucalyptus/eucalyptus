@@ -62,54 +62,35 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.io.File;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
-import java.util.StringTokenizer;
-import java.util.concurrent.ScheduledFuture;
-
 import org.apache.log4j.Logger;
-import org.logicalcobwebs.proxool.ProxoolFacade;
 
-import com.eucalyptus.bootstrap.listeners.DBCheckPollTimeListener;
-import com.eucalyptus.bootstrap.listeners.DBCheckScheduler;
-import com.eucalyptus.bootstrap.listeners.DBCheckThresholdListener;
-import com.eucalyptus.bootstrap.listeners.LogFileDiskCheckPollTimeListener;
-import com.eucalyptus.bootstrap.listeners.LogFileDiskCheckScheduler;
-import com.eucalyptus.bootstrap.listeners.LogFileDiskCheckThresholdListener;
 import com.eucalyptus.bootstrap.listeners.LogLevelListener;
 import com.eucalyptus.bootstrap.listeners.TriggerFaultListener;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.ConfigurableProperty;
-import com.eucalyptus.configurable.ConfigurablePropertyException;
-import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.troubleshooting.LoggingResetter;
-import com.eucalyptus.troubleshooting.TestFaultTrigger;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck;
-import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck.DBChecker;
-import com.eucalyptus.troubleshooting.resourcefaults.DBResourceCheck.DBPoolInfo;
-import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck;
-import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.Checker;
-import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.LocationInfo;
-import com.eucalyptus.troubleshooting.resourcefaults.MXBeanMemoryResourceCheck;
-import com.eucalyptus.troubleshooting.resourcefaults.SimpleMemoryResourceCheck;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.DBCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.DBCheckThresholdListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.GarbageCollectionCountCheckNameListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.GarbageCollectionCountCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.GarbageCollectionCountCheckThresholdListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.LogFileDiskCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.LogFileDiskCheckThresholdListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.MXBeanMemoryCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.MXBeanMemoryCheckThresholdListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.SimpleMemoryCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.listeners.SimpleMemoryCheckThresholdListener;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.DBCheckScheduler;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.GarbageCollectionCountCheckScheduler;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.LogFileDiskCheckScheduler;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.MXBeanMemoryCheckScheduler;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.SimpleMemoryCheckScheduler;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.CloudServiceInit)
 @ConfigurableClass(root = "cloud", description = "Parameters controlling troubleshooting information.")
 public class TroubleshootingBootstrapper extends Bootstrapper {
-
-	//	private static ScheduledFuture<?> simpleMemoryChecker = null;
-	//	private static ScheduledFuture<?> mxBeanMemoryChecker = null;
 
 	private static final Logger LOG = Logger
 			.getLogger(TroubleshootingBootstrapper.class);
@@ -124,9 +105,9 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		LOG.info("Starting troubleshooting interface.");
 		LogFileDiskCheckScheduler.resetLogFileDiskCheck();
 		DBCheckScheduler.resetDBCheck();
-		// new SimpleMemoryResourceCheck(1).start(512 * 1024).start(); // 512K
-		// left, also arbitrary
-		// new MXBeanMemoryResourceCheck().start(); // 512K left, also arbitrary
+		SimpleMemoryCheckScheduler.resetMemoryCheck();
+		MXBeanMemoryCheckScheduler.resetMXBeanMemoryCheck();
+		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
 		FaultSubsystem.init();
 		return true;
 	}
@@ -173,15 +154,35 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	@ConfigurableField(description = "Poll time (ms) for log file disk check", initial = "5000", changeListener = LogFileDiskCheckPollTimeListener.class, displayName = "log.file.disk.check.poll.time")
 	public static String LOG_FILE_DISK_CHECK_POLL_TIME = "5000";
 
-
-	@ConfigurableField(description = "Threshold (bytes or %) for log file disk check", initial = "2.0%", changeListener = LogFileDiskCheckThresholdListener.class, displayName = "log.file.disk.check.poll.time")
+	@ConfigurableField(description = "Threshold (bytes or %) for log file disk check", initial = "2.0%", changeListener = LogFileDiskCheckThresholdListener.class, displayName = "log.file.disk.check.threshold")
 	public static String LOG_FILE_DISK_CHECK_THRESHOLD = "2.0%";
 
 	@ConfigurableField(description = "Poll time (ms) for db connection check", initial = "60000", changeListener = DBCheckPollTimeListener.class, displayName = "db.check.poll.time")
 	public static String DB_CHECK_POLL_TIME = "60000";
 
-	@ConfigurableField(description = "Threshold (num connections or %) for db connection check", initial = "2.0%", changeListener = DBCheckThresholdListener.class, displayName = "db.check.poll.time")
+	@ConfigurableField(description = "Threshold (num connections or %) for db connection check", initial = "2.0%", changeListener = DBCheckThresholdListener.class, displayName = "db.check.threshold")
 	public static String DB_CHECK_THRESHOLD = "2.0%";
+
+	@ConfigurableField(description = "Poll time (ms) for simple memory check", initial = "60000", changeListener = SimpleMemoryCheckPollTimeListener.class, displayName = "simple.memory.check.poll.time")
+	public static String SIMPLE_MEMORY_CHECK_POLL_TIME = "60000";
+
+	@ConfigurableField(description = "Threshold (bytes or %) for simple memory check", initial = "2.0%", changeListener = SimpleMemoryCheckThresholdListener.class, displayName = "simple.memory.check.threshold")
+	public static String SIMPLE_MEMORY_CHECK_THRESHOLD = "2.0%";
+
+	@ConfigurableField(description = "Poll time (ms) for mxbean memory check", initial = "60000", changeListener = MXBeanMemoryCheckPollTimeListener.class, displayName = "mxbean.memory.check.poll.time")
+	public static String MXBEAN_MEMORY_CHECK_POLL_TIME = "60000";
+
+	@ConfigurableField(description = "Threshold (bytes or %) for mxbean memory check", initial = "2.0%", changeListener = MXBeanMemoryCheckThresholdListener.class, displayName = "mxbean.memory.check.threshold")
+	public static String MXBEAN_MEMORY_CHECK_THRESHOLD = "2.0%";
+
+	@ConfigurableField(description = "Poll time (ms) for gc count check", initial = "1000", changeListener = GarbageCollectionCountCheckPollTimeListener.class, displayName = "gc.count.check.poll.time")
+	public static String GC_COUNT_CHECK_POLL_TIME = "1000";
+
+	@ConfigurableField(description = "Threshold (number of collection counts) for gc count check", initial = "100", changeListener = GarbageCollectionCountCheckThresholdListener.class, displayName = "gc.count.check.threshold")
+	public static String GC_COUNT_CHECK_THRESHOLD = "100";
+
+	@ConfigurableField(description = "Name of the garbage collector to check for gc count check", initial = "PS MarkSweep", changeListener = GarbageCollectionCountCheckNameListener.class, displayName = "gc.count.check.name")
+	public static String GC_COUNT_CHECK_NAME = "PS MarkSweep";
 
 	@ConfigurableField( description = "Fault id last used to trigger test", initial = "", changeListener = TriggerFaultListener.class, displayName = "trigger.fault" )
 	public static String TRIGGER_FAULT = "";

@@ -1,8 +1,9 @@
-package com.eucalyptus.bootstrap.listeners;
+package com.eucalyptus.troubleshooting.resourcefaults.listeners;
 
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.troubleshooting.resourcefaults.schedulers.DBCheckScheduler;
 
 public class DBCheckThresholdListener implements PropertyChangeListener {
 	/**
