@@ -25,6 +25,7 @@
     tableWrapper : null,
     delDialog : null,
     createDialog : null,
+    registerDialog : null,
     createVolButtonId : 'volume-create-btn',
     createSnapButtonId : 'snapshot-create-btn',
     _init : function() {
@@ -156,6 +157,30 @@
          return VOL_ID_PATTERN.test($vol_selector.val());
        });
       // create snapshot dialog end
+      // snapshot register dialog start
+      var $tmpl = $('html body').find('.templates #snapshotRegDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map, help_snapshot)));
+      var $reg_dialog = $rendered.children().first();
+      var $reg_help = $rendered.children().last();
+      this.regDialog = $reg_dialog.eucadialog({
+         id: 'snapshots-register',
+         title: snapshot_register_dialog_title,
+         buttons: {
+           'register': {text: snapshot_dialog_reg_btn, click: function() {
+               var name = thisObj.regDialog.find('#snapshot-register-image-name').val();
+               if(!name || name.length <= 0) {
+                 thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
+                 return; 
+               } 
+               var desc = thisObj.regDialog.find('#snapshot-register-image-desc').val();
+               thisObj._registerSnapshots(name, desc);
+               $reg_dialog.eucadialog("close");
+            }},
+           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $reg_dialog.eucadialog("close");}} 
+         },
+         help: { content: $reg_help },
+       });
+      // snapshot delete dialog end
     },
 
     _destroy : function() {
@@ -165,8 +190,16 @@
       var thisObj = this;
       var selectedSnapshots = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is snapshot's knowledge)
       var itemsList = {};
+      (function(){
+        itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+      })();
       if ( selectedSnapshots.length > 0 && onlyInArray('completed', selectedSnapshots)){
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
+      }
+      
+      if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
+        itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
       }
       return itemsList;
     },
@@ -282,12 +315,45 @@
       });
       if ( snapshotsToDelete.length > 0 ) {
         thisObj.delDialog.eucadialog('setSelectedResources',{title:[snapshot_label], contents: matrix});
-        thisObj.delDialog.dialog('open');
+        thisObj.delDialog.eucadialog('open');
       }
     },
 
     _createAction : function() {
       this.dialogAddSnapshot();
+    },
+
+    _registerAction : function() {
+      var thisObj = this;
+      thisObj.regDialog.eucadialog('open');
+    },
+
+    _registerSnapshots : function(name, desc) {
+      var thisObj = this;
+      var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var windows = false;
+      var url = "/ec2?Action=RegisterSnapshot&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
+      if(windows)
+        url += "&Windows";
+
+      $.ajax({
+        type:"GET",
+        url:url,
+        data:"_xsrf="+$.cookie('_xsrf'),
+        dataType:"json",
+        async:true,
+        success:
+          function(data, textStatus, jqXHR){
+            if ( data.results ) {
+            } else {
+              notifyError($.i18n.prop('snapshot_register_error', snapshot), undefined_error);
+            }
+          },
+        error:
+          function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('snapshot_register_error', snapshot), getErrorMessage(jqXHR));
+          }
+      });
     },
 
 /**** Public Methods ****/

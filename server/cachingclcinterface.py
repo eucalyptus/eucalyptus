@@ -319,3 +319,8 @@ class CachingClcInterface(ClcInterface):
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         self.snapshotUpdate = datetime.min   # invalidate cache
         return self.clc.reset_snapshot_attribute(snapshot_id, attribute)
+
+    # returns True if successful
+    def register_bfebs(self, snapshot_id, name, description, is_windows):
+        self.imageUpdate = datetime.min   # invalidate cache
+        return self.clc.register_bfebs(snapshot_id, name, description, is_windows)

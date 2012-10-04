@@ -223,7 +223,7 @@ class LogoutProcessor(ProxyProcessor):
     def post(web_req):
         sid = web_req.get_cookie("session-id")
         if not sid or sid not in sessions:
-            raise Exception("Session id not found")
+            return LogoutResponse();
         del sessions[sid] # clean up session info
         logging.info("Cleared session (%s)" % sid);
         return LogoutResponse();
