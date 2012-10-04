@@ -50,6 +50,9 @@ import com.google.common.io.Closeables;
  */
 public class Import {
   private static final Logger logger = Logger.getLogger(Import.class);
+  private int count;
+  private long minTimestamp;
+  private long maxTimestamp;
 
   public static int deleteAll() {
     return deleteAll( ExportUtils.getPersistentClasses(), null );
@@ -59,8 +62,8 @@ public class Import {
     return deleteAll( ExportUtils.getTimestampedClasses(), createdTimestamp );
   }
 
-  public static ReportingExport importData( final File exportFile,
-                                            final Runnable preImportCallback ) throws Exception {
+  public static ImportResult importData( final File exportFile,
+                                         final Runnable preImportCallback ) throws Exception {
     FileInputStream in = null;
     try {
       in = new FileInputStream( exportFile );
@@ -70,13 +73,23 @@ public class Import {
     }
   }
 
-  public static ReportingExport importData( final InputStream in,
-                                            final Runnable preImportCallback ) throws Exception {
+  public static ImportResult importData( final InputStream in,
+                                        final Runnable preImportCallback ) throws Exception {
     return new Import().doImport( in, preImportCallback );
   }
 
-  protected ReportingExport doImport( final InputStream in,
-                                      final Runnable preImportCallback ) throws Exception {
+  protected void resetStats() {
+    count = 0;
+    minTimestamp = Long.MAX_VALUE;
+    maxTimestamp = Long.MIN_VALUE;
+  }
+
+  protected ImportResult getStats() {
+    return new ImportResult( count, minTimestamp, maxTimestamp );
+  }
+
+  protected ImportResult doImport( final InputStream in,
+                                   final Runnable preImportCallback ) throws Exception {
     final Supplier<Void> callback = Suppliers.memoize( new Supplier<Void>() {
       @Override
       public Void get() {
@@ -84,9 +97,10 @@ public class Import {
         return null;
       }
     } );
-    return transactional( new Callable<ReportingExport>() {
+    resetStats();
+    return transactional( new Callable<ImportResult>() {
       @Override
-      public ReportingExport call() throws Exception {
+      public ImportResult call() throws Exception {
         ReportingExport.setLoadListenerSupplier(
             Suppliers.<ReportingExportLoadListener>ofInstance( new ReportingExportLoadListener() {
               private final Set<String> userIds = Sets.newHashSet();
@@ -128,6 +142,9 @@ public class Import {
 
               private <T> void add( final T item, final Function<T,ReportingEventSupport> transform ) {
                 final ReportingEventSupport event = transform.apply( item );
+                count ++;
+                minTimestamp = Math.min( minTimestamp, event.getTimestampMs() );
+                maxTimestamp = Math.max( maxTimestamp, event.getTimestampMs() );
                 merge( event );
               }
             } ) );
@@ -135,7 +152,9 @@ public class Import {
         final String bindingName = "www_eucalyptus_com_ns_reporting_export_2012_08_24";
         BindingManager.seedBinding( bindingName, ReportingExport.class );
         final Binding binding = BindingManager.getBinding( bindingName );
-        return binding.fromStream( ReportingExport.class, new BufferedInputStream( in ) );      }
+        binding.fromStream( ReportingExport.class, new BufferedInputStream( in ) );
+        return getStats();
+      }
     });
   }
 
@@ -172,6 +191,32 @@ public class Import {
               Collections.singletonMap( "creationTimestamp", createdTimestamp ));
     } finally {
       transaction.commit();
+    }
+  }
+
+  public static class ImportResult {
+    private final int items;
+    private final long minTimestamp;
+    private final long maxTimestamp;
+
+    public ImportResult( final int items,
+                         final long minTimestamp,
+                         final long maxTimestamp ) {
+      this.items = items;
+      this.minTimestamp = minTimestamp;
+      this.maxTimestamp = maxTimestamp;
+    }
+
+    public int getItems() {
+      return items;
+    }
+
+    public long getMinTimestamp() {
+      return minTimestamp;
+    }
+
+    public long getMaxTimestamp() {
+      return maxTimestamp;
     }
   }
 }
