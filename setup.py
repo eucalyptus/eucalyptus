@@ -10,7 +10,7 @@ def getDataFiles(path):
         [ os.path.join(root, f) for f in files ])
             for root, _, files in os.walk(path) if files ]
 
-data_files = getDataFiles("static") + getDataFiles("mockdata")
+data_files = getDataFiles("static")
 data_files.append(('/etc/eucalyptus-console', ['server/console.ini']))
 
 setup (name="Eucalyptus Management Console",
