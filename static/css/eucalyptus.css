@@ -1115,6 +1115,10 @@ tr.expanded td {
   font-family: 'PlayRegular', Arial, sans-serif;
 }
 
+.sgroup-expanded-rule .expanded-section-label {
+  float: left;
+}
+
 .expanded-section-content {
   float: left;
 }

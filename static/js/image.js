@@ -74,10 +74,16 @@
               "bVisible": false,
               "mDataProp": "type"
             },
-            { // idx = 9
+            { 
               "bVisible": false,
               "mDataProp": "id",
             },
+            { // idx = 10
+              "bVisible" : false,
+              "fnRender" : function(oObj) {
+                return oObj.aData.platform ? oObj.aData.platform : 'linux';
+              }
+            }
           ],
         },
         text : {
@@ -96,7 +102,7 @@
         filters : [
           /* {name:"img_ownership", options: ['all','my'], text: ['All images', 'Images owned by me'], filter_col:TBD}, */
           {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
-launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:2},
+launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:10},
           {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:4},
           {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:6},
           ],
