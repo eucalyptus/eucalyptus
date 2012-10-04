@@ -583,6 +583,20 @@ ol li {
   width: auto;
 }
 
+/* Select list dropdown menus */
+
+select {
+  font-family: 'Trebuchet MS',Arial,sans-serif;
+  font-size: 14px;
+  margin-right: 10px;
+  outline: 0 none;
+  padding: 3px;
+}
+
+option {
+
+}
+
 input[type='text'],
 textarea,
 .input-field,
@@ -878,9 +892,7 @@ input[type='text'].medium-textinput {
 }
 
 #dashboard-instance-az select {
-  font-family: 'PlayRegular', Arial, sans-serif;
-  padding: 5px 4px;
-  outline: 0 none;
+  margin-right: 0;
   width: 190px;
 }
 
