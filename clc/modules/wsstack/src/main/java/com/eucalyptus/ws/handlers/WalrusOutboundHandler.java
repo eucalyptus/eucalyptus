@@ -89,11 +89,6 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusOutboundHandler.class );
 
 	@Override
-	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-
-	}
-
-	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );

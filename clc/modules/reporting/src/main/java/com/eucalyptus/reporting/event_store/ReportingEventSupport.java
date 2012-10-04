@@ -19,14 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
+import java.io.Serializable;
+import java.util.Date;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
-
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Index;
-
-import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingUser;
 import com.google.common.collect.Sets;
@@ -35,13 +41,32 @@ import com.google.common.collect.Sets;
  * Support class for persistent reporting events
  */
 @MappedSuperclass
-public abstract class ReportingEventSupport extends AbstractPersistent {
-
+public abstract class ReportingEventSupport implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  @Index(name="timestampmsIdx")
-  @Column(name="timestamp_ms", nullable=false)
+  @Id
+  @GeneratedValue(generator = "reporting-uuid")
+  @GenericGenerator(
+      name="reporting-uuid",
+      strategy = "com.eucalyptus.reporting.event_store.ReportingEventIdGenerator")
+  @Column( name = "id", nullable = false, updatable = false )
+  private String id;
+
+  @Temporal( TemporalType.TIMESTAMP)
+  @Column(name = "creation_timestamp", updatable = false, nullable = false)
+  private Date creationTimestamp;
+
+  @Index(name="timestamp_ms_i")
+  @Column(name="timestamp_ms", nullable = false)
   protected Long timestampMs;
+
+  public String getId() {
+    return id;
+  }
+
+  public Date getCreationTimestamp() {
+    return creationTimestamp;
+  }
 
   public final Long getTimestampMs()
   {
@@ -61,6 +86,20 @@ public abstract class ReportingEventSupport extends AbstractPersistent {
 
   protected static EventDependencyBuilder withDependencies() {
     return new EventDependencyBuilder();
+  }
+
+  void initialize( final String eventId,
+                   final Date created ) {
+    this.id = eventId;
+    this.creationTimestamp = created;
+  }
+
+  @PreUpdate
+  @PrePersist
+  public void updateTimeStamps() {
+    if ( creationTimestamp == null ) {
+      this.creationTimestamp = new Date();
+    }
   }
 
   public static class EventDependencyBuilder {

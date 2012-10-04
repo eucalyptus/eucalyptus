@@ -65,15 +65,18 @@ package com.eucalyptus.records;
 import org.apache.log4j.Logger;
 import org.mule.RequestContext;
 import org.mule.api.MuleEvent;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
 public class EventRecord extends BaseMessage {
-  private static Logger            LOG   = Logger.getLogger( EventRecord.class );
+  private static final Logger                LOG             = Logger.getLogger( EventRecord.class );
+  private static final BaseMessage           BOGUS           = getBogusMessage( );
+  private static final Supplier<BaseMessage> messageSupplier = getCurrentBaseMessageSupplier();
   
   private static Record create( final Class component, final EventClass eventClass, final EventType eventName, final String other, int dist ) {
     BaseMessage msg = tryForMessage( );
@@ -115,22 +118,35 @@ public class EventRecord extends BaseMessage {
     return last.length( ) > 1 ? last.substring( 1 ) : last.toString( );
   }
 
-  private static BaseMessage BOGUS  = getBogusMessage( );
   private static BaseMessage getBogusMessage( ) {
     EucalyptusMessage hi = new EucalyptusMessage( );
     hi.setCorrelationId( "" );
     hi.setUserId( "" );
     return hi;
   }
+
   private static BaseMessage tryForMessage( ) {
-    BaseMessage msg = null;
-    MuleEvent event = RequestContext.getEvent( );
-    if ( event != null ) {
-      if ( event.getMessage( ) != null && event.getMessage( ).getPayload( ) != null && event.getMessage( ).getPayload( ) instanceof BaseMessage ) {
-        msg = ( ( BaseMessage ) event.getMessage( ).getPayload( ) );
-      }
-    }
-    return msg == null ? BOGUS : msg;
+    return messageSupplier.get();
   }
 
+  private static Supplier<BaseMessage> getCurrentBaseMessageSupplier() {
+    try {
+      MuleEvent.class.getName(); // fail if class not found
+      return new Supplier<BaseMessage>(){
+        @Override
+        public BaseMessage get() {
+          BaseMessage msg = null;
+          MuleEvent event = RequestContext.getEvent();
+          if ( event != null ) {
+            if ( event.getMessage( ) != null && event.getMessage( ).getPayload( ) != null && event.getMessage( ).getPayload( ) instanceof BaseMessage ) {
+              msg = ( ( BaseMessage ) event.getMessage( ).getPayload( ) );
+            }
+          }
+          return msg == null ? BOGUS : msg;
+        }
+      };
+    } catch ( final NoClassDefFoundError e ) {
+      return Suppliers.ofInstance( BOGUS );
+    }
+  }
 }

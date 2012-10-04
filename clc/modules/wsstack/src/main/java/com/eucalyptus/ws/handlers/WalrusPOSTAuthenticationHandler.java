@@ -381,8 +381,4 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 		ctx.sendDownstream( newEvent );
 		newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
 	}
-
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-	}
 }

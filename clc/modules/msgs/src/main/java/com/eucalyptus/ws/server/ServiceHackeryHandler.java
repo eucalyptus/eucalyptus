@@ -72,7 +72,7 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.mule.transport.NullPayload;
@@ -108,7 +108,7 @@ public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDown
         msge.getFuture( ).cancel( );
       } else if ( msge.getMessage( ) instanceof HttpResponse ) {
         ctx.sendDownstream( e );
-      } else if ( msge.getMessage( ) instanceof IsData ) {// Pass through for chunked messaging
+      } else if ( msge.getMessage( ) instanceof IsData || msge.getMessage() instanceof HttpChunk ) {// Pass through for chunked messaging
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );

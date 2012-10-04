@@ -499,7 +499,7 @@ public final class ReportingDataVerifier {
       try {
         final View view = new View();
 
-        // Addresses TODO:STEVE: should lookup directly from DB?
+        // Addresses
         for ( final Address address : Iterables.concat( Addresses.getInstance().listValues(), Addresses.getInstance().listDisabledValues() ) ) {
           if ( address.isAllocated() && !address.isSystemOwned() ) {
             final String id = address.getNaturalId();
@@ -813,7 +813,7 @@ public final class ReportingDataVerifier {
 
   private static class ResourceWithRelation<KT extends ResourceKey> {
     @Nonnull  private final KT resourceKey;
-    @Nullable private final String relationId; //TODO:STEVE: Option
+    @Nullable private final String relationId;
 
     private ResourceWithRelation( @Nonnull final KT resourceKey,
                                   @Nullable final String relationId ) {
