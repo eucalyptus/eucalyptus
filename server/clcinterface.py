@@ -190,5 +190,5 @@ class ClcInterface(object):
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         raise NotImplementedError("Are you sure you're using the right class?")
     
-    def register_bfebs(self, snapshot_id, name, description, is_windows):
+    def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
         raise NotImplementedError("Are you sure you're using the right class?")

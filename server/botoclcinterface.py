@@ -238,16 +238,8 @@ class BotoClcInterface(ClcInterface):
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         return self.conn.reset_snapshot_attribute(snapshot_id, attribute)
 
-    def register_bfebs(self, snapshot_id, name, description, is_windows):
-        kernel_id = None
-        bdm = BlockDeviceMapping()
-        block_dev_type = BlockDeviceType()
-        block_dev_type.ephemeral_name = None
-        block_dev_type.snapshot_id = snapshot_id
-        block_dev_type.size = None
-        block_dev_type.delete_on_termination = False
-        bdm["/dev/sda1"] = block_dev_type
-        if is_windows:
-            kernel_id = 'windows'
-        return self.conn.register_image(name, description, None, None, kernel_id, None, '/dev/sda1', bdm)
+    def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
+#        if is_windows:
+#            kernel_id = 'windows'
+        return self.conn.register_image(name, description, image_location, architecture, kernel_id, ramdisk_id, root_dev_name, block_device_map)
 

@@ -332,9 +332,9 @@
       var thisObj = this;
       var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       var windows = false;
-      var url = "/ec2?Action=RegisterSnapshot&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
+      var url = "/ec2?Action=RegisterImage&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
       if(windows)
-        url += "&Windows";
+        url += "&KernelId=windows";
 
       $.ajax({
         type:"GET",

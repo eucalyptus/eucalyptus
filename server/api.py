@@ -1,5 +1,6 @@
 import base64
 import ConfigParser
+import logging
 import json
 import tornado.web
 import server
@@ -144,173 +145,215 @@ class ComputeHandler(server.BaseHandler):
             imageid = self.get_argument('ImageId')
             attribute = self.get_argument('Attribute')
             return clc.get_image_attribute(imageid, attribute)
-        elif action == 'ModifyImageAttribute':
-            imageid = self.get_argument('ImageId')
-            attribute = self.get_argument('Attribute')
-            operation = self.get_argument('OperationType')
-            users = self.get_argument_list('UserId')
-            groups = self.get_argument_list('UserGroup')
-            return clc.modify_image_attribute(imageid, attribute, operation, users, groups)
-        elif action == 'ResetImageAttribute':
-            imageid = self.get_argument('ImageId')
-            attribute = self.get_argument('Attribute')
-            return clc.reset_image_attribute(imageid, attribute)
+        else:
+            self.check_xsrf_cookie()
+            if action == 'ModifyImageAttribute':
+                imageid = self.get_argument('ImageId')
+                attribute = self.get_argument('Attribute')
+                operation = self.get_argument('OperationType')
+                users = self.get_argument_list('UserId')
+                groups = self.get_argument_list('UserGroup')
+                return clc.modify_image_attribute(imageid, attribute, operation, users, groups)
+            elif action == 'ResetImageAttribute':
+                imageid = self.get_argument('ImageId')
+                attribute = self.get_argument('Attribute')
+                return clc.reset_image_attribute(imageid, attribute)
+            elif action == 'RegisterImage':
+                image_location = self.get_argument('ImageLocation', None)
+                name = self.get_argument('Name')
+                description = self.get_argument('Description', None)
+                architecture = self.get_argument('Architecture', None)
+                kernel_id = self.get_argument('KernelId', None)
+                ramdisk_id = self.get_argument('RamdiskId', None)
+                root_dev_name = self.get_argument('RootDeviceName', None)
+                snapshot_id = self.get_argument('SnapshotId', None)
+                # get block device mappings
+                bdm = BlockDeviceMapping()
+                mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
+                idx = 1
+                while mapping:
+                    pre = 'BlockDeviceMapping.%d' % idx
+                    dev_name = mapping
+                    block_dev_type = BlockDeviceType()
+                    block_dev_type.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
+                    if not(block_dev_type.ephemeral_name):
+                        block_dev_type.no_device = \
+                            (self.get_argument('%s.NoDevice' % pre, '') == 'true')
+                        block_dev_type.snapshot_id = \
+                                self.get_argument('%s.Ebs.SnapshotId' % pre, None)
+                        block_dev_type.size = \
+                                self.get_argument('%s.Ebs.VolumeSize' % pre, None)
+                        block_dev_type.delete_on_termination = \
+                                (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
+                    bdm[dev_name] = block_dev_type
+                    idx += 1
+                    mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
+                if snapshot_id:
+                    rootbdm = BlockDeviceType()
+                    rootbdm.snapshot_id = snapshot_id
+                    bdm['/dev/sda1'] = rootbdm
+                if len(bdm) == 0:
+                    bdm = None
+                return clc.register_image(name, image_location, description, architecture, kernel_id, ramdisk_id, root_dev_name, bdm)
 
     def handleInstances(self, action, clc):
         if action == 'DescribeInstances':
             # apply transformation of data to normalize instances
             instances = clc.get_all_instances()
             return self.__normalize_instances__(instances)
-        elif action == 'RunInstances':
-            return self.handleRunInstances(action, clc, None)
-        elif action == 'TerminateInstances':
-            instance_ids = self.get_argument_list('InstanceId')
-            return clc.terminate_instances(instance_ids)
-        elif action == 'StopInstances':
-            instance_ids = self.get_argument_list('InstanceId')
-            return clc.stop_instances(instance_ids)
-        elif action == 'StartInstances':
-            instance_ids = self.get_argument_list('InstanceId')
-            return clc.start_instances(instance_ids)
-        elif action == 'RebootInstances':
-            instance_ids = self.get_argument_list('InstanceId')
-            return clc.reboot_instances(instance_ids)
-        elif action == 'GetConsoleOutput':
-            instance_id = self.get_argument('InstanceId')
-            return clc.get_console_output(instance_id)
+        else:
+            self.check_xsrf_cookie()
+            if action == 'RunInstances':
+                return self.handleRunInstances(action, clc, None)
+            elif action == 'TerminateInstances':
+                instance_ids = self.get_argument_list('InstanceId')
+                return clc.terminate_instances(instance_ids)
+            elif action == 'StopInstances':
+                instance_ids = self.get_argument_list('InstanceId')
+                return clc.stop_instances(instance_ids)
+            elif action == 'StartInstances':
+                instance_ids = self.get_argument_list('InstanceId')
+                return clc.start_instances(instance_ids)
+            elif action == 'RebootInstances':
+                instance_ids = self.get_argument_list('InstanceId')
+                return clc.reboot_instances(instance_ids)
+            elif action == 'GetConsoleOutput':
+                instance_id = self.get_argument('InstanceId')
+                return clc.get_console_output(instance_id)
 
     def handleKeypairs(self, action, clc):
         if action == 'DescribeKeyPairs':
             return clc.get_all_key_pairs()
-        elif action == 'CreateKeyPair':
-            name = self.get_argument('KeyName')
-            return clc.create_key_pair(name)
-        elif action == 'DeleteKeyPair':
-            name = self.get_argument('KeyName')
-            return clc.delete_key_pair(name)
+        else:
+            self.check_xsrf_cookie()
+            if action == 'CreateKeyPair':
+                name = self.get_argument('KeyName')
+                return clc.create_key_pair(name)
+            elif action == 'DeleteKeyPair':
+                name = self.get_argument('KeyName')
+                return clc.delete_key_pair(name)
 
     def handleGroups(self, action, clc):
         if action == 'DescribeSecurityGroups':
             return clc.get_all_security_groups()
-        elif action == 'CreateSecurityGroup':
-            name = self.get_argument('GroupName')
-            desc = self.get_argument('GroupDescription')
-            return clc.create_security_group(name, desc)
-        elif action == 'DeleteSecurityGroup':
-            name = self.get_argument('GroupName', None)
-            group_id = self.get_argument('GroupId', None)
-            return clc.delete_security_group(name, group_id)
-        elif action == 'AuthorizeSecurityGroupIngress':
-            name = self.get_argument('GroupName', None)
-            group_id = self.get_argument('GroupId', None)
-            ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
-            from_port = self.get_argument_list('IpPermissions', 'FromPort')
-            to_port = self.get_argument_list('IpPermissions', 'ToPort')
-            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
-            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
-            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
-            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
-            ret = False
-            for i in range(len(ip_protocol)):
-                ret = clc.authorize_security_group(name,
-                                 src_security_group_name[i] if src_security_group_name else None,
-                                 src_security_group_owner_id[i] if src_security_group_owner_id else None,
-                                 ip_protocol[i], from_port[i], to_port[i],
-                                 cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
-                                 src_security_group_group_id[i] if src_security_group_group_id else None)
-            return ret
-        elif action == 'RevokeSecurityGroupIngress':
-            name = self.get_argument('GroupName', None)
-            group_id = self.get_argument('GroupId', None)
-            ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
-            from_port = self.get_argument_list('IpPermissions', 'FromPort')
-            to_port = self.get_argument_list('IpPermissions', 'ToPort')
-            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
-            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
-            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
-            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
-            ret = False
-            for i in range(len(ip_protocol)):
-                ret = clc.revoke_security_group(name,
-                                 src_security_group_name[i] if src_security_group_name else None,
-                                 src_security_group_owner_id[i] if src_security_group_owner_id else None,
-                                 ip_protocol[i], from_port[i], to_port[i],
-                                 cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
-                                 src_security_group_group_id[i] if src_security_group_group_id else None)
-            return ret
+        else:
+            self.check_xsrf_cookie()
+            if action == 'CreateSecurityGroup':
+                name = self.get_argument('GroupName')
+                desc = self.get_argument('GroupDescription')
+                return clc.create_security_group(name, desc)
+            elif action == 'DeleteSecurityGroup':
+                name = self.get_argument('GroupName', None)
+                group_id = self.get_argument('GroupId', None)
+                return clc.delete_security_group(name, group_id)
+            elif action == 'AuthorizeSecurityGroupIngress':
+                name = self.get_argument('GroupName', None)
+                group_id = self.get_argument('GroupId', None)
+                ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
+                from_port = self.get_argument_list('IpPermissions', 'FromPort')
+                to_port = self.get_argument_list('IpPermissions', 'ToPort')
+                src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
+                src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
+                src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
+                cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
+                ret = False
+                for i in range(len(ip_protocol)):
+                    ret = clc.authorize_security_group(name,
+                                     src_security_group_name[i] if src_security_group_name else None,
+                                     src_security_group_owner_id[i] if src_security_group_owner_id else None,
+                                     ip_protocol[i], from_port[i], to_port[i],
+                                     cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
+                                     src_security_group_group_id[i] if src_security_group_group_id else None)
+                return ret
+            elif action == 'RevokeSecurityGroupIngress':
+                name = self.get_argument('GroupName', None)
+                group_id = self.get_argument('GroupId', None)
+                ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
+                from_port = self.get_argument_list('IpPermissions', 'FromPort')
+                to_port = self.get_argument_list('IpPermissions', 'ToPort')
+                src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
+                src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
+                src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
+                cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
+                ret = False
+                for i in range(len(ip_protocol)):
+                    ret = clc.revoke_security_group(name,
+                                     src_security_group_name[i] if src_security_group_name else None,
+                                     src_security_group_owner_id[i] if src_security_group_owner_id else None,
+                                     ip_protocol[i], from_port[i], to_port[i],
+                                     cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
+                                     src_security_group_group_id[i] if src_security_group_group_id else None)
+                return ret
 
     def handleAddresses(self, action, clc):
         if action == 'DescribeAddresses':
             return clc.get_all_addresses()
-        elif action == 'AllocateAddress':
-            return clc.allocate_address()
-        elif action == 'ReleaseAddress':
-            publicip = self.get_argument('PublicIp')
-            return clc.release_address(publicip)
-        elif action == 'AssociateAddress':
-            publicip = self.get_argument('PublicIp')
-            instanceid = self.get_argument('InstanceId')
-            return clc.associate_address(publicip, instanceid)
-        elif action == 'DisassociateAddress':
-            publicip = self.get_argument('PublicIp')
-            return clc.disassociate_address(publicip)
+        else:
+            self.check_xsrf_cookie()
+            if action == 'AllocateAddress':
+                return clc.allocate_address()
+            elif action == 'ReleaseAddress':
+                publicip = self.get_argument('PublicIp')
+                return clc.release_address(publicip)
+            elif action == 'AssociateAddress':
+                publicip = self.get_argument('PublicIp')
+                instanceid = self.get_argument('InstanceId')
+                return clc.associate_address(publicip, instanceid)
+            elif action == 'DisassociateAddress':
+                publicip = self.get_argument('PublicIp')
+                return clc.disassociate_address(publicip)
 
     def handleVolumes(self, action, clc):
         if action == 'DescribeVolumes':
             return clc.get_all_volumes()
-        elif action == 'CreateVolume':
-            size = self.get_argument('Size')
-            zone = self.get_argument('AvailabilityZone')
-            snapshotid = self.get_argument('SnapshotId', None)
-            return clc.create_volume(size, zone, snapshotid)
-        elif action == 'DeleteVolume':
-            volumeid = self.get_argument('VolumeId')
-            return clc.delete_volume(volumeid)
-        elif action == 'AttachVolume':
-            volumeid = self.get_argument('VolumeId')
-            instanceid = self.get_argument('InstanceId')
-            device = self.get_argument('Device')
-            return clc.attach_volume(volumeid, instanceid, device)
-        elif action == 'DetachVolume':
-            volumeid = self.get_argument('VolumeId')
-            force = self.get_argument('Force', False)
-            return clc.detach_volume(volumeid, force)
+        else:
+            self.check_xsrf_cookie()
+            if action == 'CreateVolume':
+                size = self.get_argument('Size')
+                zone = self.get_argument('AvailabilityZone')
+                snapshotid = self.get_argument('SnapshotId', None)
+                return clc.create_volume(size, zone, snapshotid)
+            elif action == 'DeleteVolume':
+                volumeid = self.get_argument('VolumeId')
+                return clc.delete_volume(volumeid)
+            elif action == 'AttachVolume':
+                volumeid = self.get_argument('VolumeId')
+                instanceid = self.get_argument('InstanceId')
+                device = self.get_argument('Device')
+                return clc.attach_volume(volumeid, instanceid, device)
+            elif action == 'DetachVolume':
+                volumeid = self.get_argument('VolumeId')
+                force = self.get_argument('Force', False)
+                return clc.detach_volume(volumeid, force)
 
     def handleSnapshots(self, action, clc):
         if action == "DescribeSnapshots":
             return clc.get_all_snapshots()
-        elif action == 'CreateSnapshot':
-            volumeid = self.get_argument('VolumeId')
-            description = self.get_argument('Description', None)
-            return clc.create_snapshot(volumeid, description)
-        elif action == 'DeleteSnapshot':
-            snapshotid = self.get_argument('SnapshotId')
-            return clc.delete_snapshot(snapshotid)
-        elif action == 'DescribeSnapshotAttribute':
-            snapshotid = self.get_argument('SnapshotId')
-            attribute = self.get_argument('Attribute')
-            return clc.get_snapshot_attribute(snapshotid, attribute)
-        elif action == 'ModifySnapshotAttribute':
-            snapshotid = self.get_argument('SnapshotId')
-            attribute = self.get_argument('Attribute')
-            operation = self.get_argument('OperationType')
-            users = self.get_argument_list('UserId')
-            groups = self.get_argument_list('UsersGroup')
-            return clc.modify_snapshot_attribute(snapshotid, attribute, operation, users, groups)
-        elif action == 'ResetSnapshotAttribute':
-            snapshotid = self.get_argument('SnapshotId')
-            attribute = self.get_argument('Attribute')
-            return clc.reset_snapshot_attribute(snapshotid, attribute)
-        elif action == 'RegisterSnapshot':
-            try:
+        else:
+            self.check_xsrf_cookie()
+            if action == 'CreateSnapshot':
+                volumeid = self.get_argument('VolumeId')
+                description = self.get_argument('Description', None)
+                return clc.create_snapshot(volumeid, description)
+            elif action == 'DeleteSnapshot':
                 snapshotid = self.get_argument('SnapshotId')
-                name = self.get_argument('Name')
-                desc = self.get_argument('Description', None)
-                windows = self.get_argument('Windows', False)
-                result = clc.register_bfebs(snapshotid, name, desc, windows)
-                return result
-            except Exception, err:
-                traceback.print_exc(file=sys.stdout)
+                return clc.delete_snapshot(snapshotid)
+            elif action == 'DescribeSnapshotAttribute':
+                snapshotid = self.get_argument('SnapshotId')
+                attribute = self.get_argument('Attribute')
+                return clc.get_snapshot_attribute(snapshotid, attribute)
+            elif action == 'ModifySnapshotAttribute':
+                snapshotid = self.get_argument('SnapshotId')
+                attribute = self.get_argument('Attribute')
+                operation = self.get_argument('OperationType')
+                users = self.get_argument_list('UserId')
+                groups = self.get_argument_list('UsersGroup')
+                return clc.modify_snapshot_attribute(snapshotid, attribute, operation, users, groups)
+            elif action == 'ResetSnapshotAttribute':
+                snapshotid = self.get_argument('SnapshotId')
+                attribute = self.get_argument('Attribute')
+                return clc.reset_snapshot_attribute(snapshotid, attribute)
+
     ##
     # This is the main entry point for API calls for EC2 from the browser
     # other calls are delegated to handler methods based on resource type
@@ -318,6 +361,7 @@ class ComputeHandler(server.BaseHandler):
     def get(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
+
         if not(self.user_session.clc):
             if self.should_use_mock():
                 self.user_session.clc = MockClcInterface()
@@ -366,6 +410,8 @@ class ComputeHandler(server.BaseHandler):
                 self.set_status(504);
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
             else:
+                logging.error("Could not fullfil request, exception to follow")
+                logging.exception(ex)
                 ret = ClcError(500, ex.message, '')
                 self.set_status(500);
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
@@ -416,6 +462,8 @@ class ComputeHandler(server.BaseHandler):
                 self.set_status(504);
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
             else:
+                logging.error("Could not fullfil request, exception to follow")
+                logging.exception(ex)
                 ret = ClcError(500, ex.message, None)
                 self.set_status(500);
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
