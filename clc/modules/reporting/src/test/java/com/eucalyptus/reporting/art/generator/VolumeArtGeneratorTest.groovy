@@ -265,8 +265,8 @@ class VolumeArtGeneratorTest {
   }
 
   @SuppressWarnings("GroovyAccessibility")
-  private ReportingVolumeDetachEvent volumeDetach( String volumeId, String instanceId, long sizeGb, String timestamp ) {
-    new ReportingVolumeDetachEvent( uuid(volumeId), uuid(instanceId), sizeGb, millis(timestamp) )
+  private ReportingVolumeDetachEvent volumeDetach( String volumeId, String instanceId, String timestamp ) {
+    new ReportingVolumeDetachEvent( uuid(volumeId), uuid(instanceId), millis(timestamp) )
   }
 
   @SuppressWarnings("GroovyAccessibility")
@@ -324,7 +324,7 @@ class VolumeArtGeneratorTest {
           << volumeAttach( VOLUME2, INSTANCE2, 2, "2012-09-01T12:06:00" )
 
       detachList \
-          << volumeDetach( VOLUME1, INSTANCE1, 1, "2012-09-01T11:57:00" )
+          << volumeDetach( VOLUME1, INSTANCE1, "2012-09-01T11:57:00" )
     }
 
     new VolumeArtGenerator() {

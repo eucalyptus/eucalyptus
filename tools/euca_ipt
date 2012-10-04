@@ -76,7 +76,6 @@ if (@ARGV == 3) {
     dodie("euca_ipt: wrong number of commandline parameters\n");
 }
 
-# FIXME: Does not yet save packet counters.
 sub old_euca_ipt() {
     $table = shift @_;
     if ($table =~ /^([ &:#-\@\w.]+)$/) {
@@ -96,7 +95,7 @@ sub old_euca_ipt() {
 
     @workingfiles = ("$rulefile.orig", "$rulefile.new");
 
-    open my $fh, '-|' or exec 'iptables-save', ("-t", "$table") or dodie ("iptables-save failed: $!\n");
+    open my $fh, '-|' or exec 'iptables-save', ("-c", "-t", "$table") or dodie ("iptables-save failed: $!\n");
     open(OFH, ">$rulefile.orig") or dodie ("cannot open $rulefile.orig");
     $outbuf = "";
     while(<$fh>) {
@@ -152,7 +151,7 @@ sub old_euca_ipt() {
     }
 
 
-    $rc = system("cat $rulefile.new | iptables-restore");
+    $rc = system("cat $rulefile.new | iptables-restore -c");
     if ($rc) {
 	print STDERR "iptables-restore failed: rulefile contents:\n";
 	system("cat $rulefile.new 1>&2");
@@ -235,30 +234,25 @@ sub new_euca_ipt() {
     }
     close(FH);
 
-    open(RFH, "iptables-save -t $table|") || dodie("iptables-save failed\n");
+    open(RFH, "iptables-save -c -t $table|") || dodie("iptables-save failed\n");
     while(<RFH>) {
 	chomp;
 	my $line = $_;
-#	print STDERR "~~~> $_\n";
 	if ($line =~ /^\s*#/) {
 	} elsif ($line =~ /\[[0-9]+:[0-9]+\] -A/) {
 	    my ($counters, $add, $chain, @rule) = split(/\s+/, $line);
 	    if ($chain && @rule) {
 		$oldchains{$chain} .= ",,," . join(" ", $counters, @rule);
-#		print STDERR "+++> $add\n";
-#		print STDERR "~~~> CHAIN($chain): $oldchains{$chain}\n";
 		$allchains{$chain} = 1;
 	    }
 	} elsif ($line =~ /-A/) {
 	    my ($add, $chain, @rule) = split(/\s+/, $line);
 	    if ($chain && @rule) {
 		$oldchains{$chain} .= ",,," . join(" ", @rule);
-#		print STDERR "~~~> $oldchains{$chain}\n";
 		$allchains{$chain} = 1;
 	    }
 	} elsif ($line =~ /^:/) {
 	    my ($exchain) = split(/\s+/, $line);
-#	    print STDERR "^^^> $exchain\n";
 	    if ($exchain && $exchain ne "") {
 		$exchain =~ s/://g;
 		$allchains{$exchain} = 1;
@@ -313,17 +307,14 @@ sub new_euca_ipt() {
 
 #restore non-eucalyptus chains
     foreach $chain (keys(%oldchains)) {
-#	print STDERR "---> $chain\n";
 	if (!$chainmap{$chain}) {
 	    my @rules = split(',,,', $oldchains{$chain});
 	    foreach $rule (@rules) {
 		if ($chain && $rule && $rule ne "") {
 		    if ($rule =~ /^(\[[0-9]+:[0-9]+\]) (.+)/) {
 		        print OFH "$1 -A $chain $2\n";
-#		        print STDERR ">>>> $1 -A $chain $2\n";
 		    } else {
 		        print OFH "-A $chain $rule\n";
-#		        print STDERR "===> -A $chain $rule\n";
 		    }
 		}
 	    }
@@ -332,7 +323,6 @@ sub new_euca_ipt() {
 
 #install eucalyptus chains
     foreach $chain (keys(%oldchains)) {
-#	print STDERR "--.> $chain\n";
 	if ($chainmap{$chain}) {
 	    my @rules = split(',,,', $oldchains{$chain});
 	    my $rulelen = @rules;
@@ -351,7 +341,7 @@ sub new_euca_ipt() {
     close(OFH);
 
     if ( -f "$ofile" ) {
-	$rc = system("cat $ofile | iptables-restore");
+	$rc = system("cat $ofile | iptables-restore -c");
 	if ($rc) {
 	    print STDERR "[EUCAERROR] euca_ipt: could not run iptables-restore\n";
 	    print STDERR "=====\n";

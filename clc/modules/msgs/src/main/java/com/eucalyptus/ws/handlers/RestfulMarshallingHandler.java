@@ -62,27 +62,43 @@
 
 package com.eucalyptus.ws.handlers;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.MissingFormatArgumentException;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.GZIPOutputStream;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
+import com.google.common.base.Objects;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -173,13 +189,14 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           byteOut.write( response.getBytes( ) );
           httpResponse.setStatus( msg.getHttpStatus( ) );
         } else {//actually try to bind response
+          final Object message = httpResponse.getMessage( );
           try {//use request binding
-            this.binding.toOM( httpResponse.getMessage( ) ).serialize( byteOut );
+            this.binding.toStream( byteOut, message );
           } catch ( BindingException ex ) {
             try {//use default binding with request namespace
-              BindingManager.getDefaultBinding( ).toOM( httpResponse.getMessage( ), this.namespace ).serialize( byteOut );
+              BindingManager.getDefaultBinding( ).toStream( byteOut, message, this.namespace );
             } catch ( BindingException ex1 ) {//use default binding
-              BindingManager.getDefaultBinding( ).toOM( httpResponse.getMessage( ) ).serialize( byteOut );
+              BindingManager.getDefaultBinding( ).toStream( byteOut, message );
             }
           } catch ( Exception e ) {
             LOG.debug( e );
@@ -197,7 +214,134 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
       }
     }
   }
-  
+
+  public static void streamResponse( final Object message ) {
+    final Context context = Contexts.lookup();
+    final Channel channel = context.getChannel();
+    final RestfulMarshallingHandler handler =
+        channel.getPipeline().get(RestfulMarshallingHandler.class);
+
+    final DefaultHttpResponse httpResponse =
+        new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    final EncodingWrapper wrapper = getEncodingWrapper();
+    wrapper.writeHeaders( httpResponse );
+    try {
+      httpResponse.addHeader( HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED );
+      httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml; charset=UTF-8" );
+      final OutputStream outputStream = wrapper.wrapOutput(
+          new BufferedOutputStream( new OutputStream() {
+            @Override
+            public void write( final int b ) throws IOException {
+              write( new byte[]{ (byte)b }, 0, 1 );
+            }
+            @Override
+            public void write( final byte[] b, final int off, final int len ) throws IOException {
+              final ChannelFuture future = Channels.write( channel,
+                  new DefaultHttpChunk(ChannelBuffers.copiedBuffer(b, off, len)));
+              if ( !future.awaitUninterruptibly().isSuccess() ) {
+                throw new IOException( future.getCause() );
+              }
+            }
+            @Override
+            public void flush() throws IOException {
+            }
+      } ) );
+      Channels.write( channel, httpResponse );
+      handler.binding.toStream( outputStream, message );
+      outputStream.close(); // the implementations used flush/complete on close
+      Channels.write( channel, HttpChunk.LAST_CHUNK );
+    } catch ( final Exception e ) {
+      LOG.error( "Error streaming response", e );
+    }
+  }
+
+  /**
+   * Get the encoding wrapper to use for the request.
+   *
+   * This simple check for encoding support fails if a request specifies any
+   * "q" value (i.e. encoding preferences, or any other parameters or
+   * extension)
+   */
+  static EncodingWrapper getEncodingWrapper() {
+    EncodingWrapper wrapper = null;
+
+    final MappingHttpRequest request = Contexts.lookup().getHttpRequest();
+    if ( request != null ) {
+      final String accept =
+          Objects.firstNonNull( request.getHeader( HttpHeaders.Names.ACCEPT_ENCODING ), "" ).toLowerCase();
+      if ( accept.matches( "[a-z, *_-]{1,1024}" ) ) {
+        final Iterable<String> encodings = Splitter.on(",").trimResults().omitEmptyStrings().split(accept);
+        if ( Iterables.contains( encodings, HttpHeaders.Values.DEFLATE ) ) {
+          wrapper = new DeflateEncodingWrapper();
+        } else if ( Iterables.contains( encodings, HttpHeaders.Values.GZIP ) ) {
+          wrapper = new GzipEncodingWrapper();
+        }
+      }
+    }
+
+    if ( wrapper == null ) {
+      wrapper = new EncodingWrapper();
+    }
+
+    return wrapper;
+  }
+
+  private static class EncodingWrapper {
+    void writeHeaders( @Nonnull final HttpMessage httpResponse ) {
+    }
+
+    @Nonnull
+    OutputStream wrapOutput( @Nonnull final OutputStream out ) throws IOException {
+      return out;
+    }
+  }
+
+  private static abstract class CompressingEncodingWrapper extends EncodingWrapper {
+    private final String encoding;
+
+    protected CompressingEncodingWrapper(final String encoding) {
+      this.encoding = encoding;
+    }
+
+    @Override
+    void writeHeaders( @Nonnull final HttpMessage httpResponse ) {
+      httpResponse.addHeader( HttpHeaders.Names.CONTENT_ENCODING, encoding );
+    }
+
+    @Nonnull
+    @Override
+    final OutputStream wrapOutput( @Nonnull final OutputStream out ) throws IOException {
+      return compress( out );
+    }
+
+    @Nonnull
+    abstract OutputStream compress( @Nonnull OutputStream out ) throws IOException;
+  }
+
+  private static final class DeflateEncodingWrapper extends CompressingEncodingWrapper {
+    DeflateEncodingWrapper() {
+      super( HttpHeaders.Values.DEFLATE );
+    }
+
+    @Nonnull
+    @Override
+    OutputStream compress( @Nonnull final OutputStream out ) {
+      return new DeflaterOutputStream( out );
+    }
+  }
+
+  private static final class GzipEncodingWrapper extends CompressingEncodingWrapper {
+    private GzipEncodingWrapper() {
+      super( HttpHeaders.Values.GZIP );
+    }
+
+    @Nonnull
+    @Override
+    OutputStream compress( @Nonnull final OutputStream out ) throws IOException {
+      return new GZIPOutputStream( out );
+    }
+  }
+
   /**
    * @return the namespace
    */

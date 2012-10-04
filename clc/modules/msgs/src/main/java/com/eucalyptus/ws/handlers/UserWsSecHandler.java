@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.login.SecurityContext;
@@ -85,10 +84,4 @@ public class UserWsSecHandler extends MessageStackHandler implements ChannelHand
       SecurityContext.getLoginContext( new WsSecCredentials( httpRequest.getCorrelationId( ), envelope ) ).login( );
     }
   }
-
-  @Override
-  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-
-  }
-
 }

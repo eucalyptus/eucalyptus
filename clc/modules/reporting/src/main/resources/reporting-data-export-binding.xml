@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<binding force-classes="true"
+         add-constructors="true"
+         name="www_eucalyptus_com_ns_reporting_export_2012_08_24">
+    <namespace uri="http://www.eucalyptus.com/ns/reporting/export/2012-08-24/"
+               prefix="r"/>
+
+    <mapping name="Export"
+             ns="http://www.eucalyptus.com/ns/reporting/export/2012-08-24/"
+             class="com.eucalyptus.reporting.export.ReportingExport">
+        <collection name="UsageBag"
+                    ns="http://www.eucalyptus.com/ns/reporting/export/2012-08-24/"
+                    iter-method="iterateUsage"
+                    add-method="addUsage"
+                    item-type="com.eucalyptus.reporting.export.ReportedUsage">
+            <structure map-as="com.eucalyptus.reporting.export.ReportedUsage"/>
+        </collection>
+        <collection name="EventBag"
+                    ns="http://www.eucalyptus.com/ns/reporting/export/2012-08-24/"
+                    iter-method="iterateActions"
+                    add-method="addAction"
+                    item-type="com.eucalyptus.reporting.export.ReportedAction">
+            <structure map-as="com.eucalyptus.reporting.export.ReportedAction"/>
+        </collection>
+    </mapping>
+
+    <mapping name="Event"
+             ns="http://www.eucalyptus.com/ns/reporting/export/2012-08-24/"
+             class="com.eucalyptus.reporting.export.ReportedAction">
+        <value name="Id" field="eventUuid" style="attribute"/>
+        <value name="Created" field="created" style="attribute"/>
+        <value name="Occurred" field="occurred" style="attribute"/>
+        <value name="Type" field="type" style="attribute"/>
+        <value name="TargetId" field="uuid" style="attribute"/>
+        <value name="Action" field="action" style="attribute"/>
+        <value name="AccountId" field="accountId" style="attribute" usage="optional"/>
+        <value name="AccountName" field="accountName" style="attribute" usage="optional"/>
+        <value name="UserId" field="userId" style="attribute" usage="optional"/>
+        <value name="UserName" field="userName" style="attribute" usage="optional"/>
+        <value name="TargetName" field="id" style="attribute" usage="optional"/>
+        <value name="Version" field="version" style="attribute" usage="optional"/>
+        <value name="Subtype" field="subType" style="attribute" usage="optional"/>
+        <value name="InstanceUuid" field="instanceUuid" style="attribute" usage="optional"/>
+        <value name="VolumeUuid" field="volumeUuid" style="attribute" usage="optional"/>
+        <value name="Size" field="size" style="attribute" usage="optional"/>
+        <value name="Scope" field="scope" style="attribute" usage="optional"/>
+    </mapping>
+
+    <mapping name="Usage"
+             ns="http://www.eucalyptus.com/ns/reporting/export/2012-08-24/"
+             class="com.eucalyptus.reporting.export.ReportedUsage">
+        <value name="Id" field="eventUuid" style="attribute"/>
+        <value name="Created" field="created" style="attribute"/>
+        <value name="Occurred" field="occurred" style="attribute"/>
+        <value name="Type" field="type" style="attribute"/>
+        <value name="TargetId" field="id" style="attribute"/>
+        <value name="Metric" field="metric" style="attribute"/>
+        <value name="Dimension" field="dimension" style="attribute" usage="optional"/>
+        <value name="Sequence" field="sequence" style="attribute" usage="optional"/>
+        <value name="Value" field="value" style="attribute"/>
+    </mapping>
+</binding>
+
+

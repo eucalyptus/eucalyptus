@@ -198,8 +198,4 @@ public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 			throw new AuthenticationException( "Failed to compute signature" );
 		}
 	}
-
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-	}
 }

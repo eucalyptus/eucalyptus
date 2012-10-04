@@ -28,10 +28,10 @@ class SnapShotUsageEventListenerTest {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( SnapShotEvent.with(
-        SnapShotEvent.forSnapShotCreate(Integer.MAX_VALUE.toLong() + 1L),
+        SnapShotEvent.forSnapShotCreate(Integer.MAX_VALUE.toLong() + 1L, uuid("vol-00000001"), "vol-00000001"),
         uuid("snap-00000001"),
         "snap-00000001",
-        Principals.systemFullName()
+        Principals.systemFullName().getUserId()
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeSnapshotCreateEvent", persisted instanceof ReportingVolumeSnapshotCreateEvent )
@@ -51,7 +51,7 @@ class SnapShotUsageEventListenerTest {
         SnapShotEvent.forSnapShotDelete(),
         uuid("snap-00000001"),
         "snap-00000001",
-        Principals.systemFullName()
+        Principals.systemFullName().getUserId()
     ), timestamp )
 
     assertTrue( "Persisted event is ReportingVolumeSnapshotDeleteEvent", persisted instanceof ReportingVolumeSnapshotDeleteEvent )

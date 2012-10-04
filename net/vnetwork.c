@@ -322,6 +322,21 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	//	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
 	//	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
+	// Provides rules for doing internal/external network reporting/stats.
+	snprintf(cmd, 256, "-N EUCA_COUNTERS_IN");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-N EUCA_COUNTERS_OUT");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-A EUCA_COUNTERS_IN -d %s/%d", network, slashnet);
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-A EUCA_COUNTERS_OUT -s %s/%d", network, slashnet);
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-I FORWARD -j EUCA_COUNTERS_IN");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-I FORWARD -j EUCA_COUNTERS_OUT");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+
+
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
 	for (vlan=2; vlan<vnetconfig->max_vlan; vlan++) {
@@ -1580,12 +1595,12 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   int i, j, found, lastj, localIpId=-1, rc;
   uint32_t tmpccs[NUMBER_OF_CCS];
-  
+
   if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
     logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
     return(1);
-  }  
-  
+  }
+
   bzero(tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
   found=0;
   for (i=0; i<ccsLen; i++) {
@@ -1597,9 +1612,9 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
       vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
       vnetconfig->tunnels.localIpId = i;
       found=1;
-    }    
+    }
   }
-  
+
   if (memcmp(tmpccs, vnetconfig->tunnels.ccs, sizeof(uint32_t)*NUMBER_OF_CCS)) {
     // internal list is different from new list, teardown and re-construct tunnels
     logprintfl(EUCAINFO, "vnetSetCCS(): list of CCs has changed, initiating re-construction of tunnels\n");
@@ -2513,6 +2528,20 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply SNAT rule '%s'\n", cmd);
       ret = 1;
     }
+
+    // For reporting traffic statistics.
+    snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_IN -d %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply EUCA_COUNTERS_IN rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_OUT -s %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply EUCA_COUNTERS_OUT rule '%s'\n", cmd);
+      ret = 1;
+    }
   }
   return(ret);
 }
@@ -2674,6 +2703,20 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
     }
     if (rc) {
       logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove SNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
+
+    // For reporting traffic statistics.
+    snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_IN -d %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_OUT -s %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
       ret = 1;
     }
 

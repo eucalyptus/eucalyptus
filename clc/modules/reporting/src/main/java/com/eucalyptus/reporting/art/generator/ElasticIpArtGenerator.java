@@ -56,12 +56,12 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 				}
 				final ReportingUser reportingUser = getUserById( reportingUsersById, createEvent.getUserId() );
 				if (reportingUser==null) {
-					log.error("No user corresponding to event:" + createEvent.getUserId() + " " + createEvent.getNaturalId());
+					log.error("No user corresponding to event:" + createEvent.getUserId() + " " + createEvent.getUuid());
 					return true;
 				}
 				final String accountName = getAccountNameById( accountNamesById, reportingUser.getAccountId() );
 				if (accountName==null) {
-					log.error("No account corresponding to user:" + reportingUser.getAccountId()+ " " + createEvent.getNaturalId());
+					log.error("No account corresponding to user:" + reportingUser.getAccountId()+ " " + createEvent.getUuid());
 					return true;
 				}
 				List<ElasticIpAllocation> allocations = ipUuidToAllocationListMap.get( createEvent.getUuid() );

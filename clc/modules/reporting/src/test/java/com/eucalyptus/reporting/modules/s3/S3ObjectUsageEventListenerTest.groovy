@@ -12,7 +12,6 @@ import com.eucalyptus.reporting.event.S3ObjectEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent
-import com.eucalyptus.reporting.event_store.ReportingS3ObjectUsageEvent
 
 /**
  * 
@@ -65,28 +64,6 @@ class S3ObjectUsageEventListenerTest {
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
     assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
     assertNull( "Persisted event object version", event.getObjectVersion() )
-    assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
-  }
-
-  @Test
-  void testGetEvent() {
-    long timestamp = System.currentTimeMillis() - 100000
-
-    Object persisted = testEvent( S3ObjectEvent.with(
-        S3ObjectEvent.forS3ObjectGet(),
-        "bucket15",
-        "object34",
-        "version2",
-        Principals.systemFullName(),
-        Integer.MAX_VALUE.toLong() + 1L
-    ), timestamp )
-
-    assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectUsageEvent )
-    ReportingS3ObjectUsageEvent event = persisted
-    assertEquals( "Persisted event bucket name", "bucket15", event.getBucketName() )
-    assertEquals( "Persisted event object name", "object34", event.getObjectName() )
-    assertEquals( "Persisted event object version", "version2", event.getObjectVersion() )
-    assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getUserId() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
 

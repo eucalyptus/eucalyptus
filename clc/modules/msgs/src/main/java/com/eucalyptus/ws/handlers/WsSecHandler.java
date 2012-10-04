@@ -176,8 +176,4 @@ public abstract class WsSecHandler extends MessageStackHandler {
 
   public abstract boolean shouldTimeStamp( );
 
-  @Override
-  public void incomingMessage( final MessageEvent event ) throws Exception {
-  }
-
 }

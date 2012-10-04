@@ -33,10 +33,9 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
   /**
    * @see #forS3ObjectCreate
    * @see #forS3ObjectDelete
-   * @see #forS3ObjectGet
    */
   public enum S3ObjectAction {
-    OBJECTGET, OBJECTCREATE, OBJECTDELETE
+    OBJECTCREATE, OBJECTDELETE
   }
 
   private final String objectKey;
@@ -50,14 +49,9 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
     return S3ObjectAction.OBJECTDELETE;
   }
 
-  public static S3ObjectAction forS3ObjectGet() {
-    return S3ObjectAction.OBJECTGET;
-  }
-
   /**
    * @see #forS3ObjectCreate
    * @see #forS3ObjectDelete
-   * @see #forS3ObjectGet
    */
   public static S3ObjectEvent with( @Nonnull  final S3ObjectAction action,
                                     @Nonnull  final String bucketName,

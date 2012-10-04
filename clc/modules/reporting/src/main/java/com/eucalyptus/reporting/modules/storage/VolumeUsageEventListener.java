@@ -86,7 +86,7 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
           eventStore
               .insertDetachEvent(event.getUuid(),
                   ((InstanceEventActionInfo) event.getActionInfo())
-                      .getInstanceUuid(), event.getSizeGB(),
+                      .getInstanceUuid(),
                   timeInMs);
           break;
       }

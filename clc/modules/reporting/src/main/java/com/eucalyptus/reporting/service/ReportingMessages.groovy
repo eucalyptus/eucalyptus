@@ -32,8 +32,11 @@ class ReportingMessage extends BaseMessage {
 }
 
 class ExportReportDataType extends ReportingMessage {
-  Date startDate
-  Date endDate
+  @HttpParameterMapping (parameter = "Start")
+  String startDate
+  @HttpParameterMapping (parameter = "End")
+  String endDate
+  boolean dependencies
 }
 
 class ExportReportDataResponseType extends ReportingMessage  {
@@ -65,6 +68,22 @@ class ExportDataResultType extends EucalyptusData {
   ExportDataResultType(){}
   ExportDataResultType( data ){ this.data = data }
   ReportingExport data
+}
+
+class DeleteReportDataType extends ReportingMessage {
+  @HttpParameterMapping (parameter = "End")
+  String endDate
+}
+
+class DeleteReportDataResponseType extends ReportingMessage  {
+  DeleteDataResultType result
+  ReportingResponseMetadataType responseMetadata = new ReportingResponseMetadataType( );
+}
+
+class DeleteDataResultType extends EucalyptusData {
+  DeleteDataResultType(){}
+  DeleteDataResultType( count ){ this.count = count }
+  int count
 }
 
 class GenerateReportType extends ReportingMessage {

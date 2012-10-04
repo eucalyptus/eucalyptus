@@ -23,28 +23,25 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
-from eucadmin import EucAdmin
-import eucadmin
+from boto.roboto.param import Param
+from eucadmin.reportsrequest import ReportsRequest
 
-class ReportsServiceClass(EucAdmin):
-    APIVersion = '2012-08-24'
+class DeleteReportData(ReportsRequest):
+    Description = 'Delete reporting data'
 
-class ReportsRequest(AWSQueryRequest):
-    ServicePath = '/services/Reporting'
-    ServiceClass = ReportsServiceClass
+    Params = [
+        Param(name='End',
+            short_name='e', long_name='end-date',
+            ptype='datetime', optional=False,
+            doc='the exclusive end date for the report data deletion (e.g. 2012-08-26)'),
+        ]
+
+    def cli_formatter(self, data):
+        deleted = getattr( data, 'DeletedCount', None )
+        if deleted is None:
+            raise IOError('Error processing response')
+        print 'Deleted ' + deleted + ' reporting data entries.'
 
     def process_args(self, **args):
-        args['path'] = self.ServicePath
-        super(ReportsRequest, self).process_args( **args )
-
-    def process_date_param(self, arg):
-        if arg in self.request_params:
-            self.request_params[arg] += 'T00:00:00'
-
-    def main(self, **args):
-        return self.send(**args)
-
-    def main_cli(self):
-        eucadmin.print_version_if_necessary()
-        self.do_cli()
+        super(DeleteReportData, self).process_args( **args )
+        self.process_date_param('End')

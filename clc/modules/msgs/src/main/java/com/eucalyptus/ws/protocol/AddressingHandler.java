@@ -101,9 +101,6 @@ public class AddressingHandler extends MessageStackHandler {
   }
   
   @Override
-  public void incomingMessage( final MessageEvent event ) throws Exception {}
-  
-  @Override
   public void outgoingMessage( final ChannelHandlerContext ctx, final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
       final MappingHttpRequest httpMessage = ( MappingHttpRequest ) event.getMessage( );

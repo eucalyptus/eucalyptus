@@ -26,11 +26,11 @@ class ResourceAvailabilityEventListenerTest {
   }
 
   @Test
-  void testEc2AvailabilityForVMTypeIgnored() {
+  void testInstanceAvailability() {
     def ( _, ReportingComputeZoneDomainModel zone1Model,
-    ReportingComputeZoneDomainModel zone2Model ) = testEvent( resourceEvent( Core, 50, 27 , 'zone1', 'vm-type', 'm1.small' ) )
+    ReportingComputeZoneDomainModel zone2Model ) = testEvent( resourceEvent( Instance, 50, 27 , 'zone1', 'vm-type', 'm1.small' ) )
 
-    assertNull( 'zone1 availability', zone1Model.getEc2ComputeUnitsAvailable() )
+    assertEquals( 'zone1 availability', 27, zone1Model.getInstancesAvailableForType('m1.small') )
     assertNull( 'zone2 availability', zone2Model.getEc2ComputeUnitsAvailable() )
   }
 

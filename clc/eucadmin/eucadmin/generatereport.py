@@ -44,11 +44,11 @@ class GenerateReport(ReportsRequest):
         Param(name='Start',
             short_name='s', long_name='start-date',
             ptype='datetime',
-            doc='The inclusive start date for the report period (e.g. 2012-08-19)'),
+            doc='the inclusive start date for the report period (e.g. 2012-08-19)'),
         Param(name='End',
             short_name='e', long_name='end-date',
             ptype='datetime',
-            doc='The exclusive end date for the report period (e.g. 2012-08-26)'),
+            doc='the exclusive end date for the report period (e.g. 2012-08-26)'),
         Param(name='Force',
             short_name='F', long_name='force',
             ptype='boolean', request_param=False,
@@ -77,10 +77,6 @@ class GenerateReport(ReportsRequest):
             print 'Exported data to ' + self.file
         else:
             print report
-
-    def process_date_param(self, arg):
-        if arg in self.request_params:
-            self.request_params[arg] += 'T00:00:00'
 
     def process_args(self, **args):
         super(GenerateReport, self).process_args( **args )

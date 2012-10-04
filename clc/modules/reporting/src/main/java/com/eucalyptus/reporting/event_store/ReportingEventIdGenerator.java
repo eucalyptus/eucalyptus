@@ -19,26 +19,20 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event_store;
 
-public class ReportingS3ObjectEventStore extends EventStoreSupport
-{
-  private static ReportingS3ObjectEventStore instance = new ReportingS3ObjectEventStore();
+import java.io.Serializable;
+import org.hibernate.HibernateException;
+import org.hibernate.engine.SessionImplementor;
+import org.hibernate.id.UUIDHexGenerator;
 
-  public static ReportingS3ObjectEventStore getInstance() {
-    return instance;
-  }
-
-  protected ReportingS3ObjectEventStore() {
-  }
-
-  public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
-		  long sizeGB, long timestampMs, String userId)
-  {
-    persist( new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectKey, objectVersion, sizeGB, timestampMs, userId) );
-  }
-
-  public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
-		  long timestampMs)
-  {
-    persist( new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectKey, objectVersion, timestampMs) );
+/**
+ * Custom identifier generator that preserves an existing value.
+ */
+public class ReportingEventIdGenerator extends UUIDHexGenerator {
+  @Override
+  public Serializable generate( final SessionImplementor session,
+                                final Object object ) throws HibernateException {
+    final Serializable id = session.getEntityPersister(null, object)
+        .getClassMetadata().getIdentifier(object, session);
+    return id != null ? id : super.generate(session, object);
   }
 }
