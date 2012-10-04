@@ -251,9 +251,10 @@
             thisObj.addDialog.find('#allow-ip-error').html("address range must be of format xx.xx.xx.xx/nn");
       });
       this.addDialog.find('#sgroup-ports').keyup(function () {
+        var template = $('#sgroup-template').val();
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
-            this.addDialog.find('#sgroup-ports-error').html("port or port range must be defined");
+            thisObj.addDialog.find('#sgroup-ports-error').html("port or port range must be defined");
             enable = false;
           }
           else {
@@ -261,11 +262,11 @@
             var port_list = ports.split('-');
             from_port = ports[0];
             if (from_port != parseInt(from_port)) {
-              this.addDialog.find('#sgroup-ports-error').html("from port not properly defined, might not be an int");
+              thisObj.addDialog.find('#sgroup-ports-error').html("from port not properly defined, might not be an int");
               enable = false;
             }
             else if (ports.length > 1 && ports[1] != parseInt(ports[1])) {
-              this.addDialog.find('#sgroup-ports-error').html("to port not properly defined, might not be an int");
+              thisObj.addDialog.find('#sgroup-ports-error').html("to port not properly defined, might not be an int");
               enable = false;
             }
           }
@@ -339,6 +340,7 @@
               if (fromPort.length > 0) {
                   thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
               }
+              thisObj._getTableWrapper().eucatable('refreshTable');
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
@@ -425,9 +427,10 @@
             thisObj.editDialog.find('#allow-ip-error').html("address range must be of format xx.xx.xx.xx/nn");
       });
       this.editDialog.find('#sgroup-ports').keyup(function () {
+        var template = $('#sgroup-template').val();
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
-            this.editDialog.find('#sgroup-ports-error').html("port or port range must be defined");
+            thisObj.editDialog.find('#sgroup-ports-error').html("port or port range must be defined");
             enable = false;
           }
           else {
@@ -435,11 +438,11 @@
             var port_list = ports.split('-');
             from_port = ports[0];
             if (from_port != parseInt(from_port)) {
-              this.editDialog.find('#sgroup-ports-error').html("from port not properly defined, might not be an int");
+              thisObj.editDialog.find('#sgroup-ports-error').html("from port not properly defined, might not be an int");
               enable = false;
             }
             else if (ports.length > 1 && ports[1] != parseInt(ports[1])) {
-              this.editDialog.find('#sgroup-ports-error').html("to port not properly defined, might not be an int");
+              thisObj.editDialog.find('#sgroup-ports-error').html("to port not properly defined, might not be an int");
               enable = false;
             }
           }
@@ -763,6 +766,7 @@
       $('#sgroup-rules-list').html('');
       thisObj.addDialog.eucadialog('open');
       thisObj.addDialog.find('input[id=sgroup-name]').focus();
+      thisObj.addDialog.find('input[id=sgroup-description]').focus();
       thisObj.addDialog.find('#sgroup-template').val('none');
       thisObj.addDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
