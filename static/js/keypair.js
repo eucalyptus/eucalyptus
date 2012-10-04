@@ -36,7 +36,7 @@
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
+          "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs&_xsrf="+$.cookie('_xsrf'),
           "aoColumns": [
             {
               "bSortable": false,

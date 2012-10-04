@@ -37,7 +37,7 @@
       this.tableWrapper = $sgroupTable.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
+          "sAjaxSource": "../ec2?Action=DescribeSecurityGroups&_xsrf="+$.cookie('_xsrf'),
           "aoColumns": [
             {
               "bSortable": false,

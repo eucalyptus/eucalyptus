@@ -47,7 +47,7 @@
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeInstances",
+          "sAjaxSource": "../ec2?Action=DescribeInstances&_xsrf="+$.cookie('_xsrf'),
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {

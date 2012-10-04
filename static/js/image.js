@@ -33,7 +33,7 @@
       this.tableWrapper = $imgTable.eucatable({
         id : 'images', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "sAjaxSource": "../ec2?Action=DescribeImages&_xsrf="+$.cookie('_xsrf'),
           "aoColumns": [
             {
               "bSortable": false,
