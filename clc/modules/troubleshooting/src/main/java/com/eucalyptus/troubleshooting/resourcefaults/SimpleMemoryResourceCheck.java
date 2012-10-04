@@ -73,7 +73,7 @@ public class SimpleMemoryResourceCheck {
 			this.componentIdClass = DEFAULT_COMPONENT_ID_CLASS;
 		}
 
-		public MemoryChecker(MemoryInfo info, Class<? extends ComponentId> componentIdClass,
+		public MemoryChecker(MemoryInfo memoryInfo, Class<? extends ComponentId> componentIdClass,
 				long pollInterval) {
 			this.memoryInfo = memoryInfo;
 			this.pollInterval = pollInterval;

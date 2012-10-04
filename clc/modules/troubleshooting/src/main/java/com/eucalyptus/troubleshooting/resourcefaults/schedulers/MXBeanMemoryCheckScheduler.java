@@ -11,8 +11,8 @@ import com.eucalyptus.troubleshooting.resourcefaults.MXBeanMemoryResourceCheck.M
 public class MXBeanMemoryCheckScheduler {
 	private static ScheduledFuture<?> mxBeanMemoryCheckerScheduledFuture = null;
 	public static void resetMXBeanMemoryCheck() {
-		String threshold = TroubleshootingBootstrapper.SIMPLE_MEMORY_CHECK_THRESHOLD; 
-		String pollTime = TroubleshootingBootstrapper.SIMPLE_MEMORY_CHECK_POLL_TIME;
+		String threshold = TroubleshootingBootstrapper.MXBEAN_MEMORY_CHECK_THRESHOLD; 
+		String pollTime = TroubleshootingBootstrapper.MXBEAN_MEMORY_CHECK_POLL_TIME;
 		if (mxBeanMemoryCheckerScheduledFuture != null) {
 			mxBeanMemoryCheckerScheduledFuture.cancel(true);
 		}
