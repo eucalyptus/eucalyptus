@@ -271,7 +271,7 @@
 
       
       var dtArg = { 
-          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "sAjaxSource": "../ec2?Action=DescribeImages&_xsrf="+$.cookie('_xsrf'),
           "bSortClasses" : false,
           "bSortable" : false,
           "oLanguage" : { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
