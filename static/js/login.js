@@ -63,7 +63,7 @@
    	      },
           onError: function(args){
             thisObj.errorDialog.eucadialog('open');
-            var msgdiv = thisObj.errorDialog.find("#login-error-message")
+            var msgdiv = thisObj.errorDialog.find("#login-error-message p")
             if (args.search("Timeout")>-1) {
                 msgdiv.html($.i18n.prop('login_timeout', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
             }
