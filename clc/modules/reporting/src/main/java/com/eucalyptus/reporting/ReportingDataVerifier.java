@@ -272,7 +272,7 @@ public final class ReportingDataVerifier {
             if ( attach ) {
               store.insertAttachEvent( volume.getNaturalId(), resource.relationId, volume.getSize(), timestamp );
             } else {
-              store.insertDetachEvent( volume.getNaturalId(), resource.relationId, volume.getSize(), timestamp );
+              store.insertDetachEvent( volume.getNaturalId(), resource.relationId, timestamp );
             }
           }
         }

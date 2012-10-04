@@ -340,7 +340,6 @@ public class VolumeArtGenerator extends AbstractArtGenerator
 				if ( event == null ||
 						event.getVolumeUuid() == null ||
 						event.getInstanceUuid() == null ||
-						event.getSizeGB() == null ||
 						event.getTimestampMs() == null ) {
 					log.debug("Ignoring invalid detach event: " + event);
 					return true;
@@ -369,7 +368,7 @@ public class VolumeArtGenerator extends AbstractArtGenerator
 		} else if (defaultVal==null) {
 			return added;
 		} else {
-			return (added.longValue() + defaultVal.longValue());
+			return added + defaultVal;
 		}
 	}
 }

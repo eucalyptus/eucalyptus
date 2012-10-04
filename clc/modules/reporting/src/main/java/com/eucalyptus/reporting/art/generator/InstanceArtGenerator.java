@@ -71,6 +71,7 @@ import com.eucalyptus.reporting.domain.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Maps;
 
 public class InstanceArtGenerator
 	extends AbstractArtGenerator
@@ -100,9 +101,13 @@ public class InstanceArtGenerator
 		
 	}
 	
-	public ReportArtEntity generateReportArt(final ReportArtEntity report)
+	@Override
+  public ReportArtEntity generateReportArt(final ReportArtEntity report)
 	{
 		log.debug("GENERATING REPORT ART");
+
+    final Map<String, ReportingUser> users = Maps.newHashMap();
+    final Map<String, String> accounts = Maps.newHashMap();
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance usage nodes at the bottom.
@@ -119,19 +124,20 @@ public class InstanceArtGenerator
             	}
             	AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
 
-            	ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
+            	final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
             	if (reportingUser==null) {
             		log.error("No user corresponding to event:" + createEvent.getUserId());
+                return true;
             	}
-            	ReportingAccount reportingAccount = ReportingAccountDao.getInstance()
-            										.getReportingAccount(reportingUser.getAccountId());
-            	if (reportingAccount==null) {
+            	final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
+            	if (accountName==null) {
             		log.error("No account corresponding to user:" + reportingUser.getAccountId());
+                return true;
+              }
+            	if (! zone.getAccounts().containsKey(accountName)) {
+            		zone.getAccounts().put(accountName, new AccountArtEntity());
             	}
-            	if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
-            		zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
-            	}
-            	AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
+            	AccountArtEntity account = zone.getAccounts().get(accountName);
             	if (! account.getUsers().containsKey(reportingUser.getName())) {
             		account.getUsers().put(reportingUser.getName(), new UserArtEntity());
             	}

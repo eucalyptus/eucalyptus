@@ -41,11 +41,4 @@ public class ReportingS3ObjectEventStore extends EventStoreSupport
   {
     persist( new ReportingS3ObjectDeleteEvent(s3BucketName, s3ObjectKey, objectVersion, timestampMs) );
   }
-
-  public void insertS3ObjectUsageEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
-		  long getRequestNumCumulative,  long timestampMs, String userId)
-  {
-    persist( new ReportingS3ObjectUsageEvent(s3BucketName, s3ObjectKey, objectVersion, getRequestNumCumulative,
-    		timestampMs, userId) );
-  }
 }

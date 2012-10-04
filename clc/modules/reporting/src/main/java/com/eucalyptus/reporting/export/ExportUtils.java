@@ -31,14 +31,12 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent;
-import com.eucalyptus.reporting.event_store.ReportingS3ObjectUsageEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeAttachEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeDeleteEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeDetachEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotDeleteEvent;
-import com.eucalyptus.reporting.event_store.ReportingVolumeUsageEvent;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -61,14 +59,12 @@ public class ExportUtils {
       ReportingInstanceUsageEvent.class,
       ReportingS3ObjectCreateEvent.class,
       ReportingS3ObjectDeleteEvent.class,
-      ReportingS3ObjectUsageEvent.class,
       ReportingVolumeCreateEvent.class,
       ReportingVolumeAttachEvent.class,
       ReportingVolumeDetachEvent.class,
       ReportingVolumeDeleteEvent.class,
       ReportingVolumeSnapshotCreateEvent.class,
-      ReportingVolumeSnapshotDeleteEvent.class,
-      ReportingVolumeUsageEvent.class
+      ReportingVolumeSnapshotDeleteEvent.class
   );
 
   public static Class<?> getTemplateClass() {

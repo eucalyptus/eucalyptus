@@ -66,9 +66,6 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
           case OBJECTDELETE:
             eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), timeInMs);
             break;
-          case OBJECTGET:
-            eventStore.insertS3ObjectUsageEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwner().getUserId());
-            break;
         }
       } catch (AuthException e) {
           LOG.error("Unable fire s3 object reporting event", e.getCause());
