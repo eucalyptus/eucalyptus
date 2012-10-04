@@ -214,7 +214,7 @@
         $('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         }),
         $('<div>').addClass('form-row').addClass('clearfix').append(  
-          $('<label>').attr('for','launch-wizard-buttons-security-advanced-link').text('Or:'), 
+          $('<label>').attr('for','launch-wizard-buttons-security-advanced-link').text(or_label), 
           $('<a>').attr('id','launch-wizard-buttons-security-advanced-link').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
             var advSection = $launcher.find('#launch-wizard-advanced-contents');
             thisObj._selectedSection.slideToggle('fast');
@@ -667,7 +667,7 @@
           $('<label>').attr('for','launch-wizard-security-keypair-selector').text(launch_instance_security_keypair),
           $('<select>').attr('title', launch_instance_key_select_tip).attr('id','launch-wizard-security-keypair-selector')),
         $('<div>').addClass('form-row').addClass('clearfix').append(
-          $('<label>').attr('for','launch-instance-create-keypair-link').text('Or.'),
+          $('<label>').attr('for','launch-instance-create-keypair-link').text(or_label),
           $('<a>').attr('id','launch-instance-create-keypair-link').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
             if(thisObj._keypairCallback)
               cancelRepeat(thisObj._keypairCallback);
@@ -689,7 +689,7 @@
           $('<label>').attr('for','launch-wizard-security-sg-selector').text(launch_instance_security_sgroup),
           $('<select>').attr('title', launch_instance_sgroup_select_tip).attr('id','launch-wizard-security-sg-selector')),
         $('<div>').addClass('form-row').addClass('clearfix').append(
-          $('<label>').attr('for','launch-instance-create-sg-link').text('Or.'),
+          $('<label>').attr('for','launch-instance-create-sg-link').text(or_label),
           $('<a>').attr('id', 'launch-instance-create-sg-link').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
             if(thisObj._sgCallback)
               cancelRepeat(thisObj._sgCallback);
@@ -760,7 +760,7 @@
             thisObj._setSummary('advanced', $summary.clone());
           })),
         $('<div>').addClass('form-row').addClass('clearfix').append(
-          $('<label>').attr('for','launch-wizard-advanced-input-userfile').text('Or.'),
+          $('<label>').attr('for','launch-wizard-advanced-input-userfile').text(or_label),
           $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
       $input.change(function(e){
@@ -866,16 +866,16 @@
         else{
           // exclude used volumes
           if($.inArray('root',usedVolumes) < 0)
-            $volume.append($('<option>').attr('value', 'root').text('Root'));
-          $volume.append($('<option>').attr('value', 'ebs').text('EBS')); // multiple ebs allowed
+            $volume.append($('<option>').attr('value', 'root').text(launch_instance_root));
+          $volume.append($('<option>').attr('value', 'ebs').text(launch_instance_ebs)); // multiple ebs allowed
           if($.inArray('ephemeral0',usedVolumes) < 0)
-            $volume.append($('<option>').attr('value', 'ephemeral0').text('Ephemeral 0'));
+            $volume.append($('<option>').attr('value', 'ephemeral0').text(launch_instance_ephemeral0));
           if($.inArray('ephemeral1',usedVolumes) < 0)
-            $volume.append($('<option>').attr('value', 'ephemeral1').text('Ephemeral 1'));
+            $volume.append($('<option>').attr('value', 'ephemeral1').text(launch_instance_ephemeral1));
           if($.inArray('ephemeral2',usedVolumes) < 0)
-            $volume.append($('<option>').attr('value', 'ephemeral2').text('Ephemeral 2'));
+            $volume.append($('<option>').attr('value', 'ephemeral2').text(launch_instance_ephemeral2));
           if($.inArray('ephemeral3',usedVolumes) < 0)
-            $volume.append($('<option>').attr('value', 'ephemeral3').text('Ephemeral 3'));
+            $volume.append($('<option>').attr('value', 'ephemeral3').text(launch_instance_ephemeral3));
 
           // change event should enable/disable following cells
         }
