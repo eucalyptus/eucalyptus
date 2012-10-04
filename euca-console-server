@@ -148,16 +148,6 @@ if __name__ == "__main__":
     else:
         server.config = ConfigLoader().getParser()
 
-    # set up logging
-    logging.basicConfig(format="%(asctime)-15s %(levelname)s %(message)s")
-    loglevel = server.config.get('server', 'loglevel')
-    print "logging level = "+loglevel
-    if loglevel == 'INFO':
-        logging.getLogger().setLevel(logging.INFO)
-    else:
-        if loglevel == 'DEBUG':
-            logging.getLogger().setLevel(logging.DEBUG)
-
     if daemon:
         daemonize(start_console)
     else:

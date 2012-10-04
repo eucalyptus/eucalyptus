@@ -1,5 +1,6 @@
 import base64
 import boto
+import logging
 import sys
 import socket
 import traceback
@@ -32,6 +33,7 @@ class TokenAuthenticator(object):
             creds = Credentials(None)
             h = boto.handler.XmlHandler(creds, None)
             xml.sax.parseString(body, h)
+            logging.info("authenticated user: "+account+"/"+user)
             return creds
         except urllib2.URLError, err:
             traceback.print_exc(file=sys.stdout)

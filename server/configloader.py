@@ -1,5 +1,6 @@
 import os
 import ConfigParser
+import logging
 
 # List of config file locations
 CONFIG_FILE_LIST = ['console.ini',
@@ -38,6 +39,8 @@ class ConfigLoader(object):
             if os.path.isfile(config):
                 self.parser.read(config)
                 self.config = config
+                # using config file to configure logger as well
+                logging.config.fileConfig(config)
                 return self.parser
         raise ConfigError("No valid config file found")
 
