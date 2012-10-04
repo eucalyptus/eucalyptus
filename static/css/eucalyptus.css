@@ -597,6 +597,10 @@ option {
 
 }
 
+textarea {
+  resize: vertical;
+}
+
 input[type='text'],
 textarea,
 .input-field,
