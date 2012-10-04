@@ -1082,7 +1082,7 @@ public class WalrusManager {
 							/* Send an event to reporting to report this S3 usage. */
 	
 							// TODO : Need to validate the naturalId is correct via unit testing 
-							//fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, foundDeleteMarker.getNaturalId(), bucketName, objectName, ctx.getUserFullName(), size);
+							fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, foundDeleteMarker.getNaturalId(), bucketName, objectName, ctx.getUserFullName(), size);
 								
 							
 							break;
@@ -1387,9 +1387,9 @@ public class WalrusManager {
 					
 					//fireUsageEvent For Put Object 
 					//reportWalrusEvent(genObjectEvent(ctx,true,size));
-					//fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE,
-					//	    foundObject.getNaturalId(), foundObject.getBucketName(), 
-					//	    foundObject.getObjectName(), ctx.getUserFullName(), foundObject.getSize());
+					fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE,
+						    foundObject.getNaturalId(), foundObject.getBucketName(), 
+						    foundObject.getObjectName(), ctx.getUserFullName(), foundObject.getSize());
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -1686,9 +1686,9 @@ public class WalrusManager {
 					/* Send an event to reporting to report this S3 usage. */
 					// //fireUsageEvent For Delete Object 
 					//reportWalrusEvent(genObjectEvent(userId,user,accountNumber,account,false,size));
-					//fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE,
-					//	    Integer.toString(this.hashCode()), this.bucketName, this.objectName, 
-					//	    UserFullName.getInstance(Accounts.lookupUserById(userId)), this.size);
+					fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE,
+						    Integer.toString(this.hashCode()), this.bucketName, this.objectName, 
+						    UserFullName.getInstance(Accounts.lookupUserById(userId)), this.size);
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
 			}
