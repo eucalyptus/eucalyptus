@@ -415,6 +415,7 @@
       thisObj._selectedSection = $content;
     },
     _initImageSection : function(){ 
+      var thisObj = this;
       this._enableImageLink();
       thisObj.element.find('#launch-wizard-image-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');

@@ -97,7 +97,7 @@
          title: eip_release_dialog_title,
          buttons: {
            'release': {text: eip_release_dialog_release_btn, click: function() {
-                var rowsToDelete = this.releaseDialog.eucadialog('getSelectedResources', 0);
+                var rowsToDelete = thisObj.releaseDialog.eucadialog('getSelectedResources', 0);
                 $release_dialog.eucadialog("close");
                 thisObj._releaseListedIps(rowsToDelete);
             }},
@@ -191,7 +191,7 @@
     },
 
     _createMenuActions : function() {
-      thisObj = this;
+      var thisObj = this;
       selectedEips = thisObj.baseTable.eucatable('getSelectedRows', 3);
       var itemsList = {};
 

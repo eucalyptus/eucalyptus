@@ -39,7 +39,7 @@
     },
 
     _create : function() {
-      thisObj = this;
+      var thisObj = this;
       // about cloud dialog
       $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
@@ -80,7 +80,7 @@
     },
 
     updateSelected : function (selected, filter, options) {
-      thisObj = this;
+      var thisObj = this;
       if(this._curSelected === selected){
         //$('html body').trigger('click'); // Manage resources --> uncomment this line
         return;

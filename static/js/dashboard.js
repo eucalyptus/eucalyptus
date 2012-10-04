@@ -69,6 +69,8 @@
       $instObj.find('#dashboard-instance-launch a').click( function(e) {
         var $container = $('html body').find(DOM_BINDING['main']);
         $container.maincontainer("changeSelected", e, {selected:'launcher'});
+        $('html body').trigger('click', 'navigator:launcher');
+        return false;
       });
       thisObj._reloadInstSummary($instObj);
     },
@@ -110,10 +112,14 @@
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'instance', filter:'running'});
+          $('html body').trigger('click', 'navigator:instance');
+          return false;
         }));
       $instObj.find('#dashboard-instance-stopped').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
             thisObj._trigger('select', evt, {selected:'instance', filter:'stopped'});
+            $('html body').trigger('click', 'navigator:instance');
+            return false;
       }));
     },
 
@@ -131,6 +137,8 @@
       $storageObj.find('#dashboard-storage-volume').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'volume'});
+          $('html body').trigger('click', 'navigator:volume');
+          return false;
       }));
 
       $('html body').eucadata('addCallback', 'snapshot', 'dashboard-summary', function(){
@@ -144,6 +152,8 @@
       $storageObj.find('#dashboard-storage-snapshot').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'snapshot'});
+          $('html body').trigger('click', 'navigator:snapshot');
+          return false;
       }));
 
       //az = $instObj.find('#dashboard-instance-dropbox').value();
@@ -164,6 +174,8 @@
       $netsecObj.find('#dashboard-netsec-sgroup').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'sgroup'});
+          $('html body').trigger('click', 'navigator:sgroup');
+          return false;
       }));
       $('html body').eucadata('refresh', 'sgroup'); 
 
@@ -176,6 +188,8 @@
       $netsecObj.find('#dashboard-netsec-eip').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'eip'});
+          $('html body').trigger('click', 'navigator:eip');
+          return false;
       }));
       $('html body').eucadata('refresh', 'eip');
 
@@ -188,6 +202,8 @@
       $netsecObj.find('#dashboard-netsec-keypair').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'keypair'});
+          $('html body').trigger('click', 'navigator:keypair');
+          return false;
       }));
       $('html body').eucadata('refresh', 'keypair');
 

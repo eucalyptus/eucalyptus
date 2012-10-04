@@ -38,7 +38,8 @@
             {
               "bSortable": false,
               "sClass": "centered-cell",
-              "fnRender": function(oObj) { return '<a href="#" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'});">' + image_launch_btn +'</a>' },
+              "fnRender": function(oObj) { 
+                return  '<a href="#" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;">' + image_launch_btn +'</a>' },
             },
             { 
               "fnRender" : function(oObj) { 

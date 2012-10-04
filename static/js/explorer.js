@@ -95,6 +95,8 @@
               if(src!=='triggered') {
                 //  location.hash = menu.key;
                 header._trigger("select", evt, {selected:menu.key});
+                $('html body').trigger('click', 'navigator:'+menu.key);
+                return false;
               }
             }
           );

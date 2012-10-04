@@ -162,7 +162,7 @@
     },
 
     _createMenuActions : function() {
-      thisObj = this;
+      var thisObj = this;
       var selectedSnapshots = thisObj.baseTable.eucatable('getSelectedRows', 7); // 7th column=status (this is snapshot's knowledge)
       var itemsList = {};
       if ( selectedSnapshots.length > 0 && onlyInArray('completed', selectedSnapshots)){

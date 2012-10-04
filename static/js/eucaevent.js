@@ -34,7 +34,9 @@
           if (!src || src.indexOf(k) == -1)
             $(v.target).trigger('click', ['triggered']);
         });
-        return false; // this will fix hashtag implementation
+        if(src && ( src.indexOf('navigator')>=0 || src.indexOf('create-new') >=0) ){ // 'src=navigator:*' when the click event is generated due to menu selection; or src=create-new when event is generated due to clicking on create-new button
+          return false; // this will fix hashtag implementation
+        }
 //        console.log('num events: '+Object.keys(thisObj._clicked).length);
       });
     },
