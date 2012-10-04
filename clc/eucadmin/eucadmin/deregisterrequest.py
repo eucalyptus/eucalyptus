@@ -56,7 +56,11 @@ class DeregisterRequest(AWSQueryRequest):
 
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
+        if response != 'true':
+            # Failed responses still return HTTP 200, so we raise exceptions
+            # manually.  See https://eucalyptus.atlassian.net/browse/EUCA-3670.
+            msg = getattr(data, 'euca:statusMessage', 'de-registration failed')
+            raise RuntimeError('error: ' + msg)
 
     def main(self, **args):
         return self.send(**args)
