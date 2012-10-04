@@ -25,11 +25,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="s3ObjectCreateEventMap",
-        entities=@EntityResult(entityClass=ReportingS3ObjectCreateEvent.class))
-@NamedNativeQuery(name="scanS3ObjectCreateEvents",
-     query="select * from reporting_s3_object_create_events order by s3_bucket_name, timestamp_ms",
-     resultSetMapping="s3ObjectCreateEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_create_events")
 public class ReportingS3ObjectCreateEvent

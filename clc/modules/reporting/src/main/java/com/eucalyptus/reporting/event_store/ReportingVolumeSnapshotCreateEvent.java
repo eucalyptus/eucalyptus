@@ -25,11 +25,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="createVolumeSnapshotEventMap",
-        entities=@EntityResult(entityClass=ReportingVolumeSnapshotCreateEvent.class))
-@NamedNativeQuery(name="scanVolumeSnapshotCreateEvents",
-     query="select * from reporting_volume_snapshot_create_events order by timestamp_ms",
-     resultSetMapping="createVolumeSnapshotEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_volume_snapshot_create_events")
 public class ReportingVolumeSnapshotCreateEvent
