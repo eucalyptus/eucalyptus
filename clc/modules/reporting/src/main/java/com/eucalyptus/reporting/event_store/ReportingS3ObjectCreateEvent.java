@@ -58,11 +58,11 @@ public class ReportingS3ObjectCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
  	 */
-	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
 			Long sizeGB, Long timestampMs, String userId)
 	{
 		this.s3BucketName = s3BucketName;
-		this.s3ObjectKey = s3ObjectName;
+		this.s3ObjectKey = s3ObjectKey;
 		this.objectVersion = objectVersion;
 		this.sizeGB = sizeGB;
 		this.timestampMs = timestampMs;

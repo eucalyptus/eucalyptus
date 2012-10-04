@@ -204,23 +204,6 @@ public class ReportingEventTest {
 
   @Test
   public void testS3ObjectEventCreation() {
-    final S3ObjectEvent getEvent = S3ObjectEvent.with(
-        S3ObjectEvent.forS3ObjectGet(),
-        "bucket1",
-        "object1",
-        "version1",
-        Principals.systemFullName(),
-        12L
-    );
-
-    assertEquals("action", S3ObjectEvent.S3ObjectAction.OBJECTGET, getEvent.getAction());
-    assertEquals("bucket name", "bucket1", getEvent.getBucketName());
-    assertEquals("object key", "object1", getEvent.getObjectKey());
-    assertEquals("version", "version1", getEvent.getVersion());
-    assertEquals("owner", Principals.systemFullName(), getEvent.getOwner());
-    assertEquals("size", (Long) 12L, getEvent.getSize());
-    assertEquals("get event string", "S3ObjectEvent [action=OBJECTGET, ownerFullName=arn:aws:euare::000000000000:user/eucalyptus, size=12, bucketName=bucket1, objectKey=object1, version=version1]", getEvent.toString());
-
     final S3ObjectEvent putEvent = S3ObjectEvent.with(
         S3ObjectEvent.forS3ObjectCreate(),
         "bucket1",

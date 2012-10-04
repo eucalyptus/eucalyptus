@@ -80,6 +80,7 @@ public class InstanceUsageEventListener implements EventListener<InstanceUsageEv
 
   @Override
   public void fireEvent( @Nonnull final InstanceUsageEvent event ) {
+
     if ( log.isDebugEnabled() ) {
       log.debug("Received instance usage event:" + event);
     }
@@ -100,7 +101,6 @@ public class InstanceUsageEventListener implements EventListener<InstanceUsageEv
       log.error( ex, ex );
     }
   }
-
   protected ReportingInstanceEventStore getReportingInstanceEventStore() {
     return ReportingInstanceEventStore.getInstance();
   }

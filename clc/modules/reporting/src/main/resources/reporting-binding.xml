@@ -26,6 +26,8 @@
             deserializer="org.jibx.runtime.Utility.deserializeDateTime"
             serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
 
+    <include path="classpath:reporting-data-export-binding.xml"/>
+
     <mapping class="com.eucalyptus.reporting.service.ReportingMessage" abstract="true">
     </mapping>
     <mapping class="com.eucalyptus.reporting.service.ReportingResponseMetadataType" abstract="true">
@@ -47,16 +49,29 @@
         <value name="RequestId" field="requestId" usage="required"/>
     </mapping>
     <mapping class="com.eucalyptus.reporting.service.ExportDataResultType" abstract="true">
-        <value name="Data" field="data" usage="required"/>
+        <structure field="data" usage="required" map-as="com.eucalyptus.reporting.export.ReportingExport"/>
     </mapping>
     <mapping name="ExportReportData" class="com.eucalyptus.reporting.service.ExportReportDataType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
-        <value name="Start" field="startDate"/>
-        <value name="End" field="endDate" usage="required"/>
+        <value name="Start" field="startDate" usage="optional"/>
+        <value name="End" field="endDate" usage="optional"/>
+        <value name="Dependencies" field="dependencies"/>
     </mapping>
     <mapping name="ExportReportDataResponse" class="com.eucalyptus.reporting.service.ExportReportDataResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
         <structure name="ExportDataResult" field="result" type="com.eucalyptus.reporting.service.ExportDataResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.reporting.service.DeleteDataResultType" abstract="true">
+        <value name="DeletedCount" field="count" usage="required"/>
+    </mapping>
+    <mapping name="DeleteReportData" class="com.eucalyptus.reporting.service.DeleteReportDataType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <value name="End" field="endDate" usage="required"/>
+    </mapping>
+    <mapping name="DeleteReportDataResponse" class="com.eucalyptus.reporting.service.DeleteReportDataResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
+        <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
+        <structure name="DeleteDataResult" field="result" type="com.eucalyptus.reporting.service.DeleteDataResultType"/>
         <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
     </mapping>
     <mapping class="com.eucalyptus.reporting.service.GenerateReportResultType" abstract="true">
@@ -74,5 +89,4 @@
         <structure name="GenerateReportResult" field="result" type="com.eucalyptus.reporting.service.GenerateReportResultType"/>
         <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.reporting.service.ReportingResponseMetadataType"/>
     </mapping>
-
 </binding>

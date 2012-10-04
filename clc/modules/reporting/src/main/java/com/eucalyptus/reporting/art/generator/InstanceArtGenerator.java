@@ -71,6 +71,7 @@ import com.eucalyptus.reporting.domain.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Maps;
 
 public class InstanceArtGenerator
 	extends AbstractArtGenerator
@@ -100,9 +101,13 @@ public class InstanceArtGenerator
 		
 	}
 	
-	public ReportArtEntity generateReportArt(final ReportArtEntity report)
+	@Override
+  public ReportArtEntity generateReportArt(final ReportArtEntity report)
 	{
 		log.debug("GENERATING REPORT ART");
+
+    final Map<String, ReportingUser> users = Maps.newHashMap();
+    final Map<String, String> accounts = Maps.newHashMap();
 
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance usage nodes at the bottom.
@@ -119,24 +124,27 @@ public class InstanceArtGenerator
             	}
             	AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
 
-            	ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
+            	final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
             	if (reportingUser==null) {
             		log.error("No user corresponding to event:" + createEvent.getUserId());
+                return true;
             	}
-            	ReportingAccount reportingAccount = ReportingAccountDao.getInstance().getReportingAccount(reportingUser.getAccountId());
-            	if (reportingAccount==null) {
+            	final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
+            	if (accountName==null) {
             		log.error("No account corresponding to user:" + reportingUser.getAccountId());
+                return true;
+              }
+            	if (! zone.getAccounts().containsKey(accountName)) {
+            		zone.getAccounts().put(accountName, new AccountArtEntity());
             	}
-            	if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
-            		zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
-            	}
-            	AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
+            	AccountArtEntity account = zone.getAccounts().get(accountName);
             	if (! account.getUsers().containsKey(reportingUser.getName())) {
             		account.getUsers().put(reportingUser.getName(), new UserArtEntity());
             	}
             	UserArtEntity user = account.getUsers().get(reportingUser.getName());
             	if (! user.getInstances().containsKey(createEvent.getUuid())) {
-            		user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(), createEvent.getInstanceId()));
+            		user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(),
+            				createEvent.getInstanceId()));
             	}
             	InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
             	instance.getUsage().addInstanceCnt(1);
@@ -147,74 +155,66 @@ public class InstanceArtGenerator
         } );
 
 
-		/* Gather values for the last event before report beginning, the first event after
-		 * report beginning, the last event before report end, and the first event after report
-		 * end, for every instance/metric/dimension combo, from the usage log. This is
-		 * necessary to calculate fractional usage for report boundaries that fall between
-		 * usage events.
-		 */
-		final Map<InstanceMetricDimensionKey, TimestampValueAccumulator> accumulators =
-			new HashMap<InstanceMetricDimensionKey, TimestampValueAccumulator>();
+        /* Scan through events in order, and update the total usage in the instance usage art entity, for each
+         * uuid/metric/dimension combo. Metric values are cumulative, so we must subtract each from the last.
+         * For this reason, we must retain previous values of each uuid/metric/dim combo. We must also retain
+         * the earliest and latest times for each combo, to update the duration.
+         */
+		final Map<InstanceMetricDimensionKey, MetricPrevData> prevDataMap =
+			new HashMap<InstanceMetricDimensionKey, MetricPrevData>();
         foreachInstanceUsageEvent( report.getBeginMs()-USAGE_SEARCH_PERIOD,
         		report.getEndMs()+USAGE_SEARCH_PERIOD,
         		new Predicate<ReportingInstanceUsageEvent>() {
             @Override
-            public boolean apply( final ReportingInstanceUsageEvent usageEvent ) {
-            	InstanceMetricDimensionKey key =
-            		new InstanceMetricDimensionKey(usageEvent.getUuid(), usageEvent.getMetric(),
-            				usageEvent.getDimension());
-            	if (!accumulators.containsKey(key)) {
-            		accumulators.put(key, new TimestampValueAccumulator(report.getBeginMs(), report.getEndMs()));
-            	}
-            	if (usageEvent.getValue()!=null) {
-            		TimestampValue tv = new TimestampValue(usageEvent.getTimestampMs(), usageEvent.getValue());
-            		accumulators.get(key).addTimestampValue(tv);
-            	}
-            	/* Add zeroeth event value if we need one */
-            	if (instanceStartTimes.containsKey(usageEvent.getUuid())
-            			&& (accumulators.get(key).lastBeforeBeginning==null
-            					|| accumulators.get(key).firstAfterBeginning==null)) {
-            		accumulators.get(key).addTimestampValue(new TimestampValue(instanceStartTimes.get(usageEvent.getUuid()), 0d));
-            	}
+            public boolean apply( final ReportingInstanceUsageEvent event ) {
+
+            	final InstanceMetricDimensionKey key =
+            		new InstanceMetricDimensionKey(event.getUuid(), event.getMetric(),
+            				event.getDimension());
+            	final long eventMs = event.getTimestampMs();
+        		if (event.getValue()==null) return true;
+        		final InstanceUsageArtEntity usageEntity = usageEntities.get(event.getUuid());
+        		if (usageEntity==null) return true;
+
+        		if (!prevDataMap.containsKey(key)) {
+        			/* No prior value. Use usage from instance creation to present */
+            		if (instanceStartTimes.containsKey(event.getUuid())) {
+            			//Equivalent to inserting a zero-usage event at instance creation time
+            			Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+            					instanceStartTimes.get(event.getUuid()), eventMs, event.getValue());
+        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        						fractionalVal);
+            		}
+        			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue()));
+        		} else {
+        			/* Previous value exists */
+                	final MetricPrevData prevData = prevDataMap.get(key);
+        		
+            		/* We have a period (firstMs to now); update the instance duration if necessary */
+        			usageEntity.setDurationMs(Math.max(usageEntity.getDurationMs(),
+							overlap(report.getBeginMs(), report.getEndMs(), prevData.firstMs, eventMs)));        			
+
+        			if (event.getValue() < prevData.lastVal) {
+        				/* SENSOR RESET; we lost data; just take whatever amount greater than 0 */
+        				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+        						prevData.lastMs, eventMs, event.getValue());        				
+        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        						fractionalVal);
+        			} else {
+        				/* Increase total by val minus lastVal */
+        				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+        						prevData.lastMs, eventMs, event.getValue()-prevData.lastVal);
+        				log.debug(String.format("event time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f lastVal:%f fraction:%f",
+        						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
+        						event.getDimension(), event.getValue(), prevData.lastVal, fractionalVal));
+        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        						fractionalVal);
+        			}
+        			prevDataMap.put(key, new MetricPrevData(prevData.firstMs, eventMs, event.getValue()));
+        		}
             	return true;
             }
         } );
-
-		
-		/* Fill in ART values and durations for all the instance/metric/dimension
-		 * combo data gathered above.
-		 */
-		for (InstanceMetricDimensionKey key: accumulators.keySet()) {
-			TimestampValueAccumulator acc = accumulators.get(key);
-			
-			/* No usage within report boundaries */
-			if (acc.firstAfterBeginning==null || acc.lastBeforeEnd==null) continue;
-			double val = 0;
-			/* Add all usage which occurs entirely within report boundaries */
-			val += (acc.lastBeforeEnd.val - acc.firstAfterBeginning.val);
-			/* Add partial usage for periods which cross report beginning or end */
-			if (acc.lastBeforeBeginning!=null) {
-				long durationMs = acc.firstAfterBeginning.timeMs - acc.lastBeforeBeginning.timeMs;
-				/* factor is fraction of usage which comes after report beginning */
-				double factor = ((double)acc.firstAfterBeginning.timeMs-report.getBeginMs())/durationMs;
-				val += (acc.firstAfterBeginning.val-acc.lastBeforeBeginning.val)*factor;
-			}
-			if (acc.firstAfterEnd!=null) {
-				long durationMs = acc.firstAfterEnd.timeMs - acc.lastBeforeEnd.timeMs;
-				/* factor is fraction of usage which comes before report end */
-				double factor = ((double)report.getEndMs()-acc.lastBeforeEnd.timeMs)/durationMs;
-				val += (acc.firstAfterEnd.val-acc.lastBeforeEnd.val) * factor;
-			}
-
-			/* Update usage in ART */
-			InstanceUsageArtEntity usageEntity = usageEntities.get(key.instanceUuid);
-			addMetricValueToUsageEntity(usageEntity, key.metric, key.dimension, val);
-
-			/* Update instance duration in ART */
-			long startMs = acc.lastBeforeBeginning!=null ? report.getBeginMs() : acc.firstAfterBeginning.timeMs;
-			long endMs = acc.firstAfterEnd!=null ? report.getEndMs() : acc.lastBeforeEnd.timeMs;
-			usageEntity.setDurationMs(Math.max(usageEntity.getDurationMs(), endMs-startMs));
-		}
 
 		
 		/* Perform totals and summations
@@ -345,73 +345,55 @@ public class InstanceArtGenerator
 	}
 	
 	/**
-	 * A value of a metric at a given time 
+	 * Immutable record of prior data for a uuid/metric/dim combo. This is replaced rather than updated.
 	 */
-	private static class TimestampValue
+	private static class MetricPrevData
 	{
-		private final long timeMs;
-		private final double val;
+		private final long   firstMs;
+		private final double lastVal;
+		private final long   lastMs;
 		
-		TimestampValue(long ms, double val)
+		private MetricPrevData(long firstMs, long lastMs, double lastVal)
 		{
-			this.timeMs = ms;
-			this.val = val;
+			this.firstMs = firstMs;
+			this.lastMs  = lastMs;
+			this.lastVal = lastVal;
+		}
+	}
+
+	/**
+	 * Find the overlapping portion of two time periods
+	 */
+	private static long overlap(long repBegin, long repEnd, long perBegin, long perEnd)
+	{
+		if (perEnd <= repBegin || perBegin >= repEnd) {
+			return 0l;
+		} else {
+			return Math.min(repEnd, perEnd) - Math.max(repBegin, perBegin);
 		}
 	}
 	
 	/**
-	 * TimestampValueAccumulator retains the last value before report beginning, the first
-	 * value after report beginning, the last value before report end, and the first value
-	 * after report end. It discards all other values which are not needed. 
+	 * Return the fraction of usage which occurs within both the report boundaries and the period boundaries.
 	 */
-	private static class TimestampValueAccumulator
-	{
-		private final long reportBeginMs;
-		private final long reportEndMs;
-		
-		private TimestampValue lastBeforeBeginning = null;
-		private TimestampValue firstAfterBeginning = null;
-		private TimestampValue lastBeforeEnd = null;
-		private TimestampValue firstAfterEnd = null;
-		
-		TimestampValueAccumulator(long reportBeginMs, long reportEndMs)
-		{
-			this.reportBeginMs = reportBeginMs;
-			this.reportEndMs = reportEndMs;
-		}
-		
-		public void addTimestampValue(TimestampValue tv)
-		{			
-			if (tv.timeMs < reportBeginMs) {
-				if (lastBeforeBeginning == null || tv.timeMs > lastBeforeBeginning.timeMs) {
-					lastBeforeBeginning = tv;
-				}
-			} else if (tv.timeMs >= reportBeginMs && tv.timeMs <= reportEndMs) {
-				if (firstAfterBeginning==null || tv.timeMs < firstAfterBeginning.timeMs) {
-					firstAfterBeginning = tv;
-				}
-				if (lastBeforeEnd==null || tv.timeMs > lastBeforeEnd.timeMs) {
-					lastBeforeEnd = tv;
-				}
-			} else {
-				if (firstAfterEnd==null || tv.timeMs < firstAfterEnd.timeMs) {
-					firstAfterEnd = tv;
-				}
-			}			
-		}
-
-	}
-
+    private static Double fractionalUsage(long repBegin, long repEnd, long perBegin, long perEnd, Double usage)
+    {   
+    	if (usage==null) return null;
+        double duration = (double) (perEnd-perBegin);
+        double overlapping = (double)overlap(repBegin, repEnd, perBegin, perEnd);
+        return usage*(overlapping/duration);
+    }
+	
     protected void foreachInstanceUsageEvent(long startInclusive, long endExclusive,
             Predicate<? super ReportingInstanceUsageEvent> callback)
     {
-        foreach( ReportingInstanceUsageEvent.class, between( startInclusive, endExclusive ), callback );
+        foreach( ReportingInstanceUsageEvent.class, between( startInclusive, endExclusive ), true, callback );
     }
     
     protected void foreachInstanceCreateEvent(long endExclusive,
     		Predicate<? super ReportingInstanceCreateEvent> callback )
     {
-        foreach( ReportingInstanceCreateEvent.class, before( endExclusive ), callback );
+        foreach( ReportingInstanceCreateEvent.class, before( endExclusive ), true, callback );
     }
 	
 }

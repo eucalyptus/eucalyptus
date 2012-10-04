@@ -687,20 +687,21 @@ class InstanceArtGeneratorTest {
     ]
     List<ReportingInstanceUsageEvent> instanceUsageList = usage.sort{ event -> event.getTimestampMs() }
     new InstanceArtGenerator() {
-      @Override
-      protected void foreachInstanceCreateEventInReverse( long endExclusive,
-                                                          Predicate<? super ReportingInstanceCreateEvent> callback) {
-        instanceCreateList.reverse().findAll{ event ->
-          event.getTimestampMs() < endExclusive }.every { event -> callback.apply( event ) }
-      }
 
       @Override
-      protected void foreachInstanceUsageEvent( long startInclusive,
-                                                long endExclusive,
-                                                boolean forward, Predicate<? super ReportingInstanceUsageEvent> callback) {
+      protected void foreachInstanceUsageEvent( final long startInclusive,
+                                                final long endExclusive,
+                                                final Predicate<? super ReportingInstanceUsageEvent> callback ) {
         instanceUsageList.findAll{ event ->
           startInclusive <= event.getTimestampMs() && event.getTimestampMs() < endExclusive
         }.every { event -> callback.apply( event ) }
+      }
+
+      @Override
+      protected void foreachInstanceCreateEvent( final long endExclusive,
+                                                 final Predicate<? super ReportingInstanceCreateEvent> callback ) {
+        instanceCreateList.reverse().findAll{ event ->
+          event.getTimestampMs() < endExclusive }.every { event -> callback.apply( event ) }
       }
 
       @Override

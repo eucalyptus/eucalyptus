@@ -20,9 +20,14 @@
 
 package com.eucalyptus.cluster.callback;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -44,7 +49,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
 import edu.ucsb.eucalyptus.msgs.MetricCounterType;
@@ -61,7 +65,7 @@ public class DescribeSensorCallback extends
   private final int historySize;
   private final int collectionIntervalTimeMs;
   private final ListenerRegistry listener = ListenerRegistry.getInstance();
-
+  
   public DescribeSensorCallback( final int historySize,
                                  final int collectionIntervalTimeMS ) {
     this.historySize = historySize;
@@ -75,7 +79,6 @@ public class DescribeSensorCallback extends
     } catch ( AuthException e ) {
       LOG.error( "Unable to find the system user", e );
     }
-
     this.setRequest( msg );
   }
 
@@ -97,50 +100,74 @@ public class DescribeSensorCallback extends
   }
 
   @Override
-  public void fire( final DescribeSensorsResponse msg ) {
-    try {
-      final Iterable<String> uuidList =
-          Iterables.transform( VmInstances.list( VmState.RUNNING ), VmInstances.toInstanceUuid() );
+  public void fire(final DescribeSensorsResponse msg) {
+      try {
+	  final Set<Double> uniqueValues = new HashSet<Double>();
+	  
+	  final Iterable<String> uuidList = Iterables.transform(
+		  VmInstances.list(VmState.RUNNING),
+		  VmInstances.toInstanceUuid());
 
-      for ( final SensorsResourceType sensorData : msg.getSensorsResources() ) {
-        if ( !RESOURCE_TYPE_INSTANCE.equals(sensorData.getResourceType()) ||
-            !Iterables.contains( uuidList, sensorData.getResourceUuid() ) )
-          continue;
+	  for (final SensorsResourceType sensorData : msg
+		  .getSensorsResources()) {
+	      if (!RESOURCE_TYPE_INSTANCE
+		      .equals(sensorData.getResourceType())
+		      || !Iterables.contains(uuidList,
+			      sensorData.getResourceUuid()))
+		  continue;
 
-        for ( final MetricsResourceType metricType : sensorData.getMetrics() ) {
-          for ( final MetricCounterType counterType : metricType.getCounters() ) {
-            for ( final MetricDimensionsType dimensionType : counterType.getDimensions() ) {
-              // find and fire most recent value for metric/dimension
-              final List<MetricDimensionsValuesType> values =
-                  Lists.newArrayList( dimensionType.getValues() );
-              Collections.sort( values, Ordering.natural().onResultOf( GetTimestamp.INSTANCE ) );
+	      for (final MetricsResourceType metricType : sensorData
+		      .getMetrics()) {
+		  for (final MetricCounterType counterType : metricType
+			  .getCounters()) {
+		      
+		      for (final MetricDimensionsType dimensionType : counterType
+			      .getDimensions()) {
+			  // find and fire most recent value for
+			  // metric/dimension
+			  final List<MetricDimensionsValuesType> values = Lists
+				  .newArrayList(dimensionType.getValues());
+			    
+			  Collections.sort(values, Ordering.natural()
+				  .onResultOf(GetTimestamp.INSTANCE));
 
-              if ( !values.isEmpty() ) {
-                final MetricDimensionsValuesType latestValue = Iterables.getLast( values );
-                final Double usageValue = latestValue.getValue();
-                final Long usageTimestamp = latestValue.getTimestamp().getTime();
-                final long sequenceNumber = counterType.getSequenceNum() + (values.size() - 1);
-                fireUsageEvent( new Supplier<InstanceUsageEvent>(){
-                  @Override
-                  public InstanceUsageEvent get() {
-                    return new InstanceUsageEvent(
-                        sensorData.getResourceUuid(),
-                        sensorData.getResourceName(),
-                        metricType.getMetricName(),
-                        sequenceNumber,
-                        dimensionType.getDimensionName(),
-                        usageValue,
-                        usageTimestamp );
-                  }
-                } );
-              }
-            }
-          }
-        }
+			  Collections.reverse(values);
+
+			    for (MetricDimensionsValuesType theValue : values) {
+
+				final Double usageValue = theValue.getValue();
+
+				if (!uniqueValues.add(usageValue) && counterType.getType().equalsIgnoreCase(CounterName.summation.toString()))
+				    continue;
+
+				final Long usageTimestamp = theValue
+					.getTimestamp().getTime();
+				final long sequenceNumber = counterType
+					.getSequenceNum();
+
+				fireUsageEvent(new Supplier<InstanceUsageEvent>() {
+				    @Override
+				    public InstanceUsageEvent get() {
+					return new InstanceUsageEvent(
+						sensorData.getResourceUuid(),
+						sensorData.getResourceName(),
+						metricType.getMetricName(),
+						sequenceNumber,
+						dimensionType
+							.getDimensionName(),
+						usageValue, usageTimestamp);
+				    }
+				});
+			    }
+			}
+		    }
+		}
+	    }
+      } catch ( Exception ex ) {
+	  LOG.debug( "Unable to fire describe sensors call back", ex );
       }
-    } catch ( Exception ex ) {
-      LOG.debug( "Unable to fire describe sensors call back", ex );
-    }
+
+
   }
 
   private void fireUsageEvent( Supplier<InstanceUsageEvent> instanceUsageEventSupplier ) {
@@ -154,6 +181,10 @@ public class DescribeSensorCallback extends
     }
   }
 
+  private enum CounterName {
+      summation, average;
+  }
+ 
   private enum GetTimestamp implements Function<MetricDimensionsValuesType,Date> {
     INSTANCE;
 

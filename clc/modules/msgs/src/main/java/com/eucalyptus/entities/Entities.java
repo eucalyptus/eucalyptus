@@ -65,7 +65,9 @@ package com.eucalyptus.entities;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
 import java.lang.ref.WeakReference;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.UUID;
@@ -77,6 +79,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
 import javax.persistence.OptimisticLockException;
 import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
@@ -100,6 +103,7 @@ import com.eucalyptus.util.LogUtil;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
@@ -527,7 +531,40 @@ public class Entities {
   public static <T> void delete( final T deleteObject ) {
     getTransaction( deleteObject ).getTxState( ).getEntityManager( ).remove( deleteObject );
   }
-  
+
+  /**
+   * Delete all entities for the given class.
+   *
+   * @param <T> The entity type
+   * @param deleteClass The entity class
+   */
+  public static <T> int deleteAll( final Class<T> deleteClass ) {
+    return deleteAllMatching( deleteClass, null, Collections.<String,Object>emptyMap() );
+  }
+
+  /**
+   * Delete all matching entities for the given class.
+   *
+   * @param <T> The entity type
+   * @param deleteClass The entity class
+   * @param condition The condition to match
+   */
+  public static <T> int deleteAllMatching( final Class<T> deleteClass,
+                                           final String condition,
+                                           final Map<String,?> parameters ) {
+    try {
+      final Query query = getTransaction( deleteClass ).getTxState().getEntityManager()
+          .createQuery( "DELETE FROM " + deleteClass.getName() + " " + Strings.nullToEmpty(condition));
+      for ( final Entry<String,?> entry : parameters.entrySet() ) {
+        query.setParameter( entry.getKey(), entry.getValue() );
+      }
+      return query.executeUpdate();
+    } catch ( Exception e ) {
+      LOG.error( deleteClass, e );
+      throw Exceptions.toUndeclared( e );
+    }
+  }
+
   private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, CascadingTx>> {
     TxStateThreadLocal( ) {}
     

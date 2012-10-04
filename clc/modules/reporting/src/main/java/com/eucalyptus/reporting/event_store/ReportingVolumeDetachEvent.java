@@ -22,10 +22,7 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
-import javax.persistence.EntityResult;
-import javax.persistence.NamedNativeQuery;
 import javax.persistence.PersistenceContext;
-import javax.persistence.SqlResultSetMapping;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
@@ -42,19 +39,16 @@ public class ReportingVolumeDetachEvent
 	private String volumeUuid;
 	@Column(name="instance_uuid", nullable=false)
 	private String instanceUuid;
-	@Column(name="size_gb", nullable = false)
-	private Long sizeGB;
 	
 	ReportingVolumeDetachEvent()
 	{
 	}
 	
 	ReportingVolumeDetachEvent(String volumeUuid, String instanceUuid,
-			Long sizeGB, long timestampMs)
+			long timestampMs)
 	{
 		this.volumeUuid = volumeUuid;
 		this.instanceUuid = instanceUuid;
-		this.sizeGB = sizeGB;
 		this.timestampMs = timestampMs;
 	}
 
@@ -66,11 +60,6 @@ public class ReportingVolumeDetachEvent
 	public String getInstanceUuid()
 	{
 		return instanceUuid;
-	}
-
-	public Long getSizeGB()
-	{
-	    	return sizeGB;
 	}
 
 	@Override
@@ -87,8 +76,6 @@ public class ReportingVolumeDetachEvent
 	    int result = super.hashCode();
 	    result = prime * result
 		    + ((instanceUuid == null) ? 0 : instanceUuid.hashCode());
-	    result = prime * result
-		    + ((sizeGB == null) ? 0 : sizeGB.hashCode());
 	    result = prime * result
 		    + ((timestampMs == null) ? 0 : timestampMs.hashCode());
 	    result = prime * result
@@ -109,11 +96,6 @@ public class ReportingVolumeDetachEvent
 		if (other.instanceUuid != null)
 		    return false;
 	    } else if (!instanceUuid.equals(other.instanceUuid))
-		return false;
-	    if (sizeGB == null) {
-		if (other.sizeGB != null)
-		    return false;
-	    } else if (!sizeGB.equals(other.sizeGB))
 		return false;
 	    if (timestampMs == null) {
 		if (other.timestampMs != null)
