@@ -19,12 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.auth.login;
 
+import javax.security.auth.login.CredentialExpiredException;
+import javax.security.auth.login.FailedLoginException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PasswordAuthentication;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -48,10 +51,15 @@ public class PasswordLoginModule extends BaseLoginModule<AccountUsernamePassword
       account = Accounts.lookupAccountByName( accountName );
       user = account.lookupUserByName( username );
     } catch ( final AuthException e ) {
-      throw new AuthException(PasswordAuthentication.INVALID_USERNAME_OR_PASSWORD);
+      throw new FailedLoginException();
     }
 
     PasswordAuthentication.authenticate( user, password );
+
+    if ( Objects.firstNonNull( user.getPasswordExpires(), Long.MAX_VALUE )
+        < System.currentTimeMillis() ) {
+      throw new CredentialExpiredException();
+    }
 
     super.setCredential( credentials.getAccountUsername() );
     super.setPrincipal( user );
