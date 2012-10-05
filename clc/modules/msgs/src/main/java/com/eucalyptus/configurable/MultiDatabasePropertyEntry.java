@@ -80,8 +80,9 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   
   public MultiDatabasePropertyEntry( Class definingClass, String entrySetName, Field field, Field identifierField, String description, String defaultValue,
                                      PropertyTypeParser typeParser,
-                                     Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, String identifierValue ) {
-    super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias );
+                                     Boolean readOnly, String displayName, ConfigurableFieldType widgetType, String alias, String identifierValue,
+                                     PropertyChangeListener changeListener ) {
+    super( definingClass, entrySetName, field, defaultValue, description, typeParser, readOnly, displayName, widgetType, alias, changeListener );
     this.identifierField = identifierField;
     this.identifiedMethodName = identifierField.getName( ).substring( 0, 1 ).toUpperCase( ) + identifierField.getName( ).substring( 1 );
     this.identifierValue = identifierValue;
@@ -135,10 +136,11 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
           String description = annote.description( );
           String defaultValue = annote.initial( );
           PropertyTypeParser p = PropertyTypeParser.get( f.getType( ) );
+          PropertyChangeListener listener = PropertyChangeListeners.getListenerFromClass( annote.changeListener( ) );
           try {
             if ( !Modifier.isStatic( f.getModifiers( ) ) && !f.isAnnotationPresent( Transient.class ) ) {
               ConfigurableProperty prop = new MultiDatabasePropertyEntry( c, fqPrefix, f, identifierField, description, defaultValue, p, annote.readonly( ),
-                                                                          annote.displayName( ), annote.type( ), alias, null );
+                                                                          annote.displayName( ), annote.type( ), alias, null, listener );
               return prop;
             }
           } catch ( Exception e ) {
@@ -199,7 +201,7 @@ public class MultiDatabasePropertyEntry extends AbstractConfigurableProperty imp
   public MultiDatabasePropertyEntry getClone( String idValue ) {
     return new MultiDatabasePropertyEntry( this.getDefiningClass( ), this.getEntrySetName( ), this.getField( ), identifierField, this.getDescription( ),
                                            this.getDefaultValue( ), this.getTypeParser( ), this.getReadOnly( ),
-                                           this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), idValue );
+                                           this.getDisplayName( ), this.getWidgetType( ), this.getAlias( ), idValue, this.getChangeListener( ) );
   }
   
   /**

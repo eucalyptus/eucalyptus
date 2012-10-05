@@ -154,6 +154,7 @@ public class SystemUtil {
 	   output.start();
 	   int returnValue = proc.waitFor();
 	   output.join();
+	   error.join();
 	   return new CommandOutput(returnValue, output.getReturnValue(), error.getReturnValue());
 	 }
 

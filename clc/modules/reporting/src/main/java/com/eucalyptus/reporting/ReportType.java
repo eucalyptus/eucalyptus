@@ -9,7 +9,7 @@ public enum ReportType
 	VOLUME     (new VolumeArtGenerator()),
 	SNAPSHOT   (new VolumeSnapshotArtGenerator()),
 	ELASTIC_IP (new ElasticIpArtGenerator()),
-	COMPUTE    (new ComputeCapacityArtGenerator()),
+	CAPACITY   (new ComputeCapacityArtGenerator()),
 	;
 
 	private final ArtGenerator generator;

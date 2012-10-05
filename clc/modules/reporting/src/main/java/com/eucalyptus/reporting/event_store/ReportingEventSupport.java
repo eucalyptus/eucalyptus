@@ -27,12 +27,14 @@ import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
+
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Index;
+
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingUser;
 import com.google.common.collect.Sets;
@@ -56,7 +58,6 @@ public abstract class ReportingEventSupport implements Serializable {
   @Column(name = "creation_timestamp", updatable = false, nullable = false)
   private Date creationTimestamp;
 
-  @Index(name="timestamp_ms_i")
   @Column(name="timestamp_ms", nullable = false)
   protected Long timestampMs;
 

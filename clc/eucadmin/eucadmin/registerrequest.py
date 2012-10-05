@@ -23,8 +23,9 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from boto.roboto.awsqueryrequest import AWSQueryRequest
+from boto.roboto.awsqueryrequest import AWSQueryRequest, RequiredParamError
 from boto.roboto.param import Param
+import boto.exception
 import eucadmin
 
 class FixPortMetaClass(type):
@@ -62,26 +63,26 @@ class RegisterRequest(AWSQueryRequest):
                     long_name='partition',
                     ptype='string',
                     optional=False,
-                    doc='Partition name for the service'),
+                    doc='partition the component should join'),
               Param(name='Host',
                     short_name='H',
                     long_name='host',
                     ptype='string',
                     optional=False,
-                    doc='Hostname of the service'),
+                    doc="new component's IP address"),
               Param(name='Port',
                     short_name='p',
                     long_name='port',
                     ptype='integer',
                     default=DefaultPort,
                     optional=True,
-                    doc='Port for the service (Default: %d)' % DefaultPort)
+                    doc="new component's port number (default: %d)" % DefaultPort)
               ]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
-                  doc='The name of the service')]
+                  doc='component name (must be unique)')]
 
     def __init__(self, **args):
         self._update_port()
@@ -95,7 +96,7 @@ class RegisterRequest(AWSQueryRequest):
                 break
         if port_param:
             port_param.default = self.DefaultPort
-            port_param.doc = 'Port for the service (default=%d)' % self.DefaultPort
+            port_param.doc = "new component's port number (default: %d)" % self.DefaultPort
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -105,11 +106,33 @@ class RegisterRequest(AWSQueryRequest):
 
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
+        if response != 'true':
+            # Failed responses still return HTTP 200, so we raise exceptions
+            # manually.  See https://eucalyptus.atlassian.net/browse/EUCA-3670.
+            msg = getattr(data, 'euca:statusMessage', 'registration failed')
+            raise RuntimeError('error: ' + msg)
 
     def main(self, **args):
         return self.send(**args)
 
     def main_cli(self):
         eucadmin.print_version_if_necessary()
+
+        # EVIL HACK: When you fail to supply a name for the component,
+        # roboto's error message instructs you to use the --name
+        # option, which doesn't exist.  We can't simply call
+        # self.do_cli and catch an exception either, because do_cli
+        # will call sys.exit before we regain control.  As a last
+        # resort, we monkey patch the RequiredParamError that it
+        # would throw to special-case this error message.
+        #
+        # Don't worry too much about how horrible this is; we're
+        # going to phase roboto out completely soon.
+        RequiredParamError.__init__ = _required_param_error_init
+
         self.do_cli()
+
+def _required_param_error_init(self, required):
+    self.required = required
+    s = 'Required parameters are missing: %s' % self.required.replace('--name', 'name')
+    boto.exception.BotoClientError.__init__(self, s)

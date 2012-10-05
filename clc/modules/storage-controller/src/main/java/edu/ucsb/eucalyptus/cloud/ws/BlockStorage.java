@@ -144,7 +144,7 @@ public class BlockStorage {
 	static BlockStorageStatistics blockStorageStatistics;
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
-
+	
 	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
@@ -883,11 +883,8 @@ public class BlockStorage {
 					List<SnapshotInfo> foundSnapshotInfos = db.query(snapshotInfo);
 					if(foundSnapshotInfos.size() == 0) {
 						db.commit();			
-						//TODO: Check if backend knows about this
-						//get snapshot size from walrus
-						if(blockManager.getFromBackend(snapshotId)) {
-
-						} else {
+						//This SC does not have the snapshot locally, must be fetched from Walrus
+						if(!blockManager.getFromBackend(snapshotId)) {
 							int sizeExpected;
 							if(size <= 0) {
 								sizeExpected = getSnapshotSize(snapshotId);
@@ -898,7 +895,11 @@ public class BlockStorage {
 							if(snapDestination != null) {
 								getSnapshot(snapshotId, snapDestination);
 							}
+							else {
+								LOG.warn("Block Manager replied that " + snapshotId + " not on backend, but snapshot preparation indicated that the snapshot is already present");
+							}
 						}
+						
 						db = StorageProperties.getEntityWrapper();
 						snapshotInfo = new SnapshotInfo(snapshotId);
 						snapshotInfo.setVolumeId(volumeId);
@@ -907,8 +908,9 @@ public class BlockStorage {
 						snapshotInfo.setStatus(StorageProperties.Status.available.toString());				
 						db.add(snapshotInfo);
 						db.commit();
-						size = blockManager.createVolume(volumeId, snapshotId, size);
+						size = blockManager.createVolume(volumeId, snapshotId, size); //leave the snapshot even on failure here
 					} else {
+						//Snapshot does exist on this SC.
 						SnapshotInfo foundSnapshotInfo = foundSnapshotInfos.get(0);
 						if(!foundSnapshotInfo.getStatus().equals(StorageProperties.Status.available.toString())) {
 							success = false;
@@ -924,10 +926,13 @@ public class BlockStorage {
 					LOG.error(ex);
 				}
 			} else {
+				//Not a snapshot-based volume create.
 				try {
 					if(parentVolumeId != null) {
+						//Clone the parent volume.
 						blockManager.cloneVolume(volumeId, parentVolumeId);
 					} else {
+						//Create a regular empty volume
 						blockManager.createVolume(volumeId, size);
 					}
 				} catch(Exception ex) {
@@ -935,6 +940,8 @@ public class BlockStorage {
 					LOG.error(ex,ex);
 				}
 			}
+			
+			//Create the necessary database entries for the newly created volume.
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo volumeInfo = new VolumeInfo(volumeId);
 			try {
@@ -946,7 +953,7 @@ public class BlockStorage {
 							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
 							if((totalVolumeSize + size) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb() ||
 									(size > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB())) {
-								LOG.error("Volume size limit exceeeded");
+								LOG.error("Max Total Volume size limit exceeded creating " + volumeId + ". Removing volume and cancelling operation");
 								db.commit();
 								checker.cleanFailedVolume(volumeId);
 								return;
