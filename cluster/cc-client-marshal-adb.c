@@ -570,6 +570,45 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
   return(0);
 }
 
+int cc_bundleRestartInstance(char *instanceId, axutil_env_t *env, axis2_stub_t *stub) {
+	int                                      i      = 0;
+	adb_BundleRestartInstance_t             *input  = NULL;
+	adb_BundleRestartInstanceResponse_t     *output = NULL;
+	adb_bundleRestartInstanceType_t         *sn     = NULL;
+	adb_bundleRestartInstanceResponseType_t *snrt   = NULL;
+
+	sn    = adb_bundleRestartInstanceType_create(env);
+	input = adb_BundleRestartInstance_create(env);
+
+	adb_bundleRestartInstanceType_set_userId(sn, env, "eucalyptus");
+	{
+		char cidstr[9] = { 0 };
+
+		bzero(cidstr, 9);
+		srand(time(NULL) + getpid());
+
+		for (i = 0; i < 8; i++) {
+			cidstr[i] = rand() % 26 + 'a';
+		}
+
+		adb_bundleRestartInstanceType_set_correlationId(sn, env, cidstr);
+	}
+	adb_bundleRestartInstanceType_set_instanceId(sn, env, instanceId);
+	adb_BundleRestartInstance_set_BundleRestartInstance(input, env, sn);
+
+	if ((output = axis2_stub_op_EucalyptusCC_BundleRestartInstance(stub, env, input)) == NULL) {
+		printf("ERROR: bundleRestartInstance returned NULL\n");
+		return(1);
+	}
+
+	snrt = adb_BundleRestartInstanceResponse_get_BundleRestartInstanceResponse(output, env);
+	printf("bundleRestartInstance returned status %d\n", adb_bundleRestartInstanceResponseType_get_return(snrt, env));
+
+	snrt = adb_BundleRestartInstanceResponse_get_BundleRestartInstanceResponse(output, env);
+	printf("bundleRestartInstance returned status %d\n", adb_bundleRestartInstanceResponseType_get_return(snrt, env));
+	return(0);
+}
+
 int cc_assignAddress(char *src, char *dst, axutil_env_t *env, axis2_stub_t *stub) {
   int i;
   //  char meh[32];

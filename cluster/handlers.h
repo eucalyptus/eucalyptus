@@ -250,6 +250,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force);
 
 int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int doBundleRestartInstance(ncMetadata *ccMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId);
 
 int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst);

@@ -295,6 +295,25 @@
 	  </xs:complexContent>
     </xs:complexType>
 
+    <xs:complexType name="ncBundleRestartInstanceType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncBundleRestartInstanceResponseType">
+	  <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+	  </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncCancelBundleTaskType">
 	  <xs:complexContent>
 	    <xs:extension base="tns:eucalyptusMessage">
@@ -628,6 +647,9 @@
     <xs:element name="ncBundleInstance" nillable="true" type="tns:ncBundleInstanceType"/>
     <xs:element name="ncBundleInstanceResponse" nillable="true" type="tns:ncBundleInstanceResponseType"/>
 
+    <xs:element name="ncBundleRestartInstance" nillable="true" type="tns:ncBundleRestartInstanceType"/>
+    <xs:element name="ncBundleRestartInstanceResponse" nillable="true" type="tns:ncBundleRestartInstanceResponseType"/>
+
     <xs:element name="ncCancelBundleTask" nillable="true" type="tns:ncCancelBundleTaskType"/>
     <xs:element name="ncCancelBundleTaskResponse" nillable="true" type="tns:ncCancelBundleTaskResponseType"/>
 
@@ -701,6 +723,11 @@
 
 <wsdl:message name="ncBundleInstanceResponse">
   <wsdl:part element="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncBundleRestartInstanceResponse">
+  <wsdl:part element="tns:ncBundleRestartInstanceResponse" name="ncBundleRestartInstanceResponse">
   </wsdl:part>
 </wsdl:message>
 
@@ -781,6 +808,11 @@
 
 <wsdl:message name="ncBundleInstance">
   <wsdl:part element="tns:ncBundleInstance" name="ncBundleInstance">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncBundleRestartInstance">
+  <wsdl:part element="tns:ncBundleRestartInstance" name="ncBundleRestartInstance">
   </wsdl:part>
 </wsdl:message>
 
@@ -885,6 +917,13 @@
     <wsdl:input message="tns:ncBundleInstance" name="ncBundleInstance">
     </wsdl:input>
     <wsdl:output message="tns:ncBundleInstanceResponse" name="ncBundleInstanceResponse">
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncBundleRestartInstance">
+    <wsdl:input message="tns:ncBundleRestartInstance" name="ncBundleRestartInstance">
+    </wsdl:input>
+    <wsdl:output message="tns:ncBundleRestartInstanceResponse" name="ncBundleRestartInstanceResponse">
     </wsdl:output>
   </wsdl:operation>
 
@@ -1033,6 +1072,16 @@
       <soap:body use="literal"/>
     </wsdl:input>
     <wsdl:output name="ncBundleInstanceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncBundleRestartInstance">
+    <soap:operation soapAction="EucalyptusNC#ncBundleRestartInstance" style="document"/>
+    <wsdl:input name="ncBundleRestartInstance">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncBundleRestartInstanceResponse">
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>

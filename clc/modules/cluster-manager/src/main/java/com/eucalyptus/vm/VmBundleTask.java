@@ -73,7 +73,7 @@ import com.google.common.base.Function;
 @Embeddable
 public class VmBundleTask {
   public enum BundleState {
-    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), complete( "succeeded" ), failed( "failed" );
+    none( "none" ), pending( null ), storing( "bundling" ), canceling( null ), cancelled( "cancelled" ), complete( "succeeded" ), failed( "failed" );
     private String mappedState;
     
     BundleState( final String mappedState ) {

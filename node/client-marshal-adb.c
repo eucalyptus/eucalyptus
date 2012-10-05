@@ -806,6 +806,45 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     return status;
 }
 
+int ncBundleRestartInstanceStub(ncStub *st, ncMetadata *meta, char *instanceId)
+{
+    axutil_env_t                      *env     = st->env;
+    axis2_stub_t                      *stub    = st->stub;
+    adb_ncBundleRestartInstance_t     *input   = adb_ncBundleRestartInstance_create(env);
+    adb_ncBundleRestartInstanceType_t *request = adb_ncBundleRestartInstanceType_create(env);
+
+    // set standard input fields
+    adb_ncBundleRestartInstanceType_set_nodeName(request, env, st->node_name);
+    if (meta) {
+        if (meta->correlationId)
+        	meta->correlationId = NULL;
+        EUCA_MESSAGE_MARSHAL(ncBundleRestartInstanceType, request, meta);
+    }
+
+    // set op-specific input fields
+    adb_ncBundleRestartInstanceType_set_instanceId(request, env, instanceId);
+    adb_ncBundleRestartInstance_set_ncBundleRestartInstance(input, env, request);
+
+    int status = 0;
+    { // do it
+        adb_ncBundleRestartInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncBundleRestartInstance(stub, env, input);
+
+        if (!output) {
+            logprintfl (EUCAERROR, "ERROR: BundleInstance" NULL_ERROR_MSG);
+            status = -1;
+        }
+        else {
+            adb_ncBundleRestartInstanceResponseType_t *response = adb_ncBundleRestartInstanceResponse_get_ncBundleRestartInstanceResponse(output, env);
+            if (adb_ncBundleRestartInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl (EUCAERROR, "ERROR: BundleInstance returned an error\n");
+                status = 1;
+            }
+        }
+    }
+
+    return(status);
+}
+
 int ncCancelBundleTaskStub (ncStub *st, ncMetadata *meta, char *instanceId)
 {
     axutil_env_t * env  = st->env;

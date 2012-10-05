@@ -91,6 +91,7 @@ void usage (void)
              "\t\tattachVolume\t\t[-i -V -R -L]\n"
              "\t\tdetachVolume\t\t[-i -V -R -L]\n"
 			 "\t\tbundleInstance\t\t[-i]\n"
+    		 "\t\tbundleRestartInstance\t\t[-i]\n"
              "\t\tdescribeSensors\n"
         "\toptions:\n"
              "\t\t-d \t\t- print debug output\n"
@@ -468,6 +469,10 @@ int main (int argc, char **argv)
 	int rc = ncBundleInstanceStub (stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
 		printf ("ncBundleInstanceStub = %d\n", rc);
 
+	} else if (!strcmp(command, "bundleRestartInstance")) {
+		CHECK_PARAM(instance_id, "instance id");
+		int rc = ncBundleRestartInstanceStub (stub, &meta, instance_id);
+		printf ("ncBundleRestartInstanceStub = %d\n", rc);
     } else if (!strcmp(command, "powerDown")) {
       int rc = ncPowerDownStub(stub, &meta);
     } else if (!strcmp(command, "describeBundleTasks")) {

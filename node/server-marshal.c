@@ -856,6 +856,45 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
     return response;
 }
 
+adb_ncBundleRestartInstanceResponse_t* ncBundleRestartInstanceMarshal (adb_ncBundleRestartInstance_t *ncBundleRestartInstance, const axutil_env_t *env)
+{
+    pthread_mutex_lock(&ncHandlerLock);
+	adb_ncBundleRestartInstanceType_t         *input    = adb_ncBundleRestartInstance_get_ncBundleRestartInstance(ncBundleRestartInstance, env);
+	adb_ncBundleRestartInstanceResponse_t     *response = adb_ncBundleRestartInstanceResponse_create(env);
+	adb_ncBundleRestartInstanceResponseType_t *output   = adb_ncBundleRestartInstanceResponseType_create(env);
+
+	// get standard fields from input
+	axis2_char_t *correlationId = adb_ncBundleRestartInstanceType_get_correlationId(input, env);
+	axis2_char_t *userId        = adb_ncBundleRestartInstanceType_get_userId(input, env);
+
+	// get operation-specific fields from input
+	axis2_char_t * instanceId = adb_ncBundleRestartInstanceType_get_instanceId(input, env);
+
+	eventlog("NC", userId, correlationId, "BundleRestartInstance", "begin");
+	{
+		ncMetadata meta = { correlationId, userId };
+
+		int error = doBundleRestartInstance(&meta, instanceId);
+
+		if (error) {
+			logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);
+			adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+		}
+		else {
+			adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+		}
+
+		adb_ncBundleRestartInstanceResponseType_set_correlationId(output, env, correlationId);
+		adb_ncBundleRestartInstanceResponseType_set_userId(output, env, userId);
+	}
+	// set response to output
+	adb_ncBundleRestartInstanceResponse_set_ncBundleRestartInstanceResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+
+    eventlog("NC", userId, correlationId, "BundleRestartInstance", "end");
+    return(response);
+}
+
 adb_ncCancelBundleTaskResponse_t* ncCancelBundleTaskMarshal (adb_ncCancelBundleTask_t* ncCancelBundleTask, const axutil_env_t *env) {
     pthread_mutex_lock(&ncHandlerLock);
     adb_ncCancelBundleTaskType_t * input          = adb_ncCancelBundleTask_get_ncCancelBundleTask(ncCancelBundleTask, env);
@@ -1066,7 +1105,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         ncMetadata meta = { correlationId, userId };
 
         int error = doOPERATION (&meta, instanceId, ...
-
+    
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doOPERATION() failed error=%d\n", error);
             adb_ncOPERATIONResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1083,7 +1122,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     // set response to output
     adb_ncOPERATIONResponse_set_ncOPERATIONResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
-
+    
     eventlog("NC", userId, correlationId, "OPERATION", "end");
     return response;
 */

@@ -227,6 +227,43 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundle
   return(ret);
 }
 
+adb_BundleRestartInstanceResponse_t * BundleRestartInstanceMarshal(adb_BundleRestartInstance_t *bundleInstance, const axutil_env_t *env) {
+	int                                      rc                 = 0;
+	axis2_bool_t                             status             = AXIS2_TRUE;
+	char                                     statusMessage[256] = { 0 };
+	char                                    *instanceId         = NULL;
+	ncMetadata                               ccMeta             = { 0 };
+	adb_BundleRestartInstanceResponse_t     *ret                = NULL;
+	adb_bundleRestartInstanceResponseType_t *birt               = NULL;
+	adb_bundleRestartInstanceType_t         *bit                = NULL;
+
+	bit = adb_BundleRestartInstance_get_BundleRestartInstance(bundleInstance, env);
+
+	EUCA_MESSAGE_UNMARSHAL(bundleRestartInstanceType, bit, (&ccMeta));
+
+	instanceId = adb_bundleRestartInstanceType_get_instanceId(bit, env);
+	status     = AXIS2_TRUE;
+	if (!DONOTHING) {
+		if ((rc = rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
+			logprintf("ERROR: doBundleRestartInstance() returned FAIL\n");
+			status = AXIS2_FALSE;
+			snprintf(statusMessage, 255, "ERROR");
+		}
+	}
+
+	birt = adb_bundleRestartInstanceResponseType_create(env);
+	adb_bundleRestartInstanceResponseType_set_return(birt, env, status);
+	if (status == AXIS2_FALSE)
+		adb_bundleRestartInstanceResponseType_set_statusMessage(birt, env, statusMessage);
+
+	adb_bundleRestartInstanceResponseType_set_correlationId(birt, env, ccMeta.correlationId);
+	adb_bundleRestartInstanceResponseType_set_userId(birt, env, ccMeta.userId);
+
+	ret = adb_BundleRestartInstanceResponse_create(env);
+	adb_BundleRestartInstanceResponse_set_BundleRestartInstanceResponse(ret, env, birt);
+	return(ret);
+}
+
 adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *cancelBundleTask, const axutil_env_t *env) {
   adb_CancelBundleTaskResponse_t *ret=NULL;
   adb_cancelBundleTaskResponseType_t *birt=NULL;

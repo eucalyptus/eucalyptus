@@ -256,10 +256,10 @@ void change_state(	ncInstance *instance,
     instance->state = (int) state;
     switch (state) { /* mapping from NC's internal states into external ones */
     case STAGING:
-    case BOOTING:
     case CANCELED:
         instance->stateCode = PENDING;
         break;
+    case BOOTING:
     case RUNNING:
     case BLOCKED:
     case PAUSED:
@@ -273,9 +273,7 @@ void change_state(	ncInstance *instance,
     case CREATEIMAGE_SHUTOFF:
     case SHUTDOWN:
     case SHUTOFF:
-        if (instance->stateCode == EXTANT) {
-            instance->stateCode = EXTANT;
-        } else {
+        if (instance->stateCode != EXTANT) {
             instance->stateCode = PENDING;
         }
         instance->retries = LIBVIRT_QUERY_RETRIES;
@@ -824,6 +822,151 @@ void *startup_thread (void * arg)
     if (xml) free (xml);
     if (brname) free (brname);
     return NULL;
+}
+
+void * restart_thread(void *arg)
+{
+	ncInstance   *instance   = ((ncInstance *) arg);
+	boolean       created    = FALSE;
+	virDomainPtr  dom        = NULL;
+	char         *xml        = NULL;
+	char         *brname     = NULL;
+	int           error      = -1;
+	int           i          = 0;
+	int           status     = 0;
+	int           rc         = -1;
+	boolean       tryKilling = FALSE;
+
+	// Check the hypervisor connection
+	logprintfl(EUCADEBUG, "{%u} spawning restart thread\n", (unsigned int)pthread_self());
+	if (check_hypervisor_conn() == NULL) {
+		logprintfl (EUCAERROR, "[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
+		goto shutoff;
+	}
+
+	// set up networking
+	if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != 0) {
+		logprintfl(EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
+		goto shutoff;
+	}
+
+	// Save our instance bridge name for later use
+	safe_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
+	logprintfl(EUCAINFO, "[%s] started network\n", instance->instanceId);
+
+	if (instance->state == TEARDOWN) {
+		// timed out in STAGING
+		goto done;
+	}
+
+	if (instance->state == CANCELED) {
+		logprintfl(EUCAERROR, "[%s] cancelled instance startup\n", instance->instanceId);
+		goto shutoff;
+	}
+
+	if (call_hooks(NC_EVENT_PRE_BOOT, instance->instancePath)) {
+		logprintfl(EUCAERROR, "[%s] cancelled instance startup via hooks\n", instance->instanceId);
+		goto shutoff;
+	}
+
+	xml = file2str(instance->libvirtFilePath);
+
+	// to enable NC recovery
+	save_instance_struct(instance);
+
+	// serialize domain creation as hypervisors can get confused with
+	// too many simultaneous create requests
+	logprintfl(EUCADEBUG2, "[%s] instance about to boot\n", instance->instanceId);
+
+	// retry loop
+	for (i = 0; i < MAX_CREATE_TRYS; i++) {
+		if (i > 0) {
+			logprintfl(EUCAINFO, "[%s] attempt %d of %d to create the instance\n", instance->instanceId, i + 1, MAX_CREATE_TRYS);
+		}
+
+		sem_p(hyp_sem);
+		sem_p(loop_sem);
+		{
+			pid_t cpid = fork();
+			if (cpid < 0) {
+				// fork error
+				logprintfl (EUCAERROR, "[%s] failed to fork to start instance\n", instance->instanceId);
+			}
+			else if (cpid == 0) {
+				// child process - creates the domain
+				if ((dom = virDomainCreateLinux(nc_state.conn, xml, 0)) != NULL) {
+					// To be safe. Docs are not clear on whether the handle exists outside the process.
+					virDomainFree(dom);
+					exit(0);
+				}
+				exit (1);
+			}
+			else {
+				// parent process - waits for the child, kills it if necessary
+				if ((rc = timewait(cpid, &status, CREATE_TIMEOUT_SEC)) < 0) {
+					logprintfl(EUCAERROR, "[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
+					tryKilling = TRUE;
+				}
+				else if (rc == 0) {
+					logprintfl(EUCAERROR, "[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
+					tryKilling = TRUE;
+				}
+				else if (WEXITSTATUS(status) != 0) {
+					logprintfl(EUCAERROR, "[%s] hypervisor failed to create the instance\n", instance->instanceId);
+				}
+				else {
+					created = TRUE;
+				}
+
+				if (tryKilling) {
+					kill(cpid, SIGKILL); // should be able to do
+					kill(cpid, 9); // may not be able to do?
+				}
+			}
+		}
+		sem_v(loop_sem);
+		sem_v(hyp_sem);
+
+		if (created)
+			break;
+		sleep(1);
+	}
+
+	if (!created) {
+		goto shutoff;
+	}
+
+	// TODO: bring back correlationId
+	eventlog("NC", instance->userId, "", "instanceBoot", "begin");
+
+	sem_p(inst_sem);
+	{
+		// check one more time for cancellation
+		if (instance->state == TEARDOWN) {
+			// timed out in BOOTING
+		}
+		else if ((instance->state == CANCELED) || (instance->state == SHUTOFF)) {
+			logprintfl(EUCAERROR, "[%s] startup of instance was cancelled\n", instance->instanceId);
+			change_state(instance, SHUTOFF);
+		}
+		else {
+			logprintfl(EUCAINFO, "[%s] booting\n", instance->instanceId);
+			instance->bootTime = time (NULL);
+			change_state(instance, BOOTING);
+		}
+
+		copy_instances();
+	}
+	sem_v(inst_sem);
+	goto done;
+
+shutoff: // escape point for error conditions
+	change_state(instance, SHUTOFF);
+
+done:
+	if (xml) free(xml);
+	if (brname) free(brname);
+	return(NULL);
 }
 
 void adopt_instances()
@@ -1773,6 +1916,17 @@ int doBundleInstance (ncMetadata *meta, char *instanceId, char *bucketName, char
         ret = nc_state.D->doBundleInstance (&nc_state, meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
     
 	return ret;
+}
+
+int doBundleRestartInstance(ncMetadata *meta, char *instanceId)
+{
+	if (init())
+		return(1);
+
+	logprintfl(EUCAINFO, "[%s] doBundleRestartInstance: invoked\n", instanceId);
+	if (nc_state.H->doBundleRestartInstance)
+		return(nc_state.H->doBundleRestartInstance(&nc_state, meta, instanceId));
+	return(nc_state.D->doBundleRestartInstance(&nc_state, meta, instanceId));
 }
 
 int doCancelBundleTask (ncMetadata *meta, char *instanceId)

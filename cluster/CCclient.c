@@ -344,6 +344,12 @@ int main(int argc, char **argv) {
 	printf("cc_bundleInstance() failed\n");
 	exit(1);
       }
+    } else if (!strcmp(argv[2], "bundleRestartInstance")) {
+      rc = cc_bundleRestartInstance(argv[3], env, stub);
+      if (rc != 0) {
+	printf("cc_bundleRestartInstance() failed\n");
+	exit(1);
+      }
     } else if (!strcmp(argv[2], "createImage")) {
       rc = cc_createImage(argv[3], argv[4], argv[5], env, stub);
       if (rc != 0) {
