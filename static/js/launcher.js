@@ -1003,7 +1003,7 @@
           $('<td>').text('/dev/').append($mapping),
           $('<td>').append($snapshot),
           $('<td>').append($size), 
-          $('<td>').append($delOnTerm),
+          $('<td>').addClass('centered-cell').append($delOnTerm),
           $('<td>').append($addBtn),
           $('<td>').append($removeBtn));
 
