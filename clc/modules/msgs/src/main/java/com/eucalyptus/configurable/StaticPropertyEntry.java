@@ -192,19 +192,7 @@ public class StaticPropertyEntry extends AbstractConfigurableProperty {
         PropertyTypeParser p = PropertyTypeParser.get( field.getType( ) );
         ConfigurableProperty entry = null;
         Class<? extends PropertyChangeListener> changeListenerClass = annote.changeListener( );
-        PropertyChangeListener changeListener;
-        if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
-          if ( changeListenerClass.isEnum( ) ) {
-            changeListener = changeListenerClass.getEnumConstants( )[0];
-          }
-          try {
-            changeListener = changeListenerClass.newInstance( );
-          } catch ( Throwable e ) {
-            changeListener = NoopEventListener.NOOP;
-          }
-        } else {
-          changeListener = NoopEventListener.NOOP;
-        }
+        PropertyChangeListener changeListener = PropertyChangeListeners.getListenerFromClass(changeListenerClass);
         int modifiers = field.getModifiers( );
         if ( Modifier.isPublic( modifiers ) && Modifier.isStatic( modifiers ) ) {
           entry = new StaticPropertyEntry( c, fqPrefix, field, description, defaultValue, p, annote.readonly( ), annote.displayName( ), annote.type( ), alias,

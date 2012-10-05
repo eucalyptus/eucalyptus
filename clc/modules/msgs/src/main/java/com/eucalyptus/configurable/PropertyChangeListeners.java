@@ -62,6 +62,7 @@
 
 package com.eucalyptus.configurable;
 
+import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
 import com.google.common.collect.Constraint;
 
 public class PropertyChangeListeners {
@@ -106,6 +107,23 @@ public class PropertyChangeListeners {
       } );
     }
     
+  }
+  
+  public static PropertyChangeListener getListenerFromClass( Class<? extends PropertyChangeListener> changeListenerClass ) {
+    PropertyChangeListener changeListener;
+    if ( !changeListenerClass.equals( NoopEventListener.class ) ) {
+      if ( changeListenerClass.isEnum( ) ) {
+        changeListener = changeListenerClass.getEnumConstants( )[0];
+      }
+      try {
+        changeListener = changeListenerClass.newInstance( );
+      } catch ( Throwable e ) {
+        changeListener = NoopEventListener.NOOP;
+      }
+    } else {
+      changeListener = NoopEventListener.NOOP;
+    }
+    return changeListener;
   }
   
 }

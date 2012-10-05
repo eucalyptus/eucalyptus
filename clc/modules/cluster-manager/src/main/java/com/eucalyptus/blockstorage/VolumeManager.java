@@ -450,6 +450,7 @@ public class VolumeManager {
     	request.setDevice( volume.getDevice( ).replaceAll( "unknown,requested:", "" ) );
     	request.setInstanceId( vm.getInstanceId( ) );
     	VolumeDetachCallback ncDetach = new VolumeDetachCallback( request );
+    	AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
     	try {
     		AsyncRequests.sendSync( scVm, new DetachStorageVolumeType( volume.getVolumeId( ) ) );
     	} catch ( Exception e ) {
@@ -457,7 +458,6 @@ public class VolumeManager {
     		Logs.extreme( ).debug( e, e );
     		//GRZE: attach is idempotent, failure here is ok, throw new EucalyptusCloudException( e.getMessage( ) );
     	}
-    	AsyncRequests.newRequest( ncDetach ).dispatch( cluster.getConfiguration( ) );
     }
     volume.setStatus( "detaching" );
     reply.setDetachedVolume( volume );

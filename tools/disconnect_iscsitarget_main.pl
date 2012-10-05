@@ -60,27 +60,12 @@
 #   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
-BEGIN {
-  use File::Spec::Functions qw(rel2abs);
-  use File::Basename qw(dirname);
-
-  my $script_abs_path = rel2abs($0);
-  our $script_dir = dirname($script_abs_path);
-}
-
-use lib $script_dir;
-
-require "iscsitarget_common.pl";
-
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
-$NOT_REQUIRED = "not_required";
-
-$DEFAULT = "default";
-
 $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
+$DMSETUP = untaint(`which dmsetup`);
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
 
@@ -100,7 +85,7 @@ if (is_null_or_empty($euca_home)) {
 }
 
 $EUCALYPTUS_CONF = $euca_home."/etc/eucalyptus/eucalyptus.conf";
-%conf_iface_map = get_conf_iface_map();
+%conf_iface_map = get_conf_iface_map(); 
 
 # prepare target paths:
 # <netdev0>,<ip0>,<store0>,<netdev1>,<ip1>,<store1>,...
@@ -110,9 +95,8 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
 }
 $multipath = 0;
 $multipath = 1 if @paths > 3;
-if (($multipath == 1) && (!-x $MULTIPATH)) {
-  print STDERR "Unable to find multipath\n";
-  do_exit(1);
+if (($multipath == 1) && ((!-x $MULTIPATH) || (!-x $DMSETUP))) {
+  print STDERR "Unable to find multipath or dmsetup\n";
 }
 sanitize_path(\@paths);
 
@@ -120,37 +104,109 @@ if (is_null_or_empty($lun)) {
   $lun = -1;
 }
 
-@devices = ();
-# iterate through each path, login/refresh for the new lun
+if ($multipath == 1) {
+  $mpath = get_mpath_device_by_paths(@paths);
+}
+
 while (@paths > 0) {
   $conf_iface = shift(@paths);
   $ip = shift(@paths);
   $store = shift(@paths);
   # get netdev from iface name using eucalyptus.conf
   $netdev = get_netdev_by_conf($conf_iface);
-  # get dev from lun
-  push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
+  if ($lun > -1) {
+    delete_lun($netdev, $ip, $store, $lun);
+    # rescan target
+    run_cmd(1, 1, "$ISCSIADM -m session -R");
+    next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;
+  }
+  # logout
+  if (!is_null_or_empty($netdev)) {
+    $iface = retry_until_exists(\&get_iface, [$netdev], 5);
+    if (is_null_or_empty($iface)) {
+      print STDERR "Failed to get iface.\n";
+      do_exit(1);
+    }
+  }
+  if (is_null_or_empty($iface)) {
+    run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -u");
+  } else {
+    run_cmd(1, 1, "$ISCSIADM -m node -p $ip -T $store -I $iface -u");
+  }
 }
-# get the actual device
-# Non-multipathing: the iSCSI device
-# Multipathing: the mpath device
-if ($multipath == 0) {
-  $localdev = $devices[0];
-} else {
-  $localdev = retry_until_exists(\&get_mpath_device, \@devices, 5);
-}
-if (is_null_or_empty($localdev)) {
-  print STDERR "Unable to get attached target device.\n";
-  do_exit(1);
-}
-if ($multipath == 0) {
-  $localdev = "/dev/$localdev";
-} else {
-  $localdev = "/dev/mapper/$localdev";
-}
-print "$localdev";
 
-##################################################################
+# Remove unused mpath device
+if ($multipath == 1 && !is_null_or_empty($mpath)) {
+  sleep(1);
+  # change to "fail_if_no_path" to clear up queue
+  run_cmd(1, 0, "$DMSETUP message $mpath 0 'fail_if_no_path'") if (-x $DMSETUP);
+  sleep(1);
+  # flush device map
+  run_cmd(1, 0, "$MULTIPATH -f $mpath") if (-x $MULTIPATH);
+}
+
+#####################################################
+sub get_mpath_device_by_paths {
+  my @devices = ();
+  while (@_ > 0) {
+    my $conf_iface = shift(@_);
+    my $ip = shift(@_);
+    my $store = shift(@_);
+    # get netdev from iface name using eucalyptus.conf
+    my $netdev = get_netdev_by_conf($conf_iface);
+    # get dev from lun
+    push @devices, retry_until_exists(\&get_iscsi_device, [$netdev, $ip, $store, $lun], 5);
+  }
+  return retry_until_exists(\&get_mpath_device, \@devices, 5);
+}
+
+sub delete_lun {
+  my ($netdev, $ip, $store, $lun) = @_;
+  my $sid;
+  my $host_number;
+  for $session (lookup_session()) {
+    if (($session->{$SK_TARGET} eq $store) &&
+        ($session->{$SK_PORTAL} eq $ip) &&
+        (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
+      $sid = $session->{$SK_SID};
+      $host_number = $session->{$SK_HOSTNUMBER};
+      last;
+    }
+  }
+  if (is_null_or_empty($sid) || is_null_or_empty($host_number)) {
+    print STDERR "Failed to get SID or Host Number.\n";
+    return;
+  }
+  $delete_path = "/sys/class/iscsi_session/session$sid/device/target$host_number:0:0/$host_number:0:0:$lun/delete";
+  if (!open DELETELUN, ">$delete_path") {
+    print STDERR "Unable to write $delete_path.\n";
+    do_exit(1);
+  }
+  print DELETELUN "1";
+  close DELETELUN;
+}
+
+sub has_device_attached {
+  my ($netdev, $ip, $store) = @_;
+  for $session (lookup_session()) {
+    if (($session->{$SK_TARGET} eq $store) &&
+        ($session->{$SK_PORTAL} eq $ip) &&
+        (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
+      return has_lun(keys %$session);
+    }
+  }
+  return 0;
+}
+
+sub has_lun {
+  foreach (@_) {
+    if (/$SK_LUN-\d+/) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 sub retry_until_exists {
   my ($func, $args, $retries) = @_;
   for ($i = 0; $i < $retries; $i++) {
@@ -160,3 +216,7 @@ sub retry_until_exists {
     }
   }
 }
+
+##############################################
+# needed by module
+return 1;
