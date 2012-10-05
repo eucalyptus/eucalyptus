@@ -287,6 +287,7 @@
         thisObj._storeRule(thisObj.addDialog);
         // now reset form
         thisObj.addDialog.find('#sgroup-template').val('none');
+        thisObj.editDialog.find('#sgroup-more-rules').css('display', 'none');
         thisObj.addDialog.find('#sgroup-ports').val('');
         thisObj.addDialog.find('#allow-ip').val('');
         thisObj.addDialog.find('#allow-group').val('');
@@ -404,6 +405,7 @@
         thisObj._storeRule(thisObj.editDialog);
         // now reset form
         thisObj.editDialog.find('#sgroup-template').val('none');
+        thisObj.editDialog.find('#sgroup-more-rules').css('display', 'none');
         thisObj.editDialog.find('#sgroup-ports').val('');
         thisObj.editDialog.find('#allow-ip').val('');
         thisObj.editDialog.find('#allow-group').val('');
