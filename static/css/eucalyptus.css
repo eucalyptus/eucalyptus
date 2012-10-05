@@ -844,6 +844,18 @@ input[type='text'].medium-textinput {
   background-position: right -130px;
 }
 
+/* Differences for the ui-dialog-titlebar ribbon corner positioning */
+
+.euca-dialog-container .ui-dialog-titlebar::before {
+    left: -1px;
+}
+
+.euca-dialog-container .ui-dialog-titlebar::after {
+  right: -1px;
+  background-position: right -130px;
+}
+
+
 .box-header p,
 .box-header span,
 .euca-table-header span {
@@ -2231,6 +2243,31 @@ span.on-error {
   display:none;
 }
 
+.upper-sibling {
+  margin-bottom: 0;
+}
+
+.lower-sibling label {
+  width: 190px;
+  margin-bottom: 30px;
+}
+
+.orphan-row {
+  margin: 20px 0;
+}
+
+.form-row .plaintext-label {
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.device-map-table {
+
+  
+}
+
+
+
+
 .launch-wizard-buttons {
   text-align: right;
   padding-right: 10px;
@@ -2244,7 +2281,7 @@ span.on-error {
 .image-type {
   padding-left: 60px;
   background-repeat: no-repeat;
-  /* TODO: Add path to the images sprite sheet */
+  background-image: url(../images/images-icon-sprites.png);
 }
 
 .image-type.centos5 {

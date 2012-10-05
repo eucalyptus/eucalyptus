@@ -623,7 +623,7 @@
           }
           if(group){ 
             $.each(group.rules, function (idx, rule){
-              var $wrapper = $('<div>').addClass('launcher-group-rule');
+              var $wrapper = $('<div>').addClass('launcher-group-rule clearfix');
               var protocol = rule['ip_protocol'];
               var port = rule['from_port'];
               if(rule['to_port'] !== rule['from_port'])
@@ -648,12 +648,11 @@
               });
               src = src.join(', '); 
  
-              $wrapper.append( $('<div>').addClass('wizard-section-label').html(launch_instance_security_rule),
-                               $('<div>').addClass('wizard-section-content').append(
+              $wrapper.append( $('<div>').addClass('sg-rule-label').html(launch_instance_security_rule),
                                  $('<ul>').append(
                                    $('<li>').text(protocol),
                                    $('<li>').text(portOrType),
-                                   $('<li>').text(src))));
+                                   $('<li>').text(src)));
               $rule.append($wrapper);
             });
           } 
@@ -663,10 +662,10 @@
       }
 
       $keypair.append(
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-security-keypair-selector').text(launch_instance_security_keypair),
           $('<select>').attr('title', launch_instance_key_select_tip).attr('id','launch-wizard-security-keypair-selector')),
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix lower-sibling').append(
           $('<label>').attr('for','launch-instance-create-keypair-link').text(or_label),
           $('<a>').attr('id','launch-instance-create-keypair-link').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
             if(thisObj._keypairCallback)
@@ -685,10 +684,10 @@
         })));
 
       $sgroup.append(
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-security-sg-selector').text(launch_instance_security_sgroup),
           $('<select>').attr('title', launch_instance_sgroup_select_tip).attr('id','launch-wizard-security-sg-selector')),
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix lower-sibling').append(
           $('<label>').attr('for','launch-instance-create-sg-link').text(or_label),
           $('<a>').attr('id', 'launch-instance-create-sg-link').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
             if(thisObj._sgCallback)
@@ -753,13 +752,13 @@
       var $storage = $content.find('#launch-wizard-advanced-storage');
 
       $userdata.append(
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-advanced-input-userdata').text(launch_instance_advanced_userdata),
           $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title','Enter userdata').addClass('description').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone());
           })),
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix lower-sibling').append(
           $('<label>').attr('for','launch-wizard-advanced-input-userfile').text(or_label),
           $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
@@ -794,13 +793,13 @@
         } 
       });
 
-      $network.addClass('form-row').addClass('clearfix').append(
+      $network.addClass('form-row clearfix orphan-row').addClass('clearfix').append(
         $('<label>').attr('for','launch-wizard-advanced-input-network').text(launch_instance_advanced_network),
         $('<input>').attr('id','launch-wizard-advanced-input-network').attr('type','checkbox').change(function(e){
           var $summary = summarize(); 
           thisObj._setSummary('advanced', $summary.clone());
         }),
-        $('<label>').attr('for', 'launch-wizard-advanced-input-network').text(launch_instance_advanced_network_desc));
+        $('<label>').addClass('plaintext-label').attr('for', 'launch-wizard-advanced-input-network').text(launch_instance_advanced_network_desc));
       
       var usedSnapshots = []; 
       var usedVolumes = [];
@@ -1006,7 +1005,7 @@
       $storage.append(
         $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
         $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
-          $('<table>').append(
+          $('<table>').addClass('device-map-table').append(
             $('<thead>').append(
               $('<tr>').append(
                 $('<th>').text(launch_instance_advanced_th_volume),
