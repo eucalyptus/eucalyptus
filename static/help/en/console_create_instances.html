@@ -61,7 +61,7 @@
             availability zone of your new instance(s).</p>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd"> Select an instance size by clicking the appropriate instance size link. </span>
+                    <span class="ph cmd"> Select an instance size by clicking the appropriate icon. </span>
                      
                         <div class="note note"><span class="notetitle">Note:</span>  Information about the instance size is displayed when you click the
                             instance size link. </div>
@@ -69,16 +69,18 @@
                     
                 </li>
 <li class="li step">
-                    <span class="ph cmd"> Type the number of instances to launch in the <span class="ph uicontrol">Number of
-                            instances</span> text box. </span>
+                    <span class="ph cmd"> You can optionally type the number of instances to launch in the
+                            <span class="ph uicontrol">Number of instances</span> text box if you want to
+                        launch more than one instance.</span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd"> Select an availability zone using the <span class="ph uicontrol">Availability
-                            zone</span> drop-down list box. </span>
+                    <span class="ph cmd"> If you want to specify an availability zone other than the default, select
+                        an availability zone using the <span class="ph uicontrol">Availability zone</span>
+                        drop-down list box. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Click the <span class="ph uicontrol">Next: Select security</span> button to proceed
-                        to the <span class="ph uicontrol">Type</span> panel. </span>
+                        to the <span class="ph uicontrol">Security</span> panel. </span>
                 </li>
 </ol>
 
@@ -149,7 +151,9 @@
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Click the <span class="ph uicontrol">Network</span> check box to specify that your
-                        new instance should use private addressing only. </span>
+                        new instance should use private addressing only. Private addresses cannot
+                        connect directly to the Internet and must go through a NAT (Network Address
+                        Translation) device or an elastic IP address mapped to the instance. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">You can add one or more additional storage devices to your instance:</span>
