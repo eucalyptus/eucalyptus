@@ -21,6 +21,7 @@ package com.eucalyptus.tokens.ws;
 
 import java.util.EnumSet;
 import java.util.Map;
+import javax.security.auth.login.CredentialExpiredException;
 import javax.security.auth.login.LoginException;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -137,25 +138,18 @@ public class TokensQueryPipeline extends QueryPipeline {
 
   @ChannelPipelineCoverage( ChannelPipelineCoverage.ONE )
   public static class AccountUsernamePasswordHandler extends MessageStackHandler {
-    private static class ChallengeException extends Exception { }
+    private static class ChallengeException extends Exception {
+      private static final long serialVersionUID = 1L;
+    }
 
     @Override
     public void handleUpstream(final ChannelHandlerContext ctx, final ChannelEvent channelEvent) throws Exception {
       try {
         super.handleUpstream(ctx, channelEvent);
-      } catch ( ChallengeException e ) {
-        final MappingHttpRequest httpRequest = ( MappingHttpRequest )((MessageEvent)channelEvent).getMessage( );
-        final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( "Unauthorized".getBytes(Charsets.UTF_8) );
-        final HttpResponse response =
-            new DefaultHttpResponse( httpRequest.getProtocolVersion( ), HttpResponseStatus.UNUATHORIZED );
-        response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=utf8" );
-        response.setHeader(HttpHeaders.Names.CONTENT_LENGTH, Integer.toString(buffer.readableBytes()));
-        response.setHeader( HttpHeaders.Names.WWW_AUTHENTICATE, "Basic realm=\"eucalyptus\"" );
-        response.setContent(buffer);
-        final ChannelFuture writeFuture = channelEvent.getChannel().write( response );
-        if ( !NioServerHandler.isPersistentConnection( httpRequest )  ) {
-          writeFuture.addListener( ChannelFutureListener.CLOSE );
-        }
+      } catch ( final ChallengeException e ) {
+        sendResponse( channelEvent, "Unauthorized", HttpResponseStatus.UNUATHORIZED, true );
+      } catch ( final CredentialExpiredException e ) {
+        sendResponse( channelEvent, "Expired credentials", HttpResponseStatus.FORBIDDEN, false );
       }
     }
 
@@ -181,6 +175,8 @@ public class TokensQueryPipeline extends QueryPipeline {
                 ).login();
 
                 challenge = false;
+              } catch ( CredentialExpiredException e ){
+                throw e;
               } catch ( LoginException e ){
                 // Challenge user and try again
               }
@@ -196,5 +192,25 @@ public class TokensQueryPipeline extends QueryPipeline {
 
     @Override
     public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
+
+    private void sendResponse( final ChannelEvent channelEvent,
+                               final String message,
+                               final HttpResponseStatus status,
+                               final boolean requestAuthenticate ) {
+      final MappingHttpRequest httpRequest = ( MappingHttpRequest )((MessageEvent)channelEvent).getMessage( );
+      final ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( message.getBytes(Charsets.UTF_8) );
+      final HttpResponse response =
+          new DefaultHttpResponse( httpRequest.getProtocolVersion( ), status );
+      response.setHeader( HttpHeaders.Names.CONTENT_TYPE, "text/plain; charset=utf8" );
+      response.setHeader( HttpHeaders.Names.CONTENT_LENGTH, Integer.toString(buffer.readableBytes()) );
+      if ( requestAuthenticate ) {
+        response.setHeader( HttpHeaders.Names.WWW_AUTHENTICATE, "Basic realm=\"eucalyptus\"" );
+      }
+      response.setContent(buffer);
+      final ChannelFuture writeFuture = channelEvent.getChannel().write( response );
+      if ( !NioServerHandler.isPersistentConnection( httpRequest )  ) {
+        writeFuture.addListener( ChannelFutureListener.CLOSE );
+      }
+    }
   }
 }

@@ -159,7 +159,9 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     } catch ( final Exception e ) {
       LOG.debug( e, e );
       this.setAuthenticated( false );
-      throw new LoginException( e.getMessage( ) );
+      throw e instanceof LoginException ?
+          (LoginException) e :
+          new LoginException( e.getMessage( ) );
     }
     return this.isAuthenticated( );
   }

@@ -113,13 +113,23 @@ public class Logs {
 	  // Hence, we force the simplest initialization of the normal log4j. (creating only the root logger)
 	  BasicConfigurator.configure();
 	  
+	  // Hack: If we pass "EXTREME" or "EXHAUST" to the dom configurator,
+	  // by default it will use the DEBUG level when we want it to use the trace level
+	  // So we save the old level, change it back when we are done.
+	  String logLevelProp = "euca.log.level";
+	  String oldLogLevel = System.getProperty(logLevelProp);
+	  if ("EXHAUST".equals(oldLogLevel) || "EXTREME".equals(oldLogLevel)) {
+		  System.setProperty(logLevelProp, "TRACE");
+	  }
 	  // Then we run the DOMConfigurator on a new LoggerRepository
 	  URL url = Thread.currentThread().getContextClassLoader().getResource("log4j.xml");
 	  Hierarchy eucaHierarchy = new EucaHierarchy(new EucaRootLogger(Level.DEBUG));
 	  new DOMConfigurator().doConfigure(url, eucaHierarchy);
-
       // Then we hook the new logger repository into the LogManager. 
 	  LogManager.setRepositorySelector(new DefaultRepositorySelector(eucaHierarchy), null);
+
+	  // Now set it back
+	  System.setProperty(logLevelProp, oldLogLevel);
   }
   private static Logger       LOG                     = Logger.getLogger( Logs.class );
   /**

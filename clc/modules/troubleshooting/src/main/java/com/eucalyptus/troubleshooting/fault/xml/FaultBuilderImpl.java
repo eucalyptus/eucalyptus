@@ -87,13 +87,13 @@ public class FaultBuilderImpl implements FaultBuilder {
 		
 	}
 	private FaultSubsystemManager faultSubsystemManager;
-	private ComponentId componentId;
+	private Class<? extends ComponentId> componentIdClass;
 	private ArrayList<NameValuePair> vars = new ArrayList<NameValuePair>();
 	private int faultId;
 
-	public FaultBuilderImpl(FaultSubsystemManager faultSubsystemManager, ComponentId componentId) {
+	public FaultBuilderImpl(FaultSubsystemManager faultSubsystemManager, Class<? extends ComponentId> componentIdClass) {
 		this.faultSubsystemManager = faultSubsystemManager;
-		this.componentId = componentId;
+		this.componentIdClass = componentIdClass;
 	}
 	@Override
 	public FaultBuilder withVar(String name, String value) {
@@ -110,7 +110,7 @@ public class FaultBuilderImpl implements FaultBuilder {
 	@Override
 	public void log() {
 		try {
-			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentId);
+			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentIdClass);
 			Fault fault = faultSubsystemManager.getFaultRegistry().lookupFault(faultId);
 			if (fault == FaultRegistry.SUPPRESSED_FAULT) {
 				LOG.debug("Fault " + faultId + " detected, will not be logged because it has been configured to be suppressed.");
@@ -123,7 +123,7 @@ public class FaultBuilderImpl implements FaultBuilder {
 				faultLogger.log(fault);
 			}
 		} catch (Exception ex) {
-			LOG.error("Error writing fault with id " + faultId + "  for component " + componentId);
+			LOG.error("Error writing fault with id " + faultId + "  for component " + componentIdClass.getName());
 			ex.printStackTrace();
 		}
 	}

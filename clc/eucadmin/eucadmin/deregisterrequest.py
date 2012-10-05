@@ -31,18 +31,22 @@ class DeregisterRequest(AWSQueryRequest):
     ServiceName = ''
     ServicePath = '/services/Configuration'
     ServiceClass = eucadmin.EucAdmin
-    Description = 'Deregister a %s' % ServiceName
+
+    @property
+    def Description(self):
+        return 'De-register a ' + self.ServiceName
+
     Params = [Param(name='Partition',
                     short_name='P',
                     long_name='partition',
                     ptype='string',
                     optional=True,
-                    doc='Partition for the %s' % ServiceName)]
+                    doc='partition in which the component participates')]
     Args = [Param(name='Name',
                   long_name='name',
                   ptype='string',
                   optional=False,
-                  doc='The %s name' % ServiceName)]
+                  doc='component name')]
 
     def get_connection(self, **args):
         if self.connection is None:
@@ -52,7 +56,11 @@ class DeregisterRequest(AWSQueryRequest):
 
     def cli_formatter(self, data):
         response = getattr(data, 'euca:_return')
-        print 'RESPONSE %s' % response
+        if response != 'true':
+            # Failed responses still return HTTP 200, so we raise exceptions
+            # manually.  See https://eucalyptus.atlassian.net/browse/EUCA-3670.
+            msg = getattr(data, 'euca:statusMessage', 'de-registration failed')
+            raise RuntimeError('error: ' + msg)
 
     def main(self, **args):
         return self.send(**args)

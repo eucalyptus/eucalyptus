@@ -114,6 +114,8 @@ public class LoggingResetter {
 		
 	public static synchronized void resetLoggingWithXML() {
 		LOG.info("Resetting log levels to " + System.getProperty("euca.log.level"));
+		// To avoid the value EXTREME in the log level, we "reset" it (for now)
+		Logs.reInit();
 		// This is a little evil.  Due to issues with calling DOMConfigurator.configure()
 		// more than once, we re-read the log4j.xml file, query the Threshold level of all
 		// of the appenders and loggers and set them without creating additional items
@@ -156,7 +158,6 @@ public class LoggingResetter {
 				}
 			}
 		}
-		Logs.reInit();
 	}
 
 	private static void resetRootLogLevel(Logger rootLogger,
