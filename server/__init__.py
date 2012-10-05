@@ -81,8 +81,20 @@ class GlobalSession(object):
         return self.get_value('locale', 'language')
 
     @property
-    def email(self):
-        return self.get_value('locale', 'email')
+    def version(self):
+        return '3.2.0'
+    
+    @property
+    def admin_console_url(self):
+        return 'https://' + self.get_value('server', 'clchost') + ':8443'
+
+    @property
+    def help_url(self):
+        return self.get_value('locale', 'help.url')
+
+    @property
+    def admin_support_url(self):
+        return self.get_value('locale', 'support.url')
 
     @property
     def instance_type(self):
@@ -100,9 +112,13 @@ class GlobalSession(object):
 
     # return the collection of global session info
     def get_session(self):
-        return {'language': self.language,
-                'email' : self.email,
-                'instance_type': self.instance_type 
+        return {
+                'version': self.version,
+                'language': self.language,
+                'admin_console_url': self.admin_console_url,
+                'help_url': self.help_url,
+                'admin_support_url' : self.admin_support_url,
+                'instance_type': self.instance_type,
                }
 
 class EuiException(BaseException):
@@ -288,7 +304,7 @@ class InitProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
         language = config.get('locale','language')
-        email = config.get('locale','email')
+        support_url = config.get('locale','support.url')
         if web_req.get_argument('host', False): 
           try:
             host = web_req.get_argument('host')
@@ -297,12 +313,12 @@ class InitProcessor(ProxyProcessor):
               ip_str = (addr[4])[0]; 
               ip = ip_str.split('.');
               if (len(ip) == 4):
-                return InitResponse(language, email, ip_str, host)
+                return InitResponse(language, support_url, ip_str, host)
             raise Exception
           except:
-            return InitResponse(language, email)
+            return InitResponse(language, support_url)
         else:
-          return InitResponse(language, email)
+          return InitResponse(language, support_url)
 
 class SessionProcessor(ProxyProcessor):
     @staticmethod
@@ -335,11 +351,11 @@ class LoginResponse(ProxyResponse):
                 'user_session': self.user_session.get_session()}
 
 class InitResponse(ProxyResponse):
-    def __init__(self, lang, email, ip='', hostname=''):
+    def __init__(self, lang, support_url, ip='', hostname=''):
         self.language = lang
-        self.email = email
+        self.support_url = support_url
         self.ip = ip
         self.hostname = hostname
 
     def get_response(self):
-        return {'language': self.language, 'email': self.email, 'ipaddr': self.ip, 'hostname': self.hostname}
+        return {'language': self.language, 'support_url': self.support_url, 'ipaddr': self.ip, 'hostname': self.hostname}

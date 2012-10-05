@@ -244,7 +244,7 @@ function startLaunchWizard(filter) {
 
 function getErrorMessage(jqXHR) {
   if (jqXHR.status == 504) {
-    return $.i18n.prop('general_timeout', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>");
+    return $.i18n.prop('general_timeout', "<a href='"+$.eucaData.g_session['admin_support_url']+"'>"+cloud_admin+"</a>");
   }
   if (jqXHR && jqXHR.responseText) {
     response = jQuery.parseJSON(jqXHR.responseText);
@@ -318,54 +318,5 @@ function errorAndLogout(){
   $('html body').find(DOM_BINDING['hidden']).login('popupError', $.i18n.prop('connection_failure', 'cloud administrator'), function(){
     logout();
   });
-}
-
-// This is where the singleton for "proxy info" lives.
-var _version = null;
-var _adminURL = null;
-var _helpLink = null;
-var _cloudAdminLink = null;
-
-function _checkLoaded() {
-  if (_version == null) {
-      $.ajax({
-        type:"GET",
-        url:"/support?Action=About",
-        data:"_xsrf="+$.cookie('_xsrf'),
-        dataType:"json",
-        async:false,
-        success:
-          function(data, textStatus, jqXHR){
-            if ( data ) {
-              _version = data.version;
-              _adminURL = data.admin_url;
-              _helpLink = data.help_page + data.version;
-              _cloudAdminLink = data.cloud_admin_page;
-            }
-          },
-        error:
-          function(jqXHR, textStatus, errorThrown){
-            // ?
-          }
-      });
-  }
-}
-
-function getProxyVersion() {
-  _checkLoaded();
-  return _version;
-}
-
-function getProxyAdminURL() {
-  _checkLoaded();
-  return _adminURL;
-}
-function getProxyHelpLink() {
-  _checkLoaded();
-  return _helpLink;
-}
-function getProxyCloudAdminLink() {
-  _checkLoaded();
-  return _cloudAdminLink;
 }
 
