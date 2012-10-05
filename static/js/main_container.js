@@ -58,8 +58,8 @@
          help: { content: $dialog_help },
          help_icon_class : 'help-euca',
        });
-      this._aboutDialog.find('#version').html(getProxyVersion());
-      this._aboutDialog.find('#admin-url').attr('href', getProxyAdminURL());
+      this._aboutDialog.find('#version').html($.eucaData.g_session['version']);
+      this._aboutDialog.find('#admin-url').attr('href', $.eucaData.g_session['admin_console_url']);
 
       $(window).hashchange( function(){
         thisObj._windowsHashChanged();
@@ -142,7 +142,7 @@
           logout();
           break;
         case 'help':
-          window.open(getProxyHelpLink(), '_blank');
+          window.open($.eucaData.g_session['help_url'], '_blank');
           break;
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");

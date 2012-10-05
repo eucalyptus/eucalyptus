@@ -20,11 +20,12 @@
 
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
-    _options : {
-      email : '',
-     },
+    options : {
+      support_url : '',
+    },
     errorDialog : null,
-    _init : function() { },
+    _init : function() {
+     },
     _create : function() { 
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #loginTmpl').clone(); 
@@ -65,7 +66,13 @@
             thisObj.errorDialog.eucadialog('open');
             var msgdiv = thisObj.errorDialog.find("#login-error-message p")
             if (args.search("Timeout")>-1) {
-              msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
+              msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
+              msgdiv.find('a').click( function(e){
+                if(thisObj.options.support_url.indexOf('mailto') >= 0)
+                  window.open(thisObj.options.support_url, '_self');
+                else
+                  window.open(thisObj.options.support_url,'_blank');
+              });
             } else {
               msgdiv.addClass('dialog-error').html(login_failure);
             }
@@ -84,7 +91,13 @@
         }
         $form.find('input[name=login]').removeAttr('disabled');
       }
-      $login.find("#password-help").html($.i18n.prop('login_pwd_help', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
+      $login.find("#password-help").html($.i18n.prop('login_pwd_help', '<a href="#">'+cloud_admin+'</a>'));
+      $login.find('#password-help a').click(function(e){
+        if(thisObj.options.support_url.indexOf('mailto') >= 0)
+          window.open(thisObj.options.support_url, '_self');
+        else
+          window.open(thisObj.options.support_url,'_blank');
+      });
       //rendered = $login.render($.i18n.map);
       this.element.append($login);
       $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
@@ -93,9 +106,6 @@
       }
       else {
         $form.find('input[id=password]').focus();
-      }
-      if (this.options.email && this.options.email.indexOf('@') && this.options.email !== 'help@YOUR-DOMAIN.COM'){
-        this.element.find('.password-help a').attr('href', 'mailto:'+this.options.email);
       }
     },
     _destroy : function() { },

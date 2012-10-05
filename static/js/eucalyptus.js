@@ -23,7 +23,7 @@
   if (! $.eucaData){
 	$.eucaData = {};
   }
-  var email = '';
+  var support_url = '';
   var initData = '';
   var redirected = false;
   $(document).ready(function() {
@@ -39,7 +39,7 @@
         async:"false", // async option deprecated as of jQuery 1.8
         success: function(out, textStatus, jqXHR){ 
           eucalyptus.i18n({'language':out.language});
-          email = out.email;
+          support_url = out.support_url;
           if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
@@ -76,7 +76,7 @@
           });
         } else{
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
-          $main.login({ 'email' : email, doLogin : function(evt, args) {
+          $main.login({ 'support_url' : support_url, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
               var hash = $.base64.encode(tok);  // btoa(tok) --> not supported on ie9
               var remember = (args.param.remember!=null)?"yes":"no";
