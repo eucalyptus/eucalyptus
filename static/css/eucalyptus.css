@@ -2000,6 +2000,7 @@ a.sg-my-ip {
 
 .sg-error-msg {
   color: #ff0000;
+  text-align: center;
 }
 
 .sg-rules-list {
