@@ -794,6 +794,7 @@ public class WalrusManager {
 				}
 				String objectName = null;
 				String versionId =  null;
+				Long oldObjectSize = 0L;
 				ObjectInfo objectInfo = null;
 				if (bucket.isVersioningEnabled()) {
 					//If versioning, add new object with new version id and make it the 'latest' version.
@@ -822,6 +823,7 @@ public class WalrusManager {
 							throw new AccessDeniedException("Key", objectKey, logData);
 						} 
 						objectName = foundObject.getObjectName();
+						oldObjectSize = foundObject.getSize();
 					} catch(AccessDeniedException ex) { 
 						throw ex;
 					} catch(EucalyptusCloudException ex) {
@@ -867,6 +869,8 @@ public class WalrusManager {
 								}
 								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
 										tempObjectName,
+										null,
+										null,
 										-1L,
 										ctx.getUser().getName(),
 										ctx.getUser().getUserId(),
@@ -910,6 +914,8 @@ public class WalrusManager {
 									}
 									ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
 											tempObjectName,
+											null,
+											null,
 											-1L,
 											ctx.getUser().getName(),
 											ctx.getUser().getUserId(),
@@ -1079,12 +1085,14 @@ public class WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
-							/* Send an event to reporting to report this S3 usage. */
-	
-							// TODO : Need to validate the naturalId is correct via unit testing 
-							fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, foundDeleteMarker.getNaturalId(), bucketName, objectName, ctx.getUserFullName(), size);
-								
-							
+							fireObjectCreationEvent(
+									bucketName,
+									objectKey,
+									versionId,
+									ctx.getUser().getUserId(),
+									size,
+									oldObjectSize );
+
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -1290,6 +1298,7 @@ public class WalrusManager {
 				}
 				// write object to bucket
 				String objectName;
+				Long oldObjectSize = 0L;
 				if (foundObject == null) {
 					// not found. create an object info
 					foundObject = new ObjectInfo(bucketName, objectKey);
@@ -1307,6 +1316,7 @@ public class WalrusManager {
 						foundObject.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
 					}
 					objectName = foundObject.getObjectName();
+					oldObjectSize = foundObject.getSize();
 				}
 				foundObject.setObjectKey(objectKey);
 				try {
@@ -1383,13 +1393,13 @@ public class WalrusManager {
 						reply.setLogData(logData);
 					}
 
-					/* Send an event to reporting to report this S3 usage. */
-					
-					//fireUsageEvent For Put Object 
-					//reportWalrusEvent(genObjectEvent(ctx,true,size));
-					fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE,
-						    foundObject.getNaturalId(), foundObject.getBucketName(), 
-						    foundObject.getObjectName(), ctx.getUserFullName(), foundObject.getSize());
+					fireObjectCreationEvent(
+							foundObject.getBucketName(),
+							foundObject.getObjectKey(),
+							foundObject.getVersionId(),
+							ctx.getUser().getUserId(),
+							foundObject.getSize(),
+							oldObjectSize );
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -1582,7 +1592,9 @@ public class WalrusManager {
 								}
 							} while(!success && (retryCount < 5));
 							ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, 
-									objectName, 
+									objectName,
+									objectKey,
+									WalrusProperties.NULL_VERSION_ID,
 									size, 
 									ctx.getUser().getName(),
 									ctx.getUser().getUserId(),
@@ -1659,17 +1671,22 @@ public class WalrusManager {
 
 
 	private class ObjectDeleter implements Runnable {
-		String bucketName;
-		String objectName;
-		Long size;
-		String user;
-		String userId;
-		String account;
-		String accountNumber;
+		final String bucketName;
+		final String objectName;
+		final String objectKey;
+		final String version;
+		final Long size;
+		final String user;
+		final String userId;
+		final String account;
+		final String accountNumber;
 
-		public ObjectDeleter(String bucketName, String objectName, Long size, String user, String userId, String account, String accountNumber) {
+		public ObjectDeleter(String bucketName, String objectName, String objectKey, String version,
+		    Long size, String user, String userId, String account, String accountNumber) {
 			this.bucketName = bucketName;
 			this.objectName = objectName;
+			this.objectKey = objectKey;
+			this.version = version;
 			this.size = size;
 			this.user = user;
 			this.userId = userId;
@@ -1683,12 +1700,11 @@ public class WalrusManager {
 				if (WalrusProperties.trackUsageStatistics && (size > 0))
 					walrusStatistics.updateSpaceUsed(-size);
 
-					/* Send an event to reporting to report this S3 usage. */
-					// //fireUsageEvent For Delete Object 
-					//reportWalrusEvent(genObjectEvent(userId,user,accountNumber,account,false,size));
-					fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE,
-						    Integer.toString(this.hashCode()), this.bucketName, this.objectName, 
-						    UserFullName.getInstance(Accounts.lookupUserById(userId)), this.size);
+				/* Send an event to reporting to report this S3 usage. */
+				if ( size > 0 ) {
+					fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
+						this.bucketName, this.objectKey, this.version, this.userId, this.size );
+				}
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
 			}
@@ -3576,7 +3592,9 @@ public class WalrusManager {
 						} while(!success && (retryCount < 5));
 
 						ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
-								objectName, 
+								objectName,
+								foundObject.getObjectKey(),
+								foundObject.getVersionId(),
 								size, 
 								ctx.getUser().getName(),
 								ctx.getUser().getUserId(),
@@ -3708,18 +3726,42 @@ public class WalrusManager {
 		}
 		db.commit();
 	}
-	
-	
-    private static void fireObjectUsageEvent(final S3ObjectAction actionInfo,
-	    String s3bUUID, String bucketName, String objectName, OwnerFullName ownerFullName, Long sizeInBytes) {
-	
-	try {
-	    ListenerRegistry.getInstance().fireEvent(
-		    S3ObjectEvent.with(actionInfo, s3bUUID, bucketName, objectName, ownerFullName, sizeInBytes));
-	    	 
-	} catch (final Exception e) {
-	    LOG.error(e, e);
+
+	/**
+	 * Fire creation and possibly a related delete event.
+	 *
+	 * If an object (version) is being overwritten then there will not be a
+	 * corresponding delete event so we fire one prior to the create event.
+	 */
+	private void fireObjectCreationEvent( final String bucketName, final String objectKey,
+	    final String version, final String userId, final Long size, final Long oldSize ) {
+		try {
+			if ( oldSize != null && oldSize > 0 ) {
+				fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
+						bucketName,
+						objectKey,
+						version,
+						userId,
+						oldSize );
+			}
+
+			/* Send an event to reporting to report this S3 usage. */
+			if ( size != null && size > 0 ) {
+				fireObjectUsageEvent( S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, userId, size);
+			}
+		} catch ( final Exception e ) {
+			LOG.error( e, e );
+		}
 	}
-    }
+
+	private static void fireObjectUsageEvent( S3ObjectAction actionInfo, String bucketName,
+		    String objectKey, String version, String ownerUserId, Long sizeInBytes) {
+		try {
+			ListenerRegistry.getInstance().fireEvent(
+					S3ObjectEvent.with( actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes ) );
+		} catch ( final Exception e ) {
+			LOG.error( e, e );
+		}
+	}
     
 }

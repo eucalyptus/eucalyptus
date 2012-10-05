@@ -51,7 +51,7 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
       final long timeInMs = getCurrentTimeMillis();
 
       try {
-        final User user = lookupUser( event.getOwner().getUserId() );
+        final User user = lookupUser( event.getOwnerUserId() );
 
         getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
             .getName(), user.getAccount().getAccountNumber());
@@ -61,7 +61,7 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
         final ReportingS3ObjectEventStore eventStore = getReportingS3ObjectEventStore();
         switch (event.getAction()) {
           case OBJECTCREATE:
-            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwner().getUserId());
+            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwnerUserId());
             break;
           case OBJECTDELETE:
             eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), timeInMs);

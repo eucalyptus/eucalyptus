@@ -25,7 +25,6 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.eucalyptus.util.OwnerFullName;
 
 public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> {
   private static final long serialVersionUID = 1L;
@@ -57,19 +56,19 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
                                     @Nonnull  final String bucketName,
                                     @Nonnull  final String objectKey,
                                     @Nullable final String version,
-                                    @Nonnull  final OwnerFullName ownerFullName,
+                                    @Nonnull  final String ownerUserId,
                                     @Nonnull  final Long size ) {
 
-    return new S3ObjectEvent( action, bucketName, objectKey, version, ownerFullName, size );
+    return new S3ObjectEvent( action, bucketName, objectKey, version, ownerUserId, size );
   }
 
   S3ObjectEvent( @Nonnull  final S3ObjectAction action,
                  @Nonnull  final String bucketName,
                  @Nonnull  final String objectKey,
                  @Nullable final String version,
-                 @Nonnull  final OwnerFullName ownerFullName,
+                 @Nonnull  final String ownerUserId,
                  @Nonnull  final Long size ) {
-    super( action, bucketName, ownerFullName, size );
+    super( action, bucketName, ownerUserId, size );
     assertThat(objectKey, not( isEmptyOrNullString() ));
     this.objectKey = objectKey;
     this.version = version;
@@ -87,7 +86,7 @@ public class S3ObjectEvent extends S3EventSupport<S3ObjectEvent.S3ObjectAction> 
   @Override
   public String toString() {
     return "S3ObjectEvent [action=" + getAction()
-        + ", ownerFullName=" + getOwner()
+        + ", ownerUserId=" + getOwnerUserId()
         + ", size=" + getSize() + ", bucketName=" + getBucketName()
         + ", objectKey=" + getObjectKey() + ", version=" + getVersion() + "]";
   }
