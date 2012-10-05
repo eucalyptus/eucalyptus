@@ -513,12 +513,16 @@
       var tbody = this.element.find('table tbody'); 
       if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0 || tbody.find('tr.glow').length>0 )
         return;
+      if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
+        return;
       this.table.fnReloadAjax();
     },
 
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
+      if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
+        return;
       this.table.fnReloadAjax();
     },
 
