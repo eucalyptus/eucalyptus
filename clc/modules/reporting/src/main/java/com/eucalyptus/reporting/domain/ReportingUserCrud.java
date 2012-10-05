@@ -60,7 +60,10 @@ public class ReportingUserCrud
 		if (ReportingAccountDao.getInstance().getReportingAccount(accountId)==null) {
 			LOG.error("Non-matching account for user, userId:" + id + " accountId:" + accountId + " name:" + name, new IllegalArgumentException());
 		}
-		
+		if (accountId.matches("\\D+")) {
+			LOG.error("Funnny account, accountId:" + accountId + " userId:" + id);
+		}
+
 		ReportingUser user = new ReportingUser(id, accountId, name);
 		ReportingUser oldUser = ReportingUserDao.getInstance().getReportingUser(id);
 		if (oldUser!=null && oldUser.getName().equals(name)) {

@@ -54,8 +54,8 @@ public class SnapShotUsageEventListener implements EventListener<SnapShotEvent> 
     try {
       final User user = lookupUser( event.getUserId() );
 
-      getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
-          .getName(), user.getAccount().getAccountNumber());
+      getReportingAccountCrud().createOrUpdateAccount(user.getAccount().getAccountNumber(),
+    		  user.getAccount().getName());
       getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
           .getAccount().getAccountNumber(), user.getName());
 
