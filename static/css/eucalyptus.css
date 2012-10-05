@@ -2269,10 +2269,39 @@ span.on-error {
 }
 
 .form-row .plaintext-label {
-  font-family: 'Trebuchet MS', Arial, sans-serif;
+  margin-left: 5px;
   width: 220px;
   text-align: left;
-  margin-left: 5px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+#launch-wizard-security-sg-detail {
+  padding: 0 0 20px 170px;
+}
+
+.launcher-sgroup-details-label {
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.launcher-sgroup-rule {
+  margin-bottom: 2px;
+}
+
+.launcher-sgroup-rule-label {
+  float: left;
+}
+
+.launcher-sgroup-rule ul{
+  float: left;
+  margin: 0;
+  padding: 0;
+  list-style-type: none; 
+}
+
+.launcher-sgroup-rule ul li {
+  float: left;
+  padding: 0 0 0 10px;
 }
 
 .device-map-table {
@@ -2280,8 +2309,8 @@ span.on-error {
 }
 
 .launch-wizard-buttons {
-  text-align: right;
   padding-right: 10px;
+  text-align: right;
 }
 
 .advanced-link-wrapper {
@@ -2472,19 +2501,6 @@ span.on-error {
 .wizard-type-size-legend {
   color: #666;
   margin-bottom: 40px;
-}
-
-.launcher-group-rule ul{
-    margin: 0 auto;
-    padding: 0;
-    clear: left; 
-}
-.launcher-group-rule ul li {
-    text-align: left;
-    float: left;
-    list-style: none;
-    padding: 3px 3px;
-    margin: 1px;
 }
 
 .wizard-section-label {
