@@ -754,7 +754,7 @@
       $userdata.append(
         $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-advanced-input-userdata').text(launch_instance_advanced_userdata),
-          $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title','Enter userdata').addClass('description').change(function(e){
+          $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title',launch_wizard_advanced_input_userdata_tip).addClass('description').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone());
           })),
@@ -795,7 +795,7 @@
 
       $network.addClass('form-row clearfix orphan-row').addClass('clearfix').append(
         $('<label>').attr('for','launch-wizard-advanced-input-network').text(launch_instance_advanced_network),
-        $('<input>').attr('id','launch-wizard-advanced-input-network').attr('type','checkbox').change(function(e){
+        $('<input>').attr('title', launch_wizard_advanced_input_network_tip).attr('id','launch-wizard-advanced-input-network').attr('type','checkbox').change(function(e){
           var $summary = summarize(); 
           thisObj._setSummary('advanced', $summary.clone());
         }),
@@ -893,7 +893,7 @@
           }
         });
         
-        var $mapping = $('<input>').attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text'); // mapping
+        var $mapping = $('<input>').attr('title', launch_wizard_advanced_storage_mapping_input_tip).attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text'); // mapping
         if(param && param['mapping']){
           $mapping.val(param['mapping']);
           $mapping.attr('disabled','disabled');
@@ -919,7 +919,7 @@
            var $row = $(e.target).parents('tr');
            $row.find('.launch-wizard-advanced-storage-size-input').val(size);
         });
-        var $size = $('<input>').attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
+        var $size = $('<input>').attr('title', launch_wizard_advanced_storage_size_input_tip).attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
         if(param && param['size']){
           $size.val(param['size']);
           $size.attr('disabled','disabled');
@@ -935,7 +935,7 @@
             $delOnTerm.attr('checked','true'); 
         }
 
-        var $addBtn = $('<input>').attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add);
+        var $addBtn = $('<input>').attr('title',launch_wizard_advanced_storage_add_input_tip).attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add);
         if(param && param['add'] !== undefined){
           if(!param['add']) 
             $addBtn.attr('disabled','disabled');
@@ -969,7 +969,7 @@
           thisObj._setSummary('advanced', $summary.clone());
         });
 
-        var $removeBtn = $('<input>').attr('class', 'launch-wizard-advanced-storage-remove-input').attr('type','button').val(launch_instance_advanced_btn_remove);
+        var $removeBtn = $('<input>').attr('title', launch_wizard_advanced_storage_remove_input_tip).attr('class', 'launch-wizard-advanced-storage-remove-input').attr('type','button').val(launch_instance_advanced_btn_remove);
         if(param && param['remove'] !== undefined){
           if(!param['remove'])
             $removeBtn.attr('disabled','disabled');
