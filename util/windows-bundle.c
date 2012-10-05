@@ -75,7 +75,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 #include <linux/limits.h>
 #ifndef MAX_PATH

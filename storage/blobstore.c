@@ -1707,7 +1707,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
 {
     int ret = 0;
 
-    if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock it so we can traverse blobstore safely
+    if (blobstore_lock (bs, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock it so we can traverse blobstore safely
         return ERROR;
     }
     
@@ -1743,6 +1743,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     }
 
     safe_strncpy (meta->id, bs->id, sizeof (meta->id));
+    realpath (bs->path, meta->path);
     meta->revocation_policy = bs->revocation_policy;
     meta->snapshot_policy = bs->snapshot_policy;
     meta->format = bs->format;

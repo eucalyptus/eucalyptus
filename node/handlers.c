@@ -100,6 +100,7 @@
 #include "iscsi.h"
 #include "hooks.h"
 #include "config.h"
+#include "fault.h"
 
 #include "windows-bundle.h"
 #define MONITORING_PERIOD (5)
@@ -107,6 +108,8 @@
 #define CREATE_TIMEOUT_SEC 15
 #define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 #define MAX_SENSOR_RESOURCES MAXINSTANCES 
+#define SEC_PER_MB ((1024*1024)/512)
+#define FAULT_COMPONENT_NAME "nc"
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
@@ -490,7 +493,6 @@ update_log_params (void)
 void *
 monitoring_thread (void *arg)
 {
-	int i;
 	struct nc_state_t *nc;
 
     logprintfl (EUCADEBUG, "spawning monitoring thread\n");
@@ -500,7 +502,7 @@ monitoring_thread (void *arg)
 	}
 	nc = (struct nc_state_t*)arg;
     
-    for (;;) {
+    for (long long iteration = 0; TRUE; iteration++) {
         bunchOfInstances *head;
         time_t now = time(NULL);
         FILE *FP=NULL;
@@ -618,23 +620,43 @@ monitoring_thread (void *arg)
         
         sleep (MONITORING_PERIOD);
 
-        // see if config file has changed and react to those changes
-        int rc = isConfigModified (nc_state.configFiles, 2);
-        if (rc < 0) // error
-            continue;
-        else if (rc > 0) { // config modification time has changed
-            rc = readConfigFile(nc_state.configFiles, 2);
-            if (rc) {
-                // something has changed that can be read in
-                logprintfl(EUCAINFO, "monitoring_thread(): configuration file has been modified, ingressing new options\n");
-
-                // log-related options
-                update_log_params();
-
-                // TODO: pick up other NC options dynamically?
+        // do this on every iteration (every MONITORING_PERIOD seconds)
+        if ((iteration % 1) == 0) { 
+            // see if config file has changed and react to those changes
+            if (isConfigModified (nc_state.configFiles, 2) > 0) { // config modification time has changed
+                if (readConfigFile(nc_state.configFiles, 2)) {
+                    // something has changed that can be read in
+                    logprintfl(EUCAINFO, "monitoring_thread(): configuration file has been modified, ingressing new options\n");
+                    
+                    // log-related options
+                    update_log_params();
+                    
+                    // TODO: pick up other NC options dynamically?
+                }
             }
         }
+        
+        // do this every 10th iteration (every 10*MONITORING_PERIOD seconds)
+        if ((iteration % 10) == 0) { // TODO3.2: change 1 to 10
+
+            // check file system state and blobstore state
+            blobstore_meta work_meta, cache_meta;
+            if (stat_backing_store (NULL, &work_meta, &cache_meta) == OK) {
+                long long work_fs_size_mb       = (long long)(work_meta.fs_bytes_size/MEGABYTE);
+                long long work_fs_avail_mb      = (long long)(work_meta.fs_bytes_available/MEGABYTE);
+                long long cache_fs_size_mb      = (long long)(cache_meta.fs_bytes_size/MEGABYTE);
+                long long cache_fs_avail_mb     = (long long)(cache_meta.fs_bytes_available/MEGABYTE);
+
+                if (work_fs_avail_mb < ((work_fs_size_mb * DISK_TOO_LOW_PERCENT) / 100)) {
+                    log_eucafault ("1003", "component", FAULT_COMPONENT_NAME, "file", work_meta.path, NULL);
+                }
+                if (cache_fs_size_mb > 0 && cache_fs_avail_mb < ((cache_fs_size_mb * DISK_TOO_LOW_PERCENT) / 100)) {
+                    log_eucafault ("1003", "component", FAULT_COMPONENT_NAME, "file", cache_meta.path, NULL);
+                }
                 
+                // TODO: add more faults (cache or work reserved exceeds available space on file system)
+            }
+        }
     }
     
     return NULL;
@@ -1118,6 +1140,11 @@ static int init (void)
 		return ERROR_FATAL;
     }
 
+    if (init_eucafaults (FAULT_COMPONENT_NAME) == 0) {
+        logprintfl (EUCAFATAL, "failed to initialize fault-logging subsystem\n");
+        return ERROR_FATAL;
+    }
+
     init_iscsi (nc_state.home);
 
 	// set default in the paths. the driver will override
@@ -1149,36 +1176,39 @@ static int init (void)
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
     
     { // backing store configuration
-        char * instance_path = getConfString(nc_state.configFiles, 2, INSTANCE_PATH);
+        char * instances_path = getConfString(nc_state.configFiles, 2, INSTANCE_PATH);
 
-        // determine bytes available on the file system to which instance path belongs
-        if (instance_path == NULL) {
-            logprintfl (EUCAFATAL, "error: %s is not set\n", INSTANCE_PATH);
-            return ERROR_FATAL;
-        }
-        struct statfs fs;
-        if (statfs (instance_path, &fs) == -1) { 
-            logprintfl (EUCAERROR, "error: failed to stat %s (%s): %s\n", INSTANCE_PATH, instance_path, strerror(errno));
-            free (instance_path);
-            return ERROR_FATAL;
-        }
-        long long fs_avail_mb = (long long)fs.f_bsize * (long long)(fs.f_bavail/MEGABYTE); // TODO: is 2 petabytes enough?
-        long long fs_size_mb =  (long long)fs.f_bsize * (long long)(fs.f_blocks/MEGABYTE); 
-        if (fs_avail_mb < MIN_BLOBSTORE_SIZE_MB) {
-            logprintfl (EUCAERROR, "error: insufficient available disk space (%d) under %s\n", fs_avail_mb, instance_path);
-            free (instance_path);
+        if (instances_path == NULL) {
+            logprintfl (EUCAERROR, "%s is not set\n", INSTANCE_PATH);
             return ERROR_FATAL;
         }
 
+        // create work and cache sub-directories so that stat_backing_store() below succeeds
+        char cache_path [MAX_PATH]; snprintf (cache_path, sizeof (cache_path), "%s/cache", instances_path);
+        if (ensure_directories_exist (cache_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) return ERROR;
+        char work_path [MAX_PATH];  snprintf (work_path,  sizeof (work_path),  "%s/work", instances_path);
+        if (ensure_directories_exist (work_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) return ERROR;
+        
         // determine how much is used/available in work and cache areas on the backing store
         blobstore_meta work_meta, cache_meta;
-        stat_backing_store (instance_path, &work_meta, &cache_meta); // will zero-out work_ and cache_meta
-        long long work_bs_size_mb       = work_meta.blocks_limit  ? (work_meta.blocks_limit / 2048) : (-1L); // convert sectors->MB
-        long long work_bs_allocated_mb  = work_meta.blocks_limit  ? (work_meta.blocks_allocated / 2048) : 0;
-        long long work_bs_reserved_mb   = work_meta.blocks_limit  ? ((work_meta.blocks_locked + work_meta.blocks_unlocked) / 2048) : 0;
-        long long cache_bs_size_mb      = cache_meta.blocks_limit ? (cache_meta.blocks_limit / 2048) : (-1L);
-        long long cache_bs_allocated_mb = cache_meta.blocks_limit ? (cache_meta.blocks_allocated / 2048) : 0;
-        long long cache_bs_reserved_mb  = cache_meta.blocks_limit ? ((cache_meta.blocks_locked + cache_meta.blocks_unlocked) / 2048) : 0;
+        stat_backing_store (instances_path, &work_meta, &cache_meta); // will zero-out work_ and cache_meta
+        long long work_fs_size_mb       = (long long)(work_meta.fs_bytes_size/MEGABYTE);
+        long long work_fs_avail_mb      = (long long)(work_meta.fs_bytes_available/MEGABYTE);
+        long long cache_fs_size_mb      = (long long)(cache_meta.fs_bytes_size/MEGABYTE);
+        long long cache_fs_avail_mb     = (long long)(cache_meta.fs_bytes_available/MEGABYTE);
+        long long work_bs_size_mb       = work_meta.blocks_limit  ? (work_meta.blocks_limit / SEC_PER_MB) : (-1L); // convert sectors->MB
+        long long work_bs_allocated_mb  = work_meta.blocks_limit  ? (work_meta.blocks_allocated / SEC_PER_MB) : 0;
+        long long work_bs_reserved_mb   = work_meta.blocks_limit  ? ((work_meta.blocks_locked + work_meta.blocks_unlocked) / SEC_PER_MB) : 0;
+        long long cache_bs_size_mb      = cache_meta.blocks_limit ? (cache_meta.blocks_limit / SEC_PER_MB) : (-1L);
+        long long cache_bs_allocated_mb = cache_meta.blocks_limit ? (cache_meta.blocks_allocated / SEC_PER_MB) : 0;
+        long long cache_bs_reserved_mb  = cache_meta.blocks_limit ? ((cache_meta.blocks_locked + cache_meta.blocks_unlocked) / SEC_PER_MB) : 0;
+
+        // sanity check
+        if (work_fs_avail_mb < MIN_BLOBSTORE_SIZE_MB) {
+            logprintfl (EUCAERROR, "insufficient available work space (%d MB) under %s/work\n", work_fs_avail_mb, instances_path);
+            free (instances_path);
+            return ERROR_FATAL;
+        }
 
         // look up configuration file settings for work and cache size
         long long conf_work_size_mb; GET_VAR_INT(conf_work_size_mb,  CONFIG_NC_WORK_SIZE, -1);
@@ -1238,32 +1268,42 @@ static int init (void)
         
         // if the user did not specify either or both of the sizes,
         // and blobstores do not exist yet, make reasonable choices
-        long long fs_usable_mb = (long long)((double)fs_avail_mb - (double)(fs_avail_mb) * FS_BUFFER_PERCENT);
-        if (work_size_mb == -1 && cache_size_mb == -1) {
-            work_size_mb = (long long)((double)fs_usable_mb * WORK_BS_PERCENT);
-            cache_size_mb = fs_usable_mb - work_size_mb;
-        } else if (work_size_mb == -1) {
-            work_size_mb = fs_usable_mb - cache_size_mb + cache_bs_allocated_mb;
-        } else if (cache_size_mb == -1) {
-            cache_size_mb = fs_usable_mb - work_size_mb + work_bs_allocated_mb;
+        if (memcmp (&work_meta.fs_id, &cache_meta.fs_id, sizeof (fsid_t)) == 0) { // cache and work are on the same file system
+            long long fs_usable_mb = (long long)((double)work_fs_avail_mb - (double)(work_fs_avail_mb) * FS_BUFFER_PERCENT);
+            if (work_size_mb == -1 && cache_size_mb == -1) {
+                work_size_mb = (long long)((double)fs_usable_mb * WORK_BS_PERCENT);
+                cache_size_mb = fs_usable_mb - work_size_mb;
+            } else if (work_size_mb == -1) {
+                work_size_mb = fs_usable_mb - cache_size_mb + cache_bs_allocated_mb;
+            } else if (cache_size_mb == -1) {
+                cache_size_mb = fs_usable_mb - work_size_mb + work_bs_allocated_mb;
+            }
+            // sanity check
+            if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > work_fs_avail_mb) {
+                logprintfl (EUCAWARN, "warning: sum of work and cache sizes exceeds available disk space\n");
+            }
+            
+        } else { // cache and work are on different file systems 
+            if (work_size_mb == -1) {
+                work_size_mb = (long long)((double)work_fs_avail_mb - (double)(work_fs_avail_mb) * FS_BUFFER_PERCENT);
+            }
+            if (cache_size_mb == -1) {
+                cache_size_mb = (long long)((double)cache_fs_avail_mb - (double)(cache_fs_avail_mb) * FS_BUFFER_PERCENT);
+            }
         }
 
         // sanity-check final results
         if (cache_size_mb < MIN_BLOBSTORE_SIZE_MB)
             cache_size_mb = 0;
         if (work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
-            logprintfl (EUCAERROR, "error: insufficient disk space for virtual machines (free space: %dMB, reserved for cache: %dMB)\n", 
-                        work_size_mb, fs_usable_mb, cache_size_mb);
-            free (instance_path);
+            logprintfl (EUCAERROR, "error: insufficient disk space for virtual machines\n");
+            free (instances_path);
             return ERROR_FATAL;
         }
-        if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > fs_avail_mb) {
-            logprintfl (EUCAWARN, "warning: sum of work and cache sizes exceeds available disk space\n");
-        }
 
-        if (init_backing_store (instance_path, work_size_mb, cache_size_mb)) {
+        if (init_backing_store (instances_path, work_size_mb, cache_size_mb)) {
             logprintfl (EUCAFATAL, "error: failed to initialize backing store\n");
-            free (instance_path);
+            free (instances_path);
             return ERROR_FATAL;
         }
        
@@ -1276,10 +1316,10 @@ static int init (void)
         long long disk_max_mb = work_size_mb - overhead_mb;
         nc_state.disk_max = disk_max_mb / MB_PER_DISK_UNIT;
 
-        logprintfl (EUCAINFO, "disk space for instances: %s/work\n", instance_path);
+        logprintfl (EUCAINFO, "disk space for instances: %s/work\n", instances_path);
         logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system) - %lldMB overhead = %lldMB = %lldGB\n",
                     work_size_mb, 
-                    ((double)work_size_mb/(double)fs_size_mb)*100.0,
+                    ((double)work_size_mb/(double)work_fs_size_mb)*100.0,
                     overhead_mb,
                     disk_max_mb,
                     nc_state.disk_max);
@@ -1289,23 +1329,23 @@ static int init (void)
         logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                     work_bs_allocated_mb, 
                     ((double)work_bs_allocated_mb/(double)work_size_mb)*100.0,
-                    ((double)work_bs_allocated_mb/(double)fs_size_mb)*100.0 );
+                    ((double)work_bs_allocated_mb/(double)work_fs_size_mb)*100.0 );
         if (cache_size_mb) {
-            logprintfl (EUCAINFO, "    disk space for cache: %s/cache\n", instance_path);
+            logprintfl (EUCAINFO, "    disk space for cache: %s/cache\n", instances_path);
             logprintfl (EUCAINFO, "                          %06lldMB limit (%.1f%% of the file system)\n", 
                         cache_size_mb, 
-                        ((double)cache_size_mb/(double)fs_size_mb)*100.0 );
+                        ((double)cache_size_mb/(double)cache_fs_size_mb)*100.0 );
             logprintfl (EUCAINFO, "                          %06lldMB reserved for use (%.1f%% of limit)\n", 
                         cache_bs_reserved_mb,
                         ((double)cache_bs_reserved_mb/(double)cache_size_mb)*100.0 );
             logprintfl (EUCAINFO, "                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n", 
                         cache_bs_allocated_mb, 
                         ((double)cache_bs_allocated_mb/(double)cache_size_mb)*100.0,
-                        ((double)cache_bs_allocated_mb/(double)fs_size_mb)*100.0 );
+                        ((double)cache_bs_allocated_mb/(double)cache_fs_size_mb)*100.0 );
         } else {
             logprintfl (EUCAWARN, "warning: disk cache will not be used\n");
         }
-        free (instance_path);
+        free (instances_path);
     }
 
 	// adopt running instances -- do this before disk integrity check so we know what can be purged

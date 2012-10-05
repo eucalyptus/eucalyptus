@@ -181,6 +181,9 @@
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
 
+// percent at which a C component will log a 'very low on disk space' fault
+#define DISK_TOO_LOW_PERCENT 10
+
 /* system limit defaults */
 #define MAXNODES 1024
 #define MAXINSTANCES 2048

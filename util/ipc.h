@@ -68,8 +68,6 @@
 #include <semaphore.h>
 #include <pthread.h>
 
-#include "misc.h" // boolean
-
 typedef struct sem_struct {
     int sysv;
     sem_t * posix;
@@ -79,6 +77,8 @@ typedef struct sem_struct {
     char * name;
     int flags;
 } sem;
+
+#include "misc.h" // boolean
 
 sem * sem_realloc (const int val, const char * name, const int flags);
 sem * sem_alloc (const int val, const char * name);

@@ -73,13 +73,14 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 #include <time.h>
 #include <math.h> // powf 
 #include <fcntl.h> // open
 #include <utime.h> // utime 
 #include <sys/wait.h>
-#include <sys/types.h>
+#include <pwd.h>
 #include <dirent.h> // opendir, etc
 #include <errno.h> // errno
 #include <sys/time.h> // gettimeofday
@@ -524,6 +525,36 @@ int check_path (const char *path)
     return(0);
 }
 
+// obtains size & available bytes of a file system that 'path' resides on
+// path may be a symbolic link, which will get resolved (0 = success, 1 = failure)
+int statfs_path (const char * path, unsigned long long * fs_bytes_size, unsigned long long * fs_bytes_available, int * fs_id)
+{
+    if (path == NULL)
+        return ERROR;
+
+    char cpath [PATH_MAX]; 
+    errno = 0;
+    if (realpath (path, cpath) == NULL) { // will convert a path with symbolic links and '..' into canonical form
+        logprintfl (EUCAERROR, "failed to resolve %s (%s)\n", path, strerror (errno));
+        return ERROR;
+    }
+    
+    struct statfs fs;
+    if (statfs (cpath, &fs) == -1) { // obtain the size and ID info from the file system of the canonical path
+        logprintfl (EUCAERROR, "failed to stat %s (%s)\n", cpath, strerror(errno));
+        return ERROR;
+    }
+    * fs_id              = hash_code_bin ((char *) & fs.f_fsid, sizeof (fsid_t));
+    * fs_bytes_size      = (long long)fs.f_bsize * (long long)(fs.f_blocks);
+    * fs_bytes_available = (long long)fs.f_bsize * (long long)(fs.f_bavail);
+
+    logprintfl (EUCADEBUG, "path '%s' resolved\n", path);
+    logprintfl (EUCADEBUG, "  to '%s' with ID %0x\n", cpath, * fs_id);
+    logprintfl (EUCADEBUG, "  of size %llu bytes with available %llu bytes\n", *fs_bytes_size, *fs_bytes_available);
+    
+    return OK;
+}
+
 /* given string *stringp, replace occurences of <source> with <destination>
  * and return the new string in stringp */
 char * replace_string (char ** stringp, char * source, char * destination )
@@ -851,7 +882,7 @@ from_var_to_char_list(	const char *v) {
 	return tmp;
 }
 
-/* implements Java's String.hashCode() */
+// implements Java's String.hashCode() on a string
 int hash_code (const char * s)
 {
 	int code = 0;
@@ -865,6 +896,24 @@ int hash_code (const char * s)
 	}
 	
 	return code;
+}
+
+// implements Java's String.hashCode() on a buffer of some size
+int hash_code_bin (const char * buf, int buf_size)
+{
+    char * buf_str = malloc (2 * buf_size + 1);
+    if (buf_str == NULL)
+        return -1;
+    
+    for (int i=0; i < buf_size; i++) {
+        snprintf (buf_str + (i * 2), 2, "%0x", * (buf + i));
+    }
+    buf_str [2 * buf_size] = '\0';
+ 
+    int code = hash_code (buf_str);
+    free (buf_str);
+    
+    return code;
 }
 
 /* given a string, returns 3 relevant statistics as a static string */
@@ -964,7 +1013,7 @@ int daemonrun(char *incmd, char *pidfile) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
-    struct sigaction newsigact = { 0 };
+    struct sigaction newsigact = { { NULL } };
 
     newsigact.sa_handler = SIG_DFL;
     newsigact.sa_flags = 0;
@@ -1911,6 +1960,26 @@ char parse_boolean (const char * s)
     free (lc);
 
     return val;
+}
+
+// become user 'eucalyptus'
+int drop_privs (void)
+{
+    struct passwd pwd;
+    struct passwd *result;
+    char buf [16384]; // man-page said this is enough
+
+    int s = getpwnam_r (EUCALYPTUS_ADMIN, &pwd, buf, sizeof (buf), &result);
+    if (result == NULL)
+        return ERROR; // not found if s==0, check errno otherwise
+
+    if (setgid (pwd.pw_gid) != 0)
+        return ERROR;
+
+    if (setuid (pwd.pw_uid) != 0)
+        return ERROR;
+
+    return OK;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////

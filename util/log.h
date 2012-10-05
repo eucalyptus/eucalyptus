@@ -66,6 +66,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include "ipc.h" // sem
+
 extern __thread const char * _log_curr_method;
 extern __thread const char * _log_curr_file;
 extern __thread int          _log_curr_line;
@@ -142,6 +144,7 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char * file);
 int log_prefix_set (const char * log_spec);
+int log_sem_set (sem * s);
 int logfile(char *file, int in_loglevel, int in_logrollnumber);
 int logprintf(const char *format, ...);
 int logprintfl(int level, const char *format, ...);

@@ -78,7 +78,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <sys/vfs.h> /* statfs */
 #include <signal.h> /* SIGINT */
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
