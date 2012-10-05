@@ -1239,7 +1239,7 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 	char  cmd[MAX_PATH] = { 0 };
 	char  buf[MAX_PATH] = { 0 };
 
-	logprintfl (EUCAINFO, "cleanup_bundling_task: instance %s bundling task result=%s\n", instance->instanceId, bundling_progress_names [result]);
+	logprintfl (EUCAINFO, "instance %s bundling task result=%s\n", instance->instanceId, bundling_progress_names [result]);
 
 	sem_p (inst_sem);
 	{
@@ -1283,11 +1283,11 @@ static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_
 			snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
 			setenv("EUCA_PRIVATE_KEY", buf, 1);
 
-			logprintfl(EUCADEBUG, "cleanup_bundling_task: running cmd '%s'\n", cmd);
+			logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
 			rc = system(cmd);
 			rc = rc >> 8;
 			if (rc) {
-				logprintfl(EUCAWARN, "cleanup_bundling_task: bucket cleanup cmd '%s' failed with rc '%d'\n", cmd, rc);
+				logprintfl(EUCAWARN, "bucket cleanup cmd '%s' failed with rc '%d'\n", cmd, rc);
 			}
 		}
 
@@ -1321,32 +1321,32 @@ static void * bundling_thread (void *arg)
 	char buf[MAX_PATH];
 
 	logprintfl (EUCADEBUG, "{%u} spawning bundling thread\n", (unsigned int)pthread_self());
-	logprintfl (EUCAINFO, "bundling_thread: waiting for instance %s to shut down\n", instance->instanceId);
+	logprintfl (EUCAINFO, "waiting for instance %s to shut down\n", instance->instanceId);
 	// wait until monitor thread changes the state of the instance instance 
 	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) { 
 		if (instance->bundleCanceled) { // cancel request came in while the instance was shutting down
-			logprintfl (EUCAINFO, "bundling_thread: cancelled while bundling instance %s\n", instance->instanceId);
+			logprintfl (EUCAINFO, "cancelled while bundling instance %s\n", instance->instanceId);
 			cleanup_bundling_task (instance, params, BUNDLING_CANCELLED);
 		} else {
-			logprintfl (EUCAINFO, "bundling_thread: failed while bundling instance %s\n", instance->instanceId);
+			logprintfl (EUCAINFO, "failed while bundling instance %s\n", instance->instanceId);
 			cleanup_bundling_task (instance, params, BUNDLING_FAILED);
 		}
 		return NULL;
 	}
 
-	logprintfl (EUCAINFO, "bundling_thread: started bundling instance %s\n", instance->instanceId);
+	logprintfl (EUCAINFO, "started bundling instance %s\n", instance->instanceId);
 
 	int rc=OK;
 	char bundlePath[MAX_PATH];
 	bundlePath[0] = '\0';
 	if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != OK){
-		logprintfl(EUCAERROR, "bundling_thread: could not clone the instance image\n");
+		logprintfl(EUCAERROR, "could not clone the instance image\n");
 		cleanup_bundling_task (instance, params, BUNDLING_FAILED);
 	} else {
 		char prefixPath[MAX_PATH];
 		snprintf(prefixPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
 		if (strcmp(bundlePath, prefixPath)!=0 && rename(bundlePath, prefixPath)!=0){
-			logprintfl(EUCAERROR, "bundling_thread: could not rename from %s to %s\n", bundlePath, prefixPath);
+			logprintfl(EUCAERROR, "could not rename from %s to %s\n", bundlePath, prefixPath);
 			cleanup_bundling_task (instance, params, BUNDLING_FAILED);
 			return NULL;
 		}
@@ -1380,7 +1380,7 @@ static void * bundling_thread (void *arg)
 
 		// check to see if the bucket exists in advance
 		snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth", params->ncCheckBucketCmd, params->bucketName);
-		logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s'\n", cmd);
+		logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
 		rc = system(cmd);
 		rc = rc>>8;
 		instance->bundleBucketExists = rc;
@@ -1393,7 +1393,7 @@ static void * bundling_thread (void *arg)
 
 		pid = fork();
 		if (!pid) {
-			logprintfl(EUCADEBUG, "bundling_thread: running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
+			logprintfl(EUCADEBUG, "running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
 			exit(execlp(params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c", params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
 		} else {
 			instance->bundlePid = pid;
@@ -1407,14 +1407,14 @@ static void * bundling_thread (void *arg)
 
 		if (rc==0) {
 			cleanup_bundling_task (instance, params, BUNDLING_SUCCESS);
-			logprintfl (EUCAINFO, "bundling_thread: finished bundling instance %s\n", instance->instanceId);
+			logprintfl (EUCAINFO, "finished bundling instance %s\n", instance->instanceId);
 		} else if (rc == -1) {
 			// bundler child was cancelled (killed), but should report it as failed
 			cleanup_bundling_task (instance, params, BUNDLING_FAILED);
-			logprintfl (EUCAINFO, "bundling_thread: cancelled while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
+			logprintfl (EUCAINFO, "cancelled while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
 		} else {
 			cleanup_bundling_task (instance, params, BUNDLING_FAILED);
-			logprintfl (EUCAINFO, "bundling_thread: failed while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
+			logprintfl (EUCAINFO, "failed while bundling instance %s (rc=%d)\n", instance->instanceId, rc);
 		}
 	}
 
@@ -1504,7 +1504,7 @@ doBundleInstance(
 	pthread_attr_init (&tattr);
 	pthread_attr_setdetachstate (&tattr, PTHREAD_CREATE_DETACHED);
 	if (pthread_create (&tid, &tattr, bundling_thread, (void *)params)!=0) {
-		logprintfl (EUCAERROR, "doBundleInstance: failed to start VM bundling thread\n");
+		logprintfl (EUCAERROR, "failed to start VM bundling thread\n");
 		return cleanup_bundling_task (instance, params, BUNDLING_FAILED);
 	}
 
@@ -1517,13 +1517,13 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata *meta, char
 
 	// sanity checking
 	if (instanceId == NULL) {
-		logprintfl(EUCAERROR, "doBundleRestartInstance: bundling instance called with invalid parameters\n");
+		logprintfl(EUCAERROR, "bundle restart instance called with invalid parameters\n");
 		return(ERROR);
 	}
 
 	// find the instance
 	if ((instance = find_instance(&global_instances, instanceId)) == NULL) {
-		logprintfl(EUCAERROR, "doBundleRestartInstance: instance %s not found\n", instanceId);
+		logprintfl(EUCAERROR, "instance %s not found\n", instanceId);
 		return(ERROR);
 	}
 
@@ -1682,6 +1682,6 @@ struct handlers default_libvirt_handlers = {
     .doBundleRestartInstance = doBundleRestartInstance,
     .doCancelBundleTask      = doCancelBundleTask,
     .doDescribeBundleTasks   = doDescribeBundleTasks,
-    .doDescribeSensors       = doDescribeSensors
+    .doDescribeSensors       = doDescribeSensors,
 };
 

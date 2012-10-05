@@ -350,4 +350,3 @@ struct createImage_params_t {
 };
 
 #endif /* INCLUDE */
-

@@ -1923,7 +1923,7 @@ int doBundleRestartInstance(ncMetadata *meta, char *instanceId)
 	if (init())
 		return(1);
 
-	logprintfl(EUCAINFO, "[%s] doBundleRestartInstance: invoked\n", instanceId);
+	logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
 	if (nc_state.H->doBundleRestartInstance)
 		return(nc_state.H->doBundleRestartInstance(&nc_state, meta, instanceId));
 	return(nc_state.D->doBundleRestartInstance(&nc_state, meta, instanceId));

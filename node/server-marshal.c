@@ -877,7 +877,7 @@ adb_ncBundleRestartInstanceResponse_t* ncBundleRestartInstanceMarshal (adb_ncBun
 		int error = doBundleRestartInstance(&meta, instanceId);
 
 		if (error) {
-			logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);
+			logprintfl (EUCAERROR, "ERROR: failed error=%d\n", error);
 			adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
 		}
 		else {
@@ -1105,7 +1105,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         ncMetadata meta = { correlationId, userId };
 
         int error = doOPERATION (&meta, instanceId, ...
-    
+
         if (error) {
             logprintfl (EUCAERROR, "ERROR: doOPERATION() failed error=%d\n", error);
             adb_ncOPERATIONResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1122,7 +1122,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     // set response to output
     adb_ncOPERATIONResponse_set_ncOPERATIONResponse(response, env, output);
     pthread_mutex_unlock(&ncHandlerLock);
-    
+
     eventlog("NC", userId, correlationId, "OPERATION", "end");
     return response;
 */
