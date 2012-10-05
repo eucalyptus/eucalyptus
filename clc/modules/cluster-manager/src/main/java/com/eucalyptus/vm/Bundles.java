@@ -163,7 +163,9 @@ public class Bundles {
   
   public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) throws AuthException {
     verifyPolicy( policy, bucket );
-    verifyBucket( bucket );
+    // TODO: this was removed to get bundle-instance to work we still need to resolve the 
+    // permissions issue see EUCA-3665
+    //verifyBucket( bucket );
     verifyPrefix( prefix );
     return VmBundleTask.create( v, bucket, prefix, policy );
   }
