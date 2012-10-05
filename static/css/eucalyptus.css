@@ -1119,7 +1119,7 @@ tr.glow td.sorting_3 {
   background: transparent url(../images/css-sprites-small.png) no-repeat left -615px;
   outline: 0 none;
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 40px;
   text-align: left;
 }
 
@@ -2078,7 +2078,10 @@ a.sg-my-ip {
   line-height: 1.5;
 }
 
-.content-section .form-row label {
+/* Security Group dialogs get narrower labels, due to narrow dialog width */
+
+.group.content-section .form-row label,
+.rules.content-section .form-row label  {
   width: 140px;
 }
 
@@ -2151,12 +2154,12 @@ a.sg-my-ip {
 
 .wizard-summary-wrapper {
   float: right;
-  width: 195px;
+  width: 200px;
 }
 
 .wizard-summary {
   margin: 0;
-  padding: 10px 15px;
+  padding: 10px 14px;
   color: #02405f;
   font-family: 'PlayRegular', Arial, sans-serif;  
 }
@@ -2169,7 +2172,7 @@ a.sg-my-ip {
 
 .summary {
   border-top: 1px solid #ccc;
-  padding: 10px 10px 10px 55px;
+  padding: 10px 0px 10px 60px;
 }
 
 #summary-image .summary {
@@ -2247,9 +2250,18 @@ span.on-error {
   margin-bottom: 0;
 }
 
+.upper-sibling textarea {
+  margin-bottom: 7px;
+}
+
+.lower-sibling {
+  margin-bottom: 25px;
+}
+
+/* To line the 'Or' up with the upper-sibling form element */
+
 .lower-sibling label {
-  width: 190px;
-  margin-bottom: 30px;
+  padding-left: 23px;
 }
 
 .orphan-row {
@@ -2258,15 +2270,14 @@ span.on-error {
 
 .form-row .plaintext-label {
   font-family: 'Trebuchet MS', Arial, sans-serif;
+  width: 220px;
+  text-align: left;
+  margin-left: 5px;
 }
 
 .device-map-table {
 
-  
 }
-
-
-
 
 .launch-wizard-buttons {
   text-align: right;
@@ -2284,8 +2295,76 @@ span.on-error {
   background-image: url(../images/images-icon-sprites.png);
 }
 
-.image-type.centos5 {
+.wizard-summary .image-type {
+  background-image: url(../images/wizard-summary-sprites.png);
+}
+
+.image-type.windows {
   background-position: 0 0;
+}
+
+.image-type.rhel,
+.image-type.rhel5,
+.image-type.rhel6 {
+  background-position: 0 -100px;
+}
+
+.image-type.fedora {
+  background-position: 0 -200px;
+}
+
+.image-type.gentoo {
+  background-position: 0 -300px;
+}
+
+.image-type.ubuntu,
+.image-type.lucid,
+.image-type.precise {
+  background-position: 0 -400px;
+}
+
+.image-type.centos,
+.image-type.centos5,
+.image-type.centos6 {
+  background-position: 0 -500px;
+}
+
+.image-type.opensuse,
+.image-type.suse
+ {
+  background-position: 0 -600px;
+}
+
+.image-type.debian {
+  background-position: 0 -700px;
+}
+
+.image-type.linux {
+  background-position: 0 -800px;
+}
+
+#summary-type .summary {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -900px;
+}
+
+#summary-security .summary {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1100px;
+
+}
+
+#summary-advanced .summary {
+  padding: 10px 0;
+}
+
+#summary-advanced ul {
+  list-style-type: none;
+  margin: 5px 0 0;
+  padding: 0;
+}
+
+#summary-advanced li {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1300px;
+  padding: 0 0 4px 22px;
 }
 
 .image-id-arch span {
