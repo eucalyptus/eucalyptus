@@ -175,7 +175,7 @@
          title: eip_disassociate_dialog_title,
          buttons: {
            'disassociate': { text: eip_disassociate_dialog_disassociate_btn, click: function() {
-               var ipsToDisassociate = this.disassociateDialog.eucadialog('getSelectedResources', 0);
+               var ipsToDisassociate = thisObj.disassociateDialog.eucadialog('getSelectedResources', 0);
                $eip_disassociate_dialog.eucadialog("close");
                thisObj._disassociateListedIps(ipsToDisassociate);
               } 
