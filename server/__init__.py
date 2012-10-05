@@ -30,6 +30,7 @@ class UserSession(object):
         self.obj_fullname = None
         self.session_start = time.time()
         self.session_last_used = time.time()
+        self.session_lifetime_requests = 0
 
     @property
     def account(self):
@@ -228,10 +229,17 @@ class LogoutProcessor(ProxyProcessor):
         sid = web_req.get_cookie("session-id")
         if not sid or sid not in sessions:
             return LogoutResponse();
-        del sessions[sid] # clean up session info
-        logging.info("Cleared session (%s)" % sid);
+        terminateSession(sid)
         return LogoutResponse();
 
+def terminateSession(id, expired=False):
+    msg = 'logged out'
+    if expired:
+        msg = 'session timed out'
+    logging.info("User %s after %d seconds" % (msg, (time.time() - sessions[id].session_start)));
+    logging.info("--Proxy processed %d requests during this session", sessions[id].session_lifetime_requests)
+    del sessions[id] # clean up session info
+    logging.debug("Cleared session (%s)" % id);
 
 class LoginProcessor(ProxyProcessor):
     @staticmethod

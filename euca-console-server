@@ -7,6 +7,7 @@ import fcntl
 import getopt
 import logging
 import signal
+import time
 import ConfigParser
 import tornado.httpserver
 import tornado.ioloop
@@ -65,6 +66,21 @@ def cleanpid(signum=None, action=None):
     sys.exit(0)
 
 
+def sessionChecker():
+    now = time.time()
+    timeout = server.config.getint('server', 'session.timeout')
+    expired = [];
+    # collect ids that expired (because we can't modify the dictionary we're iterating through)
+    for session_id in server.sessions:
+        session = server.sessions[session_id]
+        if (now - session.session_last_used) > timeout:
+            expired.append(session_id)
+
+    # now, actually expire the sessions we flagged
+    for id in expired:
+        server.terminateSession(id, expired=True)
+
+
 def start_console():
     settings = {
       "cookie_secret": "getting-from-config-now",
@@ -117,7 +133,11 @@ def start_console():
         httpserver.listen(server_port)
     else:
         application.listen(server_port)
-    tornado.ioloop.IOLoop.instance().start()
+    main_loop = tornado.ioloop.IOLoop.instance()
+    # this runs the checker every 10 seconds
+    checker = tornado.ioloop.PeriodicCallback(sessionChecker, 10000, io_loop = main_loop)
+    checker.start()
+    main_loop.start()
 
 
 def usage():

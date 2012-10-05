@@ -373,9 +373,14 @@ class ComputeHandler(server.BaseHandler):
             # could make this conditional, but add caching always for now
             self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
 
+        self.user_session.session_lifetime_requests += 1
+
         ret = []
         try:
             action = self.get_argument("Action")
+            # bump session counter if this was a user-initiated action
+            if action.find('Describe') == -1:
+                self.user_session.session_last_used = time.time()
             if action == 'DescribeAvailabilityZones':
                 ret = self.user_session.clc.get_all_zones()
             elif action.find('Image') > -1:
@@ -429,6 +434,9 @@ class ComputeHandler(server.BaseHandler):
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
             self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
+
+        self.user_session.session_last_used = time.time()
+        self.user_session.session_lifetime_requests += 1
 
         try:
             action = self.get_argument("Action")
