@@ -110,12 +110,13 @@ static char * log_level_names [] = {
 /////////////////////////////////////
 static char * log_level_prefix [] = {
     "",
-    "T L t9 m-24 | ",
-    "T L t9 m-24 | ",
-    "T L t9 m-24 | ",
-    "T L | ",
-    "T L | ",
-    "T L | ",
+    "T L t9 m-24 F-33 | ", // EXTREME
+    "T L t9 m-24 | ",      // TRACE
+    "T L t9 m-24 | ",      // DEBUG
+    "T L | ",              // INFO
+    "T L | ",              // WARN
+    "T L | ",              // ERROR
+    "T L | ",              // FATAL
     ""
 };
 
