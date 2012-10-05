@@ -5,6 +5,7 @@ import json
 import os
 import random
 import sys
+import time
 import tornado.web
 import traceback
 import socket
@@ -27,6 +28,8 @@ class UserSession(object):
         self.obj_access_key = access_key
         self.obj_secret_key = secret_key
         self.obj_fullname = None
+        self.session_start = time.time()
+        self.session_last_used = time.time()
 
     @property
     def account(self):
