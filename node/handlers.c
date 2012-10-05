@@ -876,7 +876,7 @@ void * restart_thread(void *arg)
 
 	// serialize domain creation as hypervisors can get confused with
 	// too many simultaneous create requests
-	logprintfl(EUCADEBUG2, "[%s] instance about to boot\n", instance->instanceId);
+	logprintfl(EUCADEBUG, "[%s] instance about to boot\n", instance->instanceId);
 
 	// retry loop
 	for (i = 0; i < MAX_CREATE_TRYS; i++) {
