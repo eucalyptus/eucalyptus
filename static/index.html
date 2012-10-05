@@ -359,16 +359,12 @@
         <div id="sgroups-add-wrapper">
 
           <div id="sgroups-add-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              
-              <div class="intro-text">
-                <p class="required-hint">{{!: required_fields }}</p>
-              </div>  
+            <div class="dialog-inner-content"> 
               
               <div class="content-sections-wrapper">
 
                 <div class="group content-section">
-                  <h3 class="required-label">Group</h3>
+                  <h3>Group</h3>
                   <div class="content-section-label">{{!: sgroup_dialog_add_group }}</div>
                   <div class="form-row">
                     <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
@@ -467,7 +463,7 @@
                     </div> 
                      
                     <div id="sgroup-rules-list"></div>
-
+                    
                   </div>
                   <!-- END #sgroup-more-rules -->
 
@@ -475,7 +471,9 @@
                 <!-- END content-section -->   
 
               </div>
-              <!-- END content-sections-wrapper -->    
+              <!-- END content-sections-wrapper -->
+
+              <p class="required-hint">{{!: required_fields }}</p>    
             
             </div>
             <!-- END dialog-inner-content -->
