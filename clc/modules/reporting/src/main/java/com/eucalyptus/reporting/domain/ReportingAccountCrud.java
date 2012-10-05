@@ -55,6 +55,11 @@ public class ReportingAccountCrud
 	public void createOrUpdateAccount(String id, String name)
 	{
 		if (id==null || name==null) throw new IllegalArgumentException("args cant be null");
+
+		LOG.debug("createOrUpdateAccount id:" + id + " name:" + name);
+		if (id.matches("\\D+") || name.matches("\\d+")) {
+			LOG.error("Funnny account, id:" + id + " name:" + name, new IllegalArgumentException());
+		}
 		
 		ReportingAccount account = new ReportingAccount(id, name);
 		ReportingAccount oldAccount = ReportingAccountDao.getInstance().getReportingAccount(account.getId());
@@ -71,7 +76,7 @@ public class ReportingAccountCrud
 				LOG.error(e);
 			}
 		}
-		
+
 	}
 	
 	private void updateInDb(ReportingAccount account)
