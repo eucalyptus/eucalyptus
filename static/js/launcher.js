@@ -367,7 +367,7 @@
       this._imageTable = $table.dataTable(dtArg);
     
       $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_refine));
-      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_header));
+      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-section-label required-label').html(launch_instance_image_table_header));
 
       $.fn.dataTableExt.afnFiltering = [];
       $.fn.dataTableExt.afnFiltering.push(

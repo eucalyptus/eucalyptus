@@ -1894,17 +1894,27 @@ ul.ramdisk-expanded li:nth-child(5) {
 
 /* ======= Dialog box content styles ======= */
 
-.label,
-.required-label {
+.label {
   display: inline-block;
   width: 170px;
   text-align: right;
 }
 
+.required-label {
+  display: inline-block;
+/*  width: 170px;
+  text-align: right;*/
+}
+
+
 .required-hint {
   position: relative;
   top: 5px;
   margin-bottom: 0;
+}
+
+#launch-wizard-required.required-hint {
+  margin: 0 0 6px 13px;
 }
 
 .required-hint:before,
@@ -1990,6 +2000,7 @@ a.sg-my-ip {
 
 .sg-error-msg {
   color: #ff0000;
+  text-align: center;
 }
 
 .sg-rules-list {
@@ -2172,7 +2183,7 @@ a.sg-my-ip {
   margin: 0;
   padding: 10px 14px;
   color: #02405f;
-  font-family: 'PlayRegular', Arial, sans-serif;  
+  font-family: 'PlayBold', Arial, sans-serif;  
 }
 
 .summary-title {
@@ -2191,7 +2202,8 @@ a.sg-my-ip {
 }
 
 .summary span {
-  font-family: 'PlayBold', Arial, sans-serif;   
+  font-family: 'Trebuchet', Arial, sans-serif;
+  color: #444;   
 }
 
 .wizard-cancel {
@@ -2584,6 +2596,13 @@ span.on-error {
 
 .launch-more-summary-wrapper {
   margin: 15px 0 0 20px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  color: #02405F;
+}
+
+.launch-more-summary-wrapper span {
+  font-family: 'Trebuchet', Arial, sans-serif;
+  color: #444;
 }
 
 .launch-more-summary-section {
@@ -2595,46 +2614,55 @@ span.on-error {
 }
 
 .launch-more-summary-section.windows {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left 0px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -11px;
 }
 
 .launch-more-summary-section.rhel,
 .launch-more-summary-section.rhel5,
 .launch-more-summary-section.rhel6 {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -100px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -111px;
 }
 
 .launch-more-summary-section.fedora {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -200px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -211px;
 }
 
 .launch-more-summary-section.gentoo {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -300px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -311px;
 }
 
 .launch-more-summary-section.ubuntu,
 .launch-more-summary-section.lucid,
 .launch-more-summary-section.precise {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -400px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -411px;
 }
 
 .launch-more-summary-section.centos,
 .launch-more-summary-section.centos5,
 .launch-more-summary-section.centos6 {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -500px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -511px;
 }
 
 .launch-more-summary-section.opensuse,
 .launch-more-summary-section.suse {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -600px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -614px;
 }
 
 .launch-more-summary-section.debian {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -700px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -711px;
 }
 
 .launch-more-summary-section.linux {
-  background: transparent url(../images/images-icon-sprites.png) no-repeat left -800px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -811px;
+}
+
+#launch-more-summary-type {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -911px;
+  width: 135px;
+}
+
+#launch-more-summary-security {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1113px;
 }
 
 .launch-more {
@@ -2652,7 +2680,7 @@ input#launch-more-sgroup-input {
 
 .launch-more-summary-section .form-row label {
   text-align: left;
-  width: 80px;
+  width: 63px;
 }
 
 .field-error {

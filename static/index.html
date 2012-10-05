@@ -450,8 +450,9 @@
                     </div>  
                   
                     <div class="form-row sg-inline-options">
-                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" class="sg-error-msg"></span>
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
                       <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
+                      <div id="allow-ip-error" class="sg-error-msg"></div>
                     </div>
   
                     <div class="form-row sg-options-row">
@@ -1328,7 +1329,6 @@
 
                 <div class="launch-wizard-intro-text">
                   <div id="launch-wizard-note">{{!>launch_instance_note}}</div>
-                  <div id="launch-wizard-required" class="required-hint">{{!> launch_instance_required }}</div>
                 </div>
                 
                 <div class="launch-wizard-pointer"></div>       
@@ -1385,6 +1385,8 @@
                       <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> </div>
                     </div>
                   </div>
+
+                  <div id="launch-wizard-required" class="required-hint">{{!> launch_instance_required }}</div>
 
                 </div>
                 <!-- END Launch Wizard Steps -->
