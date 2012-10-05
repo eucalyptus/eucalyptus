@@ -137,6 +137,7 @@
           thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-image-contents').find('select').first().focus();
         }
       }));
     },
@@ -154,6 +155,7 @@
           thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-type-contents').find('input').first().focus();
         }
       }));
     },
@@ -171,6 +173,7 @@
           thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-security-contents').find('select').first().focus();
         }
       }));
     },
@@ -188,6 +191,7 @@
           thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-advanced-contents').find('textarea').first().focus();
         }
       }));
     },
@@ -423,7 +427,7 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
-      thisObj.element.find('#launch-wizard-image-main-contents').find('select').first().trigger('focus');
+      thisObj.element.find('#launch-wizard-image-contents').find('select').first().focus();
     },
    
     _makeTypeSection : function($section){
@@ -553,6 +557,7 @@
       thisObj.element.find('#launch-wizard-type-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-type-contents').find('input').first().focus();
       thisObj._enableTypeLink();
     },
 
@@ -741,6 +746,7 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-security-contents').find('select').first().focus();
     },
 
     makeAdvancedSection : function($section) { 
@@ -1143,6 +1149,7 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').addClass('expanded');
+      thisObj.element.find('#launch-wizard-advanced-contents').find('textarea').first().focus();
     },
     _setSummary : function(section, content){
       var thisObj = this;

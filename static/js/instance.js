@@ -98,6 +98,20 @@
               "bVisible": false,
               "mDataProp": "launch_time",
               "sType": "date"
+            },
+            {
+              "bVisible": false,
+              "fnRender" : function(oObj) { 
+                 var results = describe('image');
+                 var image = null;
+                 for (i in results){
+                   if(results[i].id === oObj.aData.image_id){
+                     image = results[i];
+                     break;
+                   }
+                 }
+                 return image ? image.location : '';
+              }
             }
           ]
         },
