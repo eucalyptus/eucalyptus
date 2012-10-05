@@ -175,7 +175,7 @@ public class ISCSIManager implements StorageExportManager {
 				exitValue = processController.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException tex) {
 				processController.cancel(true);
-				FaultSubsystem.forComponent(new Storage()).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
+				FaultSubsystem.forComponent(Storage.class).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
 				throw new EucalyptusCloudException("No response was received within the timeout for the process: " + buildCommand(command));
 			}
 			output.join();

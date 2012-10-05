@@ -1,14 +1,7 @@
 package com.eucalyptus.troubleshooting.resourcefaults;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,15 +9,12 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
-import org.logicalcobwebs.proxool.ConnectionPoolDefinitionIF;
-import org.logicalcobwebs.proxool.ConnectionPoolStatisticsIF;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.ProxoolFacade;
-import org.logicalcobwebs.proxool.admin.SnapshotIF;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 
 /**
@@ -46,7 +36,7 @@ public class DBResourceCheck extends Thread {
 	private static final ScheduledExecutorService pool = Executors.newSingleThreadScheduledExecutor();
 	private static final int OUT_OF_DB_CONNECTIONS_FAULT_ID = 1006;
 	private final static long DEFAULT_POLL_INTERVAL = 60 * 1000;
-	private static final ComponentId DEFAULT_COMPONENT_ID = Eucalyptus.INSTANCE;
+	private static final Class<? extends ComponentId> DEFAULT_COMPONENT_ID_CLASS = Eucalyptus.class;
 
 	/**
 	 * Marking the constructor private on purpose, so that no code can instantiate an object this class
@@ -91,7 +81,7 @@ public class DBResourceCheck extends Thread {
 			return ProxoolFacade.getSnapshot(alias, true).getActiveConnectionCount();
 		}
 
-		public Integer getMinimumFreeConnections() throws ProxoolException{
+		public Integer getThreshold() throws ProxoolException{
 			if (null != this.minimumFreeConnections) {
 				return this.minimumFreeConnections;
 			} else {
@@ -166,25 +156,25 @@ public class DBResourceCheck extends Thread {
 
 		private Set<DBPoolInfo> dbPools = new HashSet<DBPoolInfo>();
 		private long pollInterval;
-		private ComponentId componentId;
+		private Class<? extends ComponentId> componentIdClass;
 
 		private Set<DBPoolInfo> alreadyFaulted = new HashSet<DBPoolInfo>();
 
 		public DBChecker(DBPoolInfo dbPool) {
 			this.dbPools.add(dbPool);
 			this.pollInterval = DEFAULT_POLL_INTERVAL;
-			this.componentId = DEFAULT_COMPONENT_ID;
+			this.componentIdClass = DEFAULT_COMPONENT_ID_CLASS;
 		}
 
-		public DBChecker(DBPoolInfo dbPool, ComponentId componentId, long pollTime) {
+		public DBChecker(DBPoolInfo dbPool, Class<? extends ComponentId> componentIdClass, long pollTime) {
 			this.dbPools.add(dbPool);
-			this.componentId = componentId;
+			this.componentIdClass = componentIdClass;
 			this.pollInterval = pollTime;
 		}
 
-		public DBChecker(List<DBPoolInfo> dbPools, ComponentId componentId, long pollTime) {
+		public DBChecker(List<DBPoolInfo> dbPools, Class<? extends ComponentId> componentIdClass, long pollTime) {
 			this.dbPools.addAll(dbPools);
-			this.componentId = componentId;
+			this.componentIdClass = componentIdClass;
 			this.pollInterval = pollTime;
 		}
 
@@ -194,10 +184,11 @@ public class DBResourceCheck extends Thread {
 				for (DBPoolInfo dbPool : this.dbPools) {
 					// Enclose everything between try catch because nothing should throw an exception to the executor upstream or it may halt subsequent tasks
 					try {
-						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getMinimumFreeConnections()) {
+						LOG.debug("Polling dbpool " + dbPool.getAlias() + ",pollInterval="+ pollInterval + ", threshold = " + dbPool.getThreshold());
+						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getThreshold()) {
 							if (!this.alreadyFaulted.contains(dbPool)) {
-								FaultSubsystem.forComponent(this.componentId).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
-										.withVar("component", this.componentId.getName()).withVar("alias", dbPool.getAlias()).log();
+								FaultSubsystem.forComponent(this.componentIdClass).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
+										.withVar("component", ComponentIds.lookup(componentIdClass).getFaultLogPrefix()).withVar("alias", dbPool.getAlias()).log();
 								this.alreadyFaulted.add(dbPool);
 							} else {
 								// fault has already been logged. do nothing
