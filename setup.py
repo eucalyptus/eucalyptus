@@ -3,15 +3,15 @@ from distutils.core import setup
 import glob
 import os
 
-DATA_DIR='/usr/share/eucalyptus-ui'
+DATA_DIR='/usr/share/eucalyptus-console'
 
 def getDataFiles(path):
     return [ (os.path.join(DATA_DIR, root),
         [ os.path.join(root, f) for f in files ])
             for root, _, files in os.walk(path) if files ]
 
-data_files = getDataFiles("static") + getDataFiles("mockdata")
-data_files.append(('/etc/eucalyptus-ui', ['server/console.ini']))
+data_files = getDataFiles("static")
+data_files.append(('/etc/eucalyptus-console', ['server/console.ini']))
 
 setup (name="Eucalyptus Management Console",
     version = "0",

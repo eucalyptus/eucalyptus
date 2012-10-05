@@ -359,16 +359,12 @@
         <div id="sgroups-add-wrapper">
 
           <div id="sgroups-add-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              
-              <div class="intro-text">
-                <p class="required-hint">{{!: required_fields }}</p>
-              </div>  
+            <div class="dialog-inner-content"> 
               
               <div class="content-sections-wrapper">
 
                 <div class="group content-section">
-                  <h3 class="required-label">Group</h3>
+                  <h3>Group</h3>
                   <div class="content-section-label">{{!: sgroup_dialog_add_group }}</div>
                   <div class="form-row">
                     <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
@@ -467,7 +463,7 @@
                     </div> 
                      
                     <div id="sgroup-rules-list"></div>
-
+                    
                   </div>
                   <!-- END #sgroup-more-rules -->
 
@@ -475,7 +471,9 @@
                 <!-- END content-section -->   
 
               </div>
-              <!-- END content-sections-wrapper -->    
+              <!-- END content-sections-wrapper -->
+
+              <p class="required-hint">{{!: required_fields }}</p>    
             
             </div>
             <!-- END dialog-inner-content -->
@@ -1296,13 +1294,13 @@
 
       <script id="aboutCloundDlgTmpl" type="text/x-jsrender">
         <div id="aboutcloud-euca-dialog-wrapper">
-          <div id="instances-euca-dialog" class="euca-dialog">
+          <div id="about-clound-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: about_dialog_version }}&nbsp;<span id="version"/></p>
               <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" target="_blank" id="admin-url">{{!: about_dialog_link_lable }}</a>.</p>
             </div>
           </div>
-          <div id="instances-euca-dialog-help" class="dialog-help">
+          <div id="about-clound-euca-dialog-help" class="dialog-help">
             <div class="dialog-help-content">
               {{!: dialog_content}}
             </div>

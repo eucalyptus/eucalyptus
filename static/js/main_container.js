@@ -51,6 +51,10 @@
          buttons: {
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
          },
+         afterHelpFlipped : function() {
+           $scrollable = thisObj._aboutDialog.find(".euca-credits");
+           $scrollable.animate({scrollTop : $scrollable[0].scrollHeight}, 10*1000, undefined, function() {$scrollable.stop()});
+         },
          help: { content: $dialog_help },
          help_icon_class : 'help-euca',
        });

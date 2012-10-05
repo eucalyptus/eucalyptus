@@ -248,13 +248,13 @@
         if (val.match('^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])/([1-9]|[1-3][0-9])$') != null)
             thisObj.addDialog.find('#allow-ip-error').html("");
         else
-            thisObj.addDialog.find('#allow-ip-error').html("address range must be of format xx.xx.xx.xx/nn");
+            thisObj.addDialog.find('#allow-ip-error').html(sgroup_error_address_range);
       });
       this.addDialog.find('#sgroup-ports').keyup(function () {
         var template = $('#sgroup-template').val();
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
-            thisObj.addDialog.find('#sgroup-ports-error').html("port or port range must be defined");
+            thisObj.addDialog.find('#sgroup-ports-error').html(sgroup_error_port);
             enable = false;
           }
           else {
@@ -262,11 +262,11 @@
             var port_list = ports.split('-');
             from_port = ports[0];
             if (from_port != parseInt(from_port)) {
-              thisObj.addDialog.find('#sgroup-ports-error').html("from port not properly defined, might not be an int");
+              thisObj.addDialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
               enable = false;
             }
             else if (ports.length > 1 && ports[1] != parseInt(ports[1])) {
-              thisObj.addDialog.find('#sgroup-ports-error').html("to port not properly defined, might not be an int");
+              thisObj.addDialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
               enable = false;
             }
           }
@@ -426,13 +426,13 @@
         if (val.match('^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])/([1-9]|[1-3][0-9])$') != null)
             thisObj.editDialog.find('#allow-ip-error').html("");
         else
-            thisObj.editDialog.find('#allow-ip-error').html("address range must be of format xx.xx.xx.xx/nn");
+            thisObj.editDialog.find('#allow-ip-error').html(sgroup_error_address_range);
       });
       this.editDialog.find('#sgroup-ports').keyup(function () {
         var template = $('#sgroup-template').val();
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
-            thisObj.editDialog.find('#sgroup-ports-error').html("port or port range must be defined");
+            thisObj.editDialog.find('#sgroup-ports-error').html(sgroup_error_port);
             enable = false;
           }
           else {
@@ -440,11 +440,11 @@
             var port_list = ports.split('-');
             from_port = ports[0];
             if (from_port != parseInt(from_port)) {
-              thisObj.editDialog.find('#sgroup-ports-error').html("from port not properly defined, might not be an int");
+              thisObj.editDialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
               enable = false;
             }
             else if (ports.length > 1 && ports[1] != parseInt(ports[1])) {
-              thisObj.editDialog.find('#sgroup-ports-error').html("to port not properly defined, might not be an int");
+              thisObj.editDialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
               enable = false;
             }
           }
@@ -598,7 +598,7 @@
                 if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
                     ports += "-"+this.rulesList[rule].to_port;
                 }
-                msg += "<li><a href='#' id='sgroup-rule-number-"+i+"'>Delete</a> Rule: "+this.rulesList[rule].protocol+
+                msg += "<li><a href='#' id='sgroup-rule-number-"+i+"'>"+delete_label+"</a>"+rule_label+"&nbsp;"+this.rulesList[rule].protocol+
                             " ("+ ports+"), "+
                             this.rulesList[rule].ipaddr+"</li>";
                 i += 1;

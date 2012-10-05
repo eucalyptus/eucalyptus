@@ -310,7 +310,7 @@
                  var imgKey = inferImageName(oObj.aData.location, desc, oObj.aData.platform);
                  if(imgKey)
                    name = nameMap[imgKey];
-                 var $cell = $('<div>').addClass(imgKey).append(
+                 var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
                                $('<div>').addClass('image-name').text(name), // should be linux, windows, or distros
                                $('<div>').addClass('image-id-arch').append($('<span>').text(emi), $('<span>').text(arch)),
                                $('<div>').addClass('image-description').text(desc)); 
