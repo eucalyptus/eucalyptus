@@ -491,7 +491,7 @@
       $list.append(
         $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-num-instance').append(
           $('<label>').attr('for','launch-instance-type-num-instance').text(launch_instance_type_option_numinstance),
-          $('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
+          $('<input>').attr('title', launch_instance_type_num_instance_tip).attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
             numInstances = $(this).val(); 
             instanceChanged = true;
             thisObj._setSummary('type', summarize());
