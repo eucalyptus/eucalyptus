@@ -614,7 +614,7 @@
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
-            $('<span>').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
+            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
           var results = describe('sgroup');
           var group = null;
           for(i in results){
@@ -625,7 +625,7 @@
           }
           if(group){ 
             $.each(group.rules, function (idx, rule){
-              var $wrapper = $('<div>').addClass('launcher-group-rule clearfix');
+              var $wrapper = $('<div>').addClass('launcher-sgroup-rule clearfix');
               var protocol = rule['ip_protocol'];
               var port = rule['from_port'];
               if(rule['to_port'] !== rule['from_port'])
@@ -650,7 +650,7 @@
               });
               src = src.join(', '); 
  
-              $wrapper.append( $('<div>').addClass('sg-rule-label').html(launch_instance_security_rule),
+              $wrapper.append( $('<div>').addClass('launcher-sgroup-rule-label').html(launch_instance_security_rule + ':'),
                                  $('<ul>').append(
                                    $('<li>').text(protocol),
                                    $('<li>').text(portOrType),
