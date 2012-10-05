@@ -116,6 +116,7 @@
       dt_arg.oLanguage['sProcessing'] = "<img src='images/dots32.gif'/> &nbsp; <span>"+processing_data+"</span>";
       dt_arg.oLanguage['sLoadingRecords'] =  please_wait_loading_data;
       dt_arg.oLanguage['sZeroRecords'] = please_wait_loading_data;
+      dt_arg.oLanguage['sSearch'] = search_lable;
       dt_arg.oLanguage['sEmptyTable'] = $.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural);
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
