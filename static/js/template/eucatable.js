@@ -146,19 +146,26 @@
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
         var $currentRow = $(tr);
+        var $expand = null;
+        if(thisObj.options.expand_callback && thisObj.table){
+          var allTds = thisObj.table.fnGetTds($currentRow[0]);      
+          var row = [];
+          var i =0; 
+          $(allTds).each(function(){ 
+            row[i++] = $(this).html();
+          }); 
+          $expand = thisObj.options.expand_callback(row);
+          if($expand === null){
+            $currentRow.find('a.twist').removeClass('twist').unbind('click');
+          }
+        }
+        
         if(!$currentRow.data('events') || !('click' in $currentRow.data('events'))){
           $currentRow.unbind('click').bind('click', function (e) {
             if($(e.target).is('a') && $(e.target).hasClass('twist') && thisObj.options.expand_callback){
               if(!$currentRow.next().hasClass('expanded')){
                 thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
                 thisObj.element.find('table tbody').find('a.expanded').removeClass('expanded');
-                var allTds = thisObj.table.fnGetTds($currentRow[0]);      
-                var row = [];
-                var i =0; 
-                $(allTds).each(function(){ 
-                  row[i++] = $(this).html();
-                }); 
-                var $expand = thisObj.options.expand_callback(row);
                 if(!$expand.hasClass('expanded-row-inner-wrapper'))
                   $expand.addClass('expanded-row-inner-wrapper');
                 if($expand && $expand.length > 0){

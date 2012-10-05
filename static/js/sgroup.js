@@ -803,10 +803,8 @@
           break;
         }
       }
-      if(!group){
-        return $('<div>').append(
-                 $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
-                  $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title)));
+      if(!group || !group.rules || group.rules.length <= 0){
+        return null;
       }
       var $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
           $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title), 
