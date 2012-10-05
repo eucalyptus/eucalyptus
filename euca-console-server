@@ -7,6 +7,7 @@ import fcntl
 import getopt
 import logging
 import signal
+import ConfigParser
 import tornado.httpserver
 import tornado.ioloop
 import server
@@ -78,8 +79,10 @@ def start_console():
 
     # When staticpath is in the config we will assume that it is
     # not a relative path
-    if server.config.has_option('server', 'staticpath'):
-        webroot = server.config.get('server', 'staticpath')
+    try:
+        webroot = server.config.get('paths', 'staticpath')
+    except ConfigParser.Error:
+        pass
 
     if server.config.has_option('server', 'cookie.secret'):
         settings['cookie_secret'] = server.config.get('server', 'cookie.secret')
