@@ -119,8 +119,7 @@
       });
     }).fail(function(){
         //TODO: what's the appropriate error message and the popup?
-        alert("Cannot connect to the server. Contact your administrator.");
-        logout();
+        errorAndLogout();
       }
     );
   } // end of main

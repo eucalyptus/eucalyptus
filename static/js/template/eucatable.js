@@ -38,7 +38,6 @@
       filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
       legend : null, // e.g., ['available', 'attaching', 'attached', ...]
       show_only : null, // e.g, {filter_value: 'machine', filter_col: 7}
-      create_new_function : function() {} // function() { addSnapshot(); }
     },
 
     table : null, // jQuery object to the table
@@ -88,10 +87,10 @@
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
         $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
-        if( $emptyDataTd ){
+        if( $emptyDataTd && thisObj.options.menu_click_create ){
           var $createNew = $('<a>').attr('href','#').text(thisObj.options.text.create_resource);
           $createNew.click( function() { 
-            thisObj.options.create_new_function.call(); 
+            thisObj.options.menu_click_create(); 
             $('html body').trigger('click', 'create-new');
             return false;
           });
@@ -156,7 +155,9 @@
           }); 
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
-            $currentRow.find('a.twist').removeClass('twist').unbind('click');
+            var text = $currentRow.find('a.twist').text(); 
+            $currentRow.find('a.twist').parent().append(text);
+            $currentRow.find('a.twist').remove();
           }
         }
         

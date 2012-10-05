@@ -78,7 +78,6 @@
             }
           ],
         },
-        create_new_function : function() { addSnapshot(); },
         text : {
           header_title : snapshot_h_title,
           create_resource : snapshot_create,
@@ -162,23 +161,37 @@
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_snapshot)));
       var $reg_dialog = $rendered.children().first();
       var $reg_help = $rendered.children().last();
+      var registerBtnId = 'snapshot-register-btn'
       this.regDialog = $reg_dialog.eucadialog({
          id: 'snapshots-register',
          title: snapshot_register_dialog_title,
          buttons: {
-           'register': {text: snapshot_dialog_reg_btn, click: function() {
+           'register': {domid: registerBtnId, text: snapshot_dialog_reg_btn, click: function() {
                var name = thisObj.regDialog.find('#snapshot-register-image-name').val();
                if(!name || name.length <= 0) {
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
                var desc = thisObj.regDialog.find('#snapshot-register-image-desc').val();
-               thisObj._registerSnapshots(name, desc);
+               var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
+               var windows = $checkbox.is(':checked') ? true : false; 
+               thisObj._registerSnapshots(name, desc, windows);
                $reg_dialog.eucadialog("close");
-            }},
+            }, disabled:true},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $reg_dialog.eucadialog("close");}} 
          },
          help: { content: $reg_help },
+         on_open: {callback: [ function(args) {
+           var $nameEditor = thisObj.regDialog.find('#snapshot-register-image-name');
+           $nameEditor.val('');
+           $nameEditor.focus();
+           var $descBox = thisObj.regDialog.find('#snapshot-register-image-desc');
+           $descBox.val('');
+           thisObj.regDialog.find('#snapshot-register-image-os').removeAttr('checked');
+           thisObj.regDialog.eucadialog('buttonOnChange', $nameEditor,  registerBtnId, function(){
+             return $nameEditor.val() !== '';
+           }); 
+         }]},
        });
       // snapshot delete dialog end
     },
@@ -328,10 +341,9 @@
       thisObj.regDialog.eucadialog('open');
     },
 
-    _registerSnapshots : function(name, desc) {
+    _registerSnapshots : function(name, desc, windows) {
       var thisObj = this;
       var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      var windows = false;
       var url = "/ec2?Action=RegisterImage&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
       if(windows)
         url += "&KernelId=windows";
@@ -345,6 +357,7 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
+              notifySuccess(null, $.i18n.prop('snapshot_register_success', snapshot, data.results));  
             } else {
               notifyError($.i18n.prop('snapshot_register_error', snapshot), undefined_error);
             }

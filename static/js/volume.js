@@ -79,7 +79,6 @@
             }
           ],
         },
-        create_new_function : function() { addVolume(); },
         text : {
           header_title : volume_h_title,
           create_resource : volume_create,

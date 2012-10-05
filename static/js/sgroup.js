@@ -58,7 +58,6 @@
             }*/
           ],
         },
-        create_new_function : function() { addGroup(); },
         text : {
           header_title : sgroup_h_title,
           create_resource : sgroup_create,

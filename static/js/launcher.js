@@ -423,6 +423,7 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-image-main-contents').find('select').first().trigger('focus');
     },
    
     _makeTypeSection : function($section){
