@@ -564,8 +564,8 @@ ol li {
 
 
 #login .form-row label {
-  width: 90px;
   margin-right: 13px;
+  width: 90px;
 }
 
 .checkbox-row {
@@ -573,9 +573,9 @@ ol li {
 }
 
 .checkbox-row label {
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 13px;
   color: #02405f;
+  font-size: 13px;
+  font-family: 'PlayBold', Arial, sans-serif;
 }
 
 .checkbox-row input[type='checkbox'] {
@@ -583,14 +583,25 @@ ol li {
   width: auto;
 }
 
+.checkbox-only input[type='checkbox'] { 
+  margin: 0 3px 0 177px;
+}
+
+.checkbox-only label {
+  width: auto;
+  color: #444;
+  text-align: left;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
 /* Select list dropdown menus */
 
 select {
-  font-family: 'Trebuchet MS',Arial,sans-serif;
-  font-size: 13px;
   margin-right: 10px;
-  outline: 0 none;
   padding: 3px;
+  outline: 0 none;
+  font-size: 13px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
 }
 
 option {
@@ -605,15 +616,15 @@ input[type='text'],
 textarea,
 .input-field,
 .dataTables_filter input {
-  background-color: #f3f6f9;
-  border-radius: 4px;
-  border: 1px solid #9eb1c3;
-  color: #555;
-  font-family: 'Trebuchet MS', Arial, sans-serif;
-  font-size: 12px;
   padding: 6px;
   width: 230px;
   outline: 0 none;
+  border: 1px solid #9eb1c3;
+  border-radius: 4px;
+  background-color: #f3f6f9;
+  color: #555;
+  font-size: 12px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
 
   -moz-box-shadow: inset 0 0 3px #a8b9c8;
   -webkit-box-shadow: inset 0 0 3px #a8b9c8;
@@ -843,6 +854,18 @@ input[type='text'].medium-textinput {
   right: 0;
   background-position: right -130px;
 }
+
+/* Differences for the ui-dialog-titlebar ribbon corner positioning */
+
+.euca-dialog-container .ui-dialog-titlebar::before {
+    left: -1px;
+}
+
+.euca-dialog-container .ui-dialog-titlebar::after {
+  right: -1px;
+  background-position: right -130px;
+}
+
 
 .box-header p,
 .box-header span,
@@ -1107,7 +1130,7 @@ tr.glow td.sorting_3 {
   background: transparent url(../images/css-sprites-small.png) no-repeat left -615px;
   outline: 0 none;
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 40px;
   text-align: left;
 }
 
@@ -2066,7 +2089,10 @@ a.sg-my-ip {
   line-height: 1.5;
 }
 
-.content-section .form-row label {
+/* Security Group dialogs get narrower labels, due to narrow dialog width */
+
+.group.content-section .form-row label,
+.rules.content-section .form-row label  {
   width: 140px;
 }
 
@@ -2139,12 +2165,12 @@ a.sg-my-ip {
 
 .wizard-summary-wrapper {
   float: right;
-  width: 195px;
+  width: 200px;
 }
 
 .wizard-summary {
   margin: 0;
-  padding: 10px 15px;
+  padding: 10px 14px;
   color: #02405f;
   font-family: 'PlayRegular', Arial, sans-serif;  
 }
@@ -2157,7 +2183,7 @@ a.sg-my-ip {
 
 .summary {
   border-top: 1px solid #ccc;
-  padding: 10px 10px 10px 55px;
+  padding: 10px 0px 10px 60px;
 }
 
 #summary-image .summary {
@@ -2231,19 +2257,150 @@ span.on-error {
   display:none;
 }
 
+.upper-sibling {
+  margin-bottom: 0;
+}
+
+.upper-sibling textarea {
+  margin-bottom: 7px;
+}
+
+.lower-sibling {
+  margin-bottom: 25px;
+}
+
+/* To line the 'Or' up with the upper-sibling form element */
+
+.lower-sibling label {
+  padding-left: 23px;
+}
+
+.orphan-row {
+  margin: 20px 0;
+}
+
+.form-row .plaintext-label {
+  margin-left: 5px;
+  width: 220px;
+  text-align: left;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+#launch-wizard-security-sg-detail {
+  padding: 0 0 20px 170px;
+}
+
+.launcher-sgroup-details-label {
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.launcher-sgroup-rule {
+  margin-bottom: 2px;
+}
+
+.launcher-sgroup-rule-label {
+  float: left;
+}
+
+.launcher-sgroup-rule ul{
+  float: left;
+  margin: 0;
+  padding: 0;
+  list-style-type: none; 
+}
+
+.launcher-sgroup-rule ul li {
+  float: left;
+  padding: 0 0 0 10px;
+}
+
 .launch-wizard-buttons {
-  text-align: right;
   padding-right: 10px;
+  text-align: right;
+}
+
+.advanced-link-wrapper {
+  /* For the Advanced options link under the Launch Instances button */
+  margin: 5px 13px 0 0;
 }
 
 .image-type {
   padding-left: 60px;
   background-repeat: no-repeat;
-  /* TODO: Add path to the images sprite sheet */
+  background-image: url(../images/images-icon-sprites.png);
 }
 
-.image-type.centos5 {
+.wizard-summary .image-type {
+  background-image: url(../images/wizard-summary-sprites.png);
+}
+
+.image-type.windows {
   background-position: 0 0;
+}
+
+.image-type.rhel,
+.image-type.rhel5,
+.image-type.rhel6 {
+  background-position: 0 -100px;
+}
+
+.image-type.fedora {
+  background-position: 0 -200px;
+}
+
+.image-type.gentoo {
+  background-position: 0 -300px;
+}
+
+.image-type.ubuntu,
+.image-type.lucid,
+.image-type.precise {
+  background-position: 0 -400px;
+}
+
+.image-type.centos,
+.image-type.centos5,
+.image-type.centos6 {
+  background-position: 0 -500px;
+}
+
+.image-type.opensuse,
+.image-type.suse
+ {
+  background-position: 0 -600px;
+}
+
+.image-type.debian {
+  background-position: 0 -700px;
+}
+
+.image-type.linux {
+  background-position: 0 -800px;
+}
+
+#summary-type .summary {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -900px;
+}
+
+#summary-security .summary {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1100px;
+
+}
+
+#summary-advanced .summary {
+  padding: 10px 0;
+}
+
+#summary-advanced ul {
+  list-style-type: none;
+  margin: 5px 0 0;
+  padding: 0;
+}
+
+#summary-advanced li {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1300px;
+  padding: 0 0 4px 22px;
 }
 
 .image-id-arch span {
@@ -2252,21 +2409,39 @@ span.on-error {
   font-size: 12px;
 }
 
+.device-map-table {
+  border: 1px solid #e5e5e5;
+  border-width: 1px 1px 0 0;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.device-map-table tbody tr:nth-child(2n) {
+  background-color: #f4f4ef;
+}  
+
 #launch-wizard-advanced-storage th {
   font-size: 11px;
+  border-bottom: 1px solid #e5e5e5;
+  border-left: 1px solid #e5e5e5;
+  padding: 5px;
+  background: transparent url(../images/table-header-bg.png) repeat-x left center;
 }
+
 #launch-wizard-advanced-storage td {
-  padding: 5px 10px;
-  border-top: 2px solid #dae2e8;
-  border-left: 1px solid #dae2e8;
+  padding: 5px;
+  border-bottom: 1px solid #e5e5e5;
+  border-left: 1px solid #e5e5e5;
   font-size: 11px;
   width: auto;
 }
+
 #launch-wizard-advanced-storage input[type='text']{
   width: 30px;
 }
+
 #launch-wizard-advanced-storage input[type='checkbox'] {
-  width: 10px;
+  /*width: 10px;*/
 }
 
 .launch-wizard-type-size {
@@ -2353,30 +2528,12 @@ span.on-error {
   margin-bottom: 40px;
 }
 
-.launcher-group-rule ul{
-    margin: 0 auto;
-    padding: 0;
-    clear: left; 
-}
-.launcher-group-rule ul li {
-    text-align: left;
-    float: left;
-    list-style: none;
-    padding: 3px 3px;
-    margin: 1px;
-}
-
 .wizard-section-label {
   color: #02405f;
   font-weight: bold;
-  margin-bottom: 4px;
+  font-size: 14px;
+  margin-bottom: 10px;
  } 
-
-.wizard-subsection-label {
-  color: #02405f;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
 
 .launch-wizard-section-header {
   position: absolute;
@@ -2426,13 +2583,58 @@ span.on-error {
 /* ======= Instances - Launch More dialog ======= */
 
 .launch-more-summary-wrapper {
-  margin-top: 15px;
+  margin: 15px 0 0 20px;
 }
 
 .launch-more-summary-section {
   float : left;
-  width : 150px;
-  margin: 0 20px;
+  width : 120px;
+  margin: 0 10px 0 0;
+  padding-left: 60px;
+  min-height: 60px;
+}
+
+.launch-more-summary-section.windows {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left 0px;
+}
+
+.launch-more-summary-section.rhel,
+.launch-more-summary-section.rhel5,
+.launch-more-summary-section.rhel6 {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -100px;
+}
+
+.launch-more-summary-section.fedora {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -200px;
+}
+
+.launch-more-summary-section.gentoo {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -300px;
+}
+
+.launch-more-summary-section.ubuntu,
+.launch-more-summary-section.lucid,
+.launch-more-summary-section.precise {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -400px;
+}
+
+.launch-more-summary-section.centos,
+.launch-more-summary-section.centos5,
+.launch-more-summary-section.centos6 {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -500px;
+}
+
+.launch-more-summary-section.opensuse,
+.launch-more-summary-section.suse {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -600px;
+}
+
+.launch-more-summary-section.debian {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -700px;
+}
+
+.launch-more-summary-section.linux {
+  background: transparent url(../images/images-icon-sprites.png) no-repeat left -800px;
 }
 
 .launch-more {
@@ -2465,18 +2667,26 @@ textarea.console-output {
 
 /* ======= Euca credits ======= */
 
-img.euca-credits {
-  display: block;
-  margin: auto;
-}
-
-div.euca-credits {
-  text-align: center;
-  height: 400px;
+.euca-credits {
   overflow: auto;
+  margin: 25px 0;
+  height: 400px;
+  text-align: center;
 }
 
-ul.euca-credits {
+.euca-credits img {
+  display: block;
+  margin: 10px auto;
+}
+
+.euca-credits p {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.euca-credits ul {
+  margin: 0 0 15px;
+  padding: 0;
   list-style-type: none;
 }
 

@@ -62,7 +62,6 @@
             }
           ],
         },
-        create_new_function : function() { allocateIP(); },
         text : {
           header_title : eip_h_title,
           create_resource : eip_allocate,

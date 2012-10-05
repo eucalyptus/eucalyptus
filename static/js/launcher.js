@@ -137,6 +137,7 @@
           thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-image-contents').find('select').first().focus();
         }
       }));
     },
@@ -154,6 +155,7 @@
           thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-type-contents').find('input').first().focus();
         }
       }));
     },
@@ -171,6 +173,7 @@
           thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-security-contents').find('select').first().focus();
         }
       }));
     },
@@ -188,6 +191,7 @@
           thisObj.element.find('#launch-wizard-image-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
           thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
+          thisObj.element.find('#launch-wizard-advanced-contents').find('textarea').first().focus();
         }
       }));
     },
@@ -213,7 +217,7 @@
       $securityBtn.append(
         $('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         }),
-        $('<div>').addClass('form-row').addClass('clearfix').append(  
+        $('<div>').addClass('form-row advanced-link-wrapper').append(  
           $('<label>').attr('for','launch-wizard-buttons-security-advanced-link').text(or_label), 
           $('<a>').attr('id','launch-wizard-buttons-security-advanced-link').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
             var advSection = $launcher.find('#launch-wizard-advanced-contents');
@@ -268,6 +272,7 @@
           }
         });
         $section.find('div#launch-images_filter').find('input').watermark(launch_instance_image_search_watermark);
+        $section.find('div#launch-images_filter').find('input').attr('title', launch_instance_image_search_text_tip);
       };
 
       
@@ -361,8 +366,8 @@
           };
       this._imageTable = $table.dataTable(dtArg);
     
-      $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-subsection-label').html(launch_instance_image_table_refine));
-      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-subsection-label').html(launch_instance_image_table_header));
+      $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_refine));
+      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_header));
 
       $.fn.dataTableExt.afnFiltering = [];
       $.fn.dataTableExt.afnFiltering.push(
@@ -422,6 +427,7 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-image-contents').find('select').first().focus();
     },
    
     _makeTypeSection : function($section){
@@ -491,7 +497,7 @@
       $list.append(
         $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-num-instance').append(
           $('<label>').attr('for','launch-instance-type-num-instance').text(launch_instance_type_option_numinstance),
-          $('<input>').attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
+          $('<input>').attr('title', launch_instance_type_num_instance_tip).attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
             numInstances = $(this).val(); 
             instanceChanged = true;
             thisObj._setSummary('type', summarize());
@@ -515,7 +521,7 @@
         $az.append($('<option>').attr('value', azName).text(azName));
       }
 
-      $option.append($('<span>').html(launch_instance_type_option_header),
+      $option.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_option_header),
                      $list);
 
       $section.find('#launch-wizard-buttons-type-next').click(function(e) {
@@ -551,13 +557,14 @@
       thisObj.element.find('#launch-wizard-type-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-type-contents').find('input').first().focus();
       thisObj._enableTypeLink();
     },
 
     _makeSecuritySection : function($section) {
       var thisObj = this;
       var $content = $section.find('#launch-wizard-security-main-contents');
-      $content.prepend($('<span>').html(launch_instance_security_header));
+      $content.prepend($('<div>').addClass('wizard-section-label').html(launch_instance_security_header));
       var $keypair = $content.find('#launch-wizard-security-keypair');
       var $sgroup = $content.find('#launch-wizard-security-sgroup');
       
@@ -612,7 +619,7 @@
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
-            $('<span>').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
+            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
           var results = describe('sgroup');
           var group = null;
           for(i in results){
@@ -623,7 +630,7 @@
           }
           if(group){ 
             $.each(group.rules, function (idx, rule){
-              var $wrapper = $('<div>').addClass('launcher-group-rule');
+              var $wrapper = $('<div>').addClass('launcher-sgroup-rule clearfix');
               var protocol = rule['ip_protocol'];
               var port = rule['from_port'];
               if(rule['to_port'] !== rule['from_port'])
@@ -648,12 +655,11 @@
               });
               src = src.join(', '); 
  
-              $wrapper.append( $('<div>').addClass('wizard-section-label').html(launch_instance_security_rule),
-                               $('<div>').addClass('wizard-section-content').append(
+              $wrapper.append( $('<div>').addClass('launcher-sgroup-rule-label').html(launch_instance_security_rule + ':'),
                                  $('<ul>').append(
                                    $('<li>').text(protocol),
                                    $('<li>').text(portOrType),
-                                   $('<li>').text(src))));
+                                   $('<li>').text(src)));
               $rule.append($wrapper);
             });
           } 
@@ -663,10 +669,10 @@
       }
 
       $keypair.append(
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-security-keypair-selector').text(launch_instance_security_keypair),
           $('<select>').attr('title', launch_instance_key_select_tip).attr('id','launch-wizard-security-keypair-selector')),
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix lower-sibling').append(
           $('<label>').attr('for','launch-instance-create-keypair-link').text(or_label),
           $('<a>').attr('id','launch-instance-create-keypair-link').attr('href','#').text(launch_instance_security_create_kp).click(function(e){
             if(thisObj._keypairCallback)
@@ -685,10 +691,10 @@
         })));
 
       $sgroup.append(
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-security-sg-selector').text(launch_instance_security_sgroup),
           $('<select>').attr('title', launch_instance_sgroup_select_tip).attr('id','launch-wizard-security-sg-selector')),
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix lower-sibling').append(
           $('<label>').attr('for','launch-instance-create-sg-link').text(or_label),
           $('<a>').attr('id', 'launch-instance-create-sg-link').attr('href','#').text(launch_instance_security_create_sg).click(function(e){
             if(thisObj._sgCallback)
@@ -740,26 +746,27 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').removeClass('expanded');
+      thisObj.element.find('#launch-wizard-security-contents').find('select').first().focus();
     },
 
     makeAdvancedSection : function($section) { 
       var thisObj = this;
       var $content = $section.find('#launch-wizard-advanced-main-contents');
       if(! $content.children().first().is('span'))
-        $content.prepend($('<span>').html(launch_instance_advanced_header));
+        $content.prepend($('<div>').addClass('wizard-section-label').html(launch_instance_advanced_header));
       var $userdata = $content.find('#launch-wizard-advanced-userdata');
       var $kernel = $content.find('#launch-wizard-advanced-kernelramdisk');
       var $network = $content.find('#launch-wizard-advanced-network');
       var $storage = $content.find('#launch-wizard-advanced-storage');
 
       $userdata.append(
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix upper-sibling').append(
           $('<label>').attr('for','launch-wizard-advanced-input-userdata').text(launch_instance_advanced_userdata),
-          $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title','Enter userdata').addClass('description').change(function(e){
+          $('<textarea>').attr('id','launch-wizard-advanced-input-userdata').attr('title',launch_wizard_advanced_input_userdata_tip).addClass('description').change(function(e){
             var $summary = summarize(); 
             thisObj._setSummary('advanced', $summary.clone());
           })),
-        $('<div>').addClass('form-row').addClass('clearfix').append(
+        $('<div>').addClass('form-row clearfix lower-sibling').append(
           $('<label>').attr('for','launch-wizard-advanced-input-userfile').text(or_label),
           $('<input>').attr('id','launch-wizard-advanced-input-userfile').attr('type','file')));
       var $input = $userdata.find('#launch-wizard-advanced-input-userfile');
@@ -794,13 +801,13 @@
         } 
       });
 
-      $network.addClass('form-row').addClass('clearfix').append(
+      $network.addClass('form-row clearfix orphan-row').addClass('clearfix').append(
         $('<label>').attr('for','launch-wizard-advanced-input-network').text(launch_instance_advanced_network),
-        $('<input>').attr('id','launch-wizard-advanced-input-network').attr('type','checkbox').change(function(e){
+        $('<input>').attr('title', launch_wizard_advanced_input_network_tip).attr('id','launch-wizard-advanced-input-network').attr('type','checkbox').change(function(e){
           var $summary = summarize(); 
           thisObj._setSummary('advanced', $summary.clone());
         }),
-        $('<label>').attr('for', 'launch-wizard-advanced-input-network').text(launch_instance_advanced_network_desc));
+        $('<label>').addClass('plaintext-label').attr('for', 'launch-wizard-advanced-input-network').text(launch_instance_advanced_network_desc));
       
       var usedSnapshots = []; 
       var usedVolumes = [];
@@ -894,7 +901,7 @@
           }
         });
         
-        var $mapping = $('<input>').attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text'); // mapping
+        var $mapping = $('<input>').attr('title', launch_wizard_advanced_storage_mapping_input_tip).attr('class','launch-wizard-advanced-storage-mapping-input').attr('type','text'); // mapping
         if(param && param['mapping']){
           $mapping.val(param['mapping']);
           $mapping.attr('disabled','disabled');
@@ -920,7 +927,7 @@
            var $row = $(e.target).parents('tr');
            $row.find('.launch-wizard-advanced-storage-size-input').val(size);
         });
-        var $size = $('<input>').attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
+        var $size = $('<input>').attr('title', launch_wizard_advanced_storage_size_input_tip).attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
         if(param && param['size']){
           $size.val(param['size']);
           $size.attr('disabled','disabled');
@@ -936,7 +943,7 @@
             $delOnTerm.attr('checked','true'); 
         }
 
-        var $addBtn = $('<input>').attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add);
+        var $addBtn = $('<input>').attr('title',launch_wizard_advanced_storage_add_input_tip).attr('class','launch-wizard-advanced-storage-add-input').attr('type','button').val(launch_instance_advanced_btn_add);
         if(param && param['add'] !== undefined){
           if(!param['add']) 
             $addBtn.attr('disabled','disabled');
@@ -970,7 +977,7 @@
           thisObj._setSummary('advanced', $summary.clone());
         });
 
-        var $removeBtn = $('<input>').attr('class', 'launch-wizard-advanced-storage-remove-input').attr('type','button').val(launch_instance_advanced_btn_remove);
+        var $removeBtn = $('<input>').attr('title', launch_wizard_advanced_storage_remove_input_tip).attr('class', 'launch-wizard-advanced-storage-remove-input').attr('type','button').val(launch_instance_advanced_btn_remove);
         if(param && param['remove'] !== undefined){
           if(!param['remove'])
             $removeBtn.attr('disabled','disabled');
@@ -996,7 +1003,7 @@
           $('<td>').text('/dev/').append($mapping),
           $('<td>').append($snapshot),
           $('<td>').append($size), 
-          $('<td>').append($delOnTerm),
+          $('<td>').addClass('centered-cell').append($delOnTerm),
           $('<td>').append($addBtn),
           $('<td>').append($removeBtn));
 
@@ -1004,9 +1011,9 @@
       } /// end of addNewRow()
 
       $storage.append(
-        $('<span>').text(launch_instance_advanced_storage),
+        $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
         $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
-          $('<table>').append(
+          $('<table>').addClass('device-map-table').append(
             $('<thead>').append(
               $('<tr>').append(
                 $('<th>').text(launch_instance_advanced_th_volume),
@@ -1142,6 +1149,7 @@
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-advanced-header').addClass('expanded');
+      thisObj.element.find('#launch-wizard-advanced-contents').find('textarea').first().focus();
     },
     _setSummary : function(section, content){
       var thisObj = this;

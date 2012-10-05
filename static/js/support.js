@@ -313,6 +313,13 @@ function inferImageName(manifest, desc, platform) {
   return name;
 }
 
+function errorAndLogout(){
+  $('html body').find(DOM_BINDING['hidden']).login();
+  $('html body').find(DOM_BINDING['hidden']).login('popupError', $.i18n.prop('connection_failure', 'cloud administrator'), function(){
+    logout();
+  });
+}
+
 // This is where the singleton for "proxy info" lives.
 var _version = null;
 var _adminURL = null;
