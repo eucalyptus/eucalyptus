@@ -2236,8 +2236,14 @@ span.on-error {
   padding-right: 10px;
 }
 
-#launch-images .centos5 {
+.image-type {
   padding-left: 60px;
+  background-repeat: no-repeat;
+  /* TODO: Add path to the images sprite sheet */
+}
+
+.image-type.centos5 {
+  background-position: 0 0;
 }
 
 .image-id-arch span {
@@ -2245,8 +2251,6 @@ span.on-error {
   font-weight: bold;
   font-size: 12px;
 }
-
-
 
 #launch-wizard-advanced-storage th {
   font-size: 11px;
