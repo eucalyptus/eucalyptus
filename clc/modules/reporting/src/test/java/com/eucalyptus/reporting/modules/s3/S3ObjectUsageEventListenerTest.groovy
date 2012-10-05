@@ -11,6 +11,7 @@ import com.eucalyptus.reporting.event.S3ObjectEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent
+import com.eucalyptus.util.WalrusProperties
 
 /**
  * 
@@ -54,6 +55,27 @@ class S3ObjectUsageEventListenerTest {
         "bucket15",
         "object34",
         null,
+        Principals.systemFullName().getUserId(),
+        Integer.MAX_VALUE.toLong() + 1L
+    ), timestamp )
+
+    assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectDeleteEvent )
+    ReportingS3ObjectDeleteEvent event = persisted
+    assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
+    assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
+    assertNull( "Persisted event object version", event.getObjectVersion() )
+    assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
+  }
+
+  @Test
+  void testNullVersionEvent() {
+    long timestamp = System.currentTimeMillis() - 100000
+
+    Object persisted = testEvent( S3ObjectEvent.with(
+        S3ObjectEvent.forS3ObjectDelete(),
+        "bucket15",
+        "object34",
+        WalrusProperties.NULL_VERSION_ID,
         Principals.systemFullName().getUserId(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )

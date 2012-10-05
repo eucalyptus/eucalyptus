@@ -33,11 +33,11 @@ import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore;
+import com.eucalyptus.util.WalrusProperties;
 import com.google.common.base.Preconditions;
 
 public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
 
-    
     private static Logger LOG = Logger.getLogger( S3ObjectUsageEventListener.class );
 
     public static void register() {
@@ -54,17 +54,27 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
         final User user = lookupUser( event.getOwnerUserId() );
 
         getReportingAccountCrud().createOrUpdateAccount(user.getAccount().getAccountNumber(),
-        		user.getAccount().getName());
+            user.getAccount().getName());
         getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
             .getAccount().getAccountNumber(), user.getName());
 
         final ReportingS3ObjectEventStore eventStore = getReportingS3ObjectEventStore();
         switch (event.getAction()) {
           case OBJECTCREATE:
-            eventStore.insertS3ObjectCreateEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), event.getSize(), timeInMs, event.getOwnerUserId());
+            eventStore.insertS3ObjectCreateEvent(
+                event.getBucketName(),
+                event.getObjectKey(),
+                toReportingVersion( event.getVersion() ),
+                event.getSize(),
+                timeInMs,
+                event.getOwnerUserId());
             break;
           case OBJECTDELETE:
-            eventStore.insertS3ObjectDeleteEvent(event.getBucketName(), event.getObjectKey(), event.getVersion(), timeInMs);
+            eventStore.insertS3ObjectDeleteEvent(
+                event.getBucketName(),
+                event.getObjectKey(),
+                toReportingVersion( event.getVersion() ),
+                timeInMs);
             break;
         }
       } catch (AuthException e) {
@@ -91,5 +101,11 @@ public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{
     protected User lookupUser( final String userId ) throws AuthException {
       return Accounts.lookupUserById( userId );
     }
-    
+
+    private String toReportingVersion( final String version ) {
+      if ( WalrusProperties.NULL_VERSION_ID.equals( version ) ) {
+        return null;
+      }
+      return version;
+    }
 }
