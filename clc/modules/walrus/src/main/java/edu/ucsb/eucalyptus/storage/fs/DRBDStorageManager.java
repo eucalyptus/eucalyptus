@@ -166,6 +166,9 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		if(SystemUtil.runAndGetCode(new String[]{"mount", DRBDInfo.getDRBDInfo().getBlockDevice()}) != 0) {
 			throw new EucalyptusCloudException("Unable to mount " + DRBDInfo.getDRBDInfo().getBlockDevice() + " as " + WalrusInfo.getWalrusInfo().getStorageDir());
 		}
+		if(SystemUtil.runAndGetCode(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "chown", "eucalyptus:eucalyptus", WalrusInfo.getWalrusInfo().getStorageDir()}) != 0) {
+                        throw new EucalyptusCloudException("Unable to change perms on: " + WalrusInfo.getWalrusInfo().getStorageDir());
+                }
 		SystemUtil.setEucaReadWriteOnly(WalrusInfo.getWalrusInfo().getStorageDir());
 	}
 
