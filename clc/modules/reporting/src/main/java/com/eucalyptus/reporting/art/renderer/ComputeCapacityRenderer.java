@@ -46,7 +46,7 @@ public class ComputeCapacityRenderer implements Renderer {
     doc.setWriter(new OutputStreamWriter(os));
 
     doc.open();
-    doc.textLine("Compute Report", 1);
+    doc.textLine("Capacity Report", 1);
     doc.textLine("Begin:" + new Date(report.getBeginMs()).toString(), 4);
     doc.textLine("End:" + new Date(report.getEndMs()).toString(), 4);
     doc.textLine("Resource Usage Section", 3);
