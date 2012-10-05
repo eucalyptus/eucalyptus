@@ -75,7 +75,7 @@
 #include "adb-helpers.h"
 #include "sensor.h"
 
-#define NULL_ERROR_MSG "() could not be invoked (check NC host, port, and credentials)\n"
+#define NULL_ERROR_MSG "could not be invoked (check NC host, port, and credentials)\n"
 
 //#define CORRELATION_ID meta->correlationId
 #define CORRELATION_ID NULL
@@ -99,11 +99,11 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
     }
 
     if (client_home == NULL) {
-        logprintfl (EUCAERROR, "ERROR: cannot get AXIS2C_HOME");
+        logprintfl (EUCAERROR, "cannot get AXIS2C_HOME");
 	return NULL;
     }
     if (endpoint_uri == NULL) {
-        logprintfl (EUCAERROR, "ERROR: empty endpoint_url");
+        logprintfl (EUCAERROR, "empty endpoint_url");
 	return NULL;
     }
 
@@ -112,23 +112,23 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
     // extract node name from the endpoint
     char * p = strstr (uri, "://"); // find "http[s]://..."
     if (p==NULL) {
-      logprintfl (EUCAERROR, "ncStubCreate received invalid URI %s\n", uri);
+      logprintfl (EUCAERROR, "received invalid URI %s\n", uri);
       return NULL;
     }
     char * node_name = strdup (p+3); // copy without the protocol prefix
     if (node_name==NULL) {
-      logprintfl (EUCAERROR, "ncStubCreate is out of memory\n");
+      logprintfl (EUCAERROR, "is out of memory\n");
       return NULL;
     }
     if ((p = strchr (node_name, ':')) != NULL) *p = '\0'; // cut off the port
     if ((p = strchr (node_name, '/')) != NULL) *p = '\0'; // if there is no port
 
-    logprintfl (EUCADEBUG, "DEBUG: requested URI %s\n", uri);
+    logprintfl (EUCADEBUG, "requested URI %s\n", uri);
 
     // see if we should redirect to a local broker
     if (strstr (uri, "EucalyptusBroker")) {
         uri = "http://localhost:8773/services/EucalyptusBroker";
-        logprintfl (EUCADEBUG, "DEBUG: redirecting request to %s\n", uri);
+        logprintfl (EUCADEBUG, "redirecting request to %s\n", uri);
     }
 
     // TODO: what if endpoint_uri, home, or env are NULL?
@@ -143,11 +143,11 @@ ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir)
             st->node_name=(axis2_char_t *)strdup(node_name);
             st->stub=stub;
             if (st->client_home == NULL || st->endpoint_uri == NULL || st->node_name == NULL) {
-                logprintfl (EUCAWARN, "WARNING: out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)",
+                logprintfl (EUCAWARN, "out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)",
                             __FILE__, __FUNCTION__, __LINE__, st->client_home, st->endpoint_uri, st->node_name);
             }
         } else {
-            logprintfl (EUCAWARN, "WARNING: out of memory for 'st' (%s:%s:%d)\n",
+            logprintfl (EUCAWARN, "out of memory for 'st' (%s:%s:%d)\n",
                         __FILE__, __FUNCTION__, __LINE__);
         }
     } else {
@@ -295,13 +295,13 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
         adb_ncRunInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncRunInstance(stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: RunInstance" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
             
         } else {
             adb_ncRunInstanceResponseType_t * response = adb_ncRunInstanceResponse_get_ncRunInstanceResponse(output, env);
             if ( adb_ncRunInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: RunInstance returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
 
@@ -338,14 +338,14 @@ int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char
     {
         adb_ncGetConsoleOutputResponse_t * output = axis2_stub_op_EucalyptusNC_ncGetConsoleOutput(stub, env, input);
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: GetConsoleOutputInstance" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             * consoleOutput = NULL;
             status = -1;
             
         } else {
             adb_ncGetConsoleOutputResponseType_t * response = adb_ncGetConsoleOutputResponse_get_ncGetConsoleOutputResponse(output, env);
             if ( adb_ncGetConsoleOutputResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: GetConsoleOutput returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
 
@@ -379,13 +379,13 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
         adb_ncRebootInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncRebootInstance(stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: RebootInstanceInstance" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
             
         } else {
             adb_ncRebootInstanceResponseType_t * response = adb_ncRebootInstanceResponse_get_ncRebootInstanceResponse(output, env);
             if ( adb_ncRebootInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: RebootInstance returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
 
@@ -422,7 +422,7 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int for
         adb_ncTerminateInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncTerminateInstance(stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: TerminateInstance" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
             
         } else {
@@ -431,7 +431,7 @@ int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int for
             response = adb_ncTerminateInstanceResponse_get_ncTerminateInstanceResponse(output, env);
             if ( adb_ncTerminateInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
                 // suppress error message because we conservatively call Terminate on all nodes
-                //logprintfl (EUCAERROR, "ERROR: TerminateInsance returned an error\n");
+                //logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
@@ -468,13 +468,13 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
         adb_ncDescribeInstancesResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeInstances(stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: DescribeInstances" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncDescribeInstancesResponseType_t * response = adb_ncDescribeInstancesResponse_get_ncDescribeInstancesResponse(output, env);
             if ( adb_ncDescribeInstancesResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: DescribeInstances returned an error\n");
+                logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
             
@@ -482,7 +482,7 @@ int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int i
             if (* outInstsLen) {
                 * outInsts = malloc (sizeof(ncInstance *) * *outInstsLen);
                 if ( * outInsts == NULL ) { 
-                    logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeInstancesStub()\n");
+                    logprintfl (EUCAERROR, "out of memory\n");
                     * outInstsLen = 0;
                     status = 2;
                 } else {
@@ -521,13 +521,13 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
         adb_ncDescribeResourceResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: DescribeResource" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncDescribeResourceResponseType_t * response = adb_ncDescribeResourceResponse_get_ncDescribeResourceResponse(output, env);
             if ( adb_ncDescribeResourceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: DescribeResource returned an error\n");
+                logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
@@ -543,7 +543,7 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
                 (char *)adb_ncDescribeResourceResponseType_get_publicSubnets(response, env));
 
             if (!res) {
-                logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeResourceStub()\n");
+                logprintfl (EUCAERROR, "out of memory\n");
                 status = 2;
             }
             * outRes = res;
@@ -577,13 +577,13 @@ int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *
     adb_ncAssignAddressResponse_t * output = axis2_stub_op_EucalyptusNC_ncAssignAddress (stub, env, input);
     
     if (!output) {
-      logprintfl (EUCAERROR, "ERROR: AssignAddress" NULL_ERROR_MSG);
+      logprintfl (EUCAERROR, NULL_ERROR_MSG);
       status = -1;
     } else {
       adb_ncAssignAddressResponseType_t * response = adb_ncAssignAddressResponse_get_ncAssignAddressResponse (output, env);
       if ( adb_ncAssignAddressResponseType_get_return(response, env) == AXIS2_FALSE ) {
-	logprintfl (EUCAERROR, "ERROR: AssignAddress returned an error\n");
-	status = 1;
+        logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+	    status = 1;
       }
     }
   }
@@ -612,13 +612,13 @@ int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
     adb_ncPowerDownResponse_t * output = axis2_stub_op_EucalyptusNC_ncPowerDown (stub, env, input);
     
     if (!output) {
-      logprintfl (EUCAERROR, "ERROR: PowerDown" NULL_ERROR_MSG);
+      logprintfl (EUCAERROR, NULL_ERROR_MSG);
       status = -1;
     } else {
       adb_ncPowerDownResponseType_t * response = adb_ncPowerDownResponse_get_ncPowerDownResponse (output, env);
       if ( adb_ncPowerDownResponseType_get_return(response, env) == AXIS2_FALSE ) {
-	logprintfl (EUCAERROR, "ERROR: PowerDown returned an error\n");
-	status = 1;
+    	logprintfl (EUCAERROR, "returned an error\n");
+    	status = 1;
       }
     }
   }
@@ -655,13 +655,13 @@ int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char *uuid, char **peers,
         adb_ncStartNetworkResponse_t * output = axis2_stub_op_EucalyptusNC_ncStartNetwork (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: StartNetwork" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncStartNetworkResponseType_t * response = adb_ncStartNetworkResponse_get_ncStartNetworkResponse (output, env);
             if ( adb_ncStartNetworkResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: StartNetwork returned an error\n");
+                logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
@@ -701,13 +701,13 @@ int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
         adb_ncAttachVolumeResponse_t * output = axis2_stub_op_EucalyptusNC_ncAttachVolume (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: AttachVolume" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncAttachVolumeResponseType_t * response = adb_ncAttachVolumeResponse_get_ncAttachVolumeResponse (output, env);
             if ( adb_ncAttachVolumeResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: AttachVolume returned an error\n");
+                logprintfl (EUCAERROR, "[%s][%s] returned an error\n", instanceId, volumeId);
                 status = 1;
             }
         }
@@ -747,13 +747,13 @@ int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
         adb_ncDetachVolumeResponse_t * output = axis2_stub_op_EucalyptusNC_ncDetachVolume (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: DetachVolume" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncDetachVolumeResponseType_t * response = adb_ncDetachVolumeResponse_get_ncDetachVolumeResponse (output, env);
             if ( adb_ncDetachVolumeResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: DetachVolume returned an error\n");
+                logprintfl (EUCAERROR, "[%s][%s] returned an error\n", instanceId, volumeId);
                 status = 1;
             }
         }
@@ -791,13 +791,13 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
         adb_ncBundleInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncBundleInstance (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: BundleInstance" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncBundleInstanceResponseType_t * response = adb_ncBundleInstanceResponse_get_ncBundleInstanceResponse (output, env);
             if ( adb_ncBundleInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: BundleInstance returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
@@ -830,13 +830,13 @@ int ncBundleRestartInstanceStub(ncStub *st, ncMetadata *meta, char *instanceId)
         adb_ncBundleRestartInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncBundleRestartInstance(stub, env, input);
 
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: BundleInstance" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
         }
         else {
             adb_ncBundleRestartInstanceResponseType_t *response = adb_ncBundleRestartInstanceResponse_get_ncBundleRestartInstanceResponse(output, env);
             if (adb_ncBundleRestartInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
-                logprintfl (EUCAERROR, "ERROR: BundleInstance returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
@@ -868,13 +868,13 @@ int ncCancelBundleTaskStub (ncStub *st, ncMetadata *meta, char *instanceId)
         adb_ncCancelBundleTaskResponse_t * output = axis2_stub_op_EucalyptusNC_ncCancelBundleTask (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: CancelBundleTask" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncCancelBundleTaskResponseType_t * response = adb_ncCancelBundleTaskResponse_get_ncCancelBundleTaskResponse (output, env);
             if ( adb_ncCancelBundleTaskResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: CancelBundleTask returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
@@ -907,13 +907,13 @@ int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int
         adb_ncDescribeBundleTasksResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeBundleTasks (stub, env, input);
 
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncDescribeBundleTasksResponseType_t * response = adb_ncDescribeBundleTasksResponse_get_ncDescribeBundleTasksResponse (output, env);
             if ( adb_ncDescribeBundleTasksResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: DescribeBundleTasks returned an error\n");
+                logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
 	    }		
 	    *outBundleTasksLen = adb_ncDescribeBundleTasksResponseType_sizeof_bundleTasks(response, env);
@@ -956,13 +956,13 @@ int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vol
         adb_ncCreateImageResponse_t * output = axis2_stub_op_EucalyptusNC_ncCreateImage (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: CreateImage" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncCreateImageResponseType_t * response = adb_ncCreateImageResponse_get_ncCreateImageResponse (output, env);
             if ( adb_ncCreateImageResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: CreateImage returned an error\n");
+                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
@@ -1001,13 +1001,13 @@ int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, int historySize, long l
         adb_ncDescribeSensorsResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeSensors (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: DescribeSensors" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncDescribeSensorsResponseType_t * response = adb_ncDescribeSensorsResponse_get_ncDescribeSensorsResponse (output, env);
             if ( adb_ncDescribeSensorsResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: DescribeSensors returned an error\n");
+                logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
@@ -1015,7 +1015,7 @@ int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, int historySize, long l
             if (* outResourcesLen) {
                 * outResources = malloc (sizeof(sensorResource *) * *outResourcesLen);
                 if ( * outResources == NULL ) { 
-                    logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeSensorsStub()\n");
+                    logprintfl (EUCAERROR, "out of memory\n");
                     * outResourcesLen = 0;
                     status = 2;
                 } else {
@@ -1057,13 +1057,13 @@ int ncOPERATIONStub (ncStub *st, ncMetadata *meta, ...)
         adb_ncOPERATIONResponse_t * output = axis2_stub_op_EucalyptusNC_ncOPERATION (stub, env, input);
         
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: OPERATION" NULL_ERROR_MSG);
+            logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
             adb_ncOPERATIONResponseType_t * response = adb_ncOPERATIONResponse_get_ncOPERATIONResponse (output, env);
             if ( adb_ncOPERATIONResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: OPERATION returned an error\n");
+                logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
 

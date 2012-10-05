@@ -114,14 +114,14 @@ static int doInitialize (struct nc_state_t *nc)
     
 	// get resources
 	if (virNodeGetInfo(nc->conn, &ni)) {
-		logprintfl (EUCAFATAL, "error: failed to discover resources\n");
+		logprintfl (EUCAFATAL, "failed to discover resources\n");
 		return ERROR_FATAL;
 	}
 
 	// dom0-min-mem has to come from xend config file
 	s = system_output (nc->get_info_cmd_path);
 	if (get_value (s, "dom0-min-mem", &dom0_min_mem)) {
-		logprintfl (EUCAFATAL, "error: did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
+		logprintfl (EUCAFATAL, "did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
 		free (s);
 		return ERROR_FATAL;
 	}
@@ -166,14 +166,14 @@ static int doRebootInstance(	struct nc_state_t *nc,
             int err=virDomainReboot (dom, 0);
             sem_v (hyp_sem);
             if (err==0) {
-                logprintfl (EUCAINFO, "rebooting Xen domain for instance %s\n", instanceId);
+                logprintfl (EUCAINFO, "[%s] rebooting Xen domain for instance\n", instanceId);
             }
 	    sem_p(hyp_sem);
             virDomainFree(dom); /* necessary? */
 	    sem_v(hyp_sem);
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
-                logprintfl (EUCAWARN, "warning: domain %s to be rebooted not running on hypervisor\n", instanceId);
+                logprintfl (EUCAWARN, "[%s] domain to be rebooted not running on hypervisor\n", instanceId);
             }
         }
     }
@@ -207,7 +207,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   }
   sem_v (inst_sem);
   if (!instance) {
-    logprintfl(EUCAERROR, "doGetConsoleOutput(): cannot locate instance with instanceId=%s\n", instanceId);
+    logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
     return(1);
   }
   rc = stat(console_file, &statbuf);
@@ -227,7 +227,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   bufsize = sizeof(char) * 1024 * 64;
   console_main = malloc(bufsize);
   if (!console_main) {
-    logprintfl(EUCAERROR, "doGetConsoleOutput(): out of memory!\n");
+    logprintfl(EUCAERROR, "[%s] out of memory!\n", instanceId);
     if (console_append) free(console_append);
     return(1);
   }
@@ -287,7 +287,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
       while(count < 10000 && stat(console_file, &statbuf) < 0) {count++;}
       fd = open(console_file, O_RDONLY);
       if (fd < 0) {
-	logprintfl (EUCAERROR, "ERROR: could not open consoleOutput file %s for reading\n", console_file);
+	logprintfl (EUCAERROR, "[%s] could not open consoleOutput file %s for reading\n", instanceId, console_file);
       } else {
 	FD_ZERO(&rfds);
 	FD_SET(fd, &rfds);
