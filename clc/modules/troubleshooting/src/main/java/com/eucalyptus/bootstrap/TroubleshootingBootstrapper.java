@@ -69,6 +69,7 @@ import com.eucalyptus.bootstrap.listeners.TriggerFaultListener;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 import com.eucalyptus.troubleshooting.resourcefaults.listeners.DBCheckPollTimeListener;
 import com.eucalyptus.troubleshooting.resourcefaults.listeners.DBCheckThresholdListener;
@@ -189,6 +190,6 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 
 	// TODO: figure out how to link initial value to System.property("euca.log.level")
 	@ConfigurableField(description = "Log level for dynamic override.", initial = "", changeListener = LogLevelListener.class, displayName = "euca.log.level")
-	public static String EUCA_LOG_LEVEL = "";
+	public static String EUCA_LOG_LEVEL = Logs.isExtrrreeeme() ? "EXTREME" : System.getProperty("euca.log.level", "");
 
 }
