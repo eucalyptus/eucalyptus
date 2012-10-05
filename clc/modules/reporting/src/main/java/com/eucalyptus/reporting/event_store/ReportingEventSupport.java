@@ -58,9 +58,7 @@ public abstract class ReportingEventSupport implements Serializable {
   @Column(name = "creation_timestamp", updatable = false, nullable = false)
   private Date creationTimestamp;
 
-  @Index(name="timestamp_ms_i")
   @Column(name="timestamp_ms", nullable = false)
-
   protected Long timestampMs;
 
   public String getId() {
