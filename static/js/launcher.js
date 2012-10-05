@@ -268,6 +268,7 @@
           }
         });
         $section.find('div#launch-images_filter').find('input').watermark(launch_instance_image_search_watermark);
+        $section.find('div#launch-images_filter').find('input').attr('title', launch_instance_image_search_text_tip);
       };
 
       
