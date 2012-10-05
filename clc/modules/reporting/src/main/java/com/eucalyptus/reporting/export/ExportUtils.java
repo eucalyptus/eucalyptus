@@ -471,7 +471,7 @@ public class ExportUtils {
         action.setScope( createEvent.getS3BucketName() );
         action.setId( createEvent.getS3ObjectKey() );
         action.setVersion( createEvent.getObjectVersion() );
-        action.setSize( createEvent.getSizeGB() );
+        action.setSize( createEvent.getSize() );
         action.setUserId( createEvent.getUserId() );
         return action;
       }

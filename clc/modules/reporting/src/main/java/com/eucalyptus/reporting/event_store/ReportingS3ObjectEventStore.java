@@ -31,9 +31,9 @@ public class ReportingS3ObjectEventStore extends EventStoreSupport
   }
 
   public void insertS3ObjectCreateEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
-		  long sizeGB, long timestampMs, String userId)
+		  long size, long timestampMs, String userId)
   {
-    persist( new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectKey, objectVersion, sizeGB, timestampMs, userId) );
+    persist( new ReportingS3ObjectCreateEvent(s3BucketName, s3ObjectKey, objectVersion, size, timestampMs, userId) );
   }
 
   public void insertS3ObjectDeleteEvent(String s3BucketName, String s3ObjectKey, String objectVersion,

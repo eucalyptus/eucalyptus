@@ -127,7 +127,7 @@ class S3Renderer
 		throws IOException
 	{
 		doc.addValCol(entity.getObjectsNum());
-		doc.addValCol(UnitUtil.convertSize(entity.getSizeGB(), SizeUnit.GB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getSize(), SizeUnit.BYTES, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSizeTime(entity.getGBSecs(), SizeUnit.GB,
 				units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
 		return doc;

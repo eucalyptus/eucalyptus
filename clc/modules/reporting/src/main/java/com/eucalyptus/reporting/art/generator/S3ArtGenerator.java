@@ -77,8 +77,8 @@ import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.domain.ReportingUserDao;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent;
-import com.eucalyptus.reporting.event_store.ReportingVolumeCreateEvent;
-import com.eucalyptus.reporting.event_store.ReportingVolumeDeleteEvent;
+import com.eucalyptus.reporting.units.SizeUnit;
+import com.eucalyptus.reporting.units.UnitUtil;
 import com.google.common.base.Predicate;
 
 public class S3ArtGenerator
@@ -149,7 +149,7 @@ public class S3ArtGenerator
 				 * will be overwritten later if we encounter a delete event (or multiple delete
 				 * events) for an object before the end of the report.
 				 */
-				objectData.put(objectKey, new S3ObjectData(createEvent.getSizeGB()));
+				objectData.put(objectKey, new S3ObjectData(createEvent.getSize()));
 				return true;
 			}
 		});
@@ -184,9 +184,10 @@ public class S3ArtGenerator
 			if (bucketUsageEntities.containsKey(objKey.bucketName)) {
 				BucketUsageArtEntity usage = bucketUsageEntities.get(objKey.bucketName);
 				usage.setObjectsNum(usage.getObjectsNum()+1);
-				long gBSecs = (data.durationMs/1000)*data.sizeGB;
-				usage.setGBSecs(gBSecs);
-				usage.setSizeGB(usage.getSizeGB() + data.sizeGB);
+				long gBSecs = (data.durationMs/1000) * //TODO:STEVE: should sum first then calc GB secs
+						UnitUtil.convertSize( data.size, SizeUnit.BYTES, SizeUnit.GB );
+				usage.setGBSecs( usage.getGBSecs() + gBSecs );
+				usage.setSize( usage.getSize() + data.size );
 			} else {
 				log.error("Object without corresponding bucket:" + objKey.bucketName);
 			}
@@ -215,7 +216,7 @@ public class S3ArtGenerator
 	{
 
 		totalEntity.setObjectsNum(totalEntity.getObjectsNum() + newEntity.getObjectsNum());
-		totalEntity.setSizeGB(totalEntity.getSizeGB() + newEntity.getSizeGB());
+		totalEntity.setSize( totalEntity.getSize() + newEntity.getSize() );
 		totalEntity.setGBSecs(totalEntity.getGBSecs() + newEntity.getGBSecs());
 		totalEntity.setNumGetRequests(totalEntity.getNumGetRequests() + newEntity.getNumGetRequests());
 		totalEntity.setNumPutRequests(totalEntity.getNumPutRequests() + newEntity.getNumPutRequests());
@@ -290,12 +291,12 @@ public class S3ArtGenerator
 	private static class S3ObjectData
 	{
 		private long durationMs;
-		private long sizeGB;
+		private long size;
 		
-		private S3ObjectData(long sizeGB)
+		private S3ObjectData(long size)
 		{
 			this.durationMs = 0l;
-			this.sizeGB = sizeGB;
+			this.size = size;
 		}
 	}
 	
