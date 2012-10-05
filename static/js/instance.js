@@ -98,10 +98,23 @@
               "bVisible": false,
               "mDataProp": "launch_time",
               "sType": "date"
+            },
+            {
+              "bVisible": false,
+              "fnRender" : function(oObj) { 
+                 var results = describe('image');
+                 var image = null;
+                 for (i in results){
+                   if(results[i].id === oObj.aData.image_id){
+                     image = results[i];
+                     break;
+                   }
+                 }
+                 return image ? image.location : '';
+              }
             }
           ]
         },
-        create_new_function : function() { thisObj.launchInstance(); },
         text : {
           header_title : instance_h_title,
           create_resource : instance_create,
@@ -607,7 +620,7 @@
         if(os === 'windows'){ 
           thisObj.connectDialog.eucadialog('addNote','instance-connect-text',$.i18n.prop('instance_dialog_connect_windows_text', group, keyname));
           thisObj.connectDialog.eucadialog('addNote','instance-connect-uname-password', 
-            ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span>'+ip+'\\Administrator </span></td> <td> <span> <a href="#">'+$.i18n.prop('instance_dialog_connect_getpassword', keyname)+'</a></span></td> </tr> </tbody> </table>');
+            ' <table> <thead> <tr> <th> <span>'+instance_dialog_connect_username+'</span> </th> <th> <span>'+instance_dialog_connect_password+'</span> </th> </tr> </thead> <tbody> <tr> <td> <span>'+ip+'\\Administrator </span></td> <td> <span> <a id="password-link" href="#">'+$.i18n.prop('instance_dialog_connect_getpassword', keyname)+'</a></span></td> </tr> </tbody> </table>');
           if (!thisObj.instPassword[instance]){
             var $fileSelector = thisObj.connectDialog.find('input#fileupload');
             $fileSelector.fileupload( {
@@ -617,7 +630,7 @@
               done: function (e, data) {
                 $.each(data.result, function (index, result) {
                   thisObj.instPassword[result.instance] = result.password;
-                  var parent = thisObj.connectDialog.find('a').last().parent();
+                  var parent = thisObj.connectDialog.find('a#password-link').parent();
                   parent.find('a').remove();
                   parent.html(result.password);
                   //thisObj.connectDialog.find('a').last().html(result.password);
@@ -633,7 +646,7 @@
               $fileSelector.trigger('click'); 
             });
           }else {
-            var parent = thisObj.connectDialog.find('a').last().parent();
+            var parent = thisObj.connectDialog.find('a#password-link').parent();
             parent.find('a').remove();
             parent.html(thisObj.instPassword[instance]);
             //thisObj.connectDialog.find('a').last().html(
@@ -862,7 +875,7 @@
 
       $header = thisObj.launchMoreDialog.find('#launch-wizard-advanced-header');
       $header.children().detach();
-      $header.append($('<a>').attr('href', '#').html('*'+launch_instance_section_header_advanced).click( function(e) {
+      $header.append($('<a>').attr('href', '#').html(launch_instance_section_header_advanced).click( function(e) {
         var $advSection = thisObj.launchMoreDialog.find('#launch-wizard-advanced-contents');
         $advSection.slideToggle('fast');
         $header.toggleClass('expanded');
@@ -873,7 +886,9 @@
 
       var platform = image.platform ? image.platform : 'linux';
       var $summary = $('<div>').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(platform));;
+      var imgName = inferImageName(image.location, image.description, platform);
       var $image = thisObj.launchMoreDialog.find('#launch-more-summary-image');
+      $image.addClass(imgName);
       $image.children().detach();
       $image.append($summary.children());
 
@@ -983,19 +998,21 @@
             $('<div>').addClass('expanded-section-content').addClass('clearfix'));
         $.each(instance.block_device_mapping, function(key, mapping){
           var creationTime = '';
-          creationTime = attachedVols[mapping.volume_id].create_time;
-          creationTime = formatDateTime(creationTime); 
-          $volInfo.find('.expanded-section-content').append(
-            $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
-              $('<li>').append(
-                $('<div>').addClass('expanded-title').text(instance_table_expanded_volid),
-                $('<div>').addClass('expanded-value').text(mapping.volume_id)),
-              $('<li>').append(
-                $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap),
-                $('<div>').addClass('expanded-value').text(key)),
-              $('<li>').append(
-                $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime),
-                $('<div>').addClass('expanded-value').text(creationTime))));
+          if(mapping.volume_id in attachedVols){
+            creationTime = attachedVols[mapping.volume_id].create_time;
+            creationTime = formatDateTime(creationTime); 
+            $volInfo.find('.expanded-section-content').append(
+              $('<ul>').addClass('volume-expanded').addClass('clearfix').append(
+                $('<li>').append(
+                  $('<div>').addClass('expanded-title').text(instance_table_expanded_volid),
+                  $('<div>').addClass('expanded-value').text(mapping.volume_id)),
+                $('<li>').append(
+                  $('<div>').addClass('expanded-title').text(instance_table_expanded_devmap),
+                  $('<div>').addClass('expanded-value').text(key)),
+                $('<li>').append(
+                  $('<div>').addClass('expanded-title').text(instance_table_expanded_createtime),
+                  $('<div>').addClass('expanded-value').text(creationTime))));
+          }
         });
       } 
       $wrapper.append($instInfo);

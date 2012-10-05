@@ -37,6 +37,8 @@
         if(src && ( src.indexOf('navigator')>=0 || src.indexOf('create-new') >=0) ){ // 'src=navigator:*' when the click event is generated due to menu selection; or src=create-new when event is generated due to clicking on create-new button
           return false; // this will fix hashtag implementation
         }
+        if($(evt.target).is('a') && $(evt.target).attr('href') === '#')
+          return false;
 //        console.log('num events: '+Object.keys(thisObj._clicked).length);
       });
     },

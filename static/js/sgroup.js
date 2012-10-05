@@ -58,7 +58,6 @@
             }*/
           ],
         },
-        create_new_function : function() { addGroup(); },
         text : {
           header_title : sgroup_h_title,
           create_resource : sgroup_create,
@@ -287,6 +286,7 @@
         thisObj._storeRule(thisObj.addDialog);
         // now reset form
         thisObj.addDialog.find('#sgroup-template').val('none');
+        thisObj.editDialog.find('#sgroup-more-rules').css('display', 'none');
         thisObj.addDialog.find('#sgroup-ports').val('');
         thisObj.addDialog.find('#allow-ip').val('');
         thisObj.addDialog.find('#allow-group').val('');
@@ -404,6 +404,7 @@
         thisObj._storeRule(thisObj.editDialog);
         // now reset form
         thisObj.editDialog.find('#sgroup-template').val('none');
+        thisObj.editDialog.find('#sgroup-more-rules').css('display', 'none');
         thisObj.editDialog.find('#sgroup-ports').val('');
         thisObj.editDialog.find('#allow-ip').val('');
         thisObj.editDialog.find('#allow-group').val('');
@@ -803,10 +804,8 @@
           break;
         }
       }
-      if(!group){
-        return $('<div>').append(
-                 $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
-                  $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title)));
+      if(!group || !group.rules || group.rules.length <= 0){
+        return null;
       }
       var $wrapper = $('<div>').addClass('sgroup-table-expanded-group').addClass('clearfix').append(
           $('<div>').addClass('expanded-section-label').text(sgroup_table_expanded_title), 

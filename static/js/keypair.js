@@ -47,7 +47,6 @@
             { "mDataProp": "fingerprint", "bSortable": false }
           ],
         },
-        create_new_function : function() { addKeypair(); },
         text : {
           header_title : keypair_h_title,
           create_resource : keypair_create,

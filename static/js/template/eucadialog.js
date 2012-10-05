@@ -51,7 +51,7 @@
          show: 'fade',
          // don't add hide: 'fade' here b/c it causes an issue with positioning the dialog next to another dialog
          resizable: false,
-         closeOnEscape : false,
+         closeOnEscape : true,
          position: { my: 'center', at: 'center', of: window, collision: 'none'},
          title: thisObj.options.title,
          user_val: thisObj.options.user_val,

@@ -74,7 +74,7 @@
                  thisObj._data[name] = null;
                }
                if(thisObj.getStatus() !== 'online'){
-                 logout();
+                 errorAndLogout();
                }
                if (jqXHR.status == 504) {
                  notifyError($.i18n.prop('data_load_timeout'));

@@ -359,16 +359,12 @@
         <div id="sgroups-add-wrapper">
 
           <div id="sgroups-add-dialog" class="euca-dialog">
-            <div class="dialog-inner-content">
-              
-              <div class="intro-text">
-                <p class="required-hint">{{!: required_fields }}</p>
-              </div>  
+            <div class="dialog-inner-content"> 
               
               <div class="content-sections-wrapper">
 
                 <div class="group content-section">
-                  <h3 class="required-label">Group</h3>
+                  <h3>Group</h3>
                   <div class="content-section-label">{{!: sgroup_dialog_add_group }}</div>
                   <div class="form-row">
                     <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
@@ -454,8 +450,9 @@
                     </div>  
                   
                     <div class="form-row sg-inline-options">
-                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/><span id="allow-ip-error" class="sg-error-msg"></span>
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
                       <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
+                      <div id="allow-ip-error" class="sg-error-msg"></div>
                     </div>
   
                     <div class="form-row sg-options-row">
@@ -467,7 +464,7 @@
                     </div> 
                      
                     <div id="sgroup-rules-list"></div>
-
+                    
                   </div>
                   <!-- END #sgroup-more-rules -->
 
@@ -475,7 +472,9 @@
                 <!-- END content-section -->   
 
               </div>
-              <!-- END content-sections-wrapper -->    
+              <!-- END content-sections-wrapper -->
+
+              <p class="required-hint">{{!: required_fields }}</p>    
             
             </div>
             <!-- END dialog-inner-content -->
@@ -925,6 +924,11 @@
                 <label for="snapshot-register-image-desc">{{!: snapshot_register_dialog_image_desc }}</label>
                 <textarea id="snapshot-register-image-desc" class="description" />
               </div>
+              <div class="form-row clearfix checkbox-only">
+                <input type="checkbox" id="snapshot-register-image-os"/>
+                <label for="snapshot-register-image-os">{{!:snapshot_register_dialog_image_os}} </label>
+              </div>
+              <div class="required-hint">{{!:snapshot_register_dialog_required}} </div>
             </div>
           </div>
           <div id="snapshot-register-dialog-help" class="dialog-help">
@@ -1325,7 +1329,6 @@
 
                 <div class="launch-wizard-intro-text">
                   <div id="launch-wizard-note">{{!>launch_instance_note}}</div>
-                  <div id="launch-wizard-required" class="required-hint">{{!> launch_instance_required }}</div>
                 </div>
                 
                 <div class="launch-wizard-pointer"></div>       
@@ -1382,6 +1385,8 @@
                       <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> </div>
                     </div>
                   </div>
+
+                  <div id="launch-wizard-required" class="required-hint">{{!> launch_instance_required }}</div>
 
                 </div>
                 <!-- END Launch Wizard Steps -->

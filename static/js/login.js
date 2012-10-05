@@ -65,10 +65,9 @@
             thisObj.errorDialog.eucadialog('open');
             var msgdiv = thisObj.errorDialog.find("#login-error-message p")
             if (args.search("Timeout")>-1) {
-                msgdiv.html($.i18n.prop('login_timeout', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
-            }
-            else {
-                msgdiv.html($.i18n.map['login_failure']);
+              msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', "<a href='"+getProxyCloudAdminLink()+"'>"+cloud_admin+"</a>"));
+            } else {
+              msgdiv.addClass('dialog-error').html(login_failure);
             }
           }		     
         });
@@ -100,6 +99,17 @@
       }
     },
     _destroy : function() { },
+
+  /////// PUBLIC METHODS //////
+    popupError : function(msg, callback) {
+     var thisObj = this;
+     thisObj.errorDialog.eucadialog('open');
+     if(callback){
+       thisObj.errorDialog.data('eucadialog').option('on_close', {callback: callback});
+     }
+     var msgdiv = thisObj.errorDialog.find("#login-error-message p")
+     msgdiv.addClass('dialog-error').html(msg);
+   }
   });
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
