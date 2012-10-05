@@ -42,7 +42,7 @@ import com.eucalyptus.event.Listeners;
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
   @ConfigurableField(initial = "15", description = "How often the reporting system requests information from the cluster controller")
-  public static long DEFAULT_WRITE_INTERVAL_MINS = 15;
+  public static long DEFAULT_POLL_INTERVAL_MINS = 15;
   
   private Integer COLLECTION_INTERVAL_TIME_MS;
   private Integer HISTORY_SIZE = 10;
@@ -58,13 +58,13 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   public void fireEvent( Hertz event ) {
    
 	COLLECTION_INTERVAL_TIME_MS = (((int) TimeUnit.MINUTES
-		.toMillis(DEFAULT_WRITE_INTERVAL_MINS)) / HISTORY_SIZE) * 2;
+		.toMillis(DEFAULT_POLL_INTERVAL_MINS)) / HISTORY_SIZE) * 2;
 
 	if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
 
 	    try {
 
-		if (event.isAsserted(DEFAULT_WRITE_INTERVAL_MINS)) {
+		if (event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {
 		    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
 
 			for (final ServiceConfiguration ccConfig : Topology
@@ -83,8 +83,8 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 	    }
 
 	} else {
-	    LOG.error("DEFAULT_WRITE_INTERVAL_MINS : "
-		    + DEFAULT_WRITE_INTERVAL_MINS
+	    LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
+		    + DEFAULT_POLL_INTERVAL_MINS
 		    + " must be less than 1440 minutes");
 	}
 

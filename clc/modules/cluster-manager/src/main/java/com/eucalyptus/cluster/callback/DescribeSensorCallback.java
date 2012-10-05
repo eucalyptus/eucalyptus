@@ -102,7 +102,6 @@ public class DescribeSensorCallback extends
   @Override
   public void fire(final DescribeSensorsResponse msg) {
       try {
-	  final Set<Double> uniqueValues = new HashSet<Double>();
 	  
 	  final Iterable<String> uuidList = Iterables.transform(
 		  VmInstances.list(VmState.RUNNING),
@@ -120,30 +119,24 @@ public class DescribeSensorCallback extends
 		      .getMetrics()) {
 		  for (final MetricCounterType counterType : metricType
 			  .getCounters()) {
-		      
+		      final long sequenceNumber = counterType.getSequenceNum();
 		      for (final MetricDimensionsType dimensionType : counterType
 			      .getDimensions()) {
-			  // find and fire most recent value for
-			  // metric/dimension
+
 			  final List<MetricDimensionsValuesType> values = Lists
 				  .newArrayList(dimensionType.getValues());
 			    
 			  Collections.sort(values, Ordering.natural()
 				  .onResultOf(GetTimestamp.INSTANCE));
-
-			  Collections.reverse(values);
-
+			  
 			    for (MetricDimensionsValuesType theValue : values) {
 
 				final Double usageValue = theValue.getValue();
 
-				if (!uniqueValues.add(usageValue) && counterType.getType().equalsIgnoreCase(CounterName.summation.toString()))
-				    continue;
-
 				final Long usageTimestamp = theValue
 					.getTimestamp().getTime();
-				final long sequenceNumber = counterType
-					.getSequenceNum();
+				
+				final Long currentSeqNum = sequenceNumber + 1;
 
 				fireUsageEvent(new Supplier<InstanceUsageEvent>() {
 				    @Override
@@ -152,7 +145,7 @@ public class DescribeSensorCallback extends
 						sensorData.getResourceUuid(),
 						sensorData.getResourceName(),
 						metricType.getMetricName(),
-						sequenceNumber,
+						currentSeqNum,
 						dimensionType
 							.getDimensionName(),
 						usageValue, usageTimestamp);
@@ -179,10 +172,6 @@ public class DescribeSensorCallback extends
       LOG.debug( "Failed to fire instance usage event"
           + (event!=null?event:""), e );
     }
-  }
-
-  private enum CounterName {
-      summation, average;
   }
  
   private enum GetTimestamp implements Function<MetricDimensionsValuesType,Date> {

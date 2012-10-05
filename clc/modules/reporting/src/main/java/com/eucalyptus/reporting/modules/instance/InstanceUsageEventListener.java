@@ -62,46 +62,118 @@
 
 package com.eucalyptus.reporting.modules.instance;
 
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nonnull;
 import org.apache.log4j.*;
 import org.hibernate.exception.ConstraintViolationException;
 
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.*;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
+import com.google.common.collect.Lists;
 
+@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class InstanceUsageEventListener implements EventListener<InstanceUsageEvent> {
-  private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
+    private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
 
-  public static void register( ) {
-    Listeners.register( InstanceUsageEvent.class, new InstanceUsageEventListener( ) );
-  }
+    @ConfigurableField(initial = "15", description = "How often the reporting system requests information from the cluster controller")
+    public static long DEFAULT_WRITE_INTERVAL_MINS = 15;
+    
+    private static final ScheduledExecutorService eventFlushTimer   = Executors.newScheduledThreadPool( 50 );
+    
+    private static InstanceUsageEvent lastEvent = new InstanceUsageEvent("-1", "-1", "-1", -1L, "-1", -1D, -1L);
 
-  @Override
-  public void fireEvent( @Nonnull final InstanceUsageEvent event ) {
-
-    if ( log.isDebugEnabled() ) {
-      log.debug("Received instance usage event:" + event);
+    private static List<InstanceUsageEvent> eventQueue = Lists.newArrayList();
+    
+    private static int MAX_QUEUE_SIZE = 50;
+    
+    public static void register( ) {
+	Listeners.register( InstanceUsageEvent.class, new InstanceUsageEventListener( ) );
     }
 
-    try {
-      final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
-      eventStore.insertUsageEvent(
-          event.getUuid(),
-          event.getValueTimestamp(),
-          event.getMetric(),
-          event.getSequenceNum(),
-          event.getDimension(),
-          event.getValue()
-      );
-    } catch ( ConstraintViolationException ex ) {
-      log.debug( ex, ex ); // info already exists for instance
-    } catch ( Exception ex ) {
-      log.error( ex, ex );
+    @Override
+    public void fireEvent(@Nonnull final InstanceUsageEvent event) {
+	
+	if (log.isDebugEnabled()) {
+	    log.debug("Received instance usage event:" + event);
+	}
+	if (lastEvent.getInstanceId().equals("-1")) {
+	    queueEvent(event);
+	    lastEvent = new InstanceUsageEvent(event.getUuid(),event.getInstanceId(), event.getMetric(), event.getSequenceNum(), event.getDimension(), event.getValue(), event.getValueTimestamp());
+	} else if (lastEvent.getInstanceId().equals(event.getInstanceId())
+		&& !lastEvent.getMetric().equals(event.getMetric())
+		&& !lastEvent.getDimension().equals(event.getDimension())
+		&& lastEvent.getValue() != event.getValue()) {
+	    queueEvent(event);
+	    lastEvent = new InstanceUsageEvent("-1", "-1", "-1", -1L, "-1", -1D, -1L);
+	} else {
+	    log.debug("Instance Usage Event : " + event.getInstanceId() + " : "
+		    + event.getValue() + "has already been record.");
+	}
+
+	if (checkEventQueue()) {
+	    flushEventQueue();   
+	}
+	
     }
-  }
-  protected ReportingInstanceEventStore getReportingInstanceEventStore() {
-    return ReportingInstanceEventStore.getInstance();
-  }
+
+    private void queueEvent(InstanceUsageEvent event) {
+	eventQueue.add(event);
+    }
+    
+    private void flushEventQueue() {
+
+	final List<InstanceUsageEvent> copyEventQueue = Lists.newArrayList(eventQueue);
+
+	Runnable safeRunner = new Runnable() {
+	    @Override
+	    public void run() {
+		for (final InstanceUsageEvent event : copyEventQueue) {
+		    insertEvent(event);
+		}
+		eventQueue.clear();
+		copyEventQueue.clear();
+	    }
+	};
+
+	final long delayTime = TimeUnit.MINUTES.toMillis(DEFAULT_WRITE_INTERVAL_MINS);
+	
+	eventFlushTimer.scheduleAtFixedRate(safeRunner, delayTime, 500,
+		TimeUnit.MILLISECONDS);
+	
+    }
+
+    private boolean checkEventQueue() {
+	
+	if (eventQueue.size() >= MAX_QUEUE_SIZE ) {
+	    return true;
+	} else {
+	    return false; 
+	}
+	
+    }
+    private void insertEvent(InstanceUsageEvent event) {
+	try {
+	    final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();
+	    eventStore.insertUsageEvent(event.getUuid(),
+		    event.getValueTimestamp(), event.getMetric(),
+		    event.getSequenceNum(), event.getDimension(),
+		    event.getValue());
+	} catch (ConstraintViolationException ex) {
+	    log.debug(ex, ex); // info already exists for instance
+	} catch (Exception ex) {
+	    log.error(ex, ex);
+	}
+    }
+
+    protected ReportingInstanceEventStore getReportingInstanceEventStore() {
+	return ReportingInstanceEventStore.getInstance();
+    }
 }
