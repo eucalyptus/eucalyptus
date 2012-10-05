@@ -2236,6 +2236,11 @@ span.on-error {
   padding-right: 10px;
 }
 
+.advanced-link-wrapper {
+  /* For the Advanced options link under the Launch Instances button */
+  margin: 5px 13px 0 0;
+}
+
 .image-type {
   padding-left: 60px;
   background-repeat: no-repeat;
@@ -2369,14 +2374,9 @@ span.on-error {
 .wizard-section-label {
   color: #02405f;
   font-weight: bold;
-  margin-bottom: 4px;
+  font-size: 14px;
+  margin-bottom: 10px;
  } 
-
-.wizard-subsection-label {
-  color: #02405f;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
 
 .launch-wizard-section-header {
   position: absolute;
@@ -2465,18 +2465,26 @@ textarea.console-output {
 
 /* ======= Euca credits ======= */
 
-img.euca-credits {
-  display: block;
-  margin: auto;
-}
-
-div.euca-credits {
-  text-align: center;
-  height: 400px;
+.euca-credits {
   overflow: auto;
+  margin: 25px 0;
+  height: 400px;
+  text-align: center;
 }
 
-ul.euca-credits {
+.euca-credits img {
+  display: block;
+  margin: 10px auto;
+}
+
+.euca-credits p {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.euca-credits ul {
+  margin: 0 0 15px;
+  padding: 0;
   list-style-type: none;
 }
 

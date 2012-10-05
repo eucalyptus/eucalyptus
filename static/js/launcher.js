@@ -213,7 +213,7 @@
       $securityBtn.append(
         $('<button>').attr('id','launch-wizard-buttons-security-launch').addClass('button').html(launch_instance_btn_launch).click( function(e){
         }),
-        $('<div>').addClass('form-row').addClass('clearfix').append(  
+        $('<div>').addClass('form-row advanced-link-wrapper').append(  
           $('<label>').attr('for','launch-wizard-buttons-security-advanced-link').text(or_label), 
           $('<a>').attr('id','launch-wizard-buttons-security-advanced-link').attr('href','#').html(launch_instance_btn_next_advanced).click( function(e){
             var advSection = $launcher.find('#launch-wizard-advanced-contents');
@@ -361,8 +361,8 @@
           };
       this._imageTable = $table.dataTable(dtArg);
     
-      $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-subsection-label').html(launch_instance_image_table_refine));
-      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-subsection-label').html(launch_instance_image_table_header));
+      $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_refine));
+      $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_header));
 
       $.fn.dataTableExt.afnFiltering = [];
       $.fn.dataTableExt.afnFiltering.push(
@@ -515,7 +515,7 @@
         $az.append($('<option>').attr('value', azName).text(azName));
       }
 
-      $option.append($('<span>').html(launch_instance_type_option_header),
+      $option.append($('<div>').addClass('wizard-section-label').html(launch_instance_type_option_header),
                      $list);
 
       $section.find('#launch-wizard-buttons-type-next').click(function(e) {
@@ -557,7 +557,7 @@
     _makeSecuritySection : function($section) {
       var thisObj = this;
       var $content = $section.find('#launch-wizard-security-main-contents');
-      $content.prepend($('<span>').html(launch_instance_security_header));
+      $content.prepend($('<div>').addClass('wizard-section-label').html(launch_instance_security_header));
       var $keypair = $content.find('#launch-wizard-security-keypair');
       var $sgroup = $content.find('#launch-wizard-security-sgroup');
       
@@ -746,7 +746,7 @@
       var thisObj = this;
       var $content = $section.find('#launch-wizard-advanced-main-contents');
       if(! $content.children().first().is('span'))
-        $content.prepend($('<span>').html(launch_instance_advanced_header));
+        $content.prepend($('<div>').addClass('wizard-section-label').html(launch_instance_advanced_header));
       var $userdata = $content.find('#launch-wizard-advanced-userdata');
       var $kernel = $content.find('#launch-wizard-advanced-kernelramdisk');
       var $network = $content.find('#launch-wizard-advanced-network');
@@ -1004,7 +1004,7 @@
       } /// end of addNewRow()
 
       $storage.append(
-        $('<span>').text(launch_instance_advanced_storage),
+        $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
         $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
           $('<table>').append(
             $('<thead>').append(

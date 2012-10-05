@@ -862,7 +862,7 @@
 
       $header = thisObj.launchMoreDialog.find('#launch-wizard-advanced-header');
       $header.children().detach();
-      $header.append($('<a>').attr('href', '#').html('*'+launch_instance_section_header_advanced).click( function(e) {
+      $header.append($('<a>').attr('href', '#').html(launch_instance_section_header_advanced).click( function(e) {
         var $advSection = thisObj.launchMoreDialog.find('#launch-wizard-advanced-contents');
         $advSection.slideToggle('fast');
         $header.toggleClass('expanded');
