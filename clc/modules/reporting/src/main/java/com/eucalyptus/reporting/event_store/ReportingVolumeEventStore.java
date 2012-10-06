@@ -54,15 +54,6 @@ public class ReportingVolumeEventStore extends EventStoreSupport
     persist( new ReportingVolumeDeleteEvent(uuid, timestampMs) );
   }
 
-  public void insertUsageEvent( final String uuid,
-                                final long timestampMs,
-                                final long cumulativeMegsRead,
-                                final long cumulativeMegsWritten ) {
-    Preconditions.checkNotNull(uuid, "Uuid is required");
-
-    persist( new ReportingVolumeUsageEvent(uuid, timestampMs, cumulativeMegsRead, cumulativeMegsWritten) );
-  }
-
   public void insertAttachEvent( final String uuid,
                                  final String instanceUuid,
                                  final long sizeGB,
@@ -75,12 +66,11 @@ public class ReportingVolumeEventStore extends EventStoreSupport
 
   public void insertDetachEvent( final String uuid,
                                  final String instanceUuid,
-                                 final long sizeGB,
                                  final long timestampMs ) {
     Preconditions.checkNotNull(uuid, "Uuid is required");
     Preconditions.checkNotNull(instanceUuid, "InstanceUuid is required");
 
-    persist( new ReportingVolumeDetachEvent(uuid, instanceUuid, sizeGB, timestampMs) );
+    persist( new ReportingVolumeDetachEvent(uuid, instanceUuid, timestampMs) );
   }
 
 }

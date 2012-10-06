@@ -24,7 +24,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest
-from boto.roboto.param import Param
 from eucadmin import EucAdmin
 import eucadmin
 
@@ -38,6 +37,10 @@ class ReportsRequest(AWSQueryRequest):
     def process_args(self, **args):
         args['path'] = self.ServicePath
         super(ReportsRequest, self).process_args( **args )
+
+    def process_date_param(self, arg):
+        if arg in self.request_params:
+            self.request_params[arg] += 'T00:00:00'
 
     def main(self, **args):
         return self.send(**args)

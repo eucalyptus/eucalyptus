@@ -59,8 +59,8 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
     try {
       final User user = lookupUser(event.getOwner().getUserId());
 
-      getReportingAccountCrud().createOrUpdateAccount(user.getAccount()
-          .getName(), user.getAccount().getAccountNumber());
+      getReportingAccountCrud().createOrUpdateAccount(user.getAccount().getAccountNumber(),
+    		  user.getAccount().getName());
       getReportingUserCrud().createOrUpdateUser(user.getUserId(), user
           .getAccount().getAccountNumber(), user.getName());
 
@@ -86,7 +86,7 @@ public class VolumeUsageEventListener implements EventListener<VolumeEvent> {
           eventStore
               .insertDetachEvent(event.getUuid(),
                   ((InstanceEventActionInfo) event.getActionInfo())
-                      .getInstanceUuid(), event.getSizeGB(),
+                      .getInstanceUuid(),
                   timeInMs);
           break;
       }

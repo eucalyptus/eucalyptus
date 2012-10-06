@@ -62,6 +62,7 @@
 package com.eucalyptus.reporting.art.entity;
 
 import com.eucalyptus.reporting.art.ArtObject;
+import com.google.common.base.Objects;
 
 public class InstanceUsageArtEntity
 	implements ArtObject
@@ -69,16 +70,27 @@ public class InstanceUsageArtEntity
 	private long durationMs           = 0l;
 	private int  instanceCnt          = 0;
 
-	private Long cpuUtilizationMs     = null;
-	private Long diskInMegs           = null;
-	private Long diskOutMegs          = null;
-	private Long netInternalInMegs    = null;
-	private Long netInternalOutMegs   = null;
-	private Long netTotalInMegs       = null;
-	private Long netTotalOutMegs      = null;
+	private Long cpuUtilizationMs;
+	private Long diskReadMegs;
+	private Long diskWriteMegs;
+	private Long diskReadOps;
+	private Long diskWriteOps;
+	private Long netTotalInMegs;
+	private Long netTotalOutMegs;
+	private Long diskReadTime;
+	private Long diskWriteTime;
 
-	public InstanceUsageArtEntity()
-	{
+	public boolean isEmpty() {
+		return
+				cpuUtilizationMs == null &&
+				diskReadMegs == null &&
+				diskWriteMegs == null &&
+				diskReadOps == null &&
+				diskWriteOps == null &&
+				netTotalInMegs == null &&
+				netTotalOutMegs == null &&
+				diskReadTime == null &&
+				diskWriteTime == null;
 	}
 
 	public long getDurationMs()
@@ -111,62 +123,65 @@ public class InstanceUsageArtEntity
 		return cpuUtilizationMs;
 	}
 
-	private static Long plus(Long a, Long b)
-	{
-		if (a!=null && b!=null) {
-			return a.longValue()+b.longValue();
-		} else if (a!=null) {
-			return a.longValue();
-		} else if (b!=null) {
-			return b.longValue();
-		} else {
-			return null;
-		}
-	}
-	
 	public void addCpuUtilizationMs(Long cpuUtilizationMs)
 	{
 		this.cpuUtilizationMs = plus(this.cpuUtilizationMs, cpuUtilizationMs);
 	}
 
-	public Long getDiskInMegs()
+	public Long getDiskReadMegs()
 	{
-		return diskInMegs;
+		return diskReadMegs;
 	}
 
-	public void addDiskInMegs(Long diskInMegs)
+	public void addDiskReadMegs( Long diskReadMegs )
 	{
-		this.diskInMegs = plus(this.diskInMegs, diskInMegs);
+		this.diskReadMegs = plus(this.diskReadMegs, diskReadMegs);
 	}
 
-	public Long getDiskOutMegs()
+	public Long getDiskWriteMegs()
 	{
-		return diskOutMegs;
+		return diskWriteMegs;
 	}
 
-	public void addDiskOutMegs(Long diskOutMegs)
+	public void addDiskWriteMegs( Long diskWriteMegs )
 	{
-		this.diskOutMegs = plus(this.diskOutMegs, diskOutMegs);
+		this.diskWriteMegs = plus(this.diskWriteMegs, diskWriteMegs);
 	}
 
-	public Long getNetInternalInMegs()
-	{
-		return netInternalInMegs;
+	public Long getDiskReadOps() {
+		return diskReadOps;
 	}
 
-	public void addNetInternalInMegs(Long netInternalInMegs)
+	public void addDiskReadOps( Long diskReadOps )
 	{
-		this.netInternalInMegs = plus(this.netInternalInMegs, netInternalInMegs);
-}
-
-	public Long getNetInternalOutMegs()
-	{
-		return netInternalOutMegs;
+		this.diskReadOps = plus(this.diskReadOps, diskReadOps);
 	}
 
-	public void addNetInternalOutMegs(Long netInternalOutMegs)
+	public Long getDiskWriteOps() {
+		return diskWriteOps;
+	}
+
+	public void addDiskWriteOps( Long diskWriteOps )
 	{
-		this.netInternalOutMegs = plus(this.netInternalOutMegs, netInternalOutMegs);
+		this.diskWriteOps = plus(this.diskWriteOps, diskWriteOps);
+	}
+
+	public Long getDiskReadTime() {
+		return diskReadTime;
+	}
+
+	public void addDiskReadTime( Long diskReadTime )
+	{
+		this.diskReadTime = plus(this.diskReadTime, diskReadTime);
+	}
+
+	public Long getDiskWriteTime() {
+		return diskWriteTime;
+	}
+
+	public void addDiskWriteTime( Long diskWriteTime )
+	{
+		this.diskWriteTime = plus(this.diskWriteTime, diskWriteTime);
 	}
 
 	public Long getNetTotalInMegs()
@@ -184,9 +199,18 @@ public class InstanceUsageArtEntity
 		return netTotalOutMegs;
 	}
 
-	public void addNetTotalOutMegs(Long netExternalOutMegs)
+	public void addNetTotalOutMegs(Long netTotalOutMegs)
 	{
 		this.netTotalOutMegs = plus(this.netTotalOutMegs, netTotalOutMegs);
+	}
+
+	private static Long plus(Long a, Long b)
+	{
+		if (a!=null || b!=null) {
+			return Objects.firstNonNull(a, 0L) + Objects.firstNonNull(b, 0L);
+		} else {
+			return null;
+		}
 	}
 
 }

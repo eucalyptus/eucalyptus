@@ -105,7 +105,6 @@ class VolumeUsageEventListenerTest {
     ReportingVolumeDetachEvent event = persisted
     assertEquals( "Persisted event volume uuid", uuid("vol-00000001"), event.getVolumeUuid() )
     assertEquals( "Persisted event instance uuid", uuid("i-00000002"), event.getInstanceUuid() )
-    assertEquals( "Persisted event size", 12345L, event.getSizeGB() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
 
@@ -146,8 +145,8 @@ class VolumeUsageEventListenerTest {
     listener.fireEvent( event )
 
     assertNotNull( "Persisted event", persisted )
-    assertEquals( "Account Id", "eucalyptus", updatedAccountId  )
-    assertEquals( "Account Name", "000000000000", updatedAccountName )
+    assertEquals( "Account Id", "000000000000", updatedAccountId  )
+    assertEquals( "Account Name", "eucalyptus", updatedAccountName )
     assertEquals( "User Id", "eucalyptus", updatedUserId )
     assertEquals( "User Name", "eucalyptus", updatedUserName )
 

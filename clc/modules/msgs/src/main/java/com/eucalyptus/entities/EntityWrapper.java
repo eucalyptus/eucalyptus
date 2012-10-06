@@ -191,12 +191,6 @@ public class EntityWrapper<TYPE> {
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
 
-  public Iterator scanWithNativeQuery( final String queryName )
-  {
-	//TODO: we cannot call "iterate()" directly from Query, because Hibernate throws an UnsupportedOperationException since iterate() is not supported from SQL queries. CRAP.
-	return this.getSession().getNamedQuery( queryName ).list().iterator();
-  }
-  
   // Fix for EUCA-3453
   /**
    * Returns a list of results from the database that exactly match <code>example</code>. This method does not use <i><code>enableLike</code></i> match while the 

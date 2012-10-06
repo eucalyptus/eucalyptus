@@ -322,6 +322,21 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 	//	snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
 	//	rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
 
+	// Provides rules for doing internal/external network reporting/stats.
+	snprintf(cmd, 256, "-N EUCA_COUNTERS_IN");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-N EUCA_COUNTERS_OUT");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-A EUCA_COUNTERS_IN -d %s/%d", network, slashnet);
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-A EUCA_COUNTERS_OUT -s %s/%d", network, slashnet);
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-I FORWARD -j EUCA_COUNTERS_IN");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+	snprintf(cmd, 256, "-I FORWARD -j EUCA_COUNTERS_OUT");
+	rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+
+
 	unm = 0xFFFFFFFF - numaddrs;
 	unw = nw;
 	for (vlan=2; vlan<vnetconfig->max_vlan; vlan++) {
@@ -359,7 +374,7 @@ int vnetInit(vnetConfig *vnetconfig, char *mode, char *eucahome, char *path, int
 
       if (strcmp(vnetconfig->mode, "MANAGED")) {
 	/*
-	// if we're not in MANAGED mode, set up ebtables	
+	// if we're not in MANAGED mode, set up ebtables
 	snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " ebtables -F FORWARD", vnetconfig->eucahome);
 	rc = system(cmd);
 	if (rc) {
@@ -726,6 +741,7 @@ int vnetDeleteChain(vnetConfig *vnetconfig, char *userName, char *netName) {
       runcount++;
     }
 
+    logprintfl(EUCADEBUG, "vnetDeleteChain(): flushing 'filter' table\n");
     snprintf(cmd, 256, "-F %s", hashChain);
     rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
     if (rc) {
@@ -910,6 +926,7 @@ int vnetFlushTable(vnetConfig *vnetconfig, char *userName, char *netName) {
     return(1);
   }
 
+  logprintfl(EUCADEBUG, "vnetFlushTable(): flushing 'filter' table\n");
   if ((userName && netName) && !check_chain(vnetconfig, userName, netName)) {
     snprintf(cmd, 256, "-F %s", hashChain);
     ret = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
@@ -1527,14 +1544,14 @@ int vnetKickDHCP(vnetConfig *vnetconfig) {
     snprintf(buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " chgrp -R %s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->path);
     logprintfl(EUCADEBUG, "vnetKickDHCP(): executing: %s\n", buf);
     rc = system(buf);
-    
+
     snprintf(buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " chmod -R 0775 %s", vnetconfig->eucahome, vnetconfig->path);
     logprintfl(EUCADEBUG, "vnetKickDHCP(): executing: %s\n", buf);
     rc = system(buf);
   }
-  
+
   snprintf (buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " %s -cf %s/euca-dhcp.conf -lf %s/euca-dhcp.leases -pf %s/euca-dhcp.pid -tf %s/euca-dhcp.trace %s", vnetconfig->eucahome, vnetconfig->dhcpdaemon, vnetconfig->path, vnetconfig->path, vnetconfig->path, vnetconfig->path, dstring);
-  
+
   logprintfl(EUCAINFO, "vnetKickDHCP(): executing: %s\n", buf);
   // cannot use 'daemonrun()' here, dhcpd3 is too picky about FDs and signal handlers...
   rc = system(buf);
@@ -1564,7 +1581,7 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
   for (i=0; i<NUMBER_OF_CCS; i++) {
     if (vnetconfig->tunnels.ccs[i] == cc) {
       // bring down the tunnel
-      
+
       snprintf(file, MAX_PATH, EUCALYPTUS_RUN_DIR "/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i);
       rc = safekillfile(file, "vtund", 9, rootwrap);
 
@@ -1578,12 +1595,12 @@ int vnetDelCCS(vnetConfig *vnetconfig, uint32_t cc) {
 int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
   int i, j, found, lastj, localIpId=-1, rc;
   uint32_t tmpccs[NUMBER_OF_CCS];
-  
+
   if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
     logprintfl(EUCAERROR, "vnetSetCCS(): specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
     return(1);
-  }  
-  
+  }
+
   bzero(tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
   found=0;
   for (i=0; i<ccsLen; i++) {
@@ -1595,9 +1612,9 @@ int vnetSetCCS(vnetConfig *vnetconfig, char **ccs, int ccsLen) {
       vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
       vnetconfig->tunnels.localIpId = i;
       found=1;
-    }    
+    }
   }
-  
+
   if (memcmp(tmpccs, vnetconfig->tunnels.ccs, sizeof(uint32_t)*NUMBER_OF_CCS)) {
     // internal list is different from new list, teardown and re-construct tunnels
     logprintfl(EUCAINFO, "vnetSetCCS(): list of CCs has changed, initiating re-construction of tunnels\n");
@@ -1813,7 +1830,7 @@ int vnetStartNetworkManaged(vnetConfig *vnetconfig, int vlan, char *uuid, char *
           logprintfl(EUCAWARN, "vnetStartNetworkManaged(): could not set hello time to 2 on bridge %s\n", newbrname);
         }
       }
-      
+
       snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl addif %s %s", vnetconfig->eucahome, newbrname, newdevname);
       rc = system(cmd);
 
@@ -2001,7 +2018,7 @@ int vnetTeardownTunnels(vnetConfig *vnetconfig) {
 int vnetTeardownTunnelsVTUN(vnetConfig *vnetconfig) {
   int i, rc;
   char file[MAX_PATH], rootwrap[MAX_PATH];
-  
+
   snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
 
   snprintf(file, MAX_PATH, EUCALYPTUS_RUN_DIR "/vtund-server.pid", vnetconfig->eucahome);
@@ -2031,7 +2048,7 @@ int vnetSetupTunnelsVTUN(vnetConfig *vnetconfig) {
   if (!vnetconfig->tunnels.tunneling || (vnetconfig->tunnels.localIpId == -1)) {
     return(0);
   }
-  snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);  
+  snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
 
   snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/vtund-server.pid", vnetconfig->eucahome);
   snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vtund -s -n -f " EUCALYPTUS_KEYS_DIR "/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
@@ -2188,7 +2205,7 @@ int vnetApplyArpTableRules(vnetConfig *vnetconfig) {
 
   fclose(FH);
   close(fd);
-  
+
   snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_arpt %s", vnetconfig->eucahome, vnetconfig->eucahome, file);
   //  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);
@@ -2215,7 +2232,7 @@ int vnetDelGatewayIP(vnetConfig *vnetconfig, int vlan, char *devname, int localI
   newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
   //  newip = hex2dot(vnetconfig->networks[vlan].router);
   broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-  logprintfl(EUCADEBUG, "vnetDelGatewayIP(): removing gateway IP: %s\n", newip);  
+  logprintfl(EUCADEBUG, "vnetDelGatewayIP(): removing gateway IP: %s\n", newip);
   //  snprintf(cmd, 1024, EUCALYPTUS_ROOTWRAP " ifconfig %s %s netmask %s up", vnetconfig->eucahome, devname, newip, netmask);
   slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
   //slashnet = 16;
@@ -2266,7 +2283,7 @@ int vnetStopNetworkManaged(vnetConfig *vnetconfig, int vlan, char *userName, cha
 	logprintfl(EUCAERROR, "vnetStopNetworkManaged(): cmd '%s' failed\n", cmd);
 	ret=1;
       }
-  
+
       snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig rem %s", vnetconfig->eucahome, newdevname);
       rc = system(cmd);
       if (rc) {
@@ -2511,6 +2528,20 @@ int vnetAssignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
       logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply SNAT rule '%s'\n", cmd);
       ret = 1;
     }
+
+    // For reporting traffic statistics.
+    snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_IN -d %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply EUCA_COUNTERS_IN rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_OUT -s %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetAssignAddress(): failed to apply EUCA_COUNTERS_OUT rule '%s'\n", cmd);
+      ret = 1;
+    }
   }
   return(ret);
 }
@@ -2672,6 +2703,20 @@ int vnetUnassignAddress(vnetConfig *vnetconfig, char *src, char *dst) {
     }
     if (rc) {
       logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove SNAT rule '%s'\n", cmd);
+      ret = 1;
+    }
+
+    // For reporting traffic statistics.
+    snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_IN -d %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
+      ret = 1;
+    }
+    snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_OUT -s %s", dst);
+    rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+    if (rc) {
+      logprintfl(EUCAERROR,"vnetUnassignAddress(): failed to remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
       ret = 1;
     }
 

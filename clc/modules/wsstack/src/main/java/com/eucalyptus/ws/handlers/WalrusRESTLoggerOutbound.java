@@ -62,32 +62,20 @@
 
 package com.eucalyptus.ws.handlers;
 
-import java.net.InetSocketAddress;
-import java.util.Calendar;
-import java.util.UUID;
-
-import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.ws.util.WalrusBucketLogger;
 
 import edu.ucsb.eucalyptus.cloud.BucketLogData;
 import edu.ucsb.eucalyptus.msgs.WalrusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.WalrusRequestType;
 import edu.ucsb.eucalyptus.msgs.WalrusResponseType;
 
 @ChannelPipelineCoverage("one")
 public class WalrusRESTLoggerOutbound extends MessageStackHandler {
-	@Override
-	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-	}
 
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {

@@ -31,34 +31,29 @@ public class InstanceUsageEvent implements Event {
   private static final long serialVersionUID = 1L;
 
   private final String uuid;
-  private final long timestamp;
-  private final String resourceName;
+  private final String instanceId;
   private final String metric;
-  private final int sequenceNum;
+  private final Long sequenceNum;
   private final String dimension;
   private final Double value;
-  private final long valueTimestamp;
+  private final Long valueTimestamp;
 
   public InstanceUsageEvent( final String uuid,
-                             final long timestamp,
-                             final String resourceName,
+                             final String instanceId,
                              final String metric,
-                             final int sequenceNum,
+                             final Long sequenceNum,
                              final String dimension,
                              final Double value,
-                             final long valueTimestamp ) {
-
+                             final Long valueTimestamp ) {
     assertThat( uuid, not( isEmptyOrNullString() ) );
-    assertThat( timestamp, notNullValue() );
-    assertThat( resourceName, not(isEmptyOrNullString()) );
+    assertThat( instanceId, not(isEmptyOrNullString()) );
     assertThat( metric, not(isEmptyOrNullString()) );
     assertThat( sequenceNum, notNullValue() );
     assertThat( dimension, not(isEmptyOrNullString()) );
     assertThat( value, notNullValue() );
     assertThat( valueTimestamp, notNullValue() );
     this.uuid = uuid;
-    this.timestamp = timestamp;
-    this.resourceName = resourceName;
+    this.instanceId = instanceId;
     this.metric = metric;
     this.sequenceNum = sequenceNum;
     this.dimension = dimension;
@@ -70,15 +65,15 @@ public class InstanceUsageEvent implements Event {
     return uuid;
   }
 
-  public String getResourceName() {
-    return resourceName;
+  public String getInstanceId() {
+    return instanceId;
   }
 
   public String getMetric() {
     return metric;
   }
 
-  public int getSequenceNum() {
+  public Long getSequenceNum() {
     return sequenceNum;
   }
 
@@ -90,18 +85,14 @@ public class InstanceUsageEvent implements Event {
     return value;
   }
 
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-  public long getValueTimestamp() {
+  public Long getValueTimestamp() {
     return valueTimestamp;
   }
 
   @Override
   public String toString() {
-    return "InstanceUsageEvent [uuid=" + uuid + ", timestamp=" + timestamp
-        + ", resourceName=" + resourceName + ", metric=" + metric
+    return "InstanceUsageEvent [uuid=" + uuid
+        + ", instanceId=" + instanceId + ", metric=" + metric
         + ", sequenceNum=" + sequenceNum + ", dimension=" + dimension
         + ", value=" + value + ", valueTimestamp=" + valueTimestamp
         + "]";

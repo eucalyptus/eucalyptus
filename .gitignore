@@ -55,6 +55,7 @@ tools/eucalyptus-cc
 tools/eucalyptus-cloud
 tools/eucalyptus-nc
 util/eucalyptus-config.h
+util/euca-generate-fault
 util/euca_mountwrap
 util/euca_rootwrap
 util/test_misc

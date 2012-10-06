@@ -145,8 +145,4 @@ public class QueryTimestampHandler extends MessageStackHandler {
       }
     }
   }
-  
-  @Override
-  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
-  
 }

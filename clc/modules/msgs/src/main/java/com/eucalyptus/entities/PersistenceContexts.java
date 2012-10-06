@@ -124,29 +124,37 @@ public class PersistenceContexts {
    * a persistence context. The lookup method is also invoked
    * for each subsequent (cached) lookup of the context.</p>
    */
-  public static interface PersistenceContextLookupInterceptor {
+  public static interface PersistenceContextEventInterceptor {
     void onLookup();
+    void onConnectionError();
   }
 
-  public static class PersistenceContextLookupInterceptorDiscovery extends ServiceJarDiscovery {
-    static final List<PersistenceContextLookupInterceptor> interceptors = new CopyOnWriteArrayList<PersistenceContextLookupInterceptor>();
-    static final PersistenceContextLookupInterceptor dispatcher = new PersistenceContextLookupInterceptor() {
+  public static class PersistenceContextEventInterceptorDiscovery extends ServiceJarDiscovery {
+    static final List<PersistenceContextEventInterceptor> interceptors = new CopyOnWriteArrayList<PersistenceContextEventInterceptor>();
+    static final PersistenceContextEventInterceptor dispatcher = new PersistenceContextEventInterceptor() {
       @Override
       public void onLookup() {
-        for ( final PersistenceContextLookupInterceptor interceptor : interceptors ) {
+        for ( final PersistenceContextEventInterceptor interceptor : interceptors ) {
           interceptor.onLookup();
+        }
+      }
+
+      @Override
+      public void onConnectionError() {
+        for ( final PersistenceContextEventInterceptor interceptor : interceptors ) {
+          interceptor.onConnectionError();
         }
       }
     };
 
-    static PersistenceContextLookupInterceptor dispatcher() {
+    static PersistenceContextEventInterceptor dispatcher() {
       return dispatcher;
     }
 
     @Override
     public boolean processClass( final Class candidate ) throws Exception {
-      if ( PersistenceContextLookupInterceptor.class.isAssignableFrom( candidate ) && Modifier.isPublic(candidate.getModifiers()) ) {
-        interceptors.add( ((Class<PersistenceContextLookupInterceptor>) candidate).newInstance() );
+      if ( PersistenceContextEventInterceptor.class.isAssignableFrom( candidate ) && Modifier.isPublic(candidate.getModifiers()) ) {
+        interceptors.add( ((Class<PersistenceContextEventInterceptor>) candidate).newInstance() );
         return true;
       }
       return false;
@@ -274,7 +282,7 @@ public class PersistenceContexts {
   
   @SuppressWarnings( "deprecation" )
   public static EntityManagerFactoryImpl getEntityManagerFactory( final String persistenceContext ) {
-    PersistenceContextLookupInterceptorDiscovery.dispatcher().onLookup();
+    PersistenceContextEventInterceptorDiscovery.dispatcher().onLookup();
     if ( emf.containsKey( persistenceContext ) ) {
       return emf.get( persistenceContext );
     } else {

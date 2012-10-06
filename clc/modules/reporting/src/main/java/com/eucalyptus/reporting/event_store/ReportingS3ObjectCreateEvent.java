@@ -25,11 +25,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="s3ObjectCreateEventMap",
-        entities=@EntityResult(entityClass=ReportingS3ObjectCreateEvent.class))
-@NamedNativeQuery(name="scanS3ObjectCreateEvents",
-     query="select * from reporting_s3_object_create_events order by s3_bucket_name, timestamp_ms",
-     resultSetMapping="s3ObjectCreateEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_s3_object_create_events")
 public class ReportingS3ObjectCreateEvent
@@ -43,8 +38,8 @@ public class ReportingS3ObjectCreateEvent
 	protected String s3ObjectKey;
 	@Column(name="s3_object_version", nullable=true) //version can be null as per disc with Zach
 	protected String objectVersion;
-	@Column(name="size_gb", nullable=false)
-	protected Long sizeGB;
+	@Column(name="size", nullable=false)
+	protected Long size;
 	@Column(name="user_id", nullable=false)
 	protected String userId;
 	
@@ -58,13 +53,13 @@ public class ReportingS3ObjectCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingS3ObjectCrud class.
  	 */
-	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectName, String objectVersion,
-			Long sizeGB, Long timestampMs, String userId)
+	ReportingS3ObjectCreateEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
+			Long size, Long timestampMs, String userId)
 	{
 		this.s3BucketName = s3BucketName;
-		this.s3ObjectKey = s3ObjectName;
+		this.s3ObjectKey = s3ObjectKey;
 		this.objectVersion = objectVersion;
-		this.sizeGB = sizeGB;
+		this.size = size;
 		this.timestampMs = timestampMs;
 		this.userId = userId;
 	}
@@ -84,9 +79,9 @@ public class ReportingS3ObjectCreateEvent
 		return this.userId;
 	}
 	
-	public Long getSizeGB()
+	public Long getSize()
 	{
-	    	return this.sizeGB;
+	    	return this.size;
 	}
 
 	public String getObjectVersion()
@@ -115,7 +110,7 @@ public class ReportingS3ObjectCreateEvent
 	    result = prime * result
 		    + ((s3ObjectKey == null) ? 0 : s3ObjectKey.hashCode());
 	    result = prime * result
-		    + ((sizeGB == null) ? 0 : sizeGB.hashCode());
+		    + ((size == null) ? 0 : size.hashCode());
 	    result = prime * result
 		    + ((timestampMs == null) ? 0 : timestampMs.hashCode());
 	    result = prime * result
@@ -142,10 +137,10 @@ public class ReportingS3ObjectCreateEvent
 		    return false;
 	    } else if (!s3ObjectKey.equals(other.s3ObjectKey))
 		return false;
-	    if (sizeGB == null) {
-		if (other.sizeGB != null)
+	    if (size == null) {
+		if (other.size != null)
 		    return false;
-	    } else if (!sizeGB.equals(other.sizeGB))
+	    } else if (!size.equals(other.size))
 		return false;
 	    if (timestampMs == null) {
 		if (other.timestampMs != null)
@@ -165,7 +160,7 @@ public class ReportingS3ObjectCreateEvent
 	    return "ReportingS3ObjectCreateEvent [s3BucketName=" + s3BucketName
 		    + ", s3ObjectName=" + s3ObjectKey + ", timestampMs="
 		    + timestampMs + ", userId=" + userId + ", s3ObjectSize="
-		    + sizeGB + "]";
+		    + size + "]";
 	}
 
 

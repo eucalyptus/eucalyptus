@@ -34,22 +34,21 @@ class S3EventSupport<E extends Enum<E>> implements Event {
   private static final long serialVersionUID = 1L;
 
   private final E action;
-  private final OwnerFullName ownerFullName;
+  private final String ownerUserId;
   private final Long size;
   private final String bucketName;
 
   S3EventSupport( @Nonnull final E action,
                   @Nonnull final String bucketName,
-                  @Nonnull final OwnerFullName ownerFullName,
+                  @Nonnull final String ownerUserId,
                   @Nonnull final Long size ) {
     assertThat(action, notNullValue());
     assertThat(bucketName, not(isEmptyOrNullString()));
-    assertThat(ownerFullName, notNullValue());
-    assertThat(ownerFullName.getUserId(), not(isEmptyOrNullString()));
+    assertThat(ownerUserId, not(isEmptyOrNullString()));
     assertThat(size, notNullValue());
 
     this.action = action;
-    this.ownerFullName = ownerFullName;
+    this.ownerUserId = ownerUserId;
     this.size = size;
     this.bucketName = bucketName;
   }
@@ -60,8 +59,8 @@ class S3EventSupport<E extends Enum<E>> implements Event {
   }
 
   @Nonnull
-  public OwnerFullName getOwner() {
-    return ownerFullName;
+  public String getOwnerUserId() {
+    return ownerUserId;
   }
 
   @Nonnull

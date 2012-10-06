@@ -19,67 +19,92 @@
  ************************************************************************/
 package com.eucalyptus.reporting.export;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.util.Exceptions;
-import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 
 /**
  * Reporting data export model.
+ *
+ * <p>Due to dependencies between usage and actions in an export the usage
+ * MUST be accessed first.</p>
  */
-public class ReportingExport implements Serializable, Iterable<Serializable> {
-  private static final long serialVersionUID = 1L;
+public class ReportingExport {
 
-  private final List<Serializable> exportData = Lists.newArrayList();
+  private static Supplier<ReportingExportLoadListener> loadListenerSupplier = null;
+  private final List<Iterable<ReportedAction>> actions = Lists.newArrayList();
+  private final List<Iterable<ReportedUsage>> usage = Lists.newArrayList();
+  private final ReportingExportLoadListener listener;
+
+  public static void setLoadListenerSupplier( final Supplier<ReportingExportLoadListener> supplier ) {
+    loadListenerSupplier = supplier;
+  }
 
   public ReportingExport() {
+    this.listener = getListenerSupplier().get();
   }
 
-  public ReportingExport( final String data ) {
-    try {
-      final ReportingExport export = (ReportingExport)
-          new ObjectInputStream( new ByteArrayInputStream( B64.standard.dec(data) ) ).readObject();
+  private Supplier<ReportingExportLoadListener> getListenerSupplier() {
+    return Objects.firstNonNull(
+        loadListenerSupplier,
+        Suppliers.<ReportingExportLoadListener>ofInstance(new DefaultLoadListener()));
+  }
 
-      exportData.addAll( export.exportData );
-    } catch ( Exception e ) {
-      throw Exceptions.toUndeclared( e );
+  public ReportingExport( final ReportingExportLoadListener listener ) {
+    this.listener = listener;
+  }
+
+  public void addActions( final Iterable<ReportedAction> actions ) {
+    this.actions.add( actions );
+  }
+
+  public void addUsage( final Iterable<ReportedUsage> usage ) {
+    this.usage.add( usage );
+  }
+
+  public void addAction( final ReportedAction action ) {
+    listener.addAction( action );
+  }
+
+  public Iterator<ReportedAction> iterateActions() {
+    return iterateAll( actions );
+  }
+
+  public void addUsage( final ReportedUsage usage ) {
+    listener.addUsage( usage );
+  }
+
+  public Iterator<ReportedUsage> iterateUsage() {
+    return iterateAll( usage );
+  }
+
+  private <T> Iterator<T> iterateAll( Iterable<Iterable<T>> data ) {
+    List<Iterator<T>> iterators = Lists.newArrayList();
+    for ( final Iterable<T> iterable : data ) {
+      iterators.add( iterable.iterator() );
     }
+    return Iterators.unmodifiableIterator( Iterators.concat( iterators.iterator() ) );
   }
 
-  public ReportingExport( final File file ) throws IOException {
-    this( Files.toString( file, Charsets.UTF_8 ) );
+  public static interface ReportingExportLoadListener {
+    void addAction( ReportedAction action );
+    void addUsage( ReportedUsage usage );
   }
 
-  public void add( final Serializable item ) {
-    exportData.add( item );
-  }
+  private class DefaultLoadListener implements ReportingExportLoadListener {
+    @Override
+    public void addAction( final ReportedAction action ) {
+      ReportingExport.this.actions.add( Collections.singleton( action ) );
+    }
 
-  @Override
-  public Iterator<Serializable> iterator() {
-    return Iterators.unmodifiableIterator( exportData.iterator() );
-  }
-
-  public String toString() {
-    final ByteArrayOutputStream out = new ByteArrayOutputStream();
-    try {
-      final ObjectOutputStream oout = new ObjectOutputStream( out );
-      oout.writeObject( this );
-      oout.flush();
-      oout.close();
-      return B64.standard.encString( out.toByteArray() );
-    } catch ( IOException e ) {
-      throw Exceptions.toUndeclared( e );
+    @Override
+    public void addUsage( final ReportedUsage usage ) {
+      ReportingExport.this.usage.add( Collections.singleton( usage ) );
     }
   }
 }

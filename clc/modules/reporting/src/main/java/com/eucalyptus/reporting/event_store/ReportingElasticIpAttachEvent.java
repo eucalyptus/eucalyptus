@@ -21,20 +21,12 @@ package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
 import javax.persistence.Column;
-import javax.persistence.EntityResult;
-import javax.persistence.NamedNativeQuery;
 import javax.persistence.PersistenceContext;
-import javax.persistence.SqlResultSetMapping;
 import javax.persistence.Table;
 
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="elasticIpAttachEventMap",
-        entities=@EntityResult(entityClass=ReportingElasticIpAttachEvent.class))
-@NamedNativeQuery(name="scanElasticIpAttachEvents",
-     query="select * from reporting_elastic_ip_attach_events order by timestamp_ms",
-     resultSetMapping="elasticIpAttachEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_elastic_ip_attach_events")
 public class ReportingElasticIpAttachEvent

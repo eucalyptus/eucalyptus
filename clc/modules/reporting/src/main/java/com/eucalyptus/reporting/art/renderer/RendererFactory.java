@@ -88,7 +88,7 @@ public class RendererFactory
 			return new ElasticIpRenderer(document);
 		} else if (type.equals(ReportType.S3)) {
 			return new S3Renderer(document);
-		} else if (type.equals(ReportType.COMPUTE)) {
+		} else if (type.equals(ReportType.CAPACITY )) {
 			return new ComputeCapacityRenderer(document);
 		} else {
 			throw new UnsupportedOperationException("Unsupported type:" + type);

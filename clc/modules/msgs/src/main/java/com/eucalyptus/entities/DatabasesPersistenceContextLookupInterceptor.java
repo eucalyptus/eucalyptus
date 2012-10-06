@@ -24,10 +24,15 @@ import com.eucalyptus.bootstrap.Databases;
 /**
  * PersistenceContext interceptor that ensures database synchronization.
  */
-public class DatabasesPersistenceContextLookupInterceptor implements PersistenceContexts.PersistenceContextLookupInterceptor {
+public class DatabasesPersistenceContextLookupInterceptor implements PersistenceContexts.PersistenceContextEventInterceptor {
 
   @Override
   public void onLookup() {
     Databases.awaitSynchronized();
+  }
+
+  @Override
+  public void onConnectionError() {
+    Databases.check();
   }
 }

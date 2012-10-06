@@ -57,6 +57,10 @@ public class ReportingUserCrud
 	{
 		if (id==null || accountId==null || name==null) throw new IllegalArgumentException("args cant be null");
 
+		if (ReportingAccountDao.getInstance().getReportingAccount(accountId)==null) {
+			LOG.error("Non-matching account for user, userId:" + id + " accountId:" + accountId + " name:" + name, new IllegalArgumentException());
+		}
+
 		ReportingUser user = new ReportingUser(id, accountId, name);
 		ReportingUser oldUser = ReportingUserDao.getInstance().getReportingUser(id);
 		if (oldUser!=null && oldUser.getName().equals(name)) {

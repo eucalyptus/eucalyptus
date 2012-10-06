@@ -65,7 +65,7 @@ public class ReportingUser implements Serializable
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingUserCrud class.
  	 */
-	ReportingUser(String id, String accountId, String name)
+	public ReportingUser(String id, String accountId, String name)
 	{
 		this.id = id;
 		this.accountId = accountId;
