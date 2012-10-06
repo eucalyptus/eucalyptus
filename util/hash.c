@@ -101,7 +101,7 @@ int hash_b64enc_string(const char *in, char **out) {
     return(1);
   }
   *out = NULL;
-  logprintfl(EUCADEBUG, "hash_b64enc_string(): in=%s\n", in);
+  logprintfl(EUCADEBUG, "in=%s\n", in);
   bzero(hash, 17);
   md5ret = MD5((const unsigned char *)in, strlen(in), hash);
   if (md5ret) {
