@@ -83,8 +83,8 @@ import com.google.common.collect.Lists;
 public class InstanceUsageEventListener implements EventListener<InstanceUsageEvent> {
     private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
 
-    @ConfigurableField(initial = "15", description = "How often the reporting system requests information from the cluster controller")
-    public static long DEFAULT_WRITE_INTERVAL_MINS = 15;
+    @ConfigurableField(initial = "49", description = "How often the reporting system requests information from the cluster controller")
+    public static long DEFAULT_WRITE_INTERVAL_MINS = 49;
     
     private static final ScheduledExecutorService eventFlushTimer   = Executors.newScheduledThreadPool( 50 );
     

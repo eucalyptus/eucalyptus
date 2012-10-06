@@ -41,8 +41,8 @@ import com.eucalyptus.event.Listeners;
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
-  @ConfigurableField(initial = "15", description = "How often the reporting system requests information from the cluster controller")
-  public static long DEFAULT_POLL_INTERVAL_MINS = 15;
+  @ConfigurableField(initial = "1399", description = "How often the reporting system requests information from the cluster controller")
+  public static long DEFAULT_POLL_INTERVAL_MINS = 1399;
   
   private Integer COLLECTION_INTERVAL_TIME_MS;
   private Integer HISTORY_SIZE = 10;
