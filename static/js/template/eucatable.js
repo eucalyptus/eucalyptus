@@ -341,16 +341,16 @@
           $('<span>').attr('id','table_' + this.options.id + '_count'),
           $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+thisObj.options.text.resource_found),
           'Showing:',
-          $('<span>').addClass('show selected').text('10'),
+          $('<a>').attr('href','#').addClass('show selected').text('10'),
+          '&nbsp;|&nbsp;', // TODO: don't use nbsp; in place for padding!
+          $('<a>').attr('href','#').addClass('show').text('25'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('25'),
+          $('<a>').attr('href','#').addClass('show').text('50'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('50'),
-          '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('100')));
+          $('<a>').attr('href','#').addClass('show').text('100')));
 
-      $tableTop.find('span.show').click(function () {
-        $(this).parent().children('span').each( function() {
+      $tableTop.find('a.show').click(function () {
+        $(this).parent().children('a').each( function() {
           $(this).removeClass('selected');
         });
         thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
