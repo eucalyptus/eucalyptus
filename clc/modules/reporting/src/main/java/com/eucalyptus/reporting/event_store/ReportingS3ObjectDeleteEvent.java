@@ -45,11 +45,11 @@ public class ReportingS3ObjectDeleteEvent
 	{
 	}
 	
-	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectName, String objectVersion,
+	protected ReportingS3ObjectDeleteEvent(String s3BucketName, String s3ObjectKey, String objectVersion,
 			Long timestampMs)
 	{
 		this.s3BucketName = s3BucketName;
-		this.s3ObjectKey = s3ObjectName;
+		this.s3ObjectKey = s3ObjectKey;
 		this.objectVersion = objectVersion;
 		this.timestampMs = timestampMs;
 	}
