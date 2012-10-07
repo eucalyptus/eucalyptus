@@ -244,7 +244,7 @@ adb_BundleRestartInstanceResponse_t * BundleRestartInstanceMarshal(adb_BundleRes
 	instanceId = adb_bundleRestartInstanceType_get_instanceId(bit, env);
 	status     = AXIS2_TRUE;
 	if (!DONOTHING) {
-		if ((rc = rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
+		if ((rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
 			logprintf("ERROR: doBundleRestartInstance() returned FAIL\n");
 			status = AXIS2_FALSE;
 			snprintf(statusMessage, 255, "ERROR");

@@ -2919,7 +2919,7 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, c
 
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-      snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", bufname);
+      snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
     } else {
       snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
     }
