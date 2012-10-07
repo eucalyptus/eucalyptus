@@ -148,9 +148,9 @@ do_start() {
         if [ ! `pgrep -n ntp` ]; then
 	    # write fault to stdout
 	    echo 
-	    $EUCALYPTUS/usr/sbin/euca-generate-fault       1006 daemon ntp
+	    $EUCALYPTUS/usr/sbin/euca-generate-fault       1008 daemon ntp
 	    # and to NC's fault log
-	    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1006 daemon ntp
+	    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1008 daemon ntp
         fi
 
 	# fixes #469984
