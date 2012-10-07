@@ -1982,6 +1982,127 @@ int drop_privs (void)
     return OK;
 }
 
+// run shell command with timeout and get back: return value, stdout and stderr all in one
+int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout)
+{
+  int stdoutfds[2];
+  int stderrfds[2];
+  int oldstdout, oldstderr;
+  int child_pid;
+  int maxfd;
+  int rc;
+  int status;
+  int stdout_toread, stderr_toread;
+  time_t start_time, remaining_time;
+
+  // force nonempty on all arguments to simplify the logic
+  assert(command);
+  assert(stdout_str);
+  assert(stderr_str);
+
+  if (pipe(stdoutfds) < 0) {
+    logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, NULL, 0));
+    return -1;
+  }
+  if (pipe(stderrfds) < 0) {
+    logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, NULL, 0));
+    return -1;
+  }
+
+  child_pid = fork();
+  if (child_pid == 0) {
+    close(stdoutfds[0]);
+    if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
+      logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, NULL, 0));
+      exit(1);
+    }
+    close(stdoutfds[1]);
+
+    close(stderrfds[0]);
+    if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
+      logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, NULL, 0));
+      exit(1);
+    };
+    close(stderrfds[1]);
+
+    execl("/bin/sh", "sh", "-c", command, (char *) 0);
+
+    exit(127);
+  }
+
+  close(stdoutfds[1]);
+  close(stderrfds[1]);
+
+  if (child_pid < 0) {
+    close(stdoutfds[0]);
+    close(stderrfds[0]);
+    return -1;
+  }
+
+  memset(stdout_str, 0, max_size);
+  memset(stderr_str, 0, max_size);
+  stdout_toread = stderr_toread = max_size - 1;
+
+  maxfd = stdoutfds[0] > stderrfds[0] ? stdoutfds[0] : stderrfds[0];
+
+  start_time = time(NULL);
+  for (;;) {
+    fd_set rfds;
+    struct timeval tv;
+    int retval;
+    int readn;
+
+    FD_ZERO(&rfds);
+    FD_SET(stdoutfds[0], &rfds);
+    FD_SET(stderrfds[0], &rfds);
+
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+    retval = select(maxfd + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv);
+    if (retval > 0) {
+      if (FD_ISSET(stdoutfds[0], &rfds) && stdout_toread > 0) {
+        readn = read(stdoutfds[0], stdout_str, stdout_toread);
+        if (readn > 0) {
+          stdout_toread -= readn;
+          stdout_str += readn;
+        } else {
+          break;
+        }
+      }
+      if (FD_ISSET(stderrfds[0], &rfds) && stderr_toread > 0) {
+        readn = read(stderrfds[0], stderr_str, stderr_toread);
+        if (readn > 0) {
+          stderr_toread -= readn;
+          stderr_str += readn;
+        } else {
+          break;
+        }
+      }
+    } else if (retval < 0) {
+      logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, NULL, 0));
+      break;
+    }
+    if (time(NULL) - start_time > timeout) {
+      logprintfl(EUCAWARN, "warning: read timeout\n");
+      break;
+    }
+  }
+  close(stdoutfds[0]);
+  close(stderrfds[0]);
+
+  remaining_time = timeout - (time(NULL) - start_time);
+  rc = timewait(child_pid, &status, remaining_time);
+  if (rc) {
+    rc = WEXITSTATUS(status);
+  } else {
+    kill(child_pid, SIGKILL);
+    logprintfl(EUCAERROR, "warning: shell execution timeout\n");
+    return -1;
+  }
+  return rc;
+}
+
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
 
 #ifdef _UNIT_TEST
