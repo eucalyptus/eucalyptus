@@ -1306,14 +1306,14 @@ int cc_describeSensors (int historySize, long long collectionIntervalTimeMs, cha
         adb_DescribeSensorsResponse_t * output = axis2_stub_op_EucalyptusCC_DescribeSensors (stub, env, input);
 
         if (!output) {
-            logprintfl (EUCAERROR, "ERROR: DescribeSensors could not be invoked\n");
+            logprintfl (EUCAERROR, "DescribeSensors could not be invoked\n");
             status = -1;
 
         } else {
 	  adb_describeSensorsResponseType_t * response = adb_DescribeSensorsResponse_get_DescribeSensorsResponse (output, env);
 	  
             if ( adb_describeSensorsResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "ERROR: DescribeSensors returned an error\n");
+                logprintfl (EUCAERROR, "DescribeSensors returned an error\n");
                 status = 1;
             }
 
@@ -1321,7 +1321,7 @@ int cc_describeSensors (int historySize, long long collectionIntervalTimeMs, cha
             if (* outResourcesLen) {
                 * outResources = malloc (sizeof(sensorResource *) * *outResourcesLen);
                 if ( * outResources == NULL ) { 
-                    logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeSensorsStub()\n");
+                    logprintfl (EUCAERROR, "out of memory\n");
                     * outResourcesLen = 0;
                     status = 2;
                 } else {

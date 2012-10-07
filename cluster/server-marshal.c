@@ -351,7 +351,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
 	int error = doDescribeSensors (&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
 
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
 
         } else {
 
@@ -986,7 +986,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
   }
   
   if (rc) {
-    logprintfl(ERROR, "ERROR: doDescribeResources() failed %d\n", rc);
+    logprintfl(ERROR, "doDescribeResources() failed %d\n", rc);
     status = AXIS2_FALSE;
     snprintf(statusMessage, 255, "ERROR");
   } else {
