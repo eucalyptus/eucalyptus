@@ -131,6 +131,35 @@ public class Bundles {
     }
   }
   
+  public static MessageCallback bundleRestartInstanceCallback( BundleRestartInstanceType request ) {
+    return new BundleRestartInstanceCallback( request );
+  }
+  
+  public static class BundleRestartInstanceCallback extends MessageCallback<BundleRestartInstanceType, BundleRestartInstanceResponseType> {
+    private BundleRestartInstanceCallback( BundleRestartInstanceType request ) {
+      super( request );
+    }
+    
+    @Override
+    public void fire( BundleRestartInstanceResponseType reply ) {
+      if ( !reply.get_return( ) ) {
+          LOG.info( "Attempt to restart bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
+      } else {
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
+          vm.getRuntimeState( ).restartBundleTask( );
+          EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_RESTART, this.getRequest( ).toSimpleString( ), vm.getRuntimeState( ).getBundleTask( ).getBundleId( ),
+                            vm.getInstanceId( ) ).info( );
+          db.commit( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+        }
+      }
+    }
+  }
+  
   public static class BundleCallback extends MessageCallback<BundleInstanceType, BundleInstanceResponseType> {
     private BundleCallback( BundleInstanceType request ) {
       super( request );

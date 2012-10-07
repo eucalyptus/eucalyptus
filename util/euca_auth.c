@@ -125,16 +125,16 @@ char * euca_get_cert (unsigned char options)
 
     struct stat st;
     if (stat (cert_file, &st) != 0) {
-        logprintfl (EUCAERROR, "error: cannot stat the certificate file %s\n", cert_file); 
+        logprintfl (EUCAERROR, "cannot stat the certificate file %s\n", cert_file);
 
     } else if ( (s = st.st_size*2) < 1) { /* *2 because we'll add characters */
-        logprintfl (EUCAERROR, "error: certificate file %s is too small\n", cert_file); 
+        logprintfl (EUCAERROR, "certificate file %s is too small\n", cert_file);
 
     } else if ( (cert_str = malloc (s+1)) == NULL ) { 
-        logprintfl (EUCAERROR, "error: out of memory\n");
+        logprintfl (EUCAERROR, "out of memory\n");
 
     } else if ( (fp = open (cert_file, O_RDONLY)) < 0 ) {
-        logprintfl (EUCAERROR, "error: failed to open certificate file %s\n", cert_file);
+        logprintfl (EUCAERROR, "failed to open certificate file %s\n", cert_file);
         free (cert_str);
         cert_str = NULL;
 
@@ -155,7 +155,7 @@ char * euca_get_cert (unsigned char options)
         }
         
         if (ret != 0) {
-            logprintfl (EUCAERROR, "error: failed to read whole certificate file %s\n", cert_file);
+            logprintfl (EUCAERROR, "failed to read whole certificate file %s\n", cert_file);
             free (cert_str);
             cert_str = NULL;
 
@@ -179,21 +179,21 @@ char * base64_enc (unsigned char * in, int size)
   BIO * biomem, * bio64;
   
   if ( (bio64 = BIO_new (BIO_f_base64 ())) == NULL) {
-    logprintfl (EUCAERROR, "error: BIO_new(BIO_f_base64()) failed\n");
+    logprintfl (EUCAERROR, "BIO_new(BIO_f_base64()) failed\n");
   } else {
     BIO_set_flags (bio64, BIO_FLAGS_BASE64_NO_NL); /* no long-line wrapping */
     if ( (biomem = BIO_new (BIO_s_mem ())) == NULL) {
-      logprintfl (EUCAERROR, "error: BIO_new(BIO_s_mem()) failed\n");
+      logprintfl (EUCAERROR, "BIO_new(BIO_s_mem()) failed\n");
     } else {
       bio64 = BIO_push (bio64, biomem);
       if ( BIO_write (bio64, in, size)!=size) {
-	logprintfl (EUCAERROR, "error: BIO_write() failed\n");
+	logprintfl (EUCAERROR, "BIO_write() failed\n");
       } else {
 	BUF_MEM * buf;
 	(void) BIO_flush (bio64);
 	BIO_get_mem_ptr (bio64, &buf);
 	if ( (out_str = malloc(buf->length+1)) == NULL ) {
-	  logprintfl (EUCAERROR, "error: out of memory for Base64 buf\n");
+	  logprintfl (EUCAERROR, "out of memory for Base64 buf\n");
 	} else {
 	  memcpy (out_str, buf->data, buf->length);
 	  out_str [buf->length] = '\0';
@@ -248,21 +248,21 @@ char * euca_sign_url (const char * verb, const char * date, const char * url)
     if ( verb==NULL || date==NULL || url==NULL ) return NULL;
 
     if ( ( rsa = RSA_new() ) == NULL ) {
-      logprintfl (EUCAERROR, "error: RSA_new() failed\n");
+      logprintfl (EUCAERROR, "RSA_new() failed\n");
     } else if ( ( fp = fopen (pk_file, "r") ) == NULL) {
-      logprintfl (EUCAERROR, "error: failed to open private key file %s\n", pk_file);
+      logprintfl (EUCAERROR, "failed to open private key file %s\n", pk_file);
       RSA_free (rsa);
     } else {
-      logprintfl (EUCATRACE, "euca_sign_url(): reading private key file %s\n", pk_file);
+      logprintfl (EUCATRACE, "reading private key file %s\n", pk_file);
       PEM_read_RSAPrivateKey(fp, &rsa, NULL, NULL); /* read the PEM-encoded file into rsa struct */
       if ( rsa==NULL ) {
-	logprintfl (EUCAERROR, "error: failed to read private key file %s\n", pk_file);
+	logprintfl (EUCAERROR, "failed to read private key file %s\n", pk_file);
       } else {
 	unsigned char * sig;
         
 	// RSA_print_fp (stdout, rsa, 0); /* (for debugging) */
 	if ( (sig = malloc(RSA_size(rsa))) == NULL) {
-	  logprintfl (EUCAERROR, "error: out of memory (for RSA key)\n");
+	  logprintfl (EUCAERROR, "out of memory (for RSA key)\n");
 	} else {
 	  unsigned char sha1 [SHA_DIGEST_LENGTH];
 #define BUFSIZE 2024
@@ -273,14 +273,14 @@ char * euca_sign_url (const char * verb, const char * date, const char * url)
 	  /* finally, SHA1 and sign with PK */
 	  assert ((strlen(verb)+strlen(date)+strlen(url)+4)<=BUFSIZE);
 	  snprintf (input, BUFSIZE, "%s\n%s\n%s\n", verb, date, url);
-	  logprintfl (EUCAEXTREME, "euca_sign_url(): signing input %s\n", get_string_stats(input));	
+	  logprintfl (EUCAEXTREME, "signing input %s\n", get_string_stats(input));
 	  SHA1 ((unsigned char *)input, strlen(input), sha1);
 	  if ((ret = RSA_sign (NID_sha1, sha1, SHA_DIGEST_LENGTH, sig, &siglen, rsa))!=1) {
-	    logprintfl (EUCAERROR, "error: RSA_sign() failed\n");
+	    logprintfl (EUCAERROR, "RSA_sign() failed\n");
 	  } else {
-	    logprintfl (EUCAEXTREME, "euca_sign_url(): signing output %d\n", sig[siglen-1]);	
+	    logprintfl (EUCAEXTREME, "signing output %d\n", sig[siglen-1]);
 	    sig_str = base64_enc (sig, siglen);
-	    logprintfl (EUCAEXTREME, "euca_sign_url(): base64 signature %s\n", get_string_stats((char *)sig_str));	
+	    logprintfl (EUCAEXTREME, "base64 signature %s\n", get_string_stats((char *)sig_str));
 	  }
 	  free (sig);
 	}

@@ -191,7 +191,7 @@ str_trim_suffix (char *str, const char *suffix)
     } else {
         int trim = strlen (str) - strlen (suffix);
         *(str + trim) = '\0';
-        logprintfl (EUCATRACE, "str_trim_suffix() returning: %s\n", str);
+        logprintfl (EUCATRACE, "returning: %s\n", str);
     }
     return str;
 }
@@ -240,20 +240,20 @@ static boolean
 is_suppressed_eucafault (const char *fault_id)
 {
     if (fault_id == NULL) {
-        logprintfl (EUCAWARN, "is_suppressed_eucafault() called with NULL argument...ignoring.\n");
+        logprintfl (EUCAWARN, "called with NULL argument...ignoring.\n");
         return FALSE;
     }
     struct suppress_list *suppose = suppressed;
 
     while (suppose) {
         if (!strcmp (fault_id, suppose->id)) {
-            logprintfl (EUCATRACE, "is_suppressed_eucafault() returning TRUE for %s.\n",
+            logprintfl (EUCATRACE, "returning TRUE for %s.\n",
                      fault_id);
             return TRUE;
         }
         suppose = suppose->next;
     }
-    logprintfl (EUCATRACE, "is_suppressed_eucafault() returning FALSE for %s.\n", fault_id);
+    logprintfl (EUCATRACE, "returning FALSE for %s.\n", fault_id);
     return FALSE;
 }
 
@@ -271,7 +271,7 @@ static boolean
 check_eucafault_suppression (const char *fault_id, const char *fault_file)
 {
     if ((fault_id == NULL) && (fault_file == NULL)) {
-        logprintfl (EUCAWARN, "check_eucafault_suppression() called with two NULL arguments...ignoring.\n");
+        logprintfl (EUCAWARN, "called with two NULL arguments...ignoring.\n");
         return FALSE;
     }
     if (fault_file == NULL) {
@@ -311,7 +311,7 @@ check_eucafault_suppression (const char *fault_id, const char *fault_file)
             return FALSE;
         }
     }
-    logprintfl (EUCATRACE, "check_eucafault_suppression() returning FALSE for %s, %s\n",
+    logprintfl (EUCATRACE, "returning FALSE for %s, %s\n",
              fault_id, fault_file);
     return FALSE;
 }
@@ -343,11 +343,11 @@ read_eucafault (const char *faultdir, const char *fault_id)
     my_doc = xmlParseFile (fault_file);
 
     if (my_doc == NULL) {
-        logprintfl (EUCAWARN, "Could not parse file %s in read_eucafault()\n",
+        logprintfl (EUCAWARN, "Could not parse file %s\n",
                    fault_file);
         return NULL;
     } else {
-        logprintfl (EUCATRACE, "Successfully parsed file %s in read_eucafault()\n",
+        logprintfl (EUCATRACE, "Successfully parsed file %s\n",
                 fault_file);
     }
     if (get_eucafault (fault_id, my_doc) != NULL) {
@@ -690,7 +690,7 @@ static char *
 get_fault_var (const char *var, const xmlNode *f_node)
 {
     if ((f_node == NULL) || (var == NULL)) {
-        logprintfl (EUCAWARN, "get_fault_var() called with one or more NULL arguments.\n");
+        logprintfl (EUCAWARN, "called with one or more NULL arguments.\n");
         return NULL;
     }
     // Just in case we're matching the top-level node.
