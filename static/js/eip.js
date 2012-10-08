@@ -65,7 +65,7 @@
         text : {
           header_title : eip_h_title,
           create_resource : eip_allocate,
-          resource_found : eip_found,
+          resource_found : 'eip_found',
           resource_search : eip_search,
           resource_plural : eip_plural,
         },

@@ -82,7 +82,7 @@
         text : {
           header_title : volume_h_title,
           create_resource : volume_create,
-          resource_found : volume_found,
+          resource_found : 'volume_found',
           resource_search : volume_search,
           resource_plural : volume_plural,
         },

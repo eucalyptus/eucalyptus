@@ -50,7 +50,7 @@
         text : {
           header_title : keypair_h_title,
           create_resource : keypair_create,
-          resource_found : keypair_found,
+          resource_found : 'keypair_found',
           resource_search : keypair_search,
           resource_plural : keypair_plural,
         },

@@ -61,7 +61,7 @@
         text : {
           header_title : sgroup_h_title,
           create_resource : sgroup_create,
-          resource_found : sgroup_found,
+          resource_found : 'sgroup_found',
           resource_search : sgroup_search,
           resource_plural : sgroup_plural,
         },

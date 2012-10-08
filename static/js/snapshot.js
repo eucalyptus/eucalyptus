@@ -81,7 +81,7 @@
         text : {
           header_title : snapshot_h_title,
           create_resource : snapshot_create,
-          resource_found : snapshot_found,
+          resource_found : 'snapshot_found',
           resource_search : snapshot_search,
           resource_plural : snapshot_plural,
         },
