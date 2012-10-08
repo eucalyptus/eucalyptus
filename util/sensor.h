@@ -28,10 +28,10 @@
 
 #ifndef _UNIT_TEST
 #define MAX_SENSOR_NAME_LEN    64
-#define MAX_SENSOR_VALUES      32 // by default 20
-#define MAX_SENSOR_DIMENSIONS  32 // root, ephemeral[0-1], vol-XYZ
+#define MAX_SENSOR_VALUES      15 // by default 10 on CLC
+#define MAX_SENSOR_DIMENSIONS  (5 + EUCA_MAX_VOLUMES) // root, ephemeral[0-1], vol-XYZ
 #define MAX_SENSOR_COUNTERS    2  // we only have two types of counters (summation|average) for now
-#define MAX_SENSOR_METRICS     16 // currently 9 are implemented
+#define MAX_SENSOR_METRICS     10 // currently 9 are implemented
 #else
 #define MAX_SENSOR_NAME_LEN    64
 #define MAX_SENSOR_VALUES      5  // smaller sizes, for easier testing of limits

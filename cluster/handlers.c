@@ -97,7 +97,7 @@
 #include <eucalyptus.h>
 
 #define SUPERUSER "eucalyptus"
-#define MAX_SENSOR_RESOURCES MAXINSTANCES 
+#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC 
 
 // Globals
 
@@ -1911,7 +1911,7 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
       unlock_exit(1);
     }
 
-    for (i=0; i<MAXINSTANCES; i++) {
+    for (i=0; i<MAXINSTANCES_PER_CC; i++) {
       if (instanceCache->cacheState[i] == INSTVALID) {
 	if (count >= instanceCache->numInsts) {
 	  logprintfl(EUCAWARN, "found more instances than reported by numInsts, will only report a subset of instances\n");
@@ -4307,7 +4307,7 @@ int checkActiveNetworks() {
     bzero(activeNetworks, sizeof(int) * NUMBER_OF_VLANS);
 
     logprintfl(EUCADEBUG, "checkActiveNetworks(): maintaining active networks\n");
-    for (i=0; i<MAXINSTANCES; i++) {
+    for (i=0; i<MAXINSTANCES_PER_CC; i++) {
       if ( instanceCache->cacheState[i] != INSTINVALID ) {
 	if ( strcmp(instanceCache->instances[i].state, "Teardown") ) {
 	  int vlan = instanceCache->instances[i].ccnet.vlan;
@@ -4780,7 +4780,7 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock) {
   inuse=0;
   if (!force) {
     // check to make sure the mac isn't in use elsewhere
-    for (i=0; i<MAXINSTANCES && !inuse; i++) {
+    for (i=0; i<MAXINSTANCES_PER_CC && !inuse; i++) {
       if (!strcmp(instanceCache->instances[i].ccnet.privateMac, mac) && strcmp(instanceCache->instances[i].state, "Teardown")) {
 	inuse++;
       }
@@ -4906,7 +4906,7 @@ int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int 
 
   sem_mywait(INSTCACHE);
 
-  for (i=0; i<MAXINSTANCES; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC; i++) {
     if (!match(&(instanceCache->instances[i]), matchParam)) {
       if (operate(&(instanceCache->instances[i]), operateParam)) {
 	logprintfl(EUCAWARN, "failed to operate at index %d\n", i);
@@ -4923,7 +4923,7 @@ void print_instanceCache(void) {
   int i;
 
   sem_mywait(INSTCACHE);
-  for (i=0; i<MAXINSTANCES; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC; i++) {
     if ( instanceCache->cacheState[i] == INSTVALID ) {
       logprintfl(EUCADEBUG,"\tcache: %d/%d %s %s %s %s\n", i, instanceCache->numInsts, instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp, instanceCache->instances[i].state);
     }
@@ -5002,7 +5002,7 @@ void invalidate_instanceCache(void) {
   int i;
 
   sem_mywait(INSTCACHE);
-  for (i=0; i<MAXINSTANCES; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC; i++) {
     // if instance is in teardown, free up network information
     if ( !strcmp(instanceCache->instances[i].state, "Teardown") ) {
       free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
@@ -5027,7 +5027,7 @@ int refresh_instanceCache(char *instanceId, ccInstance *in){
 
   sem_mywait(INSTCACHE);
   done=0;
-  for (i=0; i<MAXINSTANCES && !done; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC && !done; i++) {
     if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
       // in cache
       // give precedence to instances that are in Extant/Pending over expired instances, when info comes from two different nodes
@@ -5059,7 +5059,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
 
   sem_mywait(INSTCACHE);
   done=0;
-  for (i=0; i<MAXINSTANCES && !done; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC && !done; i++) {
     if ( (instanceCache->cacheState[i] == INSTVALID ) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // already in cache
       logprintfl(EUCADEBUG, "'%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
@@ -5085,7 +5085,7 @@ int del_instanceCacheId(char *instanceId) {
   int i;
 
   sem_mywait(INSTCACHE);
-  for (i=0; i<MAXINSTANCES; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC; i++) {
     if ( (instanceCache->cacheState[i] == INSTVALID) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // del from cache
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
@@ -5110,7 +5110,7 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
   sem_mywait(INSTCACHE);
   *out = NULL;
   done=0;
-  for (i=0; i<MAXINSTANCES && !done; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC && !done; i++) {
     if (!strcmp(instanceCache->instances[i].instanceId, instanceId)) {
       // found it
       *out = malloc(sizeof(ccInstance));
@@ -5141,7 +5141,7 @@ int find_instanceCacheIP(char *ip, ccInstance **out) {
   sem_mywait(INSTCACHE);
   *out = NULL;
   done=0;
-  for (i=0; i<MAXINSTANCES && !done; i++) {
+  for (i=0; i<MAXINSTANCES_PER_CC && !done; i++) {
     if ((instanceCache->instances[i].ccnet.publicIp[0] != '\0' || instanceCache->instances[i].ccnet.privateIp[0] != '\0')) {
       if (!strcmp(instanceCache->instances[i].ccnet.publicIp, ip) || !strcmp(instanceCache->instances[i].ccnet.privateIp, ip)) {
 	// found it

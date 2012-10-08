@@ -107,7 +107,7 @@
 #define MAX_CREATE_TRYS 5
 #define CREATE_TIMEOUT_SEC 15
 #define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
-#define MAX_SENSOR_RESOURCES MAXINSTANCES 
+#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_NC
 #define SEC_PER_MB ((1024*1024)/512)
 
 #ifdef EUCA_COMPILE_TIMESTAMP
@@ -1316,8 +1316,13 @@ static int init (void)
     // adjust the values based on configuration parameters, if any
 	if (nc_state.config_max_mem && nc_state.config_max_mem < nc_state.mem_max)
 		nc_state.mem_max = nc_state.config_max_mem;
-	if (nc_state.config_max_cores)
+	if (nc_state.config_max_cores) {
 		nc_state.cores_max = nc_state.config_max_cores;
+        if (nc_state.cores_max > MAXINSTANCES_PER_NC) {
+            nc_state.cores_max = MAXINSTANCES_PER_NC;
+            logprintfl (EUCAWARN, "ignoring excessive MAX_CORES value (leaving at %d)\n", nc_state.cores_max);
+        }
+    }
 	logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
 	logprintfl(EUCAINFO, "virtual cpu cores available for instances: %lld\n", nc_state.cores_max);
     

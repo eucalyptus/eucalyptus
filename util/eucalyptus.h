@@ -186,10 +186,11 @@
 
 /* system limit defaults */
 #define MAXNODES 1024
-#define MAXINSTANCES 2048
+#define MAXINSTANCES_PER_CC 2048
+#define MAXINSTANCES_PER_NC 256
 #define MAXLOGFILESIZE 10485760
 #define EUCA_MAX_GROUPS 64
-#define EUCA_MAX_VOLUMES 64
+#define EUCA_MAX_VOLUMES 27
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
 #define EUCA_MAX_PARTITIONS 32 // partitions per disk
