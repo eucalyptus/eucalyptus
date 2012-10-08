@@ -246,6 +246,8 @@ class LogoutProcessor(ProxyProcessor):
         if not sid or sid not in sessions:
             return LogoutResponse();
         terminateSession(sid)
+        web_req.clear_cookie("session-id")
+        web_req.clear_cookie("_xsrf")
         return LogoutResponse();
 
 def terminateSession(id, expired=False):
@@ -270,7 +272,8 @@ class LoginProcessor(ProxyProcessor):
         remember = web_req.get_argument("remember")
 
         if config.getboolean('test', 'usemock') == False:
-            auth = TokenAuthenticator(config.get('server', 'clchost'), 3600)
+            auth = TokenAuthenticator(config.get('server', 'clchost'),
+                            config.getint('server', 'session.abs.timeout')+60)
             creds = auth.authenticate(account, user, passwd)
             session_token = creds.session_token
             access_id = creds.access_key
