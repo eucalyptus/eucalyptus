@@ -46,6 +46,8 @@
     _init : function() {
       var thisObj = this; // 
       // add draw call back
+      $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
+
       var dtArg = this._getTableParam();
       thisObj.tableArg = dtArg;
       this.table = this.element.find('table').dataTable(dtArg);
@@ -55,13 +57,15 @@
       this._decorateActionMenu();
       this._decorateLegendPagination();
       this._addActions();
-      if ( thisObj.options.show_only ) {
-        $.fn.dataTableExt.afnFiltering.push(
-	  function( oSettings, aData, iDataIndex ) {
-            if (oSettings.sInstance !== thisObj.options.id)
-              return true;
-            return thisObj.options.show_only.filter_value === aData[thisObj.options.show_only.filter_col];
-          });
+      if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
+        $.each(thisObj.options.show_only, function(idx, filter){
+          $.fn.dataTableExt.afnFiltering.push(
+	    function( oSettings, aData, iDataIndex ) {
+              if (oSettings.sInstance !== thisObj.options.id)
+                return true;
+              return filter.filter_value === aData[filter.filter_col];
+            });
+        });
       }
 
       thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
@@ -290,7 +294,7 @@
                   var aliasTbl = filter['alias'];
                   return aliasTbl[selectorVal] === aData[filter['filter_col']];
                 }else if ( selectorVal !== filter['options'][0] ){ // not 'all'
-                    return selectorVal === aData[filter['filter_col']];
+                  return selectorVal === aData[filter['filter_col']];
                 }else
                   return true;
              });
@@ -341,16 +345,16 @@
           $('<span>').attr('id','table_' + this.options.id + '_count'),
           $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+thisObj.options.text.resource_found),
           'Showing:',
-          $('<span>').addClass('show selected').text('10'),
+          $('<a>').attr('href','#').addClass('show selected').text('10'),
+          '&nbsp;|&nbsp;', // TODO: don't use nbsp; in place for padding!
+          $('<a>').attr('href','#').addClass('show').text('25'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('25'),
+          $('<a>').attr('href','#').addClass('show').text('50'),
           '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('50'),
-          '&nbsp;|&nbsp;',
-          $('<span>').addClass('show').text('100')));
+          $('<a>').attr('href','#').addClass('show').text('100')));
 
-      $tableTop.find('span.show').click(function () {
-        $(this).parent().children('span').each( function() {
+      $tableTop.find('a.show').click(function () {
+        $(this).parent().children('a').each( function() {
           $(this).removeClass('selected');
         });
         thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
@@ -513,12 +517,16 @@
       var tbody = this.element.find('table tbody'); 
       if(tbody.find('tr.selected-row').length > 0 || tbody.find('tr.expanded').length > 0 || tbody.find('tr.glow').length>0 )
         return;
+      if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
+        return;
       this.table.fnReloadAjax();
     },
 
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
+      if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
+        return;
       this.table.fnReloadAjax();
     },
 

@@ -36,19 +36,28 @@
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
+    _numPending : 0,
     _create : function(){
       var thisObj = this;
+      
       $.each(thisObj.options.endpoints, function(idx, ep){
         var name = ep.name;
         var url = ep.url;
         thisObj._callbacks[name] = {callback: function(){
+         if(thisObj.countPendingReq() > MAX_PENDING_REQ ) {
+           return;
+         }
          $.ajax({
            type:"GET",
            url: url,
            data:"_xsrf="+$.cookie('_xsrf'),
            dataType:"json",
            async:"false",
+           beforeSend: function(jqXHR, settings){
+             thisObj._numPending++;
+           },
            success: function(data, textStatus, jqXHR){
+             thisObj._numPending--;
              if (data.results) {
                //delete thisObj._data[name];
                thisObj._data[name] = {
@@ -65,6 +74,7 @@
              }
            },
            error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
+             thisObj._numPending--;
              if(thisObj._data[name]){
                var last = thisObj._data[name]['lastupdated'];
                var now = new Date();
@@ -95,7 +105,7 @@
         thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true); // random ms is added to distribute sync interval
       });
     },
-      
+     
 /***** Public Methods *****/
     // e.g., get(instance, id);
     get : function(resource){
@@ -105,6 +115,11 @@
       else
         return null;
     },
+
+    countPendingReq : function(){
+      var thisObj = this;
+      return thisObj._numPending;
+    }, 
 
     addCallback : function(resource, source, callback){
       var thisObj = this;

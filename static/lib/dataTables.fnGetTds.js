@@ -8,6 +8,9 @@ $.fn.dataTableExt.oApi.fnGetTds  = function ( oSettings, mTr )
     /* Take either a TR node or aoData index as the mTr property */
     var iRow = (typeof mTr == 'object') ?
         oSettings.oApi._fnNodeToDataIndex(oSettings, mTr) : mTr;
+    if (!oSettings.aoData[iRow])
+      return [];
+
     var nTr = oSettings.aoData[iRow].nTr;
       
     /* Get an array of the visible TD elements */
