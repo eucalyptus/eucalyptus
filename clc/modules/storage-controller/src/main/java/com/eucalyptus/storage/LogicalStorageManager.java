@@ -115,7 +115,7 @@ public interface LogicalStorageManager {
 	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
 
 	public String getStorageRootDirectory();
-	
+
 	public String getVolumePath(String volumeId) throws EucalyptusCloudException;
 
 	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;

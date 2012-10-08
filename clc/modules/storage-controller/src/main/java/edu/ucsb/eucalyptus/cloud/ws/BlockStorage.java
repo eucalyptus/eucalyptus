@@ -1112,4 +1112,13 @@ public class BlockStorage {
 		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
 		return reply;
 	}
+	
+	private class VolumeChecker extends CheckerTask {
+
+		@Override
+		public void run() {
+			
+		}
+		
+	}
 }
