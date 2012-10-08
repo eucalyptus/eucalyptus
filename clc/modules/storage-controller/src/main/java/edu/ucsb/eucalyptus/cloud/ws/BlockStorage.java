@@ -132,6 +132,8 @@ import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import com.eucalyptus.storage.CheckerTask;
+import edu.ucsb.eucalyptus.storage.StorageCheckerService;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
@@ -144,6 +146,7 @@ public class BlockStorage {
 	static BlockStorageStatistics blockStorageStatistics;
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
+	static StorageCheckerService checkerService;
 	
 	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
@@ -159,6 +162,7 @@ public class BlockStorage {
 			blockStorageStatistics = new BlockStorageStatistics();
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
+		checkerService = new StorageCheckerService();
 	}
 
 	public BlockStorage() {}
@@ -198,6 +202,9 @@ public class BlockStorage {
 		if(snapshotService != null) {
 			snapshotService.shutdown();
 		}
+		if(checkerService != null) {
+			checkerService.shutdown();
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
 	}
 
@@ -210,6 +217,9 @@ public class BlockStorage {
 			LOG.error("Startup checks failed ", ex);
 		}
 		blockManager.enable();
+		for (CheckerTask checker : blockManager.getCheckers()) {
+			checkerService.add(checker);
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 

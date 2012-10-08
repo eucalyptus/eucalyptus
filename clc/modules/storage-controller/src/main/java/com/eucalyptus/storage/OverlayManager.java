@@ -97,6 +97,7 @@ import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import com.eucalyptus.storage.CheckerTask;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -1255,7 +1256,7 @@ public class OverlayManager implements LogicalStorageManager {
 						LOG.error(e);				
 					}
 				} while (i++ < max_tries);
-				
+
 				// EUCA-3597 After all retries, check if the process actually completed
 				if (null != ex){
 					throw ex;
@@ -1490,5 +1491,10 @@ public class OverlayManager implements LogicalStorageManager {
 	public boolean getFromBackend(String snapshotId)
 	throws EucalyptusCloudException {
 		return false;
+	}
+
+	@Override
+	public List<CheckerTask> getCheckers() {
+		return new ArrayList<CheckerTask>();
 	}
 }

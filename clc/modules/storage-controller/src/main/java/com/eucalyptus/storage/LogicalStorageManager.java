@@ -66,7 +66,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -138,4 +137,6 @@ public interface LogicalStorageManager {
 	public void disable() throws EucalyptusCloudException;
 
 	public boolean getFromBackend(String snapshotId) throws EucalyptusCloudException;
+
+	public List<CheckerTask> getCheckers();
 }
