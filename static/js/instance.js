@@ -118,7 +118,7 @@
         text : {
           header_title : instance_h_title,
           create_resource : instance_create,
-          resource_found : instance_found,
+          resource_found : 'instance_found',
           resource_search : instance_search,
           resource_plural : instance_plural,
         },
