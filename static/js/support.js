@@ -313,9 +313,17 @@ function inferImageName(manifest, desc, platform) {
   return name;
 }
 
-function errorAndLogout(){
+function errorAndLogout(errorCode){
+  // turn off all eucaData requests
+  $('html body').eucadata('disable');
   $('html body').find(DOM_BINDING['hidden']).login();
-  $('html body').find(DOM_BINDING['hidden']).login('popupError', $.i18n.prop('connection_failure', 'cloud administrator'), function(){
+  var errorMsg = null;
+  if (errorCode === 401)
+    errorMsg = $.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>');
+  else
+    errorMsg = $.i18n.prop('connection_failure', '<a href="#">'+cloud_admin+'</a>');
+
+  $('html body').find(DOM_BINDING['hidden']).login('popupError', errorMsg, function(){
     logout();
   });
 }

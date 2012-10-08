@@ -119,6 +119,12 @@
      }
      var msgdiv = thisObj.errorDialog.find("#login-error-message p")
      msgdiv.addClass('dialog-error').html(msg);
+     thisObj.errorDialog.find('#login-error-message a').click(function(e){
+       if(thisObj.options.support_url.indexOf('mailto') >= 0)
+         window.open(thisObj.options.support_url, '_self');
+       else
+         window.open(thisObj.options.support_url,'_blank');
+     });
    }
   });
 })(jQuery, 
