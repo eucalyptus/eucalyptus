@@ -94,6 +94,7 @@ int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *
 int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
 
 int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int ncBundleRestartInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
 int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);
 int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.ws.server;
 
+import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
@@ -89,7 +90,11 @@ public class EucalyptusSoapPipeline extends FilteredPipeline {
   @Override
   public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
     auth.unrollStage( pipeline );
-    pipeline.addLast( "binding", new BindingHandler( BindingManager.getBinding( DEFAULT_EC2_SOAP_NAMESPACE ) ) );
+    pipeline.addLast( "binding",
+        new BindingHandler(
+            BindingManager.getBinding( DEFAULT_EC2_SOAP_NAMESPACE ),
+            Pattern.compile( "http://ec2.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) )
+    );
     return pipeline;
   }
 }

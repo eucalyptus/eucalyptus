@@ -145,10 +145,10 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO, "BundleInstance(): called \n");
-  logprintfl(EUCADEBUG, "BundleInstance(): params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
   if (!instanceId) {
-    logprintfl(EUCAERROR, "BundleInstance(): bad input params\n");
+    logprintfl(EUCAERROR, "bad input params\n");
     return(1);
   }
 
@@ -196,11 +196,71 @@ int doBundleInstance(ncMetadata *ccMeta, char *instanceId, char *bucketName, cha
     }
   }
 
-  logprintfl(EUCADEBUG,"BundleInstance(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
   return(ret);
+}
+
+int doBundleRestartInstance(ncMetadata *ccMeta, char *instanceId) {
+	int              j          = 0;
+	int              rc         = 0;
+	int              start      = 0;
+	int              stop       = 0;
+	int              ret        = 0;
+	int              timeout    = 0;
+	int              done       = 0;
+	ccInstance      *myInstance = NULL;
+	time_t           op_start   = time(NULL);
+	ccResourceCache  resourceCacheLocal;
+
+	rc = initialize(ccMeta);
+	if (rc || ccIsEnabled())
+		return(1);
+
+	logprintfl(EUCAINFO, "invoked\n");
+	logprintfl(EUCADEBUG, "params: userId=%s, instanceId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId));
+	if (instanceId == NULL) {
+		logprintfl(EUCAERROR, "bad input params\n");
+		return(1);
+	}
+
+	sem_mywait(RESCACHE);
+	{
+		memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+	}
+	sem_mypost(RESCACHE);
+
+	if ((rc = find_instanceCacheId(instanceId, &myInstance)) == 0) {
+		// found the instance in the cache
+		if (myInstance) {
+			start = myInstance->ncHostIdx;
+			stop  = start + 1;
+			free(myInstance);
+			myInstance = NULL;
+		}
+	}
+	else {
+		start = 0;
+		stop  = resourceCacheLocal.numResources;
+	}
+
+	done = 0;
+	for (j = start; ((j < stop) && !done); j++) {
+		timeout = ncGetTimeout(op_start, OP_TIMEOUT, (stop - start), j);
+		rc      = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncBundleRestartInstance", instanceId);
+		if (rc) {
+			ret = 1;
+		} else {
+			ret = 0;
+			done++;
+		}
+	}
+
+	logprintfl(EUCADEBUG,"done.\n");
+	shawn();
+	return(ret);
 }
 
 int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
@@ -218,10 +278,10 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO, "CancelBundleTask(): called \n");
-  logprintfl(EUCADEBUG, "CancelBundleTask(): params: userId=%s, instanceId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId));
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, instanceId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId));
   if (!instanceId) {
-    logprintfl(EUCAERROR, "CancelBundleTask(): bad input params\n");
+    logprintfl(EUCAERROR, "bad input params\n");
     return(1);
   }
 
@@ -254,7 +314,7 @@ int doCancelBundleTask(ncMetadata *ccMeta, char *instanceId) {
     }
   }
 
-  logprintfl(EUCADEBUG,"CancelBundleTask(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -266,11 +326,11 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
   int pid, rc=0, ret=0, status=0, opFail=0, len, rbytes, i;
   int filedes[2];
 
-  logprintfl(EUCADEBUG, "ncClientCall(%s): called ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);
+  logprintfl(EUCADEBUG, "invoked ncOps=%s ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);
 
   rc = pipe(filedes);
   if (rc) {
-    logprintfl(EUCAERROR, "ncClientCall(%s): cannot create pipe\n", ncOp);
+    logprintfl(EUCAERROR, "cannot create pipe ncOps=%s\n", ncOp);
     return(1);
   }
 
@@ -286,7 +346,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 
     localmeta = malloc(sizeof(ncMetadata));
     if (!localmeta) {
-      logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+      logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
       unlock_exit(1);
     }
     memcpy(localmeta, meta, sizeof(ncMetadata));
@@ -307,7 +367,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       rc = InitWSSEC(ncs->env, ncs->stub, config->policyFile);
     }
 
-    logprintfl(EUCADEBUG, "\tncClientCall(%s): ppid=%d client calling '%s'\n", ncOp, getppid(), ncOp);
+    logprintfl(EUCADEBUG, "\tncOps=%s ppid=%d client calling '%s'\n", ncOp, getppid(), ncOp);
     if (!strcmp(ncOp, "ncGetConsoleOutput")) {
       // args: char *instId
       char *instId = va_arg(al, char *);
@@ -515,15 +575,18 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
       char *S3PolicySig = va_arg(al, char *);
 
       rc = ncBundleInstanceStub(ncs, localmeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+    } else if (!strcmp(ncOp, "ncBundleRestartInstance")) {
+      char *instanceId = va_arg(al, char *);
+      rc = ncBundleRestartInstanceStub(ncs, localmeta, instanceId);
     } else if (!strcmp(ncOp, "ncCancelBundleTask")) {
       char *instanceId = va_arg(al, char *);
 
       rc = ncCancelBundleTaskStub(ncs, localmeta, instanceId);
     } else {
-      logprintfl(EUCAWARN, "\tncClientCall(%s): ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
+      logprintfl(EUCAWARN, "\tncOps=%s ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
       rc = 1;
     }
-    logprintfl(EUCADEBUG, "\tncClientCall(%s): ppid=%d done calling '%s' with exit code '%d'\n", ncOp, getppid(), ncOp, rc);
+    logprintfl(EUCADEBUG, "\tncOps=%s ppid=%d done calling '%s' with exit code '%d'\n", ncOp, getppid(), ncOp, rc);
     if (rc) {
       ret = 1;
     } else {
@@ -550,7 +613,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	} else {
 	  *outConsoleOutput = malloc(sizeof(char) * len);
 	  if (!*outConsoleOutput) {
-	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	    unlock_exit(1);
 	  }
 	  rbytes = timeread(filedes[0], *outConsoleOutput, len, timeout);
@@ -605,7 +668,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	} else {
 	  *outStatus = malloc(sizeof(char) * len);
 	  if (!*outStatus) {
-	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	    unlock_exit(1);
 	  }
 	  rbytes = timeread(filedes[0], *outStatus, len, timeout);
@@ -648,7 +711,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	} else {
 	  *outInst = malloc(sizeof(ncInstance));
 	  if (!*outInst) {
-	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	    unlock_exit(1);
 	  }
 	  rbytes = timeread(filedes[0], *outInst, sizeof(ncInstance), timeout);
@@ -675,7 +738,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	} else {
 	  *ncOutInsts = malloc(sizeof(ncInstance *) * len);
 	  if (!*ncOutInsts) {
-	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	    unlock_exit(1);
 	  }
 	  *ncOutInstsLen = len;
@@ -683,7 +746,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	    ncInstance *inst;
 	    inst = malloc(sizeof(ncInstance));
 	    if (!inst) {
-	      logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	      logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	      unlock_exit(1);
 	    }
 	    rbytes = timeread(filedes[0], inst, sizeof(ncInstance), timeout);
@@ -705,7 +768,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	} else {
 	  *outRes = malloc(sizeof(ncResource));
 	  if (*outRes == NULL) {
-	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	    unlock_exit(1);
 	  }
 	  rbytes = timeread(filedes[0], *outRes, sizeof(ncResource), timeout);
@@ -737,7 +800,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	} else {
 	  * srs = malloc(sizeof(sensorResource *) * len);
 	  if (* srs == NULL) {
-	    logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	    logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	    unlock_exit(1);
 	  }
 	  * srsLen = len;
@@ -745,7 +808,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
 	    sensorResource * sr;
 	    sr = malloc (sizeof (sensorResource));
 	    if (sr == NULL) {
-	      logprintfl(EUCAFATAL, "ncClientCall(%s): out of memory!\n", ncOp);
+	      logprintfl(EUCAFATAL, "out of memory! ncOps=%s\n", ncOp);
 	      unlock_exit(1);
 	    }
 	    rbytes = timeread(filedes[0], sr, sizeof (sensorResource), timeout);
@@ -766,7 +829,7 @@ int ncClientCall(ncMetadata *meta, int timeout, int ncLock, char *ncURL, char *n
     }
   }
 
-  logprintfl(EUCADEBUG, "ncClientCall(%s): done clientrc=%d opFail=%d\n", ncOp, rc, opFail);
+  logprintfl(EUCADEBUG, "done ncOps=%s clientrc=%d opFail=%d\n", ncOp, rc, opFail);
   if (rc || opFail) {
     ret = 1;
   } else {
@@ -813,10 +876,10 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     return(1);
   }
 
-  logprintfl(EUCAINFO, "AttachVolume(): called \n");
-  logprintfl(EUCADEBUG, "AttachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
-    logprintfl(EUCAERROR, "AttachVolume(): bad input params\n");
+    logprintfl(EUCAERROR, "bad input params\n");
     return(1);
   }
 
@@ -849,7 +912,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     }
   }
 
-  logprintfl(EUCADEBUG,"AttachVolume(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -870,10 +933,10 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO, "DetachVolume(): called \n");
-  logprintfl(EUCADEBUG, "DetachVolume(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
   if (!volumeId || !instanceId || !remoteDev || !localDev) {
-    logprintfl(EUCAERROR, "DetachVolume(): bad input params\n");
+    logprintfl(EUCAERROR, "bad input params\n");
     return(1);
   }
 
@@ -905,7 +968,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
     }
   }
 
-  logprintfl(EUCADEBUG,"DetachVolume(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -920,8 +983,8 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *accountId, char *type, int name
     return(1);
   }
 
-  logprintfl(EUCAINFO, "ConfigureNetwork(): called \n");
-  logprintfl(EUCADEBUG, "ConfigureNetwork(): params: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", ccMeta ? SP(ccMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n", ccMeta ? SP(ccMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
     fail = 0;
@@ -932,7 +995,7 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *accountId, char *type, int name
 	destUserName = accountId;
       } else {
 	// destUserName is not set, return fail
-	logprintfl(EUCAERROR, "ConfigureNetwork(): cannot set destUserName from ccMeta or input\n");
+	logprintfl(EUCAERROR, "cannot set destUserName from ccMeta or input\n");
 	return(1);
       }
     }
@@ -945,7 +1008,7 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *accountId, char *type, int name
 	rc = vnetTableRule(vnetconfig, type, destUserName, destName, userNames[i], NULL, sourceNames[i], protocol, minPort, maxPort);
       }
       if (rc) {
-	logprintfl(EUCAERROR,"ERROR: vnetTableRule() returned error\n");
+	logprintfl(EUCAERROR,"vnetTableRule() returned error rc=%d\n", rc);
 	fail=1;
       }
     }
@@ -954,14 +1017,14 @@ int doConfigureNetwork(ncMetadata *ccMeta, char *accountId, char *type, int name
 	rc = vnetTableRule(vnetconfig, type, destUserName, destName, NULL, sourceNets[i], NULL, protocol, minPort, maxPort);
       }
       if (rc) {
-	logprintfl(EUCAERROR,"ERROR: vnetTableRule() returned error\n");
+	logprintfl(EUCAERROR,"vnetTableRule() returned error rc=%d\n", rc);
 	fail=1;
       }
     }
     sem_mypost(VNET);
   }
 
-  logprintfl(EUCADEBUG,"ConfigureNetwork(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -999,11 +1062,11 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"doAssignAddress(): called \n");
-  logprintfl(EUCADEBUG,"doAssignAddress(): params: src=%s, dst=%s\n", SP(src), SP(dst));
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: src=%s, dst=%s\n", SP(src), SP(dst));
 
   if (!src || !dst || !strcmp(src, "0.0.0.0")) {
-    logprintfl(EUCADEBUG, "doAssignAddress(): bad input params\n");
+    logprintfl(EUCADEBUG, "bad input params\n");
     return(1);
   }
   set_dirty_instanceCache();
@@ -1020,12 +1083,12 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     rc = find_instanceCacheIP(dst, &myInstance);
     if (!rc) {
       if (myInstance) {
-	logprintfl(EUCADEBUG, "doAssignAddress(): found local instance, applying %s->%s mapping\n", src, dst);
+	logprintfl(EUCADEBUG, "found local instance, applying %s->%s mapping\n", src, dst);
 
 	sem_mywait(VNET);
 	rc = vnetReassignAddress(vnetconfig, uuid, src, dst);
 	if (rc) {
-	  logprintfl(EUCAERROR, "doAssignAddress(): vnetReassignAddress() failed\n");
+	  logprintfl(EUCAERROR, "vnetReassignAddress() failed rc=%d\n", rc);
 	  ret = 1;
 	} else {
 	  ret = 0;
@@ -1035,7 +1098,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
 	if (myInstance) free(myInstance);
       }
     } else {
-      logprintfl(EUCADEBUG, "doAssignAddress(): skipping %s->%s mapping, as this clusters does not own the instance (%s)\n", src, dst, dst);
+      logprintfl(EUCADEBUG, "skipping %s->%s mapping, as this clusters does not own the instance (%s)\n", src, dst, dst);
     }
   }
 
@@ -1044,17 +1107,17 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
 
     rc = map_instanceCache(privIpCmp, dst, pubIpSet, src);
     if (rc) {
-      logprintfl(EUCAERROR, "doAssignAddress(): map_instanceCache() failed to assign %s->%s\n", dst, src);
+      logprintfl(EUCAERROR, "map_instanceCache() failed to assign %s->%s\n", dst, src);
     } else {
       rc = find_instanceCacheIP(src, &myInstance);
       if (!rc) {
-	logprintfl(EUCADEBUG, "doAssignAddress(): found instance (%s) in cache with IP (%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+	logprintfl(EUCADEBUG, "found instance (%s) in cache with IP (%s)\n", myInstance->instanceId, myInstance->ccnet.publicIp);
 	// found the instance in the cache
 	if (myInstance) {
 	  //timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
 	  rc = ncClientCall(ccMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx, resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
 	  if (rc) {
-	    logprintfl(EUCAERROR, "doAssignAddress(): could not sync public IP %s with NC\n", src);
+	    logprintfl(EUCAERROR, "could not sync public IP %s with NC\n", src);
 	    ret = 1;
 	  } else {
 	    ret = 0;
@@ -1065,7 +1128,7 @@ int doAssignAddress(ncMetadata *ccMeta, char *uuid, char *src, char *dst) {
     }
   }
 
-  logprintfl(EUCADEBUG,"doAssignAddress(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -1080,8 +1143,8 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
     return(1);
   }
 
-  logprintfl(EUCAINFO, "DescribePublicAddresses(): called \n");
-  logprintfl(EUCADEBUG, "DescribePublicAddresses(): params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
   ret=0;
   if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
@@ -1095,7 +1158,7 @@ int doDescribePublicAddresses(ncMetadata *ccMeta, publicip **outAddresses, int *
     ret=0;
   }
 
-  logprintfl(EUCADEBUG, "DescribePublicAddresses(): done. \n");
+  logprintfl(EUCADEBUG, "done.\n");
 
   shawn();
 
@@ -1112,12 +1175,12 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"UnassignAddress(): called \n");
+  logprintfl(EUCAINFO,"invoked\n");
 
-  logprintfl(EUCADEBUG,"UnassignAddress(): params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));
+  logprintfl(EUCADEBUG,"params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));
 
   if (!src || !dst || !strcmp(src, "0.0.0.0")) {
-    logprintfl(EUCADEBUG, "UnassignAddress(): bad input params\n");
+    logprintfl(EUCADEBUG, "bad input params\n");
     return(1);
   }
   set_dirty_instanceCache();
@@ -1136,7 +1199,7 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
 
     ret = vnetReassignAddress(vnetconfig, "UNSET", src, "0.0.0.0");
     if (ret) {
-      logprintfl(EUCAERROR, "UnassignAddress(): vnetReassignAddress() failed\n");
+      logprintfl(EUCAERROR, "vnetReassignAddress() failed ret=%d\n", ret);
       ret = 1;
     }
 
@@ -1147,13 +1210,13 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
 
     rc = find_instanceCacheIP(src, &myInstance);
     if (!rc) {
-      logprintfl(EUCADEBUG, "UnassignAddress(): found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
+      logprintfl(EUCADEBUG, "found instance %s in cache with IP %s\n", myInstance->instanceId, myInstance->ccnet.publicIp);
       // found the instance in the cache
       if (myInstance) {
 	//timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, myInstance->ncHostIdx);
 	rc = ncClientCall(ccMeta, OP_TIMEOUT, resourceCacheLocal.resources[myInstance->ncHostIdx].lockidx, resourceCacheLocal.resources[myInstance->ncHostIdx].ncURL, "ncAssignAddress", myInstance->instanceId, "0.0.0.0");
 	if (rc) {
-	  logprintfl(EUCAERROR, "UnassignAddress(): could not sync IP with NC\n");
+	  logprintfl(EUCAERROR, "could not sync IP with NC\n");
 	  ret = 1;
 	} else {
 	  ret = 0;
@@ -1165,11 +1228,11 @@ int doUnassignAddress(ncMetadata *ccMeta, char *src, char *dst) {
     // refresh instance cache
     rc = map_instanceCache(pubIpCmp, src, pubIpSet, "0.0.0.0");
     if (rc) {
-      logprintfl(EUCAERROR, "UnassignAddress(): map_instanceCache() failed to assign %s->%s\n", dst, src);
+      logprintfl(EUCAERROR, "map_instanceCache() failed to assign %s->%s\n", dst, src);
     }
   }
 
-  logprintfl(EUCADEBUG,"UnassignAddress(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -1184,10 +1247,10 @@ int doStopNetwork(ncMetadata *ccMeta, char *accountId, char *netName, int vlan) 
     return(1);
   }
 
-  logprintfl(EUCAINFO, "StopNetwork(): called \n");
-  logprintfl(EUCADEBUG, "StopNetwork(): params: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan);
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan);
   if (!ccMeta || !netName || vlan < 0) {
-    logprintfl(EUCAERROR, "StopNetwork(): bad input params\n");
+    logprintfl(EUCAERROR, "bad input params\n");
   }
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
@@ -1202,7 +1265,7 @@ int doStopNetwork(ncMetadata *ccMeta, char *accountId, char *netName, int vlan) 
     sem_mypost(VNET);
   }
 
-  logprintfl(EUCADEBUG,"StopNetwork(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -1217,13 +1280,13 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
     return(1);
   }
 
-  logprintfl(EUCAINFO, "DescribeNetworks(): called \n");
-  logprintfl(EUCADEBUG, "DescribeNetworks(): params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(nameserver), ccsLen);
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(nameserver), ccsLen);
 
   // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
   rc = checkActiveNetworks();
   if (rc) {
-    logprintfl(EUCAWARN, "DescribeNetowrks(): checkActiveNetworks() failed, will attempt to re-sync\n");
+    logprintfl(EUCAWARN, "checkActiveNetworks() failed, will attempt to re-sync\n");
   }
 
   sem_mywait(VNET);
@@ -1237,7 +1300,7 @@ int doDescribeNetworks(ncMetadata *ccMeta, char *nameserver, char **ccs, int ccs
   memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
 
   sem_mypost(VNET);
-  logprintfl(EUCADEBUG, "DescribeNetworks(): done. \n");
+  logprintfl(EUCADEBUG, "done.\n");
 
   shawn();
 
@@ -1253,8 +1316,8 @@ int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netNam
     return(1);
   }
 
-  logprintfl(EUCAINFO, "StartNetwork(): called \n");
-  logprintfl(EUCADEBUG, "StartNetwork(): params: userId=%s, accountId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan, SP(nameserver), ccsLen);
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, accountId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName), vlan, SP(nameserver), ccsLen);
 
   if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC") ) {
     ret = 0;
@@ -1274,7 +1337,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netNam
     sem_mypost(VNET);
 
     if (rc) {
-      logprintfl(EUCAERROR,"StartNetwork(): vnetStartNetwork() failed (%d)\n", rc);
+      logprintfl(EUCAERROR,"vnetStartNetwork() failed (%d)\n", rc);
       ret = 1;
     } else {
       ret = 0;
@@ -1282,7 +1345,7 @@ int doStartNetwork(ncMetadata *ccMeta, char *accountId, char *uuid, char *netNam
 
   }
 
-  logprintfl(EUCADEBUG,"StartNetwork(): done \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -1297,8 +1360,8 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   ccResourceCache resourceCacheLocal;
   char strbuf[4096];
 
-  logprintfl(EUCAINFO,"DescribeResources(): called \n");
-  logprintfl(EUCADEBUG,"DescribeResources(): params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
 
   rc = initialize(ccMeta);
   if (rc || ccIsEnabled()) {
@@ -1316,7 +1379,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   *outTypesMax = malloc(sizeof(int) * vmLen);
   *outTypesAvail = malloc(sizeof(int) * vmLen);
   if (*outTypesMax == NULL || *outTypesAvail == NULL) {
-      logprintfl(EUCAERROR,"DescribeResources(): out of memory\n");
+      logprintfl(EUCAERROR,"out of memory\n");
       unlock_exit(1);
   }
   bzero(*outTypesMax, sizeof(int) * vmLen);
@@ -1326,7 +1389,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
 
   for (i=0; i<vmLen; i++) {
     if ((*ccvms)[i].mem <= 0 || (*ccvms)[i].cores <= 0 || (*ccvms)[i].disk <= 0) {
-      logprintfl(EUCAERROR,"DescribeResources(): input error\n");
+      logprintfl(EUCAERROR,"input error\n");
       if (*outTypesAvail) free(*outTypesAvail);
       if (*outTypesMax) free(*outTypesMax);
       *outTypesLen = 0;
@@ -1341,7 +1404,7 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
     *outNodes = malloc(sizeof(ccResource) * resourceCacheLocal.numResources);
 
     if (*outNodes == NULL) {
-      logprintfl(EUCAFATAL,"DescribeResources(): out of memory!\n");
+      logprintfl(EUCAFATAL,"out of memory!\n");
       unlock_exit(1);
     } else {
        bzero(*outNodes, sizeof(ccResource) * resourceCacheLocal.numResources);
@@ -1385,10 +1448,10 @@ int doDescribeResources(ncMetadata *ccMeta, virtualMachine **ccvms, int vmLen, i
   }
 
   if (vmLen >= 5) {
-    logprintfl(EUCAINFO,"DescribeResources(): resource response summary (name{avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name, (*outTypesAvail)[0], (*outTypesMax)[0], (*ccvms)[1].name, (*outTypesAvail)[1], (*outTypesMax)[1], (*ccvms)[2].name, (*outTypesAvail)[2], (*outTypesMax)[2], (*ccvms)[3].name, (*outTypesAvail)[3], (*outTypesMax)[3], (*ccvms)[4].name, (*outTypesAvail)[4], (*outTypesMax)[4]);
+    logprintfl(EUCAINFO,"resource response summary (name{avail/max}): %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d} %s{%d/%d}\n", (*ccvms)[0].name, (*outTypesAvail)[0], (*outTypesMax)[0], (*ccvms)[1].name, (*outTypesAvail)[1], (*outTypesMax)[1], (*ccvms)[2].name, (*outTypesAvail)[2], (*outTypesMax)[2], (*ccvms)[3].name, (*outTypesAvail)[3], (*outTypesMax)[3], (*ccvms)[4].name, (*outTypesAvail)[4], (*outTypesMax)[4]);
   }
 
-  logprintfl(EUCADEBUG,"DescribeResources(): done \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -1417,7 +1480,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
   if (timeout <= 0) timeout = 1;
 
   op_start = time(NULL);
-  logprintfl(EUCAINFO,"refresh_resources(): called\n");
+  logprintfl(EUCAINFO,"invoked\n");
 
   // critical NC call section
   sem_mywait(RESCACHE);
@@ -1429,7 +1492,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 
   pids = malloc(sizeof(int) * resourceCacheStage->numResources);
   if (!pids) {
-    logprintfl(EUCAFATAL, "refresh_resources(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
 
@@ -1448,9 +1511,9 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	  powerUp(&(resourceCacheStage->resources[i]));
 
 	  if (resourceCacheStage->resources[i].state == RESWAKING && ((time(NULL) - resourceCacheStage->resources[i].stateChange) < config->wakeThresh)) {
-	    logprintfl(EUCADEBUG, "refresh_resources(): resource still waking up (%d more seconds until marked as down)\n", config->wakeThresh - (time(NULL) - resourceCacheStage->resources[i].stateChange));
+	    logprintfl(EUCADEBUG, "resource still waking up (%d more seconds until marked as down)\n", config->wakeThresh - (time(NULL) - resourceCacheStage->resources[i].stateChange));
 	  } else{
-	    logprintfl(EUCAERROR,"refresh_resources(): bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
+	    logprintfl(EUCAERROR,"bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
 	    resourceCacheStage->resources[i].maxMemory = 0;
 	    resourceCacheStage->resources[i].availMemory = 0;
 	    resourceCacheStage->resources[i].maxDisk = 0;
@@ -1460,7 +1523,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	    changeState(&(resourceCacheStage->resources[i]), RESDOWN);
 	  }
 	} else {
-	  logprintfl(EUCADEBUG,"refresh_resources(): received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
+	  logprintfl(EUCADEBUG,"received data from node=%s mem=%d/%d disk=%d/%d cores=%d/%d\n",
 		     resourceCacheStage->resources[i].hostname,
 		     ncResDst->memorySizeAvailable,
 		     ncResDst->memorySizeMax,
@@ -1483,7 +1546,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	  changeState(&(resourceCacheStage->resources[i]), RESUP);
 	}
       } else {
-	logprintfl(EUCADEBUG, "refresh_resources(): resource asleep/running instances (%d), skipping resource update\n", resourceCacheStage->resources[i].running);
+	logprintfl(EUCADEBUG, "resource asleep/running instances (%d), skipping resource update\n", resourceCacheStage->resources[i].running);
       }
 
       // try to discover the mac address of the resource
@@ -1493,7 +1556,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 	if (!rc) {
 	  safe_strncpy(resourceCacheStage->resources[i].mac, mac, 24);
 	  free(mac);
-	  logprintfl(EUCADEBUG, "refresh_resources(): discovered MAC '%s' for host %s(%s)\n", resourceCacheStage->resources[i].mac, resourceCacheStage->resources[i].hostname, resourceCacheStage->resources[i].ip);
+	  logprintfl(EUCADEBUG, "discovered MAC '%s' for host %s(%s)\n", resourceCacheStage->resources[i].mac, resourceCacheStage->resources[i].hostname, resourceCacheStage->resources[i].ip);
 	}
       }
 
@@ -1524,7 +1587,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
       rc = 0;
     }
     if (rc) {
-      logprintfl(EUCAWARN, "refresh_resources(): error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
+      logprintfl(EUCAWARN, "error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
     }
   }
 
@@ -1534,7 +1597,7 @@ int refresh_resources(ncMetadata *ccMeta, int timeout, int dolock) {
 
   if (pids) free(pids);
 
-  logprintfl(EUCADEBUG,"refresh_resources(): done\n");
+  logprintfl(EUCADEBUG,"done.\n");
   return(0);
 }
 
@@ -1550,7 +1613,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 
   op_start = time(NULL);
 
-  logprintfl(EUCAINFO,"refresh_instances(): called\n");
+  logprintfl(EUCAINFO,"invoked\n");
 
   set_clean_instanceCache();
 
@@ -1564,7 +1627,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 
   pids = malloc(sizeof(int) * resourceCacheStage->numResources);
   if (!pids) {
-    logprintfl(EUCAFATAL, "refresh_instances(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
 
@@ -1583,14 +1646,14 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 
 	  // if idle, power down
 	  if (ncOutInstsLen == 0) {
-	    logprintfl(EUCADEBUG, "refresh_instances(): node %s idle since %d: (%d/%d) seconds\n", resourceCacheStage->resources[i].hostname, resourceCacheStage->resources[i].idleStart, time(NULL) - resourceCacheStage->resources[i].idleStart, config->idleThresh);
+	    logprintfl(EUCADEBUG, "node %s idle since %d: (%d/%d) seconds\n", resourceCacheStage->resources[i].hostname, resourceCacheStage->resources[i].idleStart, time(NULL) - resourceCacheStage->resources[i].idleStart, config->idleThresh);
 	    if (!resourceCacheStage->resources[i].idleStart) {
 	      resourceCacheStage->resources[i].idleStart = time(NULL);
 	    } else if ((time(NULL) - resourceCacheStage->resources[i].idleStart) > config->idleThresh) {
 	      // call powerdown
 
 	      if (powerDown(ccMeta, &(resourceCacheStage->resources[i]))) {
-		logprintfl(EUCAWARN, "refresh_instances(): powerDown for %s failed\n", resourceCacheStage->resources[i].hostname);
+		logprintfl(EUCAWARN, "powerDown for %s failed\n", resourceCacheStage->resources[i].hostname);
 	      }
 	    }
 	  } else {
@@ -1603,7 +1666,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	    if (found) {
 	      myInstance = NULL;
 	      // add it
-	      logprintfl(EUCADEBUG,"refresh_instances(): describing instance %s, %s, %d\n", ncOutInsts[j]->instanceId, ncOutInsts[j]->stateName, j);
+	      logprintfl(EUCADEBUG,"describing instance %s, %s, %d\n", ncOutInsts[j]->instanceId, ncOutInsts[j]->stateName, j);
 	      numInsts++;
 
 	      // grab instance from cache, if available.  otherwise, start from scratch
@@ -1611,7 +1674,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      if (rc || !myInstance) {
 		myInstance = malloc(sizeof(ccInstance));
 		if (!myInstance) {
-		  logprintfl(EUCAFATAL, "refresh_instances(): out of memory!\n");
+		  logprintfl(EUCAFATAL, "out of memory!\n");
 		  unlock_exit(1);
 		}
 		bzero(myInstance, sizeof(ccInstance));
@@ -1650,11 +1713,11 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	      //#if 0
 	      if ((myInstance->ccnet.publicIp[0] != '\0' && strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) && (myInstance->ncnet.publicIp[0] == '\0' || !strcmp(myInstance->ncnet.publicIp, "0.0.0.0"))) {
 		// CC has network info, NC does not
-		logprintfl(EUCADEBUG, "refresh_instances(): sending ncAssignAddress to sync NC\n");
+		logprintfl(EUCADEBUG, "sending ncAssignAddress to sync NC\n");
 		rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncAssignAddress", myInstance->instanceId, myInstance->ccnet.publicIp);
 		if (rc) {
 		  // problem, but will retry next time
-		  logprintfl(EUCAWARN, "refresh_instances(): could not send AssignAddress to NC\n");
+		  logprintfl(EUCAWARN, "could not send AssignAddress to NC\n");
 		}
 	      }
 	      //#endif
@@ -1667,7 +1730,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 	          vnetEnableHost(vnetconfig, myInstance->ccnet.privateMac, myInstance->ccnet.privateIp, myInstance->ccnet.vlan);
 	       }
               }
-	      logprintfl(EUCADEBUG, "refresh_instances(): storing instance state: %s/%s/%s/%s\n", myInstance->instanceId, myInstance->state, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
+	      logprintfl(EUCADEBUG, "storing instance state: %s/%s/%s/%s\n", myInstance->instanceId, myInstance->state, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	      print_ccInstance("refresh_instances(): ", myInstance);
 
 	      if (myInstance) free(myInstance);
@@ -1709,7 +1772,7 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
       rc = 0;
     }
     if (rc) {
-      logprintfl(EUCAWARN, "refresh_instances(): error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
+      logprintfl(EUCAWARN, "error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
     }
   }
 
@@ -1719,14 +1782,14 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
 
   if (pids) free(pids);
 
-  logprintfl(EUCADEBUG,"refresh_instances(): done\n");
+  logprintfl(EUCADEBUG,"done.\n");
   return(0);
 }
 
 int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
 
   time_t op_start = time(NULL);
-  logprintfl(EUCAINFO,"refresh_sensors(): called\n");
+  logprintfl(EUCAINFO,"invoked\n");
 
   int history_size;
   long long collection_interval_time_ms;
@@ -1745,7 +1808,7 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
 
   int * pids = malloc(sizeof(int) * resourceCacheStage->numResources);
   if (!pids) {
-    logprintfl(EUCAFATAL, "refresh_sensors(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
   
@@ -1803,7 +1866,7 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
       rc = 0;
     }
     if (rc) {
-      logprintfl(EUCAWARN, "refresh_sensors(): error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
+      logprintfl(EUCAWARN, "error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
     }
   }
   
@@ -1813,7 +1876,7 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
   
   if (pids) free(pids);
   
-  logprintfl(EUCADEBUG,"refresh_sensors(): done\n");
+  logprintfl(EUCADEBUG,"done.\n");
   return(0);
 }
 
@@ -1826,8 +1889,8 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   ncInstance **ncOutInsts=NULL;
   ncStub *ncs;
 
-  logprintfl(EUCAINFO,"DescribeInstances(): called \n");
-  logprintfl(EUCADEBUG,"DescribeInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen);
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: userId=%s, instIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen);
 
   op_start = time(NULL);
 
@@ -1844,14 +1907,14 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   if (instanceCache->numInsts) {
     *outInsts = malloc(sizeof(ccInstance) * instanceCache->numInsts);
     if (!*outInsts) {
-      logprintfl(EUCAFATAL, "doDescribeInstances(): out of memory!\n");
+      logprintfl(EUCAFATAL, "out of memory!\n");
       unlock_exit(1);
     }
 
     for (i=0; i<MAXINSTANCES; i++) {
       if (instanceCache->cacheState[i] == INSTVALID) {
 	if (count >= instanceCache->numInsts) {
-	  logprintfl(EUCAWARN, "doDescribeInstances(): found more instances than reported by numInsts, will only report a subset of instances\n");
+	  logprintfl(EUCAWARN, "found more instances than reported by numInsts, will only report a subset of instances\n");
 	  count=0;
 	}
 	memcpy( &((*outInsts)[count]), &(instanceCache->instances[i]), sizeof(ccInstance));
@@ -1864,10 +1927,10 @@ int doDescribeInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, ccIn
   sem_mypost(INSTCACHE);
 
   for (i=0; i< (*outInstsLen) ; i++) {
-    logprintfl(EUCAINFO, "DescribeInstances(): instance response summary: instanceId=%s, state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
+    logprintfl(EUCAINFO, "instance response summary: instanceId=%s, state=%s, publicIp=%s, privateIp=%s\n", (*outInsts)[i].instanceId, (*outInsts)[i].state, (*outInsts)[i].ccnet.publicIp, (*outInsts)[i].ccnet.privateIp);
   }
 
-  logprintfl(EUCADEBUG,"DescribeInstances(): done \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -1888,13 +1951,13 @@ int powerUp(ccResource *res) {
 
     ips = malloc(sizeof(uint32_t));
     if (!ips) {
-      logprintfl(EUCAFATAL, "powerUp(): out of memory!\n");
+      logprintfl(EUCAFATAL, "out of memory!\n");
       unlock_exit(1);
     }
 
     nms = malloc(sizeof(uint32_t));
     if (!nms) {
-      logprintfl(EUCAFATAL, "powerUp(): out of memory!\n");
+      logprintfl(EUCAFATAL, "out of memory!\n");
       unlock_exit(1);
     }
 
@@ -1904,7 +1967,7 @@ int powerUp(ccResource *res) {
   }
 
   for (i=0; i<len; i++) {
-    logprintfl(EUCADEBUG, "powerUp(): attempting to wake up resource %s(%s/%s)\n", res->hostname, res->ip, res->mac);
+    logprintfl(EUCADEBUG, "attempting to wake up resource %s(%s/%s)\n", res->hostname, res->ip, res->mac);
     // try to wake up res
 
     // broadcast
@@ -1921,14 +1984,14 @@ int powerUp(ccResource *res) {
     }
     if (bc) free(bc);
     if (!rc) {
-      logprintfl(EUCAINFO, "powerUp(): waking up powered off host %s(%s/%s): %s\n", res->hostname, res->ip, res->mac, cmd);
+      logprintfl(EUCAINFO, "waking up powered off host %s(%s/%s): %s\n", res->hostname, res->ip, res->mac, cmd);
       rc = system(cmd);
       rc = rc>>8;
       if (rc) {
-	logprintfl(EUCAERROR, "powerUp(): cmd failed: %d\n", rc);
+	logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
 	ret = 1;
       } else {
-	logprintfl(EUCAERROR, "powerUp(): cmd success: %d\n", rc);
+	logprintfl(EUCAERROR, "cmd success: %d\n", rc);
 	changeState(res, RESWAKING);
 	ret = 0;
       }
@@ -1951,7 +2014,7 @@ int powerDown(ncMetadata *ccMeta, ccResource *node) {
 
   op_start = time(NULL);
 
-  logprintfl(EUCAINFO, "powerDown(): sending powerdown to node: %s, %s\n", node->hostname, node->ncURL);
+  logprintfl(EUCAINFO, "sending powerdown to node: %s, %s\n", node->hostname, node->ncURL);
 
   timeout = ncGetTimeout(op_start, OP_TIMEOUT, 1, 1);
   rc = ncClientCall(ccMeta, timeout, node->lockidx, node->ncURL, "ncPowerDown");
@@ -1963,7 +2026,7 @@ int powerDown(ncMetadata *ccMeta, ccResource *node) {
 }
 
 void print_netConfig(char *prestr, netConfig *in) {
-  logprintfl(EUCADEBUG, "print_netConfig(): %s: vlan:%d networkIndex:%d privateMac:%s publicIp:%s privateIp:%s\n", prestr, in->vlan, in->networkIndex, in->privateMac, in->publicIp, in->privateIp);
+  logprintfl(EUCADEBUG, "%s: vlan:%d networkIndex:%d privateMac:%s publicIp:%s privateIp:%s\n", prestr, in->vlan, in->networkIndex, in->privateMac, in->publicIp, in->privateIp);
 }
 
 int ccInstance_to_ncInstance(ccInstance *dst, ncInstance *src) {
@@ -2033,13 +2096,13 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
 
   *outresid = 0;
 
-  logprintfl(EUCADEBUG, "schedule(): scheduler using ROUNDROBIN policy to find next resource\n");
+  logprintfl(EUCADEBUG, "scheduler using ROUNDROBIN policy to find next resource\n");
   // find the best 'resource' on which to run the instance
   done=found=0;
   start = config->schedState;
   i = start;
 
-  logprintfl(EUCADEBUG, "schedule(): scheduler state starting at resource %d\n", config->schedState);
+  logprintfl(EUCADEBUG, "scheduler state starting at resource %d\n", config->schedState);
   while(!done) {
     int mem, disk, cores;
 
@@ -2072,7 +2135,7 @@ int schedule_instance_roundrobin(virtualMachine *vm, int *outresid) {
   *outresid = resid;
   config->schedState = i;
 
-  logprintfl(EUCADEBUG, "schedule(): scheduler state finishing at resource %d\n", config->schedState);
+  logprintfl(EUCADEBUG, "scheduler state finishing at resource %d\n", config->schedState);
 
   return(0);
 }
@@ -2083,7 +2146,7 @@ int schedule_instance_explicit(virtualMachine *vm, char *targetNode, int *outres
 
   *outresid = 0;
 
-  logprintfl(EUCADEBUG, "schedule(): scheduler using EXPLICIT policy to run VM on target node '%s'\n", targetNode);
+  logprintfl(EUCADEBUG, "scheduler using EXPLICIT policy to run VM on target node '%s'\n", targetNode);
 
   // find the best 'resource' on which to run the instance
   resid = sleepresid = -1;
@@ -2140,9 +2203,9 @@ int schedule_instance_greedy(virtualMachine *vm, int *outresid) {
   *outresid = 0;
 
   if (config->schedPolicy == SCHEDGREEDY) {
-    logprintfl(EUCADEBUG, "schedule(): scheduler using GREEDY policy to find next resource\n");
+    logprintfl(EUCADEBUG, "scheduler using GREEDY policy to find next resource\n");
   } else if (config->schedPolicy == SCHEDPOWERSAVE) {
-    logprintfl(EUCADEBUG, "schedule(): scheduler using POWERSAVE policy to find next resource\n");
+    logprintfl(EUCADEBUG, "scheduler using POWERSAVE policy to find next resource\n");
   }
 
   // find the best 'resource' on which to run the instance
@@ -2211,8 +2274,8 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"RunInstances(): called \n");
-  logprintfl(EUCADEBUG,"RunInstances(): params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId), SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
 
   if (config->use_proxy) {
     char walrusURL[MAX_PATH], *strptr=NULL, newURL[MAX_PATH];
@@ -2235,12 +2298,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  if (strptr) {
 	    strptr += strlen("walrus://");
 	    snprintf(newURL, MAX_PATH, "%s/%s", walrusURL, strptr);
-	    logprintfl(EUCADEBUG, "RunInstances(): constructed cacheable URL: %s\n", newURL);
+	    logprintfl(EUCADEBUG, "constructed cacheable URL: %s\n", newURL);
 	    rc = image_cache(ccvm->virtualBootRecord[i].id, newURL);
 	    if (!rc) {
 	      snprintf(ccvm->virtualBootRecord[i].resourceLocation, CHAR_BUFFER_SIZE, "http://%s:8776/%s", config->proxyIp, ccvm->virtualBootRecord[i].id);
 	    } else {
-	      logprintfl(EUCAWARN, "RunInstances(): could not cache image %s/%s\n", ccvm->virtualBootRecord[i].id, newURL);
+	      logprintfl(EUCAWARN, "could not cache image %s/%s\n", ccvm->virtualBootRecord[i].id, newURL);
 	    }
 	  }
 	}
@@ -2251,11 +2314,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   *outInstsLen = 0;
 
   if (!ccvm) {
-    logprintfl(EUCAERROR,"RunInstances(): invalid ccvm\n");
+    logprintfl(EUCAERROR,"invalid ccvm\n");
     return(-1);
   }
   if (minCount <= 0 || maxCount <= 0 || instIdsLen < maxCount) {
-    logprintfl(EUCAERROR,"RunInstances(): bad min or max count, or not enough instIds (%d, %d, %d)\n", minCount, maxCount, instIdsLen);
+    logprintfl(EUCAERROR,"bad min or max count, or not enough instIds (%d, %d, %d)\n", minCount, maxCount, instIdsLen);
     return(-1);
   }
 
@@ -2265,12 +2328,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     nidx=-1;
   } else {
     if ( (networkIndexListLen < minCount) || (networkIndexListLen > maxCount) ) {
-      logprintfl(EUCAERROR, "RunInstances(): network index length (%d) is out of bounds for min/max instances (%d-%d)\n", networkIndexListLen, minCount, maxCount);
+      logprintfl(EUCAERROR, "network index length (%d) is out of bounds for min/max instances (%d-%d)\n", networkIndexListLen, minCount, maxCount);
       return(1);
     }
     for (i=0; i<networkIndexListLen; i++) {
       if ( (networkIndexList[i] < 0) || (networkIndexList[i] > (vnetconfig->numaddrs-1)) ) {
-	logprintfl(EUCAERROR, "RunInstances(): network index (%d) out of bounds (0-%d)\n", networkIndexList[i], vnetconfig->numaddrs-1);
+	logprintfl(EUCAERROR, "network index (%d) out of bounds (0-%d)\n", networkIndexList[i], vnetconfig->numaddrs-1);
 	return(1);
       }
     }
@@ -2281,7 +2344,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 
   retInsts = malloc(sizeof(ccInstance) * maxCount);
   if (!retInsts) {
-    logprintfl(EUCAFATAL, "RunInstances(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
 
@@ -2298,7 +2361,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       snprintf(uuid, 48, "UNSET");
     }
 
-    logprintfl(EUCADEBUG,"RunInstances(): running instance %s\n", instId);
+    logprintfl(EUCADEBUG,"running instance %s\n", instId);
 
     // generate new mac
     bzero(mac, 32);
@@ -2325,13 +2388,13 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
     sem_mypost(VNET);
 
     if (thenidx != -1) {
-      logprintfl(EUCADEBUG,"RunInstances(): assigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, networkIndexList[thenidx]);
+      logprintfl(EUCADEBUG,"assigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, networkIndexList[thenidx]);
     } else {
-      logprintfl(EUCADEBUG,"RunInstances(): assigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, thenidx);
+      logprintfl(EUCADEBUG,"assigning MAC/IP: %s/%s/%s/%d\n", mac, pubip, privip, thenidx);
     }
 
     if (mac[0] == '\0' || !foundnet) {
-      logprintfl(EUCAERROR,"RunInstances(): could not find/initialize any free network address, failing doRunInstances()\n");
+      logprintfl(EUCAERROR,"could not find/initialize any free network address, failing doRunInstances()\n");
     } else {
       // "run" the instance
       memcpy (&ncvm, ccvm, sizeof(virtualMachine));
@@ -2357,14 +2420,14 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
       res = &(resourceCache->resources[resid]);
       if (rc) {
 	// could not find resource
-	logprintfl(EUCAERROR, "RunInstances(): scheduler could not find resource to run the instance on\n");
+	logprintfl(EUCAERROR, "scheduler could not find resource to run the instance on\n");
 	// couldn't run this VM, remove networking information from system
 	free_instanceNetwork(mac, vlan, 1, 1);
       } else {
 	int pid, status, ret, rbytes;
 
 	// try to run the instance on the chosen resource
-	logprintfl(EUCADEBUG, "RunInstances(): scheduler decided to run instance '%s' on resource '%s', running count '%d'\n", instId, res->ncURL, res->running);
+	logprintfl(EUCADEBUG, "scheduler decided to run instance '%s' on resource '%s', running count '%d'\n", instId, res->ncURL, res->running);
 
 	outInst=NULL;
 
@@ -2379,7 +2442,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  sem_mypost(RESCACHE);
 
 	  ret=0;
-	  logprintfl(EUCAINFO,"RunInstances(): sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, instId, SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
+	  logprintfl(EUCAINFO,"sending run instance: node=%s instanceId=%s emiId=%s mac=%s privIp=%s pubIp=%s vlan=%d networkIdx=%d key=%.32s... mem=%d disk=%d cores=%d\n", res->ncURL, instId, SP(amiId), ncnet.privateMac, ncnet.privateIp, ncnet.publicIp, ncnet.vlan, ncnet.networkIndex, SP(keyName), ncvm.mem, ncvm.disk, ncvm.cores);
 
 	  rc = 1;
 	  startRun = time(NULL);
@@ -2401,12 +2464,12 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	      snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
 	      if (check_directory(cdir)) mkdir(cdir, 0700);
 	      if (check_directory(cdir)) {
-		logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache directory '%s'\n", cdir);
+		logprintfl(EUCAERROR, "could not create console/floppy cache directory '%s'\n", cdir);
 	      } else {
 		// drop encrypted windows password and floppy on filesystem
 		rc = makeWindowsFloppy(config->eucahome, cdir, keyName, instId);
 		if (rc) {
-		  logprintfl(EUCAERROR, "RunInstances(): could not create console/floppy cache\n");
+		  logprintfl(EUCAERROR, "could not create console/floppy cache\n");
 		}
 	      }
 	    }
@@ -2414,9 +2477,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
             // call StartNetwork client
 
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncStartNetwork", uuid, NULL, 0, 0, vlan, NULL);
-	    logprintfl(EUCADEBUG, "RunInstances(): sent network start request for network idx '%d' on resource '%s' uuid '%s': result '%s'\n", vlan, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
+	    logprintfl(EUCADEBUG, "sent network start request for network idx '%d' on resource '%s' uuid '%s': result '%s'\n", vlan, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
 	    rc = ncClientCall(ccMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm, amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
-	    logprintfl(EUCADEBUG, "RunInstances(): sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
+	    logprintfl(EUCADEBUG, "sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
 	    if (rc) {
 	      // make sure we get the latest topology information before trying again
 	      sem_mywait(CONFIG);
@@ -2442,11 +2505,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  exit(ret);
 	} else {
 	  rc = 0;
-	  logprintfl(EUCADEBUG,"RunInstances(): call complete (pid/rc): %d/%d\n", pid, rc);
+	  logprintfl(EUCADEBUG,"call complete (pid/rc): %d/%d\n", pid, rc);
 	}
 	if (rc != 0) {
 	  // problem
-	  logprintfl(EUCAERROR, "RunInstances(): tried to run the VM, but runInstance() failed; marking resource '%s' as down\n", res->ncURL);
+	  logprintfl(EUCAERROR, "tried to run the VM, but runInstance() failed; marking resource '%s' as down\n", res->ncURL);
 	  res->state = RESDOWN;
 	  i--;
 	  // couldn't run this VM, remove networking information from system
@@ -2456,7 +2519,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  res->availDisk -= ccvm->disk;
 	  res->availCores -= ccvm->cores;
 
-	  logprintfl(EUCADEBUG, "RunInstances(): resource information after schedule/run: %d/%d, %d/%d, %d/%d\n", res->availMemory, res->maxMemory, res->availCores, res->maxCores, res->availDisk, res->maxDisk);
+	  logprintfl(EUCADEBUG, "resource information after schedule/run: %d/%d, %d/%d, %d/%d\n", res->availMemory, res->maxMemory, res->availCores, res->maxCores, res->availDisk, res->maxDisk);
 
 	  myInstance = &(retInsts[runCount]);
 	  bzero(myInstance, sizeof(ccInstance));
@@ -2471,7 +2534,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 	  // add the instance to the cache, and continue on
 	  //	  add_instanceCache(myInstance->instanceId, myInstance);
 	  refresh_instanceCache(myInstance->instanceId, myInstance);
-	  print_ccInstance("RunInstances(): ", myInstance);
+	  print_ccInstance("", myInstance);
 
 	  runCount++;
 	}
@@ -2485,7 +2548,7 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   *outInstsLen = runCount;
   *outInsts = retInsts;
 
-  logprintfl(EUCADEBUG,"RunInstances(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -2514,8 +2577,8 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
     return(1);
   }
 
-  logprintfl(EUCAINFO,"GetConsoleOutput(): called \n");
-  logprintfl(EUCADEBUG,"GetConsoleOutput(): params: userId=%s, instId=%s\n", SP(ccMeta->userId), SP(instId));
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: userId=%s, instId=%s\n", SP(ccMeta->userId), SP(instId));
 
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -2576,7 +2639,7 @@ int doGetConsoleOutput(ncMetadata *ccMeta, char *instId, char **outConsoleOutput
     }
   }
 
-  logprintfl(EUCADEBUG,"GetConsoleOutput(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -2600,8 +2663,8 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
   if (rc || ccIsEnabled()) {
     return(1);
   }
-  logprintfl(EUCAINFO,"RebootInstances(): called \n");
-  logprintfl(EUCADEBUG,"RebootInstances(): params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
 
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -2633,7 +2696,7 @@ int doRebootInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen) {
     }
   }
 
-  logprintfl(EUCADEBUG,"RebootInstances(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -2657,8 +2720,8 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
   }
   set_dirty_instanceCache();
 
-  logprintfl(EUCAINFO,"TerminateInstances(): called \n");
-  logprintfl(EUCADEBUG,"TerminateInstances(): params: userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"), force);
+  logprintfl(EUCAINFO,"invoked\n");
+  logprintfl(EUCADEBUG,"params: userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen, SP(instIdsLen ? instIds[0] : "UNSET"), force);
 
   sem_mywait(RESCACHE);
   memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -2708,7 +2771,7 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	rc = ncClientCall(ccMeta, 0, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncTerminateInstance", instId, force, &shutdownState, &previousState);
 	if (rc) {
 	  (*outStatus)[i] = 1;
-	  logprintfl(EUCAWARN, "TerminateInstances(): failed to terminate '%s': instance may not exist any longer\n", instId);
+	  logprintfl(EUCAWARN, "failed to terminate '%s': instance may not exist any longer\n", instId);
 	  ret = 1;
 	} else {
 	  (*outStatus)[i] = 0;
@@ -2718,13 +2781,13 @@ int doTerminateInstances(ncMetadata *ccMeta, char **instIds, int instIdsLen, int
 	rc = ncClientCall(ccMeta, 0, resourceCacheStage->resources[j].lockidx, resourceCacheStage->resources[j].ncURL, "ncAssignAddress", instId, "0.0.0.0");
 	if (rc) {
 	  // problem, but will retry next time
-	  logprintfl(EUCAWARN, "TerminateInstances(): could not send AssignAddress to NC\n");
+	  logprintfl(EUCAWARN, "could not send AssignAddress to NC\n");
 	}
       }
     }
   }
 
-  logprintfl(EUCADEBUG,"TerminateInstances(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -2747,10 +2810,10 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
     return(1);
   }
 
-  logprintfl(EUCAINFO, "CreateImage(): called \n");
-  logprintfl(EUCADEBUG, "CreateImage(): params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev));
+  logprintfl(EUCAINFO, "invoked\n");
+  logprintfl(EUCADEBUG, "params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev));
   if (!volumeId || !instanceId || !remoteDev) {
-    logprintfl(EUCAERROR, "CreateImage(): bad input params\n");
+    logprintfl(EUCAERROR, "bad input params\n");
     return(1);
   }
 
@@ -2784,7 +2847,7 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
     }
   }
 
-  logprintfl(EUCADEBUG,"CreateImage(): done. \n");
+  logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
 
@@ -2793,7 +2856,7 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
 
 int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
-  logprintfl(EUCAINFO, "DescribeSensors(): invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
+  logprintfl(EUCAINFO, "invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
   int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
   if (err != 0)
     logprintfl (EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
@@ -2861,7 +2924,7 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t **lock, c
 
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-      snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", bufname);
+      snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
     } else {
       snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
     }
@@ -2895,41 +2958,41 @@ int initialize(ncMetadata *ccMeta) {
   rc = init_thread();
   if (rc) {
     ret=1;
-    logprintfl(EUCAERROR, "initialize(): cannot initialize thread\n");
+    logprintfl(EUCAERROR, "cannot initialize thread\n");
   }
 
   rc = init_log();
   if (rc) {
     ret = 1;
-    logprintfl(EUCAERROR, "initialize(): cannot initialize local state\n");
+    logprintfl(EUCAERROR, "cannot initialize local state\n");
   }
 
   rc = init_eucafaults ("cc");	// Returns # of faults loaded into registry.
   if (!rc) {
-    logprintfl(EUCAERROR, "initialize(): cannot initialize eucafault registry at startup--will retry initialization upon detection of any faults.\n");
+    logprintfl(EUCAERROR, "cannot initialize eucafault registry at startup--will retry initialization upon detection of any faults.\n");
   }
 
   rc = init_config();
   if (rc) {
     ret=1;
-    logprintfl(EUCAERROR, "initialize(): cannot initialize from configuration file\n");
+    logprintfl(EUCAERROR, "cannot initialize from configuration file\n");
   }
 
   if (config->use_tunnels) {
     rc = vnetInitTunnels(vnetconfig);
     if (rc) {
-      logprintfl(EUCAERROR, "initialize(): cannot initialize tunnels\n");
+      logprintfl(EUCAERROR, "cannot initialize tunnels\n");
     }
   }
 
   rc = init_pthreads();
   if (rc) {
-    logprintfl(EUCAERROR, "initialize(): cannot initialize background threads\n");
+    logprintfl(EUCAERROR, "cannot initialize background threads\n");
     ret = 1;
   }
 
   if (ccMeta != NULL) {
-    logprintfl(EUCADEBUG, "initialize(): ccMeta: userId=%s correlationId=%s\n", ccMeta->userId, ccMeta->correlationId);
+    logprintfl(EUCADEBUG, "ccMeta: userId=%s correlationId=%s\n", ccMeta->userId, ccMeta->correlationId);
   }
 
   if (!ret) {
@@ -3060,7 +3123,7 @@ int ccCheckState(int clcTimer) {
   }
   // check local configuration
   if (config->ccState == SHUTDOWNCC) {
-    logprintfl(EUCAINFO, "ccCheckState(): this cluster controller marked as shut down\n");
+    logprintfl(EUCAINFO, "this cluster controller marked as shut down\n");
     ret++;
   }
 
@@ -3069,7 +3132,7 @@ int ccCheckState(int clcTimer) {
     char cmd[MAX_PATH];
     snprintf(cmd, MAX_PATH, "%s", config->eucahome);
     if (check_directory(cmd)) {
-      logprintfl(EUCAERROR, "ccCheckState(): cannot find directory '%s'\n", cmd);
+      logprintfl(EUCAERROR, "cannot find directory '%s'\n", cmd);
       ret++;
     }
   }
@@ -3078,19 +3141,19 @@ int ccCheckState(int clcTimer) {
   {
     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     if (check_file(cmd)) {
-      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      logprintfl(EUCAERROR, "cannot find shellout '%s'\n", cmd);
       ret++;
     }
 
     snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl", config->eucahome);
     if (check_file(cmd)) {
-      logprintfl(EUCAERROR, "ccCheckState(): cannot find shellout '%s'\n", cmd);
+      logprintfl(EUCAERROR, "cannot find shellout '%s'\n", cmd);
       ret++;
     }
 
     snprintf(cmd, MAX_PATH, "ip addr show");
     if (system(cmd)) {
-      logprintfl(EUCAERROR, "ccCheckState(): cannot run shellout '%s'\n", cmd);
+      logprintfl(EUCAERROR, "cannot run shellout '%s'\n", cmd);
       ret++;
     }
   }
@@ -3109,11 +3172,11 @@ int ccCheckState(int clcTimer) {
       hostint = dot2hex(tok);
       host = hex2dot(hostint);
       if (host) {
-	logprintfl(EUCADEBUG, "ccCheckState(): checking health of arbitrator (%s)\n", tok);
+	logprintfl(EUCADEBUG, "checking health of arbitrator (%s)\n", tok);
 	snprintf(cmd, 255, "ping -c 1 %s", host);
 	rc = system(cmd);
 	if (rc) {
-	  logprintfl(EUCADEBUG, "ccCheckState(): cannot ping arbitrator %s (ping rc=%d)\n", host, rc);
+	  logprintfl(EUCADEBUG, "cannot ping arbitrator %s (ping rc=%d)\n", host, rc);
 	  arbitratorFails++;
 	}
 	free(host);
@@ -3128,7 +3191,7 @@ int ccCheckState(int clcTimer) {
     }
 
     if (config->arbitratorFails > 10) {
-      logprintfl(EUCADEBUG, "ccCheckState(): more than 10 arbitrator ping fails in a row (%d), failing check\n", config->arbitratorFails);
+      logprintfl(EUCADEBUG, "more than 10 arbitrator ping fails in a row (%d), failing check\n", config->arbitratorFails);
       ret++;
     }
   }
@@ -3160,24 +3223,24 @@ int doBrokerPairing() {
   //enabled
   for (i=0; i<16; i++) {
     if (!strcmp(config->ccStatus.serviceId.name, "self")) {
-      //      logprintfl(EUCADEBUG, "ccCheckState(): local CC service info not yet initialized\n");
+      //      logprintfl(EUCADEBUG, "local CC service info not yet initialized\n");
     } else if (!memcmp(&(config->ccStatus.serviceId), &(config->services[i]), sizeof(serviceInfoType))) {
-      //      logprintfl(EUCADEBUG, "ccCheckState(): found local CC information in services()\n");
+      //      logprintfl(EUCADEBUG, "found local CC information in services()\n");
     } else if (!strcmp(config->services[i].type, "cluster") && !strcmp(config->services[i].partition, config->ccStatus.serviceId.partition)) {
       // service is not 'me', but is a 'cluster' and in has the same 'partition', must be in HA mode
-      //      logprintfl(EUCADEBUG, "ccCheckState(): CC is in HA mode\n");
+      //      logprintfl(EUCADEBUG, "CC is in HA mode\n");
       is_ha_cc = 1;
     }
   }
   //disabled
   for (i=0; i<16; i++) {
     if (!strcmp(config->ccStatus.serviceId.name, "self")) {
-      //      logprintfl(EUCADEBUG, "ccCheckState(): local CC service info not yet initialized\n");
+      //      logprintfl(EUCADEBUG, "local CC service info not yet initialized\n");
     } else if (!memcmp(&(config->ccStatus.serviceId), &(config->disabledServices[i]), sizeof(serviceInfoType))) {
-      //      logprintfl(EUCADEBUG, "ccCheckState(): found local CC information in disabled services()\n");
+      //      logprintfl(EUCADEBUG, "found local CC information in disabled services()\n");
     } else if (!strcmp(config->disabledServices[i].type, "cluster") && !strcmp(config->disabledServices[i].partition, config->ccStatus.serviceId.partition)) {
       // service is not 'me', but is a 'cluster' and in has the same 'partition', must be in HA mode
-      //      logprintfl(EUCADEBUG, "ccCheckState(): CC is in HA mode\n");
+      //      logprintfl(EUCADEBUG, "CC is in HA mode\n");
       is_ha_cc = 1;
     }
   }
@@ -3186,12 +3249,12 @@ int doBrokerPairing() {
     int j;
     //test
     if (!strcmp(config->ccStatus.serviceId.name, "self")) {
-      //      logprintfl(EUCADEBUG, "ccCheckState(): local CC service info not yet initialized\n");
+      //      logprintfl(EUCADEBUG, "local CC service info not yet initialized\n");
     } else if (!memcmp(&(config->ccStatus.serviceId), &(config->notreadyServices[i]), sizeof(serviceInfoType))) {
-      //      logprintfl(EUCADEBUG, "ccCheckState(): found local CC information in notreadyServices()\n");
+      //      logprintfl(EUCADEBUG, "found local CC information in notreadyServices()\n");
     } else if (!strcmp(config->notreadyServices[i].type, "cluster") && !strcmp(config->notreadyServices[i].partition, config->ccStatus.serviceId.partition)) {
       // service is not 'me', but is a 'cluster' and in has the same 'partition', must be in HA mode
-      //      logprintfl(EUCADEBUG, "ccCheckState(): CC is in HA mode\n");
+      //      logprintfl(EUCADEBUG, "CC is in HA mode\n");
       is_ha_cc = 1;
     }
 
@@ -3199,15 +3262,15 @@ int doBrokerPairing() {
       if (!strcmp(config->notreadyServices[i].type, "vmwarebroker")) {
 	for (j=0; j<8; j++) {
 	  if (strlen(config->notreadyServices[i].uris[j])) {
-	    logprintfl(EUCADEBUG, "ccCheckState(): found broker - %s\n", config->notreadyServices[i].uris[j]);
+	    logprintfl(EUCADEBUG, "found broker - %s\n", config->notreadyServices[i].uris[j]);
 
 	    snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
 	    bzero(bhost, sizeof(char) * MAX_PATH);
 	    tokenize_uri(buri, uriType, bhost, &port, path);
 
-	    logprintfl(EUCADEBUG, "ccCheckState(): comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
+	    logprintfl(EUCADEBUG, "comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
 	    if (!strcmp(chost, bhost)) {
-	      logprintfl(EUCAWARN, "ccCheckState(): detected local broker (%s) matching local CC (%s) in NOTREADY state\n", bhost, chost);
+	      logprintfl(EUCAWARN, "detected local broker (%s) matching local CC (%s) in NOTREADY state\n", bhost, chost);
 	      //	      ret++;
 	      local_broker_down = 1;
 	    }
@@ -3218,7 +3281,7 @@ int doBrokerPairing() {
   }
 
   if (local_broker_down && is_ha_cc) {
-    logprintfl(EUCADEBUG, "ccCheckState(): detected CC in HA mode, and local broker is not ENABLED\n", local_broker_down, is_ha_cc);
+    logprintfl(EUCADEBUG, "detected CC in HA mode, and local broker is not ENABLED\n", local_broker_down, is_ha_cc);
     ret++;
   }
   return(ret);
@@ -3242,7 +3305,7 @@ void *monitor_thread(void *in) {
   ccMeta.correlationId = strdup("monitor");
   ccMeta.userId = strdup("eucalyptus");
   if (!ccMeta.correlationId || !ccMeta.userId) {
-    logprintfl(EUCAFATAL, "monitor_thread(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
 
@@ -3258,7 +3321,7 @@ void *monitor_thread(void *in) {
   clcTimer = config->clcPollingFrequency+1;
 
   while(1) {
-    logprintfl(EUCADEBUG, "monitor_thread(): running\n");
+    logprintfl(EUCADEBUG, "running\n");
 
     if (config->kick_enabled) {
       ccChangeState(ENABLED);
@@ -3267,7 +3330,7 @@ void *monitor_thread(void *in) {
 
     rc = update_config();
     if (rc) {
-      logprintfl(EUCAWARN, "refresh_resources(): bad return from update_config(), check your config file\n");
+      logprintfl(EUCAWARN, "bad return from update_config(), check your config file\n");
     }
 
     if (config->ccState == ENABLED) {
@@ -3289,17 +3352,17 @@ void *monitor_thread(void *in) {
       if (ncRefresh) {
 	rc = refresh_resources(&ccMeta, 60, 1);
 	if (rc) {
-	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_resources() failed in monitor thread\n");
+	  logprintfl(EUCAWARN, "call to refresh_resources() failed in monitor thread\n");
 	}
 
 	rc = refresh_sensors(&ccMeta, 60, 1); // TODO3.2: change this to use sensorTimer instead of ncTimer
 	if (rc) {
-	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_sensors() failed in monitor thread\n");
+	  logprintfl(EUCAWARN, "call to refresh_sensors() failed in monitor thread\n");
 	}
 
 	rc = refresh_instances(&ccMeta, 60, 1);
 	if (rc) {
-	  logprintfl(EUCAWARN, "monitor_thread(): call to refresh_instances() failed in monitor thread\n");
+	  logprintfl(EUCAWARN, "call to refresh_instances() failed in monitor thread\n");
 	}
       }
 
@@ -3308,20 +3371,20 @@ void *monitor_thread(void *in) {
 	// Network state operations
 	//	sem_mywait(RESCACHE);
 
-	  logprintfl(EUCADEBUG, "monitor_thread(): syncing network state\n");
+	  logprintfl(EUCADEBUG, "syncing network state\n");
 	  rc = syncNetworkState();
 	  if (rc) {
-	    logprintfl(EUCADEBUG, "monitor_thread(): syncNetworkState() triggering network restore\n");
+	    logprintfl(EUCADEBUG, "syncNetworkState() triggering network restore\n");
 	    config->kick_network = 1;
 	  }
 	  //	sem_mypost(RESCACHE);
 
 	  if (config->kick_network) {
-	    logprintfl(EUCADEBUG, "monitor_thread(): restoring network state\n");
+	    logprintfl(EUCADEBUG, "restoring network state\n");
 	    rc = restoreNetworkState();
 	    if (rc) {
 	      // failed to restore network state, continue
-	      logprintfl(EUCAWARN, "monitor_thread(): restoreNetworkState returned false (may be already restored)\n");
+	      logprintfl(EUCAWARN, "restoreNetworkState returned false (may be already restored)\n");
 	    } else {
 	      sem_mywait(CONFIG);
 	      config->kick_network = 0;
@@ -3329,31 +3392,31 @@ void *monitor_thread(void *in) {
 	    }
 	  }
 	} else {
-	  logprintfl(EUCADEBUG, "monitor_thread(): instanceCache is dirty, skipping network update\n");
+	  logprintfl(EUCADEBUG, "instanceCache is dirty, skipping network update\n");
 	}
       }
 
 
       if (clcRefresh) {
-	logprintfl(EUCADEBUG, "monitor_thread(): syncing CLC network rules ground truth with local state\n");
+	logprintfl(EUCADEBUG, "syncing CLC network rules ground truth with local state\n");
 	rc = reconfigureNetworkFromCLC();
 	if (rc) {
-	  logprintfl(EUCAWARN, "monitor_thread(): cannot get network ground truth from CLC\n");
+	  logprintfl(EUCAWARN, "cannot get network ground truth from CLC\n");
 	}
       }
 
       if (ncRefresh) {
-	logprintfl(EUCADEBUG, "monitor_thread(): maintaining network state\n");
+	logprintfl(EUCADEBUG, "maintaining network state\n");
 	rc = maintainNetworkState();
 	if (rc) {
-	  logprintfl(EUCAERROR, "monitor_thread(): network state maintainance failed\n");
+	  logprintfl(EUCAERROR, "network state maintainance failed\n");
 	}
       }
 
       if (config->use_proxy) {
 	rc = image_cache_invalidate();
 	if (rc) {
-	  logprintfl(EUCAERROR, "monitor_thread(): cannot invalidate image cache\n");
+	  logprintfl(EUCAERROR, "cannot invalidate image cache\n");
 	}
 	snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/httpd-dynserv.pid", config->eucahome);
 	pidstr = file2str(pidfile);
@@ -3361,14 +3424,14 @@ void *monitor_thread(void *in) {
 	  if (check_process(atoi(pidstr), "dynserv-httpd.conf")) {
 	    rc = image_cache_proxykick(resourceCache->resources, &(resourceCache->numResources));
 	    if (rc) {
-	      logprintfl(EUCAERROR, "monitor_thread(): could not start proxy cache\n");
+	      logprintfl(EUCAERROR, "could not start proxy cache\n");
 	    }
 	  }
 	  free(pidstr);
 	} else {
 	  rc = image_cache_proxykick(resourceCache->resources, &(resourceCache->numResources));
 	  if (rc) {
-	    logprintfl(EUCAERROR, "monitor_thread(): could not start proxy cache\n");
+	    logprintfl(EUCAERROR, "could not start proxy cache\n");
 	  }
 	}
       }
@@ -3377,14 +3440,14 @@ void *monitor_thread(void *in) {
       // this CC is not enabled, ensure that local network state is disabled
       rc = clean_network_state();
       if (rc) {
-	logprintfl(EUCAERROR, "monitor_thread(): could not cleanup network state\n");
+	logprintfl(EUCAERROR, "could not cleanup network state\n");
       }
     }
 
     // do state checks under CONFIG lock
     sem_mywait(CONFIG);
     if (ccCheckState(clcTimer)) {
-      logprintfl(EUCAERROR, "monitor_thread(): ccCheckState() returned failures\n");
+      logprintfl(EUCAERROR, "ccCheckState() returned failures\n");
       config->kick_enabled = 0;
       ccChangeState(NOTREADY);
     } else if (config->ccState == NOTREADY) {
@@ -3393,7 +3456,7 @@ void *monitor_thread(void *in) {
     sem_mypost(CONFIG);
     shawn();
 
-    logprintfl(EUCADEBUG, "monitor_thread(localState=%s): done\n", config->ccStatus.localState);
+    logprintfl(EUCADEBUG, "localState=%s - done.\n", config->ccStatus.localState);
     //sleep(config->ncPollingFrequency);
     ncRefresh = clcRefresh = 0;
     sleep(1);
@@ -3515,7 +3578,7 @@ int init_log(void)
 int init_thread(void) {
   int rc, i;
 
-  logprintfl(EUCADEBUG, "init_thread(): init=%d %08X %08X %08X %08X\n", init, config, vnetconfig, instanceCache, resourceCache);
+  logprintfl(EUCADEBUG, "init=%d %08X %08X %08X %08X\n", init, config, vnetconfig, instanceCache, resourceCache);
   if (thread_init) {
     // thread has already been initialized
   } else {
@@ -3537,7 +3600,7 @@ int init_thread(void) {
     if (config == NULL) {
       rc = setup_shared_buffer((void **)&config, "/eucalyptusCCConfig", sizeof(ccConfig), &(locks[CONFIG]), "/eucalyptusCCConfigLock", SHARED_FILE);
       if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccConfig, exiting...\n");
+	fprintf(stderr, "Cannot set up shared memory region for ccConfig, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }
@@ -3546,7 +3609,7 @@ int init_thread(void) {
     if (instanceCache == NULL) {
       rc = setup_shared_buffer((void **)&instanceCache, "/eucalyptusCCInstanceCache", sizeof(ccInstanceCache), &(locks[INSTCACHE]), "/eucalyptusCCInstanceCacheLock", SHARED_FILE);
       if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccInstanceCache, exiting...\n");
+	fprintf(stderr, "Cannot set up shared memory region for ccInstanceCache, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }
@@ -3555,7 +3618,7 @@ int init_thread(void) {
     if (resourceCache == NULL) {
       rc = setup_shared_buffer((void **)&resourceCache, "/eucalyptusCCResourceCache", sizeof(ccResourceCache), &(locks[RESCACHE]), "/eucalyptusCCResourceCacheLock", SHARED_FILE);
       if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccResourceCache, exiting...\n");
+	fprintf(stderr, "Cannot set up shared memory region for ccResourceCache, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }
@@ -3564,7 +3627,7 @@ int init_thread(void) {
     if (resourceCacheStage == NULL) {
       rc = setup_shared_buffer((void **)&resourceCacheStage, "/eucalyptusCCResourceCacheStage", sizeof(ccResourceCache), &(locks[RESCACHESTAGE]), "/eucalyptusCCResourceCacheStatgeLock", SHARED_FILE);
       if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccResourceCacheStage, exiting...\n");
+	fprintf(stderr, "Cannot set up shared memory region for ccResourceCacheStage, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }
@@ -3573,7 +3636,7 @@ int init_thread(void) {
     if (ccSensorResourceCache == NULL) {
       rc = setup_shared_buffer((void **)&ccSensorResourceCache, "/eucalyptusCCSensorResourceCache", sizeof(sensorResourceCache)+sizeof(sensorResource)*(MAX_SENSOR_RESOURCES-1), &(locks[SENSORCACHE]), "/eucalyptusCCSensorResourceCacheLock", SHARED_FILE);
       if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccSensorResourceCache, exiting...\n");
+	fprintf(stderr, "Cannot set up shared memory region for ccSensorResourceCache, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }
@@ -3582,7 +3645,7 @@ int init_thread(void) {
     if (vnetconfig == NULL) {
       rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &(locks[VNET]), "/eucalyptusCCVNETConfigLock", SHARED_FILE);
       if (rc != 0) {
-	fprintf(stderr, "init_thread(): Cannot set up shared memory region for ccVNETConfig, exiting...\n");
+	fprintf(stderr, "Cannot set up shared memory region for ccVNETConfig, exiting...\n");
 	sem_mypost(INIT);
 	exit(1);
       }
@@ -3609,7 +3672,7 @@ int update_config(void) {
     rc = readConfigFile(config->configFiles, 2);
     if (rc) {
       // something has changed that can be read in
-      logprintfl(EUCAINFO, "update_config(): ingressing new options.\n");
+      logprintfl(EUCAINFO, "ingressing new options.\n");
 
       // read log params from config file and update in-memory configuration
       char * log_prefix;
@@ -3624,11 +3687,11 @@ int update_config(void) {
       log_prefix_set (config->log_prefix);
 
       // NODES
-      logprintfl(EUCAINFO, "update_config(): refreshing node list.\n");
+      logprintfl(EUCAINFO, "refreshing node list.\n");
       res = NULL;
       rc = refreshNodes(config, &res, &numHosts);
       if (rc) {
-	logprintfl(EUCAERROR, "update_config(): cannot read list of nodes, check your config file\n");
+	logprintfl(EUCAERROR, "cannot read list of nodes, check your config file\n");
 	sem_mywait(RESCACHE);
 	resourceCache->numResources = 0;
 	config->schedState = 0;
@@ -3638,7 +3701,7 @@ int update_config(void) {
       } else {
 	sem_mywait(RESCACHE);
 	if (numHosts > MAXNODES) {
-	  logprintfl(EUCAWARN, "update_config(): the list of nodes specified exceeds the maximum number of nodes that a single CC can support (%d).  Truncating list to %d nodes.\n", MAXNODES, MAXNODES);
+	  logprintfl(EUCAWARN, "the list of nodes specified exceeds the maximum number of nodes that a single CC can support (%d).  Truncating list to %d nodes.\n", MAXNODES, MAXNODES);
 	  numHosts = MAXNODES;
 	}
 	resourceCache->numResources = numHosts;
@@ -3736,8 +3799,8 @@ int init_config(void) {
     return(0);
   }
 
-  logprintfl(EUCADEBUG, "init_config(): called.\n");
-  logprintfl(EUCADEBUG, "init_config(): initializing CC configuration\n");
+  logprintfl(EUCADEBUG, "invoked\n");
+  logprintfl(EUCADEBUG, "initializing CC configuration\n");
 
   configInitValues(configKeysRestartCC, configKeysNoRestartCC);
   readConfigFile(configFiles, 2);
@@ -3767,40 +3830,40 @@ int init_config(void) {
     // DHCP Daemon Configuration Params
     daemon = configFileValue("VNET_DHCPDAEMON");
     if (!daemon) {
-      logprintfl(EUCAWARN,"init_config(): no VNET_DHCPDAEMON defined in config, using default\n");
+      logprintfl(EUCAWARN,"no VNET_DHCPDAEMON defined in config, using default\n");
     }
 
     dhcpuser = configFileValue("VNET_DHCPUSER");
     if (!dhcpuser) {
       dhcpuser = strdup("root");
       if (!dhcpuser) {
-         logprintfl(EUCAFATAL,"init_config(): Out of memory\n");
+         logprintfl(EUCAFATAL,"Out of memory\n");
 	 unlock_exit(1);
       }
     }
 
     pubmode = configFileValue("VNET_MODE");
     if (!pubmode) {
-      logprintfl(EUCAWARN,"init_config(): VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
+      logprintfl(EUCAWARN,"VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
       pubmode = strdup("SYSTEM");
       if (!pubmode) {
-         logprintfl(EUCAFATAL,"init_config(): Out of memory\n");
+         logprintfl(EUCAFATAL,"Out of memory\n");
 	 unlock_exit(1);
       }
     }
 
     macPrefix = configFileValue("VNET_MACPREFIX");
     if (!macPrefix) {
-      logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+      logprintfl(EUCAWARN, "VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
       macPrefix = strdup("d0:0d");
       if (!macPrefix) {
-	logprintfl(EUCAFATAL, "init_config(): Out of memory!\n");
+	logprintfl(EUCAFATAL, "Out of memory!\n");
 	unlock_exit(1);
       }
     } else {
       unsigned int a=0, b=0;
       if (sscanf(macPrefix, "%02X:%02X", &a,&b) != 2 || (a > 0xFF || b > 0xFF)) {
-	logprintfl(EUCAWARN, "init_config(): VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
+	logprintfl(EUCAWARN, "VNET_MACPREFIX is not defined, defaulting to 'd0:0d'\n");
 	if(macPrefix) free(macPrefix);
 	macPrefix = strdup("d0:0d");
       }
@@ -3808,10 +3871,10 @@ int init_config(void) {
 
     pubInterface = configFileValue("VNET_PUBINTERFACE");
     if (!pubInterface) {
-      logprintfl(EUCAWARN,"init_config(): VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
+      logprintfl(EUCAWARN,"VNET_PUBINTERFACE is not defined, defaulting to 'eth0'\n");
       pubInterface = strdup("eth0");
       if (!pubInterface) {
-	logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	logprintfl(EUCAFATAL, "out of memory!\n");
 	unlock_exit(1);
       }
     } else {
@@ -3821,10 +3884,10 @@ int init_config(void) {
     privInterface = NULL;
     privInterface = configFileValue("VNET_PRIVINTERFACE");
     if (!privInterface) {
-      logprintfl(EUCAWARN,"init_config(): VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
+      logprintfl(EUCAWARN,"VNET_PRIVINTERFACE is not defined, defaulting to 'eth0'\n");
       privInterface = strdup("eth0");
       if (!privInterface) {
-	logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	logprintfl(EUCAFATAL, "out of memory!\n");
 	unlock_exit(1);
       }
       usednew = 0;
@@ -3834,18 +3897,18 @@ int init_config(void) {
       tmpstr = NULL;
       tmpstr = configFileValue("VNET_INTERFACE");
       if (tmpstr) {
-	logprintfl(EUCAWARN, "init_config(): VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
+	logprintfl(EUCAWARN, "VNET_INTERFACE is deprecated, please use VNET_PUBINTERFACE and VNET_PRIVINTERFACE instead.  Will set both to value of VNET_INTERFACE (%s) for now.\n", tmpstr);
 	if (pubInterface) free(pubInterface);
 	pubInterface = strdup(tmpstr);
 	if (!pubInterface) {
-	  logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	  logprintfl(EUCAFATAL, "out of memory!\n");
 	  unlock_exit(1);
 	}
 
 	if (privInterface) free(privInterface);
 	privInterface = strdup(tmpstr);
 	if (!privInterface) {
-	  logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+	  logprintfl(EUCAFATAL, "out of memory!\n");
 	  unlock_exit(1);
 	}
       }
@@ -3864,7 +3927,7 @@ int init_config(void) {
 
       if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS
 	  || (!strcmp(pubmode, "STATIC") && !pubmacmap) || (!strcmp(pubmode, "STATIC-DYNMAC") && !pubips)) {
-	logprintfl(EUCAFATAL,"init_config(): in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS and %s'\n",
+	logprintfl(EUCAFATAL,"in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, VNET_DNS and %s'\n",
 		   pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS");
 	initFail = 1;
       }
@@ -3878,17 +3941,17 @@ int init_config(void) {
       pubips = configFileValue("VNET_PUBLICIPS");
       localIp = configFileValue("VNET_LOCALIP");
       if (!localIp) {
-	logprintfl(EUCAWARN, "init_config(): VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
+	logprintfl(EUCAWARN, "VNET_LOCALIP not defined, will attempt to auto-discover (consider setting this explicitly if tunnelling does not function properly.)\n");
       }
 
       if (!pubSubnet || !pubSubnetMask || !pubDNS || !numaddrs) {
-	logprintfl(EUCAFATAL,"init_config(): in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
+	logprintfl(EUCAFATAL,"in 'MANAGED' or 'MANAGED-NOVLAN' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_ADDRSPERNET, and VNET_DNS'\n");
 	initFail = 1;
       }
     }
 
     if (initFail) {
-      logprintfl(EUCAFATAL, "init_config(): bad network parameters, must fix before system will work\n");
+      logprintfl(EUCAFATAL, "bad network parameters, must fix before system will work\n");
       if (pubSubnet) free(pubSubnet);
       if (pubSubnetMask) free(pubSubnetMask);
       if (pubBroadcastAddress) free(pubBroadcastAddress);
@@ -3957,7 +4020,7 @@ int init_config(void) {
 	if (ip) {
 	  rc = vnetAddPublicIP(vnetconfig, ip);
 	  if (rc) {
-	    logprintfl(EUCAERROR, "init_config(): could not add public IP '%s'\n", ip);
+	    logprintfl(EUCAERROR, "could not add public IP '%s'\n", ip);
 	  }
 	}
 	toka = strtok_r(NULL, " ", &ptra);
@@ -3990,7 +4053,7 @@ int init_config(void) {
   tmpstr = configFileValue("SCHEDPOLICY");
   if (!tmpstr) {
     // error
-    logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
+    logprintfl(EUCAWARN,"parsing config file (%s) for SCHEDPOLICY, defaulting to GREEDY\n", configFiles[0]);
     schedPolicy = SCHEDGREEDY;
     tmpstr = NULL;
   } else {
@@ -4005,13 +4068,13 @@ int init_config(void) {
   tmpstr = configFileValue("POWER_IDLETHRESH");
   if (!tmpstr) {
     if (SCHEDPOWERSAVE == schedPolicy)
-      logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFiles[0]);
+      logprintfl(EUCAWARN,"parsing config file (%s) for POWER_IDLETHRESH, defaulting to 300 seconds\n", configFiles[0]);
     idleThresh = 300;
     tmpstr = NULL;
   } else {
     idleThresh = atoi(tmpstr);
     if (idleThresh < 300) {
-      logprintfl(EUCAWARN, "init_config(): POWER_IDLETHRESH set too low (%d seconds), resetting to minimum (300 seconds)\n", idleThresh);
+      logprintfl(EUCAWARN, "POWER_IDLETHRESH set too low (%d seconds), resetting to minimum (300 seconds)\n", idleThresh);
       idleThresh = 300;
     }
   }
@@ -4020,13 +4083,13 @@ int init_config(void) {
   tmpstr = configFileValue("POWER_WAKETHRESH");
   if (!tmpstr) {
     if (SCHEDPOWERSAVE == schedPolicy)
-      logprintfl(EUCAWARN,"init_config(): parsing config file (%s) for POWER_WAKETHRESH, defaulting to 300 seconds\n", configFiles[0]);
+      logprintfl(EUCAWARN,"parsing config file (%s) for POWER_WAKETHRESH, defaulting to 300 seconds\n", configFiles[0]);
     wakeThresh = 300;
     tmpstr = NULL;
   } else {
     wakeThresh = atoi(tmpstr);
     if (wakeThresh < 300) {
-      logprintfl(EUCAWARN, "init_config(): POWER_WAKETHRESH set too low (%d seconds), resetting to minimum (300 seconds)\n", wakeThresh);
+      logprintfl(EUCAWARN, "POWER_WAKETHRESH set too low (%d seconds), resetting to minimum (300 seconds)\n", wakeThresh);
       wakeThresh = 300;
     }
   }
@@ -4040,7 +4103,7 @@ int init_config(void) {
   } else {
     ncPollingFrequency = atoi(tmpstr);
     if (ncPollingFrequency < 6) {
-      logprintfl(EUCAWARN, "init_config(): NC_POLLING_FREQUENCY set too low (%d seconds), resetting to minimum (6 seconds)\n", ncPollingFrequency);
+      logprintfl(EUCAWARN, "NC_POLLING_FREQUENCY set too low (%d seconds), resetting to minimum (6 seconds)\n", ncPollingFrequency);
       ncPollingFrequency = 6;
     }
   }
@@ -4053,7 +4116,7 @@ int init_config(void) {
   } else {
     clcPollingFrequency = atoi(tmpstr);
     if (clcPollingFrequency < 1) {
-      logprintfl(EUCAWARN, "init_config(): CLC_POLLING_FREQUENCY set too low (%d seconds), resetting to default (6 seconds)\n", clcPollingFrequency);
+      logprintfl(EUCAWARN, "CLC_POLLING_FREQUENCY set too low (%d seconds), resetting to default (6 seconds)\n", clcPollingFrequency);
       clcPollingFrequency = 6;
     }
   }
@@ -4075,7 +4138,7 @@ int init_config(void) {
   } else {
     ncFanout = atoi(tmpstr);
     if (ncFanout < 1 || ncFanout > 32) {
-      logprintfl(EUCAWARN, "init_config(): NC_FANOUT set out of bounds (min=%d max=%d) (current=%d), resetting to default (1 NC)\n", 1, 32, ncFanout);
+      logprintfl(EUCAWARN, "NC_FANOUT set out of bounds (min=%d max=%d) (current=%d), resetting to default (1 NC)\n", 1, 32, ncFanout);
       ncFanout = 1;
     }
   }
@@ -4088,7 +4151,7 @@ int init_config(void) {
   } else {
     instanceTimeout = atoi(tmpstr);
     if (instanceTimeout < 30) {
-      logprintfl(EUCAWARN, "init_config(): INSTANCE_TIMEOUT set too low (%d seconds), resetting to minimum (30 seconds)\n", instanceTimeout);
+      logprintfl(EUCAWARN, "INSTANCE_TIMEOUT set too low (%d seconds), resetting to minimum (30 seconds)\n", instanceTimeout);
       instanceTimeout = 30;
     }
   }
@@ -4099,7 +4162,7 @@ int init_config(void) {
   tmpstr = configFileValue("ENABLE_WS_SECURITY");
   if (!tmpstr) {
     // error
-    logprintfl(EUCAFATAL,"init_config(): parsing config file (%s) for ENABLE_WS_SECURITY\n", configFiles[0]);
+    logprintfl(EUCAFATAL,"parsing config file (%s) for ENABLE_WS_SECURITY\n", configFiles[0]);
     sem_mypost(INIT);
     return(1);
   } else {
@@ -4126,7 +4189,7 @@ int init_config(void) {
   if (tmpstr) {
     proxyIp = strdup(tmpstr);
     if (!proxyIp) {
-      logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+      logprintfl(EUCAFATAL, "out of memory!\n");
       unlock_exit(1);
     }
     use_proxy=1;
@@ -4195,13 +4258,13 @@ int init_config(void) {
   snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
   snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
 
-  logprintfl(EUCAINFO, "init_config(): CC Configuration: eucahome=%s, policyfile=%s, ws-security=%s, schedulerPolicy=%s, idleThreshold=%d, wakeThreshold=%d\n", SP(config->eucahome), SP(config->policyFile), use_wssec ? "ENABLED" : "DISABLED", SP(SCHEDPOLICIES[config->schedPolicy]), config->idleThresh, config->wakeThresh);
+  logprintfl(EUCAINFO, "CC Configuration: eucahome=%s, policyfile=%s, ws-security=%s, schedulerPolicy=%s, idleThreshold=%d, wakeThreshold=%d\n", SP(config->eucahome), SP(config->policyFile), use_wssec ? "ENABLED" : "DISABLED", SP(SCHEDPOLICIES[config->schedPolicy]), config->idleThresh, config->wakeThresh);
   sem_mypost(CONFIG);
 
   res = NULL;
   rc = refreshNodes(config, &res, &numHosts);
   if (rc) {
-    logprintfl(EUCAERROR, "init_config(): cannot read list of nodes, check your config file\n");
+    logprintfl(EUCAERROR, "cannot read list of nodes, check your config file\n");
     sem_mypost(INIT);
     return(1);
   }
@@ -4217,7 +4280,7 @@ int init_config(void) {
   sem_mypost(RESCACHE);
 
   config_init=1;
-  logprintfl(EUCADEBUG,"init_config(): done\n");
+  logprintfl(EUCADEBUG,"done\n");
 
   sem_mypost(INIT);
   return(0);
@@ -4496,7 +4559,7 @@ int reconfigureNetworkFromCLC() {
   } else {
     cloudIp = strdup("localhost");
     if (!cloudIp) {
-      logprintfl(EUCAFATAL, "init_config(): out of memory!\n");
+      logprintfl(EUCAFATAL, "out of memory!\n");
       unlock_exit(1);
     }
   }
@@ -4507,7 +4570,7 @@ int reconfigureNetworkFromCLC() {
 
   fd = safe_mkstemp(clcnetfile);
   if (fd < 0) {
-    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open clcnetfile '%s'\n", clcnetfile);
+    logprintfl(EUCAERROR, "cannot open clcnetfile '%s'\n", clcnetfile);
     if(cloudIp)
        free(cloudIp);
     return(1);
@@ -4517,7 +4580,7 @@ int reconfigureNetworkFromCLC() {
 
   fd = safe_mkstemp(chainmapfile);
   if (fd < 0) {
-    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot open chainmapfile '%s'\n", chainmapfile);
+    logprintfl(EUCAERROR, "cannot open chainmapfile '%s'\n", chainmapfile);
     if (cloudIp) free(cloudIp);
     unlink(clcnetfile);
     return(1);
@@ -4530,7 +4593,7 @@ int reconfigureNetworkFromCLC() {
   rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
   if (cloudIp) free(cloudIp);
   if (rc) {
-    logprintfl(EUCAWARN, "reconfigureNetworkFromCLC(): cannot get latest network topology from cloud controller\n");
+    logprintfl(EUCAWARN, "cannot get latest network topology from cloud controller\n");
     unlink(clcnetfile);
     unlink(chainmapfile);
     return(1);
@@ -4539,7 +4602,7 @@ int reconfigureNetworkFromCLC() {
   // chainmap populate
   FH = fopen(chainmapfile, "w");
   if (!FH) {
-    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
+    logprintfl(EUCAERROR, "cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
     unlink(clcnetfile);
     unlink(chainmapfile);
     return(1);
@@ -4563,7 +4626,7 @@ int reconfigureNetworkFromCLC() {
   snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
   rc = system(cmd);
   if (rc) {
-    logprintfl(EUCAERROR, "reconfigureNetworkFromCLC(): cannot run command '%s'\n", cmd);
+    logprintfl(EUCAERROR, "cannot run command '%s'\n", cmd);
     ret = 1;
   }
   sem_mypost(VNET);
@@ -4587,7 +4650,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   tmpstr = configFileValue(CONFIG_NC_SERVICE);
   if (!tmpstr) {
     // error
-    logprintfl(EUCAFATAL,"refreshNodes(): parsing config files (%s,%s) for NC_SERVICE\n", config->configFiles[1], config->configFiles[0]);
+    logprintfl(EUCAFATAL,"parsing config files (%s,%s) for NC_SERVICE\n", config->configFiles[1], config->configFiles[0]);
     return(1);
   } else {
     if(tmpstr) {
@@ -4600,7 +4663,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   tmpstr = configFileValue(CONFIG_NC_PORT);
   if (!tmpstr) {
     // error
-    logprintfl(EUCAFATAL,"refreshNodes(): parsing config files (%s,%s) for NC_PORT\n", config->configFiles[1], config->configFiles[0]);
+    logprintfl(EUCAFATAL,"parsing config files (%s,%s) for NC_PORT\n", config->configFiles[1], config->configFiles[0]);
     return(1);
   } else {
     if(tmpstr)
@@ -4611,12 +4674,12 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   tmpstr = configFileValue(CONFIG_NODES);
   if (!tmpstr) {
     // error
-    logprintfl(EUCAWARN,"refreshNodes(): NODES parameter is missing from config files(%s,%s)\n", config->configFiles[1], config->configFiles[0]);
+    logprintfl(EUCAWARN,"NODES parameter is missing from config files(%s,%s)\n", config->configFiles[1], config->configFiles[0]);
     return(0);
   } else {
     hosts = from_var_to_char_list(tmpstr);
     if (hosts == NULL) {
-      logprintfl(EUCAWARN,"refreshNodes(): NODES list is empty in config files(%s,%s)\n", config->configFiles[1], config->configFiles[0]);
+      logprintfl(EUCAWARN,"NODES list is empty in config files(%s,%s)\n", config->configFiles[1], config->configFiles[0]);
       if (tmpstr) free(tmpstr);
       return(0);
     }
@@ -4651,7 +4714,7 @@ int refreshNodes(ccConfig *config, ccResource **res, int *numHosts) {
   if (config->use_proxy) {
     rc = image_cache_proxykick(*res, numHosts);
     if (rc) {
-      logprintfl(EUCAERROR, "refreshNodes(): could not restart the image proxy\n");
+      logprintfl(EUCAERROR, "could not restart the image proxy\n");
     }
   }
 
@@ -4846,7 +4909,7 @@ int map_instanceCache(int (*match)(ccInstance *, void *), void *matchParam, int 
   for (i=0; i<MAXINSTANCES; i++) {
     if (!match(&(instanceCache->instances[i]), matchParam)) {
       if (operate(&(instanceCache->instances[i]), operateParam)) {
-	logprintfl(EUCAWARN, "map_instanceCache(): failed to operate at index %d\n", i);
+	logprintfl(EUCAWARN, "failed to operate at index %d\n", i);
 	ret++;
       }
     }
@@ -4874,14 +4937,14 @@ void print_ccInstance(char *tag, ccInstance *in) {
 
   volbuf = malloc(sizeof(ncVolume)*EUCA_MAX_VOLUMES*2);
   if (!volbuf) {
-    logprintfl(EUCAFATAL, "print_ccInstance(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
   bzero(volbuf, sizeof(ncVolume)*EUCA_MAX_VOLUMES*2);
 
   groupbuf = malloc(64*32*2);
   if (!groupbuf) {
-    logprintfl(EUCAFATAL, "print_ccInstance(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
   bzero(groupbuf, 64*32*2);
@@ -4906,7 +4969,7 @@ void print_ccInstance(char *tag, ccInstance *in) {
     }
   }
 
-  logprintfl(EUCADEBUG, "print_ccInstance(): %s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%d keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
+  logprintfl(EUCADEBUG, "%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%d keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n", tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp, in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk, in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf, groupbuf);
 
   free(volbuf);
   free(groupbuf);
@@ -4945,7 +5008,7 @@ void invalidate_instanceCache(void) {
       free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
     }
     if ( (instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
-      logprintfl(EUCADEBUG, "invalidate_instanceCache(): invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
+      logprintfl(EUCADEBUG, "invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId, (time(NULL) - instanceCache->lastseen[i]));
       bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
       instanceCache->lastseen[i] = 0;
       instanceCache->cacheState[i] = INSTINVALID;
@@ -4970,7 +5033,7 @@ int refresh_instanceCache(char *instanceId, ccInstance *in){
       // give precedence to instances that are in Extant/Pending over expired instances, when info comes from two different nodes
       if (strcmp(in->serviceTag, instanceCache->instances[i].serviceTag) && strcmp(in->state, instanceCache->instances[i].state) && !strcmp(in->state, "Teardown")) {
 	// skip
-	logprintfl(EUCADEBUG, "refresh_instanceCache(): skipping cache refresh with instance in Teardown (instance with non-Teardown from different node already cached)\n");
+	logprintfl(EUCADEBUG, "skipping cache refresh with instance in Teardown (instance with non-Teardown from different node already cached)\n");
       } else {
 	// update cached instance info
 	memcpy(&(instanceCache->instances[i]), in, sizeof(ccInstance));
@@ -4999,7 +5062,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
   for (i=0; i<MAXINSTANCES && !done; i++) {
     if ( (instanceCache->cacheState[i] == INSTVALID ) && (!strcmp(instanceCache->instances[i].instanceId, instanceId))) {
       // already in cache
-      logprintfl(EUCADEBUG, "add_instanceCache(): '%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
+      logprintfl(EUCADEBUG, "'%s/%s/%s' already in cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp);
       instanceCache->lastseen[i] = time(NULL);
       sem_mypost(INSTCACHE);
       return(0);
@@ -5008,7 +5071,7 @@ int add_instanceCache(char *instanceId, ccInstance *in){
       done++;
     }
   }
-  logprintfl(EUCADEBUG, "add_instanceCache(): adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
+  logprintfl(EUCADEBUG, "adding '%s/%s/%s/%d' to cache\n", instanceId, in->ccnet.publicIp, in->ccnet.privateIp, in->volumesSize);
   allocate_ccInstance(&(instanceCache->instances[firstNull]), in->instanceId, in->amiId, in->kernelId, in->ramdiskId, in->amiURL, in->kernelURL, in->ramdiskURL, in->ownerId, in->accountId, in->state, in->ccState, in->ts, in->reservationId, &(in->ccnet), &(in->ncnet), &(in->ccvm), in->ncHostIdx, in->keyName, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->groupNames, in->volumes, in->volumesSize);
   instanceCache->numInsts++;
   instanceCache->lastseen[firstNull] = time(NULL);
@@ -5052,12 +5115,12 @@ int find_instanceCacheId(char *instanceId, ccInstance **out) {
       // found it
       *out = malloc(sizeof(ccInstance));
       if (!*out) {
-	logprintfl(EUCAFATAL, "find_instanceCacheId(): out of memory!\n");
+	logprintfl(EUCAFATAL, "out of memory!\n");
 	unlock_exit(1);
       }
 
       allocate_ccInstance(*out, instanceCache->instances[i].instanceId,instanceCache->instances[i].amiId, instanceCache->instances[i].kernelId, instanceCache->instances[i].ramdiskId, instanceCache->instances[i].amiURL, instanceCache->instances[i].kernelURL, instanceCache->instances[i].ramdiskURL, instanceCache->instances[i].ownerId, instanceCache->instances[i].accountId, instanceCache->instances[i].state, instanceCache->instances[i].ccState, instanceCache->instances[i].ts, instanceCache->instances[i].reservationId, &(instanceCache->instances[i].ccnet), &(instanceCache->instances[i].ncnet), &(instanceCache->instances[i].ccvm), instanceCache->instances[i].ncHostIdx, instanceCache->instances[i].keyName, instanceCache->instances[i].serviceTag, instanceCache->instances[i].userData, instanceCache->instances[i].launchIndex, instanceCache->instances[i].platform, instanceCache->instances[i].bundleTaskStateName, instanceCache->instances[i].groupNames, instanceCache->instances[i].volumes, instanceCache->instances[i].volumesSize);
-      logprintfl(EUCADEBUG, "find_instanceCache(): found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
+      logprintfl(EUCADEBUG, "found instance in cache '%s/%s/%s'\n", instanceCache->instances[i].instanceId, instanceCache->instances[i].ccnet.publicIp, instanceCache->instances[i].ccnet.privateIp);
       done++;
     }
   }
@@ -5084,7 +5147,7 @@ int find_instanceCacheIP(char *ip, ccInstance **out) {
 	// found it
 	*out = malloc(sizeof(ccInstance));
 	if (!*out) {
-	  logprintfl(EUCAFATAL, "find_instanceCacheIP(): out of memory!\n");
+	  logprintfl(EUCAFATAL, "out of memory!\n");
 	  unlock_exit(1);
 	}
 
@@ -5218,7 +5281,7 @@ int find_resourceCacheId(char *host, ccResource **out) {
 	// found it
 	*out = malloc(sizeof(ccResource));
 	if (!*out) {
-	  logprintfl(EUCAFATAL, "find_resourceCacheId(): out of memory!\n");
+	  logprintfl(EUCAFATAL, "out of memory!\n");
 	  unlock_exit(1);
 	}
 	allocate_ccResource(*out, resourceCache->resources[i].ncURL, resourceCache->resources[i].ncService, resourceCache->resources[i].ncPort, resourceCache->resources[i].hostname, resourceCache->resources[i].mac, resourceCache->resources[i].ip, resourceCache->resources[i].maxMemory, resourceCache->resources[i].availMemory, resourceCache->resources[i].maxDisk, resourceCache->resources[i].availDisk, resourceCache->resources[i].maxCores, resourceCache->resources[i].availCores, resourceCache->resources[i].state, resourceCache->resources[i].lastState, resourceCache->resources[i].stateChange, resourceCache->resources[i].idleStart);
@@ -5237,11 +5300,11 @@ int find_resourceCacheId(char *host, ccResource **out) {
 void unlock_exit(int code) {
   int i;
 
-  logprintfl(EUCADEBUG, "unlock_exit(): params: code=%d\n", code);
+  logprintfl(EUCADEBUG, "params: code=%d\n", code);
 
   for (i=0; i<ENDLOCK; i++) {
     if (mylocks[i]) {
-      logprintfl(EUCAWARN, "unlock_exit(): unlocking index '%d'\n", i);
+      logprintfl(EUCAWARN, "unlocking index '%d'\n", i);
       sem_post(locks[i]);
     }
   }
@@ -5272,7 +5335,7 @@ int image_cache(char *id, char *url) {
       if (check_file(path) && check_file(finalpath)) {
 	rc = walrus_object_by_url(url, path, 0);
 	if (rc) {
-	  logprintfl(EUCAERROR, "image_cache(): could not cache image manifest (%s/%s)\n", id, url);
+	  logprintfl(EUCAERROR, "could not cache image manifest (%s/%s)\n", id, url);
 	  unlink(path);
 	  exit(1);
 	}
@@ -5284,7 +5347,7 @@ int image_cache(char *id, char *url) {
       if (check_file(path) && check_file(finalpath)) {
 	rc = walrus_image_by_manifest_url(url, path, 1);
 	if (rc) {
-	  logprintfl(EUCAERROR, "image_cache(): could not cache image (%s/%s)\n", id, url);
+	  logprintfl(EUCAERROR, "could not cache image (%s/%s)\n", id, url);
 	  unlink(path);
 	  exit(1);
 	}
@@ -5316,7 +5379,7 @@ int image_cache_invalidate() {
     snprintf(proxyPath, MAX_PATH, "%s/data", config->proxyPath);
     DH=opendir(proxyPath);
     if (!DH) {
-      logprintfl(EUCAERROR, "image_cache_invalidate(): could not open dir '%s'\n", proxyPath);
+      logprintfl(EUCAERROR, "could not open dir '%s'\n", proxyPath);
       return(1);
     }
 
@@ -5326,7 +5389,7 @@ int image_cache_invalidate() {
 	snprintf(path, MAX_PATH, "%s/%s", proxyPath, dent.d_name);
 	rc = stat(path, &mystat);
 	if (!rc) {
-	  logprintfl(EUCADEBUG, "image_cache_invalidate(): evaluating file: name=%s size=%d atime=%d'\n", dent.d_name, mystat.st_size/1048576, mystat.st_atime);
+	  logprintfl(EUCADEBUG, "evaluating file: name=%s size=%d atime=%d'\n", dent.d_name, mystat.st_size/1048576, mystat.st_atime);
 	  if (mystat.st_atime < oldest) {
 	    oldest = mystat.st_atime;
 	    snprintf(oldestpath, MAX_PATH, "%s", path);
@@ -5338,10 +5401,10 @@ int image_cache_invalidate() {
       rc = readdir_r(DH, &dent, &result);
     }
     closedir(DH);
-    logprintfl(EUCADEBUG, "image_cache_invalidate(): summary: totalMBs=%d oldestAtime=%d oldestFile=%s\n", total_megs, oldest, oldestpath);
+    logprintfl(EUCADEBUG, "summary: totalMBs=%d oldestAtime=%d oldestFile=%s\n", total_megs, oldest, oldestpath);
     if (total_megs > config->proxy_max_cache_size) {
       // start slowly deleting
-      logprintfl(EUCAINFO, "image_cache_invalidate(): invalidating cached image: name=%s\n", oldestpath);
+      logprintfl(EUCAINFO, "invalidating cached image: name=%s\n", oldestpath);
       unlink(oldestpath);
       unlink(oldestmanifestpath);
     }
@@ -5358,7 +5421,7 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
 
   nodestr = malloc(( (*numHosts) * 128) + (*numHosts) + 1);
   if (!nodestr) {
-    logprintfl(EUCAFATAL, "image_cache_proxykick(): out of memory!\n");
+    logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
 
@@ -5369,7 +5432,7 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
   }
   
   snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
-  logprintfl(EUCADEBUG, "image_cache_proxykick(): running cmd '%s'\n", cmd);
+  logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);
 
   if (nodestr) free(nodestr);

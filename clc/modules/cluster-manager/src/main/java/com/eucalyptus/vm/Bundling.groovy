@@ -103,6 +103,14 @@ public class BundleInstanceType extends VmBundleMessage {
 public class BundleInstanceResponseType extends VmBundleMessage {
   BundleTask task;
 }
+
+public class BundleRestartInstanceType extends VmBundleMessage {
+  String instanceId;
+}
+public class BundleRestartInstanceResponseType extends VmBundleMessage {
+  BundleTask task;
+}
+
 public class CancelBundleTaskType extends VmBundleMessage {
   String bundleId;
   String instanceId;

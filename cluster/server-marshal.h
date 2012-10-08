@@ -88,6 +88,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t *attachVolume, const axutil_env_t *env);
 adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t *detachVolume, const axutil_env_t *env);
 adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t *bundleInstance, const axutil_env_t *env);
+adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRestartInstance_t *bundleInstance, const axutil_env_t *env);
 adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *cancelBundleInstance, const axutil_env_t *env);
 adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *describeSensors, const axutil_env_t *env);
 

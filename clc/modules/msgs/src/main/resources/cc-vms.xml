@@ -225,6 +225,12 @@
   <mapping name="BundleInstanceResponse" class="com.eucalyptus.vm.BundleInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
+  <mapping name="BundleRestartInstance" class="com.eucalyptus.vm.BundleRestartInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <value name="instanceId" field="instanceId" usage="required" />
+  </mapping>
+  <mapping name="BundleRestartInstanceResponse" class="com.eucalyptus.vm.BundleRestartInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
   <mapping name="CancelBundleTask" class="com.eucalyptus.vm.CancelBundleTaskType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <value name="instanceId" field="instanceId" usage="required" />
   </mapping>
