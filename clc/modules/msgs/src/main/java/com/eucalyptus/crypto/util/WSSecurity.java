@@ -87,6 +87,8 @@ import org.apache.ws.security.message.token.Timestamp;
 import org.apache.ws.security.message.token.X509Security;
 import org.apache.ws.security.processor.TimestampProcessor;
 import org.apache.ws.security.util.WSSecurityUtil;
+import org.apache.xml.security.c14n.Canonicalizer;
+import org.apache.xml.security.c14n.InvalidCanonicalizerException;
 import org.apache.xml.security.exceptions.XMLSecurityException;
 import org.apache.xml.security.keys.KeyInfo;
 import org.apache.xml.security.signature.SignedInfo;
@@ -109,14 +111,24 @@ import com.eucalyptus.ws.WebServicesException;
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
   private static CertificateFactory factory;
- 
+  private static final String       SYSTEM_PROPERTY_SKIP_SECURITY_CHECK = "com.eucalyptus.crypto.util.skipWsSecurityConfigurationChecks";
+
   static {
+    System.setProperty( "org.apache.xml.security.resource.config", "/xml-security-config.xml" );
     org.apache.xml.security.Init.init( );
+    if ( !acceptXmlSecurityConfiguration() ) {
+      LOG.fatal("XML Security configuration not applied, set system property "+SYSTEM_PROPERTY_SKIP_SECURITY_CHECK+"=true to skip check");
+      throw new RuntimeException("XML Security Configuration not applied");
+    }
     WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
     WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
     WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
   }
-   
+
+  public static void init() {
+    // currently the static initializer does the work
+  }
+
   public static CertificateFactory getCertificateFactory( ) {
     if ( factory == null ) {
       try {
@@ -388,5 +400,19 @@ public class WSSecurity {
     if ( sig.getKeyInfo( ) == null ) throw new WSSecurityException( WSSecurityException.SECURITY_TOKEN_UNAVAILABLE );
     return sig;
   }
-  
+
+  private static boolean acceptXmlSecurityConfiguration() {
+    return
+        Boolean.parseBoolean(System.getProperty(SYSTEM_PROPERTY_SKIP_SECURITY_CHECK)) ||
+        isValidXmlSecurityConfiguration();
+  }
+
+  private static boolean isValidXmlSecurityConfiguration()  {
+    try {
+      Canonicalizer.getInstance( "http://www.w3.org/2006/12/xml-c14n11" );
+      return false;
+    } catch (InvalidCanonicalizerException e) {
+      return true;
+    }
+  }
 }
