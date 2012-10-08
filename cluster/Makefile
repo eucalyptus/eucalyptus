@@ -100,11 +100,10 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Adding marshalling calls to server stubs
 #	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
-#	@echo Compiling the stubs
-#	cd generated; patch -p1 < ../axis2_svc_generated.patch; $(CC) -c $(CFLAGS) $(INCLUDES) *.c
-	cd generated; patch -p1 < ../axis2_svc_generated.patch; cd ../
+	@echo Compiling the stubs
+	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-#	cd generated; $(MAKE); cd ..
+	$(MAKE) -C generated
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 

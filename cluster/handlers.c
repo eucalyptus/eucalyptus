@@ -120,6 +120,11 @@ sensorResourceCache *ccSensorResourceCache=NULL;
 sem_t *locks[ENDLOCK];
 int mylocks[ENDLOCK];
 
+#ifndef NO_COMP
+const char * euca_this_component_name   = "cc";
+const char * euca_client_component_name = "clc";
+#endif
+
 void doInitCC(void) {
   initialize(NULL);
 }

@@ -109,12 +109,16 @@
 #define PER_INSTANCE_BUFFER_MB 20 // by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 #define MAX_SENSOR_RESOURCES MAXINSTANCES 
 #define SEC_PER_MB ((1024*1024)/512)
-#define FAULT_COMPONENT_NAME "nc"
 
 #ifdef EUCA_COMPILE_TIMESTAMP
 static char * compile_timestamp_str = EUCA_COMPILE_TIMESTAMP;
 #else
 static char * compile_timestamp_str = "";
+#endif
+
+#ifndef NO_COMP
+const char * euca_this_component_name   = "nc";
+const char * euca_client_component_name = "cc";
 #endif
 
 /* used by lower level handlers */
@@ -648,10 +652,10 @@ monitoring_thread (void *arg)
                 long long cache_fs_avail_mb     = (long long)(cache_meta.fs_bytes_available/MEGABYTE);
 
                 if (work_fs_avail_mb < ((work_fs_size_mb * DISK_TOO_LOW_PERCENT) / 100)) {
-                    log_eucafault ("1003", "component", FAULT_COMPONENT_NAME, "file", work_meta.path, NULL);
+                    log_eucafault ("1003", "component", euca_this_component_name, "file", work_meta.path, NULL);
                 }
                 if (cache_fs_size_mb > 0 && cache_fs_avail_mb < ((cache_fs_size_mb * DISK_TOO_LOW_PERCENT) / 100)) {
-                    log_eucafault ("1003", "component", FAULT_COMPONENT_NAME, "file", cache_meta.path, NULL);
+                    log_eucafault ("1003", "component", euca_this_component_name, "file", cache_meta.path, NULL);
                 }
                 
                 // TODO: add more faults (cache or work reserved exceeds available space on file system)
@@ -962,7 +966,6 @@ static int init (void)
 		return 1;
 
 	bzero (&nc_state, sizeof(struct nc_state_t)); // ensure that MAXes are zeroed out
-
 	// read in configuration - this should be first!
 
     // determine home ($EUCALYPTUS)
@@ -1140,7 +1143,7 @@ static int init (void)
 		return ERROR_FATAL;
     }
 
-    if (init_eucafaults (FAULT_COMPONENT_NAME) == 0) {
+    if (init_eucafaults (euca_this_component_name) == 0) {
         logprintfl (EUCAFATAL, "failed to initialize fault-logging subsystem\n");
         return ERROR_FATAL;
     }

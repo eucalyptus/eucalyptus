@@ -70,6 +70,10 @@
 #include <linux/limits.h>
 #include <stdint.h> // uint32_t
 
+// these must be defined by each euca component
+extern const char * euca_client_component_name;
+extern const char * euca_this_component_name;
+
 typedef unsigned char boolean;
 #define TRUE 1
 #define FALSE 0

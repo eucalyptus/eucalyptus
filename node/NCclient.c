@@ -80,6 +80,11 @@
 #define BUFSIZE 1024
 char debug = 0;
 
+#ifndef NO_COMP
+const char * euca_this_component_name   = "nc";
+const char * euca_client_component_name = "user";
+#endif
+
 void usage (void) 
 { 
     fprintf (stderr, "usage: NCclient [command] [options]\n"

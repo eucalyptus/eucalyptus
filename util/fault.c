@@ -783,7 +783,7 @@ format_eucafault (const char *fault_id, const char_map **map)
 
     // Get time.
     secs = time (NULL);
-    if (gmtime_r (&secs, &lt) == NULL) {
+    if (localtime_r (&secs, &lt) == NULL) {
         // Someone call Dr. Who.
         lt.tm_year = lt.tm_mon = lt.tm_mday = 0;
         lt.tm_hour = lt.tm_min = lt.tm_sec = 0;
