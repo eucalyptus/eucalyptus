@@ -131,7 +131,7 @@
 
     _drawCallback : function(oSettings) {
       var thisObj = this;
-      $('#table_' + this.options.id + '_count').html(oSettings.fnRecordsDisplay());
+      $('#table_' + this.options.id + '_count').html($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
         if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
@@ -343,8 +343,7 @@
         $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
-          $('<span>').attr('id','tbl_txt_found').addClass('resources-found').html('&nbsp; '+thisObj.options.text.resource_found),
-          'Showing:',
+          '&nbsp;', showing_lable,
           $('<a>').attr('href','#').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;', // TODO: don't use nbsp; in place for padding!
           $('<a>').attr('href','#').addClass('show').text('25'),

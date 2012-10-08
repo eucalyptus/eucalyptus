@@ -82,7 +82,7 @@
         text : {
           header_title : volume_h_title,
           create_resource : volume_create,
-          resource_found : volume_found,
+          resource_found : 'volume_found',
           resource_search : volume_search,
           resource_plural : volume_plural,
         },
@@ -162,16 +162,17 @@
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
          },
          help: { content: $attach_dialog_help },
-         on_open: {spin: true, callback: [ function(args) {
-           var dfd = $.Deferred();
+         on_open: {callback: []},
+        /* on_open: {spin: true, callback: [ function(args) {
+           //var dfd = $.Deferred();
            thisObj._initAttachDialog(dfd); // pulls instance info from server
            $instance_id = $attach_dialog.find('#volume-attach-instance-id');
            $device_name = $attach_dialog.find('#volume-attach-device-name');
            $attach_dialog.eucadialog('buttonOnKeyup', $device_name, thisObj.attachButtonId, function () {
              return $instance_id.val() != '';
            });
-           return dfd.promise();
-         }]},
+          // return dfd.promise();
+         }]},*/
        });
 
       // attach dialog end
@@ -294,13 +295,25 @@
       var $instanceSelector = this.attachDialog.find('#volume-attach-instance-id');
       var $volumeSelector = this.attachDialog.find('#volume-attach-volume-id');
       var $deviceName = thisObj.attachDialog.find('#volume-attach-device-name');
-      if(!$instanceSelector.val()){
+
+      if(!$instanceSelector.val()){ // launch from volume landing
         var inst_ids = [];
-        var results = describe('instance');
+        var vol_id = $volumeSelector.val();
+        var results = describe('volume');
+        var volume = null;
         if ( results ) {
           for( res in results) {
+            if (results[res].id === vol_id){
+              volume=results[res];
+              break;
+            }
+          }
+        }
+        results = describe('instance');
+        if ( volume && results ) {
+          for( res in results) {
             var instance = results[res];
-            if ( instance.state === 'running' )
+            if ( instance.state === 'running' && instance.placement === volume.zone)
               inst_ids.push(instance.id);
           }
         }
@@ -319,10 +332,21 @@
         });
         $instanceSelector.watermark(instance_id_watermark);
       }
-      if(!$volumeSelector.val()){
+      if(!$volumeSelector.val()){ // launch from instance landing
+        var inst_id = $instanceSelector.val();
+        var results = describe('instance');
+        var instance = null;
+        if (results){
+          for( res in results){
+            if (results[res].id === inst_id){
+              instance = results[res];
+              break;
+            }
+          }
+        }
         var vol_ids = [];
-        var results = describe('volume');
-        if( results ) {
+        results = describe('volume');
+        if( results && instance ) {
           for ( res in results){
             var volume = results[res];
             if ( volume.status === 'available' )
@@ -340,7 +364,7 @@
         });
         $volumeSelector.watermark(volume_id_watermark);
       }
-      dfd.resolve();
+      //dfd.resolve();
     },
 
     _deleteListedVolumes : function (volumesToDelete) {
@@ -584,10 +608,16 @@
           $instanceId.attr('disabled', 'disabled');
           thisObj.attachDialog.find('#volume-attach-device-name').val(thisObj._suggestNextDeviceName(instance));
         }
+        thisObj._initAttachDialog(); // pulls instance info from server
+        var $instance_id = thisObj.attachDialog.find('#volume-attach-instance-id');
+        var $device_name = thisObj.attachDialog.find('#volume-attach-device-name');
+        thisObj.attachDialog.eucadialog('buttonOnKeyup', $device_name, thisObj.attachButtonId, function () {
+          return $instance_id.val() != '';
+        });
       }
       var on_open = this.attachDialog.eucadialog('option', 'on_open'); 
       // make sure that there is only one set variables callback function
-      if (on_open.callback.length == 2)
+      if (on_open.callback.length == 1)
         on_open.callback.pop();
       on_open.callback.push(openCallback);
       this.attachDialog.eucadialog('option', 'on_open', on_open);

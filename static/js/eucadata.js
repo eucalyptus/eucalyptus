@@ -37,6 +37,8 @@
     _listeners : {},
     _init : function(){ },
     _numPending : 0,
+    _enabled : true,
+    _errorCode : null, // the http status code of the latest response
     _create : function(){
       var thisObj = this;
       
@@ -44,7 +46,7 @@
         var name = ep.name;
         var url = ep.url;
         thisObj._callbacks[name] = {callback: function(){
-         if(thisObj.countPendingReq() > MAX_PENDING_REQ ) {
+         if(!thisObj._enabled || thisObj.countPendingReq() > MAX_PENDING_REQ ) {
            return;
          }
          $.ajax({
@@ -62,7 +64,7 @@
                //delete thisObj._data[name];
                thisObj._data[name] = {
                  lastupdated: new Date(),
-                 results: data.results
+                 results: data.results,
                }
                if(thisObj._listeners[name] && thisObj._listeners[name].length >0) {
                  $.each(thisObj._listeners[name], function (idx, callback){
@@ -74,6 +76,7 @@
              }
            },
            error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
+             thisObj._errorCode = jqXHR.status;
              thisObj._numPending--;
              if(thisObj._data[name]){
                var last = thisObj._data[name]['lastupdated'];
@@ -84,7 +87,7 @@
                  thisObj._data[name] = null;
                }
                if(thisObj.getStatus() !== 'online'){
-                 errorAndLogout();
+                 errorAndLogout(thisObj._errorCode);
                }
                if (jqXHR.status == 504) {
                  notifyError($.i18n.prop('data_load_timeout'));
@@ -177,6 +180,14 @@
 
       return status;
     },
+
+    disable : function(){
+      this._enabled = false;
+    },
+
+    enable : function(){
+      this._enabled = true;
+    }
 /**************************/ 
   });
 })

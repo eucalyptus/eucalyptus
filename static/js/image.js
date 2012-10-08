@@ -89,7 +89,7 @@
         },
         text : {
           header_title : image_h_title,
-          resource_found : image_found,
+          resource_found : 'image_found',
           resource_search : image_search,
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
