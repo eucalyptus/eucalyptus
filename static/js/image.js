@@ -62,7 +62,7 @@
                },
               "sClass": "narrow-cell",
               "bSearchable": false,
-              "iDataSort": 6, // sort on hidden status column
+              "iDataSort": 7, // sort on hidden status column
             },
             { "mDataProp": "architecture" },
             { "mDataProp": "description" },
@@ -99,7 +99,7 @@
           thisObj._flipToHelp(evt, $imgHelp);
         },
         legend : ['pending','available','failed'],
-        show_only : {filter_value: 'machine', filter_col: 8},
+        show_only : [{filter_value: 'machine', filter_col: 8},{filter_value: 'available', filter_col: 7}],
         filters : [
           /* {name:"img_ownership", options: ['all','my'], text: ['All images', 'Images owned by me'], filter_col:TBD}, */
           {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
