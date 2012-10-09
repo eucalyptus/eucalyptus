@@ -140,7 +140,7 @@
     _addKeyPair : function(keyName) {
       var thisObj = this;
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=CreateKeyPair",
         data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
         dataType:"json",
@@ -172,7 +172,7 @@
       for ( i = 0; i<keysToDelete.length; i++ ) {
         var keyName = keysToDelete[i];
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DeleteKeyPair&KeyName=" + keyName,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
