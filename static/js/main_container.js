@@ -76,6 +76,15 @@
       }
       if (this._curSelected !== hash && hash !== '')
        this.updateSelected(hash);
+      $.ajax({
+          type: 'POST',
+          url: '/',
+          data:"action=busy&_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          success: function(data, textStatus, jqXHR) {
+            ;
+          }
+      });
     },
 
     // event receiver for menu selection
