@@ -621,7 +621,7 @@
             $('<div>').text(launch_instance_summary_sg),
             $('<span>').text(selectedSg)));
       }
-      var populateKeypair = function(){
+      var populateKeypair = function(oldKeypairs){ // select the new keypair if not found in the list of old ones
         var $kp_selector = $keypair.find('select');
         var results = describe('keypair');
         var numOptions = $kp_selector.find('option').length - 1; // none is always appended
@@ -630,7 +630,11 @@
         $kp_selector.children().detach();
         for( res in results) {
           var kpName = results[res].name;
-          $kp_selector.append($('<option>').attr('value', kpName).text(kpName));
+          var $option = $('<option>').attr('value', kpName).text(kpName);
+          if(oldKeypairs && $.inArray(kpName, oldKeypairs) < 0){
+            $option.attr('selected', 'selected'); 
+          }
+          $kp_selector.append($option);
         }
         $kp_selector.append($('<option>').attr('value', 'none').text(launch_instance_security_keypair_none));
         $kp_selector.change(function(e){
@@ -639,7 +643,7 @@
         });
       }
 
-      var populateSGroup = function(){
+      var populateSGroup = function(oldGroups){
         var $sg_selector = $sgroup.find('select');
         var results = describe('sgroup');
         var numOptions = $sg_selector.find('option').length;
@@ -648,12 +652,18 @@
         $sg_selector.children().detach();
         for(res in results){
           var sgName = results[res].name;
-          $sg_selector.append($('<option>').attr('value',sgName).text(sgName)); 
+          var $option = $('<option>').attr('value',sgName).text(sgName);
+          if(oldGroups && $.inArray(sgName, oldGroups) < 0){
+            $option.attr('selected','selected');
+          }
+          $sg_selector.append($option);
         }
-        $sg_selector.find('option').each(function(){
-          if($(this).val() ==='default')
-            $(this).attr('selected','selected');
-        });
+        if(! oldGroups){
+          $sg_selector.find('option').each(function(){
+            if($(this).val() ==='default')
+              $(this).attr('selected','selected');
+          });
+        }
         $sg_selector.change(function(e){
           var groupName = $sg_selector.val();
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
@@ -718,10 +728,15 @@
             if(thisObj._keypairCallback)
               cancelRepeat(thisObj._keypairCallback);
             addKeypair( function(){ 
-              var numKeypairs = $section.find('#launch-wizard-security-keypair-selector').find('option').length;
+              var oldKeypairs = [];
+              $.each($section.find('#launch-wizard-security-keypair-selector').find('option'), function(){
+                oldKeypairs.push($(this).val());
+              });
+
+              var numKeypairs = oldKeypairs.length;
               refresh('keypair'); 
               thisObj._keypairCallback = runRepeat(function(){
-                populateKeypair(); 
+                populateKeypair(oldKeypairs); 
                 if($section.find('#launch-wizard-security-keypair-selector').find('option').length  > numKeypairs){
                   cancelRepeat(thisObj._keypairCallback);
                 }
@@ -740,10 +755,14 @@
             if(thisObj._sgCallback)
               cancelRepeat(thisObj._sgCallback);
             addGroup( function() {
-              var numGroups = $section.find('#launch-wizard-security-sg-selector').find('option').length;
+              var oldGroups = [];
+              $.each($section.find('#launch-wizard-security-sg-selector').find('option'), function(){
+                oldGroups.push($(this).val());
+              });
+              var numGroups = oldGroups.length;
               refresh('sgroup');
               thisObj._sgCallback = runRepeat(function(){ 
-                populateSGroup();
+                populateSGroup(oldGroups);
                 if($section.find('#launch-wizard-security-sg-selector').find('option').length > numGroups){
                   cancelRepeat(thisObj._sgCallback);
                 }  
