@@ -67,9 +67,6 @@
          location.hash = '';
          location.reload();
        });
-       // navigation area   
-       //var $naviArea = this.element.find('#euca-navigator');
-       //$naviArea.append($('<a>').attr('href','#').attr('id','resources-link').text(button_explorer));
 
        //user area
        var user_menus = {'help':{text:menu_help, options:KEEP_VIEW}, 'aboutcloud':{text:menu_user_aboutcloud, options:KEEP_VIEW},'logout':{text:menu_user_logout}}
