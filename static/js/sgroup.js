@@ -246,6 +246,15 @@
         },
       });
       this._setupDialogFeatures(this.editDialog, group_ids, createButtonId);
+      $.ajax({
+          type: 'POST',
+          url: '/',
+          data:"action=busy&_xsrf="+$.cookie('_xsrf'),
+          dataType:"json",
+          success: function(data, textStatus, jqXHR) {
+                       //alert("busy call results: "+data);
+                   }
+      });
     },
 
     _destroy : function() {

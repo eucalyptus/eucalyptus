@@ -196,6 +196,14 @@ class RootHandler(BaseHandler):
                 except Exception, err:
                     traceback.print_exc(file=sys.stdout)
                     raise EuiException(401, 'not authorized')
+            elif action == 'busy':
+                if self.authorized():
+                    self.user_session.session_last_used = time.time()
+                    logging.info("**** busy indicated, session is good ****")
+                    response = BusyResponse(self.user_session)
+                else:
+                    logging.info("**** busy indicated, session is invalid ****")
+                    response = BusyResponse(None)
             else:
                 if not self.authorized():
                     raise EuiException(401, 'not authorized')
@@ -353,6 +361,15 @@ class LoginResponse(ProxyResponse):
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}
+
+class BusyResponse(ProxyResponse):
+    def __init__(self, session):
+        self.user_session = session
+    def get_response(self):
+        if self.user_session:
+            return {'result': 'true'}
+        else:
+            return {'result': 'false'}
 
 class InitResponse(ProxyResponse):
     def __init__(self, lang, support_url, ip='', hostname=''):
