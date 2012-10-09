@@ -74,6 +74,11 @@
 #define MODE 0
 #endif
 
+#ifndef NO_COMP
+const char * euca_this_component_name   = "cc";
+const char * euca_client_component_name = "clc";
+#endif
+
 ncMetadata mymeta;
 
 int main(int argc, char **argv) {

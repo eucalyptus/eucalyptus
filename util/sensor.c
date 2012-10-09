@@ -38,7 +38,7 @@
 #include "sensor.h"
 #include "ipc.h"
 
-#define MAX_SENSOR_RESOURCES MAXINSTANCES
+#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC // used for resource name cache
 
 static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
 static sensorResourceCache * sensor_state = NULL;
