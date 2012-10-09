@@ -143,6 +143,7 @@ var help_instance = {
     loadHtml('help/'+arg.language+'/console_reboot_instances.html', function(data){help_instance.dialog_reboot_content=data})
     loadHtml('help/'+arg.language+'/console_stop_instances.html', function(data){help_instance.dialog_stop_content=data})
     loadHtml('help/'+arg.language+'/console_terminate_instances.html', function(data){help_instance.dialog_terminate_content=data})
+    loadHtml('help/'+arg.language+'/console_launch_more_instances.html', function(data){help_instance.dialog_launchmore_content=data})
   },
   landing_content: "",
   dialog_add_content: "",
@@ -153,7 +154,8 @@ var help_instance = {
   dialog_connect_content: "",
   dialog_terminate_content: "",
   dialog_console_content: "",
-  dialog_password_content: ""
+  dialog_password_content: "",
+  dialog_launchmore_content: "",
 }
 
 var help_about = {
@@ -170,9 +172,3 @@ var help_launcher = {
   landing_content: "" 
 }
 
-var help_launch_more = {
-load : function(arg) {
-    loadHtml('help/'+arg.language+'/console_launch_more_instances.html', function(data){help_launcher.landing_content=data})
-  },
-  dialog_launchmore_content: ""
-}

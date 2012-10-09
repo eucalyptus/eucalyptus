@@ -268,7 +268,7 @@
       // volume detach dialog end
       // launch more instances like this dialog
       $tmpl = $('html body').find('.templates #instanceLaunchMoreDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_launch_more)));
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $launchmore_dialog = $rendered.children().first();
       var $launchmore_help = $rendered.children().last();  
     
