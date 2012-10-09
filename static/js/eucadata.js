@@ -50,7 +50,7 @@
            return;
          }
          $.ajax({
-           type:"GET",
+           type:"POST",
            url: url,
            data:"_xsrf="+$.cookie('_xsrf'),
            dataType:"json",
