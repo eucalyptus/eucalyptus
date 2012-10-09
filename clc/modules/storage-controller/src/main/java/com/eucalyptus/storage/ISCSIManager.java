@@ -412,4 +412,18 @@ public class ISCSIManager implements StorageExportManager {
 			db.commit();
 		}
 	}
+	
+	public void cleanup(LVMVolumeInfo volumeInfo) {
+		if(volumeInfo instanceof ISCSIVolumeInfo) {
+			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
+				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", iscsiVolumeInfo.getTid().toString()});
+				if(!returnValue.contains("Connection:")) {
+					LOG.info("CAN CLEANUP TID: " + iscsiVolumeInfo.getTid());
+					unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+					iscsiVolumeInfo.setTid(-1);
+				}
+			}
+		}
+	}
 }

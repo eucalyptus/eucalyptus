@@ -77,4 +77,6 @@ public interface StorageExportManager {
 	public void configure();
 	
 	public void allocateTarget(LVMVolumeInfo volumeInfo);
+
+	public void cleanup(LVMVolumeInfo volume);
 }

@@ -87,6 +87,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
+import com.eucalyptus.storage.CheckerTask;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
@@ -216,7 +217,11 @@ public class BlockStorage {
 			LOG.error("Startup checks failed ", ex);
 		}
 		blockManager.enable();
-		checkerService.add(new VolumeChecker(blockManager));
+		checkerService.add(new VolumeStateChecker(blockManager));
+		//add any block manager checkers
+		for(CheckerTask checker : blockManager.getCheckers()) {
+			checkerService.add(checker);
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 
@@ -224,6 +229,12 @@ public class BlockStorage {
 		blockManager.disable();
 	}
 
+	public static void addChecker(CheckerTask checkerTask) {
+		if(checkerService != null) {
+			checkerService.add(checkerTask);
+		}
+	}
+	
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))

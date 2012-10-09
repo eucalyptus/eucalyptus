@@ -97,7 +97,6 @@ import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
-import com.eucalyptus.storage.CheckerTask;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -1430,7 +1429,7 @@ public class OverlayManager implements LogicalStorageManager {
 	@Override
 	public void detachVolume(String volumeId, String nodeIqn)
 	throws EucalyptusCloudException {
-		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		/*VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(foundLVMVolumeInfo != null) {
 			String loDevName = foundLVMVolumeInfo.getLoDevName();
@@ -1454,7 +1453,7 @@ public class OverlayManager implements LogicalStorageManager {
 		}  else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
-		}
+		}*/
 	}
 
 	@Override
@@ -1504,5 +1503,47 @@ public class OverlayManager implements LogicalStorageManager {
 			}
 		}
 		volumeManager.finish();
+	}
+
+	@Override
+	public List<CheckerTask> getCheckers() {
+		List<CheckerTask> checkers = new ArrayList<CheckerTask>();
+		checkers.add(new VolumeCleanup());
+		return checkers;
+	}
+
+	private class VolumeCleanup extends CheckerTask {
+
+		@Override
+		public void run() {
+			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+			List<LVMVolumeInfo> volumes = volumeManager.getAllVolumeInfos();
+			for(LVMVolumeInfo foundLVMVolumeInfo : volumes) {
+				LOG.info("CHECKING VOL: " + foundLVMVolumeInfo.getVolumeId() + " FOR CLEANUP");
+				exportManager.cleanup(foundLVMVolumeInfo);
+
+				String loDevName = foundLVMVolumeInfo.getLoDevName();
+				String vgName = foundLVMVolumeInfo.getVgName();
+				String lvName = foundLVMVolumeInfo.getLvName();
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				LVMVolumeInfo volumeInfo = new LVMVolumeInfo();
+				volumeInfo.setSnapshotOf(foundLVMVolumeInfo.getVolumeId());
+				volumeInfo.setStatus(StorageProperties.Status.pending.toString());
+				LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo(volumeInfo);
+				if(snapshotInfo == null) {
+					LOG.info("Detaching loop device: " + loDevName);
+					try {
+						disableLogicalVolume(absoluteLVName);
+						removeLoopback(loDevName);
+						foundLVMVolumeInfo.setLoDevName(null);
+					} catch (EucalyptusCloudException e) {
+						LOG.error(e, e);
+					}
+				} else {
+					LOG.info("Snapshot: " + snapshotInfo.getVolumeId() + " in progress. Not detaching loop device.");
+				}
+			}
+			volumeManager.finish();
+		}
 	}
 }

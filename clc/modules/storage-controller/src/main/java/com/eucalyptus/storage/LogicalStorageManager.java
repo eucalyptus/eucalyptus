@@ -139,4 +139,6 @@ public interface LogicalStorageManager {
 	public boolean getFromBackend(String snapshotId) throws EucalyptusCloudException;
 	
 	public void checkVolume(String volumeId) throws EucalyptusCloudException;
+
+	public List<CheckerTask> getCheckers();
 }
