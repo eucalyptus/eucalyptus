@@ -171,5 +171,8 @@ var help_launcher = {
 }
 
 var help_launch_more = {
+load : function(arg) {
+    loadHtml('help/'+arg.language+'/console_launch_more_instances.html', function(data){help_launcher.landing_content=data})
+  },
   dialog_launchmore_content: ""
 }
