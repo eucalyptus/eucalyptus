@@ -92,8 +92,10 @@
         <h2 class="title topictitle2">Specify Security</h2>
 
         
+
         <div class="body taskbody"><p class="shortdesc">This panel allows you to specify the key pair and security group that will be
-            used by your new instance(s).</p>
+            used by your new instance(s). NOTE: if you create a key pair or security group in this
+            section, they will automatically be selected for use in your new instance. </p>
 
             <ol class="ol steps"><li class="li step">
                     <span class="ph cmd"> Select a key pair using the <span class="ph uicontrol">Key pair</span> drop-down list
@@ -104,6 +106,7 @@
                                 key pair</span> dialog box. </div>
 
                     
+
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Select a security group using the <span class="ph uicontrol">Security group</span>
@@ -112,6 +115,11 @@
                         <div class="note note"><span class="notetitle">Note:</span>  You can also create a new security group by clicking the
                                 <span class="ph uicontrol">Create new security group</span> link to display the
                                 <span class="ph uicontrol">Create new security group</span> dialog box. </div>
+
+                        <div class="note note"><span class="notetitle">Note:</span> 
+                            If you select the default security group, make sure that you've added rules 
+                            to the default security group so that you can access your instances.
+                        </div>
 
                     
                 </li>
@@ -133,7 +141,7 @@
 
         
         <div class="body taskbody"><p class="shortdesc">This panel allows you to specify advanced options for your new instance(s). You
-            can add user data, override the kernal and RAM disk IDs, specify private networking, and
+            can add user data, override the kernel and RAM disk IDs, specify private networking, and
             add additional storage.</p>
 
             <ol class="ol steps"><li class="li step">
