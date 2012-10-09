@@ -315,7 +315,7 @@ function inferImageName(manifest, desc, platform) {
 
 function errorAndLogout(){
   $('html body').find(DOM_BINDING['hidden']).login();
-  $('html body').find(DOM_BINDING['hidden']).login('popupError', $.i18n.prop('connection_failure', 'cloud administrator'), function(){
+  $('html body').find(DOM_BINDING['hidden']).login('popupError', $.i18n.prop('connection_failure', cloud_admin), function(){
     logout();
   });
 }
