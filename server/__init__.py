@@ -257,7 +257,6 @@ def terminateSession(id, expired=False):
     logging.info("User %s after %d seconds" % (msg, (time.time() - sessions[id].session_start)));
     logging.info("--Proxy processed %d requests during this session", sessions[id].session_lifetime_requests)
     del sessions[id] # clean up session info
-    logging.debug("Cleared session (%s)" % id);
 
 class LoginProcessor(ProxyProcessor):
     @staticmethod
