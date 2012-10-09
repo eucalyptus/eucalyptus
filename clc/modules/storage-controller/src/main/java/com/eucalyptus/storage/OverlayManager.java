@@ -1494,7 +1494,7 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public List<CheckerTask> getCheckers() {
-		return new ArrayList<CheckerTask>();
+	public void checkVolume(String volumeId) throws EucalyptusCloudException {
+		
 	}
 }
