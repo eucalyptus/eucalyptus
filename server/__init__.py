@@ -162,6 +162,8 @@ class BaseHandler(tornado.web.RequestHandler):
             return False
 
         if not sid or sid not in sessions:
+            self.clear_cookie("session-id")
+            self.clear_cookie("_xsrf")
             return False
         self.user_session = sessions[sid]
         return True
