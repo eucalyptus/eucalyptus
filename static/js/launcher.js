@@ -608,9 +608,9 @@
       var $keypair = $content.find('#launch-wizard-security-keypair');
       var $sgroup = $content.find('#launch-wizard-security-sgroup');
       
-      var summarize = function(){
-        var selectedKp = $section.find('select#launch-wizard-security-keypair-selector').val();
-        var selectedSg = $section.find('select#launch-wizard-security-sg-selector').val();
+      var summarize = function(kp, sg){
+        var selectedKp = kp? kp : $section.find('select#launch-wizard-security-keypair-selector').val();
+        var selectedSg = sg? sg : $section.find('select#launch-wizard-security-sg-selector').val();
         thisObj.launchParam['keypair'] = selectedKp;
         thisObj.launchParam['sgroup'] = selectedSg;
         return $('<div>').addClass('summary').append(
@@ -624,6 +624,8 @@
       var populateKeypair = function(oldKeypairs){ // select the new keypair if not found in the list of old ones
         var $kp_selector = $keypair.find('select');
         var results = describe('keypair');
+        if(!results)
+          return;
         var numOptions = $kp_selector.find('option').length - 1; // none is always appended
         if (numOptions === results.length)
           return;
@@ -649,23 +651,7 @@
         var numOptions = $sg_selector.find('option').length;
         if (numOptions === results.length)
           return;
-        $sg_selector.children().detach();
-        for(res in results){
-          var sgName = results[res].name;
-          var $option = $('<option>').attr('value',sgName).text(sgName);
-          if(oldGroups && $.inArray(sgName, oldGroups) < 0){
-            $option.attr('selected','selected');
-          }
-          $sg_selector.append($option);
-        }
-        if(! oldGroups){
-          $sg_selector.find('option').each(function(){
-            if($(this).val() ==='default')
-              $(this).attr('selected','selected');
-          });
-        }
-        $sg_selector.change(function(e){
-          var groupName = $sg_selector.val();
+        var onSelectorChange = function(groupName){
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
@@ -678,7 +664,11 @@
               break; 
             }
           }
-          if(group){ 
+          if(!group.rules || group.rules.length <=0){
+            $rule.children().detach();
+            $rule.append(
+              $('<div>').html(launch_instance_security_group_norule));
+          }else{
             $.each(group.rules, function (idx, rule){
               var $wrapper = $('<div>').addClass('launcher-sgroup-rule clearfix');
               var protocol = rule['ip_protocol'];
@@ -713,8 +703,29 @@
               $rule.append($wrapper);
             });
           } 
-          var $summary = summarize(); 
+          var $summary = summarize(null, groupName); 
           thisObj._setSummary('security', $summary.clone());
+        } //end of onSelectorChange
+
+        $sg_selector.children().detach();
+        for(res in results){
+          var sgName = results[res].name;
+          var $option = $('<option>').attr('value',sgName).text(sgName);
+          if(oldGroups && $.inArray(sgName, oldGroups) < 0){
+            $option.attr('selected','selected');
+            onSelectorChange(sgName);
+          }
+          $sg_selector.append($option);
+        }
+        if(! oldGroups){
+          $sg_selector.find('option').each(function(){
+            if($(this).val() ==='default')
+              $(this).attr('selected','selected');
+          });
+        }
+        $sg_selector.change(function(e){
+          var groupName = $sg_selector.val();
+          onSelectorChange(groupName);
         });
       }
 

@@ -667,6 +667,7 @@
       var thisObj = this;
       thisObj.rulesList=null;
       $('#sgroup-rules-list').html('');
+      thisObj.addDialog.find('#sgroup-description').val('');
       thisObj.addDialog.eucadialog('open');
       thisObj.addDialog.find('input[id=sgroup-name]').focus();
       thisObj.addDialog.find('input[id=sgroup-description]').focus();
@@ -770,6 +771,7 @@
       var thisObj = this;
       thisObj.rulesList=null; 
       $('#sgroup-rules-list').html(''); 
+      thisObj.addDialog.find('#sgroup-description').val('');
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')
