@@ -1495,6 +1495,14 @@ public class OverlayManager implements LogicalStorageManager {
 
 	@Override
 	public void checkVolume(String volumeId) throws EucalyptusCloudException {
-		
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo lvmVolInfo = volumeManager.getVolumeInfo(volumeId);
+		if(lvmVolInfo != null) {
+			if(!new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + lvmVolInfo.getVolumeId()).exists()) {
+				volumeManager.abort();
+				throw new EucalyptusCloudException("Unable to find backing volume for: " + volumeId);
+			}
+		}
+		volumeManager.finish();
 	}
 }
