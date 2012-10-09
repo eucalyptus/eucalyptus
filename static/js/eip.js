@@ -218,7 +218,7 @@
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var eipId = rowsToDelete[i];
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=ReleaseAddress&PublicIp=" + eipId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -250,7 +250,7 @@
       for ( i = 0; i<ipsToDisassociate.length; i++ ) {
         var eipId = ipsToDisassociate[i];
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DisassociateAddress&PublicIp=" + eipId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -281,7 +281,7 @@
       var thisObj = this;
       for ( i=0; i<numberIpsToAllocate; i++)
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=AllocateAddress",
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -308,7 +308,7 @@
     _associateIp : function (publicIp, instanceId) {
       var thisObj = this;
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=AssociateAddress&PublicIp="+publicIp+"&InstanceId="+instanceId,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",

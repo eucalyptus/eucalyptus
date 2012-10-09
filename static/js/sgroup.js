@@ -133,7 +133,7 @@
               }
               $add_dialog.eucadialog("close");
               $.ajax({
-                  type:"GET",
+                  type:"POST",
                   url:"/ec2?Action=CreateSecurityGroup",
                   data:"_xsrf="+$.cookie('_xsrf') + "&GroupName=" + name + "&GroupDescription=" + desc,
                   dataType:"json",
@@ -548,7 +548,7 @@
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = $(rowsToDelete[i]).html();
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup&GroupName=" + sgroupName,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -589,7 +589,7 @@
       var sgroupName = groupName;
       dialog.eucadialog("close");
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
         data:"_xsrf="+$.cookie('_xsrf') + req_params,
         dataType:"json",
@@ -623,7 +623,7 @@
       }
       var sgroupName = groupName;
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=RevokeSecurityGroupIngress",
         data:"_xsrf="+$.cookie('_xsrf') + req_params,
         dataType:"json",
@@ -667,6 +667,7 @@
       var thisObj = this;
       thisObj.rulesList=null;
       $('#sgroup-rules-list').html('');
+      thisObj.addDialog.find('#sgroup-description').val('');
       thisObj.addDialog.eucadialog('open');
       thisObj.addDialog.find('input[id=sgroup-name]').focus();
       thisObj.addDialog.find('input[id=sgroup-description]').focus();
@@ -770,6 +771,7 @@
       var thisObj = this;
       thisObj.rulesList=null; 
       $('#sgroup-rules-list').html(''); 
+      thisObj.addDialog.find('#sgroup-description').val('');
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')

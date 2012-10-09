@@ -451,7 +451,7 @@
       for(i=0; i<instances.length; i++)
         instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=TerminateInstances"+instIds,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -501,7 +501,7 @@
         instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
      
       $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=RebootInstances"+instIds,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -540,7 +540,7 @@
       for(i=0; i<instances.length; i++)
         instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=StopInstances"+instIds,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -578,7 +578,7 @@
         instIds+= '&InstanceId.'+parseInt(i+1)+'='+(instances[i]);
 
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=StartInstances"+instIds, 
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
@@ -666,7 +666,7 @@
       instances = $(instances).html();
       $.when( 
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=GetConsoleOutput&InstanceId=" + instances,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -761,7 +761,7 @@
       $.each(thisObj.detachDialog.find("input:checked"), function(idx, checkbox){
         var volumeId = $(checkbox).val();
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DetachVolume&VolumeId=" + volumeId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",

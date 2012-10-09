@@ -267,7 +267,7 @@
       for ( i = 0; i<snapshotsToDelete.length; i++ ) {
         var snapshotId = snapshotsToDelete[i];
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DeleteSnapshot&SnapshotId=" + snapshotId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -296,7 +296,7 @@
     _createSnapshot : function (volumeId, description) {
       var thisObj = this;
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=CreateSnapshot&VolumeId=" + volumeId + "&Description=" + description,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
@@ -349,7 +349,7 @@
         url += "&KernelId=windows";
 
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:url,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",

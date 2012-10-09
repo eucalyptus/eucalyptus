@@ -372,7 +372,7 @@
       for ( i = 0; i<volumesToDelete.length; i++ ) {
         var volumeId = volumesToDelete[i];
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
@@ -401,7 +401,7 @@
     _attachVolume : function (volumeId, instanceId, device) {
       var thisObj = this;
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
@@ -426,7 +426,7 @@
       var thisObj = this;
       sid = snapshotId != '' ? "&SnapshotId=" + snapshotId : '';
       $.ajax({
-        type:"GET",
+        type:"POST",
         url:"/ec2?Action=CreateVolume&Size=" + size + "&AvailabilityZone=" + az + sid,
         data:"_xsrf="+$.cookie('_xsrf'),
         dataType:"json",
@@ -455,7 +455,7 @@
       for ( i = 0; i<volumes.length; i++ ) {
         var volumeId = volumes[i];
         $.ajax({
-          type:"GET",
+          type:"POST",
           url:"/ec2?Action=DetachVolume&VolumeId=" + volumeId,
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",

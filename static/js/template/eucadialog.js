@@ -56,6 +56,7 @@
          title: thisObj.options.title,
          user_val: thisObj.options.user_val,
          open: function(event, ui) {
+             iamBusy();
              $titleBar = thisObj.element.parent().find('.ui-dialog-titlebar');
              if($titleBar.find('.' + thisObj.options.help_icon_class).length <= 0)
                $titleBar.append($('<div>').addClass(thisObj.options.help_icon_class).append($('<a>').attr('href','#').text('?')));

@@ -76,6 +76,7 @@
       }
       if (this._curSelected !== hash && hash !== '')
        this.updateSelected(hash);
+      iamBusy();
     },
 
     // event receiver for menu selection

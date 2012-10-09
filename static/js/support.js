@@ -212,7 +212,6 @@ function logout(){
       dataType:"json",
       async:"false", // async option deprecated as of jQuery 1.8
     })).always(function(out){
-      $.cookie('session-id',''); 
       var hostname = null;
       if (location.href && location.href.indexOf('hostname=') >= 0){
         hostname = location.href.substring(location.href.indexOf('hostname='));
@@ -352,3 +351,14 @@ function errorAndLogout(errorCode){
   });
 }
 
+function iamBusy(){
+  $.ajax({
+    type: 'POST',
+    url: '/',
+    data:"action=busy&_xsrf="+$.cookie('_xsrf'),
+    dataType:"json",
+      success: function(data, textStatus, jqXHR) {
+        ;
+      }
+  });
+}
