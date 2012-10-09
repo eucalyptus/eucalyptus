@@ -6,8 +6,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="DC.Type" content="task"/>
 <meta name="DC.Title" content="Navigate the Dashboard"/>
-<meta name="abstract" content="The dashboard is your starting point for using the Eucalyptus console. From the Dashboard, you can access instances, storage items (volumes, snapshots, and buckets), and networking and security objects (key pairs, security groups, and IP addresses)."/>
-<meta name="description" content="The dashboard is your starting point for using the Eucalyptus console. From the Dashboard, you can access instances, storage items (volumes, snapshots, and buckets), and networking and security objects (key pairs, security groups, and IP addresses)."/>
+<meta name="abstract" content="The dashboard is your starting point for using the Eucalyptus console. From the Dashboard, you can access instances, storage items (volumes, and snapshots), and networking and security objects (key pairs, security groups, and IP addresses)."/>
+<meta name="description" content="The dashboard is your starting point for using the Eucalyptus console. From the Dashboard, you can access instances, storage items (volumes, and snapshots), and networking and security objects (key pairs, security groups, and IP addresses)."/>
 <meta name="prodname" content="Eucalyptus"/>
 <meta name="version" content="3.2"/>
 <meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
@@ -24,7 +24,7 @@
 
     
     <div class="body taskbody"><p class="shortdesc"> The dashboard is your starting point for using the Eucalyptus console. From the
-        Dashboard, you can access instances, storage items (volumes, snapshots, and buckets), and
+        Dashboard, you can access instances, storage items (volumes, and snapshots), and
         networking and security objects (key pairs, security groups, and IP addresses). </p>
 </div>
 
@@ -64,6 +64,14 @@
                         labels or counts in the <span class="ph uicontrol">Instances</span> section of the
                         dashboard to display the <span class="ph uicontrol">Manage Instances</span> screen.
                     </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> 
+                            Your initial view in the <span class="ph uicontrol">Manage instances</span> screen will be filtered by running or stopped instances, depending on which label 
+                            you clicked. To see all running and stopped instances, be sure to change the the value of the 
+                            <span class="ph uicontrol">Filter by</span> drop-down list on the <span class="ph uicontrol">Manage instances</span> screen to <kbd class="ph userinput">All instances</kbd>.
+                        </div>
+
+                    
                 </li>
 <li class="li step">
                     <span class="ph cmd"> You can filter the instances list by availability zone by selecting an
@@ -94,10 +102,6 @@
 <li class="li step">
                     <span class="ph cmd"> To access the <span class="ph uicontrol">Manage Snapshots</span> screen, click the
                             <span class="ph uicontrol">Snapshots</span> label or count. </span>
-                </li>
-<li class="li step">
-                    <span class="ph cmd"> To access the <span class="ph uicontrol">Manage Buckets</span> screen, click the
-                            <span class="ph uicontrol">Buckets</span> label or count.</span>
                 </li>
 </ol>
 
