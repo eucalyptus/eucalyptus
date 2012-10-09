@@ -120,7 +120,7 @@
       dt_arg.oLanguage['sProcessing'] = "<img src='images/dots32.gif'/> &nbsp; <span>"+processing_data+"</span>";
       dt_arg.oLanguage['sLoadingRecords'] =  please_wait_loading_data;
       dt_arg.oLanguage['sZeroRecords'] = please_wait_loading_data;
-      dt_arg.oLanguage['sSearch'] = search_lable;
+      dt_arg.oLanguage['sSearch'] = search_label;
       dt_arg.oLanguage['sEmptyTable'] = $.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural);
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
@@ -343,7 +343,7 @@
         $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
-          '&nbsp;', showing_lable,
+          '&nbsp;', showing_label,
           $('<a>').attr('href','#').addClass('show selected').text('10'),
           '&nbsp;|&nbsp;', // TODO: don't use nbsp; in place for padding!
           $('<a>').attr('href','#').addClass('show').text('25'),
@@ -353,6 +353,8 @@
           $('<a>').attr('href','#').addClass('show').text('100')));
 
       $tableTop.find('a.show').click(function () {
+        if($(this).hasClass('selected'))
+          return;
         $(this).parent().children('a').each( function() {
           $(this).removeClass('selected');
         });

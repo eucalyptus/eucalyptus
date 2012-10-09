@@ -312,6 +312,30 @@ function inferImageName(manifest, desc, platform) {
   }
   return name;
 }
+function getImageName(imgKey){
+  if(!imgKey)
+    imgKey = 'linux';
+
+  var nameMap = {
+    'rhel5' : 'Red Hat 5',
+    'rhel6' : 'Red Hat 6',
+    'rhel' : 'Red Hat',
+    'centos5' : 'CENT OS 5',
+    'centos6' : 'CENT OS 6',
+    'centos' : 'CENT OS',
+    'lucid' : 'Ubuntu Lucid(10.04)',
+    'precise' : 'Ubuntu Precise(12.04)',
+    'ubuntu' : 'Ubuntu',
+    'debian' : 'Debian',
+    'fedora' : 'Fedora',
+    'opensuse' : 'Open Suse',
+    'suse' : 'Suse Linux',
+    'gentoo' : 'Gentoo',
+    'linux' : 'Linux',
+    'windows' : 'Windows' ,
+  };
+  return nameMap[imgKey];
+}
 
 function errorAndLogout(errorCode){
   // turn off all eucaData requests

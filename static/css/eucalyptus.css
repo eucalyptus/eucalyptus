@@ -2700,6 +2700,13 @@ textarea.console-output {
   margin: 10px;
 }
 
+#launch-images_paginate {
+  margin-top: 5px;
+}
+
+#wizard-img-table-size {
+ text-align: right; 
+}
 /* ======= Euca credits ======= */
 
 .euca-credits {

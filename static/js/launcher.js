@@ -130,6 +130,20 @@
       $header.append($('<a>').attr('href', '#').addClass('required-label').html(launch_instance_section_header_image).click( function(e) {
         var imgSection = thisObj.element.find('#launch-wizard-image-contents');
         if(! $header.hasClass('expanded')) { 
+          var selectedTableSize = thisObj.element.find('#wizard-img-table-size a.selected').text();
+          var displayLength = thisObj._imageTable.fnSettings()._iDisplayLength;
+          if(! ((selectedTableSize===showing_all && displayLength < 0) ||
+                 (parseInt(selectedTableSize) === displayLength))){
+            var allLinks = thisObj.element.find('#wizard-img-table-size a.show');
+            for(i in allLinks){
+              if( ($(allLinks[i]).text() === showing_all && displayLength <0 ) || 
+                   (parseInt($(allLinks[i]).text()) === displayLength))
+              {
+                $(allLinks[i]).trigger('click');
+                break;
+              }
+            }
+          }
           thisObj._selectedSection.slideToggle('fast');
           imgSection.slideToggle('fast');
           thisObj._selectedSection = imgSection;
@@ -269,6 +283,8 @@
           if(thisObj.options.image && thisObj.options.image === emi){
             $currentRow.trigger('click');
             $section.find('#launch-wizard-buttons-image-next').trigger('click');
+            thisObj._imageTable.fnSettings()._iDisplayLength = 5;
+            thisObj.options.image = null;
           }
         });
         $section.find('div#launch-images_filter').find('input').watermark(launch_instance_image_search_watermark);
@@ -287,24 +303,6 @@
           "aoColumns": [
              { // platform
                "fnRender" : function(oObj) { 
-                 var nameMap = {
-                   'rhel5' : 'Red Hat 5',
-                   'rhel6' : 'Red Hat 6',
-                   'rhel' : 'Red Hat',
-                   'centos5' : 'CENT OS 5',
-                   'centos6' : 'CENT OS 6',
-                   'centos' : 'CENT OS',
-                   'lucid' : 'Ubuntu Lucid(10.04)',
-                   'precise' : 'Ubuntu Precise(12.04)',
-                   'ubuntu' : 'Ubuntu',
-                   'debian' : 'Debian',
-                   'fedora' : 'Fedora',
-                   'opensuse' : 'Open Suse',
-                   'suse' : 'Suse Linux',
-                   'gentoo' : 'Gentoo',
-                   'linux' : 'Linux',
-                   'windows' : 'Windows' ,
-                 };
                  var emi = oObj.aData.id;
                  var desc = oObj.aData.description ? oObj.aData.description : oObj.aData.location;
                  var arch = oObj.aData.architecture;
@@ -314,7 +312,7 @@
                  var name = '';
                  var imgKey = inferImageName(oObj.aData.location, desc, oObj.aData.platform);
                  if(imgKey)
-                   name = nameMap[imgKey];
+                   name = getImageName(imgKey);
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
                                $('<div>').addClass('image-name').text(name), // should be linux, windows, or distros
                                $('<div>').addClass('image-id-arch').append($('<span>').text(emi), $('<span>').text(arch)),
@@ -354,7 +352,9 @@
                "mDataProp": "root_device_type"
              },
            ],
-           "sDom" : "<\"#filter-wrapper\"<\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\"tr>", 
+           "sDom" : "<\"#filter-wrapper\"<\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
+           "sPaginationType" : "full_numbers",
+           "iDisplayLength" : thisObj.options.image ? -1: 5,
            "bProcessing" : true,
            "sAjaxDataProp" : "results",
            "bAutoWidth" : false,
@@ -423,6 +423,42 @@
     _initImageSection : function(){ 
       var thisObj = this;
       this._enableImageLink();
+      thisObj.element.find('#wizard-img-table-size').children().detach();
+
+      thisObj.element.find('#wizard-img-table-size').append(
+        $('<span>').attr('id','img-table-count'),
+          '&nbsp;', showing_label,
+          $('<a>').attr('href','#').addClass('show').text('5'),
+          '&nbsp;|&nbsp;', // TODO: don't use nbsp; in place for padding!
+          $('<a>').attr('href','#').addClass('show').text('10'),
+          '&nbsp;|&nbsp;',
+          $('<a>').attr('href','#').addClass('show').text('20'),
+          '&nbsp;|&nbsp;',
+          $('<a>').attr('href','#').addClass('show').text(showing_all));
+
+      var tableLength = thisObj._imageTable.fnSettings()._iDisplayLength; 
+      $.each(thisObj.element.find('#wizard-img-table-size a.show'), function(){
+        if(tableLength < 0 && $(this).text() === showing_all)
+          $(this).addClass('selected'); 
+        else if (tableLength === parseInt($(this).text()))
+          $(this).addClass('selected');
+      });
+
+      thisObj.element.find('#wizard-img-table-size a.show').unbind('click').bind('click',function () {
+        if($(this).hasClass('selected'))
+          return;
+        var numEntry = $(this).text().replace('|','');
+        if(numEntry===showing_all)
+          numEntry = "-1";
+        $(this).parent().children('a').each( function() {
+          $(this).removeClass('selected');
+        });
+        thisObj._imageTable.fnSettings()._iDisplayLength = parseInt(numEntry);
+        thisObj._imageTable.fnDraw();
+        $(this).addClass('selected');
+        return false;
+      });
+
       thisObj.element.find('#launch-wizard-image-header').addClass('expanded');
       thisObj.element.find('#launch-wizard-type-header').removeClass('expanded');
       thisObj.element.find('#launch-wizard-security-header').removeClass('expanded');
