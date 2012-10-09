@@ -351,3 +351,14 @@ function errorAndLogout(errorCode){
   });
 }
 
+function iamBusy(){
+  $.ajax({
+    type: 'POST',
+    url: '/',
+    data:"action=busy&_xsrf="+$.cookie('_xsrf'),
+    dataType:"json",
+      success: function(data, textStatus, jqXHR) {
+        ;
+      }
+  });
+}
