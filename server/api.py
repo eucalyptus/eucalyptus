@@ -361,6 +361,8 @@ class ComputeHandler(server.BaseHandler):
 
         self.user_session.session_lifetime_requests += 1
 
+        logging.warn(">>>> get being called in api.py. Fix this now! <<<<");
+
         ret = []
         try:
             action = self.get_argument("Action")
@@ -422,7 +424,6 @@ class ComputeHandler(server.BaseHandler):
             # could make this conditional, but add caching always for now
             self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
 
-        self.user_session.session_last_used = time.time()
         self.user_session.session_lifetime_requests += 1
 
         try:
