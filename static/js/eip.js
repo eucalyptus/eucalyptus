@@ -42,7 +42,17 @@
         id : 'eips', // user of this widget should customize these options,
         dt_arg : {
           "bProcessing": true,
-          "sAjaxSource": "../ec2?Action=DescribeAddresses&_xsrf="+$.cookie('_xsrf'),
+          "sAjaxSource": "../ec2?Action=DescribeAddresses",
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                $.ajax( {
+                    "dataType": 'json',
+                    "type": "POST",
+                    "url": sSource,
+                    "data": "_xsrf="+$.cookie('_xsrf'),
+                    "success": fnCallback
+                });
+
+          },
           "sAjaxDataProp": "results",
           "bAutoWidth" : false,
           "sPaginationType": "full_numbers",

@@ -39,7 +39,17 @@
       this.tableWrapper = $volTable.eucatable({
         id : 'volumes', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeVolumes&_xsrf="+$.cookie('_xsrf'),
+          "sAjaxSource": "../ec2?Action=DescribeVolumes",
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                $.ajax( {
+                    "dataType": 'json',
+                    "type": "POST",
+                    "url": sSource,
+                    "data": "_xsrf="+$.cookie('_xsrf'),
+                    "success": fnCallback
+                });
+
+          },
           "aaSorting": [[ 7, "desc" ]],
           "aoColumns": [
             {
