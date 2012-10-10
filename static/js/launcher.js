@@ -299,6 +299,7 @@
           "oLanguage" : { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
                           "sLoadingRecords": "",
                           "sSearch": "",
+                          "sZeroRecords": $.i18n.prop('resource_no_records', image_plural),
                         },
           "aoColumns": [
              { // platform
