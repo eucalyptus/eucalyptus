@@ -607,13 +607,12 @@
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', sgroupName));
-//                dialog.eucadialog("close");
+                thisObj._getTableWrapper().eucatable('refreshTable');
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
-//                dialog.eucadialog("close");
             }
         }),
       });
@@ -641,13 +640,12 @@
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', sgroupName));
-//                dialog.eucadialog("close");
+                thisObj._getTableWrapper().eucatable('refreshTable');
             }
         }),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
-//                dialog.eucadialog("close");
             }
         }),
       });
