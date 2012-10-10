@@ -106,6 +106,8 @@
              }
          },
          close: function(event, ui) { 
+           if(thisObj.popout_dialog) 
+             thisObj.popout_dialog.dialog('close'); 
            if( thisObj.options.on_close) { 
              thisObj.options.on_close.callback();
            }
@@ -254,8 +256,6 @@
     
     close : function() {
       var thisObj = this;
-      if(thisObj.popout_dialog) 
-        thisObj.popout_dialog.dialog('close'); 
       this.element.dialog('close');
       // this method should clean-up things
       this.element.find('input').each(function () { 
