@@ -1261,6 +1261,7 @@ ul.ramdisk-expanded li:nth-child(5) {
   right: 25px;
 }
 
+
 .help-link a,
 .help-return a,
 .help-euca a {
@@ -2732,4 +2733,24 @@ textarea.console-output {
   list-style-type: none;
 }
 
+/* Pop-out help */
 
+.help-popout {
+  position: absolute;
+  top: 4px;
+  right: 60px;
+}
+.euca-popout-container .ui-dialog-titlebar {
+  background-color: #f1ffe3;
+  background-image: none;
+  border: none;
+  height: 20px;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.popout-close {
+  float: right;  
+}
