@@ -432,7 +432,6 @@
         $legend = $('<div>').attr('id',thisObj.options.id+'-legend'); 
 
         $legend.addClass('table-legend clearfix');
-        $legend.append($('<div class="legend-title">').html(legend_label));
         var $itemWrapper = $('<div>').attr('class','legend-items-wrapper');
         $.each(thisObj.options.legend, function(idx, val){
           var itemCls = 'legend-'+val;
