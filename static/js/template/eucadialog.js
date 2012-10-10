@@ -187,7 +187,7 @@
                       dialogClass: 'euca-popout-container',
                       resizable: false,
                       closeOnEscape : true,
-                      position: [750, 100],// { my: 'center', at: 'right', of: thisObj.element, collision: 'none'},
+                      position: [800, 100],// { my: 'center', at: 'right', of: thisObj.element, collision: 'none'},
                       open: function(e, ui){
                         thisObj.element.data('dialog').option('position', [100,200]);
                         thisObj._stylePopout();
