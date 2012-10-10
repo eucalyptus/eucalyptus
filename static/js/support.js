@@ -38,7 +38,7 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    hidden:'.euca-hidden-container',
                   };
 
-var KEY_PATTERN = new RegExp('^[A-Za-z0-9_\s-]{1,256}$');
+var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 
 var KEEP_VIEW = 'keep_view';
