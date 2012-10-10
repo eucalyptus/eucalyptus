@@ -101,6 +101,7 @@
           header_title : image_h_title,
           resource_found : 'image_found',
           resource_search : image_search,
+          resource_plural : image_plural,
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
