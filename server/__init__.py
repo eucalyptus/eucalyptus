@@ -199,10 +199,8 @@ class RootHandler(BaseHandler):
             elif action == 'busy':
                 if self.authorized():
                     self.user_session.session_last_used = time.time()
-                    logging.info("**** busy indicated, session is good ****")
                     response = BusyResponse(self.user_session)
                 else:
-                    logging.info("**** busy indicated, session is invalid ****")
                     response = BusyResponse(None)
             else:
                 if not self.authorized():

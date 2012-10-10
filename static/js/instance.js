@@ -47,7 +47,17 @@
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeInstances&_xsrf="+$.cookie('_xsrf'),
+          "sAjaxSource": "../ec2?Action=DescribeInstances",
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                $.ajax( {
+                    "dataType": 'json',
+                    "type": "POST",
+                    "url": sSource,
+                    "data": "_xsrf="+$.cookie('_xsrf'),
+                    "success": fnCallback
+                });
+
+          },
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {
@@ -258,7 +268,7 @@
       // volume detach dialog end
       // launch more instances like this dialog
       $tmpl = $('html body').find('.templates #instanceLaunchMoreDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_launch_more)));
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $launchmore_dialog = $rendered.children().first();
       var $launchmore_help = $rendered.children().last();  
     
