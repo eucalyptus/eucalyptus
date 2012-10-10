@@ -104,7 +104,7 @@
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
-          thisObj._flipToHelp(evt, $volHelp);
+          thisObj._flipToHelp(evt, {content: $volHelp, url: help_volume.landing_content_url});
         },
         filters : [{name:"vol_state", options: ['all','attached','detached'], text: [vol_state_selector_all,vol_state_selector_attached,vol_state_selector_detached], filter_col:8, alias: {'attached':'in-use','detached':'available'}}],
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
@@ -130,7 +130,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: { content: $del_help },
+         help: { content: $del_help , url: help_volume.dialog_delete_content_url},
        });
       // volume delete dialog end
       // volume detach dialog start
@@ -149,7 +149,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
-         help: { content: $detach_help },
+         help: { content: $detach_help, url:  help_volume.dialog_detach_content_url},
        });
       // volume detach dialog end
       // attach dialog start
@@ -171,18 +171,8 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $attach_dialog.eucadialog("close"); } }
          },
-         help: { content: $attach_dialog_help },
+         help: { content: $attach_dialog_help, url: help_volume.dialog_attach_content_url },
          on_open: {callback: []},
-        /* on_open: {spin: true, callback: [ function(args) {
-           //var dfd = $.Deferred();
-           thisObj._initAttachDialog(dfd); // pulls instance info from server
-           $instance_id = $attach_dialog.find('#volume-attach-instance-id');
-           $device_name = $attach_dialog.find('#volume-attach-device-name');
-           $attach_dialog.eucadialog('buttonOnKeyup', $device_name, thisObj.attachButtonId, function () {
-             return $instance_id.val() != '';
-           });
-          // return dfd.promise();
-         }]},*/
        });
 
       // attach dialog end
@@ -226,7 +216,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
          },
-         help: { content: $add_help },
+         help: { content: $add_help , url: help_volume.dialog_add_content_url, pop_height: 500},
          on_open: {spin: true, callback: [ function(args) {
            var dfd = $.Deferred();
            var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');

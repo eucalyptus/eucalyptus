@@ -144,7 +144,7 @@
         },
         help_click : function(evt) {
           // TODO: make this a reusable operation
-          thisObj._flipToHelp(evt,$instHelp);
+          thisObj._flipToHelp(evt,{content: $instHelp, url: help_instance.landing_content_url});
         },
         draw_cell_callback : null, 
         /*function(row, col, val){
@@ -187,7 +187,7 @@
           'terminate': {text: instance_dialog_term_btn, click: function() { thisObj._terminateInstances(); $term_dialog.eucadialog("close");}},
           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $term_dialog.eucadialog("close");}}
         },
-        help: {content: $term_help},
+        help: {content: $term_help, url: help_instance.dialog_terminate_content_url},
       });
 
       $tmpl = $('html body').find('.templates #instanceRebootDlgTmpl').clone();
@@ -201,7 +201,7 @@
           'reboot': {text: instance_dialog_reboot_btn, click: function() { thisObj._rebootInstances(); $reboot_dialog.eucadialog("close");}},
           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $reboot_dialog.eucadialog("close");}}
         },
-        help: {content: $reboot_help},
+        help: {content: $reboot_help, url: help_instance.dialog_reboot_content_url},
       });
       
       $tmpl = $('html body').find('.templates #instanceStopDlgTmpl').clone();
@@ -215,7 +215,7 @@
           'stop': {text: instance_dialog_stop_btn, click: function() { thisObj._stopInstances(); $stop_dialog.eucadialog("close");}},
           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $stop_dialog.eucadialog("close");}}
         },
-        help: {content: $stop_help},
+        help: {content: $stop_help, url: help_instance.dialog_stop_content_url},
       });
       
       $tmpl = $('html body').find('.templates #instanceConnectDlgTmpl').clone();
@@ -258,7 +258,7 @@
            'detach': {text: volume_dialog_detach_btn, disabled: true, domid: thisObj.detachButtonId, click: function() { thisObj._detachVolume(); $detach_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $detach_dialog.eucadialog("close");}} 
          },
-         help: {title: help_volume['dialog_detach_title'], content: $detach_help},
+         help: {title: help_volume['dialog_detach_title'], content: $detach_help, url: help_volume.dialog_detach_content_url},
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initDetachDialog(dfd); // pulls instance info from server
@@ -279,7 +279,7 @@
            'launch': {text: instance_dialog_launch_btn, domid: 'btn-launch-more', click: function() { thisObj._launchMore(); $launchmore_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $launchmore_dialog.eucadialog("close");}} 
          },
-         help: {title: null, content: $launchmore_help},
+         help: {title: null, content: $launchmore_help, url: help_instance.dialog_launchmore_content_url, pop_height: 600},
          on_open: {callback: function(args) {
            thisObj._initLaunchMoreDialog(); // pulls instance info from server
          }},

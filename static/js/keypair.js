@@ -72,7 +72,7 @@
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
         help_click : function(evt) { 
-          thisObj._flipToHelp(evt, $keyHelp);
+          thisObj._flipToHelp(evt, {content:$keyHelp, url: help_keypair.landing_content_url});
         },
       });
       this.tableWrapper.appendTo(this.element);
@@ -96,7 +96,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: { content: $del_help },
+         help: { content: $del_help, url: help_keypair.dialog_delete_content_url },
        });
 
       var createButtonId = 'keys-add-btn'; 
@@ -123,7 +123,7 @@
                   },
         'cancel': {domid: 'keys-cancel-btn', text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
-        help : { content: $add_help },
+        help : { content: $add_help, url: help_keypair.dialog_add_content_url, pop_height: 600 },
       });
       $add_dialog.eucadialog('buttonOnKeyup', $add_dialog.find('#key-name'), createButtonId); 
     },

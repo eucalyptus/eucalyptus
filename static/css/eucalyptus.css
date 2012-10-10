@@ -2739,17 +2739,13 @@ textarea.console-output {
   top: 4px;
   right: 60px;
 }
-.euca-popout-container .ui-dialog-titlebar {
-  background-color: #f1ffe3;
-  background-image: none;
-  border: none;
-  height: 20px;
-  color: #02405f;
-  font-family: 'PlayBold', Arial, sans-serif;
-  font-size: 16px;
-  font-weight: normal;
-}
 
-.popout-close {
-  float: right;  
+.help-popout a{
+  display: inline-block;
+  overflow: hidden;
+  width: 24px;
+  height: 24px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -210px;
+  text-indent: 100%;
+  white-space: nowrap;
 }
