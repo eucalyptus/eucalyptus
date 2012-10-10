@@ -91,11 +91,11 @@
 
 #define BLOBSTORE_METADATA_FILE ".blobstore"
 #define BLOBSTORE_METADATA_TIMEOUT_USEC 1000000LL * 60 * 2 // it may take dozens of seconds to open blobstore when others are LRU-purging it
-#define BLOBSTORE_LOCK_TIMEOUT_USEC 50000LL
+#define BLOBSTORE_LOCK_TIMEOUT_USEC 500000LL
 #define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
 #define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
-#define BLOBSTORE_DMSETUP_TIMEOUT_SEC 30
+#define BLOBSTORE_DMSETUP_TIMEOUT_SEC 60
 #define BLOBSTORE_MAX_CONCURRENT 99
 #define BLOBSTORE_NO_TIMEOUT -1L
 #define BLOBSTORE_SIG_MAX 262144
@@ -1707,7 +1707,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
 {
     int ret = 0;
 
-    if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock it so we can traverse blobstore safely
+    if (blobstore_lock (bs, BLOBSTORE_LOCK_TIMEOUT_USEC)==-1) { // lock it so we can traverse blobstore safely
         return ERROR;
     }
     
@@ -1743,6 +1743,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     }
 
     safe_strncpy (meta->id, bs->id, sizeof (meta->id));
+    realpath (bs->path, meta->path);
     meta->revocation_policy = bs->revocation_policy;
     meta->snapshot_policy = bs->snapshot_policy;
     meta->format = bs->format;

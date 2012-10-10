@@ -66,7 +66,7 @@ import com.eucalyptus.reporting.art.ArtObject;
 public class BucketUsageArtEntity
 	implements ArtObject
 {
-	private long sizeGB;
+	private long size;
 	private long objectsNum = 0;
 	private long gBSecs;
 	private long numGetRequests;
@@ -77,14 +77,14 @@ public class BucketUsageArtEntity
 		
 	}
 
-	public long getSizeGB()
+	public long getSize()
 	{
-		return sizeGB;
+		return size;
 	}
 
-	public void setSizeGB(long sizeGB)
+	public void setSize( long sizeGB )
 	{
-		this.sizeGB = sizeGB;
+		this.size = sizeGB;
 	}
 
 	public long getObjectsNum()

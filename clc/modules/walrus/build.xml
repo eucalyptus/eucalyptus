@@ -62,6 +62,7 @@
 
 <project name="eucalyptus-walrus" basedir=".">
     <import file="../module-inc.xml"/>
+    <property name="euca.udev.dir" value="${euca.home}/usr/share/eucalyptus/udev" />
     <target name="install">
         <copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
           <fileset dir="conf">
@@ -76,6 +77,12 @@
             <fileset dir="${basedir}/conf/drbd">
                 <include name="**/*" />
             </fileset>
+        </copy>
+            <mkdir dir="${DESTDIR}${euca.udev.dir}" />
+            <copy todir="${DESTDIR}${euca.udev.dir}" overwrite="true">
+	            <fileset dir="${basedir}/udev">
+       	                      <include name="**/*" />
+                    </fileset>
         </copy>
     </target>
 </project>

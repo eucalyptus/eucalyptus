@@ -63,13 +63,13 @@
 package com.eucalyptus.crypto.util;
 
 import static org.junit.Assert.*;
-import static com.eucalyptus.crypto.util.SslSetup.SslCipherBuilder.ciphers;
+import static com.eucalyptus.crypto.util.SslUtils.SslCipherBuilder.ciphers;
 import org.junit.Test;
 
 /**
  *
  */
-public class SslSetupTest {
+public class SslUtilsTest {
 
   @Test
   public void testCipherSuitesList() {

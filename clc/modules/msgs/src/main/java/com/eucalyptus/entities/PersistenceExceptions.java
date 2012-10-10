@@ -62,6 +62,7 @@
 
 package com.eucalyptus.entities;
 
+import static com.eucalyptus.entities.PersistenceContexts.PersistenceContextEventInterceptorDiscovery;
 import java.util.List;
 import java.util.SortedSet;
 import javax.persistence.EntityExistsException;
@@ -97,15 +98,12 @@ import org.hibernate.exception.SQLGrammarException;
 import org.hibernate.jdbc.TooManyRowsAffectedException;
 import org.hibernate.loader.MultipleBagFetchException;
 import org.hibernate.type.SerializationException;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
@@ -125,7 +123,7 @@ public class PersistenceExceptions {
     CONNECTION {
       @Override
       public RuntimeException handleException( final RuntimeException e ) {
-        Databases.check( );
+        PersistenceContextEventInterceptorDiscovery.dispatcher().onConnectionError();
         Logs.extreme( ).error( e, e );
         return super.handleException( e );
       }

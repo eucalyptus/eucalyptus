@@ -20,7 +20,7 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-    id="1234"
+    id="1008"
     message="${daemon} is not running">
 
     <condition

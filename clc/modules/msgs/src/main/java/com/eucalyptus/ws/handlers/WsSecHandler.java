@@ -83,6 +83,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.crypto.util.WSSecurity;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.util.CredentialProxy;
 
@@ -90,6 +91,10 @@ import com.eucalyptus.ws.util.CredentialProxy;
 public abstract class WsSecHandler extends MessageStackHandler {
   private static Logger         LOG    = Logger.getLogger( WsSecHandler.class );
   private final CredentialProxy credentials;
+
+  static {
+    WSSecurity.init();
+  }
 
   public WsSecHandler( final CredentialProxy credentials ) {
     this.credentials = credentials;
@@ -175,9 +180,5 @@ public abstract class WsSecHandler extends MessageStackHandler {
   public abstract Collection<WSEncryptionPart> getSignatureParts( );
 
   public abstract boolean shouldTimeStamp( );
-
-  @Override
-  public void incomingMessage( final MessageEvent event ) throws Exception {
-  }
 
 }

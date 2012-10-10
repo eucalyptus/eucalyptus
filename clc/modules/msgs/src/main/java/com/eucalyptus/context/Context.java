@@ -177,31 +177,8 @@ public class Context {
     return UserFullName.getInstance( this.getUser( ) );
   }
   
-  public OwnerFullName getEffectiveUserFullName( ) {
-    String effectiveUserId = this.getRequest( ).getEffectiveUserId( );
-    if ( this.getRequest( ) != null && Principals.systemFullName( ).getUserName( ).equals( effectiveUserId ) ) {
-      return Principals.systemFullName( );
-      /** system **/
-    } else if ( this.getRequest( ) == null || effectiveUserId == null ) {
-      return Principals.nobodyFullName( );
-      /** unset **/
-    } else if ( !effectiveUserId.equals( this.getUserFullName( ).getUserName( ) ) ) {
-      try {
-        return UserFullName.getInstance( Accounts.lookupUserByName( effectiveUserId ) );
-      } catch ( RuntimeException ex ) {
-        LOG.error( ex );
-        return UserFullName.getInstance( this.getUser( ) );
-      } catch ( AuthException ex ) {
-        LOG.error( ex, ex );
-        return UserFullName.getInstance( this.getUser( ) );
-      }
-    } else {
-      return UserFullName.getInstance( this.getUser( ) );
-    }
-  }
-  
   public boolean hasAdministrativePrivileges( ) {
-    return Principals.systemFullName().equals( this.getEffectiveUserFullName( ) ) || this.getUser( ).isSystemAdmin( );
+    return this.getUser( ).isSystemAdmin( );
   }
   
   public User getUser( ) {

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.config;
 
+import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
@@ -73,13 +74,36 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.storage.BlockStorageManagerFactory;
+import com.eucalyptus.storage.StorageManagers;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 
 
 @ComponentPart( Storage.class )
 @Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class, ModifyStorageControllerAttributeType.class } )
 public class StorageControllerBuilder extends AbstractServiceBuilder<StorageControllerConfiguration> {
+  @Override
+  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {
+    try {
+      if ( parent.isVmLocal( ) ) {
+        EntityTransaction tx = Entities.get( parent ); 
+        try {
+          parent = Entities.merge( parent );
+          tx.commit( );
+        } catch ( Exception ex ) {
+          tx.rollback( );
+        }
+        String propertyBackend = ( ( StorageControllerConfiguration ) parent ).getBlockStorageManager( );
+        StorageManagers.getInstance( propertyBackend );
+      }
+    } catch ( Exception ex ) {
+      throw Exceptions.toUndeclared( ex );
+    }
+  }
+
   private static Logger LOG = Logger.getLogger( StorageControllerBuilder.class );
 
   @Override

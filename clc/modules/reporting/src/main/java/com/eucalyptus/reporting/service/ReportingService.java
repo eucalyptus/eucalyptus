@@ -22,6 +22,7 @@ package com.eucalyptus.reporting.service;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.TimeZone;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -31,8 +32,10 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.reporting.Period;
 import com.eucalyptus.reporting.ReportGenerationFacade;
 import com.eucalyptus.reporting.export.Export;
+import com.eucalyptus.reporting.export.Import;
 import com.eucalyptus.reporting.export.ReportingExport;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Objects;
 
 /**
@@ -52,8 +55,63 @@ public class ReportingService {
       throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
 
-    final ReportingExport export = Export.export( request.getStartDate(), request.getEndDate() );
+    Date startDate = null;
+    Date endDate = null;
+    if ( request.getStartDate() != null ) {
+      startDate = new Date( parseDate( request.getStartDate() ) );
+    }
+    if ( request.getEndDate() != null ) {
+      endDate = new Date( parseDate( request.getEndDate() ) );
+    }
+    if ( endDate != null && startDate != null && endDate.getTime() <= startDate.getTime() ) {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
+    }
+
+    final ReportingExport export = Export.export(
+        startDate,
+        endDate,
+        request.isDependencies() );
     reply.setResult( new ExportDataResultType(export ) );
+
+    logger.info( "Exporting report data from " +
+        Objects.firstNonNull( request.getStartDate(), "-" ) + " to " +
+        Objects.firstNonNull( request.getEndDate(), "-" ) );
+
+    try {
+      RestfulMarshallingHandler.streamResponse( reply );
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+      throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error exporting data");
+    }
+
+    return null;
+  }
+
+  public DeleteReportDataResponseType deleteData( final DeleteReportDataType request ) throws EucalyptusCloudException {
+    final DeleteReportDataResponseType reply = request.getReply();
+    reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup();
+    final User requestUser = ctx.getUser( );
+
+    if ( !requestUser.isSystemAdmin() ) {
+      throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
+    }
+
+    Date endDate;
+    if ( request.getEndDate() != null ) {
+      endDate = new Date( parseDate( request.getEndDate() ) );
+    } else {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: End date is required");
+    }
+
+    logger.info( "Deleting report data up to " + request.getEndDate() );
+
+    try {
+      reply.setResult( new DeleteDataResultType( Import.deleteAll( endDate ) ) );
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+      throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error deleting report data");
+    }
 
     return reply;
   }

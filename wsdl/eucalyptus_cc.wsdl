@@ -390,6 +390,25 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="bundleRestartInstanceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="bundleRestartInstanceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="cancelBundleTaskType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -856,6 +875,9 @@
       <xs:element name="BundleInstance" nillable="true" type="tns:bundleInstanceType"/>
       <xs:element name="BundleInstanceResponse" nillable="true" type="tns:bundleInstanceResponseType"/>
 
+      <xs:element name="BundleRestartInstance" nillable="true" type="tns:bundleRestartInstanceType"/>
+      <xs:element name="BundleRestartInstanceResponse" nillable="true" type="tns:bundleRestartInstanceResponseType"/>
+
       <xs:element name="CancelBundleTask" nillable="true" type="tns:cancelBundleTaskType"/>
       <xs:element name="CancelBundleTaskResponse" nillable="true" type="tns:cancelBundleTaskResponseType"/>
 
@@ -953,6 +975,11 @@
 
   <wsdl:message name="BundleInstanceResponse">
     <wsdl:part element="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleRestartInstanceResponse">
+    <wsdl:part element="tns:BundleRestartInstanceResponse" name="BundleRestartInstanceResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -1078,6 +1105,11 @@
 
   <wsdl:message name="BundleInstance">
     <wsdl:part element="tns:BundleInstance" name="BundleInstance">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BundleRestartInstance">
+    <wsdl:part element="tns:BundleRestartInstance" name="BundleRestartInstance">
     </wsdl:part>
   </wsdl:message>
 
@@ -1234,6 +1266,13 @@
       <wsdl:input message="tns:BundleInstance" name="BundleInstance">
       </wsdl:input>
       <wsdl:output message="tns:BundleInstanceResponse" name="BundleInstanceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleRestartInstance">
+      <wsdl:input message="tns:BundleRestartInstance" name="BundleRestartInstance">
+      </wsdl:input>
+      <wsdl:output message="tns:BundleRestartInstanceResponse" name="BundleRestartInstanceResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1454,6 +1493,16 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="BundleInstanceResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BundleRestartInstance">
+      <soap:operation soapAction="EucalyptusCC#BundleRestartInstance" style="document"/>
+      <wsdl:input name="BundleRestartInstance">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="BundleRestartInstanceResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

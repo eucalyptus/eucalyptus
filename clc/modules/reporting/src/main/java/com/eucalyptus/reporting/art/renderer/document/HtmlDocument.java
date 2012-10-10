@@ -165,14 +165,14 @@ public class HtmlDocument
 	public Document addValCol(Long val)
 		throws IOException
     {
-        return addCol((val==null)?null:val.toString(), VALUE_WIDTH, 1, "center");
+        return addCol((val==null)?"-":val.toString(), VALUE_WIDTH, 1, "center");
     }
 
     @Override
 	public Document addValCol(Double val)
 		throws IOException
     {
-        return addCol((val==null)?null:String.format("%3.1f", val), VALUE_WIDTH, 1, "center");
+        return addCol((val==null)?"-":String.format("%3.1f", val), VALUE_WIDTH, 1, "center");
     }
 
     @Override

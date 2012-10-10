@@ -131,6 +131,35 @@ public class Bundles {
     }
   }
   
+  public static MessageCallback bundleRestartInstanceCallback( BundleRestartInstanceType request ) {
+    return new BundleRestartInstanceCallback( request );
+  }
+  
+  public static class BundleRestartInstanceCallback extends MessageCallback<BundleRestartInstanceType, BundleRestartInstanceResponseType> {
+    private BundleRestartInstanceCallback( BundleRestartInstanceType request ) {
+      super( request );
+    }
+    
+    @Override
+    public void fire( BundleRestartInstanceResponseType reply ) {
+      if ( !reply.get_return( ) ) {
+          LOG.info( "Attempt to restart bundle instance " + this.getRequest( ).getInstanceId( ) + " has failed." );
+      } else {
+        EntityTransaction db = Entities.get( VmInstance.class );
+        try {
+          VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
+          vm.getRuntimeState( ).restartBundleTask( );
+          EventRecord.here( CancelBundleCallback.class, EventType.BUNDLE_RESTART, this.getRequest( ).toSimpleString( ), vm.getRuntimeState( ).getBundleTask( ).getBundleId( ),
+                            vm.getInstanceId( ) ).info( );
+          db.commit( );
+        } catch ( Exception ex ) {
+          Logs.exhaust( ).error( ex, ex );
+          db.rollback( );
+        }
+      }
+    }
+  }
+  
   public static class BundleCallback extends MessageCallback<BundleInstanceType, BundleInstanceResponseType> {
     private BundleCallback( BundleInstanceType request ) {
       super( request );
@@ -163,7 +192,9 @@ public class Bundles {
   
   public static VmBundleTask create( VmInstance v, String bucket, String prefix, String policy ) throws AuthException {
     verifyPolicy( policy, bucket );
-    verifyBucket( bucket );
+    // TODO: this was removed to get bundle-instance to work we still need to resolve the 
+    // permissions issue see EUCA-3665
+    //verifyBucket( bucket );
     verifyPrefix( prefix );
     return VmBundleTask.create( v, bucket, prefix, policy );
   }

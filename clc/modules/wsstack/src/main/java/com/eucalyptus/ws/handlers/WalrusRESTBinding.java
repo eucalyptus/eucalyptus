@@ -82,8 +82,6 @@ import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
 import org.apache.axiom.om.OMElement;
-import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
@@ -109,7 +107,6 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.context.Contexts;
@@ -231,14 +228,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				}
 			}
 			if(msg != null) {
-				OMElement omMsg = binding.toOM( msg );
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-				HoldMe.canHas.lock(); 
-				try {
-					omMsg.serialize( byteOut );
-				} finally {
-					HoldMe.canHas.unlock();
-				}
+				binding.toStream( byteOut, msg );
 				byte[] req = byteOut.toByteArray();
 				ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );

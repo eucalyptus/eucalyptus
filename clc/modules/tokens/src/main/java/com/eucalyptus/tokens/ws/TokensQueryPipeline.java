@@ -131,9 +131,6 @@ public class TokensQueryPipeline extends QueryPipeline {
         addAfter = handlerEntry.getKey();
       }
     }
-
-    @Override
-    public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
   }
 
   @ChannelPipelineCoverage( ChannelPipelineCoverage.ONE )

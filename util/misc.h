@@ -69,11 +69,16 @@
 #include <sys/types.h> // mode_t
 #include <linux/limits.h>
 #include <stdint.h> // uint32_t
-#include "log.h" // so everyone picks up the logging functions
+
+// these must be defined by each euca component
+extern const char * euca_client_component_name;
+extern const char * euca_this_component_name;
 
 typedef unsigned char boolean;
 #define TRUE 1
 #define FALSE 0
+
+#include "log.h" // so everyone picks up the logging functions
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096
@@ -151,6 +156,7 @@ int check_directory(const char *dir);
 int check_file (const char *file);
 int check_block (const char *file);
 int check_path (const char *path);
+int statfs_path (const char * path, unsigned long long * fs_bytes_size, unsigned long long * fs_bytes_available, int * fs_id);
 int check_file_newer_than(char *file, time_t mtime);
 
 // safe version of common fuctions
@@ -166,6 +172,7 @@ int param_check(char *func, ...);
 // end of dan't functions
 
 int hash_code (const char * s);
+int hash_code_bin (const char * buf, int buf_size);
 char * get_string_stats (const char * s);
 int daemonrun(char *cmd, char *pidfile);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
@@ -200,5 +207,7 @@ char * strdupcat (char * original, char * new);
 int ensure_directories_exist (const char * path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec (void);
 long long time_ms (void);
+int drop_privs (void);
+int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 
 #endif

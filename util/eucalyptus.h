@@ -166,6 +166,7 @@
 #define CONFIG_SAVE_INSTANCES "MANUAL_INSTANCES_CLEANUP"
 #define CONFIG_DISABLE_KEY_INJECTION "DISABLE_KEY_INJECTION"
 #define CONFIG_CONCURRENT_DISK_OPS "CONCURRENT_DISK_OPS"
+#define CONFIG_CONCURRENT_CLEANUP_OPS "CONCURRENT_CLEANUP_OPS"
 #define CONFIG_USE_VIRTIO_NET "USE_VIRTIO_NET"
 #define CONFIG_USE_VIRTIO_DISK "USE_VIRTIO_DISK"
 #define CONFIG_USE_VIRTIO_ROOT "USE_VIRTIO_ROOT"
@@ -181,12 +182,16 @@
 /* name of the administrative user within Eucalyptus */
 #define EUCALYPTUS_ADMIN "eucalyptus"
 
+// percent at which a C component will log a 'very low on disk space' fault
+#define DISK_TOO_LOW_PERCENT 10
+
 /* system limit defaults */
 #define MAXNODES 1024
-#define MAXINSTANCES 2048
+#define MAXINSTANCES_PER_CC 2048
+#define MAXINSTANCES_PER_NC 256
 #define MAXLOGFILESIZE 10485760
 #define EUCA_MAX_GROUPS 64
-#define EUCA_MAX_VOLUMES 64
+#define EUCA_MAX_VOLUMES 27
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
 #define EUCA_MAX_PARTITIONS 32 // partitions per disk
@@ -194,13 +199,14 @@
 #define MAX_PATH_SIZE 4096 // TODO: remove
 
 // NC hook events
-#define NC_EVENT_PRE_INIT    "euca-nc-pre-init"     // p1: eucalyptusHome
-#define NC_EVENT_POST_INIT   "euca-nc-post-init"    // p1: eucalyptusHome
-#define NC_EVENT_PRE_BOOT    "euca-nc-pre-boot"     // p1: instancePath
-#define NC_EVENT_ADOPTING    "euca-nc-pre-adopt"    // p1: instancePath
-#define NC_EVENT_PRE_CLEAN   "euca-nc-pre-clean"    // p1: instancePath
-#define NC_EVENT_PRE_ATTACH  "euca-nc-pre-attach"   // p1: volumeXmlPath
-#define NC_EVENT_POST_DETACH "euca-nc-post-detach"  // p1: volumeXmlPath
+#define NC_EVENT_PRE_INIT      "euca-nc-pre-init"      // p1: eucalyptusHome
+#define NC_EVENT_POST_INIT     "euca-nc-post-init"     // p1: eucalyptusHome
+#define NC_EVENT_PRE_HYP_CHECK "euca-nc-pre-hyp-check" // p1: eucalyptusHome
+#define NC_EVENT_PRE_BOOT      "euca-nc-pre-boot"      // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_ADOPTING      "euca-nc-pre-adopt"     // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_PRE_CLEAN     "euca-nc-pre-clean"     // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_PRE_ATTACH    "euca-nc-pre-attach"    // p1: eucalyptusHome p2: volumeXmlPath
+#define NC_EVENT_POST_DETACH   "euca-nc-post-detach"   // p1: eucalyptusHome p2: volumeXmlPath
 
 #define MEGABYTE 1048576
 

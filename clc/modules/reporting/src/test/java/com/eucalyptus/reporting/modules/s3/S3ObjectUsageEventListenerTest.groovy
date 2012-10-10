@@ -7,12 +7,11 @@ import static org.junit.Assert.*
 import com.eucalyptus.reporting.domain.ReportingAccountCrud
 import com.eucalyptus.reporting.domain.ReportingUserCrud
 import com.eucalyptus.auth.principal.User
-import com.google.common.base.Charsets
 import com.eucalyptus.reporting.event.S3ObjectEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent
-import com.eucalyptus.reporting.event_store.ReportingS3ObjectUsageEvent
+import com.eucalyptus.util.WalrusProperties
 
 /**
  * 
@@ -33,7 +32,7 @@ class S3ObjectUsageEventListenerTest {
         "bucket15",
         "object34",
         "version1",
-        Principals.systemFullName(),
+        Principals.systemFullName().getUserId(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
 
@@ -42,7 +41,7 @@ class S3ObjectUsageEventListenerTest {
     assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
     assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
     assertEquals( "Persisted event object version", "version1", event.getObjectVersion() )
-    assertEquals( "Persisted event size", Integer.MAX_VALUE.toLong() + 1L, event.getSizeGB() )
+    assertEquals( "Persisted event size", Integer.MAX_VALUE.toLong() + 1L, event.getSize() )
     assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getUserId() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -56,7 +55,7 @@ class S3ObjectUsageEventListenerTest {
         "bucket15",
         "object34",
         null,
-        Principals.systemFullName(),
+        Principals.systemFullName().getUserId(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
 
@@ -69,24 +68,23 @@ class S3ObjectUsageEventListenerTest {
   }
 
   @Test
-  void testGetEvent() {
+  void testNullVersionEvent() {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( S3ObjectEvent.with(
-        S3ObjectEvent.forS3ObjectGet(),
+        S3ObjectEvent.forS3ObjectDelete(),
         "bucket15",
         "object34",
-        "version2",
-        Principals.systemFullName(),
+        WalrusProperties.NULL_VERSION_ID,
+        Principals.systemFullName().getUserId(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
 
-    assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectUsageEvent )
-    ReportingS3ObjectUsageEvent event = persisted
-    assertEquals( "Persisted event bucket name", "bucket15", event.getBucketName() )
-    assertEquals( "Persisted event object name", "object34", event.getObjectName() )
-    assertEquals( "Persisted event object version", "version2", event.getObjectVersion() )
-    assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getUserId() )
+    assertTrue( "Persisted event is ReportingS3BucketDeleteEvent", persisted instanceof ReportingS3ObjectDeleteEvent )
+    ReportingS3ObjectDeleteEvent event = persisted
+    assertEquals( "Persisted event bucket name", "bucket15", event.getS3BucketName() )
+    assertEquals( "Persisted event object name", "object34", event.getS3ObjectKey() )
+    assertNull( "Persisted event object version", event.getObjectVersion() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
 
@@ -127,15 +125,11 @@ class S3ObjectUsageEventListenerTest {
     listener.fireEvent( event )
 
     assertNotNull( "Persisted event", persisted )
-    assertEquals( "Account Id", "eucalyptus", updatedAccountId  )
-    assertEquals( "Account Name", "000000000000", updatedAccountName )
+    assertEquals( "Account Id", "000000000000", updatedAccountId  )
+    assertEquals( "Account Name", "eucalyptus", updatedAccountName )
     assertEquals( "User Id", "eucalyptus", updatedUserId )
     assertEquals( "User Name", "eucalyptus", updatedUserName )
 
     persisted
-  }
-
-  private String uuid( String seed ) {
-    return UUID.nameUUIDFromBytes( seed.getBytes(Charsets.UTF_8) ).toString()
   }
 }

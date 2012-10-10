@@ -25,11 +25,6 @@ import javax.persistence.*;
 import org.hibernate.annotations.Entity;
 
 @Entity @javax.persistence.Entity
-@SqlResultSetMapping(name="elasticIpCreateEventMap",
-        entities=@EntityResult(entityClass=ReportingElasticIpCreateEvent.class))
-@NamedNativeQuery(name="scanElasticIpCreateEvents",
-     query="select * from reporting_elastic_ip_create_events order by timestamp_ms",
-     resultSetMapping="elasticIpCreateEventMap")
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_elastic_ip_create_events")
 public class ReportingElasticIpCreateEvent

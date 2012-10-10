@@ -38,11 +38,12 @@
 #include "sensor.h"
 #include "ipc.h"
 
-#define MAX_SENSOR_RESOURCES MAXINSTANCES
+#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC // used for resource name cache
 
 static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
 static sensorResourceCache * sensor_state = NULL;
 static sem * state_sem = NULL;
+static sem * hyp_sem = NULL;
 
 static void getstat_free (void)
 {
@@ -101,7 +102,9 @@ static int getstat_refresh (void)
     getstat_free(); // free the old stats, regardless of whether we succeed or not
 
     errno = 0;
+    if (hyp_sem) sem_p (hyp_sem);
     char * output = system_output ("euca_rootwrap getstats.pl"); // invoke th Perl script
+    if (hyp_sem) sem_v (hyp_sem);
     int ret = ERROR;
 
     if (output) { // output is a string with one line per measurement, with tab-delimited fields
@@ -367,6 +370,17 @@ int sensor_config (int new_history_size, long long new_collection_interval_time_
     sensor_state->collection_interval_time_ms = new_collection_interval_time_ms;
     sem_v (state_sem);
     
+    return 0;
+}
+
+int sensor_set_hyp_sem (sem * sem)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+
+    sem_p (state_sem);
+    hyp_sem = sem;
+    sem_v (state_sem);
+
     return 0;
 }
 

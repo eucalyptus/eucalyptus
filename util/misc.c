@@ -73,13 +73,14 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 #include <time.h>
 #include <math.h> // powf 
 #include <fcntl.h> // open
 #include <utime.h> // utime 
 #include <sys/wait.h>
-#include <sys/types.h>
+#include <pwd.h>
 #include <dirent.h> // opendir, etc
 #include <errno.h> // errno
 #include <sys/time.h> // gettimeofday
@@ -217,7 +218,7 @@ int timeread(int fd, void *buf, size_t bytes, int timeout) {
   rc = select(fd+1, &rfds, NULL, NULL, &tv);
   if (rc <= 0) {
     // timeout
-    logprintfl(EUCAERROR, "timeread(): select() timed out for read: timeout=%d\n", timeout);
+    logprintfl(EUCAERROR, "select() timed out for read: timeout=%d\n", timeout);
     return(-1);
   }
   rc = read(fd, buf, bytes);
@@ -371,7 +372,7 @@ int param_check(char *func, ...) {
   va_end(al);
 
   if (fail) {
-    logprintfl (EUCAERROR, "INTERNAL ERROR: incorrect input parameters to function %s\n", func);
+    logprintfl (EUCAERROR, "incorrect input parameters to function %s\n", func);
     return(1);
   }
   return(0);
@@ -524,6 +525,36 @@ int check_path (const char *path)
     return(0);
 }
 
+// obtains size & available bytes of a file system that 'path' resides on
+// path may be a symbolic link, which will get resolved (0 = success, 1 = failure)
+int statfs_path (const char * path, unsigned long long * fs_bytes_size, unsigned long long * fs_bytes_available, int * fs_id)
+{
+    if (path == NULL)
+        return ERROR;
+
+    char cpath [PATH_MAX]; 
+    errno = 0;
+    if (realpath (path, cpath) == NULL) { // will convert a path with symbolic links and '..' into canonical form
+        logprintfl (EUCAERROR, "failed to resolve %s (%s)\n", path, strerror (errno));
+        return ERROR;
+    }
+    
+    struct statfs fs;
+    if (statfs (cpath, &fs) == -1) { // obtain the size and ID info from the file system of the canonical path
+        logprintfl (EUCAERROR, "failed to stat %s (%s)\n", cpath, strerror(errno));
+        return ERROR;
+    }
+    * fs_id              = hash_code_bin ((char *) & fs.f_fsid, sizeof (fsid_t));
+    * fs_bytes_size      = (long long)fs.f_bsize * (long long)(fs.f_blocks);
+    * fs_bytes_available = (long long)fs.f_bsize * (long long)(fs.f_bavail);
+
+    logprintfl (EUCADEBUG, "path '%s' resolved\n", path);
+    logprintfl (EUCADEBUG, "  to '%s' with ID %0x\n", cpath, * fs_id);
+    logprintfl (EUCADEBUG, "  of size %llu bytes with available %llu bytes\n", *fs_bytes_size, *fs_bytes_available);
+    
+    return OK;
+}
+
 /* given string *stringp, replace occurences of <source> with <destination>
  * and return the new string in stringp */
 char * replace_string (char ** stringp, char * source, char * destination )
@@ -619,7 +650,7 @@ char * fp2str (FILE * fp)
         memset(new_buf+buf_current, 0, INCREMENT * sizeof(char));
 
         buf = new_buf;
-        logprintfl (EUCAEXTREME, "fp2str: enlarged buf to %d\n", buf_max);
+        logprintfl (EUCAEXTREME, "enlarged buf to %d\n", buf_max);
         
         do { // read in until EOF or buffer is full
             last_read = fgets (buf+buf_current, buf_max-buf_current, fp);
@@ -627,12 +658,12 @@ char * fp2str (FILE * fp)
                 buf_current = strlen(buf);
             } else {
                 if (! feof(fp)) {
-                    logprintfl (EUCAERROR, "fp2str: failed while reading from file handle\n");
+                    logprintfl (EUCAERROR, "failed while reading from file handle\n");
                     free (buf);
                     return NULL;
                 }
             }
-            logprintfl (EUCAEXTREME, "fp2str: read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
+            logprintfl (EUCAEXTREME, "read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read?"no":"yes");
         } while ( last_read && buf_max > buf_current+1 ); // +1 is needed for fgets() to put \0
         
         buf_max += INCREMENT; // in case it is full
@@ -649,17 +680,12 @@ char * system_output (char * shell_command )
   FILE * fp;
 
   /* forks off command (this doesn't fail if command doesn't exist */
-  logprintfl (EUCATRACE, "system_output(): [%s]\n", shell_command);
+  logprintfl (EUCATRACE, "[%s]\n", shell_command);
   if ( (fp=popen(shell_command, "r")) == NULL) 
     return NULL; /* caller can check errno */
   buf = fp2str (fp);
-
   pclose(fp);
 
-  if (buf && (strlen(buf) == 0)) {
-      free(buf);
-      buf = NULL;
-  }
   return buf;
 }
 
@@ -851,7 +877,7 @@ from_var_to_char_list(	const char *v) {
 	return tmp;
 }
 
-/* implements Java's String.hashCode() */
+// implements Java's String.hashCode() on a string
 int hash_code (const char * s)
 {
 	int code = 0;
@@ -865,6 +891,24 @@ int hash_code (const char * s)
 	}
 	
 	return code;
+}
+
+// implements Java's String.hashCode() on a buffer of some size
+int hash_code_bin (const char * buf, int buf_size)
+{
+    char * buf_str = malloc (2 * buf_size + 1);
+    if (buf_str == NULL)
+        return -1;
+    
+    for (int i=0; i < buf_size; i++) {
+        snprintf (buf_str + (i * 2), 2, "%0x", * (buf + i));
+    }
+    buf_str [2 * buf_size] = '\0';
+ 
+    int code = hash_code (buf_str);
+    free (buf_str);
+    
+    return code;
 }
 
 /* given a string, returns 3 relevant statistics as a static string */
@@ -964,7 +1008,7 @@ int daemonrun(char *incmd, char *pidfile) {
   if (!pid) {
     char *tok=NULL, *ptr=NULL;
     int idx, rc;
-    struct sigaction newsigact = { 0 };
+    struct sigaction newsigact = { { NULL } };
 
     newsigact.sa_handler = SIG_DFL;
     newsigact.sa_flags = 0;
@@ -1021,7 +1065,7 @@ int vrun (const char * fmt, ...)
 	vsnprintf (buf, MAX_PATH, fmt, ap);
 	va_end (ap);
 	
-    logprintfl (EUCAINFO, "vrun(): [%s]\n", buf);
+    logprintfl (EUCAINFO, "[%s]\n", buf);
 	if ((e = system (buf)) != 0) {
 		logprintfl (EUCAERROR, "system(%s) failed with %d\n", buf, e); /* TODO: remove? */
 	}
@@ -1056,11 +1100,11 @@ int touch (const char * path)
     if ( (fd = open (path, O_WRONLY | O_CREAT | O_NONBLOCK, 0644)) >= 0 ) {
         close (fd);
         if (utime (path, NULL)!=0) {
-            logprintfl (EUCAERROR, "error: touch(): failed to adjust time for %s (%s)\n", path, strerror (errno));
+            logprintfl (EUCAERROR, "failed to adjust time for %s (%s)\n", path, strerror (errno));
             ret = 1;
         }
     } else {
-        logprintfl (EUCAERROR, "error: touch(): failed to create/open file %s (%s)\n", path, strerror (errno));
+        logprintfl (EUCAERROR, "failed to create/open file %s (%s)\n", path, strerror (errno));
         ret = 1;
     }
     return ret;
@@ -1073,9 +1117,9 @@ int diff (const char * path1, const char * path2)
     char buf1 [BUFSIZE], buf2 [BUFSIZE];
 
     if ( (fd1 = open (path1, O_RDONLY)) < 0 ) {
-        logprintfl (EUCAERROR, "error: diff(): failed to open %s\n", path1);
+        logprintfl (EUCAERROR, "failed to open %s\n", path1);
     } else if ( (fd2 = open (path2, O_RDONLY)) < 0 ) {
-        logprintfl (EUCAERROR, "error: diff(): failed to open %s\n", path2);
+        logprintfl (EUCAERROR, "failed to open %s\n", path2);
         close(fd1);
     } else {
         int read1, read2;
@@ -1102,11 +1146,11 @@ long long dir_size (const char * path)
     long long size = 0;
 
     if ((dir=opendir(path))==NULL) {
-        logprintfl (EUCAWARN, "warning: unopeneable directory %s\n", path);
+        logprintfl (EUCAWARN, "unopeneable directory %s\n", path);
         return -1;
     }
     if (stat (path, &mystat) < 0) {
-        logprintfl (EUCAWARN, "warning: could not stat %s\n", path);
+        logprintfl (EUCAWARN, "could not stat %s\n", path);
 	closedir(dir);
         return -1;
     }
@@ -1122,7 +1166,7 @@ long long dir_size (const char * path)
             continue;
 
         if (DT_REG!=type) {
-            logprintfl (EUCAWARN, "warning: non-regular (type=%d) file %s/%s\n", type, path, name);
+            logprintfl (EUCAWARN, "non-regular (type=%d) file %s/%s\n", type, path, name);
             size = -1;
             break;
         }
@@ -1130,7 +1174,7 @@ long long dir_size (const char * path)
         char filepath [MAX_PATH];
         snprintf (filepath, MAX_PATH, "%s/%s", path, name);
         if (stat (filepath, &mystat) < 0 ) {
-            logprintfl (EUCAWARN, "warning: could not stat file %s\n", filepath);
+            logprintfl (EUCAWARN, "could not stat file %s\n", filepath);
             size = -1;
             break;
         }
@@ -1159,11 +1203,11 @@ char * file2strn (const char * path, const ssize_t limit)
 {
   struct stat mystat;
   if (stat (path, &mystat) < 0) {
-    logprintfl (EUCAERROR, "error: file2strn() could not stat file %s\n", path);
+    logprintfl (EUCAERROR, "could not stat file %s\n", path);
     return NULL;
   }
   if (mystat.st_size>limit) {
-    logprintfl (EUCAERROR, "error: file %s exceeds the limit (%d) in file2strn()\n", path, limit);
+    logprintfl (EUCAERROR, "file %s exceeds the limit (%d) in file2strn()\n", path, limit);
     return NULL;
   }
   return file2str (path);
@@ -1177,19 +1221,19 @@ char * file2str (const char * path)
 
     struct stat mystat;
     if (stat (path, &mystat) < 0) {
-        logprintfl (EUCAERROR, "error: file2str() could not stat file %s\n", path);
+        logprintfl (EUCAERROR, "could not stat file %s\n", path);
         return content;
     }
     file_size = mystat.st_size;
 
     if ( (content = malloc (file_size+1)) == NULL ) {
-        logprintfl (EUCAERROR, "error: file2str() out of memory reading file %s\n", path);
+        logprintfl (EUCAERROR, "out of memory reading file %s\n", path);
         return content;
     }
 
     int fp;
     if ( ( fp = open (path, O_RDONLY) ) < 0 ) {
-        logprintfl (EUCAERROR, "error: file2str() failed to open file %s\n", path);
+        logprintfl (EUCAERROR, "failed to open file %s\n", path);
         free (content);
         content = NULL;
         return content;
@@ -1209,7 +1253,7 @@ char * file2str (const char * path)
     close(fp);
 
     if ( bytes < 0 ) {
-        logprintfl (EUCAERROR, "error: file2str() failed to read file %s\n", path);
+        logprintfl (EUCAERROR, "failed to read file %s\n", path);
         free (content);
         content = NULL;
         return content;
@@ -1225,13 +1269,13 @@ char *file2str_seek(char *file, size_t size, int mode) {
   char *ret=NULL;
 
   if (!file || size <= 0) {
-    logprintfl(EUCAERROR, "file2str_seek(): bad input parameters\n");
+    logprintfl(EUCAERROR, "bad input parameters\n");
     return(NULL);
   }
 
   ret = malloc(size);
   if (!ret) {
-    logprintfl(EUCAERROR, "file2str_seek(): out of memory!\n");
+    logprintfl(EUCAERROR, "out of memory!\n");
     return(NULL);
   }
 
@@ -1244,7 +1288,7 @@ char *file2str_seek(char *file, size_t size, int mode) {
 	if (rc < 0) {
 	  rc = lseek(fd, (off_t)0, SEEK_SET);
 	  if (rc < 0) {
-	    logprintfl(EUCAERROR, "file2str_seek(): cannot seek\n");
+	    logprintfl(EUCAERROR, "cannot seek\n");
 	    if (ret) free(ret);
 	    close(fd);
 	    return(NULL);
@@ -1256,12 +1300,12 @@ char *file2str_seek(char *file, size_t size, int mode) {
       rc = read(fd, ret, (size)-1);
       close(fd);
     } else {
-      logprintfl(EUCAERROR, "file2str_seek(): cannot open '%s' read-only\n", file);
+      logprintfl(EUCAERROR, "cannot open '%s' read-only\n", file);
       if (ret) free(ret);
       return(NULL);
     }
   } else {
-    logprintfl(EUCAERROR, "file2str_seek(): cannot stat console_output file '%s'\n", file);
+    logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", file);
     if (ret) free(ret);
     return(NULL);
   }
@@ -1275,31 +1319,31 @@ char * str2str (const char * str, const char * begin, const char * end)
   char * buf = NULL;
 
     if ( str==NULL || begin==NULL || end==NULL || strlen (str)<3 || strlen (begin)<1 || strlen (end)<1 ) {
-        logprintfl (EUCAERROR, "error: str2str() called with bad parameters\n");
+        logprintfl (EUCAERROR, "called with bad parameters\n");
         return buf;
     }
 
     char * b = strstr ( str, begin );
     if ( b==NULL ) {
-        logprintfl (EUCAERROR, "error: str2str() beginning string '%s' not found\n", begin);
+        logprintfl (EUCAERROR, "beginning string '%s' not found\n", begin);
         return buf;
     }
 
     char * e = strstr ( str, end );
     if ( e==NULL ) {
-        logprintfl (EUCAERROR, "error: str2str() end string '%s' not found\n", end);
+        logprintfl (EUCAERROR, "end string '%s' not found\n", end);
         return buf;
     }
 
     b += strlen (begin); // b now points at the supposed content
     int len = e-b;
     if ( len < 0 ) {
-        logprintfl (EUCAERROR, "error: str2str() there is nothing between '%s' and '%s'\n", begin, end);
+        logprintfl (EUCAERROR, "there is nothing between '%s' and '%s'\n", begin, end);
         return buf;
     }
 
     if ( len > BUFSIZE-1 ) {
-        logprintfl (EUCAERROR, "error: str2str() string between '%s' and '%s' is too long\n", begin, end);
+        logprintfl (EUCAERROR, "string between '%s' and '%s' is too long\n", begin, end);
         return buf;
     }
 
@@ -1411,7 +1455,7 @@ int copy_file (const char * src, const char * dst)
 	struct stat mystat;
 
 	if (stat (src, &mystat) < 0) {
-		logprintfl (EUCAERROR, "error: cannot stat '%s'\n", src);
+		logprintfl (EUCAERROR, "cannot stat '%s'\n", src);
 		return ERROR;
 	}
 
@@ -1798,10 +1842,10 @@ int ensure_directories_exist (const char * path, int is_file_path, const char * 
 
         if ( try_dir ) {
             if ( stat (path_copy, &buf) == -1 ) {
-                logprintfl (EUCAINFO, "{%u} creating path %s\n", (unsigned int)pthread_self(), path_copy);
+                logprintfl (EUCAINFO, "creating path %s\n", path_copy);
 
                 if ( mkdir (path_copy, mode) == -1) {
-                    logprintfl (EUCAERROR, "error: failed to create path %s: %s\n", path_copy, strerror (errno));
+                    logprintfl (EUCAERROR, "failed to create path %s: %s\n", path_copy, strerror (errno));
 
                     free (path_copy);
                     return -1;
@@ -1809,7 +1853,7 @@ int ensure_directories_exist (const char * path, int is_file_path, const char * 
                 ret = 1; // we created a directory
 
                 if(diskutil_ch(path_copy, user, group, mode) != OK) {
-                    logprintfl (EUCAERROR, "error: failed to change perms on path %s\n", path_copy);
+                    logprintfl (EUCAERROR, "failed to change perms on path %s\n", path_copy);
                     free (path_copy);
                     return -1;
                 }
@@ -1907,10 +1951,151 @@ char parse_boolean (const char * s)
              strcmp (lc, "f")==0 ||
              strcmp (lc, "false")==0) { val = 0; }
     else
-        logprintfl (EUCAERROR, "error: failed to parse value '%s' as boolean", lc);
+        logprintfl (EUCAERROR, "failed to parse value '%s' as boolean", lc);
     free (lc);
 
     return val;
+}
+
+// become user 'eucalyptus'
+int drop_privs (void)
+{
+    struct passwd pwd;
+    struct passwd *result;
+    char buf [16384]; // man-page said this is enough
+
+    int s = getpwnam_r (EUCALYPTUS_ADMIN, &pwd, buf, sizeof (buf), &result);
+    if (result == NULL)
+        return ERROR; // not found if s==0, check errno otherwise
+
+    if (setgid (pwd.pw_gid) != 0)
+        return ERROR;
+
+    if (setuid (pwd.pw_uid) != 0)
+        return ERROR;
+
+    return OK;
+}
+
+// run shell command with timeout and get back: return value, stdout and stderr all in one
+int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout)
+{
+  int stdoutfds[2];
+  int stderrfds[2];
+  int oldstdout, oldstderr;
+  int child_pid;
+  int maxfd;
+  int rc;
+  int status;
+  int stdout_toread, stderr_toread;
+  time_t start_time, remaining_time;
+
+  // force nonempty on all arguments to simplify the logic
+  assert(command);
+  assert(stdout_str);
+  assert(stderr_str);
+
+  if (pipe(stdoutfds) < 0) {
+    logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, NULL, 0));
+    return -1;
+  }
+  if (pipe(stderrfds) < 0) {
+    logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, NULL, 0));
+    return -1;
+  }
+
+  child_pid = fork();
+  if (child_pid == 0) {
+    close(stdoutfds[0]);
+    if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
+      logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, NULL, 0));
+      exit(1);
+    }
+    close(stdoutfds[1]);
+
+    close(stderrfds[0]);
+    if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
+      logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, NULL, 0));
+      exit(1);
+    };
+    close(stderrfds[1]);
+
+    execl("/bin/sh", "sh", "-c", command, (char *) 0);
+
+    exit(127);
+  }
+
+  close(stdoutfds[1]);
+  close(stderrfds[1]);
+
+  if (child_pid < 0) {
+    close(stdoutfds[0]);
+    close(stderrfds[0]);
+    return -1;
+  }
+
+  memset(stdout_str, 0, max_size);
+  memset(stderr_str, 0, max_size);
+  stdout_toread = stderr_toread = max_size - 1;
+
+  maxfd = stdoutfds[0] > stderrfds[0] ? stdoutfds[0] : stderrfds[0];
+
+  start_time = time(NULL);
+  for (;;) {
+    fd_set rfds;
+    struct timeval tv;
+    int retval;
+    int readn;
+
+    FD_ZERO(&rfds);
+    FD_SET(stdoutfds[0], &rfds);
+    FD_SET(stderrfds[0], &rfds);
+
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+
+    retval = select(maxfd + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv);
+    if (retval > 0) {
+      if (FD_ISSET(stdoutfds[0], &rfds) && stdout_toread > 0) {
+        readn = read(stdoutfds[0], stdout_str, stdout_toread);
+        if (readn > 0) {
+          stdout_toread -= readn;
+          stdout_str += readn;
+        } else {
+          break;
+        }
+      }
+      if (FD_ISSET(stderrfds[0], &rfds) && stderr_toread > 0) {
+        readn = read(stderrfds[0], stderr_str, stderr_toread);
+        if (readn > 0) {
+          stderr_toread -= readn;
+          stderr_str += readn;
+        } else {
+          break;
+        }
+      }
+    } else if (retval < 0) {
+      logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, NULL, 0));
+      break;
+    }
+    if (time(NULL) - start_time > timeout) {
+      logprintfl(EUCAWARN, "warning: read timeout\n");
+      break;
+    }
+  }
+  close(stdoutfds[0]);
+  close(stderrfds[0]);
+
+  remaining_time = timeout - (time(NULL) - start_time);
+  rc = timewait(child_pid, &status, remaining_time);
+  if (rc) {
+    rc = WEXITSTATUS(status);
+  } else {
+    kill(child_pid, SIGKILL);
+    logprintfl(EUCAERROR, "warning: shell execution timeout\n");
+    return -1;
+  }
+  return rc;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
@@ -1933,9 +2118,6 @@ int main (int argc, char ** argv)
     assert (strlen (s) != 0);
     printf("echo Hello == |%s|\n", s);
     free (s);
-
-    s = system_output("echo -n");
-    assert(!s);
 
     printf ("testing fp2str in misc.c\n");
     FILE * fp = tmpfile ();

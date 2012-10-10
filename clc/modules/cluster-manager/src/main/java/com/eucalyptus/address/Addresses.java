@@ -65,7 +65,6 @@ package com.eucalyptus.address;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Address;
 import java.util.List;
 import java.util.NoSuchElementException;
-import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -141,7 +140,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         return arg0.getState( ).isAddressingInitialized( ) && arg0.getState( ).hasPublicAddressing( );
       }
     } );
-    Class<? extends AbstractSystemAddressManager> newManager = null;
+    Class<? extends AbstractSystemAddressManager> newManager;
     if ( AddressingConfiguration.getInstance( ).getDoDynamicPublicAddresses( ) ) {
       newManager = DynamicSystemAddressManager.class;
     } else {
@@ -219,7 +218,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       }
       return true;
     }
-  };
+  }
   
   public static void system( final VmInstance vm ) {
     try {
@@ -245,7 +244,14 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
               public void fire( ) {
                 try {
                   Addresses.system( vm );
-                } catch ( final NoSuchElementException ex ) {}
+                } catch ( final NoSuchElementException ex ) {
+                } finally {
+                  try {
+                    addr.release();
+                  } catch ( Exception e ) {
+                    LOG.error( "Error releasing address after unassign", e );
+                  }
+                }
               }
             } ).dispatch( vm.getPartition( ) );
           }

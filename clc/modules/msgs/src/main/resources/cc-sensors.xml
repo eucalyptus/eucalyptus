@@ -38,11 +38,6 @@
 				</structure>
 			</collection>
 		</structure>
-		<collection field="clusterControllers"
-			factory="org.jibx.runtime.Utility.arrayListFactory">
-			<value name="clusterControllers" type="java.lang.String" />
-		</collection>
-		<value name="nameServer" field="nameServer" type="java.lang.String" />
 	</mapping>
 
 	<mapping name="DescribeSensorsResponse"

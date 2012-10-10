@@ -90,6 +90,7 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-register-storage-controller",
                  "bin/euca-register-vmware-broker",
                  "bin/euca-register-walrus",
+                 "bin/eureport-delete-data",
                  "bin/eureport-export-data",
                  "bin/eureport-generate-report",
                  ]

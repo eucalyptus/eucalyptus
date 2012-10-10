@@ -120,6 +120,13 @@ if (!is_null_or_empty($auth_mode)) {
   $password = $NOT_REQUIRED;
 }
 
+# debugging
+use Data::Dumper;
+print STDERR "Before connecting:\n";
+for $session (lookup_session()) {
+  print STDERR Dumper($session);
+}
+
 @devices = ();
 # iterate through each path, login/refresh for the new lun
 while (@paths > 0) {

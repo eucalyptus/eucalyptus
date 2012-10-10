@@ -272,7 +272,7 @@ public final class ReportingDataVerifier {
             if ( attach ) {
               store.insertAttachEvent( volume.getNaturalId(), resource.relationId, volume.getSize(), timestamp );
             } else {
-              store.insertDetachEvent( volume.getNaturalId(), resource.relationId, volume.getSize(), timestamp );
+              store.insertDetachEvent( volume.getNaturalId(), resource.relationId, timestamp );
             }
           }
         }
@@ -499,7 +499,7 @@ public final class ReportingDataVerifier {
       try {
         final View view = new View();
 
-        // Addresses TODO:STEVE: should lookup directly from DB?
+        // Addresses
         for ( final Address address : Iterables.concat( Addresses.getInstance().listValues(), Addresses.getInstance().listDisabledValues() ) ) {
           if ( address.isAllocated() && !address.isSystemOwned() ) {
             final String id = address.getNaturalId();
@@ -765,16 +765,16 @@ public final class ReportingDataVerifier {
   }
 
   private static final class S3ObjectKey extends ResourceKey {
-    private final String bucketName;
-    private final String objectKey;
-    private final String objectVersion;
+    @Nonnull  private final String bucketName;
+    @Nonnull  private final String objectKey;
+    @Nullable private final String objectVersion;
 
-    private S3ObjectKey( final String bucketName,
-                         final String objectKey,
-                         final String objectVersion  ) {
+    private S3ObjectKey( @Nonnull  final String bucketName,
+                         @Nonnull  final String objectKey,
+                         @Nullable final String objectVersion  ) {
       this.bucketName = bucketName;
       this.objectKey = objectKey;
-      this.objectVersion = objectVersion; //TODO:STEVE: Will we store "null" or actually null?
+      this.objectVersion = objectVersion;
     }
 
     @SuppressWarnings( "RedundantIfStatement" )
@@ -813,7 +813,7 @@ public final class ReportingDataVerifier {
 
   private static class ResourceWithRelation<KT extends ResourceKey> {
     @Nonnull  private final KT resourceKey;
-    @Nullable private final String relationId; //TODO:STEVE: Option
+    @Nullable private final String relationId;
 
     private ResourceWithRelation( @Nonnull final KT resourceKey,
                                   @Nullable final String relationId ) {

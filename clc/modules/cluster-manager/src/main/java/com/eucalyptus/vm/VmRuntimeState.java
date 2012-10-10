@@ -102,6 +102,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -396,24 +397,36 @@ public class VmRuntimeState {
     }
   }
   
-  public Boolean submittedBundleTask( ) {
-    if ( this.getBundleTask( ) != null && this.getBundleTask( ).getState( ).ordinal( ) >= BundleState.storing.ordinal( ) ) {
-      this.getBundleTask( ).setState( BundleState.storing );
-      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_STARTING,
-                        this.vmInstance.getOwner( ).toString( ),
-                        this.getBundleTask( ).getBundleId( ),
+  public Boolean restartBundleTask( ) {
+    if ( this.getBundleTask( ) != null ) {
+      this.getBundleTask( ).setState( BundleState.none );
+      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_RESTART, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
                         this.getVmInstance( ).getInstanceId( ),
                         "" + this.getBundleTask( ).getState( ) ).info( );
       return true;
-    } else if ( BundleState.canceling.equals( this.getBundleTaskState( ) ) ) {
-      EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
-                        this.getVmInstance( ).getInstanceId( ),
-                        "" + this.getBundleTask( ).getState( ) ).info( );
-      this.resetBundleTask( );
-      return true;
-    } else {
-      return false;
     }
+    return false;
+  }
+  
+  public Boolean submittedBundleTask( ) {
+	if ( this.getBundleTask( ) != null ) {
+  	  if ( BundleState.cancelled.equals( this.getBundleTaskState( ) ) ) {
+	    EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_CANCELLED, this.vmInstance.getOwner( ).toString( ), this.getBundleTask( ).getBundleId( ),
+	                      this.getVmInstance( ).getInstanceId( ),
+	                      "" + this.getBundleTask( ).getState( ) ).info( );
+	    this.resetBundleTask( );
+	    return true;
+	  } else if ( this.getBundleTask( ).getState( ).ordinal( ) >= BundleState.storing.ordinal( ) ) {
+        this.getBundleTask( ).setState( BundleState.storing );
+        EventRecord.here( VmRuntimeState.class, EventType.BUNDLE_STARTING,
+                          this.vmInstance.getOwner( ).toString( ),
+                          this.getBundleTask( ).getBundleId( ),
+                          this.getVmInstance( ).getInstanceId( ),
+                          "" + this.getBundleTask( ).getState( ) ).info( );
+        return true;
+      }
+  	} 
+    return false;
   }
   
   public Boolean startBundleTask( final VmBundleTask task ) {
@@ -421,7 +434,7 @@ public class VmRuntimeState {
       this.bundleTask = task;
       return true;
     } else {
-      if ( ( this.getBundleTask( ) != null ) && ( BundleState.failed.equals( task.getState() ) || BundleState.canceling.equals( task.getState() ) ) ) {
+      if ( ( this.getBundleTask( ) != null ) && ( BundleState.failed.equals( task.getState() ) || BundleState.canceling.equals( task.getState() ) || BundleState.cancelled.equals( task.getState() ) ) ) {
         this.resetBundleTask( );
         this.bundleTask = task;
         return true;
@@ -496,14 +509,43 @@ public class VmRuntimeState {
     updateBundleTaskState( next );
   }
   
+  public void bundleRestartInstance(VmBundleTask bundleTask) {
+	  BundleState state = bundleTask.getState();
+	  if(BundleState.complete.equals(state) || BundleState.failed.equals(state) || BundleState.cancelled.equals(state)) {
+		final BundleRestartInstanceType         request = new BundleRestartInstanceType();
+        final BundleRestartInstanceResponseType reply   = request.getReply();
+        
+        reply.set_return(true);
+        try {
+            LOG.info(EventRecord.here(BundleCallback.class, EventType.BUNDLE_RESTART, vmInstance.getOwner().getUserName(),
+                                      bundleTask.getBundleId(),
+                                      vmInstance.getInstanceId()));
+            
+            ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vmInstance.lookupPartition());
+            final Cluster        cluster  = Clusters.lookup(ccConfig );
+            
+            request.setInstanceId(vmInstance.getInstanceId());
+            reply.setTask(Bundles.transform(bundleTask));
+            AsyncRequests.newRequest(Bundles.bundleRestartInstanceCallback(request)).dispatch(cluster.getConfiguration());
+        } catch (final Exception e) {
+        	Logs.extreme().trace("Failed to find bundle task: " + bundleTask.getBundleId());
+        }
+	  }
+  }
+  
   public void updateBundleTaskState( BundleState state ) {
     if ( this.getBundleTask( ) != null ) {
       final BundleState current = this.getBundleTask( ).getState( );
-      if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) ) {
+      if ( BundleState.complete.equals( state ) && !BundleState.complete.equals( current ) && !BundleState.none.equals( current )) {
         this.getBundleTask( ).setState( state );
-      } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) ) {
+        bundleRestartInstance(this.getBundleTask());
+     } else if ( BundleState.failed.equals( state ) && !BundleState.failed.equals( current ) && !BundleState.none.equals( current )) {
         this.getBundleTask( ).setState( state );
-      } else if ( BundleState.canceling.equals( current ) || BundleState.canceling.equals( state ) ) {
+        bundleRestartInstance(this.getBundleTask());
+      } else if ( BundleState.cancelled.equals( state ) && !BundleState.cancelled.equals( current ) && !BundleState.none.equals( current )) {
+        this.getBundleTask( ).setState( state );
+        bundleRestartInstance(this.getBundleTask());
+      } else if ( BundleState.canceling.equals( state ) || BundleState.canceling.equals( current ) ) {
         //
       } else if ( BundleState.pending.equals( current ) && !BundleState.none.equals( state ) ) {
         this.getBundleTask( ).setState( state );

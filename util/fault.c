@@ -128,6 +128,7 @@ struct suppress_list {
     struct suppress_list *next;
 };
 static struct suppress_list *suppressed = NULL;
+static struct suppress_list *redundant = NULL;
 
 /*
  * Function prototypes
@@ -190,7 +191,7 @@ str_trim_suffix (char *str, const char *suffix)
     } else {
         int trim = strlen (str) - strlen (suffix);
         *(str + trim) = '\0';
-        logprintfl (EUCATRACE, "str_trim_suffix() returning: %s\n", str);
+        logprintfl (EUCATRACE, "returning: %s\n", str);
     }
     return str;
 }
@@ -239,20 +240,20 @@ static boolean
 is_suppressed_eucafault (const char *fault_id)
 {
     if (fault_id == NULL) {
-        logprintfl (EUCAWARN, "is_suppressed_eucafault() called with NULL argument...ignoring.\n");
+        logprintfl (EUCAWARN, "called with NULL argument...ignoring.\n");
         return FALSE;
     }
     struct suppress_list *suppose = suppressed;
 
     while (suppose) {
         if (!strcmp (fault_id, suppose->id)) {
-            logprintfl (EUCATRACE, "is_suppressed_eucafault() returning TRUE for %s.\n",
+            logprintfl (EUCATRACE, "returning TRUE for %s.\n",
                      fault_id);
             return TRUE;
         }
         suppose = suppose->next;
     }
-    logprintfl (EUCATRACE, "is_suppressed_eucafault() returning FALSE for %s.\n", fault_id);
+    logprintfl (EUCATRACE, "returning FALSE for %s.\n", fault_id);
     return FALSE;
 }
 
@@ -270,7 +271,7 @@ static boolean
 check_eucafault_suppression (const char *fault_id, const char *fault_file)
 {
     if ((fault_id == NULL) && (fault_file == NULL)) {
-        logprintfl (EUCAWARN, "check_eucafault_suppression() called with two NULL arguments...ignoring.\n");
+        logprintfl (EUCAWARN, "called with two NULL arguments...ignoring.\n");
         return FALSE;
     }
     if (fault_file == NULL) {
@@ -310,7 +311,7 @@ check_eucafault_suppression (const char *fault_id, const char *fault_file)
             return FALSE;
         }
     }
-    logprintfl (EUCATRACE, "check_eucafault_suppression() returning FALSE for %s, %s\n",
+    logprintfl (EUCATRACE, "returning FALSE for %s, %s\n",
              fault_id, fault_file);
     return FALSE;
 }
@@ -342,11 +343,11 @@ read_eucafault (const char *faultdir, const char *fault_id)
     my_doc = xmlParseFile (fault_file);
 
     if (my_doc == NULL) {
-        logprintfl (EUCAWARN, "Could not parse file %s in read_eucafault()\n",
+        logprintfl (EUCAWARN, "Could not parse file %s\n",
                    fault_file);
         return NULL;
     } else {
-        logprintfl (EUCATRACE, "Successfully parsed file %s in read_eucafault()\n",
+        logprintfl (EUCATRACE, "Successfully parsed file %s\n",
                 fault_file);
     }
     if (get_eucafault (fault_id, my_doc) != NULL) {
@@ -689,7 +690,7 @@ static char *
 get_fault_var (const char *var, const xmlNode *f_node)
 {
     if ((f_node == NULL) || (var == NULL)) {
-        logprintfl (EUCAWARN, "get_fault_var() called with one or more NULL arguments.\n");
+        logprintfl (EUCAWARN, "called with one or more NULL arguments.\n");
         return NULL;
     }
     // Just in case we're matching the top-level node.
@@ -782,7 +783,7 @@ format_eucafault (const char *fault_id, const char_map **map)
 
     // Get time.
     secs = time (NULL);
-    if (gmtime_r (&secs, &lt) == NULL) {
+    if (localtime_r (&secs, &lt) == NULL) {
         // Someone call Dr. Who.
         lt.tm_year = lt.tm_mon = lt.tm_mday = 0;
         lt.tm_hour = lt.tm_min = lt.tm_sec = 0;
@@ -850,6 +851,51 @@ format_eucafault (const char *fault_id, const char_map **map)
 }
 
 /*
+ * Checks if this fault has already been logged with the same
+ * set of parameters.
+ *
+ * Returns TRUE if so, FALSE otherwise.
+ */
+boolean
+is_redundant_eucafault (const char *fault_id, const char_map **vars)
+{
+    // just concatenate everything together: fault_id+key1+val1+key2...
+    char * new = strdup (fault_id);
+    for (int i = 0; vars && vars[i] != NULL; i++) {
+        const char_map * v = vars[i];
+        new = strdupcat (new, v->key);
+        new = strdupcat (new, v->val);
+    }
+
+    // see if it is already in our linked list (TODO: switch to a more efficient data structure)
+    for (struct suppress_list * s = redundant; s != NULL; s = s->next) {
+        char * old = s->id;
+        
+        // compare strings ourselves (instead of strcmp) so we can bail early
+        int i;
+        for (i = 0; new [i] != '\0' && old [i] != '\0'; i++)
+            if (new [i] != old [i])
+                break; // not the same string
+        
+        if (new [i] == '\0' && old [i] == '\0') { // found the match in the LL
+            free (new);
+            return TRUE;
+        }
+    }
+    
+    // was not found, so add it to the list
+    struct suppress_list * s = calloc (1, sizeof (struct suppress_list));
+    s->id = new;
+    if (redundant == NULL) {
+        redundant = s;
+    } else {
+        redundant->next = s;
+    }
+    
+    return FALSE;
+}
+
+/*
  * EXTERNAL ENTRY POINT
  *
  * Logs a fault, initializing the fault registry, if necessary.
@@ -865,6 +911,10 @@ log_eucafault_map (const char *fault_id, const char_map **map)
 
     if (is_suppressed_eucafault (fault_id)) {
         logprintfl (EUCADEBUG, "Fault %s detected, but it is being actively suppressed.\n", fault_id);
+        return FALSE;
+    }
+    if (is_redundant_eucafault (fault_id, map)) {
+        logprintfl (EUCADEBUG, "Fault %s detected, but it has already been logged.\n", fault_id);
         return FALSE;
     }
     return format_eucafault (fault_id, map);
@@ -898,12 +948,12 @@ log_eucafault (const char *fault_id, ...)
         }
     }
     va_end (argv);
-
+    
     if (count % 2) {
-        logprintfl (EUCAWARN, "log_eucafault() called with an odd (unmatched) number of substitution parameters: %d\n", count);
+        logprintfl (EUCAWARN, "called with an odd (unmatched) number of substitution parameters: %d\n", count);
     }
     if (!log_eucafault_map (fault_id, (const char_map **)m)) {
-        logprintfl (EUCADEBUG, "log_eucafault_map() returned FALSE inside log_eucafault()\n");
+        logprintfl (EUCATRACE, "got FALSE from log_eucafault_map()\n");
         count *= -1;
     }
     c_varmap_free (m);
@@ -1022,6 +1072,7 @@ usage (const char *argv0)
 
 int main (int argc, char **argv)
 {
+    drop_privs (); // become 'eucalyptus' so log file is created with the right privs
     log_params_set (EUCAWARN, 0, 0); // set log level
     log_prefix_set ("L "); // only print log level
     log_file_set (NULL); // log output goes to STANDARD_FILESTREAM

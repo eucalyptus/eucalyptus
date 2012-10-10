@@ -23,10 +23,10 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availabil
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.StorageEBS;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
@@ -35,7 +35,10 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.util.HasFullName;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 
 /**
@@ -52,18 +55,19 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
   public void fireEvent( final ClockTick event ) {
     if ( Bootstrap.isFinished() && Hosts.isCoordinator() ) {
       final List<Availability> resourceAvailability = Lists.newArrayList();
-      for ( final Cluster cluster : Clusters.getInstance().listValues() ) {
+      final Set<String> partitions =
+          Sets.newHashSet( Iterables.transform( Clusters.getInstance().listValues(), HasFullName.GET_PARTITION ) );
+      for ( final String partition : partitions ) {
         long total = 0;
 
         try {
-          total = Transactions.find( new StorageInfo( cluster.getPartition() ) ).getMaxTotalVolumeSizeInGb();
+          total = Transactions.find( new StorageInfo( partition ) ).getMaxTotalVolumeSizeInGb();
         } catch ( TransactionException e ) {
-          logger.debug( "Error finding capacity for " + cluster.getPartition(), e );
+          logger.debug( "Error finding capacity for " + partition, e );
         }
 
-        resourceAvailability.add( new Availability( total, Math.max( total - StorageUtil.getBlockStorageTotalSize(cluster.getPartition()), 0), Lists.<Tag>newArrayList(
-            new ResourceAvailabilityEvent.Dimension( "availabilityZone", cluster.getPartition() ),
-            new ResourceAvailabilityEvent.Dimension( "cluster", cluster.getName() )
+        resourceAvailability.add( new Availability( total, Math.max( total - StorageUtil.getBlockStorageTotalSize(partition), 0), Lists.<Tag>newArrayList(
+            new ResourceAvailabilityEvent.Dimension( "availabilityZone", partition )
         ) ) );
       }
 

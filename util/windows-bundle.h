@@ -66,7 +66,7 @@
 #include <eucalyptus.h>
 #include <data.h>
 
-#define MAXBUNDLES MAXINSTANCES
+#define MAXBUNDLES MAXINSTANCES_PER_NC
 
 typedef struct bundleTask_t {
   char instanceId[CHAR_BUFFER_SIZE];

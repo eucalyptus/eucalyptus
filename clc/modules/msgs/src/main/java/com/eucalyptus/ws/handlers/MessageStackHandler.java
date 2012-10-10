@@ -65,7 +65,6 @@ package com.eucalyptus.ws.handlers;
 import java.util.concurrent.Callable;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
@@ -91,8 +90,16 @@ public abstract class MessageStackHandler implements ChannelDownstreamHandler, C
       throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );//TODO:GRZE: this is not right; needs to propagate in the right direction wrt server vs. client
     }
   }
-  
-  public abstract void outgoingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception;
+
+  /**
+   * Perform processing for an outgoing message.
+   *
+   * @param ctx The context for the message event
+   * @param event The message event
+   * @throws Exception If an error occurs
+   */
+  public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+  }
   
   public void incomingMessage( final ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     this.incomingMessage( event );

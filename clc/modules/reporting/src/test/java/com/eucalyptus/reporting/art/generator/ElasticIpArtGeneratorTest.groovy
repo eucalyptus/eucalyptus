@@ -18,6 +18,7 @@ import com.google.common.collect.Sets
 import java.util.concurrent.TimeUnit
 import java.text.SimpleDateFormat
 import com.eucalyptus.reporting.art.entity.UserArtEntity
+import com.google.common.base.Predicate
 
 /**
  * Unit test for Elastic IP ART generator
@@ -31,6 +32,15 @@ class ElasticIpArtGeneratorTest {
   private static String USER2 = "user2"
   private static String INSTANCE1 = "i-00000001"
   private static String INSTANCE2 = "i-00000002"
+
+  @Test
+  void testGenerationNoDataInPeriod(){
+    ElasticIpArtGenerator generator = testGenerator( false, false );
+    ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-08-01T00:00:00"), millis("2012-08-01T12:00:00") ) )
+    assertEquals( "Accounts", Collections.emptySet(), art.getAccounts().keySet() )
+    assertEquals( "Zones", Collections.emptySet(), art.getZones().keySet() )
+    assertEquals( "Total usage count", 0L, art.getUsageTotals().getElasticIpTotals().getIpNum() )
+  }
 
   @Test
   void testBasicGeneration() {
@@ -209,7 +219,7 @@ class ElasticIpArtGeneratorTest {
 
   @SuppressWarnings("GroovyAccessibility")
   private ReportingInstanceCreateEvent instance( String instanceId, String userId ) {
-    new ReportingInstanceCreateEvent( uuid(instanceId), millis("2012-09-01T00:00:00"), instanceId, "m1.small", userId, name(userId), name(ACCOUNT1), ACCOUNT1, "PARTI00" )
+    new ReportingInstanceCreateEvent( uuid(instanceId), instanceId, millis("2012-09-01T00:00:00"), "m1.small", userId, "PARTI00" )
   }
 
   @SuppressWarnings("GroovyAccessibility")
@@ -272,37 +282,37 @@ class ElasticIpArtGeneratorTest {
 
     new ElasticIpArtGenerator() {
       @Override
-      protected Iterator<ReportingElasticIpCreateEvent> getElasticIpCreateEventIterator() {
-        return createList.iterator()
+      protected void foreachElasticIpCreateEvent(final Predicate<? super ReportingElasticIpCreateEvent> callback) {
+        createList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingElasticIpDeleteEvent> getElasticIpDeleteEventIterator() {
-        return deleteList.iterator()
+      protected void foreachElasticIpDeleteEvent(final Predicate<? super ReportingElasticIpDeleteEvent> callback) {
+        deleteList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingElasticIpAttachEvent> getElasticIpAttachEventIterator() {
-        return attachList.iterator()
+      protected void foreachElasticIpAttachEvent(final Predicate<? super ReportingElasticIpAttachEvent> callback) {
+        attachList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingElasticIpDetachEvent> getElasticIpDetachEventIterator() {
-        return detachList.iterator()
+      protected void foreachElasticIpDetachEvent(final Predicate<? super ReportingElasticIpDetachEvent> callback) {
+        detachList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected Iterator<ReportingInstanceCreateEvent> getInstanceCreateEventIterator() {
-        return instanceCreateList.iterator()
+      protected void foreachInstanceCreateEvent(final Predicate<? super ReportingInstanceCreateEvent> callback) {
+        instanceCreateList.every { event -> callback.apply( event ) }
       }
 
       @Override
-      protected ReportingUser getUserById(final String userId) {
+      protected ReportingUser getUserById(String userId) {
         return user( userId, ACCOUNT1 )
       }
 
       @Override
-      protected ReportingAccount getAccountById(final String accountId) {
+      protected ReportingAccount getAccountById(String accountId) {
         return account( accountId )
       }
     }

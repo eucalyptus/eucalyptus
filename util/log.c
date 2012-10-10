@@ -147,6 +147,8 @@ static FILE * get_file (boolean do_reopen)
             int err = stat (log_file_path, &statbuf);
             if (err == -1) { // probably file does not exist, perhaps because it was renamed
                 file_changed = TRUE;
+            } else if (statbuf.st_size < 1) { // truncated externally, reopen
+                file_changed = TRUE;
             } else if (log_ino != statbuf.st_ino) { // inode change, reopen just in case
                 file_changed = TRUE;
             }

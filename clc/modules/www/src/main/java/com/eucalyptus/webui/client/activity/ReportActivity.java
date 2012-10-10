@@ -90,7 +90,7 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
 
     reportView.init( new Date( ),
                      new Date( ),
-                     new String[] { "Instance", "S3", "Volume", "Snapshot", "Elastic-IP", "Compute"});
+                     new String[] { "Instance", "S3", "Volume", "Snapshot", "Elastic-IP", "Capacity"});
     container.setWidget( reportView );
     
     ActivityUtil.updateDirectorySelection( clientFactory );

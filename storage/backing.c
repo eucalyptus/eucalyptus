@@ -93,7 +93,7 @@
 #define DELETE_TIMEOUT_USEC 1000000LL*10
 #define FIND_TIMEOUT_USEC   50000LL // TODO: use 1000LL or less to induce rare timeouts
 
-static char instances_path [MAX_PATH];
+static char instances_path [MAX_PATH] = "";
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs = NULL;
 static sem * disk_sem = NULL;
@@ -105,11 +105,18 @@ static void bs_errors (const char * msg) {
     logprintfl (EUCATRACE, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 } 
 
-static void stat_blobstore (const char * conf_instances_path, const char * name, blobstore_meta * meta)
+static int stat_blobstore (const char * conf_instances_path, const char * name, blobstore_meta * meta)
 {
     bzero (meta, sizeof (blobstore_meta));
     char path [MAX_PATH]; 
     snprintf (path, sizeof (path), "%s/%s", conf_instances_path, name);
+
+    // stat the file system and return those numbers even if blobstore does not exist
+    if (statfs_path (path, &(meta->fs_bytes_size), &(meta->fs_bytes_available), &(meta->fs_id)) != OK) {
+        return ERROR;
+    }
+
+    // get the size and params of the blobstore, if it exists
     blobstore * bs = blobstore_open (path, 
                                      0, // any size
                                      0, // no flags = do not create it
@@ -117,9 +124,11 @@ static void stat_blobstore (const char * conf_instances_path, const char * name,
                                      BLOBSTORE_REVOCATION_ANY, 
                                      BLOBSTORE_SNAPSHOT_ANY);
     if (bs == NULL)
-        return;
+        return OK;
     blobstore_stat (bs, meta);
     blobstore_close (bs);
+    
+    return OK;
 }
 
 static int stale_blob_examiner (const blockblob * bb);
@@ -145,11 +154,18 @@ int check_backing_store (bunchOfInstances ** global_instances)
     return OK;
 }
 
-void stat_backing_store (const char * conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta)
+int stat_backing_store (const char * conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta)
 {
-    assert (conf_instances_path);
-    stat_blobstore (conf_instances_path, "work",  work_meta);
-    stat_blobstore (conf_instances_path, "cache", cache_meta);
+    char * path = conf_instances_path;
+    if (path == NULL) {
+        if (strlen (instances_path) < 1) {
+            return ERROR;
+        }
+        path = instances_path;
+    }
+    
+    return  stat_blobstore (path, "work",  work_meta)
+        ||  stat_blobstore (path, "cache", cache_meta);
 }
 
 int init_backing_store (const char * conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb)

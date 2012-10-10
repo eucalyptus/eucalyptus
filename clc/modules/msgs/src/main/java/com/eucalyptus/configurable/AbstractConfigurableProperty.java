@@ -66,8 +66,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.List;
+import java.util.NoSuchElementException;
+
+import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.PropertyDirectory.NoopEventListener;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
 
@@ -180,34 +186,45 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
   }
   
   public String getValue( ) {
-    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
+    EntityTransaction trans = Entities.get( this.getDefiningClass( ) );
     try {
-      Object o = db.getUnique( this.getQueryObject( ) );
+    	//Unique result gets first found value if multiple exist, should work if all are kept in sync
+      Object o = Entities.uniqueResult( this.getQueryObject( ) );
       Object prop = this.getter.invoke( o );
       String result = prop != null
         ? prop.toString( )
         : "<unset>";
-      db.commit( );
+      trans.commit( );
       return result;
     } catch ( Exception e ) {
       Logs.exhaust( ).error( e, e );
-      db.rollback( );
+      trans.rollback( );
       return "<unset>";
     }
   }
   
   public String setValue( String s ) {
-    EntityWrapper db = EntityWrapper.get( this.getDefiningClass( ) );
+  	EntityTransaction trans = Entities.get(this.getDefiningClass());
     try {
-      Object o = db.getUnique( this.getQueryObject( ) );
+    	//This should return all matching objects
+      List<Object> resultList = Entities.query( this.getQueryObject( ) );
       Object prop = this.getTypeParser( ).apply( s );
-      this.fireChange( prop );
-      this.setter.invoke( o, prop );
-      db.commit( );
+      
+      if(resultList == null || resultList.size() == 0) {
+      	throw new NoSuchElementException("no entities found for property");
+      }
+      
+      this.fireChange( prop ); //Fire change only once
+      LOG.debug("Running setters.");
+      
+      for(Object obj : resultList) {      	
+      	this.setter.invoke( obj, prop );
+      }
+      trans.commit( );
       return s;
     } catch ( Exception e ) {
       Logs.exhaust( ).error( e, e );
-      db.rollback( );
+      trans.rollback( );
       return "Error: " + e.getMessage( );
     }
   }

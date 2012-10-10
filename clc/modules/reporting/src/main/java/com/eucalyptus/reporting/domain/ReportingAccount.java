@@ -59,7 +59,7 @@ public class ReportingAccount implements Serializable
 		this.name = null;
 	}
 	
-	ReportingAccount(String id, String name)
+	public ReportingAccount(String id, String name)
 	{
 		this.id = id;
 		this.name = name;

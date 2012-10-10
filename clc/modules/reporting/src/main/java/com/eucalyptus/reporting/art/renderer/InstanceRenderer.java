@@ -61,11 +61,19 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.renderer;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.Date;
 import java.util.Map;
 
-import com.eucalyptus.reporting.art.entity.*;
+import com.eucalyptus.reporting.art.entity.AccountArtEntity;
+import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
+import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
+import com.eucalyptus.reporting.art.entity.InstanceUsageArtEntity;
+import com.eucalyptus.reporting.art.entity.ReportArtEntity;
+import com.eucalyptus.reporting.art.entity.UsageTotalsArtEntity;
+import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.renderer.document.Document;
 import com.eucalyptus.reporting.units.SizeUnit;
 import com.eucalyptus.reporting.units.TimeUnit;
@@ -75,125 +83,137 @@ import com.eucalyptus.reporting.units.Units;
 class InstanceRenderer
 	implements Renderer
 {
-	private Document doc;
-	
-	public InstanceRenderer(Document doc)
+	private final Document doc;
+
+	public InstanceRenderer( final Document doc )
 	{
 		this.doc = doc;
 	}
-	
-	public void render(ReportArtEntity report, OutputStream os, Units units)
-		throws IOException
-	{        
-        doc.setWriter(new OutputStreamWriter(os));
-        
-        doc.open();
-        doc.textLine("Instance Report", 1);
-        doc.textLine("Begin:" + new Date(report.getBeginMs()).toString(), 4);
-        doc.textLine("End:" + new Date(report.getEndMs()).toString(), 4);
-        doc.textLine("Resource Usage Section", 3);
-        doc.tableOpen();
-        doc.newRow().addEmptyValCols(5)
-        		.addValCol("Net Internal " + units.getSizeUnit(), 2, "center")
-        		.addValCol("Net Total " + units.getSizeUnit(), 2, "center")
-        		.addValCol("Disk " + units.getSizeUnit(), 2, "center");
-        doc.newRow().addValCol("InstanceId")
-        		.addValCol("Type").addValCol("#").addValCol("Time").addValCol("CpuUsage%")
-        		.addValCol("In").addValCol("Out").addValCol("In").addValCol("Out").addValCol("In")
-        		.addValCol("Out");
-        for(String zoneName : report.getZones().keySet()) {
-        	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-            doc.newRow().addLabelCol(0, "Zone: " + zoneName)
-            		.addValCol("cumul.")
-            		.addValCol("cumul.");
-            addUsageCols(doc, zone.getUsageTotals().getInstanceTotals(), units);
-            for (String accountName: zone.getAccounts().keySet()) {
-              	AccountArtEntity account = zone.getAccounts().get(accountName);
-                doc.newRow().addLabelCol(1, "Account: " + accountName)
-                   		.addValCol("cumul.")
-                   		.addValCol("cumul.");
-                addUsageCols(doc, account.getUsageTotals().getInstanceTotals(),units);
-                for (String userName: account.getUsers().keySet()) {
-                   	UserArtEntity user = account.getUsers().get(userName);
-                    doc.newRow().addLabelCol(2, "User: " + userName)
-                       		.addValCol("cumul.")
-                       		.addValCol("cumul.");
-                    addUsageCols(doc, user.getUsageTotals().getInstanceTotals(),units);
-                    for (String instanceUuid: user.getInstances().keySet()) {
-                       	InstanceArtEntity instance = user.getInstances().get(instanceUuid);
-                       	doc.newRow().addValCol(instance.getInstanceId())
-                       			.addValCol(instance.getInstanceType());
-                       	addUsageCols(doc, instance.getUsage(), units);
-                    }
-                }
-            }
-        }
-        doc.tableClose();
 
-        doc.textLine("Instance Running Times Section", 3);
-        
-        doc.tableOpen();
-        doc.newRow()
-        		.addValCol("m1.Small", 2, "center")
-        		.addValCol("c1.Medium", 2, "center")
-        		.addValCol("m1.Large", 2, "center")
-        		.addValCol("c1.Large", 2, "center")
-        		.addValCol("m1.XLarge", 2, "center");
-        doc.newRow()
-        		.addValCol("num", 1, "center").addValCol("time", 1, "center")
-        		.addValCol("num", 1, "center").addValCol("time", 1, "center")
-        		.addValCol("num", 1, "center").addValCol("time", 1, "center")
-        		.addValCol("num", 1, "center").addValCol("time", 1, "center")
-        		.addValCol("num", 1, "center").addValCol("time", 1, "center");
-        for(String zoneName : report.getZones().keySet()) {
-        	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
-            doc.newRow().addLabelCol(0, "Zone: " + zoneName);
-            	addTimeCols(doc, zone.getUsageTotals(), units);
-            for (String accountName: zone.getAccounts().keySet()) {
-               	AccountArtEntity account = zone.getAccounts().get(accountName);
-                doc.newRow().addLabelCol(1, "Account: " + accountName);
-                addTimeCols(doc, account.getUsageTotals(),units);
-                for (String userName: account.getUsers().keySet()) {
-                	UserArtEntity user = account.getUsers().get(userName);
-                    doc.newRow().addLabelCol(2, "User: " + userName);
-                    addTimeCols(doc, user.getUsageTotals(),units);
-                }
-            }
-        }
-        doc.tableClose();
-        doc.close();
+	@Override
+	public void render( final ReportArtEntity report, final OutputStream os,
+						final Units units ) throws IOException
+	{
+		doc.setWriter(new OutputStreamWriter(os));
+
+		doc.open();
+		doc.textLine("Instance Report", 1);
+		doc.textLine("Begin:" + new Date(report.getBeginMs()).toString(), 4);
+		doc.textLine("End:" + new Date(report.getEndMs()).toString(), 4);
+		doc.textLine("Resource Usage Section", 3);
+		doc.tableOpen();
+		doc.newRow().addEmptyValCols(5)
+				.addValCol("Net Total " + units.getSizeUnit(), 2, "center")
+				.addValCol("Disk " + units.getSizeUnit(), 2, "center")
+				.addValCol("Disk IOPS (M)", 2, "center")
+				.addValCol("Disk Time (" + TimeUnit.values()[units.getTimeUnit().ordinal()-1] + ")", 2, "center");
+		doc.newRow().addValCol("InstanceId")
+				.addValCol("Type").addValCol("#").addValCol(units.getTimeUnit().toString()).addValCol("CpuUsage%")
+				.addValCol("In").addValCol("Out")
+				.addValCol("Read").addValCol("Write")
+				.addValCol("Read").addValCol("Write")
+				.addValCol("Read").addValCol("Write");
+		for( final String zoneName : report.getZones().keySet() ) {
+			final AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
+			doc.newRow().addLabelCol(0, "Zone: " + zoneName)
+					.addValCol("cumul.")
+					.addValCol("cumul.");
+			addUsageCols(doc, zone.getUsageTotals().getInstanceTotals(), units);
+			for (String accountName: zone.getAccounts().keySet()) {
+				AccountArtEntity account = zone.getAccounts().get(accountName);
+				doc.newRow().addLabelCol(1, "Account: " + accountName)
+						.addValCol("cumul.")
+						.addValCol("cumul.");
+				addUsageCols(doc, account.getUsageTotals().getInstanceTotals(),units);
+				for (String userName: account.getUsers().keySet()) {
+					UserArtEntity user = account.getUsers().get(userName);
+					doc.newRow().addLabelCol(2, "User: " + userName)
+							.addValCol("cumul.")
+							.addValCol("cumul.");
+					addUsageCols(doc, user.getUsageTotals().getInstanceTotals(),units);
+					for (String instanceUuid: user.getInstances().keySet()) {
+						InstanceArtEntity instance = user.getInstances().get(instanceUuid);
+						doc.newRow().addValCol(instance.getInstanceId())
+								.addValCol(instance.getInstanceType());
+						addUsageCols(doc, instance.getUsage(), units);
+					}
+				}
+			}
+		}
+		doc.tableClose();
+
+		doc.textLine("Instance Running Times Section", 3);
+
+		doc.tableOpen();
+		doc.newRow()
+				.addValCol("m1.small", 2, "center")
+				.addValCol("c1.medium", 2, "center")
+				.addValCol("m1.large", 2, "center")
+				.addValCol("c1.large", 2, "center")
+				.addValCol("m1.xlarge", 2, "center");
+		doc.newRow()
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center")
+				.addValCol("num", 1, "center").addValCol(units.getTimeUnit().toString(), 1, "center");
+		for(String zoneName : report.getZones().keySet()) {
+			AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
+			doc.newRow().addLabelCol(0, "Zone: " + zoneName);
+			addTimeCols(doc, zone.getUsageTotals(), units);
+			for (String accountName: zone.getAccounts().keySet()) {
+				AccountArtEntity account = zone.getAccounts().get(accountName);
+				doc.newRow().addLabelCol(1, "Account: " + accountName);
+				addTimeCols(doc, account.getUsageTotals(),units);
+				for (String userName: account.getUsers().keySet()) {
+					UserArtEntity user = account.getUsers().get(userName);
+					doc.newRow().addLabelCol(2, "User: " + userName);
+					addTimeCols(doc, user.getUsageTotals(),units);
+				}
+			}
+		}
+		doc.tableClose();
+		doc.close();
 	}
-	
 
-	public static Document addUsageCols(Document doc, InstanceUsageArtEntity entity, Units units)
-		throws IOException
+	public static Document addUsageCols( final Document doc,
+				final InstanceUsageArtEntity entity,
+				final Units units )
+			throws IOException
 	{
 		doc.addValCol((long)entity.getInstanceCnt());
 		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
-		doc.addValCol((entity.getCpuUtilizationMs()==null)?null:((double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getNetInternalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+		if (entity.getDurationMs()>0) {
+			doc.addValCol(entity.getCpuUtilizationMs()==null?null:((double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));			
+		} else {
+			doc.addValCol(0d); //Doesn't work if you divide by zero
+		}
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getDiskInMegs(), SizeUnit.MB, units.getSizeUnit()));
-		doc.addValCol(UnitUtil.convertSize(entity.getDiskOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getDiskReadMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(entity.getDiskReadOps()==null?null:((double)entity.getDiskReadOps()/1000000d)); //TODO: do something about this
+		doc.addValCol(entity.getDiskWriteOps()==null?null:((double)entity.getDiskWriteOps()/1000000d));
+		doc.addValCol(UnitUtil.convertTime(entity.getDiskReadTime(), TimeUnit.MS, TimeUnit.values()[units.getTimeUnit().ordinal()-1]));
+		doc.addValCol(UnitUtil.convertTime(entity.getDiskWriteTime(), TimeUnit.MS, TimeUnit.values()[units.getTimeUnit().ordinal()-1]));
+
 		return doc;
 	}
 
 	public static Document addTimeCols(Document doc, UsageTotalsArtEntity totals, Units units)
-		throws IOException
+			throws IOException
 	{
-		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
+		final Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
 		for (String type : new String[] {"m1.small", "c1.medium", "m1.large", "c1.large", "m1.xlarge"}) {
 			if (typeTotals.containsKey(type)) {
 				doc.addValCol((long)typeTotals.get(type).getInstanceCnt());
-				doc.addValCol(UnitUtil.convertTime(typeTotals.get(type).getDurationMs(), TimeUnit.MS, units.getTimeUnit()));				
+				doc.addValCol(UnitUtil.convertTime(typeTotals.get(type).getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
 			} else {
-				doc.addValCol("(null)");
-				doc.addValCol("(null)");
+				doc.addValCol("0");
+				doc.addValCol("0");
 			}
 		}
 		return doc;
 	}
-		
+
 }

@@ -131,8 +131,4 @@ public class HmacHandler extends MessageStackHandler {
       parameters.remove( SecurityParameter.SecurityToken.toString( ) );
     }
   }
-  
-  @Override
-  public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {}
-  
 }

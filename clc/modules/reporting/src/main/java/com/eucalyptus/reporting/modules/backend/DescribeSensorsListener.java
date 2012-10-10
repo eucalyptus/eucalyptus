@@ -22,54 +22,71 @@ package com.eucalyptus.reporting.modules.backend;
 
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 
-import com.eucalyptus.reporting.units.Units;
+import java.util.concurrent.TimeUnit;
 import com.eucalyptus.util.async.AsyncRequests;
 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 
-public class DescribeSensorsListener implements EventListener<ClockTick> {
-   
-    private static Logger LOG = Logger.getLogger( DescribeSensorsListener.class );
-    public static void register( ) {
-	    Listeners.register( ClockTick.class, new DescribeSensorsListener() );
-	  }
-  
-    @Override
-    public void fireEvent(ClockTick event) {
+@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
+public class DescribeSensorsListener implements EventListener<Hertz> {
 
-        ArrayList<String> fakeSensorIds = new ArrayList<String>();
-	ArrayList<String> fakeInstanceIds = new ArrayList<String>();
-	fakeSensorIds.add("SensorId"); // future feature
-	fakeInstanceIds.add("InstanceIds"); // future feature
-	
-	try {
-	    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
-		
-		for ( final ServiceConfiguration ccConfig : Topology.enabledServices(ClusterController.class) ) {
-		 
-		// need to determine the correct values for the describe sensor callback
-		AsyncRequests.newRequest(
-			new DescribeSensorCallback(
-				Units.HISTORY_SIZE,
-				Units.COLLECTION_INTERVAL_TIME_MS,
-				fakeSensorIds, fakeInstanceIds)).dispatch(
-			ccConfig);
-		LOG.debug("DecribeSensorCallback has been successfully executed");
+  @ConfigurableField(initial = "1399", description = "How often the reporting system requests information from the cluster controller")
+  public static long DEFAULT_POLL_INTERVAL_MINS = 1399;
+  
+  private Integer COLLECTION_INTERVAL_TIME_MS;
+  private Integer HISTORY_SIZE = 10;
+  private Integer MAX_WRITE_INTERVAL_MS = 86400000;
+ 
+  private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
+
+  public static void register() {
+    Listeners.register( Hertz.class, new DescribeSensorsListener() );
+  }
+
+  @Override
+  public void fireEvent( Hertz event ) {
+   
+	COLLECTION_INTERVAL_TIME_MS = (((int) TimeUnit.MINUTES
+		.toMillis(DEFAULT_POLL_INTERVAL_MINS)) / HISTORY_SIZE) * 2;
+
+	if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
+
+	    try {
+
+		if (event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {
+		    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
+
+			for (final ServiceConfiguration ccConfig : Topology
+				.enabledServices(ClusterController.class)) {
+
+			    AsyncRequests.newRequest(
+				    new DescribeSensorCallback(HISTORY_SIZE,
+					    COLLECTION_INTERVAL_TIME_MS))
+				    .dispatch(ccConfig);
+			    LOG.debug("DecribeSensorCallback has been successfully executed");
+			}
+		    }
 		}
+	    } catch (Exception ex) {
+		LOG.error("Unable to listen for describe sensors events", ex);
 	    }
-	} catch (Exception ex) {
-	    LOG.error("Unable to listen for describe sensors events", ex);
+
+	} else {
+	    LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
+		    + DEFAULT_POLL_INTERVAL_MINS
+		    + " must be less than 1440 minutes");
 	}
+
     }
 }

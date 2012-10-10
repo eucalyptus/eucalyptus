@@ -62,6 +62,7 @@
 
 package com.eucalyptus.ws.server;
 
+import static com.eucalyptus.component.ComponentId.ComponentPart;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.security.auth.login.LoginException;
@@ -91,6 +92,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.WebServicesException;
@@ -145,9 +147,13 @@ public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE:
       if ( Logs.isExtrrreeeme( ) && request instanceof MappingHttpMessage ) {
         Logs.extreme( ).trace( ( ( MappingHttpMessage ) request ).logMessage( ) );
       }
-      FilteredPipeline filteredPipeline = Pipelines.find( request );
+      final FilteredPipeline filteredPipeline = Pipelines.find( request );
       if ( this.pipeline.compareAndSet( null, filteredPipeline ) ) {
         this.pipeline.get( ).unroll( ctx.getPipeline( ) );
+        final Ats ats = Ats.inClassHierarchy( filteredPipeline );
+        Handlers.addComponentHandlers(
+            ats.has(ComponentPart.class) ? ats.get(ComponentPart.class).value() : null,
+            ctx.getPipeline() );
         Handlers.addSystemHandlers( ctx.getPipeline( ) );
       }
     } catch ( DuplicatePipelineException e1 ) {
