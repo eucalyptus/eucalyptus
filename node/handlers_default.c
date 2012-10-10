@@ -1660,7 +1660,7 @@ doDescribeSensors (struct nc_state_t *nc,
     * outResources = rss;
 	sem_v (inst_copy_sem);
    
-	logprintfl (EUCADEBUG, "%d resource(s)\n", k);
+	logprintfl (EUCADEBUG, "found %d resource(s)\n", k);
     return 0;
 }
 

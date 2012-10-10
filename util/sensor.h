@@ -107,6 +107,7 @@ typedef struct {
 
 int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half);
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
+int sensor_set_hyp_sem (sem * hyp_sem);
 int sensor_get_config (int *new_history_size, long long * new_collection_interval_time_ms);
 int sensor_get_num_resources (void);
 int sensor_add_resource (const char * resourceName, const char * resourceType, const char * resourceUuid);
