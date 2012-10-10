@@ -60,60 +60,123 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.storage;
+/*
+ * Author: chris grzegorczyk <grze@eucalyptus.com>
+ */
+package edu.ucsb.eucalyptus.cloud.entities;
 
-import javax.persistence.EntityTransaction;
-
+import javax.persistence.Column;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Entity;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
 
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.config.StorageControllerConfiguration;
-import com.eucalyptus.entities.Entities;
-import com.google.common.base.Strings;
+@Entity @javax.persistence.Entity
+@PersistenceContext(name="eucalyptus_storage")
+@Table( name = "das_info" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ConfigurableClass(root = "storage", alias = "das", description = "Basic storage controller configuration for DAS.", singleton=false, deferred = true)
+public class DASInfo extends AbstractPersistent {
+	private static Logger LOG = Logger.getLogger( DASInfo.class );
+	
+	@ConfigurableIdentifier
+	@Column( name = "storage_name", unique=true)
+	private String name;
+	@ConfigurableField( description = "Direct attached storage device location", displayName = "Direct attached block device or volume group" )
+	@Column(name = "das_device")
+	private String DASDevice;
 
-public class BlockStorageManagerFactory {
-	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);	
+	public DASInfo(){
+		this.name = StorageProperties.NAME;
+	}
 
-	public static LogicalStorageManager getBlockStorageManager() throws Exception {		
-		//Get the basic service config, but this is stale, so we must query the db directly
-		StorageControllerConfiguration scServiceConfig = (StorageControllerConfiguration)(Components.lookup(Storage.class).getLocalServiceConfiguration());
-		if(scServiceConfig == null) {
-			throw new ClassNotFoundException("Cannot lookup SC config because partition or service name is not found");
-		}
-		
-		//Get the latest info from the DB directly.
-		StorageControllerConfiguration exampleConfig = new StorageControllerConfiguration();		
-		exampleConfig.setPartition(scServiceConfig.getPartition());
-		exampleConfig.setName(scServiceConfig.getName());
-		exampleConfig.setHostName(scServiceConfig.getHostName());
-		
-		EntityTransaction trans = Entities.get(StorageControllerConfiguration.class);
-		StorageControllerConfiguration scInfo = null;
+	public DASInfo( final String name )
+	{
+		this.name = name;
+	}
+
+	public DASInfo(final String name, 
+			final String DASDevice) {
+		this.name = name;
+		this.DASDevice = DASDevice;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getDASDevice() {
+		return DASDevice;
+	}
+
+	public void setDASDevice(String DASDevice) {
+		this.DASDevice = DASDevice;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DASInfo other = (DASInfo) obj;
+		if (name == null) {
+			if (other.name != null)
+				return false;
+		} else if (!name.equals(other.name))
+			return false;
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		return result;
+	}
+
+	@Override
+	public String toString()
+	{
+		return this.name;
+	}
+
+	public static DASInfo getStorageInfo() {
+		EntityWrapper<DASInfo> storageDb = EntityWrapper.get(DASInfo.class);
+		DASInfo conf = null;
 		try {
-			scInfo = Entities.uniqueResult(exampleConfig);
-		} catch(Exception e) {
-			throw new ClassNotFoundException("Error retrieving configuration for this SC: " + exampleConfig.getPartition() + " " + exampleConfig.getName(),e);
+			conf = storageDb.getUnique(new DASInfo(StorageProperties.NAME));
+			storageDb.commit();
 		}
-		finally {
-			trans.commit();
+		catch ( EucalyptusCloudException e ) {
+			LOG.warn("Failed to get storage info for: " + StorageProperties.NAME + ". Loading defaults.");
+			conf =  new DASInfo(StorageProperties.NAME, 
+					StorageProperties.DAS_DEVICE);
+			storageDb.add(conf);
+			storageDb.commit();
 		}
-		
-		String ebsManager = scInfo.getBlockStorageManager();		
-		if(Strings.isNullOrEmpty(ebsManager)) {
-			LOG.error("No block storage backend specified.");
-			throw new ClassNotFoundException("Block Storage Backend not specified");
+		catch (Exception t) {
+			LOG.error("Unable to get storage info for: " + StorageProperties.NAME);
+			storageDb.rollback();
+			return new DASInfo(StorageProperties.NAME, 
+					StorageProperties.DAS_DEVICE);
 		}
-		
-		//Update the in-memory state of the service config
-		scServiceConfig.setBlockStorageManager(scInfo.getBlockStorageManager());
-		
-		try {
-			ebsManager = "com.eucalyptus.storage." + ebsManager;			
-			return (LogicalStorageManager) ClassLoader.getSystemClassLoader().loadClass(ebsManager).newInstance();
-		} catch (ClassNotFoundException e) {
-			LOG.error("No such backend: " + ebsManager + ". Did you spell it correctly? " + e);
-			throw e;
-		}
+		return conf;
 	}
 }

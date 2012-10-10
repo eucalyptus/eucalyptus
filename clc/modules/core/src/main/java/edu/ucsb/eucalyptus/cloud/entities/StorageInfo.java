@@ -64,8 +64,6 @@ package edu.ucsb.eucalyptus.cloud.entities;
 
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
@@ -75,6 +73,9 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -100,7 +101,7 @@ public class StorageInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Should transfer snapshots", displayName = "Transfer snapshots to Walrus", type = ConfigurableFieldType.BOOLEAN )
 	@Column( name = "system_storage_transfer_snapshots")
 	private Boolean shouldTransferSnapshots;
-
+	
 	public StorageInfo() {
 		this.name = StorageProperties.NAME;
 	}
@@ -127,7 +128,7 @@ public class StorageInfo extends AbstractPersistent {
 	public void setName(String name) {
 		this.name = name;
 	}
-
+	
 	public Integer getMaxTotalVolumeSizeInGb() {
 		return maxTotalVolumeSizeInGb;
 	}
@@ -205,7 +206,7 @@ public class StorageInfo extends AbstractPersistent {
 			return new StorageInfo(StorageProperties.NAME, 
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
 					StorageProperties.MAX_VOLUME_SIZE,
-					true);
+					true); 
 		}
 		return conf;
 	}
