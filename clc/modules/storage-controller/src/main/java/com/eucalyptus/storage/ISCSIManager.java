@@ -417,7 +417,6 @@ public class ISCSIManager implements StorageExportManager {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
-				LOG.info("CAN CLEANUP TID: " + iscsiVolumeInfo.getTid());
 				unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
                                 if(SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(iscsiVolumeInfo.getTid())}).length() == 0) {
 					iscsiVolumeInfo.setTid(-1);

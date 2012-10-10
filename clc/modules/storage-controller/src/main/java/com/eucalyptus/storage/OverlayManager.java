@@ -1132,16 +1132,25 @@ public class OverlayManager implements LogicalStorageManager {
 			return null;
 		}
 
-		private LVMVolumeInfo getVolumeInfo(LVMVolumeInfo volumeInfo) {
-			try {
-				List<LVMVolumeInfo> lvmVolumeInfos = entityWrapper.query(volumeInfo);
-				if(lvmVolumeInfos.size() > 0) {
-					return lvmVolumeInfos.get(0);
-				}
-			} catch (Throwable ex) {
-				LOG.info(ex, ex);
-			}
-			return null;
+		private boolean areSnapshotsPending(String volumeId) {
+                        if(exportManager instanceof AOEManager) {
+                                AOEVolumeInfo AOEVolumeInfo = new AOEVolumeInfo();
+				AOEVolumeInfo.setSnapshotOf(volumeId);
+				AOEVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
+                                List<AOEVolumeInfo> AOEVolumeInfos = entityWrapper.query(AOEVolumeInfo);
+                                if(AOEVolumeInfos.size() > 0) {
+                                        return true;
+                                }
+                        } else if(exportManager instanceof ISCSIManager) {
+                                ISCSIVolumeInfo ISCSIVolumeInfo = new ISCSIVolumeInfo();
+				ISCSIVolumeInfo.setSnapshotOf(volumeId);
+				ISCSIVolumeInfo.setStatus(StorageProperties.Status.pending.toString());
+                                List<ISCSIVolumeInfo> ISCSIVolumeInfos = entityWrapper.query(ISCSIVolumeInfo);
+                                if(ISCSIVolumeInfos.size() > 0) {
+                                        return true;
+                                }
+                        }
+			return false;
 		}
 
 		private LVMVolumeInfo getVolumeInfo() {
@@ -1519,28 +1528,30 @@ public class OverlayManager implements LogicalStorageManager {
 					}
 				String loDevName = foundLVMVolumeInfo.getLoDevName();
 				if(loDevName != null) {
+				volumeManager = new VolumeEntityWrapperManager();
+				String volumeId = foundLVMVolumeInfo.getVolumeId();
+				LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+				if(volInfo != null) {
 				String vgName = foundLVMVolumeInfo.getVgName();
 				String lvName = foundLVMVolumeInfo.getLvName();
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				LVMVolumeInfo volumeInfo = new LVMVolumeInfo();
-				volumeInfo.setSnapshotOf(foundLVMVolumeInfo.getVolumeId());
-				volumeInfo.setStatus(StorageProperties.Status.pending.toString());
-				volumeManager = new VolumeEntityWrapperManager();
-				LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo(volumeInfo);
-				if(snapshotInfo == null) {
+				if(!volumeManager.areSnapshotsPending(volumeId)) {
 					LOG.info("Detaching loop device: " + loDevName);
 					try {
 						disableLogicalVolume(absoluteLVName);
 						removeLoopback(loDevName);
-						foundLVMVolumeInfo.setLoDevName(null);
+						volInfo.setLoDevName(null);
 					} catch (EucalyptusCloudException e) {
 						LOG.error(e, e);
 					}
 				} else {
-					LOG.info("Snapshot: " + snapshotInfo.getVolumeId() + " in progress. Not detaching loop device.");
+					LOG.info("Snapshot in progress. Not detaching loop device.");
 				}
-				foundLVMVolumeInfo.setCleanup(false);
+				volInfo.setCleanup(false);
 				volumeManager.finish();
+				}
+				} else {
+					volumeManager.abort();
 				}
 				}
 			}
