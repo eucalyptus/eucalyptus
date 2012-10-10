@@ -107,7 +107,7 @@
           return thisObj._expandCallback(row);
         },
         help_click : function(evt) {
-          thisObj._flipToHelp(evt, $imgHelp);
+          thisObj._flipToHelp(evt, {content:$imgHelp, url: help_image.landing_content_url});
         },
         legend : ['pending','available','failed'],
         show_only : [{filter_value: 'machine', filter_col: 8},{filter_value: 'available', filter_col: 7}],

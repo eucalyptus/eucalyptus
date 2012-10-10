@@ -80,7 +80,7 @@
       $header.find('span').append(
           $('<div>').addClass('help-link').append(
             $('<a>').attr('href','#').text('?').click( function(evt){
-              thisObj._flipToHelp(evt,help);
+              thisObj._flipToHelp(evt, {content:help, url: help_dashboard.landing_content_url} ); 
             })));
       return $header;
     },

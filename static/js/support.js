@@ -362,3 +362,17 @@ function iamBusy(){
       }
   });
 }
+
+function popOutDialogHelp(url, height){
+  var width = 600;
+  var height = height ? height: 400;
+  var option = 'width='+width+',height='+height+',directories=no,fullscreen=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=yes,titlebar=yes,toobar=no';
+  window.open(url, '_blank', option,true);
+}
+
+function popOutPageHelp(url, height){
+  var width = 700;
+  var height = height ? height: 600;
+  var option = 'width='+width+',height='+height+',directories=no,fullscreen=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=yes,titlebar=yes,toobar=no';
+  window.open(url, '_blank', option,true);
+}

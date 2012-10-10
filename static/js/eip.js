@@ -87,7 +87,7 @@
         },
         menu_click_create : function (args) { thisObj.createAction() },
         help_click : function(evt) {
-          thisObj._flipToHelp(evt, $eipHelp);
+          thisObj._flipToHelp(evt, {content: $eipHelp, url: help_eip.landing_content_url});
         },
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
@@ -112,7 +112,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $release_dialog.eucadialog("close");}}
          },
-         help: { content: $release_help },
+         help: { content: $release_help, url: help_eip.dialog_release_content_url },
        });
       // eip release dialog end
       // allocate eip dialog end
@@ -137,7 +137,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
          },
-         help: { content: $eip_allocate_dialog_help },
+         help: { content: $eip_allocate_dialog_help, url: help_eip.dialog_allocate_content_url },
        });
       var $ip_count_edit = $eip_allocate_dialog.find('#eip-allocate-count');
       $eip_allocate_dialog.eucadialog('buttonOnKeyup', $ip_count_edit,  allocateButtonId, function(){
@@ -166,7 +166,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus: true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
-         help: { content: $eip_associate_dialog_help },
+         help: { content: $eip_associate_dialog_help, url: help_eip.dialog_associate_content_url },
          on_open: {spin: true, callback: function(args) {
            var dfd = $.Deferred();
            thisObj._initAssociateDialog(dfd) ; // pulls instances from the server
@@ -191,7 +191,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_disassociate_dialog.eucadialog("close"); } }
          },
-         help: { content: $eip_disassociate_dialog_help },
+         help: { content: $eip_disassociate_dialog_help, url: help_eip.dialog_disassociate_content_url },
        });
       // disassociate eip dialog end
     },
