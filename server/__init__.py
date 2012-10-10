@@ -10,6 +10,8 @@ import tornado.web
 import traceback
 import socket
 import logging
+from datetime import datetime
+from datetime import timedelta
 
 from token import TokenAuthenticator
 
@@ -299,9 +301,10 @@ class LoginProcessor(ProxyProcessor):
             break
         web_req.set_cookie("session-id", sid)
         if remember == 'yes':
-            web_req.set_cookie("account", account)
-            web_req.set_cookie("username", user)
-            web_req.set_cookie("remember", 'true' if remember else 'false')
+            expiration = datetime.now() + timedelta(days=180)
+            web_req.set_cookie("account", account, expires=expiration)
+            web_req.set_cookie("username", user, expires=expiration)
+            web_req.set_cookie("remember", 'true' if remember else 'false', expires=expiration)
         else:
             web_req.clear_cookie("account")
             web_req.clear_cookie("username")
