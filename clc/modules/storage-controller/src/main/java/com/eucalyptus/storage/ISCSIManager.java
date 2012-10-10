@@ -413,15 +413,16 @@ public class ISCSIManager implements StorageExportManager {
 		}
 	}
 	
-	public void cleanup(LVMVolumeInfo volumeInfo) {
+	public void cleanup(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
-				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", iscsiVolumeInfo.getTid().toString()});
-				if(!returnValue.contains("Connection:")) {
-					LOG.info("CAN CLEANUP TID: " + iscsiVolumeInfo.getTid());
-					unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+				LOG.info("CAN CLEANUP TID: " + iscsiVolumeInfo.getTid());
+				unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+                                if(SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(iscsiVolumeInfo.getTid())}).length() == 0) {
 					iscsiVolumeInfo.setTid(-1);
+				} else {
+					throw new EucalyptusCloudException("Unable to remove tid: " + iscsiVolumeInfo.getTid());
 				}
 			}
 		}

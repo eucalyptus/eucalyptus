@@ -78,5 +78,5 @@ public interface StorageExportManager {
 	
 	public void allocateTarget(LVMVolumeInfo volumeInfo);
 
-	public void cleanup(LVMVolumeInfo volume);
+	public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException;
 }

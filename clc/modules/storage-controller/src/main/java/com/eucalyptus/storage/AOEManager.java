@@ -178,7 +178,7 @@ public class AOEManager implements StorageExportManager {
 	}
 
 	@Override
-	public void cleanup(LVMVolumeInfo volume) {
+	public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
 		
 	}
