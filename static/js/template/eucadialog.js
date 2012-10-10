@@ -35,6 +35,7 @@
     },
     $error_div : null,
     help_flipped : false,
+    popout_dialog : null,
     _init : function() {
       var thisObj = this;
       /// create div for displaying errors
@@ -162,10 +163,40 @@
       }
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
+          thisObj.element.data('dialog').option('closeOnEscape', false);
           $contentPane.fadeOut(function(){
             $helpPane.fadeIn();
             thisObj.help_flipped = true;
-            $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
+            if(thisObj.popout_dialog){
+              $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
+            }else{
+              $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return').before(
+                $('<div>').addClass('help-popout').append(
+                  $('<a>').attr('href','#').text('popout').click(function(e){
+                    if(thisObj.popout_dialog)
+                      return;
+                    $helpLink.trigger('click');
+                    thisObj.popout_dialog = $help.content.find('.dialog-help-content').clone().dialog({
+                      autoOpen: true,  // assume the three params are fixed for all dialogs
+                      modal: false,
+                      width: 500,
+                      maxHeight: false,
+                      height: 'auto',
+                      dialogClass: 'euca-popout-container',
+                      resizable: false,
+                      closeOnEscape : true,
+                      position: [750, 100],// { my: 'center', at: 'right', of: thisObj.element, collision: 'none'},
+                      open: function(e, ui){
+                        thisObj.element.data('dialog').option('position', [100,200]);
+                        thisObj._stylePopout();
+                      },
+                      close: function(e, ui){
+                        $('html body').find('.euca-popout-container').detach();
+                        thisObj.popout_dialog = null;
+                      }
+                  });
+                })));
+            }
             $helpLink.html('&nbsp;');
             $buttonPane.hide();
             $resourcePane.hide();
@@ -174,10 +205,12 @@
               thisObj.options.afterHelpFlipped.call();
           });
         }else{
+          thisObj.element.data('dialog').option('closeOnEscape', true);
           $helpPane.fadeOut(function(){
             $contentPane.fadeIn();
             thisObj.help_flipped = false;
             $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
+            $titleBar.find('.help-popout').remove();
             $helpLink.html('&nbsp;');
             $buttonPane.show();
             $resourcePane.show();
@@ -188,51 +221,17 @@
       thisObj.element.find('.help-revert-button a').click( function(evt) {
         $helpLink.trigger('click');
       });
-          /*$contentPane.flip({
-            direction : 'lr',
-            speed : 300,
-            color : 'white',
-            bgColor : 'white',
-            easingIn: 'easeInQuad',
-            easingOut: 'easeOutQuad',
-            content : thisObj.options.help.content,
-            onEnd : function(){
-              thisObj.element.find('.help-revert-button a').click( function(evt) {
-                $contentPane.revertFlip();
-              });
-              // at the end of flip/revertFlip, change the ?/x button
-              if(!thisObj.help_flipped){ 
-                $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
-                $helpLink.html('&nbsp;');
-                $resourcePane.hide();
-                $titleBar.find('span').text('');
-                thisObj.help_flipped =true;
-              } else {
-                $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
-                $helpLink.html('&nbsp;');
-                $buttonPane.show();
-                $resourcePane.show();
-                $titleBar.find('span').text(thisObj.options.title);
-                thisObj.help_flipped=false;
-                thisObj.element.dialog('close');
-                thisObj.element.dialog('option', 'show', null); 
-                thisObj.element.dialog('open');
-                thisObj.element.dialog('option', 'show', 'fade'); 
-              }
-              $titleBar.show();
-            },
-            onBefore: function() {
-              if(!thisObj.help_flipped){
-                $buttonPane.hide();
-              }
-            }
-          });
-        }else{ // when flipped to help page
-          $contentPane.revertFlip();
-        }
-      });*/ 
     },
-
+    _stylePopout : function(){
+      var thisObj = this;
+      var $container = $('html body').find('.euca-popout-container');
+      var $titleBar = $container.find('.ui-dialog-titlebar');
+      $titleBar.append($('<div>').addClass('popout-close').append(
+                         $('<a>').attr('href','#').text('close').click(function(e){
+                           thisObj.popout_dialog.dialog('close'); 
+                         })));
+      
+    },
     _makeButtons : function() {
       var btnArr = [];
        // e.g., add : { text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
@@ -255,6 +254,8 @@
     
     close : function() {
       var thisObj = this;
+      if(thisObj.popout_dialog) 
+        thisObj.popout_dialog.dialog('close'); 
       this.element.dialog('close');
       // this method should clean-up things
       this.element.find('input').each(function () { 
