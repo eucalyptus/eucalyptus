@@ -62,7 +62,7 @@
 
 package com.eucalyptus.bootstrap;
 
-import static com.eucalyptus.crypto.util.SslSetup.getEnabledCipherSuites;
+import static com.eucalyptus.crypto.util.SslUtils.getEnabledCipherSuites;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -83,7 +83,6 @@ import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.system.Threads;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLEngine;
-import com.google.common.io.Files;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
