@@ -23,12 +23,12 @@
     $.widget("eucalyptus.explorer", {
       options : {
         menus : [ {key:'dashboard', text:menu_dashboard}, 
-                {key:'image', text:menu_images},
-                {key:'instance', text:menu_instances},
-                {key:'storage', text:menu_storage},
-                {key:'netsec', text:menu_netsec}],
-        submenus : { storage: [{key:'volume', text:menu_storage_volumes}, {key:'snapshot', text:menu_storage_snapshots}],
-                  netsec: [{key:'sgroup',text:menu_netsec_sgroup},{key:'keypair',text:menu_netsec_keypair},{key:'eip',text:menu_netsec_eip}]},
+                {key:'image', text:images_label},
+                {key:'instance', text:instances_label},
+                {key:'storage', text:storage_label},
+                {key:'netsec', text:netsec_label}],
+        submenus : { storage: [{key:'volume', text:volumes_label}, {key:'snapshot', text:snapshots_label}],
+                  netsec: [{key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label}]},
       },
 
       _init : function() { },

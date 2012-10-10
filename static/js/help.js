@@ -59,116 +59,172 @@ function loadHtml(url, handler){
 
 var help_dashboard = {
    load : function(arg){
-    loadHtml('help/'+arg.language+'/console_dashboard.html', function(data){help_dashboard.landing_content=data})
+    help_dashboard.landing_content_url = 'help/'+arg.language+'/console_dashboard.html',
+    loadHtml(help_dashboard.landing_content_url, function(data){help_dashboard.landing_content=data})
    },
-   landing_content: ""
+   landing_content: '',
+   landing_content_url : '', 
 }
   //[keypair]
 var help_keypair = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_keypairs.html', function(data){help_keypair.landing_content=data})
-    loadHtml('help/'+arg.language+'/console_create_keypair.html', function(data){help_keypair.dialog_add_content=data})
-    loadHtml('help/'+arg.language+'/console_delete_keypair.html', function(data){help_keypair.dialog_delete_content=data})
+    help_keypair.landing_content_url = 'help/'+arg.language+'/console_manage_keypairs.html';
+    help_keypair.dialog_add_content_url = 'help/'+arg.language+'/console_create_keypair.html';
+    help_keypair.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_keypair.html';
+    loadHtml(help_keypair.landing_content_url , function(data){help_keypair.landing_content=data})
+    loadHtml(help_keypair.dialog_add_content_url, function(data){help_keypair.dialog_add_content=data})
+    loadHtml(help_keypair.dialog_delete_content_url, function(data){help_keypair.dialog_delete_content=data})
   },
-  landing_content: "",
-  dialog_add_content: "",
-  dialog_delete_content: ""
+  landing_content: '',
+  landing_content_url: '',
+  dialog_add_content: '',
+  dialog_add_content_url: '',
+  dialog_delete_content: '',
+  dialog_delete_content_url: '',
+
 };
 
 var help_image = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_images.html', function(data){help_image.landing_content=data})
+    help_image.landing_content_url = 'help/'+arg.language+'/console_manage_images.html';
+    loadHtml(help_image.landing_content_url, function(data){help_image.landing_content=data})
   },
-  landing_content: ""
+  landing_content:'',
+  landing_content_url: '',
 };
 
 var help_snapshot = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_snapshots.html', function(data){help_snapshot.landing_content=data})
-    loadHtml('help/'+arg.language+'/console_create_snapshot.html', function(data){help_snapshot.dialog_create_content=data})
-    loadHtml('help/'+arg.language+'/console_delete_snapshot.html', function(data){help_snapshot.dialog_delete_content=data})
+    help_snapshot.landing_content_url = 'help/'+arg.language+'/console_manage_snapshots.html';
+    help_snapshot.dialog_create_content_url = 'help/'+arg.language+'/console_create_snapshot.html';
+    help_snapshot.dialog_delete_content_url  = 'help/'+arg.language+'/console_delete_snapshot.html';
+    loadHtml(help_snapshot.landing_content_url, function(data){help_snapshot.landing_content=data})
+    loadHtml(help_snapshot.dialog_create_content_url, function(data){help_snapshot.dialog_create_content=data})
+    loadHtml(help_snapshot.dialog_delete_content_url, function(data){help_snapshot.dialog_delete_content=data})
   },
-  landing_content: "",
-  dialog_delete_content: "",
-  dialog_create_content: "",
-  dialog_register_content: "",
+  landing_content: '',
+  landing_content_url: '',
+  dialog_delete_content: '',
+  dialog_delete_content_url: '',
+  dialog_create_content: '',
+  dialog_create_content_url: '',
+  dialog_register_content: '',
+  dialog_register_content_url: '',
 };
 
 var help_eip = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_eips.html', function(data){help_eip.landing_content=data})
-    loadHtml('help/'+arg.language+'/console_allocate_eip.html', function(data){help_eip.dialog_allocate_content=data})
-    loadHtml('help/'+arg.language+'/console_release_eip.html', function(data){help_eip.dialog_release_content=data})
-    loadHtml('help/'+arg.language+'/console_associate_eip.html', function(data){help_eip.dialog_associate_content=data})
-    loadHtml('help/'+arg.language+'/console_disassociate_eip.html', function(data){help_eip.dialog_disassociate_content=data})
+    help_eip.landing_content_url = 'help/'+arg.language+'/console_manage_eips.html';
+    help_eip.dialog_allocate_content_url = 'help/'+arg.language+'/console_allocate_eip.html';
+    help_eip.dialog_release_content_url = 'help/'+arg.language+'/console_release_eip.html';
+    help_eip.dialog_associate_content_url = 'help/'+arg.language+'/console_associate_eip.html';
+    help_eip.dialog_disassociate_content_url = 'help/'+arg.language+'/console_disassociate_eip.html';
+    loadHtml(help_eip.landing_content_url, function(data){help_eip.landing_content=data})
+    loadHtml(help_eip.dialog_allocate_content_url, function(data){help_eip.dialog_allocate_content=data})
+    loadHtml(help_eip.dialog_release_content_url, function(data){help_eip.dialog_release_content=data})
+    loadHtml(help_eip.dialog_associate_content_url, function(data){help_eip.dialog_associate_content=data})
+    loadHtml(help_eip.dialog_disassociate_content_url, function(data){help_eip.dialog_disassociate_content=data})
   },
-  landing_content: "",
-  dialog_release_content: "",
-  dialog_allocate_content: "",
-  dialog_associate_content: "",
-  dialog_disassociate_content: ""
+  landing_content: '',
+  landing_content_url: '',
+  dialog_release_content: '',
+  dialog_release_content_url: '',
+  dialog_allocate_content: '',
+  dialog_allocate_content_url: '',
+  dialog_associate_content: '',
+  dialog_associate_content_url: '',
+  dialog_disassociate_content: '' ,
+  dialog_disassociate_content_url: '' 
 };
 
 var help_volume = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_volumes.html', function(data){help_volume.landing_content=data})
-    loadHtml('help/'+arg.language+'/console_create_volume.html', function(data){help_volume.dialog_add_content=data})
-    loadHtml('help/'+arg.language+'/console_attach_volume.html', function(data){help_volume.dialog_attach_content=data})
-    loadHtml('help/'+arg.language+'/console_detach_volume.html', function(data){help_volume.dialog_detach_content=data})
-    loadHtml('help/'+arg.language+'/console_delete_volumes.html', function(data){help_volume.dialog_delete_content=data})
+    help_volume.landing_content_url = 'help/'+arg.language+'/console_manage_volumes.html';
+    help_volume.dialog_add_content_url = 'help/'+arg.language+'/console_create_volume.html';
+    help_volume.dialog_attach_content_url = 'help/'+arg.language+'/console_attach_volume.html';
+    help_volume.dialog_detach_content_url = 'help/'+arg.language+'/console_detach_volume.html';
+    help_volume.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_volumes.html';
+
+    loadHtml(help_volume.landing_content_url, function(data){help_volume.landing_content=data})
+    loadHtml(help_volume.dialog_add_content_url, function(data){help_volume.dialog_add_content=data})
+    loadHtml(help_volume.dialog_attach_content_url, function(data){help_volume.dialog_attach_content=data})
+    loadHtml(help_volume.dialog_detach_content_url, function(data){help_volume.dialog_detach_content=data})
+    loadHtml(help_volume.dialog_delete_content_url, function(data){help_volume.dialog_delete_content=data})
   },
-  landing_content: "",
-  dialog_add_content: "",
-  dialog_attach_content: "",
-  dialog_detach_content: "",
-  dialog_delete_content: ""
+  landing_content: '',
+  landing_content_url: '',
+  dialog_add_content: '',
+  dialog_add_content_url: '',
+  dialog_attach_content: '',
+  dialog_attach_content_url: '',
+  dialog_detach_content: '',
+  dialog_detach_content_url: '',
+  dialog_delete_content:  '',
+  dialog_delete_content_url:  '' 
 };
 
 var help_sgroup = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_security_groups.html', function(data){help_sgroup.landing_content=data})
-    loadHtml('help/'+arg.language+'/console_create_security_group.html', function(data){help_sgroup.dialog_add_content=data})
-    loadHtml('help/'+arg.language+'/console_edit_security_group.html', function(data){help_sgroup.dialog_edit_content=data})
-    loadHtml('help/'+arg.language+'/console_delete_security_group.html', function(data){help_sgroup.dialog_delete_content=data})
+    help_sgroup.landing_content_url = 'help/'+arg.language+'/console_manage_security_groups.html';
+    help_sgroup.dialog_add_content_url = 'help/'+arg.language+'/console_create_security_group.html';
+    help_sgroup.dialog_edit_content_url = 'help/'+arg.language+'/console_edit_security_group.html';
+    help_sgroup.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_security_group.html';
+    loadHtml(help_sgroup.landing_content_url, function(data){help_sgroup.landing_content=data})
+    loadHtml(help_sgroup.dialog_add_content_url, function(data){help_sgroup.dialog_add_content=data})
+    loadHtml(help_sgroup.dialog_edit_content_url, function(data){help_sgroup.dialog_edit_content=data})
+    loadHtml(help_sgroup.dialog_delete_content_url, function(data){help_sgroup.dialog_delete_content=data})
   },
-  landing_content: "",
-  dialog_add_content: "",
-  dialog_edit_content: "",
-  dialog_delete_content: ""
+  landing_content: '',
+  landing_content_url: '',
+  dialog_add_content: '',
+  dialog_add_content_url: '',
+  dialog_edit_content: '',
+  dialog_edit_content_url: '',
+  dialog_delete_content:'', 
+  dialog_delete_content_url:'', 
 }
 
 var help_instance = {
   load : function(arg){
-    loadHtml('help/'+arg.language+'/console_manage_instances.html', function(data){help_instance.landing_content=data})
-    loadHtml('help/'+arg.language+'/console_reboot_instances.html', function(data){help_instance.dialog_reboot_content=data})
-    loadHtml('help/'+arg.language+'/console_stop_instances.html', function(data){help_instance.dialog_stop_content=data})
-    loadHtml('help/'+arg.language+'/console_terminate_instances.html', function(data){help_instance.dialog_terminate_content=data})
-    loadHtml('help/'+arg.language+'/console_launch_more_instances.html', function(data){help_instance.dialog_launchmore_content=data})
+    help_instance.landing_content_url = 'help/'+arg.language+'/console_manage_instances.html';
+    help_instance.dialog_reboot_content_url = 'help/'+arg.language+'/console_reboot_instances.html';
+    help_instance.dialog_stop_content_url = 'help/'+arg.language+'/console_stop_instances.html';
+    help_instance.dialog_terminate_content_url = 'help/'+arg.language+'/console_terminate_instances.html';
+    help_instance.dialog_launchmore_content_url = 'help/'+arg.language+'/console_launch_more_instances.html';
+
+    loadHtml(help_instance.landing_content_url, function(data){help_instance.landing_content=data})
+    loadHtml(help_instance.dialog_reboot_content_url, function(data){help_instance.dialog_reboot_content=data})
+    loadHtml(help_instance.dialog_stop_content_url, function(data){help_instance.dialog_stop_content=data})
+    loadHtml(help_instance.dialog_terminate_content_url, function(data){help_instance.dialog_terminate_content=data})
+    loadHtml(help_instance.dialog_launchmore_content_url, function(data){help_instance.dialog_launchmore_content=data})
   },
-  landing_content: "",
-  dialog_add_content: "",
-  dialog_delete_content: "",
-  dialog_reboot_content: "",
-  dialog_start_content: "",
-  dialog_stop_content: "",
-  dialog_connect_content: "",
-  dialog_terminate_content: "",
-  dialog_console_content: "",
-  dialog_password_content: "",
-  dialog_launchmore_content: "",
+  landing_content: '',
+  landing_content_url: '',
+  dialog_reboot_content: '',
+  dialog_reboot_content_url: '',
+  dialog_stop_content: '',
+  dialog_stop_content_url: '',
+  dialog_terminate_content: '',
+  dialog_terminate_content_url: '',
+  dialog_launchmore_content: '',
+  dialog_launchmore_content_url: '',
 }
 
 var help_about = {
-  load : function(arg) {
-    loadHtml('help/'+arg.language+'/console_about.html', function(data){help_about.dialog_content=data})
+  load : function(arg){
+    help_about.dialog_content_url = 'help/'+arg.language+'/console_about.html';
+    loadHtml(help_about.dialog_content_url, function(data){help_about.dialog_content=data})
   },
-  dialog_content: ""
+  dialog_content: '',
+  dialog_content_url: '',
 }
 
 var help_launcher = {
   load : function(arg) {
-    loadHtml('help/'+arg.language+'/console_create_instances.html', function(data){help_launcher.landing_content=data})
+    help_launcher.landing_content_url = 'help/'+arg.language+'/console_create_instances.html';
+    loadHtml(help_launcher.landing_content_url, function(data){help_launcher.landing_content=data})
   },
-  landing_content: "" 
+  landing_content: '',
+  landing_content_url: '',
 }
 

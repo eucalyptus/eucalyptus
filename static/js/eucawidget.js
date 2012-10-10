@@ -37,10 +37,10 @@
     
 
     _help_flipped : false,
-    _flipToHelp : function(evt, helpContent, $target ) {
+    _flipToHelp : function(evt, help, $target) {
        var thisObj  = this;
        var $helpWrapper = $('<div>'); // this one gets stripped off
-       var $helpContainer = $('<div>').addClass('help-page-wrapper clearfix').append(getLandingHelpHeader(), helpContent);
+       var $helpContainer = $('<div>').addClass('help-page-wrapper clearfix').append(getLandingHelpHeader(), help.content);
        $helpWrapper.append($helpContainer);
        
        if(! $target)
@@ -63,11 +63,22 @@
             });       
             if(!thisObj._help_flipped){
                thisObj._help_flipped = true;
-               thisObj.element.find('.help-link').removeClass().addClass('help-return');
+               thisObj.element.find('.help-link').removeClass().addClass('help-return').before(
+                $('<div>').addClass('help-popout').append(
+                  $('<a>').attr('href','#').text('popout').click(function(e){
+                    if(help.url){
+                      if(help.pop_height)
+                        popOutPageHelp(help.url, help.pop_height);
+                      else
+                        popOutPageHelp(help.url);
+                    }
+                    thisObj.element.find('.help-revert-button a').trigger('click');
+                  })));
                thisObj.element.find('.help-page-wrapper').parent().removeAttr('style'); // flip plugin adds unnecessary style
             }else{
                thisObj._help_flipped = false;
                thisObj.element.find('.help-return').removeClass().addClass('help-link');
+               thisObj.element.find('.help-popout').detach();
                var $container = $('html body').find(DOM_BINDING['main']);
                $container.maincontainer("clearSelected");
                $container.maincontainer("changeSelected",evt, {selected:thisObj.widgetName});

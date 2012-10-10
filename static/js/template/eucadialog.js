@@ -35,7 +35,6 @@
     },
     $error_div : null,
     help_flipped : false,
-    popout_dialog : null,
     _init : function() {
       var thisObj = this;
       /// create div for displaying errors
@@ -106,8 +105,6 @@
              }
          },
          close: function(event, ui) { 
-           if(thisObj.popout_dialog) 
-             thisObj.popout_dialog.dialog('close'); 
            if( thisObj.options.on_close) { 
              thisObj.options.on_close.callback();
            }
@@ -169,36 +166,17 @@
           $contentPane.fadeOut(function(){
             $helpPane.fadeIn();
             thisObj.help_flipped = true;
-            if(thisObj.popout_dialog){
-              $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return');
-            }else{
-              $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return').before(
-                $('<div>').addClass('help-popout').append(
-                  $('<a>').attr('href','#').text('popout').click(function(e){
-                    if(thisObj.popout_dialog)
-                      return;
-                    $helpLink.trigger('click');
-                    thisObj.popout_dialog = $help.content.find('.dialog-help-content').clone().dialog({
-                      autoOpen: true,  // assume the three params are fixed for all dialogs
-                      modal: false,
-                      width: 500,
-                      maxHeight: false,
-                      height: 'auto',
-                      dialogClass: 'euca-popout-container',
-                      resizable: false,
-                      closeOnEscape : true,
-                      position: [800, 100],// { my: 'center', at: 'right', of: thisObj.element, collision: 'none'},
-                      open: function(e, ui){
-                        thisObj.element.data('dialog').option('position', [100,200]);
-                        thisObj._stylePopout();
-                      },
-                      close: function(e, ui){
-                        $('html body').find('.euca-popout-container').detach();
-                        thisObj.popout_dialog = null;
-                      }
-                  });
+            $titleBar.find('.'+thisObj.options.help_icon_class).removeClass().addClass('help-return').before(
+              $('<div>').addClass('help-popout').append(
+                $('<a>').attr('href','#').text('popout').click(function(e){
+                  if(thisObj.options.help['url']){
+                    if(thisObj.options.help['pop_height'])
+                      popOutDialogHelp(thisObj.options.help['url'], thisObj.options.help['pop_height']);
+                    else
+                      popOutDialogHelp(thisObj.options.help['url']);
+                  }
+                  $helpLink.trigger('click');
                 })));
-            }
             $helpLink.html('&nbsp;');
             $buttonPane.hide();
             $resourcePane.hide();
@@ -211,8 +189,8 @@
           $helpPane.fadeOut(function(){
             $contentPane.fadeIn();
             thisObj.help_flipped = false;
+            $titleBar.find('.help-popout').detach();
             $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
-            $titleBar.find('.help-popout').remove();
             $helpLink.html('&nbsp;');
             $buttonPane.show();
             $resourcePane.show();
@@ -223,16 +201,6 @@
       thisObj.element.find('.help-revert-button a').click( function(evt) {
         $helpLink.trigger('click');
       });
-    },
-    _stylePopout : function(){
-      var thisObj = this;
-      var $container = $('html body').find('.euca-popout-container');
-      var $titleBar = $container.find('.ui-dialog-titlebar');
-      $titleBar.append($('<div>').addClass('popout-close').append(
-                         $('<a>').attr('href','#').text('close').click(function(e){
-                           thisObj.popout_dialog.dialog('close'); 
-                         })));
-      
     },
     _makeButtons : function() {
       var btnArr = [];

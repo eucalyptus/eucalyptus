@@ -103,7 +103,7 @@
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
-          thisObj._flipToHelp(evt, $snapshotHelp);
+          thisObj._flipToHelp(evt, {content: $snapshotHelp, url: help_snapshot.landing_content_url});
         },
         filters : [{name:"snap_state", options: ['all','in-progress','completed'], text: [snap_state_selector_all, snap_state_selector_in_progress, snap_state_selector_completed], filter_col:7, alias: {'in-progress':'pending','completed':'completed'}} ],
         legend : ['pending', 'completed', 'error'],
@@ -129,7 +129,7 @@
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: { content: $del_help },
+         help: { content: $del_help, url: help_snapshot.dialog_delete_content_url},
        });
       // snapshot delete dialog end
       // create snapshot dialog start
@@ -154,7 +154,7 @@
             },
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
-         help: { content: $snapshot_dialog_help },
+         help: { content: $snapshot_dialog_help, url: help_snapshot.dialog_create_content_url },
          on_open: {spin: true, callback: [ function(args) {
            var dfd = $.Deferred();
            thisObj._initCreateDialog(dfd) ; // pulls volumes info from the server
@@ -190,7 +190,7 @@
             }, disabled:true},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $reg_dialog.eucadialog("close");}} 
          },
-         help: { content: $reg_help },
+         help: { content: $reg_help, url: help_snapshot.dialog_register_content_url },
          on_open: {callback: [ function(args) {
            var $nameEditor = thisObj.regDialog.find('#snapshot-register-image-name');
            $nameEditor.val('');

@@ -193,7 +193,7 @@
           <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
           <div id="dashboard-content">
             <div class="instances inner-box clearfix">
-              <h3>Instances</h3>
+              <h3>{{!>instances_label}}</h3>
               <div id="dashboard-instance-img"></div>
               <div id="dashboard-instance-az" title="{{!: dashboard_instance_az_tip }}">
                 <select>
@@ -211,30 +211,30 @@
                 </div>
               </div>
               <div id="dashboard-instance-launch">
-                <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">Launch new instance</a>
+                <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">{{!>dashboard_launch_new_instance}}</a>
               </div> 
             </div>
             <div class="storage inner-box clearfix">
-              <h3>Storage</h3>
+              <h3>{{!>storage_label}}</h3>
               <div id="dashboard-storage-img"></div>
               <div id="dashboard-storage-volume" class="status-readout" title="{{!: dashboard_volumes_tip }}">
-                <span></span> {{!>dashboard_volumes}}
+                <span></span> {{!>volumes_label}}
               </div>
               <div id="dashboard-storage-snapshot" class="status-readout" title="{{!: dashboard_snapshots_tip }}">
-                <span></span> {{!>dashboard_snapshots}}
+                <span></span> {{!>snapshots_label}}
               </div>
             </div>
             <div class="netsec inner-box clearfix">
-              <h3>Network &amp; Security</h3>
+              <h3>{{!>netsec_label}}</h3>
               <div id="dashboard-netsec-img"></div>
               <div id="dashboard-netsec-sgroup" class="status-readout" title="{{!: dashboard_sgroup_tip }}">
-                <span></span> {{!>dashboard_sgroup}}
+                <span></span> {{!>sgroups_label}}
               </div>
               <div id="dashboard-netsec-keypair" class="status-readout" title="{{!: dashboard_keypair_tip }}">
-                <span></span> {{!>dashboard_keypair}}
+                <span></span> {{!>keypairs_label}}
               </div>
               <div id="dashboard-netsec-eip" class="status-readout" title="{{!: dashboard_eip_tip }}">
-                <span></span> {{!>dashboard_eip}}
+                <span></span> {{!>eips_label}}
               </div>           
             </div> <!-- END of netsec div -->
           </div> <!-- END dashboard-content -->

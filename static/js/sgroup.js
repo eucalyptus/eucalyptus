@@ -88,7 +88,7 @@
         },
         menu_click_create : function (args) { thisObj._createAction(); },
         help_click : function(evt) {
-          thisObj._flipToHelp(evt, $sgroupHelp);
+          thisObj._flipToHelp(evt, {content: $sgroupHelp, url: help_sgroup.landing_content_url});
         },
       });
       this.tableWrapper.appendTo(this.element);
@@ -110,7 +110,7 @@
            'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.eucadialog("close");}},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
-         help: { content: $del_help },
+         help: { content: $del_help, url: help_sgroup.dialog_delete_content_url },
        });
 
       var createButtonId = 'sgroup-add-btn';
@@ -175,7 +175,7 @@
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
         },
-        help: { content: $add_help },
+        help: { content: $add_help, url: help_sgroup.dialog_add_content_url, pop_height: 600 },
         user_val : function(index) {
                     thisObj.rulesList.splice(index, 1);
                     thisObj._refreshRulesList(thisObj.addDialog);
@@ -244,7 +244,7 @@
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
-        help: { content: $edit_help },
+        help: { content: $edit_help , url: help_sgroup.dialog_edit_content_url, pop_height: 600},
         user_val : function(index) {
                     if (thisObj.rulesList[index].isnew) {
                         thisObj.rulesList.splice(index, 1);
