@@ -517,7 +517,7 @@
             $('<a>').attr('href','#').text(type).click( function(){
               selectedType = type;
               typeSelected = true;
-              var legend = type +' defaults: ' + size[0] + ' CPUs, '+size[1]+' memory(MB), '+size[2]+' disk(GB,root device)';  
+              var legend = type + '&nbsp;' + launch_wizard_type_description_default + '&nbsp;' + size[0] + '&nbsp;' + launch_wizard_type_description_cpus + ',&nbsp;' + size[1] + '&nbsp;' + launch_wizard_type_description_memory + ',&nbsp;' +size[2] + '&nbsp;' + launch_wizard_type_description_disk;  
               $size.find('#launch-wizard-type-size-legend').html(legend); 
               $(this).parent().addClass('selected-type');
               $(this).parent().siblings().removeClass('selected-type');
