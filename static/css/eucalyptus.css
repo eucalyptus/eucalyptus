@@ -2355,7 +2355,8 @@ span.on-error {
 }
 
 .image-type.windows {
-  background-position: 0 0;
+  /*background-position: 0 0;*/
+  background-image: none;
 }
 
 .image-type.rhel,
