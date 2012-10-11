@@ -503,11 +503,11 @@ public class FalseDataGenerator
 
 			/* An instance which is created before report beginning and terminated after report end. Beginning and ending
 			 * does not correspond to report beginning and ending times, so fractional usage is required. Should result in
-			 * 1300d usage (300 * 0.6666=200 for initial period,  300*3=900, 300*0.6666=200 for final usage).
+			 * 1000d usage (300 * 0.6666=200 for initial period,  300*2=600, 300*0.6666=200 for final usage).
 			 * 
 			 */
 			uuid = "b-0-" + i;
-			store.insertCreateEvent(uuid, "i-1", 800l, "m1.small", userId, "zone0");
+			store.insertCreateEvent(uuid, "i-1", 500l, "m1.small", userId, "zone0");
 			store.insertUsageEvent(uuid,  600l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
 			store.insertUsageEvent(uuid,  900l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
 			store.insertUsageEvent(uuid, 1200l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 600d*oneMB);
@@ -517,15 +517,15 @@ public class FalseDataGenerator
 
 			/* Instance outside of report bounds (before) should cause no usage */
 			uuid = "c-0-" + i;
-			store.insertCreateEvent(uuid, "i-2", 800l, "m1.small", userId, "zone0");
+			store.insertCreateEvent(uuid, "i-2", 50l, "m1.small", userId, "zone0");
 			store.insertUsageEvent(uuid,  100l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
 			store.insertUsageEvent(uuid,  200l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
 			store.insertUsageEvent(uuid,  300l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 600d*oneMB);
 
 			/* Instance outside of report bounds (after) should cause no usage */
 			uuid = "d-0-" + i;
-			store.insertCreateEvent(uuid, "i-2", 800l, "m1.small", userId, "zone0");
-			store.insertUsageEvent(uuid,  2000l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
+			store.insertCreateEvent(uuid, "i-3", 2000l, "m1.small", userId, "zone0");
+			store.insertUsageEvent(uuid,  2100l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
 			store.insertUsageEvent(uuid,  2200l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
 			store.insertUsageEvent(uuid,  2300l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 600d*oneMB);
 		}
@@ -543,30 +543,30 @@ public class FalseDataGenerator
 		}
 		/* TODO: verify zone totals */
 		InstanceUsageArtEntity zoneUsage = zone.getUsageTotals().getInstanceTotals();
-		checkDiskInMetric("Zone Totals", zoneUsage, 2000d*NUM_USER_TEST); // Each user has 2000d (1300d+700d for instance a+b)	
+		checkDiskInMetric("Zone Totals", zoneUsage, 1700d*NUM_USER_TEST); // Each user has 2000d (1000d+700d for instance a+b)	
 		
-		AccountArtEntity account = zone.getAccounts().get("acc-0");
+		AccountArtEntity account = zone.getAccounts().get("account0");
 		if (account==null) {
-			throw new IllegalStateException("acc-0 not found");
+			throw new IllegalStateException("account0 not found");
 		}
 		Map<String,UserArtEntity> users = account.getUsers();
 		for (int i=0; i<NUM_USER_TEST; i++) {
-			String userId = "user-" + i;
+			String userId = "user " + i;
 			UserArtEntity user = users.get(userId);
 			if (user==null) {
-				throw new IllegalStateException("user" + userId + " not found");
+				throw new IllegalStateException("user " + userId + " not found");
 			}
 
 			/* Verify user totals */
 			InstanceUsageArtEntity userUsage = user.getUsageTotals().getInstanceTotals();
-			checkDiskInMetric("User Totals", userUsage, 2000d);	// Each user has 2000d (1300d+700d for instance a+b)
+			checkDiskInMetric("User Totals", userUsage, 1700d);	// Each user has 1700d (1000d+700d for instance a+b)
 			
 			for (String uuid: user.getInstances().keySet()) {
 				InstanceUsageArtEntity usage = user.getInstances().get(uuid).getUsage();
 				if (uuid.startsWith("a")) {
 					checkDiskInMetric("Instance A", usage, 700d);  // See comment in geneation method for 700d
 				} else if (uuid.startsWith("b")) {
-					checkDiskInMetric("Instance B", usage, 1300d); // See comment in generation method for 1300d
+					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1300d
 				}
 			}
 		}
@@ -574,8 +574,8 @@ public class FalseDataGenerator
 	
 	private static boolean checkDiskInMetric(String testName, InstanceUsageArtEntity usage, double foundVal)
 	{
-		long expected = new Double(usage.getDiskReadMegs()).longValue();
-		long got = new Double(foundVal).longValue();
+		long got = new Double(usage.getDiskReadMegs()).longValue();
+		long expected = new Double(foundVal).longValue();
 		log.debug(String.format("test:%s expected:%d got:%d", testName, expected, got));
 		return (expected==got);
 	}
