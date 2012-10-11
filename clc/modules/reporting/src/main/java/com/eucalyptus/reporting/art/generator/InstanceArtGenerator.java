@@ -79,18 +79,18 @@ public class InstanceArtGenerator
     private static Logger log = Logger.getLogger( InstanceArtGenerator.class );
 
     /* Metric names */
-    private static final String METRIC_NET_IN_BYTES   = "NetworkIn";
-    private static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
-    private static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
-    private static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
-    private static final String METRIC_DISK_READ_OPS  = "DiskReadOps";
-    private static final String METRIC_DISK_WRITE_OPS = "DiskWriteOps";
-    private static final String METRIC_CPU_USAGE_MS   = "CPUUtilization";
-    private static final String METRIC_VOLUME_READ    = "VolumeTotalReadTime";
-    private static final String METRIC_VOLUME_WRITE   = "VolumeTotalWriteTime";
+    public static final String METRIC_NET_IN_BYTES   = "NetworkIn";
+    public static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
+    public static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
+    public static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
+    public static final String METRIC_DISK_READ_OPS  = "DiskReadOps";
+    public static final String METRIC_DISK_WRITE_OPS = "DiskWriteOps";
+    public static final String METRIC_CPU_USAGE_MS   = "CPUUtilization";
+    public static final String METRIC_VOLUME_READ    = "VolumeTotalReadTime";
+    public static final String METRIC_VOLUME_WRITE   = "VolumeTotalWriteTime";
 
-    private static final String DIM_TOTAL     = "total";
-    private static final String DIM_DEFAULT   = "default";
+    public static final String DIM_TOTAL     = "total";
+    public static final String DIM_DEFAULT   = "default";
     
     private static final long USAGE_SEARCH_PERIOD = TimeUnit.DAYS.toMillis( 12 );
 
@@ -184,6 +184,9 @@ public class InstanceArtGenerator
             					instanceStartTimes.get(event.getUuid()), eventMs, event.getValue());
         				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
         						fractionalVal);
+        				log.debug(String.format("new metric time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f fraction:%f",
+        						instanceStartTimes.get(event.getUuid()), eventMs, report.getBeginMs(), report.getEndMs(),
+        						event.getUuid(), event.getMetric(),	event.getDimension(), event.getValue(), fractionalVal));
             		}
         			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue()));
         		} else {
@@ -197,18 +200,21 @@ public class InstanceArtGenerator
         			if (event.getValue() < prevData.lastVal) {
         				/* SENSOR RESET; we lost data; just take whatever amount greater than 0 */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
-        						prevData.lastMs, eventMs, event.getValue());        				
+        						prevData.lastMs, eventMs, event.getValue());
         				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
         						fractionalVal);
-        			} else {
+        				log.debug(String.format("reset time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f fraction:%f",
+        						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
+        						event.getDimension(), event.getValue(), fractionalVal));
+       			} else {
         				/* Increase total by val minus lastVal */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue()-prevData.lastVal);
+        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        						fractionalVal);
         				log.debug(String.format("event time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f lastVal:%f fraction:%f",
         						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
         						event.getDimension(), event.getValue(), prevData.lastVal, fractionalVal));
-        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
-        						fractionalVal);
         			}
         			prevDataMap.put(key, new MetricPrevData(prevData.firstMs, eventMs, event.getValue()));
         		}
