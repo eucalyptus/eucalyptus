@@ -1442,6 +1442,7 @@ public class OverlayManager implements LogicalStorageManager {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(foundLVMVolumeInfo != null) {
+			LOG.info("Marking volume: " + volumeId + " for cleanup");
 			foundLVMVolumeInfo.setCleanup(true);
 			volumeManager.finish();
 		}  else {
