@@ -88,7 +88,7 @@ public class StorageCheckerService {
 					checker.run();
 				}
 			}
-		}, 1, 15, TimeUnit.SECONDS);
+		}, 1, 1, TimeUnit.MINUTES);
 
 	}
 
