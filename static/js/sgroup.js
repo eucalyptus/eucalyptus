@@ -766,7 +766,7 @@
                   $('<div>').addClass('expanded-value').text(portOrType)),
                 $('<li>').append( 
                   $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
-                  $('<div>').addClass('expanded-value').text(src)))));
+                  $('<div>').addClass('expanded-value').html(src).text()))));
         });
       }
       return $('<div>').append($wrapper);

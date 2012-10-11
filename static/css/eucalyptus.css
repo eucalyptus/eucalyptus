@@ -2704,6 +2704,11 @@ textarea.console-output {
   margin-top: 5px;
 }
 
+#launch-images td:hover,
+#launch-images td:hover .image-name {
+  color: #73a434;
+}
+
 #wizard-img-table-size {
  text-align: right; 
 }
