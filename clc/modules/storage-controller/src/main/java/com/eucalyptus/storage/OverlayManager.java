@@ -658,6 +658,25 @@ public class OverlayManager implements LogicalStorageManager {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(foundLVMVolumeInfo != null) {
+			try {
+				exportManager.cleanup(foundLVMVolumeInfo);
+			} catch(EucalyptusCloudException ee) {
+				LOG.error(ee, ee);
+			}
+			String loDevName = foundLVMVolumeInfo.getLoDevName();
+			if(loDevName != null) {
+				String vgName = foundLVMVolumeInfo.getVgName();
+				String lvName = foundLVMVolumeInfo.getLvName();
+				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+				try {
+					disableLogicalVolume(absoluteLVName);
+					removeLoopback(loDevName);
+					foundLVMVolumeInfo.setLoDevName(null);
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e, e);
+				}
+			}
+
 			volumeManager.remove(foundLVMVolumeInfo);
 			volumeManager.finish();
 			File volFile = new File (DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + volumeId);
@@ -1413,7 +1432,10 @@ public class OverlayManager implements LogicalStorageManager {
 			long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
 			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 			try {
-				String loDevName = createLoopback(rawFileName);
+				String loDevName = lvmVolumeInfo.getLoDevName();
+				if(loDevName == null) {
+					loDevName = createLoopback(rawFileName);
+				}
 				String vgName = lvmVolumeInfo.getVgName();
 				String lvName = lvmVolumeInfo.getLvName();
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
@@ -1421,12 +1443,12 @@ public class OverlayManager implements LogicalStorageManager {
 				enableLogicalVolume(absoluteLVName);
 				//export logical volume
 				try {
-					lvmVolumeInfo.setCleanup(false);
 					volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
 				} catch(EucalyptusCloudException ex) {
 					LOG.error(ex);
 					throw ex;
 				}
+				lvmVolumeInfo.setCleanup(false);
 				volumeManager.finish();
 			} catch(EucalyptusCloudException ex) {
 				String error = "Unable to run command: " + ex.getMessage();

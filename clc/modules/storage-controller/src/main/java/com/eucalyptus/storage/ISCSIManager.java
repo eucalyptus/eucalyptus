@@ -63,32 +63,24 @@
 package com.eucalyptus.storage;
 
 import java.io.IOException;
-import java.security.PublicKey;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.crypto.Cipher;
-
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.util.BlockStorageUtil;
-import com.eucalyptus.util.EucalyptusCloudException;
-
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
+import com.eucalyptus.util.BlockStorageUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
@@ -96,7 +88,6 @@ import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -207,6 +198,11 @@ public class ISCSIManager implements StorageExportManager {
 	// Modified logic for implementing EUCA-3597
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
 		checkAndAddUser();
+
+		String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+		if(returnValue.length() > 0) {
+			LOG.info("Target: " + tid + " already exported");
+		} 
 
 		Runtime rt = Runtime.getRuntime();
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
@@ -343,7 +339,11 @@ public class ISCSIManager implements StorageExportManager {
 	@Override
 	public synchronized void allocateTarget(LVMVolumeInfo volumeInfo) {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
-			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;		
+			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;	
+			if(iscsiVolumeInfo.getTid() > -1) {
+				LOG.info("Volume already associated with a tid: " + iscsiVolumeInfo.getTid());
+				return;
+			}
 			EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
 			List<ISCSIMetaInfo> metaInfoList = db.query(new ISCSIMetaInfo(StorageProperties.NAME));
 			int tid = -1, storeNumber = -1;
