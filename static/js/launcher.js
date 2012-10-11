@@ -327,7 +327,7 @@
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
                                $('<div>').addClass('image-name').text(name), // should be linux, windows, or distros
                                $('<div>').addClass('image-id-arch').append($('<span>').text(emi), $('<span>').text(arch)),
-                               $('<div>').addClass('image-description').text(desc)); 
+                               $('<div>').addClass('image-description').html(desc).text()); 
                  
                  return $cell.wrap($('<div>')).parent().html();
                }
@@ -362,6 +362,10 @@
                "bVisible": false,
                "mDataProp": "root_device_type"
              },
+             {
+               "bVisible": false,
+               "mDataProp": "state",
+             }
            ],
            "sDom" : "<\"#filter-wrapper\"<\"#owner-filter\"><\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
            "sPaginationType" : "full_numbers",
@@ -400,7 +404,7 @@
         function( oSettings, aData, iDataIndex ) {
           if (oSettings.sInstance !== $table.attr('id'))
             return true;
-          return aData[3] === 'machine';
+          return (aData[3] === 'machine'  && aData[6] ==='available');
         }); // display only machine images
 
       var filters = [{name:"platform", options: ['all', 'linux','windows'], text: [launch_instance_image_table_platform_all, launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:1}, 
