@@ -1805,7 +1805,7 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 .ui-widget-overlay {
-  background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
+  background: url(../images/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
   opacity: 0.6;
 }
 
