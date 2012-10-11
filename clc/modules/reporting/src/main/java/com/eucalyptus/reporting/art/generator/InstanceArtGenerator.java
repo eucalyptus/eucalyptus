@@ -188,7 +188,7 @@ public class InstanceArtGenerator
         						instanceStartTimes.get(event.getUuid()), eventMs, report.getBeginMs(), report.getEndMs(),
         						event.getUuid(), event.getMetric(),	event.getDimension(), event.getValue(), fractionalVal));
             		}
-        			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue()));
+        			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue(), event.getSequenceNum()));
         		} else {
         			/* Previous value exists */
                 	final MetricPrevData prevData = prevDataMap.get(key);
@@ -197,7 +197,7 @@ public class InstanceArtGenerator
         			usageEntity.setDurationMs(Math.max(usageEntity.getDurationMs(),
 							overlap(report.getBeginMs(), report.getEndMs(), prevData.firstMs, eventMs)));        			
 
-        			if (event.getValue() < prevData.lastVal) {
+        			if (event.getSequenceNum() < prevData.lastSeq) {
         				/* SENSOR RESET; we lost data; just take whatever amount greater than 0 */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue());
@@ -216,7 +216,7 @@ public class InstanceArtGenerator
         						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
         						event.getDimension(), event.getValue(), prevData.lastVal, fractionalVal));
         			}
-        			prevDataMap.put(key, new MetricPrevData(prevData.firstMs, eventMs, event.getValue()));
+        			prevDataMap.put(key, new MetricPrevData(prevData.firstMs, eventMs, event.getValue(), event.getSequenceNum()));
         		}
             	return true;
             }
@@ -358,12 +358,14 @@ public class InstanceArtGenerator
 		private final long   firstMs;
 		private final double lastVal;
 		private final long   lastMs;
+		private final long   lastSeq;
 		
-		private MetricPrevData(long firstMs, long lastMs, double lastVal)
+		private MetricPrevData(long firstMs, long lastMs, double lastVal, long lastSeq)
 		{
 			this.firstMs = firstMs;
 			this.lastMs  = lastMs;
 			this.lastVal = lastVal;
+			this.lastSeq = lastSeq;
 		}
 	}
 
