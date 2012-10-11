@@ -104,6 +104,8 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.Component.Transition;
+import com.eucalyptus.component.fault.FaultBuilderImpl;
+import com.eucalyptus.component.fault.FaultSubsystemManager;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -760,4 +762,17 @@ public class Faults {
   public static boolean isFailstop( ) {
     return !failstopExceptions.isEmpty( );
   }
+  
+  private static final FaultSubsystemManager faultSubsystemManager = new FaultSubsystemManager();
+  public static void init() {
+		faultSubsystemManager.init();
+  }
+  public static FaultBuilder forComponent(Class <? extends ComponentId> componentIdClass) {
+    return new FaultBuilderImpl(faultSubsystemManager, componentIdClass);
+  }
+  public interface FaultBuilder {
+		public FaultBuilder withVar(String name, String value);
+		public FaultBuilder havingId(int faultId);
+		public void log();
+	}
 }

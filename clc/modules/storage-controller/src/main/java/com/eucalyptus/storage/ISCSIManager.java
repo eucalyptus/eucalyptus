@@ -74,10 +74,10 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -175,7 +175,7 @@ public class ISCSIManager implements StorageExportManager {
 				exitValue = processController.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException tex) {
 				processController.cancel(true);
-				FaultSubsystem.forComponent(Storage.class).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
+				Faults.forComponent(Storage.class).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
 				throw new EucalyptusCloudException("No response was received within the timeout for the process: " + buildCommand(command));
 			}
 			output.join();

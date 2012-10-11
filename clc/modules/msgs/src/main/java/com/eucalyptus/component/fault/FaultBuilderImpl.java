@@ -59,40 +59,73 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-package com.eucalyptus.troubleshooting;
+package com.eucalyptus.component.fault;
 
-import java.util.Enumeration;
-import java.util.Properties;
+import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.Faults.FaultBuilder;
 
-public class TestFaultTrigger {
-	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
-	public static void triggerFault(int id, Properties varProps) {
-		// log it in all components
-		for (ComponentId componentId: ComponentIds.list()) {
-			try {
-				FaultBuilder faultBuilder = Faults.forComponent(componentId.getClass()).havingId(id);
-				LOG.debug("Triggering fault in component " + componentId.getName() + " with id " + id + " and vars " + varProps);
-				if (varProps != null) {
-					Enumeration e = varProps.propertyNames();
-					while (e.hasMoreElements()) {
-						String name = (String) e.nextElement();
-						String value = varProps.getProperty(name);
-						if (value == null) continue;
-						faultBuilder = faultBuilder.withVar(name, value);
-					}
+public class FaultBuilderImpl implements FaultBuilder {
+	private static final Logger LOG = Logger.getLogger(FaultBuilder.class);
+	private class NameValuePair {
+		private String name;
+		private String value;
+		public String getName() {
+			return name;
+		}
+		public String getValue() {
+			return value;
+		}
+		public NameValuePair(String name, String value) {
+			super();
+			this.name = name;
+			this.value = value;
+		}
+		
+	}
+	private FaultSubsystemManager faultSubsystemManager;
+	private Class<? extends ComponentId> componentIdClass;
+	private ArrayList<NameValuePair> vars = new ArrayList<NameValuePair>();
+	private int faultId;
+
+	public FaultBuilderImpl(FaultSubsystemManager faultSubsystemManager, Class<? extends ComponentId> componentIdClass) {
+		this.faultSubsystemManager = faultSubsystemManager;
+		this.componentIdClass = componentIdClass;
+	}
+	@Override
+	public FaultBuilder withVar(String name, String value) {
+		vars.add(new NameValuePair(name, value));
+		return this;
+	}
+
+	@Override
+	public FaultBuilder havingId(int faultId) {
+		this.faultId = faultId;
+		return this;
+	}
+
+	@Override
+	public void log() {
+		try {
+			FaultLogger faultLogger = faultSubsystemManager.getFaultLogger(componentIdClass);
+			Fault fault = faultSubsystemManager.getFaultRegistry().lookupFault(faultId);
+			if (fault == FaultRegistry.SUPPRESSED_FAULT) {
+				LOG.debug("Fault " + faultId + " detected, will not be logged because it has been configured to be suppressed.");
+			} else if (fault == null) {
+				LOG.error( "Fault " + faultId + " detected, could not find fault id in registry.");
+			} else {
+				for (NameValuePair nameValuePair: vars) {
+					fault = fault.withVar(nameValuePair.getName(), nameValuePair.getValue());
 				}
-				faultBuilder.log();
-			} catch (Exception ex) {
-				LOG.error("Error triggering fault: " + ex);
-				ex.printStackTrace();
+				faultLogger.log(fault);
 			}
+		} catch (Exception ex) {
+			LOG.error("Error writing fault with id " + faultId + "  for component " + componentIdClass.getName());
+			ex.printStackTrace();
 		}
 	}
+
 }
