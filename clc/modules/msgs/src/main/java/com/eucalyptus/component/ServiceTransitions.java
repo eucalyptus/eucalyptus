@@ -590,6 +590,7 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration parent ) throws Exception {
         parent.lookupBootstrapper( ).load( );
+        ServiceBuilders.lookup( parent.getComponentId( ) ).fireLoad( parent );
       }
       
     },

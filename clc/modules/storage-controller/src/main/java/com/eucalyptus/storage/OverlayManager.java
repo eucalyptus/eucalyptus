@@ -87,6 +87,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.storage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
@@ -100,6 +101,7 @@ import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
+@StorageManagerProperty("overlay")
 public class OverlayManager implements LogicalStorageManager {
 
 	public static final String lvmRootDirectory = "/dev";

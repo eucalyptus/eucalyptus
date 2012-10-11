@@ -32,7 +32,12 @@ clc/modules/msgs/src/main/resources/msgs-binding.xml
 clc/modules/postgresql/src/main/resources/postgresql-binaries.properties
 clc/modules/storage-controller/include/**
 clc/modules/storage-controller/lib
-clc/modules/storage-san
+clc/modules/storage-san-common
+clc/modules/storage-san-emc-libs
+clc/modules/storage-san-emc
+clc/modules/storage-san-equallogic
+clc/modules/storage-san-netapp
+clc/modules/storage-san-netapp-libs
 clc/modules/vmware-broker
 clc/modules/www/build-war
 clc/modules/www/conf/eucalyptus-web.properties
@@ -61,6 +66,7 @@ util/euca_rootwrap
 util/test_misc
 util/test_fault
 util/test_wc
+util/euca-generate-fault
 clc/.settings/org.eclipse.jdt.core.prefs
 clc/eucadmin/eucadmin/__init__.py
 storage/euca-blobs

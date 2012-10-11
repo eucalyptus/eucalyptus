@@ -328,6 +328,7 @@ typedef struct ncInstance_t {
 
     // reported by NC back, for report generation
     long long blkbytes, netbytes;
+    time_t last_stat;
 } ncInstance;
 
 typedef struct ncResource_t {

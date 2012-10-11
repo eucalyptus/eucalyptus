@@ -110,6 +110,9 @@ public class StorageProperties {
 	public static String SC_INITIATOR_IQN = null;
 	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
 	public static final String blockSize = "1M";
+	public static final String DEFAULT_EBS_MANAGER = "OverlayManager";
+	public static String DAS_DEVICE = "/dev/blockdev";
+	public static final String STORAGE_CLASS_PREFIX = "com.eucalyptus.storage.";
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 

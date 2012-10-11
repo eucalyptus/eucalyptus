@@ -64,10 +64,14 @@
 # All executables placed into this directory will be invoked by NC
 # at certain points with certain arguments. Currently supported are:
 #
-#   euca-nc-post-init <eucalyptus-home>
-#   euca-nc-pre-boot  <eucalyptus-home> <instance-home>
-#   euca-nc-pre-adopt <eucalyptus-home> <instance-home>
-#   euca-nc-pre-clean <eucalyptus-home> <instance-home>
+#   euca-nc-pre-init      <eucalyptus-home>
+#   euca-nc-post-init     <eucalyptus-home>
+#   euca-nc-pre-hyp-check <eucalyptus-home>
+#   euca-nc-pre-boot      <eucalyptus-home> <instance-home>
+#   euca-nc-pre-adopt     <eucalyptus-home> <instance-home>
+#   euca-nc-pre-clean     <eucalyptus-home> <instance-home>
+#   euca-nc-pre-attach    <eucalyptus-home> <volume-Xml-Path>
+#   euca-nc-post-detach   <eucalyptus-home> <volume-Xml-Path>
 #
 # If the executables return 0, the execution proceeds normally.
 # If values [1-99] are returned, NC will abort some operation:

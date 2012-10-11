@@ -59,35 +59,25 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+/*
+ * Author: Sunil Soman sunils@cs.ucsb.edu
+ */
 
-package com.eucalyptus.config
+#include <com_eucalyptus_storage_DASManager.h>
+#include <storage_native.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <sys/wait.h>
+#include <signal.h>
 
-import java.io.Serializable
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.PersistenceContext
-import javax.persistence.Table
-import javax.persistence.Transient
-import org.hibernate.annotations.Cache
-import org.hibernate.annotations.CacheConcurrencyStrategy
-import org.hibernate.annotations.Entity
-import com.eucalyptus.component.ComponentId.ComponentPart
-import com.eucalyptus.component.id.Storage
+void sigchld(int signal)
+{
+	while (0 < waitpid(-1, NULL, WNOHANG));
+}
 
-@Entity @javax.persistence.Entity
-@PersistenceContext(name="eucalyptus_config")
-@Table( name = "config_sc" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ComponentPart(Storage.class)
-public class StorageControllerConfiguration extends ComponentConfiguration implements Serializable {
-  @Transient
-  private static String DEFAULT_SERVICE_PATH = "/services/Storage";
-  public StorageControllerConfiguration( ) {
-    
-  }
-  public StorageControllerConfiguration( String name ) {
-    super.setName(name);
-  }
-  public StorageControllerConfiguration( String partition, String name, String hostName, Integer port ) {
-    super( partition, name, hostName, port, DEFAULT_SERVICE_PATH );
-  }
+JNIEXPORT void JNICALL Java_com_eucalyptus_storage_DASManager_registerSignals(JNIEnv *env, jobject obj) {
+	signal(SIGCHLD, sigchld);
 }

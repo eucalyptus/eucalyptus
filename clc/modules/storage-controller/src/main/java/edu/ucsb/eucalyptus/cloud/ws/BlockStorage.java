@@ -89,6 +89,7 @@ import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.CheckerTask;
 import com.eucalyptus.storage.LogicalStorageManager;
+import com.eucalyptus.storage.StorageManagers;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
@@ -138,8 +139,7 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 public class BlockStorage {
-
-	private static Logger LOG = Logger.getLogger(BlockStorage.class);
+  private static Logger LOG = Logger.getLogger(BlockStorage.class);
 
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
@@ -152,14 +152,17 @@ public class BlockStorage {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
 		StorageProperties.updateStorageHost();
+		
 		try {
-			blockManager = BlockStorageManagerFactory.getBlockStorageManager();
+			blockManager = StorageManagers.getInstance();
 		} catch (Exception e) {
 			throw new EucalyptusCloudException(e);
 		}
+		
 		checker = new BlockStorageChecker(blockManager);
-		if(StorageProperties.trackUsageStatistics) 
+		if(StorageProperties.trackUsageStatistics) { 
 			blockStorageStatistics = new BlockStorageStatistics();
+		}
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
 		checkerService = new StorageCheckerService();
