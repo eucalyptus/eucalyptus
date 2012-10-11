@@ -41,11 +41,11 @@ import com.eucalyptus.event.Listeners;
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
 
-  @ConfigurableField(initial = "15", description = "How often the reporting system requests information from the cluster controller")
-  public static long DEFAULT_POLL_INTERVAL_MINS = 15;
+  @ConfigurableField(initial = "5", description = "How often the reporting system requests information from the cluster controller")
+  public static long DEFAULT_POLL_INTERVAL_MINS = 5;
   
   private Integer COLLECTION_INTERVAL_TIME_MS;
-  private Integer HISTORY_SIZE = 10;
+  private Integer HISTORY_SIZE = 5;
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
  
   private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
@@ -57,14 +57,16 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   @Override
   public void fireEvent( Hertz event ) {
    
-	COLLECTION_INTERVAL_TIME_MS = (((int) TimeUnit.MINUTES
-		.toMillis(DEFAULT_POLL_INTERVAL_MINS)) / HISTORY_SIZE) * 2;
+
+	COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
+		.toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
 
 	if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
 
 	    try {
 
-		if (event.isAsserted(DEFAULT_POLL_INTERVAL_MINS)) {
+		if (event.isAsserted(TimeUnit.MINUTES
+			.toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
 		    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
 
 			for (final ServiceConfiguration ccConfig : Topology
