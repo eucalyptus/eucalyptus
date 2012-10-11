@@ -66,6 +66,7 @@ import java.io.Serializable;
 import java.util.List;
 
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.Column;
@@ -129,6 +130,15 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 		}
 	}
 
+	@PrePersist
+	private void updateRedundantConfig( ) {
+		if ( this.blockStorageManager == null && this.getPartition( ) != null ) { 
+			for ( ServiceConfiguration s : ServiceConfigurations.listPartition( Storage.class, this.getPartition( ) ) ) {
+				StorageControllerConfiguration otherSc = ( StorageControllerConfiguration ) s;
+				this.blockStorageManager = otherSc.getBlockStorageManager( ) != null ? otherSc.getBlockStorageManager( ) : null;
+			}
+		}
+  }
 
 	public StorageControllerConfiguration( ) {
 

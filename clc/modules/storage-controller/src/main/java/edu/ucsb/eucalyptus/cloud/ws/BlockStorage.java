@@ -137,9 +137,6 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
 public class BlockStorage {
-
-	private static final LogicalStorageManager Stor = null;
-
   private static Logger LOG = Logger.getLogger(BlockStorage.class);
 
 	static LogicalStorageManager blockManager;

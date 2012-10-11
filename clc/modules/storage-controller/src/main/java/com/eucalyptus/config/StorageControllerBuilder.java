@@ -76,7 +76,6 @@ import com.eucalyptus.component.ServiceRegistrationException;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.StorageManagers;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -117,8 +116,8 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
   }
   
   @Override
-  public StorageControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
-    return new StorageControllerConfiguration( partition, name, host, port );
+  public StorageControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {  	
+  		return new StorageControllerConfiguration( partition, name, host, port );	
   }
   
   @Override
