@@ -91,10 +91,10 @@ class CachingClcInterface(ClcInterface):
             self.zoneUpdate = datetime.now()
         return self.zones
 
-    def get_all_images(self):
-        if (datetime.now() - self.imageUpdate) > timedelta(seconds = self.imageFreq):
-            self.images = self.clc.get_all_images()
-            self.imageUpdate = datetime.now()
+    def get_all_images(self, owners):
+   #     if (datetime.now() - self.imageUpdate) > timedelta(seconds = self.imageFreq):
+        self.images = self.clc.get_all_images(owners)
+   #         self.imageUpdate = datetime.now()
         return self.images
 
     # returns list of image attributes

@@ -140,7 +140,12 @@ class ComputeHandler(server.BaseHandler):
 
     def handleImages(self, action, clc):
         if action == 'DescribeImages':
-            return clc.get_all_images()
+            owner = self.get_argument('Owner', None);
+            if not owner:
+                owners = None
+            else:
+                owners = [owner]
+            return clc.get_all_images(owners)
         elif action == 'DescribeImageAttribute':
             imageid = self.get_argument('ImageId')
             attribute = self.get_argument('Attribute')

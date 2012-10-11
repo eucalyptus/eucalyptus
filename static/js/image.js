@@ -112,7 +112,7 @@
         legend : ['pending','available','failed'],
         show_only : [{filter_value: 'machine', filter_col: 8},{filter_value: 'available', filter_col: 7}],
         filters : [
-          /* {name:"img_ownership", options: ['all','my'], text: ['All images', 'Images owned by me'], filter_col:TBD}, */
+    //      {name:"img_ownership", options: ['all','my'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_all], callback : function(selected){ }}, 
           {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
 launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:10},
           {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:4},

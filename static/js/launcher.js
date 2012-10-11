@@ -293,7 +293,17 @@
 
       
       var dtArg = { 
-          "sAjaxSource": "../ec2?Action=DescribeImages&_xsrf="+$.cookie('_xsrf'),
+          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                $.ajax( {
+                    "dataType": 'json',
+                    "type": "POST",
+                    "url": sSource,
+                    "data": "_xsrf="+$.cookie('_xsrf'),
+                    "success": fnCallback
+                });
+
+          },
           "bSortClasses" : false,
           "bSortable" : false,
           "oLanguage" : { "sProcessing": "<img src=\"images/dots32.gif\"/> &nbsp; <span>Loading...</span>", 
@@ -353,7 +363,7 @@
                "mDataProp": "root_device_type"
              },
            ],
-           "sDom" : "<\"#filter-wrapper\"<\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
+           "sDom" : "<\"#filter-wrapper\"<\"#owner-filter\"><\"#platform-filter\"><\"clear\"><\"#arch-filter\"><\"clear\"><\"#root-filter\"><\"clear\">f><\"#table-wrapper\" <\"#wizard-img-table-size\"> tr<\"clear\">p>", 
            "sPaginationType" : "full_numbers",
            "iDisplayLength" : thisObj.options.image ? -1: 5,
            "bProcessing" : true,
@@ -369,6 +379,21 @@
     
       $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_refine));
       $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-section-label required-label').html(launch_instance_image_table_header));
+
+      // special owner filter
+      $section.find('#owner-filter').addClass('euca-table-filter').append(
+        $('<select>').append(
+          $('<option>').val('all').text(launch_instance_image_table_owner_all).attr('selected','selected'),
+          $('<option>').val('me').text(launch_instance_image_table_owner_me)));
+      $section.find('#owner-filter').find('select').change(function(e){
+        var val = $(e.target).val();
+        var oSettings = thisObj._imageTable.fnSettings();
+        if(val === 'me')
+          oSettings.sAjaxSource = "../ec2?Action=DescribeImages&Owner=self";
+        else 
+          oSettings.sAjaxSource = "../ec2?Action=DescribeImages";
+        thisObj._imageTable.fnReloadAjax();
+      });
 
       $.fn.dataTableExt.afnFiltering = [];
       $.fn.dataTableExt.afnFiltering.push(

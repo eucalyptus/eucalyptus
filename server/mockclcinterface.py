@@ -57,7 +57,7 @@ class MockClcInterface(ClcInterface):
     def get_all_zones(self):
         return self.zones
 
-    def get_all_images(self):
+    def get_all_images(self, owners):
         return self.images
 
     # returns list of snapshots attributes

@@ -298,6 +298,10 @@
                 }else
                   return true;
              });
+          }else if (filter['callback']){
+            $selector.change(function(e){ 
+              filter.callback($(e.target).val());
+            }); 
           }
 
           if(filter.default){

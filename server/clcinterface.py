@@ -12,7 +12,7 @@ class ClcInterface(object):
     ##
     # Image methods
     ##
-    def get_all_images(self):
+    def get_all_images(self, owners):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns list of image attributes
