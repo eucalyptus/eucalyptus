@@ -1520,25 +1520,26 @@ public class OverlayManager implements LogicalStorageManager {
 			volumeManager.abort();
 			for(LVMVolumeInfo foundLVMVolumeInfo : volumes) {
 				if(foundLVMVolumeInfo.getCleanup()) {
+					LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
+				volumeManager = new VolumeEntityWrapperManager();
+				String volumeId = foundLVMVolumeInfo.getVolumeId();
+				LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 					try {
-						exportManager.cleanup(foundLVMVolumeInfo);
+						exportManager.cleanup(volInfo);
 					} catch(EucalyptusCloudException ee) {
 						LOG.error(ee, ee);
 						continue;
 					}
 				String loDevName = foundLVMVolumeInfo.getLoDevName();
 				if(loDevName != null) {
-				volumeManager = new VolumeEntityWrapperManager();
-				String volumeId = foundLVMVolumeInfo.getVolumeId();
-				LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 				if(volInfo != null) {
 				String vgName = foundLVMVolumeInfo.getVgName();
 				String lvName = foundLVMVolumeInfo.getLvName();
 				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 				if(!volumeManager.areSnapshotsPending(volumeId)) {
-					LOG.info("Detaching loop device: " + loDevName);
 					try {
 						disableLogicalVolume(absoluteLVName);
+						LOG.info("Detaching loop device: " + loDevName);
 						removeLoopback(loDevName);
 						volInfo.setLoDevName(null);
 					} catch (EucalyptusCloudException e) {
@@ -1547,6 +1548,7 @@ public class OverlayManager implements LogicalStorageManager {
 				} else {
 					LOG.info("Snapshot in progress. Not detaching loop device.");
 				}
+				LOG.info("Done cleaning up: " + volumeId);
 				volInfo.setCleanup(false);
 				volumeManager.finish();
 				}

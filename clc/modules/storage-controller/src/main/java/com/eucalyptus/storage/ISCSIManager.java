@@ -228,32 +228,46 @@ public class ISCSIManager implements StorageExportManager {
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
+				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+				if(returnValue.length() > 0) {
+					LOG.info("Attempting to unexport target: " + tid);
+				} else {
+					LOG.info("Target: " + tid + " not found");
+					return;
+				}
 			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
 				LOG.error("Unable to unbind tid: " + tid);
-				return;
 			}
-
-			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
-				LOG.error("Unable to delete lun for tid: " + tid);
-				return;
-			}
-
 			int retryCount = 0;
+			do {
+					if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
+					LOG.warn("Unable to delete lun for: " + tid);
+                                        Thread.sleep(1000); //FIXME: clean this up async 
+					continue;
+				} else {
+					break;
+				}	
+			} while (retryCount++ < 30);
+			if (retryCount>=30){
+				LOG.error("Gave up deleting the lun for: " + tid);
+			}
+
+			retryCount = 0;
 			do {
 				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
 					LOG.warn("Unable to delete target: " + tid);
-                                        Thread.sleep(300); //FIXME: clean this up async 
+                                        Thread.sleep(1000); //FIXME: clean this up async 
 					continue;
 				}	
-				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+				returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
 				if(returnValue.length() > 0) {
 					LOG.warn("Target: " + tid + " still exists...");
-					Thread.sleep(300); //FIXME: clean this up async
+					Thread.sleep(1000); //FIXME: clean this up async
 				} else {
 					break;
 				}
-			} while (retryCount++ < 10);
-			if (retryCount>=10){
+			} while (retryCount++ < 30);
+			if (retryCount>=30){
 				LOG.error("Gave up deleting the target: " + tid);
 			}
 		} catch (Exception t) {
@@ -418,7 +432,8 @@ public class ISCSIManager implements StorageExportManager {
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
 				unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
-                                if(SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(iscsiVolumeInfo.getTid())}).length() == 0) {
+				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(iscsiVolumeInfo.getTid())});
+				if(returnValue.length() == 0) {
 					iscsiVolumeInfo.setTid(-1);
 				} else {
 					throw new EucalyptusCloudException("Unable to remove tid: " + iscsiVolumeInfo.getTid());
