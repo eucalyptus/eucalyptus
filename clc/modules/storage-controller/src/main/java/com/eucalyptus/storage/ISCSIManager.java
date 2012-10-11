@@ -104,12 +104,12 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
 	private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
-	
+
 	// TODO find out if its okay to not shutdown the service. found something online which explicitly mentioned this
 	private static ExecutorService service = Executors.newSingleThreadExecutor();
 	// TODO define fault IDs in a enum
 	private static final int TGT_HOSED = 2000;
-		
+
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;
@@ -216,7 +216,7 @@ public class ISCSIManager implements StorageExportManager {
 
 		execute(rt,
 				new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun",
-						String.valueOf(lun), "-b", path }, timeout);
+				String.valueOf(lun), "-b", path }, timeout);
 
 		execute(rt, new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user },
 				timeout);
@@ -228,21 +228,21 @@ public class ISCSIManager implements StorageExportManager {
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
-				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
-				if(returnValue.length() > 0) {
-					LOG.info("Attempting to unexport target: " + tid);
-				} else {
-					LOG.info("Target: " + tid + " not found");
-					return;
-				}
+			String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+			if(returnValue.length() > 0) {
+				LOG.info("Attempting to unexport target: " + tid);
+			} else {
+				LOG.info("Target: " + tid + " not found");
+				return;
+			}
 			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
 				LOG.error("Unable to unbind tid: " + tid);
 			}
 			int retryCount = 0;
 			do {
-					if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
+				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
 					LOG.warn("Unable to delete lun for: " + tid);
-                                        Thread.sleep(1000); //FIXME: clean this up async 
+					Thread.sleep(1000); //FIXME: clean this up async 
 					continue;
 				} else {
 					break;
@@ -256,7 +256,7 @@ public class ISCSIManager implements StorageExportManager {
 			do {
 				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
 					LOG.warn("Unable to delete target: " + tid);
-                                        Thread.sleep(1000); //FIXME: clean this up async 
+					Thread.sleep(1000); //FIXME: clean this up async 
 					continue;
 				}	
 				returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
@@ -426,7 +426,7 @@ public class ISCSIManager implements StorageExportManager {
 			db.commit();
 		}
 	}
-	
+
 	public void cleanup(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
