@@ -625,10 +625,14 @@
           req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
           req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
           req_params += "&IpPermissions."+(i+1)+".ToPort=" + toPort[i];
-          if (cidr[i])
-              req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + cidr[i];
-          if (fromGroup[i])
-              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
+          if (cidr[i]) {
+              var tmp = $("<div/>").html(cidr[i]).text();
+              req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + tmp;
+          }
+          if (fromGroup[i]) {
+              var tmp = $("<div/>").html(fromGroup[i]).text();
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + tmp
+          }
       }
       var sgroupName = groupName;
       $.ajax({

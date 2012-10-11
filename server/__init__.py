@@ -175,7 +175,7 @@ class RootHandler(BaseHandler):
         try:
             path = os.path.join(config.get('paths', 'staticpath'), "index.html")
         except ConfigParser.Error:
-            print "Caught exception"
+            logging.info("Caught url path exception :"+path)
             path = '../static/index.html'
         self.render(path)
 
