@@ -134,21 +134,33 @@ function clearRepeat() {
   _rqueue = {}; 
 }
     
-function describe(resource){
-  return $('html body').eucadata('get', resource);
+function describe(resource, resourceId){
+  var result= $('html body').eucadata('get', resource);
+  if(!resourceId)
+    return escapeResponse(resource,result);
+
+  if (result){
+    for(i in result){
+      if(result[i].id && result[i].id.toUpperCase() === resourceId.toUpperCase())
+        return escapeResponse(resource, result[i]);
+    }
+  }
+  return null;
 }
 
-function getResource(resourceType, resourceId){
-  if (!resourceId)
-    return null;
-  res = $('html body').eucadata('get', resourceType);
-  if (res) {
-    for (i in res){
-      if (res[i].id && res[i].id.toUpperCase() == resourceId.toUpperCase())
-        return res[i];
+function escapeResponse(resource, result){
+  return escapeData(result); 
+}
+
+function escapeData(data){
+  if($.type(data) === 'array' || $.type(data) === 'object'){
+    for (i in data){
+      data[i] = escapeData(data[i]);
     }
-  } else {
-    return null;
+    return data;
+  }else{
+    var $esc = $('<div>');
+    return $esc.html(data).text();
   }
 }
 
@@ -259,10 +271,10 @@ function getErrorMessage(jqXHR) {
 }
 
 function isRootVolume(instanceId, volumeId) {
-  var instance = getResource('instance', instanceId);
-  if ( instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
+  var instance = describe('instance', instanceId);
+  if ( instance && instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
     var rootVolume = instance.block_device_mapping[instance.root_device_name];
-    if ( rootVolume.volume_id == volumeId ) {
+    if ( rootVolume && rootVolume.volume_id === volumeId ) {
       return true;
     }
   }
