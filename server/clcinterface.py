@@ -110,6 +110,10 @@ class ClcInterface(object):
     def delete_key_pair(self, key_name):
         raise NotImplementedError("Are you sure you're using the right class?")
 
+    # returns keypair info and key
+    def import_key_pair(self, key_name, public_key_material):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     ##
     # Security Group methods
     ##

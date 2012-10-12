@@ -190,6 +190,17 @@ class MockClcInterface(ClcInterface):
         self.keypairs.remove(self.keypairs[idx])
         return True
 
+    # returns keypair info and key
+    def import_key_pair(self, key_name, public_key_material):
+        newkey = {
+                'name': key_name,
+                'fingerprint': 'd0:0d:01:02:03:04:05:06:07:08:09:0a:0b:0c:0d:0e:0f:d0:0d',
+                'material': public_key_material,
+                '__obj_name__': 'KeyPair'
+            }
+        self.keypairs.append(newkey)
+        return newkey
+
     def get_all_security_groups(self):
         return self.groups
 

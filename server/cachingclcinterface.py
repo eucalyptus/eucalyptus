@@ -217,6 +217,11 @@ class CachingClcInterface(ClcInterface):
         self.keypairUpdate = datetime.min   # invalidate cache
         return self.clc.delete_key_pair(key_name)
 
+    # returns keypair info and key
+    def import_key_pair(self, key_name, public_key_material):
+        self.keypairUpdate = datetime.min   # invalidate cache
+        return self.clc.import_key_pair(key_name, public_key_material)
+
     def get_all_security_groups(self):
         if (datetime.now() - self.groupUpdate) > timedelta(seconds = self.groupFreq):
             self.groups = self.clc.get_all_security_groups()

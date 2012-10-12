@@ -25,6 +25,7 @@
     baseTable : null,
     delDialog : null,
     addDialog : null,
+    importDialog : null,
     // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
@@ -60,6 +61,7 @@
         text : {
           header_title : keypair_h_title,
           create_resource : keypair_create,
+          extra_resource : keypair_import,
           resource_found : 'keypair_found',
           resource_search : keypair_search,
           resource_plural : keypair_plural,
@@ -68,6 +70,7 @@
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
         menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
+        menu_click_extra : function (args) { thisObj.importDialog.eucadialog('open') },
         context_menu_actions : function(state) { 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
@@ -126,6 +129,33 @@
         help : { content: $add_help, url: help_keypair.dialog_add_content_url, pop_height: 600 },
       });
       $add_dialog.eucadialog('buttonOnKeyup', $add_dialog.find('#key-name'), createButtonId); 
+
+      $tmpl = $('html body').find('.templates #keypairImportDlgTmpl').clone();
+      $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
+      $import_dialog = $rendered.children().first();
+      $import_help = $rendered.children().last();
+
+      this.importDialog = $import_dialog.eucadialog({
+        id: 'keys-import',
+        title: keypair_dialog_import_title,
+        buttons: { 
+        'create': { domid: createButtonId, text: keypair_dialog_import_btn, disabled: true,  click: function() {
+                      var keyName = $.trim($import_dialog.find('#key-name').val());
+                      var keyContents = $.trim($import_dialog.find('#key-import-contents').val());
+                      if (KEY_PATTERN.test(keyName)){
+                        $import_dialog.eucadialog("close"); 
+                        thisObj._importKeyPair(keyName, keyContents);
+                      }
+                      else{
+                        thisObj.addDialog.eucadialog('showError', keypair_dialog_error_msg);
+                      }
+                    }
+                  },
+        'cancel': {domid: 'keys-cancel-btn', text: dialog_cancel_btn, focus:true, click: function() { $import_dialog.eucadialog("close");}},
+        },
+        help : { content: $import_help, url: help_keypair.dialog_import_content_url, pop_height: 600 },
+      });
+      $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId); 
     },
 
     _destroy : function() {
@@ -186,6 +216,34 @@
           })(keyName)
         });
       }
+    },
+   
+    _importKeyPair : function (keyName, keyContents) {
+      var thisObj = this;
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=ImportKeyPair",
+        data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName+"&PublicKeyMaterial="+keyContents,
+        dataType:"json",
+        async:true,
+        success:
+        (function(keyName) {
+          return function(data, textStatus, jqXHR){
+            if ( data.results && data.results.material) {
+              notifySuccess(null, $.i18n.prop('keypair_import_success', keyName));
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError($.i18n.prop('keypair_import_error', keyName), undefined_error);
+            }
+         }
+        })(keyName),
+        error:
+        (function(keyName) {
+          return function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('keypair_import_error', keyName), getErrorMessage(jqXHR));
+          }
+        })(keyName, keyContents)
+      });
     },
    
 /**** Public Methods ****/ 

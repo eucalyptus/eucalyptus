@@ -1403,6 +1403,11 @@ ul.ramdisk-expanded li:nth-child(5) {
   float: left;
 }
 
+.euca-table-extra {
+  float: left;
+  margin-left: 15px;
+}
+
 .euca-table-action {
   float: left;
 }

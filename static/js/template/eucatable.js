@@ -27,6 +27,7 @@
         header_title : '',
         search_refresh : '',
         create_resource : '',
+        extra_button : '',
         resource_found : '',
         action : '',
       },
@@ -342,8 +343,13 @@
       if ( thisObj.options.text.create_resource )
         $createResourceDiv.append(
           $('<a>').attr('id','table-'+this.options.id+'-new').addClass('button').attr('href','#').text(thisObj.options.text.create_resource));
+      $extraResourceDiv =  $('<div>').addClass('euca-table-extra');
+      if ( thisObj.options.text.extra_resource )
+        $extraResourceDiv.append(
+          $('<a>').attr('id','table-'+this.options.id+'-extra').addClass('button').attr('href','#').text(thisObj.options.text.extra_resource));
       $tableTop.append(
         $createResourceDiv,
+        $extraResourceDiv,
         $('<div>').addClass('euca-table-action actionmenu'),
         $('<div>').addClass('euca-table-size').append(
           $('<span>').attr('id','table_' + this.options.id + '_count'),
@@ -371,6 +377,11 @@
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
         $('html body').trigger('click', 'create-new');
+        return false;
+      });
+      this.element.find('#table-' + this.options.id + '-extra').click(function(e) {
+        thisObj._trigger('menu_click_extra', e); // users of the table should listen to
+        $('html body').trigger('click', 'create-extra');
         return false;
       });
       return $tableTop;

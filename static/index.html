@@ -305,6 +305,32 @@
         </div>
       </script>
 
+      <script id="keypairImportDlgTmpl" type="text/x-jsrender">
+        <div id="keys-import-dialog-wrapper">
+          <div id="keys-import-dialog" class="add-dialog">
+            <div class="dialog-inner-content">
+              {{!: keypair_dialog_import_text }}
+              <div class="form-row">
+                <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
+                <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_add_name_tip }}"/>
+              </div>
+              <div class="form-row">
+                <label for="key-contents" class="required-label">{{!>keypair_dialog_import_contents}}</label>
+                <textarea id="key-import-contents" class="description" title="{{!: keypair_dialog_import_contents_tip }}"/>
+              </div>
+            </div>
+          </div>
+          <div id="keys-import-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_import_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
       <script id="keypairDelDlgTmpl" type="text/x-jsrender">
         <div id="keys-euca-dialog-wrapper">
           <div id="keys-euca-dialog" class="euca-dialog">

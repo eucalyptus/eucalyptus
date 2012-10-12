@@ -231,6 +231,10 @@ class ComputeHandler(server.BaseHandler):
         elif action == 'DeleteKeyPair':
             name = self.get_argument('KeyName')
             return clc.delete_key_pair(name)
+        elif action == 'ImportKeyPair':
+            name = self.get_argument('KeyName')
+            material = self.get_argument('PublicKeyMaterial')
+            return clc.import_key_pair(name, material)
 
     def handleGroups(self, action, clc):
         if action == 'DescribeSecurityGroups':
