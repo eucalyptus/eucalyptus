@@ -213,13 +213,13 @@ function logout(){
       async:"false", // async option deprecated as of jQuery 1.8
     })).always(function(out){
       var hostname = null;
-      if (location.href && location.href.indexOf('hostname=') >= 0){
+      /*if (location.href && location.href.indexOf('hostname=') >= 0){
         hostname = location.href.substring(location.href.indexOf('hostname='));
         hostname = hostname.replace(/#.+?$/,'');
         hostname = hostname.replace('hostname=','');
         hostname = hostname.replace('#','');
         hostname = hostname.replace('/','');
-      }
+      }*/
       if(!hostname)
         hostname = location.hostname;
       var href = '';
