@@ -315,13 +315,14 @@
                 <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_add_name_tip }}"/>
               </div>
               <div class="form-row">
-                <label for="key-contents">{{!>keypair_dialog_import_contents}}</label>
+                <label for="key-contents" class="required-label">{{!>keypair_dialog_import_contents}}</label>
                 <textarea id="key-import-contents" class="description" title="{{!: keypair_dialog_import_contents_tip }}"/>
               </div>
               <div class="form-row">
-                <label for="key-contents">{{!>keypair_dialog_import_file}}</label>
+                <label for="key-contents">{{!>or_label}}</label>
                 <input type="file" id="key-import-file"/>
               </div>
+              <p class="required-hint">{{!: required_fields }}</p>
             </div>
           </div>
           <div id="keys-import-dialog-help" class="dialog-help">
