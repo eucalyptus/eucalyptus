@@ -43,9 +43,9 @@
           if(out.ipaddr && out.ipaddr.length>0 && isValidIp(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
-              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port + '/?hostname='+out.hostname;
+              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port; // + '/?hostname='+out.hostname;
             else 
-              newLocation = location.protocol + '//' + out.ipaddr + '/?hostname='+out.hostname;
+              newLocation = location.protocol + '//' + out.ipaddr; // + '/?hostname='+out.hostname;
             location.href = newLocation;
             redirected = true;
           }
