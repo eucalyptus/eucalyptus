@@ -62,19 +62,16 @@
 package com.eucalyptus.reporting.art.generator;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
 import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeArtEntity;
 import com.eucalyptus.reporting.art.entity.VolumeSnapshotUsageArtEntity;
-import com.eucalyptus.reporting.art.util.DurationCalculator;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
@@ -93,82 +90,54 @@ public class VolumeSnapshotArtGenerator
 	{
 		
 	}
-	
+
 	public ReportArtEntity generateReportArt(final ReportArtEntity report)
 	{
 		log.debug("GENERATING REPORT ART");
 
-		/* Create super-tree of availZones, accounts, users, and volumes;
-		 * and create a Map of the volume nodes at the bottom with start times.
-		 */
-		final Map<String,VolumeArtEntity> volumeEntities = new HashMap<String,VolumeArtEntity>();
-		foreachReportingVolumeCreateEvent( report.getEndMs(), new Predicate<ReportingVolumeCreateEvent>() {
-			@Override
-			public boolean apply( final ReportingVolumeCreateEvent createEvent ) {
-				if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
-					report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
-				}
-				AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
-
-				ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
-				if (reportingUser==null) {
-					log.error("No user corresponding to event:" + createEvent.getUserId());
-				}
-				ReportingAccount reportingAccount = ReportingAccountDao.getInstance().getReportingAccount(reportingUser.getAccountId());
-				if (reportingAccount==null) {
-					log.error("No account corresponding to user:" + reportingUser.getAccountId());
-				}
-				if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
-					zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
-				}
-				AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
-				if (! account.getUsers().containsKey(reportingUser.getName())) {
-					account.getUsers().put(reportingUser.getName(), new UserArtEntity());
-				}
-				UserArtEntity user = account.getUsers().get(reportingUser.getName());
-				VolumeArtEntity volume = new VolumeArtEntity(createEvent.getVolumeId());
-				user.getVolumes().put(createEvent.getUuid(), volume);
-				volumeEntities.put(createEvent.getUuid(), volume);
-				return true;
-			}
-		});
-		
-
-		final Map<String, VolumeSnapshotUsageArtEntity> snapshotEntities = new HashMap<String, VolumeSnapshotUsageArtEntity>();
-		final Map<String, Long> snapshotStartTimes = new HashMap<String, Long>();
-		foreachReportingSnapshotCreateEvent( report.getEndMs(), new Predicate<ReportingVolumeSnapshotCreateEvent>() {
-			@Override
-			public boolean apply( final ReportingVolumeSnapshotCreateEvent createEvent ) {
-				if (createEvent.getTimestampMs() > report.getEndMs()) return true; //not included in this report
-				VolumeSnapshotUsageArtEntity usage = new VolumeSnapshotUsageArtEntity();
-				usage.setSizeGB(createEvent.getSizeGB());
-				usage.setSnapshotNum(1);
-				/* Default sizeGB is remainder of report * GB. This will be overwritten later if there's
-				 * a corresponding delete event before the report end, later.
-				 */
-				usage.setGBSecs(createEvent.getSizeGB() * (DurationCalculator.boundDuration(report.getBeginMs(),
-						report.getEndMs(), createEvent.getTimestampMs())/1000));
-				VolumeArtEntity volume = volumeEntities.get(createEvent.getVolumeUuid());
-				volume.getSnapshotUsage().put(createEvent.getVolumeSnapshotId(), usage);
-				snapshotEntities.put(createEvent.getUuid(), usage);
-				snapshotStartTimes.put(createEvent.getUuid(), createEvent.getTimestampMs());
-				return true;
-			}
-		});
-		
+		/* Find delete times */
+		final Map<String, Long> snapshotEndTimes = new HashMap<String, Long>();
 		foreachReportingSnapshotDeleteEvent( report.getEndMs(), new Predicate<ReportingVolumeSnapshotDeleteEvent>() {
 			@Override
 			public boolean apply( final ReportingVolumeSnapshotDeleteEvent deleteEvent ) {
-				if (snapshotEntities.containsKey(deleteEvent.getUuid())) {
-					VolumeSnapshotUsageArtEntity snap = snapshotEntities.get(deleteEvent.getUuid());
-					long startTimeMs = snapshotStartTimes.get(deleteEvent.getUuid()).longValue();
-					long duration = DurationCalculator.boundDuration(report.getBeginMs(), report.getEndMs(),
-							startTimeMs, deleteEvent.getTimestampMs())/1000;
-					snap.setGBSecs(snap.getSizeGB() * duration);
+				snapshotEndTimes.put(deleteEvent.getUuid(), deleteEvent.getTimestampMs());
+				return true;
+			}
+		});
+
+		/* Find volume create events */
+		final Map<String, ReportingVolumeCreateEvent> volumeCreateEvents =
+			new HashMap<String, ReportingVolumeCreateEvent>();
+		foreachReportingVolumeCreateEvent( report.getEndMs(), new Predicate<ReportingVolumeCreateEvent>() {
+			@Override
+			public boolean apply( final ReportingVolumeCreateEvent createEvent ) {
+				volumeCreateEvents.put(createEvent.getUuid(), createEvent);
+				return true;
+			}
+		});
+		
+		/* Scan through snapshot usage events, and create tree */
+		foreachReportingSnapshotCreateEvent( report.getEndMs(), new Predicate<ReportingVolumeSnapshotCreateEvent>() {
+			@Override
+			public boolean apply( final ReportingVolumeSnapshotCreateEvent createEvent ) {
+				long endTime = snapshotEndTimes.containsKey(createEvent.getUuid()) 
+								? snapshotEndTimes.get(createEvent.getUuid())
+								: report.getEndMs();
+				if (createEvent.getTimestampMs() <= report.getEndMs()
+						&& endTime >= report.getBeginMs()
+						&& volumeCreateEvents.containsKey(createEvent.getVolumeUuid())) {
+					VolumeSnapshotUsageArtEntity usage = new VolumeSnapshotUsageArtEntity();
+					usage.setSizeGB(createEvent.getSizeGB());
+					usage.setSnapshotNum(1);
+					long durationMs = Math.min(report.getEndMs(), endTime) - Math.max(report.getBeginMs(), createEvent.getTimestampMs());
+					usage.setGBSecs(createEvent.getSizeGB() * (durationMs/1000));
+					VolumeArtEntity vol = addParentNodes(report, volumeCreateEvents.get(createEvent.getVolumeUuid()));
+					vol.getSnapshotUsage().put(createEvent.getId(), usage);
 				}
 				return true;
 			}
 		});
+		
 		
 		/* Perform totals and summations for user, account, and zone
 		 */
@@ -185,17 +154,44 @@ public class VolumeSnapshotArtGenerator
 							updateUsageTotals(volume.getSnapshotTotals(), snap);							
 							updateUsageTotals(user.getUsageTotals().getSnapshotTotals(), snap);
 							updateUsageTotals(account.getUsageTotals().getSnapshotTotals(), snap);
-							updateUsageTotals(zone.getUsageTotals().getSnapshotTotals(), snap);
-							
+							updateUsageTotals(zone.getUsageTotals().getSnapshotTotals(), snap);	
 						}
 					}
 				}
 			}
 		}
 
-
 		return report;
 	}
+
+    private static VolumeArtEntity addParentNodes(ReportArtEntity report, ReportingVolumeCreateEvent createEvent)
+    {
+		if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
+			report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
+		}
+		AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
+
+		ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
+		if (reportingUser==null) {
+			log.error("No user corresponding to event:" + createEvent.getUserId());
+		}
+		ReportingAccount reportingAccount = ReportingAccountDao.getInstance().getReportingAccount(reportingUser.getAccountId());
+		if (reportingAccount==null) {
+			log.error("No account corresponding to user:" + reportingUser.getAccountId());
+		}
+		if (! zone.getAccounts().containsKey(reportingAccount.getName())) {
+			zone.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
+		}
+		AccountArtEntity account = zone.getAccounts().get(reportingAccount.getName());
+		if (! account.getUsers().containsKey(reportingUser.getName())) {
+			account.getUsers().put(reportingUser.getName(), new UserArtEntity());
+		}
+		UserArtEntity user = account.getUsers().get(reportingUser.getName());
+		if (! user.getVolumes().containsKey(createEvent.getUuid())) {
+			user.getVolumes().put(createEvent.getUuid(), new VolumeArtEntity(createEvent.getVolumeId()));
+		}
+    	return user.getVolumes().get(createEvent.getUuid());
+    }
 	
 	private static void updateUsageTotals(VolumeSnapshotUsageArtEntity totalEntity,
 			VolumeSnapshotUsageArtEntity newEntity)

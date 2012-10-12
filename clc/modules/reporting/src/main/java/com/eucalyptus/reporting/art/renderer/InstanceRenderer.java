@@ -104,11 +104,13 @@ class InstanceRenderer
 		doc.tableOpen();
 		doc.newRow().addEmptyValCols(5)
 				.addValCol("Net Total " + units.getSizeUnit(), 2, "center")
+				.addValCol("Net External " + units.getSizeUnit(), 2, "center")
 				.addValCol("Disk " + units.getSizeUnit(), 2, "center")
 				.addValCol("Disk IOPS (M)", 2, "center")
 				.addValCol("Disk Time (" + TimeUnit.values()[units.getTimeUnit().ordinal()-1] + ")", 2, "center");
 		doc.newRow().addValCol("InstanceId")
 				.addValCol("Type").addValCol("#").addValCol(units.getTimeUnit().toString()).addValCol("CpuUsage%")
+				.addValCol("In").addValCol("Out")
 				.addValCol("In").addValCol("Out")
 				.addValCol("Read").addValCol("Write")
 				.addValCol("Read").addValCol("Write")
@@ -190,6 +192,8 @@ class InstanceRenderer
 		}
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalInMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getNetTotalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetExternalInMegs(), SizeUnit.MB, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getNetExternalOutMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getDiskReadMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSize(entity.getDiskWriteMegs(), SizeUnit.MB, units.getSizeUnit()));
 		doc.addValCol(entity.getDiskReadOps()==null?null:((double)entity.getDiskReadOps()/1000000d)); //TODO: do something about this
