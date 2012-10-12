@@ -304,7 +304,7 @@ class LoginProcessor(ProxyProcessor):
             if sid in sessions:
                 continue
             break
-        web_req.set_cookie("session-id", sid)
+        web_req.set_cookie("session-id", sid, secure='yes')
         if remember == 'yes':
             expiration = datetime.now() + timedelta(days=180)
             web_req.set_cookie("account", account, expires=expiration)
