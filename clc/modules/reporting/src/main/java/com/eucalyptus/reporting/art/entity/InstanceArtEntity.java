@@ -73,6 +73,13 @@ public class InstanceArtEntity
 	private String instanceId;
 	private InstanceUsageArtEntity usage;
 	
+	public InstanceArtEntity(String instanceType, String instanceId, InstanceUsageArtEntity usage)
+	{
+		this.instanceType = instanceType;
+		this.instanceId = instanceId;
+		this.usage = usage;
+	}
+
 	public InstanceArtEntity(String instanceType, String instanceId)
 	{
 		this.instanceType = instanceType;

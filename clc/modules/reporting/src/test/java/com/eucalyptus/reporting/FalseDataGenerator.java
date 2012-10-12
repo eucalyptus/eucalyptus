@@ -11,7 +11,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.reporting.art.entity.AccountArtEntity;
 import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
-import com.eucalyptus.reporting.art.entity.InstanceArtEntity;
 import com.eucalyptus.reporting.art.entity.InstanceUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
@@ -543,7 +542,7 @@ public class FalseDataGenerator
 		}
 		/* TODO: verify zone totals */
 		InstanceUsageArtEntity zoneUsage = zone.getUsageTotals().getInstanceTotals();
-		checkDiskInMetric("Zone Totals", zoneUsage, 1700d*NUM_USER_TEST); // Each user has 2000d (1000d+700d for instance a+b)	
+		checkDiskInMetric("Zone Totals", zoneUsage, 1700d*NUM_USER_TEST); // Each user has 1700d (1000d+700d for instance a+b)	
 		
 		AccountArtEntity account = zone.getAccounts().get("account0");
 		if (account==null) {
@@ -566,7 +565,7 @@ public class FalseDataGenerator
 				if (uuid.startsWith("a")) {
 					checkDiskInMetric("Instance A", usage, 700d);  // See comment in geneation method for 700d
 				} else if (uuid.startsWith("b")) {
-					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1300d
+					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1000d
 				}
 			}
 		}

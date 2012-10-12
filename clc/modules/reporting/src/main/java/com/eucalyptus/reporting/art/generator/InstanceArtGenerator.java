@@ -94,74 +94,37 @@ public class InstanceArtGenerator
     
     private static final long USAGE_SEARCH_PERIOD = TimeUnit.DAYS.toMillis( 12 );
 
-    
-    
     public InstanceArtGenerator()
 	{
 		
 	}
 	
 	@Override
-  public ReportArtEntity generateReportArt(final ReportArtEntity report)
+	public ReportArtEntity generateReportArt(final ReportArtEntity report)
 	{
 		log.debug("GENERATING REPORT ART");
 
-    final Map<String, ReportingUser> users = Maps.newHashMap();
-    final Map<String, String> accounts = Maps.newHashMap();
+		final Map<String, ReportingInstanceCreateEvent> createEvents = new HashMap<String, ReportingInstanceCreateEvent>();
 
-		/* Create super-tree of availZones, clusters, accounts, users, and instances;
-		 * and create a Map of the instance usage nodes at the bottom.
+		/* Find all instance create events. These will be used to populate the ART tree with instances etc, 
+		 * if there is usage for them within the report boundaries (determined below).
 		 */
-		final Map<String,InstanceUsageArtEntity> usageEntities = new HashMap<String,InstanceUsageArtEntity>();
-		final Map<String, Long> instanceStartTimes = new HashMap<String, Long>();
-
         foreachInstanceCreateEvent( report.getEndMs(), new Predicate<ReportingInstanceCreateEvent>() {
             @Override
             public boolean apply( final ReportingInstanceCreateEvent createEvent ) {
-
-            	if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
-            		report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
-            	}
-            	AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
-
-            	final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
-            	if (reportingUser==null) {
-            		log.error("No user corresponding to event:" + createEvent.getUserId());
-                return true;
-            	}
-            	final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
-            	if (accountName==null) {
-            		log.error("No account corresponding to user:" + reportingUser.getAccountId());
-                return true;
-              }
-            	if (! zone.getAccounts().containsKey(accountName)) {
-            		zone.getAccounts().put(accountName, new AccountArtEntity());
-            	}
-            	AccountArtEntity account = zone.getAccounts().get(accountName);
-            	if (! account.getUsers().containsKey(reportingUser.getName())) {
-            		account.getUsers().put(reportingUser.getName(), new UserArtEntity());
-            	}
-            	UserArtEntity user = account.getUsers().get(reportingUser.getName());
-            	if (! user.getInstances().containsKey(createEvent.getUuid())) {
-            		user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(),
-            				createEvent.getInstanceId()));
-            	}
-            	InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
-            	instance.getUsage().addInstanceCnt(1);
-            	usageEntities.put(createEvent.getUuid(), instance.getUsage());
-            	instanceStartTimes.put(createEvent.getUuid(), createEvent.getTimestampMs());
+            	createEvents.put(createEvent.getUuid(), createEvent);
             	return true;            
             }
         } );
 
 
-        /* Scan through events in order, and update the total usage in the instance usage art entity, for each
-         * uuid/metric/dimension combo. Metric values are cumulative, so we must subtract each from the last.
-         * For this reason, we must retain previous values of each uuid/metric/dim combo. We must also retain
-         * the earliest and latest times for each combo, to update the duration.
+        /* Scan through usage events in order, and populate the ART tree with nodes and usage.
          */
 		final Map<InstanceMetricDimensionKey, MetricPrevData> prevDataMap =
 			new HashMap<InstanceMetricDimensionKey, MetricPrevData>();
+		final Map<String, InstanceUsageArtEntity> usageEntities =
+			new HashMap<String, InstanceUsageArtEntity>();
+		
         foreachInstanceUsageEvent( report.getBeginMs()-USAGE_SEARCH_PERIOD,
         		report.getEndMs()+USAGE_SEARCH_PERIOD,
         		new Predicate<ReportingInstanceUsageEvent>() {
@@ -173,21 +136,43 @@ public class InstanceArtGenerator
             				event.getDimension());
             	final long eventMs = event.getTimestampMs();
         		if (event.getValue()==null) return true;
-        		final InstanceUsageArtEntity usageEntity = usageEntities.get(event.getUuid());
-        		if (usageEntity==null) return true;
 
+        		if (!usageEntities.containsKey(event.getUuid())) {
+        			usageEntities.put(event.getUuid(), new InstanceUsageArtEntity());
+        		}
+        		final InstanceUsageArtEntity usageEntity = usageEntities.get(event.getUuid());
+        		final ReportingInstanceCreateEvent createEvent = createEvents.get(event.getUuid());
+        		if (createEvent==null) {
+        			log.error("Usage event without create event:" + event.getUuid());
+        			return true;
+        		}
+        		
+        		/* Populate the nodes in the tree for this usage, if the usage falls within report boundaries */
+        		if (eventMs >= report.getBeginMs() || eventMs <= report.getEndMs()) {
+        			addParentNodes(report, createEvent, usageEntity);      			
+        		}
+
+        		/* Update the total usage in the usage art entity, for this uuid/metric/dimension combo.
+        		 * Metric values are cumulative, so we must subtract each from the last. For this reason,
+        		 * we must retain previous values of each uuid/metric/dim combo. We must also retain the
+        		 * earliest and latest times for each combo, to update the duration. We must also retain sequence
+        		 * numbers, to detect sensor resets.
+        		 */
         		if (!prevDataMap.containsKey(key)) {
-        			/* No prior value. Use usage from instance creation to present */
-            		if (instanceStartTimes.containsKey(event.getUuid())) {
-            			//Equivalent to inserting a zero-usage event at instance creation time
-            			Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
-            					instanceStartTimes.get(event.getUuid()), eventMs, event.getValue());
-        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
-        						fractionalVal);
-        				log.debug(String.format("new metric time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f fraction:%f",
-        						instanceStartTimes.get(event.getUuid()), eventMs, report.getBeginMs(), report.getEndMs(),
-        						event.getUuid(), event.getMetric(),	event.getDimension(), event.getValue(), fractionalVal));
-            		}
+        			/* No prior value. Use usage from instance creation to present
+        			 * Equivalent to inserting a zero-usage event at instance creation time
+        			 */
+        			
+        			/* Find the fraction of this period which falls within report boundaries. This is
+        			 * needed because period boundaries do not align with report boundaries.
+        			 */
+        			Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+        					createEvent.getTimestampMs(), eventMs, event.getValue());
+        			addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        					fractionalVal);
+        			log.debug(String.format("new metric time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f fraction:%f",
+        					createEvent.getTimestampMs(), eventMs, report.getBeginMs(), report.getEndMs(),
+        					event.getUuid(), event.getMetric(),	event.getDimension(), event.getValue(), fractionalVal));
         			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue(), event.getSequenceNum()));
         		} else {
         			/* Previous value exists */
@@ -199,6 +184,8 @@ public class InstanceArtGenerator
 
         			if (event.getSequenceNum() < prevData.lastSeq) {
         				/* SENSOR RESET; we lost data; just take whatever amount greater than 0 */
+        				
+        				/* Find the fraction of this period which falls within report boundaries. */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue());
         				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
@@ -207,8 +194,10 @@ public class InstanceArtGenerator
         						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
         						event.getDimension(), event.getValue(), fractionalVal));
        			} else {
-        				/* Increase total by val minus lastVal */
-        				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+        			/* Increase total by val minus lastVal */
+
+    				/* Find the fraction of this period which falls within report boundaries. */
+       				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue()-prevData.lastVal);
         				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
         						fractionalVal);
@@ -243,7 +232,40 @@ public class InstanceArtGenerator
 		return report;
 	}
 
+    private void addParentNodes(ReportArtEntity report, ReportingInstanceCreateEvent createEvent, InstanceUsageArtEntity usageEntity)
+    {
+		final Map<String, ReportingUser> users = Maps.newHashMap();
+		final Map<String, String> accounts = Maps.newHashMap();
 
+    	if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
+    		report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
+    	}
+    	AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
+
+    	final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
+    	if (reportingUser==null) {
+    		log.error("No user corresponding to event:" + createEvent.getUserId());
+    	}
+    	final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
+    	if (accountName==null) {
+    		log.error("No account corresponding to user:" + reportingUser.getAccountId());
+    	}
+    	if (! zone.getAccounts().containsKey(accountName)) {
+    		zone.getAccounts().put(accountName, new AccountArtEntity());
+    	}
+    	AccountArtEntity account = zone.getAccounts().get(accountName);
+    	if (! account.getUsers().containsKey(reportingUser.getName())) {
+    		account.getUsers().put(reportingUser.getName(), new UserArtEntity());
+    	}
+    	UserArtEntity user = account.getUsers().get(reportingUser.getName());
+    	if (! user.getInstances().containsKey(createEvent.getUuid())) {
+    		user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(),
+    				createEvent.getInstanceId(), usageEntity));
+    	}
+    	InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
+    	instance.getUsage().addInstanceCnt(1);  	
+    }
+    
 	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)
 	{
 		InstanceUsageArtEntity totalEntity = totals.getInstanceTotals();
