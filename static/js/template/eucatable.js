@@ -217,16 +217,6 @@
           });
         }
       }); 
-      
-      if(thisObj.options.draw_cell_callback && thisObj.table && oSettings.fnRecordsDisplay()>0){
-        thisObj.element.find('table tbody').find('td').each(function(index, td) { 
-          var pos = thisObj.table.fnGetPosition(td);
-          var oldVal = $(td).html();
-          var newVal = thisObj.options.draw_cell_callback(pos[0], pos[1], $(td).html());
-          if(oldVal !== newVal)
-            $(td).html(newVal);
-        });
-      }
     },
 
     _onRowClick : function() {

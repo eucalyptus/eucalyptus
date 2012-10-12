@@ -229,6 +229,9 @@
       this.element.find('input').each(function () { 
         $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
       });
+      this.element.find('textarea').each(function () { 
+        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+      });
       if(this.help_flipped){
         this.element.find('.dialog-inner-content').revertFlip();
         $buttonPane.show();
