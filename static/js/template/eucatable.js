@@ -568,6 +568,13 @@
       }
       return selectedRows;
     },
+    
+    changeAjaxUrl : function(url){
+      var thisObj = this;
+      var oSettings = thisObj.table.fnSettings();
+      oSettings.sAjaxSource = url;
+      thisObj.refreshTable();
+    }, 
     close : function() {
       ; // cancelRepeat(this.refreshCallback);
     }

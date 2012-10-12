@@ -896,7 +896,7 @@ input[type='text'].medium-textinput {
 
 /* ======= Dashboard ======= */
 
-#dashboard {
+#dashboard-page {
   padding: 75px 30px 30px;
   font-size: 14px;
 }
@@ -1805,7 +1805,7 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 .ui-widget-overlay {
-  background: url(../img/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
+  background: url(../images/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
   opacity: 0.6;
 }
 
@@ -2355,7 +2355,8 @@ span.on-error {
 }
 
 .image-type.windows {
-  background-position: 0 0;
+  /*background-position: 0 0;*/
+  background-image: none;
 }
 
 .image-type.rhel,
@@ -2702,6 +2703,11 @@ textarea.console-output {
 
 #launch-images_paginate {
   margin-top: 5px;
+}
+
+#launch-images td:hover,
+#launch-images td:hover .image-name {
+  color: #73a434;
 }
 
 #wizard-img-table-size {

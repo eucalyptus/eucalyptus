@@ -189,7 +189,7 @@
       <!-- Dashboard template -->
       <script id="dashboardTmpl" type="text/x-jsrender">
       <div id="dashboard-wrapper"> 
-        <div id="dashboard" class="content-box clearfix">
+        <div id="dashboard-page" class="content-box clearfix">
           <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
           <div id="dashboard-content">
             <div class="instances inner-box clearfix">
@@ -451,7 +451,7 @@
                   
                     <div class="form-row sg-inline-options">
                       <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
-                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">{{!>sgroup_dialog_use_my_ip}}</a>
                       <div id="allow-ip-error" class="sg-error-msg"></div>
                     </div>
   
@@ -460,7 +460,7 @@
                     </div>
                   
                     <div class="section-button-bar">
-                      <a href='#' id='sgroup-add-rule' class="button section-button">Add Another Rule</a>
+                      <a href='#' id='sgroup-add-rule' class="button section-button">{{!>sgroup_dialog_add_another_rule}}</a>
                     </div> 
                      
                     <div id="sgroup-rules-list"></div>
@@ -583,7 +583,7 @@
   
                     <div class="form-row sg-inline-options">
                       <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
-                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">Use my IP address</a>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">{{!>sgroup_dialog_use_my_ip}}</a>
                     </div>
   
                     <div class="form-row sg-options-row"> 
@@ -591,7 +591,7 @@
                     </div>
 
                     <div class="section-button-bar">
-                      <a href='#' id='sgroup-add-rule' class="button section-button">Add Another Rule</a>
+                      <a href='#' id='sgroup-add-rule' class="button section-button">{{!>sgroup_dialog_add_another_rule}}</a>
                     </div>
 
                   </div>

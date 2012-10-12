@@ -112,7 +112,12 @@
         legend : ['pending','available','failed'],
         show_only : [{filter_value: 'machine', filter_col: 8},{filter_value: 'available', filter_col: 7}],
         filters : [
-    //      {name:"img_ownership", options: ['all','my'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_all], callback : function(selected){ }}, 
+          {name:"img_ownership", options: ['all','me'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], callback : function(selected){ 
+               var url = '../ec2?Action=DescribeImages';
+               if(selected === 'me')
+                 url = '../ec2?Action=DescribeImages&Owner=self';
+               thisObj.tableWrapper.eucatable('changeAjaxUrl', url);
+          }}, 
           {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
 launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:10},
           {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:4},
@@ -168,7 +173,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                              $('<div>').addClass('expanded-value').text(image['owner_id'])),
                            $('<li>').append(
                              $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                             $('<div>').addClass('expanded-value').text(image['location']))))));
+                             $('<div>').addClass('expanded-value').html(image['location']).text())))));
 
       var $kernelInfo = null;
       if(kernel){
@@ -187,7 +192,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                 $('<div>').addClass('expanded-value').text(kernel['architecture'])),
                               $('<li>').append(
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                $('<div>').addClass('expanded-value').text(kernel['location'])),
+                                $('<div>').addClass('expanded-value').html(kernel['location']).text()),
                               $('<li>').append(
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
                                 $('<div>').addClass('expanded-value').html(kernel['description'] ? kernel['description'] : '&nbsp;'))))));
@@ -209,7 +214,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                  $('<div>').addClass('expanded-value').text(ramdisk['architecture'])),
                                $('<li>').append(
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['location'])),
+                                 $('<div>').addClass('expanded-value').html(ramdisk['location']).text()),
                                $('<li>').append(
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
                                  $('<div>').addClass('expanded-value').html(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'))))));
