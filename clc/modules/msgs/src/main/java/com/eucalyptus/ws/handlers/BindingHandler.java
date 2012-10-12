@@ -62,6 +62,7 @@
 
 package com.eucalyptus.ws.handlers;
 
+import java.util.regex.Pattern;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.log4j.Logger;
@@ -88,19 +89,27 @@ public class BindingHandler extends MessageStackHandler {
   private Binding       binding;
   private String        namespace;
   private final Binding defaultBinding;
+  private final Pattern namespacePattern;
   
   public BindingHandler( ) {
     super( );
     this.defaultBinding = null;
-    this.namespace = null;
+    this.namespacePattern = null;
   }
   
   public BindingHandler( final Binding binding ) {
     this.binding = binding;
     this.defaultBinding = binding;
-    this.namespace = null;
+    this.namespacePattern = null;
   }
-  
+
+  public BindingHandler( final Binding binding,
+                         final Pattern namespacePattern ) {
+    this.binding = binding;
+    this.defaultBinding = binding;
+    this.namespacePattern = namespacePattern;
+  }
+
   @Override
   public void incomingMessage( final MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpMessage ) {
@@ -112,6 +121,9 @@ public class BindingHandler extends MessageStackHandler {
         OMElement elem = httpMessage.getOmMessage( );
         OMNamespace omNs = elem.getNamespace( );
         namespace = omNs.getNamespaceURI( );
+        if ( namespacePattern != null && !namespacePattern.matcher( namespace ).matches() ) {
+          throw new WebServicesException( "Invalid request" );
+        }
         this.binding = BindingManager.getBinding( BindingManager.sanitizeNamespace( namespace ) );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
       } catch ( BindingException ex ) {

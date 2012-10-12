@@ -68,14 +68,16 @@
 #include "misc.h"
 #include "data.h"
 
+const char * euca_this_component_name = "test";
+
 #define ITER 160*4
 
-void test_sem_fork (void) 
+void test_sem_fork (void)
 {
   sem * s = sem_alloc (1, "eucalyptus-util-test");
-    
+
     printf ("---> testing semaphores between processes\n");
-    
+
     if (fork()) {
         char c = 'A';
         int i;
@@ -87,7 +89,7 @@ void test_sem_fork (void)
         printf ("A releasing sem...\n");
         sem_v (s);
         sleep (1);
-        
+
         for (i=0; i<ITER; i++) {
             sem_p(s);
             if (i%16==0) printf ("\n");
@@ -96,11 +98,11 @@ void test_sem_fork (void)
             write (1, &c, 1);
             sem_v(s);
         }
-        
+
     } else {
         char c = 'B';
         int i;
-        
+
         printf ("B trying sem...\n");
         sem_p (s);
         printf ("B got sem!\n");
@@ -108,7 +110,7 @@ void test_sem_fork (void)
         printf ("B releasing sem...\n");
         sem_v (s);
         sleep (2);
-        
+
         for (i=0; i<ITER; i++) {
             sem_p(s);
             write (1, &c, 1);
@@ -136,7 +138,7 @@ void * thread_a (void * arg)
     printf ("T releasing sem...\n");
     sem_v (s);
     sleep (1);
-    
+
     for (i=0; i<ITER; i++) {
         sem_p(s);
         if (i%16==0) printf ("\n");
@@ -153,7 +155,7 @@ void * thread_b (void * arg)
     sem * s = (sem *)arg;
     char c = 'U';
     int i;
-    
+
     printf ("U trying sem...\n");
     sem_p (s);
     printf ("U got sem!\n");
@@ -161,7 +163,7 @@ void * thread_b (void * arg)
     printf ("U releasing sem...\n");
     sem_v (s);
     sleep (2);
-    
+
     for (i=0; i<ITER; i++) {
         sem_p(s);
         write (1, &c, 1);
@@ -172,7 +174,7 @@ void * thread_b (void * arg)
     return NULL;
 }
 
-void test_sem_pthreads (void) 
+void test_sem_pthreads (void)
 {
     sem * s = sem_alloc (1, "eucalyptus-util-test2");
     pthread_t ta, tb;
@@ -218,7 +220,7 @@ static void test_volumes (void)
         vols [i] = add_volume (&inst, id, "remote", "local");
         if (vols [i] != NULL) EXIT;
         if (inst.volumesSize!=EUCA_MAX_VOLUMES) EXIT;
-        
+
         ncVolume * v = vols [pivot];
         strncpy (id, v->volumeId, 100);
         ncVolume * v2 = free_volume (&inst, id, "remote", "local");

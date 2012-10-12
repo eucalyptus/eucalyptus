@@ -115,9 +115,15 @@ while (@paths > 0) {
   # get netdev from iface name using eucalyptus.conf
   $netdev = get_netdev_by_conf($conf_iface);
   if ($lun > -1) {
-    delete_lun($netdev, $ip, $store, $lun);
-    # rescan target
-    run_cmd(1, 1, "$ISCSIADM -m session -R");
+    # keep trying lun deletion until it is really gone
+    for ($i = 0; $i < 10; $i++) {
+      delete_lun($netdev, $ip, $store, $lun);
+      # rescan target
+      run_cmd(1, 1, "$ISCSIADM -m session -R");
+      last if is_null_or_empty(get_iscsi_device($netdev, $ip, $store, $lun));
+      sleep(5);
+    }
+    print STDERR "Tried deleting lun $i times\n";
     next if retry_until_true(\&has_device_attached, [$netdev, $ip, $store], 5) == 1;
   }
   # logout
@@ -174,16 +180,16 @@ sub delete_lun {
     }
   }
   if (is_null_or_empty($sid) || is_null_or_empty($host_number)) {
-    print STDERR "Failed to get SID or Host Number.\n";
+    print STDERR "Warning: failed to get SID or Host Number.\n";
     return;
   }
   $delete_path = "/sys/class/iscsi_session/session$sid/device/target$host_number:0:0/$host_number:0:0:$lun/delete";
   if (!open DELETELUN, ">$delete_path") {
     print STDERR "Unable to write $delete_path.\n";
-    do_exit(1);
+  } else {
+    print DELETELUN "1";
+    close DELETELUN;
   }
-  print DELETELUN "1";
-  close DELETELUN;
 }
 
 sub has_device_attached {

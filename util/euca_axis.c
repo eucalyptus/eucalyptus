@@ -111,6 +111,7 @@
 #include <axis2_stub.h>
 
 #include "misc.h" /* check_file, logprintf */
+#include "fault.h" // log_eucafault
 #include "euca_axis.h"
 
 #define NO_U_FAIL(x) do{ \
@@ -231,6 +232,12 @@ axis2_status_t __euca_authenticate(const axutil_env_t *env,axis2_msg_ctx_t *out_
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," --------- Local x509 certificate value! ---------" );
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI, recv_x509_buf );
       AXIS2_LOG_CRITICAL(env->log,AXIS2_LOG_SI," ---------------------------------------------------" );
+      init_eucafaults (euca_this_component_name);
+      log_eucafault ("1009", 
+		     "sender", euca_client_component_name, 
+		     "receiver", euca_this_component_name, 
+		     "keys_dir", "$EUCALYPTUS/var/lib/eucalyptus/keys/",
+		     NULL);
       NO_U_FAIL("The certificate specified is invalid!");
     }
     if(verify_references(sig_node, env, out_msg_ctx, soap_envelope, rampart_context) == AXIS2_FAILURE) {
@@ -448,14 +455,14 @@ int InitWSSEC(axutil_env_t *env, axis2_stub_t *stub, char *policyFile) {
 
   svc_client =  axis2_stub_get_svc_client(stub, env);
   if (!svc_client) {
-    logprintfl (EUCAERROR, "InitWSSEC(): ERROR could not get svc_client from stub\n");
+    logprintfl (EUCAERROR, "could not get svc_client from stub\n");
     return(1);
   }
   axis2_svc_client_engage_module(svc_client, env, "rampart");
 
   policy = neethi_util_create_policy_from_file(env, policyFile);
   if (!policy) {
-    logprintfl (EUCAERROR, "InitWSSEC(): ERROR could not initialize policy file %s\n", policyFile);
+    logprintfl (EUCAERROR, "could not initialize policy file %s\n", policyFile);
     return(1);
   }
   status = axis2_svc_client_set_policy(svc_client, env, policy);

@@ -95,13 +95,14 @@ generated/stubs: $(NCWSDL)
 	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
 #	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
-	../tools/add_marshalling.pl generated/axis2_skel_*.c 
+	../tools/add_marshalling.pl generated/axis2_skel_*.c
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
-#	@echo Compiling the stubs
-	cd generated; patch -p1 < ../axis2_svc_generated.patch; cd ../
+	@echo Compiling the stubs
+	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-#	cd generated; $(MAKE); cd ..
+	$(MAKE) -C generated
+	cd ..
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
@@ -122,7 +123,7 @@ server: $(SERVICE_SO)
 ../storage/walrus.o: ../storage/walrus.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
-../storage/iscsi.o: ../storage/iscsi.c 
+../storage/iscsi.o: ../storage/iscsi.c
 	make -C ../storage
 
 ../storage/http.o: ../storage/http.c ../util/log.o ../util/misc.o ../util/data.o
@@ -146,7 +147,7 @@ server: $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
-../util/sensor.o: ../util/sensor.o
+../util/sensor.o: ../util/sensor.c
 	make -C ../util
 
 ../util/windows-bundle.o: ../util/windows-bundle.c ../util/windows-bundle.h
@@ -167,7 +168,7 @@ $(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/
 $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
-	$(CC) -o $(CLIENT)_local $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
+	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
 
 test: test.c ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o

@@ -63,32 +63,25 @@
 package com.eucalyptus.storage;
 
 import java.io.IOException;
-import java.security.PublicKey;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.crypto.Cipher;
-
-import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.util.BlockStorageUtil;
-import com.eucalyptus.util.EucalyptusCloudException;
-
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.util.BlockStorageUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
@@ -96,7 +89,6 @@ import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
-
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -104,12 +96,12 @@ import edu.ucsb.eucalyptus.util.SystemUtil;
 public class ISCSIManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
 	private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
-	
+
 	// TODO find out if its okay to not shutdown the service. found something online which explicitly mentioned this
 	private static ExecutorService service = Executors.newSingleThreadExecutor();
 	// TODO define fault IDs in a enum
 	private static final int TGT_HOSED = 2000;
-		
+
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {
 		String returnValue;
@@ -175,7 +167,7 @@ public class ISCSIManager implements StorageExportManager {
 				exitValue = processController.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException tex) {
 				processController.cancel(true);
-				FaultSubsystem.forComponent(new Storage()).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
+				Faults.forComponent(Storage.class).havingId(TGT_HOSED).withVar("component", "Storage Controller").withVar("operation", "Volume operation").log();
 				throw new EucalyptusCloudException("No response was received within the timeout for the process: " + buildCommand(command));
 			}
 			output.join();
@@ -208,6 +200,11 @@ public class ISCSIManager implements StorageExportManager {
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
 		checkAndAddUser();
 
+		String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+		if(returnValue.length() > 0) {
+			LOG.info("Target: " + tid + " already exported");
+		} 
+
 		Runtime rt = Runtime.getRuntime();
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
@@ -216,7 +213,7 @@ public class ISCSIManager implements StorageExportManager {
 
 		execute(rt,
 				new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun",
-						String.valueOf(lun), "-b", path }, timeout);
+				String.valueOf(lun), "-b", path }, timeout);
 
 		execute(rt, new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user },
 				timeout);
@@ -228,32 +225,46 @@ public class ISCSIManager implements StorageExportManager {
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
+			String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+			if(returnValue.length() > 0) {
+				LOG.info("Attempting to unexport target: " + tid);
+			} else {
+				LOG.info("Target: " + tid + " not found");
+				return;
+			}
 			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
 				LOG.error("Unable to unbind tid: " + tid);
-				return;
 			}
-
-			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
-				LOG.error("Unable to delete lun for tid: " + tid);
-				return;
-			}
-
 			int retryCount = 0;
+			do {
+				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
+					LOG.warn("Unable to delete lun for: " + tid);
+					Thread.sleep(1000); //FIXME: clean this up async 
+					continue;
+				} else {
+					break;
+				}	
+			} while (retryCount++ < 30);
+			if (retryCount>=30){
+				LOG.error("Gave up deleting the lun for: " + tid);
+			}
+
+			retryCount = 0;
 			do {
 				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
 					LOG.warn("Unable to delete target: " + tid);
-                                        Thread.sleep(300); //FIXME: clean this up async 
+					Thread.sleep(1000); //FIXME: clean this up async 
 					continue;
 				}	
-				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
+				returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
 				if(returnValue.length() > 0) {
 					LOG.warn("Target: " + tid + " still exists...");
-					Thread.sleep(300); //FIXME: clean this up async
+					Thread.sleep(1000); //FIXME: clean this up async
 				} else {
 					break;
 				}
-			} while (retryCount++ < 10);
-			if (retryCount>=10){
+			} while (retryCount++ < 30);
+			if (retryCount>=30){
 				LOG.error("Gave up deleting the target: " + tid);
 			}
 		} catch (Exception t) {
@@ -329,7 +340,11 @@ public class ISCSIManager implements StorageExportManager {
 	@Override
 	public synchronized void allocateTarget(LVMVolumeInfo volumeInfo) {
 		if(volumeInfo instanceof ISCSIVolumeInfo) {
-			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;		
+			ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;	
+			if(iscsiVolumeInfo.getTid() > -1) {
+				LOG.info("Volume already associated with a tid: " + iscsiVolumeInfo.getTid());
+				return;
+			}
 			EntityWrapper<ISCSIMetaInfo> db = StorageProperties.getEntityWrapper();
 			List<ISCSIMetaInfo> metaInfoList = db.query(new ISCSIMetaInfo(StorageProperties.NAME));
 			int tid = -1, storeNumber = -1;
@@ -410,6 +425,21 @@ public class ISCSIManager implements StorageExportManager {
 			throw new EucalyptusCloudException("Unable to get CHAP password for: " + "eucalyptus");
 		} finally {
 			db.commit();
+		}
+	}
+
+	public void cleanup(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException {
+		if(volumeInfo instanceof ISCSIVolumeInfo) {
+			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
+				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
+				unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
+				String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(iscsiVolumeInfo.getTid())});
+				if(returnValue.length() == 0) {
+					iscsiVolumeInfo.setTid(-1);
+				} else {
+					throw new EucalyptusCloudException("Unable to remove tid: " + iscsiVolumeInfo.getTid());
+				}
+			}
 		}
 	}
 }

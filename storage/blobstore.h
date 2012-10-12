@@ -214,10 +214,14 @@ typedef struct _blockblob_meta {
 
 typedef struct _blobstore_meta {
     char id [BLOBSTORE_MAX_PATH]; // ID of the blobstore, to handle directory moving
+    char path [PATH_MAX]; // canonical path of the blobstore directory
     unsigned long long blocks_limit; // max size of the blobstore, in blocks
     unsigned long long blocks_unlocked;  // number of blocks in blobstore allocated to blobs that are not in use and is not mapped
     unsigned long long blocks_locked;    // number of blocks in blobstore allocated to blobs that are in use or is mapped (a dependency)
     unsigned long long blocks_allocated; // number of blocks in blobstore that have been allocated on disk
+    unsigned long long fs_bytes_size; // size, in bytes, of the file system that blobstore resides on
+    unsigned long long fs_bytes_available; // bytes available on the file system that blobstore resides on
+    int                fs_id; // hash of file system ID, as returned by statfs()
     unsigned int num_blobs; // count of blobs in the blobstore
     blobstore_revocation_t revocation_policy; 
     blobstore_snapshot_t snapshot_policy;

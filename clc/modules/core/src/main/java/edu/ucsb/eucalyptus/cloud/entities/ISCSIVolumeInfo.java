@@ -99,7 +99,7 @@ public class ISCSIVolumeInfo extends LVMVolumeInfo {
     }
 
     public Integer getTid() {
-        return tid;
+        return tid == null ? -1 : tid;
     }
 
     public void setTid(Integer tid) {

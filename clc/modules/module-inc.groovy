@@ -73,24 +73,43 @@ def modulesBuild = []
 def modulesIgnore = []
 def buildOrder = []
 def doBuild = { module ->
-  if ( new File("${moduleBasePath}/${module}/build.xml").exists() ) {
-    println ( "CALL-MODULE-TARGET ${module} ${antTarget}" )
-    ant.ant(dir:"modules/${module}",inheritall:'false'){
-      target(name:"${antTarget}")
-    }
-  } else {
-    println ( "SKIP-MODULE-TARGET ${module} ${antTarget}" )
-  }
+
+	if ( new File("${moduleBasePath}/${module}/build.xml").exists() ) {
+
+		println ( "CALL-MODULE-TARGET ${module} ${antTarget}" )
+		ant.ant(dir:"modules/${module}",inheritall:'false'){
+			target(name:"${antTarget}")
+		}
+	} else {
+		println ( "SKIP-MODULE-TARGET ${module} ${antTarget}" )
+	}
 }
 
 modulesList.eachLine{
-  if ( it.startsWith("#") ) {
-    moduleDirs.remove(it.substring(1).trim())
-  } else {
-    moduleDirs.remove(it)
-    buildOrder += it;
-  }
+	if ( it.startsWith("#") ) {
+		moduleDirs.remove(it.substring(1).trim())
+	} else {
+		moduleDirs.remove(it)
+		buildOrder += it;
+		//Do exactly one level of checks for further ordering in the module dir.
+		def submod = new File("${moduleBasePath}/${it}/module-inc.order");
+		if(submod.exists()) {
+			println ( "Processing module-inc.order in module dir ${it}" )
+			submod.eachLine{
+				if( it.startsWith("#") )  {
+					//Exclude
+					moduleDirs.remove(it.substring(1).trim())
+				}
+				else {
+					//Add to build order
+					moduleDirs.remove(it);
+					buildOrder += it;
+				}
+			}
+		}
+	}
 }
+
 buildOrder.addAll( moduleDirs )
 println "==== BUILD ORDER ===="
 buildOrder.each{ print "=> ${it} "}

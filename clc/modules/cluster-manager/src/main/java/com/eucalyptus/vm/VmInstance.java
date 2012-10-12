@@ -1635,18 +1635,21 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
           }
           if ( dns ) {
-            String publicDnsName = input.getPublicDnsName( );
-            String privateDnsName = input.getPrivateDnsName( );
-            publicDnsName = ( publicDnsName == null
-                                                   ? VmNetworkConfig.DEFAULT_IP
-                                                   : publicDnsName );
-            privateDnsName = ( privateDnsName == null
+              String publicDnsName = input.getPublicDnsName( );
+              String publicAddress = input.getPublicAddress( );
+              String privateDnsName = input.getPrivateDnsName( );
+              String privateAddress = input.getPrivateAddress( );
+              		
+              publicDnsName = ( publicDnsName == null
                                                      ? VmNetworkConfig.DEFAULT_IP
-                                                     : privateDnsName );
-            runningInstance.setDnsName( publicDnsName );
-            runningInstance.setIpAddress( publicDnsName );
-            runningInstance.setPrivateDnsName( privateDnsName );
-            runningInstance.setPrivateIpAddress( privateDnsName );
+                                                     : publicDnsName );
+              privateDnsName = ( privateDnsName == null
+                                                       ? VmNetworkConfig.DEFAULT_IP
+                                                       : privateDnsName );
+              runningInstance.setDnsName( publicDnsName );
+              runningInstance.setIpAddress( publicAddress );
+              runningInstance.setPrivateDnsName( privateDnsName );
+              runningInstance.setPrivateIpAddress( privateAddress );
           } else {
             String publicDnsName = input.getPublicAddress( );
             String privateDnsName = input.getPrivateAddress( );

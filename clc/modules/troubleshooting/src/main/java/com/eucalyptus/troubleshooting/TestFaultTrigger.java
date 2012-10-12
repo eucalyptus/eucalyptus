@@ -68,8 +68,8 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.troubleshooting.fault.FaultBuilder;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
+import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.Faults.FaultBuilder;
 
 public class TestFaultTrigger {
 	private static final Logger LOG = Logger.getLogger(TestFaultTrigger.class);
@@ -77,7 +77,7 @@ public class TestFaultTrigger {
 		// log it in all components
 		for (ComponentId componentId: ComponentIds.list()) {
 			try {
-				FaultBuilder faultBuilder = FaultSubsystem.forComponent(componentId).havingId(id);
+				FaultBuilder faultBuilder = Faults.forComponent(componentId.getClass()).havingId(id);
 				LOG.debug("Triggering fault in component " + componentId.getName() + " with id " + id + " and vars " + varProps);
 				if (varProps != null) {
 					Enumeration e = varProps.propertyNames();

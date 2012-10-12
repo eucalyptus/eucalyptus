@@ -76,9 +76,9 @@ import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck;
-import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.Checker;
-import com.eucalyptus.troubleshooting.resourcefaults.DiskResourceCheck.LocationInfo;
+import com.eucalyptus.troubleshooting.checker.DiskResourceCheck;
+import com.eucalyptus.troubleshooting.checker.DiskResourceCheck.Checker;
+import com.eucalyptus.troubleshooting.checker.DiskResourceCheck.LocationInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.WalrusProperties;
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
@@ -216,7 +216,7 @@ public class WalrusControl {
 		// Implementation for EUCA-3583. Check for available space in Walrus bukkits directory and throw a fault when less than 10% of total space is available
 		try {
 			ScheduledFuture<?> future = DiskResourceCheck.start(new Checker(
-					new LocationInfo(new File(WalrusInfo.getWalrusInfo().getStorageDir()), (double) 10), new Walrus(), (long) 300000));
+					new LocationInfo(new File(WalrusInfo.getWalrusInfo().getStorageDir()), 10.0), Walrus.class, (long) 300000));
 		} catch (Exception ex) {
 			LOG.error("Error starting disk space check for Walrus storage directory.", ex);
 		}

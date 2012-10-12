@@ -100,7 +100,7 @@ adb_ncAssignAddressResponse_t* ncAssignAddressMarshal (adb_ncAssignAddress_t* nc
     int error = doAssignAddress (&meta, instanceId, publicIp);
     
     if (error) {
-      logprintfl (EUCAERROR, "ERROR: doAssignAddress() failed error=%d\n", error);
+      logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
       adb_ncAssignAddressResponseType_set_correlationId(output, env, meta.correlationId);
       adb_ncAssignAddressResponseType_set_userId(output, env, meta.userId);
       adb_ncAssignAddressResponseType_set_return(output, env, AXIS2_FALSE);
@@ -147,7 +147,7 @@ adb_ncPowerDownResponse_t* ncPowerDownMarshal (adb_ncPowerDown_t* ncPowerDown, c
         int error = doPowerDown (&meta);
 
         if (error) {
-	  logprintfl (EUCAERROR, "ERROR: doPowerDown() failed error=%d\n", error);
+	  logprintfl (EUCAERROR, "failed error=%d\n", error);
 	  adb_ncPowerDownResponseType_set_correlationId(output, env, meta.correlationId);
 	  adb_ncPowerDownResponseType_set_userId(output, env, meta.userId);
 	  adb_ncPowerDownResponseType_set_return(output, env, AXIS2_FALSE);
@@ -205,7 +205,7 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
         int error = doStartNetwork (&meta, uuid, peers, peersLen, port, vlan);
 
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doStartNetwork() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "failed error=%d\n", error);
             adb_ncStartNetworkResponseType_set_return(output, env, AXIS2_FALSE);
 
             // set operation-specific fields in output
@@ -259,7 +259,7 @@ adb_ncDescribeResourceResponse_t* ncDescribeResourceMarshal (adb_ncDescribeResou
         int error = doDescribeResource (&meta, resourceType, &outRes);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doDescribeResource() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "failed error=%d\n", error);
             adb_ncDescribeResourceResponseType_set_return(output, env, AXIS2_FALSE);
 
         } else {
@@ -394,7 +394,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
     char ** groupNames = calloc (groupNamesSize, sizeof(char *));
     if (groupNames==NULL) {
-        logprintfl (EUCAERROR, "ERROR: out of memory in ncRunInstancesMarshall()\n");
+        logprintfl (EUCAERROR, "[%s] out of memory\n", instanceId);
         adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
 
     } else {
@@ -420,7 +420,7 @@ adb_ncRunInstanceResponse_t* ncRunInstanceMarshal (adb_ncRunInstance_t* ncRunIns
                                        &outInst);
             
             if (error) {
-                logprintfl (EUCAERROR, "ERROR: doRunInstance() failed error=%d\n", error);
+                logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
                 adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
                 
             } else {
@@ -465,7 +465,7 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
     int instIdsLen = adb_ncDescribeInstancesType_sizeof_instanceIds(input, env);
     char ** instIds = malloc(sizeof(char *) * instIdsLen);
     if (instIds==NULL) {
-        logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeInstancesMarshal()\n");
+        logprintfl (EUCAERROR, "out of memory\n");
         adb_ncDescribeInstancesResponseType_set_return(output, env, AXIS2_FALSE);
 
     } else {
@@ -485,7 +485,7 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
             int error = doDescribeInstances (&meta, instIds, instIdsLen, &outInsts, &outInstsLen);
                                              
             if (error) {
-                logprintfl (EUCAERROR, "ERROR: doDescribeInstances() failed error=%d\n", error);
+                logprintfl (EUCAERROR, "failed error=%d\n", error);
                 adb_ncDescribeInstancesResponseType_set_return(output, env, AXIS2_FALSE);
                 
             } else {
@@ -541,7 +541,7 @@ adb_ncRebootInstanceResponse_t* ncRebootInstanceMarshal (adb_ncRebootInstance_t*
         int error = doRebootInstance (&meta, instanceId);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doRebootInstance() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
             adb_ncRebootInstanceResponseType_set_return(output, env, AXIS2_FALSE);
 
         } else {
@@ -586,7 +586,7 @@ adb_ncGetConsoleOutputResponse_t* ncGetConsoleOutputMarshal (adb_ncGetConsoleOut
         int error = doGetConsoleOutput (&meta, instanceId, &consoleOutput);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doGetConsoleOutput() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
             adb_ncGetConsoleOutputResponseType_set_return(output, env, AXIS2_FALSE);
 
         } else {
@@ -639,7 +639,7 @@ adb_ncTerminateInstanceResponse_t* ncTerminateInstanceMarshal (adb_ncTerminateIn
         int error = doTerminateInstance (&meta, instanceId, force, &shutdownState, &previousState);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doTerminateInstance() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
             adb_ncTerminateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncTerminateInstanceResponseType_set_correlationId(output, env, meta.correlationId);
             adb_ncTerminateInstanceResponseType_set_userId(output, env, meta.userId);
@@ -698,7 +698,7 @@ adb_ncAttachVolumeResponse_t* ncAttachVolumeMarshal (adb_ncAttachVolume_t* ncAtt
         int error = doAttachVolume (&meta, instanceId, volumeId, remoteDev, localDev);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doAttachVolume() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s][%s] failed error=%d\n", instanceId, volumeId, error);
             adb_ncAttachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncAttachVolumeResponseType_set_correlationId(output, env, meta.correlationId);
             adb_ncAttachVolumeResponseType_set_userId(output, env, meta.userId);
@@ -750,7 +750,7 @@ adb_ncDetachVolumeResponse_t* ncDetachVolumeMarshal (adb_ncDetachVolume_t* ncDet
         int error = doDetachVolume (&meta, instanceId, volumeId, remoteDev, localDev, force, 1);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doDetachVolume() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s][%s] failed error=%d\n", instanceId, volumeId, error);
             adb_ncDetachVolumeResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncDetachVolumeResponseType_set_correlationId(output, env, meta.correlationId);
             adb_ncDetachVolumeResponseType_set_userId(output, env, meta.userId);
@@ -789,7 +789,7 @@ adb_ncCreateImageResponse_t* ncCreateImageMarshal (adb_ncCreateImage_t* ncCreate
         int error = doCreateImage (&meta, instanceId, volumeId, remoteDev);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doCreateImage() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s][%s] failed error=%d\n", instanceId, volumeId, error);
             adb_ncCreateImageResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncCreateImageResponseType_set_correlationId(output, env, meta.correlationId);
             adb_ncCreateImageResponseType_set_userId(output, env, meta.userId);
@@ -836,7 +836,7 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
         int error = doBundleInstance (&meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doBundleInstance() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
             adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);
             adb_ncBundleInstanceResponseType_set_userId(output, env, userId);
@@ -854,6 +854,45 @@ adb_ncBundleInstanceResponse_t* ncBundleInstanceMarshal (adb_ncBundleInstance_t*
     
     eventlog("NC", userId, correlationId, "BundleInstance", "end");
     return response;
+}
+
+adb_ncBundleRestartInstanceResponse_t* ncBundleRestartInstanceMarshal (adb_ncBundleRestartInstance_t *ncBundleRestartInstance, const axutil_env_t *env)
+{
+    pthread_mutex_lock(&ncHandlerLock);
+	adb_ncBundleRestartInstanceType_t         *input    = adb_ncBundleRestartInstance_get_ncBundleRestartInstance(ncBundleRestartInstance, env);
+	adb_ncBundleRestartInstanceResponse_t     *response = adb_ncBundleRestartInstanceResponse_create(env);
+	adb_ncBundleRestartInstanceResponseType_t *output   = adb_ncBundleRestartInstanceResponseType_create(env);
+
+	// get standard fields from input
+	axis2_char_t *correlationId = adb_ncBundleRestartInstanceType_get_correlationId(input, env);
+	axis2_char_t *userId        = adb_ncBundleRestartInstanceType_get_userId(input, env);
+
+	// get operation-specific fields from input
+	axis2_char_t * instanceId = adb_ncBundleRestartInstanceType_get_instanceId(input, env);
+
+	eventlog("NC", userId, correlationId, "BundleRestartInstance", "begin");
+	{
+		ncMetadata meta = { correlationId, userId };
+
+		int error = doBundleRestartInstance(&meta, instanceId);
+
+		if (error) {
+			logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
+			adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+		}
+		else {
+			adb_ncBundleRestartInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+		}
+
+		adb_ncBundleRestartInstanceResponseType_set_correlationId(output, env, correlationId);
+		adb_ncBundleRestartInstanceResponseType_set_userId(output, env, userId);
+	}
+	// set response to output
+	adb_ncBundleRestartInstanceResponse_set_ncBundleRestartInstanceResponse(response, env, output);
+    pthread_mutex_unlock(&ncHandlerLock);
+
+    eventlog("NC", userId, correlationId, "BundleRestartInstance", "end");
+    return(response);
 }
 
 adb_ncCancelBundleTaskResponse_t* ncCancelBundleTaskMarshal (adb_ncCancelBundleTask_t* ncCancelBundleTask, const axutil_env_t *env) {
@@ -876,7 +915,7 @@ adb_ncCancelBundleTaskResponse_t* ncCancelBundleTaskMarshal (adb_ncCancelBundleT
         int error = doCancelBundleTask (&meta, instanceId);
     
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doCancelBundleTask() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "[%s] failed error=%d\n", instanceId, error);
             adb_ncCancelBundleTaskResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncCancelBundleTaskResponseType_set_correlationId(output, env, correlationId);
             adb_ncCancelBundleTaskResponseType_set_userId(output, env, userId);
@@ -915,7 +954,7 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
     int outBundleTasksLen=0;
 
     if (instIds==NULL) {
-        logprintfl (EUCAERROR, "ERROR: out of memory in ncDescribeBundleTasksMarshal()\n");
+        logprintfl (EUCAERROR, "out of memory\n");
         adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
 
     } else {
@@ -930,7 +969,7 @@ adb_ncDescribeBundleTasksResponse_t* ncDescribeBundleTasksMarshal (adb_ncDescrib
 
             int error = doDescribeBundleTasks (&meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);                                             
             if (error) {
-                logprintfl (EUCAERROR, "ERROR: doDescribeBundleTasks() failed error=%d\n", error);
+                logprintfl (EUCAERROR, "failed error=%d\n", error);
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
                 
             } else {
@@ -979,7 +1018,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     int instIdsLen = adb_ncDescribeSensorsType_sizeof_instanceIds(input, env);
     char ** instIds = malloc (sizeof(char *) * instIdsLen);
     if (instIds == NULL) {
-        logprintfl (EUCAERROR, "out of memory for 'instIds' in 'ncDescribeSensorsMarshal'\n");
+        logprintfl (EUCAERROR, "out of memory for 'instIds'\n");
         goto reply;
     }
     for (int i=0; i<instIdsLen; i++) {
@@ -989,7 +1028,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
     int sensorIdsLen = adb_ncDescribeSensorsType_sizeof_sensorIds(input, env);
     char ** sensorIds = malloc (sizeof(char *) * sensorIdsLen);
     if (sensorIds == NULL) {
-        logprintfl (EUCAERROR, "out of memory for 'sensorIds' in 'ncDescribeSensorsMarshal'\n");
+        logprintfl (EUCAERROR, "out of memory for 'sensorIds'\n");
         goto reply;
     }
     for (int i=0; i<sensorIdsLen; i++) {
@@ -1007,7 +1046,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         int error = doDescribeSensors (&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources, &outResourcesLen);
 
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doDescribeSensors() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "failed error=%d\n", error);
 
         } else {
 
@@ -1068,7 +1107,7 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         int error = doOPERATION (&meta, instanceId, ...
 
         if (error) {
-            logprintfl (EUCAERROR, "ERROR: doOPERATION() failed error=%d\n", error);
+            logprintfl (EUCAERROR, "failed error=%d\n", error);
             adb_ncOPERATIONResponseType_set_return(output, env, AXIS2_FALSE);
 
         } else {

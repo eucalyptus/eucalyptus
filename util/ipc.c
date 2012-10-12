@@ -110,7 +110,7 @@ sem * sem_realloc (const int val, const char * name, int flags)
     } else if (name) { /* named semaphores */
         if (s->flags & O_EXCL) {
             if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
-                logprintfl (EUCAINFO, "sem_alloc(): cleaning up old semaphore %s\n", name);
+                logprintfl (EUCAINFO, "cleaning up old semaphore %s\n", name);
             }
         }
         if ((s->posix = sem_open (name, O_CREAT | flags, 0644, val))==SEM_FAILED) {

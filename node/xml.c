@@ -373,12 +373,12 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                                 if (fp) {
                                     int bytes = xsltSaveResultToFile (fp, res, cur);
                                     if (bytes==-1) {
-                                        logprintfl (EUCAERROR, "ERROR: failed to save XML document to %s\n", outputXmlPath);
+                                        logprintfl (EUCAERROR, "failed to save XML document to %s\n", outputXmlPath);
                                         err = ERROR;
                                     }
                                     fclose (fp);
                                 } else {
-                                    logprintfl (EUCAERROR, "ERROR: failed to create file %s\n", outputXmlPath);
+                                    logprintfl (EUCAERROR, "failed to create file %s\n", outputXmlPath);
                                     err = ERROR;
                                 }                                
                             }
@@ -396,28 +396,28 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
                                                 outputXmlBuffer [j++] = c;
                                         }
                                     } else {
-                                        logprintfl (EUCAERROR, "ERROR: XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
+                                        logprintfl (EUCAERROR, "XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
                                         err = ERROR;
                                     }
                                     xmlFree (buf);
                                 } else {
-                                    logprintfl (EUCAERROR, "ERROR: failed to save XML document to a string\n");
+                                    logprintfl (EUCAERROR, "failed to save XML document to a string\n");
                                     err = ERROR;
                                 }
                             }
                         } else {
-                            logprintfl (EUCAERROR, "ERROR: failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
+                            logprintfl (EUCAERROR, "failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
                             err = ERROR;
                         }
                         if (res!=NULL) xmlFreeDoc(res);
                         xmlFreeDoc(doc);
                 } else {
-                        logprintfl (EUCAERROR, "ERROR: failed to parse XML document %s\n", inputXmlPath);
+                        logprintfl (EUCAERROR, "failed to parse XML document %s\n", inputXmlPath);
                         err = ERROR;
                 }
                 xsltFreeStylesheet(cur);
         } else {
-                logprintfl (EUCAERROR, "ERROR: failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
+                logprintfl (EUCAERROR, "failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
                 err = ERROR;
         }
 
@@ -544,7 +544,7 @@ static void create_dummy_instance (const char * file)
 int main (int argc, char ** argv)
 {
         if (argc!=2) {
-                logprintfl (EUCAERROR, "ERROR: required parameters are <XSLT stylesheet path>\n");
+                logprintfl (EUCAERROR, "required parameters are <XSLT stylesheet path>\n");
                 return 1;
         }
         strncpy (xslt_path, argv[1], sizeof (xslt_path));

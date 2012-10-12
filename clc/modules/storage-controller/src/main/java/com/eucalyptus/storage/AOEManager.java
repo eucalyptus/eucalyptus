@@ -176,4 +176,10 @@ public class AOEManager implements StorageExportManager {
 			db.commit();		
 		}
 	}
+
+	@Override
+	public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		
+	}
 }

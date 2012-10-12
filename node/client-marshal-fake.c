@@ -422,6 +422,10 @@ int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char
   return(ncTerminateInstanceStub(stub, meta, instanceId, 0, NULL, NULL));
 }
 
+int ncBundleRestartInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId) {
+  return(ncTerminateInstanceStub(stub, meta, instanceId, 0, NULL, NULL));
+}
+
 int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId) {
   return(0);
 }

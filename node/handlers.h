@@ -95,7 +95,7 @@ struct nc_state_t {
 	virConnectPtr conn;
 	boolean convert_to_disk;
         boolean do_inject_key;
-        int concurrent_disk_ops;
+        int concurrent_disk_ops, concurrent_cleanup_ops;
 	int staging_cleanup_threshold;
 	int booting_cleanup_threshold;
 	int bundling_cleanup_threshold;
@@ -234,6 +234,9 @@ struct handlers {
 				char *userPublicKey,
 				char *S3Policy,
 				char *S3PolicySig);
+	int (*doBundleRestartInstance)(struct nc_state_t *nc,
+	                               ncMetadata        *meta,
+	                               char              *instanceId);
     int (*doCancelBundleTask)   (struct nc_state_t *nc,
 		    		ncMetadata *meta,
 				char *instanceId);
@@ -268,6 +271,7 @@ int doStartNetwork		(ncMetadata *ccMeta, char *uuid, char **remoteHosts, int rem
 int doAttachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
 int doBundleInstance		(ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int doBundleRestartInstance	(ncMetadata *meta, char *instanceId);
 int doCancelBundleTask		(ncMetadata *meta, char *instanceId);
 int doDescribeBundleTasks	(ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
 int doCreateImage		(ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
@@ -309,6 +313,7 @@ int get_instance_xml(		const char *gen_libvirt_cmd_path,
 				char **xml);
 void * monitoring_thread(	void *arg);
 void * startup_thread(		void *arg);
+void * restart_thread(      void *arg);
 
 int get_instance_stats(virDomainPtr dom, ncInstance *instance);
 ncInstance * find_global_instance (const char * instanceId);

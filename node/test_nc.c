@@ -74,6 +74,8 @@
 
 #define MAXDOMS 1024
 
+const char * euca_this_component_name = "nc";
+
 static void print_libvirt_error (void)
 {
     virError * verr = virGetLastError();
@@ -91,49 +93,49 @@ static char* find_conf_value(const char* eucahome, const char* param)
     char line[1024];
     char *value = NULL;
     FILE *f_conf = NULL;
-    int i =0; 
+    int i =0;
 
     if (!eucahome || !param)
         return NULL;
-    
-    snprintf (conf_path, 1024, EUCALYPTUS_CONF_LOCATION, eucahome); 
+
+    snprintf (conf_path, 1024, EUCALYPTUS_CONF_LOCATION, eucahome);
     f_conf = fopen (conf_path, "r");
-    if (!f_conf){ 
+    if (!f_conf){
     	return NULL;
     }
-    
+
     while (fgets (line, 1024, f_conf)!=NULL) {
         if (strstr(line, param)!=NULL) { // found the param in the line
             if (strchr(line, '#')!= NULL) { // the line is commented out (assume # can't appear in the middle)
-                break;   
+                break;
             } else {
                 char* pch = strtok(line, "="); // again assume '=' can't appear in the middle of value
                 pch = strtok(NULL, "=");
                 if (pch && strlen(pch)>0) {
                     value = calloc(strlen(pch)+1, 1);
                     if (!value) {
-                        fclose(f_conf); 
+                        fclose(f_conf);
                         return NULL;
                     }
                     snprintf(value, strlen(pch)+1, "%s", pch);
-                }             
+                }
                 break;
             }
         }
         bzero(line, 1024);
-    } 
-    
-    // remove "" from the value 	
+    }
+
+    // remove "" from the value
     if (value){
         int quote=0;
-        for (int i=0; i<strlen(value); i++)	{	
-            if(value[i]=='\"')	
+        for (int i=0; i<strlen(value); i++)	{
+            if(value[i]=='\"')
                 quote++;
             else
                 value[i-quote] = value[i];
         }
         value[strlen(value)-quote] = 0x00;
-        
+
         // remove spaces
         i=0;
         while (value[i]==' ' || value[i]=='\t')
@@ -141,35 +143,35 @@ static char* find_conf_value(const char* eucahome, const char* param)
         for(int j=i; j<strlen(value); j++)
             value[j-i] = value[j];
         value[strlen(value)-i] = 0x00;
-        
+
         if(value[strlen(value)-1] == '\n')
             value[strlen(value)-1] = 0x00;
     }
-    
-    fclose(f_conf); 
+
+    fclose(f_conf);
     return value;
 }
 
 int main (int argc, char * argv[])
-{ 
+{
     virConnectPtr conn = NULL;
     int dom_ids [MAXDOMS];
     int num_doms = 0;
     char *hypervisor, hypervisorURL[32], cmd[1024];
     char *eucahome=NULL;
-    
+
     //  logfile (NULL, EUCAFATAL); // suppress all messages
-    
+
     if (argc != 2) {
         fprintf (stderr, "error: test_nc expects one parameter (name of hypervisor)\n");
         exit (1);
     }
-    
+
     hypervisor = argv[1];
     if (!strcmp(hypervisor, "kvm")) {
         snprintf(hypervisorURL, 32, "qemu:///system");
     } else if (!strcmp(hypervisor, "xen")) {
-        snprintf(hypervisorURL, 32, "xen:///");      
+        snprintf(hypervisorURL, 32, "xen:///");
     } else if (!strcmp(hypervisor, "not_configured")) {
         fprintf (stderr, "error: HYPERVISOR variable is not set in eucalyptus.conf\n");
         exit (1);
@@ -177,27 +179,27 @@ int main (int argc, char * argv[])
         fprintf (stderr, "error: hypervisor type (%s) is not recognized\n", hypervisor);
         exit (1);
     }
-    
+
     // check that commands that NC needs are there
-    
+
     if (system("perl --version")) {
         fprintf (stderr, "error: could not run perl\n");
         exit (1);
     }
-    
+
     eucahome = getenv (EUCALYPTUS_ENV_VAR_NAME);
     if (!eucahome) {
         eucahome = strdup (""); // root by default
     } else {
         eucahome = strdup(eucahome);
     }
-    
+
     add_euca_to_path (eucahome);
 
     fprintf (stderr, "looking for system utilities...\n");
     if (diskutil_init(FALSE)) // NC does not require GRUB for now
         exit (1);
-    
+
     // check if euca2ools commands for bundle-instance are available
     fprintf (stderr, "ok\n\nlooking for euca2ools...\n");
     static char * helpers_name [3] = {
@@ -229,7 +231,7 @@ int main (int argc, char * argv[])
         fprintf (stderr, "error: could not run '%s'\n", cmd);
         exit (1);
     }
-    
+
     // check that libvirt can query the hypervisor
     conn = virConnectOpen (hypervisorURL); // NULL means local hypervisor
     if (conn == NULL) {
@@ -237,7 +239,7 @@ int main (int argc, char * argv[])
         fprintf (stderr, "error: failed to connect to hypervisor\n");
         exit (1);
     }
-    
+
     num_doms = virConnectListDomains (conn, dom_ids, MAXDOMS);
     if (num_doms < 0) {
         print_libvirt_error ();

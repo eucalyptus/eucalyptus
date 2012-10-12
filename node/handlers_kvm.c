@@ -109,7 +109,7 @@ static int doInitialize (struct nc_state_t *nc)
 	s = system_output (nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
 	if (get_value (s, name, &var)) { \
-		logprintfl (EUCAFATAL, "error: did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
+		logprintfl (EUCAFATAL, "did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
 		if (s) free (s); \
 		return ERROR_FATAL; \
 	}
@@ -132,16 +132,16 @@ static void * rebooting_thread (void *arg)
     struct stat statbuf;
     int rc = 0;
 
-    logprintfl (EUCADEBUG, "{%u} spawning rebooting thread\n", (unsigned int)pthread_self());
+    logprintfl (EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
     char * xml = file2str (instance->libvirtFilePath);
     if (xml == NULL) {
-        logprintfl (EUCAERROR, "cannot obtain XML file %s\n", instance->libvirtFilePath);
+        logprintfl (EUCAERROR, "[%s] cannot obtain XML file %s\n", instance->instanceId, instance->libvirtFilePath);
         return NULL;
     }
 
     conn = check_hypervisor_conn();
     if (! conn) {
-        logprintfl (EUCAERROR, "cannot restart instance %s, abandoning it\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
         change_state (instance, SHUTOFF);
         free (xml);
         return NULL;
@@ -185,7 +185,7 @@ static void * rebooting_thread (void *arg)
         // get credentials, decrypt them
         remoteDevStr = get_iscsi_target (volume->remoteDev);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            logprintfl(EUCAERROR, "Reattach-volume: failed to get local name of host iscsi device\n");
+            logprintfl(EUCAERROR, "[%s] Reattach-volume: failed to get local name of host iscsi device\n", instance->instanceId);
             rc = 1;
         } else {
             rc = gen_libvirt_attach_xml (volume->volumeId,
@@ -205,14 +205,14 @@ static void * rebooting_thread (void *arg)
             err = virDomainAttachDevice (dom, attach_xml);
             sem_v (hyp_sem);      
             if (err) {
-                logprintfl (EUCAERROR, "virDomainAttachDevice() failed (err=%d) XML=%s\n", err, attach_xml);
+                logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed (err=%d) XML=%s\n", instance->instanceId, err, attach_xml);
             } else {
-                logprintfl (EUCAINFO, "reattached '%s' to '%s' in domain %s\n", volume->remoteDev, volume->localDevReal, instance->instanceId);
+                logprintfl (EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
             }
         }
     }
     if (dom==NULL) {
-        logprintfl (EUCAERROR, "Failed to restart instance %s\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] Failed to restart instance\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         return NULL;
     }
@@ -232,18 +232,18 @@ doRebootInstance(	struct nc_state_t *nc,
     ncInstance *instance = find_instance (&global_instances, instanceId);
     sem_v (inst_sem);
     if ( instance == NULL ) {
-        logprintfl (EUCAERROR, "cannot find instance %s\n", instanceId);
+        logprintfl (EUCAERROR, "[%s] cannot find instance\n", instanceId);
         return ERROR;
     }
     
     pthread_t tcb;
     // since shutdown/restart may take a while, we do them in a thread
     if ( pthread_create (&tcb, NULL, rebooting_thread, (void *)instance) ) {
-        logprintfl (EUCAERROR, "failed to spawn a reboot thread\n");
+        logprintfl (EUCAERROR, "[%s] failed to spawn a reboot thread\n", instanceId);
         return ERROR_FATAL;
     }
     if (pthread_detach(tcb)) {
-      logprintfl (EUCAERROR, "failed to detach the rebooting thread\n");
+      logprintfl (EUCAERROR, "[%s] failed to detach the rebooting thread\n", instanceId);
       return ERROR_FATAL;
     }
     
@@ -275,7 +275,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   sem_v (inst_sem);
 
   if (!instance) {
-    logprintfl(EUCAERROR, "doGetConsoleOutput(): cannot locate instance with instanceId=%s\n", instanceId);
+    logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
     return(1);
   }
 
@@ -283,7 +283,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
       if (diskutil_ch (console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
-          logprintfl (EUCAERROR, "doGetConsoleOutput(): failed to change ownership of %s\n", console_file);
+          logprintfl (EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
           return (1);
       }
     fd = open(console_file, O_RDONLY);
@@ -305,7 +305,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
   rc = stat(console_file, &statbuf);
   if (rc >= 0) {
       if (diskutil_ch (console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
-          logprintfl (EUCAERROR, "doGetConsoleOutput(): failed to change ownership of %s\n", console_file);
+          logprintfl (EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
           if (console_append) 
               free(console_append);
           return (1);
@@ -316,7 +316,7 @@ doGetConsoleOutput(	struct nc_state_t *nc,
       if (rc < 0) {
 	rc = lseek(fd, (off_t)0, SEEK_SET);
 	if (rc < 0) {
-	  logprintfl(EUCAERROR, "cannot seek to beginning of file\n");
+	  logprintfl(EUCAERROR, "[%s] cannot seek to beginning of file\n", instanceId);
 	  if (console_append) free(console_append);
 	  return(1);
 	}
@@ -328,10 +328,10 @@ doGetConsoleOutput(	struct nc_state_t *nc,
 	close(fd);
       }
     } else {
-      logprintfl(EUCAERROR, "cannot open '%s' read-only\n", console_file);
+      logprintfl(EUCAERROR, "[%s] cannot open '%s' read-only\n", instanceId, console_file);
     }
   } else {
-    logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", console_file);
+    logprintfl(EUCAERROR, "[%s] cannot stat console_output file '%s'\n", instanceId, console_file);
   }
   
   // concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
