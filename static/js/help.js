@@ -52,7 +52,7 @@ function loadHtml(url, handler){
           handler(data);
         },
         error : function (){
-          handler("Error - cannot load the help page");
+          handler($.i18n.prop('error_loading_help_file'));
         }
     });
 }
