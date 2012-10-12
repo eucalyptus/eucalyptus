@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.service;
 
+import static com.eucalyptus.reporting.ReportGenerationFacade.ReportGenerationArgumentException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -135,9 +136,6 @@ public class ReportingService {
     if ( request.getEndDate() != null ) {
       endTime = parseDate( request.getEndDate() );
     }
-    if ( endTime <= startTime ) {
-      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
-    }
 
     final String reportData;
     try {
@@ -146,6 +144,8 @@ public class ReportingService {
           Objects.firstNonNull( request.getFormat(), "html" ),
           startTime,
           endTime );
+    } catch ( final ReportGenerationArgumentException e ) {
+      throw new ReportingException( HttpResponseStatus.BAD_REQUEST, ReportingException.BAD_REQUEST, "Bad request: Invalid start or end date");
     } catch ( final Exception e ) {
       logger.error( e, e );
       throw new ReportingException( HttpResponseStatus.INTERNAL_SERVER_ERROR, ReportingException.INTERNAL_SERVER_ERROR, "Error generating report");
