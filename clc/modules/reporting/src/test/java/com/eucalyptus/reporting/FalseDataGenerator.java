@@ -566,6 +566,8 @@ public class FalseDataGenerator
 					checkDiskInMetric("Instance A", usage, 700d);  // See comment in geneation method for 700d
 				} else if (uuid.startsWith("b")) {
 					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1000d
+				} else if (uuid.startsWith("c") || uuid.startsWith("d")) {
+					throw new IllegalStateException("Instance included without any usage in report boundaries");
 				}
 			}
 		}
