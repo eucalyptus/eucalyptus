@@ -725,6 +725,7 @@
               });
               src = src.join(', '); 
  
+              src = $("<div/>").html(src).text();
               $wrapper.append( $('<div>').addClass('launcher-sgroup-rule-label').html(launch_instance_security_rule + ':'),
                                  $('<ul>').append(
                                    $('<li>').text(protocol),
