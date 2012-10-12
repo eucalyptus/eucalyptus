@@ -130,6 +130,7 @@ def start_console():
         ], **settings)
 
     if len(ssl_settings.keys()) > 0:    # we're using ssl
+        server.using_ssl = True
         httpserver = tornado.httpserver.HTTPServer(application,
             ssl_options=ssl_settings)
         httpserver.listen(server_port)

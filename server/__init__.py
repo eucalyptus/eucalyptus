@@ -19,7 +19,7 @@ sessions = {}
 use_mock = True
 config = None
 global_session = None
-
+using_ssl = False
 
 class UserSession(object):
     clc = None
@@ -304,7 +304,10 @@ class LoginProcessor(ProxyProcessor):
             if sid in sessions:
                 continue
             break
-        web_req.set_cookie("session-id", sid, secure='yes')
+        if using_ssl:
+            web_req.set_cookie("session-id", sid, secure='yes')
+        else:
+            web_req.set_cookie("session-id", sid)
         if remember == 'yes':
             expiration = datetime.now() + timedelta(days=180)
             web_req.set_cookie("account", account, expires=expiration)
