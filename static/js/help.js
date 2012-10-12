@@ -71,9 +71,11 @@ var help_keypair = {
     help_keypair.landing_content_url = 'help/'+arg.language+'/console_manage_keypairs.html';
     help_keypair.dialog_add_content_url = 'help/'+arg.language+'/console_create_keypair.html';
     help_keypair.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_keypair.html';
+    help_keypair.dialog_import_content_url = 'help/'+arg.language+'/console_import_keypair.html';
     loadHtml(help_keypair.landing_content_url , function(data){help_keypair.landing_content=data})
     loadHtml(help_keypair.dialog_add_content_url, function(data){help_keypair.dialog_add_content=data})
     loadHtml(help_keypair.dialog_delete_content_url, function(data){help_keypair.dialog_delete_content=data})
+    loadHtml(help_keypair.dialog_import_content_url, function(data){help_keypair.dialog_import_content=data})
   },
   landing_content: '',
   landing_content_url: '',
@@ -81,6 +83,8 @@ var help_keypair = {
   dialog_add_content_url: '',
   dialog_delete_content: '',
   dialog_delete_content_url: '',
+  dialog_import_content: '',
+  dialog_import_content_url: '',
 
 };
 

@@ -150,7 +150,6 @@ class BotoClcInterface(ClcInterface):
 
     # returns keypair info and key
     def import_key_pair(self, key_name, public_key_material):
-        print "importing : "+key_name+" with material "+public_key_material
         return self.conn.import_key_pair(key_name, public_key_material)
 
     def get_all_security_groups(self):
