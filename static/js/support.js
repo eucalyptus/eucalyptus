@@ -204,13 +204,18 @@ function allocateIP() {
   $('html body').find(DOM_BINDING['hidden']).eip('createAction');
 }
 
+var _logoutSent = false;
 function logout(){
+  if (_logoutSent)
+    return;
+  _logoutSent = true;
   $.when( // this is to synchronize a chain of ajax calls 
     $.ajax({
       type:"POST",
       data:"action=logout&_xsrf="+$.cookie('_xsrf'),
       dataType:"json",
       async:"false", // async option deprecated as of jQuery 1.8
+      timeout: 10000, // shorter timeout for log-out
     })).always(function(out){
       var hostname = null;
       /*if (location.href && location.href.indexOf('hostname=') >= 0){
@@ -337,6 +342,8 @@ function getImageName(imgKey){
 }
 
 function errorAndLogout(errorCode){
+  if (_logoutSent)
+    return;
   // turn off all eucaData requests
   $('html body').eucadata('disable');
   $('html body').find(DOM_BINDING['hidden']).login();
@@ -375,4 +382,11 @@ function popOutPageHelp(url, height){
   var height = height ? height: 600;
   var option = 'width='+width+',height='+height+',directories=no,fullscreen=no,location=no,menubar=no,resizable=yes,scrollbars=yes,status=yes,titlebar=yes,toobar=no';
   window.open(url, '_blank', option,true);
+}
+
+function setupAjax(){
+ $.ajaxSetup({
+   type: "POST",
+   timeout: 30000,
+ });
 }

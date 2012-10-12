@@ -58,6 +58,7 @@
       })).done(function(out){
         if(redirected)
           return;
+        setupAjax();
         // check cookie
         if ($.cookie('session-id')) {
           $.ajax({
