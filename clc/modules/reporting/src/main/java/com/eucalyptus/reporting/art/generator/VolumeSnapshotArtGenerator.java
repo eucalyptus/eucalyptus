@@ -120,9 +120,6 @@ public class VolumeSnapshotArtGenerator
 		foreachReportingSnapshotCreateEvent( report.getEndMs(), new Predicate<ReportingVolumeSnapshotCreateEvent>() {
 			@Override
 			public boolean apply( final ReportingVolumeSnapshotCreateEvent createEvent ) {
-				/* Default sizeGB is remainder of report * GB. This will be overwritten later if there's
-				 * a corresponding delete event before the report end, later.
-				 */
 				long endTime = snapshotEndTimes.containsKey(createEvent.getUuid()) 
 								? snapshotEndTimes.get(createEvent.getUuid())
 								: report.getEndMs();
@@ -157,8 +154,7 @@ public class VolumeSnapshotArtGenerator
 							updateUsageTotals(volume.getSnapshotTotals(), snap);							
 							updateUsageTotals(user.getUsageTotals().getSnapshotTotals(), snap);
 							updateUsageTotals(account.getUsageTotals().getSnapshotTotals(), snap);
-							updateUsageTotals(zone.getUsageTotals().getSnapshotTotals(), snap);
-							
+							updateUsageTotals(zone.getUsageTotals().getSnapshotTotals(), snap);	
 						}
 					}
 				}
