@@ -93,7 +93,9 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
 
   protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
     final String token = credentials.getParameters().get( SecurityParameter.SecurityToken.toString() );
-    return AccessKeys.lookupAccessKey( credentials.getQueryId( ), token );
+    final AccessKey key =  AccessKeys.lookupAccessKey( credentials.getQueryId( ), token );
+    if ( !key.isActive() ) throw new AuthException( "Invalid access key or token" );
+    return key;
   }
 
   protected void checkForReplay( final String signature ) throws AuthenticationException {
