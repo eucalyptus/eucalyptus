@@ -993,7 +993,7 @@
             $('<div>').addClass('expanded-value').text(instance['owner_id'])),
           $('<li>').append(
             $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest),
-            $('<div>').addClass('expanded-value').html(thisObj.emiToManifest[instance['image_id']]).text()))));
+            $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']])))));
 
       var $volInfo = null;
       if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){

@@ -273,7 +273,7 @@
     },
 
     _suggestNextDeviceName : function(instanceId) {
-      var instance = getResource('instance', instanceId);
+      var instance = describe('instance', instanceId);
       if (instance) {
         var count = 1;
         for(device in instance.block_device_mapping) count++;
