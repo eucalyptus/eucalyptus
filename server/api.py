@@ -437,6 +437,15 @@ class ComputeHandler(server.BaseHandler):
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
 
+            # this call returns a file vs. a json envelope, so it is self-contained
+            if action == 'CreateKeyPairFile':
+                name = self.get_argument('KeyName')
+                result = self.user_session.clc.create_key_pair(name)
+                self.set_header("Content-type", "application/x-pem-file;charset=ISO-8859-1")
+                self.set_header("Content-Disposition", "attachment; filename=\"" + name + '.pem"')
+                self.write(result.material)
+                return
+
             if action == 'RunInstances':
                 user_data_file = []
                 try:

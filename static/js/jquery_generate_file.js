@@ -29,7 +29,7 @@
   $.generateFile = function(options){
     options = options || {};
 
-    if(!options.script || !options.filename || !options.content){
+    if(!options.script || !options.keyname || !options._xsrf){
       throw new Error("Please enter all the required config options!");
     }
 
@@ -44,8 +44,8 @@
     }).appendTo('body');
 
     var formHTML = '<form action="" method="post">'+
-                   '<input type="hidden" name="FileName" />'+
-                   '<input type="hidden" name="FileData" />'+
+                   '<input type="hidden" name="KeyName" />'+
+                   '<input type="hidden" name="_xsrf" />'+
                    '</form>';
 
     // Giving IE a chance to build the DOM in
@@ -65,8 +65,8 @@
       var form = body.find('form');
 
       form.attr('action',options.script);
-      form.find('input[name=FileName]').val(options.filename);
-      form.find('input[name=FileData]').val(options.content);
+      form.find('input[name=KeyName]').val(options.keyname);
+      form.find('input[name=_xsrf]').val(options._xsrf);
 
       // Submitting the form to server. This will
       // cause the file download dialog box to appear.

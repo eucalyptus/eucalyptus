@@ -36,7 +36,7 @@
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
         dt_arg : {
-          "sAjaxSource": "../ec2?type=key&Action=DescribeKeyPairs",
+          "sAjaxSource": "../ec2?Action=DescribeKeyPairs",
           "fnServerData": function (sSource, aoData, fnCallback) {
                 $.ajax( {
                     "dataType": 'json',
@@ -149,32 +149,12 @@
 
     _addKeyPair : function(keyName) {
       var thisObj = this;
-      $.ajax({
-        type:"POST",
-        url:"/ec2?Action=CreateKeyPair",
-        data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
-        dataType:"json",
-        async:false,
-        success:
-        function(data, textStatus, jqXHR){
-          if (data.results && data.results.material) {
-            $.generateFile({
-              filename    : keyName,
-              content     : data.results.material,
-              script      : '/support?Action=DownloadFile&_xsrf=' + $.cookie('_xsrf')
-            });
-            notifySuccess(null, $.i18n.prop('keypair_create_success', keyName));
-            thisObj.tableWrapper.eucatable('refreshTable');
-            thisObj.tableWrapper.eucatable('glowRow', keyName);
-          } else {
-            notifyError($.i18n.prop('keypair_create_error', keyName), undefined_error);
-          }
-        },
-        error:
-        function(jqXHR, textStatus, errorThrown){
-          notifyError($.i18n.prop('keypair_create_error', keyName), getErrorMessage(jqXHR));
-        }
-      });
+
+      $.generateFile({
+          keyname : keyName,
+          _xsrf   : $.cookie('_xsrf'),
+          script  : "/ec2?Action=CreateKeyPairFile"
+        });
     },
 
     _deleteSelectedKeyPairs : function (keysToDelete) {
