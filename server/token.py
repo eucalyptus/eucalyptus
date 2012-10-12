@@ -37,9 +37,9 @@ class TokenAuthenticator(object):
             return creds
         except urllib2.URLError, err:
             traceback.print_exc(file=sys.stdout)
-            if isinstance(err.reason, socket.timeout):
-                raise server.EuiException(504, 'Timed out')
-            else:
-                raise server.EuiException(401, 'Not Authorized')
+            if not(issubclass(err.__class__, urllib2.HTTPError)):
+                if isinstance(err.reason, socket.timeout):
+                    raise server.EuiException(504, 'Timed out')
+            raise server.EuiException(401, 'Not Authorized')
 
 

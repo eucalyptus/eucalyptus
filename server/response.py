@@ -15,5 +15,7 @@ class ClcError(object):
         self.status = status
         self.summary = summary
         # trim up message so we don't overload the browser, trim starting at "Caused by"
-        idx = message.find("Caused by")
+        idx = -1;
+        if message:
+            idx = message.find("Caused by")
         self.message = (message if (idx == -1) else message[:idx-1])
