@@ -577,7 +577,7 @@
           error:
           (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-              thisObj.delDialog.eucadialog('showError', $.i18n.prop('sgroup_delete_error', sgroupName));
+              notifyError($.i18n.prop('sgroup_delete_error', sgroupName), errorThrown);
             }
           })(sgroupName)
         });
