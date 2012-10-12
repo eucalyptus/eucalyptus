@@ -65,7 +65,6 @@ package com.eucalyptus.webui.client.activity;
 import java.util.Date;
 
 import com.eucalyptus.webui.client.ClientFactory;
-import com.eucalyptus.webui.client.place.ReportPlace;
 import com.eucalyptus.webui.client.view.ReportView;
 import com.google.gwt.activity.shared.AbstractActivity;
 import com.google.gwt.event.shared.EventBus;
@@ -125,8 +124,6 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
   private String sessionId = null;
   private Date fromDate;
   private Date toDate;
-  private String criteria;
-  private String groupBy;
   private String type;
   
   @Override

@@ -62,13 +62,15 @@
 
 package com.eucalyptus.webui.client.view;
 
+import static com.google.gwt.i18n.client.DateTimeFormat.getFormat;
+import static com.google.gwt.user.datepicker.client.DateBox.DefaultFormat;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.eucalyptus.webui.client.ClientFactory;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.*;
-import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.i18n.client.DateTimeFormat.PredefinedFormat;
 import com.google.gwt.uibinder.client.*;
 import com.google.gwt.user.client.ui.*;
@@ -96,20 +98,40 @@ public class ReportViewImpl extends Composite implements ReportView {
   ListBox type;
   
   private Presenter presenter;
-  
+  private final ClientFactory clientFactory;
+
   private LoadingAnimationViewImpl loadingAnimation;
   private Frame iFrame;
     
-  public ReportViewImpl( ) {
+  public ReportViewImpl( ClientFactory clientFactory ) {
+    this.clientFactory = clientFactory;
     initWidget( uiBinder.createAndBindUi( this ) );
     loadingAnimation = new LoadingAnimationViewImpl( );
     iFrame = new Frame( );
-    this.fromDate.setFormat( new DateBox.DefaultFormat( DateTimeFormat.getFormat( PredefinedFormat.DATE_LONG ) ) );
-    this.toDate.setFormat( new DateBox.DefaultFormat( DateTimeFormat.getFormat( PredefinedFormat.DATE_LONG ) ) );
+    this.fromDate.setFormat( new DefaultFormat( getFormat( PredefinedFormat.DATE_LONG ) ) );
+    this.toDate.setFormat( new DefaultFormat( getFormat( PredefinedFormat.DATE_LONG ) ) );
   }
   
   @UiHandler( "generateButton" )
   void handleGenerateButtonClick( ClickEvent e ) {
+    final Date from = fromDate.getValue( );
+    final Date to = toDate.getValue( );
+
+    String errorMessage = null;
+    if ( from == null || to == null ) {
+      errorMessage = "Invalid report period.";
+    } else if ( System.currentTimeMillis() < from.getTime() ) {
+      errorMessage = "Invalid report period requested, 'From' must be in the past.";
+    } else if ( from.getTime() > to.getTime() ) {
+      errorMessage = "Invalid report period requested, 'From' must not be later than 'Through'";
+    }
+
+    if ( errorMessage != null ) {
+      clientFactory.getShellView( ).getFooterView( ).showStatus(
+          FooterView.StatusType.ERROR, errorMessage, FooterView.DEFAULT_STATUS_CLEAR_DELAY );
+      return;
+    }
+
     this.contentPanel.clear( );
     this.contentPanel.add( loadingAnimation );
     this.presenter.generateReport( fromDate.getValue( ),

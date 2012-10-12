@@ -32,11 +32,17 @@ public class ReportGenerationFacade {
                                          @Nonnull  final String format,
                                                    final long start,
                                                    final long end ) throws ReportGenerationException {
+      final long maxEndTime = System.currentTimeMillis();
+      final long adjustedEndTime = end > maxEndTime ? maxEndTime : end;
+      if ( start >= adjustedEndTime ) {
+        throw new ReportGenerationArgumentException( "Invalid report period" );
+      }
+
       final ReportGenerator generator = ReportGenerator.getInstance();
       final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
       try {
         generator.generateReport(
-            new Period( start, end ),
+            new Period( start, adjustedEndTime ),
             ReportFormat.valueOf(format.toUpperCase()),
             ReportType.valueOf(type.toUpperCase().replace('-','_')),
             null,
@@ -48,7 +54,7 @@ public class ReportGenerationFacade {
       return new String( reportOutput.toByteArray(), Charsets.UTF_8 );
     }
 
-    public static final class ReportGenerationException extends Exception {
+    public static class ReportGenerationException extends Exception {
       private static final long serialVersionUID = 1L;
 
       public ReportGenerationException( final String message ) {
@@ -60,4 +66,12 @@ public class ReportGenerationFacade {
         super(message, cause);
       }
     }
+
+  public static final class ReportGenerationArgumentException extends ReportGenerationException {
+    private static final long serialVersionUID = 1L;
+
+    public ReportGenerationArgumentException( final String message ) {
+      super(message);
+    }
+  }
 }
