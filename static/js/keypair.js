@@ -115,10 +115,6 @@
         // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: keypair_dialog_create_btn, disabled: true,  click: function() {
                       var keyName = $.trim($add_dialog.find('#key-name').val());
-                      alert(keyName);
-                      alert($('<div>').html(keyName).text());
-                      return;
-
                       if (KEY_PATTERN.test(keyName)){
                         $add_dialog.eucadialog("close"); 
                         thisObj._addKeyPair(keyName);
