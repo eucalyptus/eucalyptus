@@ -162,9 +162,9 @@
          title: volume_dialog_attach_title,
          buttons: {
            'attach': { domid: thisObj.attachButtonId, text: volume_dialog_attach_btn, disabled: true, click: function() { 
-                volumeId = $attach_dialog.find('#volume-attach-volume-id').val();
-                instanceId = $attach_dialog.find('#volume-attach-instance-id').val()
-                device = $.trim($attach_dialog.find('#volume-attach-device-name').val());
+                volumeId = asText($attach_dialog.find('#volume-attach-volume-id').val());
+                instanceId = asText($attach_dialog.find('#volume-attach-instance-id').val());
+                device = $.trim(asText($attach_dialog.find('#volume-attach-device-name').val()));
                 $attach_dialog.eucadialog("close");
                 thisObj._attachVolume(volumeId, instanceId, device);
               } 
@@ -187,7 +187,7 @@
          title: volume_dialog_add_title,
          buttons: {
            'create': { domid: createButtonId, text: volume_dialog_create_btn, disabled: true, click: function() { 
-              var size = $.trim($add_dialog.find('#volume-size').val());
+              var size = $.trim(asText($add_dialog.find('#volume-size').val()));
               var az = $add_dialog.find('#volume-add-az-selector').val();
               var $snapshot = $add_dialog.find('#volume-add-snapshot-selector :selected');
               var isValid = true;
@@ -211,7 +211,7 @@
               }
               if ( isValid ) {
                 $add_dialog.eucadialog("close");
-                thisObj._createVolume(size, az, $snapshot.val());
+                thisObj._createVolume(size, az, asText($snapshot.val()));
               } 
             }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
@@ -222,10 +222,10 @@
            var $az_selector = thisObj.addDialog.find('#volume-add-az-selector');
            var $vol_size_edit = thisObj.addDialog.find('#volume-size');
            $add_dialog.eucadialog('buttonOnChange', $az_selector,  createButtonId, function(){
-             return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
+             return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt(asText($vol_size_edit.val()));
            }); 
            $add_dialog.eucadialog('buttonOnKeyup', $vol_size_edit,  createButtonId, function(){
-             return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt($vol_size_edit.val());
+             return $az_selector.val() !== '' &&  $vol_size_edit.val() == parseInt(asText($vol_size_edit.val()));
            });
            thisObj._initAddDialog(dfd) ; // pulls az and snapshot info from the server
            return dfd.promise();
@@ -298,7 +298,7 @@
 
       if(!$instanceSelector.val()){ // launch from volume landing
         var inst_ids = [];
-        var vol_id = $volumeSelector.val();
+        var vol_id = asText($volumeSelector.val());
         var results = describe('volume');
         var volume = null;
         if ( results ) {
@@ -323,7 +323,7 @@
         $instanceSelector.autocomplete({
           source: inst_ids,
           select: function(event, ui) {
-            if ($.trim($deviceName.val()) == ''){
+            if ($.trim(asText($deviceName.val())) == ''){
               $deviceName.val(thisObj._suggestNextDeviceName(ui.item.value));
             }
             if ($deviceName.val() != '' && $volumeSelector.val() != '')
@@ -333,7 +333,7 @@
         $instanceSelector.watermark(instance_id_watermark);
       }
       if(!$volumeSelector.val()){ // launch from instance landing
-        var inst_id = $instanceSelector.val();
+        var inst_id = asText($instanceSelector.val());
         var results = describe('instance');
         var instance = null;
         if (results){

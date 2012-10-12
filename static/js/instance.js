@@ -31,8 +31,6 @@
     consoleDialog : null,
     detachDialog : null,
     launchMoreDialog : null,
-    emiToManifest : {},
-    emiToPlatform : {},
     instVolMap : {},// {i-123456: {vol-123456:attached,vol-234567:attaching,...}}
     instIpMap : {}, // {i-123456: 192.168.0.1}
     instPassword : {}, // only windows instances
@@ -43,7 +41,6 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
-      this._getEmi();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
         dt_arg : {
@@ -67,8 +64,9 @@
             },
             { // platform
               "fnRender" : function(oObj) { 
-               if (thisObj.emiToPlatform[oObj.aData.image_id])
-                 return thisObj.emiToPlatform[oObj.aData.image_id];
+               var result = describe('image', oObj.aData.image_id);
+               if(result && result.platform) 
+                 return result.platform;
                else
                  return "linux";
                }
@@ -148,22 +146,6 @@
           thisObj._flipToHelp(evt,{content: $instHelp, url: help_instance.landing_content_url});
         },
         draw_cell_callback : null, 
-        /*function(row, col, val){
-          if(col===4){
-            if(!thisObj.emiToManifest[val])
-              return val; // in case of error, print EMI
-            else{
-              var manifest = thisObj.emiToManifest[val];
-              var newManifest = ''; 
-              for(i=0; i<manifest.length/25; i++){
-                newManifest += manifest.substring(i*25, Math.min(i*25+25, manifest.length)) + '\n';
-              } 
-              newManifest = $.trim(newManifest);
-              return newManifest;
-            }
-          }else
-            return val;
-        },*/
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
         },
@@ -290,15 +272,6 @@
     },
 
     _destroy : function() { },
-
-    _getEmi : function() {
-      var thisObj = this;
-      var results = describe('image');
-      $.each(results, function(idx, img){
-        thisObj.emiToManifest[img['name']] = img['location'];
-        thisObj.emiToPlatform[img['name']] = img['platform'];
-      });
-    },
 
     _reloadData : function() {
       var thisObj = this;
@@ -839,7 +812,7 @@
       var emi = instance.image_id;
       var type = thisObj.launchMoreDialog.find('#summary-type-insttype').children().last().text();
       var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
-      var inst_num = thisObj.launchMoreDialog.find('input#launch-more-num-instance').val();
+      var inst_num = asText(thisObj.launchMoreDialog.find('input#launch-more-num-instance').val());
       var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
       var sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
 
@@ -968,7 +941,10 @@
       var prodCode = ''; 
       if(instance['product_codes'] && instance['product_codes'].length > 0)
         prodCode = instance['product_codes'].join(' ');
-
+      var manifest = '';
+      var image = describe('image',instance['image_id']);
+      if(image && image.location)
+        manifest = image.location; 
       var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
       $('<div>').addClass('expanded-section-label').text(instance_table_expanded_instance),
       $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
@@ -993,7 +969,7 @@
             $('<div>').addClass('expanded-value').text(instance['owner_id'])),
           $('<li>').append(
             $('<div>').addClass('expanded-title').text(instance_table_expanded_manifest),
-            $('<div>').addClass('expanded-value').text(thisObj.emiToManifest[instance['image_id']])))));
+            $('<div>').addClass('expanded-value').text(manifest)))));
 
       var $volInfo = null;
       if(instance.block_device_mapping && Object.keys(instance.block_device_mapping).length >0){

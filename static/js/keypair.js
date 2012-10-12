@@ -114,7 +114,7 @@
         buttons: { 
         // e.g., add : { domid: keys-add-btn, text: "Add new key", disabled: true, focus: true, click : function() { }, keypress : function() { }, ...} 
         'create': { domid: createButtonId, text: keypair_dialog_create_btn, disabled: true,  click: function() {
-                      var keyName = $.trim($add_dialog.find('#key-name').val());
+                      var keyName = $.trim(asText($add_dialog.find('#key-name').val()));
                       if (KEY_PATTERN.test(keyName)){
                         $add_dialog.eucadialog("close"); 
                         thisObj._addKeyPair(keyName);
@@ -140,8 +140,8 @@
         title: keypair_dialog_import_title,
         buttons: { 
         'create': { domid: createButtonId, text: keypair_dialog_import_btn, disabled: true,  click: function() {
-                      var keyName = $.trim($import_dialog.find('#key-name').val());
-                      var keyContents = $.trim($import_dialog.find('#key-import-contents').val());
+                      var keyName = $.trim(asText($import_dialog.find('#key-name').val()));
+                      var keyContents = $.trim(asText($import_dialog.find('#key-import-contents').val()));
                       if (KEY_PATTERN.test(keyName)){
                         $import_dialog.eucadialog("close"); 
                         thisObj._importKeyPair(keyName, keyContents);

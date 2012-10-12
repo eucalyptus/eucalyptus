@@ -564,7 +564,7 @@
         $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-num-instance').append(
           $('<label>').attr('for','launch-instance-type-num-instance').text(launch_instance_type_option_numinstance),
           $('<input>').attr('title', launch_instance_type_num_instance_tip).attr('id','launch-instance-type-num-instance').attr('type','text').attr('class', 'short-textinput').change( function(e) {
-            numInstances = $(this).val(); 
+            numInstances = asText($(this).val()); 
             if(numInstances<=0 || isNaN(numInstances)){
               $(this).val(1);
               return;
@@ -916,9 +916,9 @@
       var validate = function($selectedRow){
         var $cells = $selectedRow.find('td');
         var volume = $($cells[0]).find('select').val();
-        var mapping = '/dev/'+$($cells[1]).find('input').val();
+        var mapping = '/dev/'+asText($($cells[1]).find('input').val());
         var snapshot = $($cells[2]).find('select').val();
-        var size = $($cells[3]).find('input').val(); 
+        var size = asText($($cells[3]).find('input').val()); 
         var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
 
         //validate the input 
@@ -934,7 +934,7 @@
           $($cells[1]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_none));
           return false;
         }
-        if(size.length <= 0 || (volume === 'ebs' && parseInt(size)<=0)){
+        if(size.length <= 0 || (volume === 'ebs' && (parseInt(size)<=0 || isNaN(size)))){
           thisObj.element.find('.field-error').remove();
           $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size_none));
           return false;
@@ -1053,9 +1053,9 @@
           var $selectedRow = $(e.target).parents('tr');
           var $cells = $selectedRow.find('td');
           var volume = $($cells[0]).find('select').val();
-          var mapping = '/dev/'+$($cells[1]).find('input').val();
+          var mapping = '/dev/'+asText($($cells[1]).find('input').val());
           var snapshot = $($cells[2]).find('select').val();
-          var size = $($cells[3]).find('input').val(); 
+          var size = asText($($cells[3]).find('input').val()); 
           var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
 
           if(!validate($selectedRow))
@@ -1143,7 +1143,7 @@
         var data = $section.find('#launch-wizard-advanced-input-userdata');
         if(data.val().length > 0){
           dataAdded = true;
-          thisObj.launchParam['data'] = data.val();
+          thisObj.launchParam['data'] = asText(data.val());
         }
         if($userdata.find('#launch-wizard-advanced-input-userfile').val().length > 0){
           dataAdded = true;
@@ -1175,9 +1175,9 @@
           var $selectedRow = $(this);
           var $cells = $selectedRow.find('td');
           var volume = $($cells[0]).find('select').val();
-          var mapping = '/dev/'+$($cells[1]).find('input').val();
+          var mapping = '/dev/'+asText($($cells[1]).find('input').val());
           var snapshot = $($cells[2]).find('select').val();
-          var size = $($cells[3]).find('input').val(); 
+          var size = asText($($cells[3]).find('input').val()); 
           var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
         
           snapshot = (snapshot ==='none') ? null : snapshot; 

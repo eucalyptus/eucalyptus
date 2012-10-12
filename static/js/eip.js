@@ -126,7 +126,7 @@
          title: eip_allocate_dialog_title,
          buttons: {
            'create': { domid: allocateButtonId, text: eip_allocate_dialog_allocate_btn, disabled: true, click: function() {
-                var numberOfIps = $eip_allocate_dialog.find('#eip-allocate-count').val();
+                var numberOfIps = asText($eip_allocate_dialog.find('#eip-allocate-count').val());
                 if ( numberOfIps != parseInt(numberOfIps) ) {
                   $eip_allocate_dialog.eucadialog('showError', eip_allocate_count_error_msg);
                 } else {
@@ -155,7 +155,7 @@
          buttons: {
            'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
                fixedValue = $eip_associate_dialog.find('#associate-fixed-value').html();
-               selectedValue = $eip_associate_dialog.find('#associate-selected-value').val();
+               selectedValue = asText($eip_associate_dialog.find('#associate-selected-value').val());
                $eip_associate_dialog.eucadialog("close");
                if (thisObj.options.from_instance) {
                  thisObj._associateIp(selectedValue, fixedValue);

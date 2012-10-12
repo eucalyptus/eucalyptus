@@ -142,9 +142,9 @@
          title: snapshot_create_dialog_title,
          buttons: {
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
-                volumeId = $.trim($snapshot_dialog.find('#snapshot-create-volume-id').val());
+                volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = $.trim($snapshot_dialog.find('#snapshot-create-description').val());
+                  description = $.trim(asText($snapshot_dialog.find('#snapshot-create-description').val()));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -163,7 +163,7 @@
        });
        var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
        this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
-         return VOL_ID_PATTERN.test($vol_selector.val());
+         return VOL_ID_PATTERN.test(asText($vol_selector.val()));
        });
       // create snapshot dialog end
       // snapshot register dialog start
@@ -177,12 +177,12 @@
          title: snapshot_register_dialog_title,
          buttons: {
            'register': {domid: registerBtnId, text: snapshot_dialog_reg_btn, click: function() {
-               var name = thisObj.regDialog.find('#snapshot-register-image-name').val();
+               var name = asText(thisObj.regDialog.find('#snapshot-register-image-name').val());
                if(!name || name.length <= 0) {
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
-               var desc = thisObj.regDialog.find('#snapshot-register-image-desc').val();
+               var desc = asText(thisObj.regDialog.find('#snapshot-register-image-desc').val());
                var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
                var windows = $checkbox.is(':checked') ? true : false; 
                thisObj._registerSnapshots(name, desc, windows);

@@ -124,8 +124,8 @@
         title: sgroup_dialog_add_title,
         buttons: { 
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
-              var name = $.trim($add_dialog.find('#sgroup-name').val());
-              var desc = $.trim($add_dialog.find('#sgroup-description').val());
+              var name = $.trim(asText($add_dialog.find('#sgroup-name').val()));
+              var desc = $.trim(asText($add_dialog.find('#sgroup-description').val()));
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
               var fromPort = new Array();
               var toPort = new Array();
@@ -289,7 +289,7 @@
       dialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
          var thediv = dialog.find('#sgroup-more-rules');
          var sel = dialog.find('#sgroup-template');
-         var templ = sel.val();
+         var templ = asText(sel.val());
          if (templ == 'none') {
             thediv.css('display','none')
             thisDialog.find('#sgroup-ports').val('');
@@ -327,14 +327,14 @@
         thisDialog.find('#allow-group').prop('disabled', false);
       });
       dialog.find('#allow-ip').keyup(function () {
-        var val = thisDialog.find('#allow-ip').val();
+        var val = asText(thisDialog.find('#allow-ip').val());
         if (val.match('^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])/([1-9]|[1-3][0-9])$') != null)
             thisDialog.find('#allow-ip-error').html("");
         else
             thisDialog.find('#allow-ip-error').html(sgroup_error_address_range);
       });
       dialog.find('#sgroup-ports').keyup(function () {
-        var template = thisDialog.find('#sgroup-template').val();
+        var template = asText(thisDialog.find('#sgroup-template').val());
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
             thisDialog.find('#sgroup-ports-error').html(sgroup_error_port);
@@ -378,8 +378,8 @@
     },
 
     _validateFormAdd : function(createButtonId, dialog) {
-      name = $.trim(dialog.find('#sgroup-name').val());
-      desc = $.trim(dialog.find('#sgroup-description').val());
+      name = $.trim(asText(dialog.find('#sgroup-name').val()));
+      desc = $.trim(asText(dialog.find('#sgroup-description').val()));
       $button = dialog.parent().find('#' + createButtonId);
       if ( name.length == 0 || desc.length == 0 )     
         $button.prop("disabled", false).addClass("ui-state-disabled");
@@ -393,11 +393,11 @@
       var enable = true;
       $button = dialog.parent().find('#' + createButtonId);
 
-      template = dialog.find('#sgroup-template').val();
-      ports = dialog.find('#sgroup-ports').val();
-      type = dialog.find('#sgroup-type').val();
-      allow_ip = dialog.find('#allow-ip').val();
-      allow_group = dialog.find('#allow-group').val();
+      template = asText(dialog.find('#sgroup-template').val());
+      ports = asText(dialog.find('#sgroup-ports').val());
+      type = asText(dialog.find('#sgroup-type').val());
+      allow_ip = asText(dialog.find('#allow-ip').val());
+      allow_group = asText(dialog.find('#allow-group').val());
       dialog.find('#sgroup-ports-error').html("");
       if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
         if (ports == '') {
@@ -460,7 +460,7 @@
             this.rulesList = new Array();
         }
         // if nothing selected, don't save
-        template = dialog.find('#sgroup-template').val();
+        asText(template = dialog.find('#sgroup-template').val());
         if (template == 'none')
             return;
         var rule = new Object();
@@ -475,12 +475,12 @@
             }
         }
         if (rule.protocol == 'icmp') {
-            var icmp_type = dialog.find('#sgroup-type').val();
+            var icmp_type = asText(dialog.find('#sgroup-type').val());
             rule.from_port = icmp_type;
             rule.to_port = icmp_type;
         }
         else { // gather port details
-            var port_range = dialog.find('#sgroup-ports').val();
+            var port_range = asText(dialog.find('#sgroup-ports').val());
             // if no port named, don't save
             if (port_range == '')
                 return;
@@ -489,10 +489,10 @@
             rule.to_port = ports[ports.length-1];
         }
         if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-ip') {
-            rule.ipaddr = dialog.find('#allow-ip').val();
+            rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
         else if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-group') {
-            rule.group = dialog.find('#allow-group').val();
+            rule.group = asText(dialog.find('#allow-group').val());
         }
         rule.isnew = true;
         this.rulesList.push(rule);
