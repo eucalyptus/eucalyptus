@@ -223,13 +223,13 @@
       $.ajax({
         type:"POST",
         url:"/ec2?Action=ImportKeyPair",
-        data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName+"&PublicKeyMaterial="+keyContents,
+        data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName+"&PublicKeyMaterial="+btoa(keyContents),
         dataType:"json",
         async:true,
         success:
         (function(keyName) {
           return function(data, textStatus, jqXHR){
-            if ( data.results && data.results.material) {
+            if (data.results && data.results.fingerprint) {
               notifySuccess(null, $.i18n.prop('keypair_import_success', keyName));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
