@@ -60,85 +60,44 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.storage;
+package edu.ucsb.eucalyptus.storage;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import edu.ucsb.eucalyptus.msgs.ComponentProperty;
+import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.eucalyptus.storage.CheckerTask;
 
-public interface LogicalStorageManager {
-	public void initialize() throws EucalyptusCloudException;
+public class StorageCheckerService {
+	private Logger LOG = Logger.getLogger( StorageCheckerService.class );
 
-	public void configure() throws EucalyptusCloudException;
-
-	public void checkPreconditions() throws EucalyptusCloudException;
-
-	public void reload();
-
-	public void startupChecks();
-
-	public void cleanVolume(String volumeId);
-
-	public void cleanSnapshot(String snapshotId);
-
-	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
-
-	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
-
-	public void createVolume(String volumeId, int size) throws EucalyptusCloudException;
-
-	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException;
-
-	public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException;
-
-	public void addSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public void deleteVolume(String volumeId) throws EucalyptusCloudException;
-
-	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException;
-
-	public String getVolumeProperty(String volumeId) throws EucalyptusCloudException;
-
-	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException;
-
-	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException;
-
-	public void finishVolume(String snapshotId) throws EucalyptusCloudException;
-
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
-
-	public ArrayList<ComponentProperty> getStorageProps();
-
-	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
-
-	public String getStorageRootDirectory();
-
-	public String getVolumePath(String volumeId) throws EucalyptusCloudException;
-
-	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;
-
-	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException;
-
-	public void importSnapshot(String snapshotId, String snapPath, String volumeId, int size) throws EucalyptusCloudException;
-
-	public String attachVolume(String volumeId, List<String> nodeIqns) throws EucalyptusCloudException;
-
-	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
-
-	public void checkReady() throws EucalyptusCloudException;
-
-	public void stop() throws EucalyptusCloudException;
-
-	public void enable() throws EucalyptusCloudException;
-
-	public void disable() throws EucalyptusCloudException;
-
-	public boolean getFromBackend(String snapshotId) throws EucalyptusCloudException;
+	private final ScheduledExecutorService exec;
 	
-	public void checkVolume(String volumeId) throws EucalyptusCloudException;
+	private ConcurrentHashMap<String, CheckerTask> checkers;
 
-	public List<CheckerTask> getCheckers();
+	public StorageCheckerService() {
+		checkers = new ConcurrentHashMap<String, CheckerTask>();
+		exec = Executors.newSingleThreadScheduledExecutor();
+		exec.scheduleAtFixedRate(new Runnable () {
+			@Override
+			public void run() {
+				for (CheckerTask checker : checkers.values()) {
+					checker.run();
+				}
+			}
+		}, 1, 1, TimeUnit.MINUTES);
+
+	}
+
+	public void add(CheckerTask checker) {
+		checkers.putIfAbsent(checker.getName(), checker);
+	}
+
+	public void shutdown() {
+		exec.shutdownNow();
+		checkers.clear();
+	}
 }

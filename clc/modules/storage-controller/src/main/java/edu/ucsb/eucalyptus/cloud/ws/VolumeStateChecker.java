@@ -60,172 +60,50 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package edu.ucsb.eucalyptus.cloud.entities;
+package edu.ucsb.eucalyptus.cloud.ws;
 
-import java.io.Serializable;
+import java.util.List;
 
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.GenericGenerator;
+import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.storage.CheckerTask;
+import com.eucalyptus.storage.LogicalStorageManager;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
-import javax.persistence.*;
+import edu.ucsb.eucalyptus.cloud.entities.VolumeInfo;
 
-@MappedSuperclass
-public class LVMVolumeInfo extends AbstractPersistent {
-	@Column(name = "volume_name")
-	protected String volumeId;
-	@Column(name = "sc_name")
-	private String scName;
-	@Column(name = "lodev_name")
-	private String loDevName;
-	@Column(name = "lofile_name")
-	private String loFileName;
-	@Column(name = "pv_name")
-	private String pvName;
-	@Column(name = "vg_name")
-	private String vgName;
-	@Column(name = "lv_name")
-	private String lvName;
-	@Column(name = "size")
-	protected Integer size;
-	@Column(name = "status")
-	private String status;
-	@Column(name = "snapshot_of")
-	private String snapshotOf;
-	@Column(name = "cleanup")
-	private Boolean cleanup;
 
-	public LVMVolumeInfo() {
-		super();
-		this.scName = StorageProperties.NAME;
-	}
+public class VolumeStateChecker extends CheckerTask {
+	private static Logger LOG = Logger.getLogger(VolumeStateChecker.class);
 
-	public LVMVolumeInfo(String volumeId) {
-		this();
-		this.volumeId = volumeId;
-	}
-	public String getVolumeId() {
-		return volumeId;
-	}
-
-	public void setVolumeId(String volumeId) {
-		this.volumeId = volumeId;
-	}
-
-	public String getScName() {
-		return scName;
-	}
-
-	public void setScName(String scName) {
-		this.scName = scName;
-	}
-
-	public String getLoDevName() {
-		return loDevName;
-	}
-
-	public void setLoDevName(String loDevName) {
-		this.loDevName = loDevName;
-	}
-
-	public String getLoFileName() {
-		return loFileName;
-	}
-
-	public void setLoFileName(String loFileName) {
-		this.loFileName = loFileName;
-	}
-
-	public String getPvName() {
-		return pvName;
-	}
-
-	public void setPvName(String pvName) {
-		this.pvName = pvName;
-	}
-
-	public String getVgName() {
-		return vgName;
-	}
-
-	public void setVgName(String vgName) {
-		this.vgName = vgName;
-	}
-
-	public String getLvName() {
-		return lvName;
-	}
-
-	public void setLvName(String lvName) {
-		this.lvName = lvName;
-	}
-
-	public Integer getSize() {
-		return size;
-	}
-
-	public void setSize(Integer size) {
-		this.size = size;
-	}
-
-	public String getStatus() {
-		return status;
-	}
-
-	public void setStatus(String status) {
-		this.status = status;
-	}
-
-	public String getSnapshotOf() {
-		return snapshotOf;
-	}
-
-	public void setSnapshotOf(String snapshotOf) {
-		this.snapshotOf = snapshotOf;
-	}
-
-	public Boolean getCleanup() {
-		return cleanup == null ? false : cleanup;
-	}
-
-	public void setCleanup(Boolean cleanup) {
-		this.cleanup = cleanup;
+	LogicalStorageManager blockManager;
+	public VolumeStateChecker(LogicalStorageManager blockManager) {
+		this.name = "VolumeStatusChecker";
+		this.blockManager = blockManager;
 	}
 
 	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((scName == null) ? 0 : scName.hashCode());
-		result = prime * result
-		+ ((volumeId == null) ? 0 : volumeId.hashCode());
-		return result;
+	public void run() {
+		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+		VolumeInfo volumeInfo = new VolumeInfo();
+		volumeInfo.setStatus(StorageProperties.Status.available.toString());
+		List<VolumeInfo> volumes = db.query(volumeInfo);
+		for(VolumeInfo volume : volumes) {
+			try {
+				blockManager.checkVolume(volume.getVolumeId());
+			} catch (EucalyptusCloudException ex) {
+				//volume.setStatus(StorageProperties.Status.error.toString());
+				LOG.error(ex);
+			}
+		}
+		try {
+			db.commit();
+		} catch(Exception ex) {
+			LOG.error(ex, ex);
+			db.rollback();
+		}
 	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		LVMVolumeInfo other = (LVMVolumeInfo) obj;
-		if (scName == null) {
-			if (other.scName != null)
-				return false;
-		} else if (!scName.equals(other.scName))
-			return false;
-		if (volumeId == null) {
-			if (other.volumeId != null)
-				return false;
-		} else if (!volumeId.equals(other.volumeId))
-			return false;
-		return true;
-	}
-
-
 }
+

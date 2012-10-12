@@ -87,6 +87,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.BlockStorageChecker;
 import com.eucalyptus.storage.BlockStorageManagerFactory;
+import com.eucalyptus.storage.CheckerTask;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.storage.StorageManagers;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -133,6 +134,7 @@ import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 import edu.ucsb.eucalyptus.msgs.StorageVolume;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
+import edu.ucsb.eucalyptus.storage.StorageCheckerService;
 import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 
@@ -144,7 +146,8 @@ public class BlockStorage {
 	static BlockStorageStatistics blockStorageStatistics;
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
-	
+	static StorageCheckerService checkerService;
+
 	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
@@ -162,7 +165,7 @@ public class BlockStorage {
 		}
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
-	
+		checkerService = new StorageCheckerService();
 	}
 
 	public BlockStorage() {}
@@ -202,6 +205,9 @@ public class BlockStorage {
 		if(snapshotService != null) {
 			snapshotService.shutdown();
 		}
+		if(checkerService != null) {
+			checkerService.shutdown();
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = false;
 	}
 
@@ -214,6 +220,11 @@ public class BlockStorage {
 			LOG.error("Startup checks failed ", ex);
 		}
 		blockManager.enable();
+		checkerService.add(new VolumeStateChecker(blockManager));
+		//add any block manager checkers
+		for(CheckerTask checker : blockManager.getCheckers()) {
+			checkerService.add(checker);
+		}
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
 	}
 
@@ -221,6 +232,12 @@ public class BlockStorage {
 		blockManager.disable();
 	}
 
+	public static void addChecker(CheckerTask checkerTask) {
+		if(checkerService != null) {
+			checkerService.add(checkerTask);
+		}
+	}
+	
 	public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
@@ -757,12 +774,12 @@ public class BlockStorage {
 					final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
 					ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
 							SnapShotEvent.forSnapShotCreate(
-								snapshotSize,
-								volumeUuid,
-								volumeId ),
-							snapshotInfo.getNaturalId(),
-							snapshotInfo.getSnapshotId(),
-							snapshotInfo.getUserName() ) ); // snapshot info user name is user id
+									snapshotSize,
+									volumeUuid,
+									volumeId ),
+									snapshotInfo.getNaturalId(),
+									snapshotInfo.getSnapshotId(),
+									snapshotInfo.getUserName() ) ); // snapshot info user name is user id
 				} catch ( final Exception e ) {
 					LOG.error( e, e  );
 				}
@@ -903,7 +920,7 @@ public class BlockStorage {
 								LOG.warn("Block Manager replied that " + snapshotId + " not on backend, but snapshot preparation indicated that the snapshot is already present");
 							}
 						}
-						
+
 						db = StorageProperties.getEntityWrapper();
 						snapshotInfo = new SnapshotInfo(snapshotId);
 						snapshotInfo.setVolumeId(volumeId);
@@ -944,7 +961,7 @@ public class BlockStorage {
 					LOG.error(ex,ex);
 				}
 			}
-			
+
 			//Create the necessary database entries for the newly created volume.
 			EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 			VolumeInfo volumeInfo = new VolumeInfo(volumeId);
