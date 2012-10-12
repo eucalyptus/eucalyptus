@@ -231,11 +231,11 @@ public class FalseDataGenerator
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "NetworkIn", 0L, "total", oneMB*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0L, "internal", oneMB*2*periodNum);
+										timeMs, "NetworkIn", 0L, "external", oneMB*2*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "NetworkOut", 0L, "total", oneMB*3*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0L, "internal", oneMB*4*periodNum);
+										timeMs, "NetworkOut", 0L, "external", oneMB*4*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "DiskReadBytes", 0L, "root", oneMB*5*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,

@@ -91,6 +91,7 @@ public class InstanceArtGenerator
 
     public static final String DIM_TOTAL     = "total";
     public static final String DIM_DEFAULT   = "default";
+    public static final String DIM_EXTERNAL  = "external";
     
     private static final long USAGE_SEARCH_PERIOD = TimeUnit.DAYS.toMillis( 12 );
 
@@ -154,9 +155,8 @@ public class InstanceArtGenerator
 
         		/* Update the total usage in the usage art entity, for this uuid/metric/dimension combo.
         		 * Metric values are cumulative, so we must subtract each from the last. For this reason,
-        		 * we must retain previous values of each uuid/metric/dim combo. We must also retain the
-        		 * earliest and latest times for each combo, to update the duration. We must also retain sequence
-        		 * numbers, to detect sensor resets.
+        		 * we must retain previous values of each uuid/metric/dim combo, the earliest and latest times
+        		 * for each combo (to update the duration), and the sequence numbers (to detect sensor resets)
         		 */
         		if (!prevDataMap.containsKey(key)) {
         			/* No prior value. Use usage from instance creation to present
@@ -270,9 +270,9 @@ public class InstanceArtGenerator
 	{
 		InstanceUsageArtEntity totalEntity = totals.getInstanceTotals();
 		InstanceUsageArtEntity usage = instance.getUsage();
-		
+				
 		/* Update metrics */
-        addUsage( totalEntity, usage );
+		totalEntity.addUsage(usage);
 		
 		/* Update total running time and type count for this instance type */
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
@@ -282,25 +282,9 @@ public class InstanceArtGenerator
 		}
 		InstanceUsageArtEntity typeTotal =
 			typeTotals.get(instance.getInstanceType().toLowerCase());
-		
-        addUsage( typeTotal, usage );
-		
-	}
 
-    private static void addUsage( final InstanceUsageArtEntity total, final InstanceUsageArtEntity usage )
-    {
-        total.addDurationMs( usage.getDurationMs() );
-        total.addCpuUtilizationMs( usage.getCpuUtilizationMs() );
-        total.addDiskReadMegs( usage.getDiskReadMegs() );
-        total.addDiskWriteMegs( usage.getDiskWriteMegs() );
-        total.addDiskReadOps( usage.getDiskReadOps() );
-        total.addDiskWriteOps( usage.getDiskWriteOps() );
-        total.addDiskReadTime( usage.getDiskReadTime() );
-        total.addDiskWriteTime( usage.getDiskWriteTime() );
-        total.addNetTotalInMegs( usage.getNetTotalInMegs() );
-        total.addNetTotalOutMegs( usage.getNetTotalOutMegs() );
-        total.addInstanceCnt( 1 );
-    }
+		typeTotal.addUsage(usage);
+	}
 
     private static void addMetricValueToUsageEntity(InstanceUsageArtEntity usage, String metric, String dim, double val)
     {
@@ -310,6 +294,10 @@ public class InstanceArtGenerator
             usage.addNetTotalInMegs(valueMB);
         } else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_TOTAL)) {
             usage.addNetTotalOutMegs(valueMB);
+        } else if (metric.equals(METRIC_NET_IN_BYTES) && dim.equals(DIM_EXTERNAL)) {
+        	usage.addNetExternalInMegs(valueMB);            
+        } else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_EXTERNAL)) {
+        	usage.addNetExternalOutMegs(valueMB);
         } else if (metric.equals(METRIC_DISK_IN_BYTES)) {
             usage.addDiskReadMegs(valueMB);
         } else if (metric.equals(METRIC_DISK_OUT_BYTES)) {
