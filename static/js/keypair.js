@@ -142,9 +142,10 @@
         'create': { domid: createButtonId, text: keypair_dialog_import_btn, disabled: true,  click: function() {
                       var keyName = $.trim($import_dialog.find('#key-name').val());
                       var keyContents = $.trim($import_dialog.find('#key-import-contents').val());
+                      var keyFile = $.trim($import_dialog.find('#key-import-file').val());
                       if (KEY_PATTERN.test(keyName)){
                         $import_dialog.eucadialog("close"); 
-                        thisObj._importKeyPair(keyName, keyContents);
+                        thisObj._importKeyPair(keyName, keyContents, keyFile);
                       }
                       else{
                         thisObj.addDialog.eucadialog('showError', keypair_dialog_error_msg);
@@ -218,12 +219,16 @@
       }
     },
    
-    _importKeyPair : function (keyName, keyContents) {
+    _importKeyPair : function (keyName, keyContents, keyFile) {
       var thisObj = this;
+      var parms = "_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName;
+      if (keyFile -= null) {
+        params += "&PublicKeyMaterial="+btoa(keyContents)
+      }
       $.ajax({
         type:"POST",
         url:"/ec2?Action=ImportKeyPair",
-        data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName+"&PublicKeyMaterial="+btoa(keyContents),
+        data:params,
         dataType:"json",
         async:true,
         success:
