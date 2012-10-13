@@ -24,11 +24,40 @@ class BotoJsonEncoder(JSONEncoder):
     codec = HTMLEntityCodec()
     IMMUNE_HTML = ',.-_ '
     IMMUNE_HTMLATTR = ',.-_'
+
+    # these are system generated values that aren't a risk for XSS attacks
+    FIELD_WHITELIST = [
+        'id',
+        'image_id',
+        'kernel_id',
+        'ramdisk_id',
+        'reservation_id',
+        'owner_id',
+        'root_device_type',
+        'state_reason',
+        'state_reason',
+        'state_code',
+        'monitored',
+        'platform',
+        'volume_id',
+        'snapshot_id',
+        'launch_time',
+        'attach_time',
+        'create_time',
+        'start_time',
+        'instance_type',
+        'zone',
+        'progress',
+        'ip_protocol',
+        'fingerpirnt'
+    ];
     
     def __sanitize_and_copy__(self, dict):
         try:
             ret = copy.copy(dict)
             for key in ret.keys():
+                if key in self.FIELD_WHITELIST:
+                    continue
                 if isinstance(ret[key], basestring):
                     ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
             return ret
