@@ -39,6 +39,7 @@ class BotoJsonEncoder(JSONEncoder):
         'state_code',
         'monitored',
         'platform',
+        'output',
         'volume_id',
         'snapshot_id',
         'launch_time',
@@ -49,7 +50,7 @@ class BotoJsonEncoder(JSONEncoder):
         'zone',
         'progress',
         'ip_protocol',
-        'fingerpirnt'
+        'fingerprint'
     ];
     
     def __sanitize_and_copy__(self, dict):
