@@ -259,11 +259,11 @@ public class InstanceArtGenerator
     	}
     	UserArtEntity user = account.getUsers().get(reportingUser.getName());
     	if (! user.getInstances().containsKey(createEvent.getUuid())) {
-    		user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(),
-    				createEvent.getInstanceId(), usageEntity));
+    		InstanceArtEntity instance = new InstanceArtEntity(createEvent.getInstanceType(),
+    				createEvent.getInstanceId(), usageEntity);
+    		user.getInstances().put(createEvent.getUuid(), instance);
+    		instance.getUsage().addInstanceCnt(1);
     	}
-    	InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
-    	instance.getUsage().addInstanceCnt(1);  	
     }
     
 	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)

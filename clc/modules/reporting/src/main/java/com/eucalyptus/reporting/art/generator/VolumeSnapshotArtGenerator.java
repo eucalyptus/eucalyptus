@@ -132,7 +132,7 @@ public class VolumeSnapshotArtGenerator
 					long durationMs = Math.min(report.getEndMs(), endTime) - Math.max(report.getBeginMs(), createEvent.getTimestampMs());
 					usage.setGBSecs(createEvent.getSizeGB() * (durationMs/1000));
 					VolumeArtEntity vol = addParentNodes(report, volumeCreateEvents.get(createEvent.getVolumeUuid()));
-					vol.getSnapshotUsage().put(createEvent.getId(), usage);
+					vol.getSnapshotUsage().put(createEvent.getVolumeSnapshotId(), usage);
 				}
 				return true;
 			}
