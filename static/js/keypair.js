@@ -69,8 +69,14 @@
         menu_actions : function(args){ 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
-        menu_click_create : function (args) { thisObj.addDialog.eucadialog('open') },
-        menu_click_extra : function (args) { thisObj.importDialog.eucadialog('open') },
+        menu_click_create : function (args) {
+                                thisObj.addDialog.eucadialog('open');
+                                thisObj.addDialog.find('input[id=key-name]').focus();
+                            },
+        menu_click_extra : function (args) {
+                                thisObj.importDialog.eucadialog('open');
+                                thisObj.importDialog.find('input[id=key-name]').focus();
+                            },
         context_menu_actions : function(state) { 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
