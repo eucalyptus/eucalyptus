@@ -43,8 +43,8 @@ var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 
 var KEEP_VIEW = 'keep_view';
 
-function escapeHTML(input) {
-  return $('<div/>').text(input).html();
+function asText(input) {
+  return $('<div>').html(input).text();
 }
 
 function asHTML(input) {
@@ -106,6 +106,7 @@ function onlyInArray(val, array){
   return true; 
 }
 
+/////////  Codes for repeated execution of callbacks ////////
 var _rqueue = {};
 function _delayedExec(cbName, callback){
   if(cbName in _rqueue){  
@@ -133,36 +134,79 @@ function cancelRepeat (cbName){
 function clearRepeat() {
   _rqueue = {}; 
 }
-    
+//////////////////////////////////////////////////////////////
+ 
 function describe(resource, resourceId){
   var result= $('html body').eucadata('get', resource);
   if(!resourceId)
-    return result;
-    //return escapeResponse(resource,result);
+    return escapeResponse(resource,result);
 
   if (result){
     for(i in result){
       if(result[i].id && result[i].id.toUpperCase() === resourceId.toUpperCase())
-        return result[i];
-        //return escapeResponse(resource, result[i]);
+        return escapeResponse(resource, result[i]);
     }
   }
   return null;
 }
 
-function escapeResponse(resource, result){
-  return escapeData(result); 
+var unescape_vector = {
+  instance: {
+    root_device_name: true,
+    reason: true,
+    launch_time: true,
+  },
+  image: {
+    root_device_name: true,
+    location: true, //can we?
+  },
+  volume: {
+    create_time: true, 
+  },
+  snapshot: {
+    start_time: true,
+    progress: true,
+  },
+  sgroup: {
+    rules: { 
+      grants: {
+        cidr_ip: true 
+      },
+    },
+  },
+  keypair: {
+    fingerprint: true,
+  },
+  zone: {
+    state: true,
+  }
 }
 
-function escapeData(data){
+function escapeResponse(resource, result){
+  return escapeData(result, unescape_vector[resource]); 
+}
+
+function escapeData(data, escVector){
   if($.type(data) === 'array' || $.type(data) === 'object'){
     for (i in data){
-      data[i] = escapeData(data[i]);
+      var vectorForward = null;
+      if($.type(data)==='object'){
+        if(escVector && escVector[i])
+          vectorForward = escVector[i];
+      }else{ // array
+          vectorForward = escVector;
+      }
+      data[i] = escapeData(data[i],vectorForward);
     }
     return data;
   }else{
-    var $esc = $('<div>');
-    return $esc.html(data).text();
+    if(escVector){
+      if(!data)
+        return data;
+      var $esc = $('<div>');
+      return $esc.html(data).text();
+    }else
+      return data;
   }
 }
 

@@ -333,7 +333,7 @@
 
     buttonOnChange : function(evtSrc, buttonId, check){
       var thisObj = this;
-      evtSrc.change( function(e){
+      evtSrc.unbind('change').bind('change', function(e){
         var button = thisObj.element.parent().find('#'+buttonId.replace('#',''));
         if (isFunction(check) && check.call(evtSrc))
           button.removeAttr('disabled').removeClass('ui-state-disabled');
@@ -389,7 +389,7 @@
       evt_src_id = evt_src_id.replace('#','');
       var $evt_src = this.element.find('#'+evt_src_id);
 
-      $evt_src.change( function(e){
+      $evt_src.unbind('change').bind('change',function(e){
          if ( isFunction(checkFunction) ) {
            checkFunction.call(this);
          }
