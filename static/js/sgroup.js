@@ -76,12 +76,7 @@
           resource_plural : sgroup_plural,
         },
         menu_actions : function(){
-          return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
-                 "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
-        },
-        context_menu_actions : function(state) { 
-          return{"edit": {"name": sgroup_action_edit, callback: function(key, opt) { thisObj._editAction();}},
-                 "delete" : { "name": sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction();}}};
+          return thisObj._createMenuActions(); 
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
           return thisObj._expandCallback(row);
@@ -92,6 +87,23 @@
         },
       });
       this.tableWrapper.appendTo(this.element);
+    },
+
+    _createMenuActions : function() {
+      var thisObj = this;
+      if(!thisObj.tableWrapper)
+        return [];
+      var selectedRows = thisObj.tableWrapper.eucatable('getSelectedRows');  
+      var numSelected = selectedRows.length;
+      var menuItems = {};
+      (function(){
+         menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
+         menuItems['delete'] = {"name":sgroup_action_delete, callback: function(key, opt) { thisObj._deleteAction(); }};
+      })();
+      if(numSelected == 1){
+        menuItems['edit'] = {"name":sgroup_action_edit, callback: function(key, opt) { thisObj._editAction(); }}
+      }
+      return menuItems;
     },
 
     _create : function() {
@@ -132,13 +144,27 @@
               var protocol = new Array();
               var cidr = new Array();
               var fromGroup = new Array();
+              var fromUser = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
-                      cidr.push(thisObj.rulesList[rule].ipaddr);
-                      fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                      if (thisObj.rulesList[rule].group) {
+                        fromGroup.push(thisObj.rulesList[rule].group);
+                        if (thisObj.rulesList[rule].user) {
+                            fromUser.push(thisObj.rulesList[rule].user);
+                        }
+                        else {
+                            fromUser.push(null);
+                        }
+                        cidr.push(null);
+                      }
+                      else {
+                        cidr.push(thisObj.rulesList[rule].ipaddr);
+                        fromGroup.push(null);
+                        fromUser.push(null);
+                      }
                   }
               }
               $add_dialog.eucadialog("close");
@@ -152,7 +178,7 @@
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
-                              thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
+                              thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
                               thisObj._getTableWrapper().eucatable('refreshTable');
 //                              $add_dialog.eucadialog("close");
                           }
@@ -215,8 +241,21 @@
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
-                      cidr.push(thisObj.rulesList[rule].ipaddr);
-                      fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                      if (thisObj.rulesList[rule].group) {
+                        fromGroup.push(thisObj.rulesList[rule].group);
+                        if (thisObj.rulesList[rule].user) {
+                            fromUser.push(thisObj.rulesList[rule].user);
+                        }
+                        else {
+                            fromUser.push(null);
+                        }
+                        cidr.push(null);
+                      }
+                      else {
+                        cidr.push(thisObj.rulesList[rule].ipaddr);
+                        fromGroup.push(null);
+                        fromUser.push(null);
+                      }
                   }
               }
               if (fromPort.length > 0) {
@@ -233,8 +272,21 @@
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
-                      cidr.push(thisObj.rulesList[rule].ipaddr);
-                      fromGroup.push(thisObj.rulesList[rule].fromGroup);
+                      if (thisObj.rulesList[rule].group) {
+                        fromGroup.push(thisObj.rulesList[rule].group);
+                        if (thisObj.rulesList[rule].user) {
+                            fromUser.push(thisObj.rulesList[rule].user);
+                        }
+                        else {
+                            fromUser.push(null);
+                        }
+                        cidr.push(null);
+                      }
+                      else {
+                        cidr.push(thisObj.rulesList[rule].ipaddr);
+                        fromGroup.push(null);
+                        fromUser.push(null);
+                      }
                   }
               }
               if (fromPort.length > 0) {
@@ -493,6 +545,11 @@
         }
         else if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-group') {
             rule.group = asText(dialog.find('#allow-group').val());
+            var user_group = rule.group.split('/');
+            if (user_group.length > 1) {
+                rule.user = user_group[0];
+                rule.group = user_group[1];
+            }
         }
         rule.isnew = true;
         this.rulesList.push(rule);
@@ -510,8 +567,18 @@
                     ports += "-"+this.rulesList[rule].to_port;
                 }
                 msg += "<li><a href='#' id='sgroup-rule-number-"+i+"'>"+delete_label+"</a>"+rule_label+"&nbsp;"+this.rulesList[rule].protocol+
-                            " ("+ ports+"), "+
-                            this.rulesList[rule].ipaddr+"</li>";
+                            " ("+ ports+"), "
+
+                if (this.rulesList[rule].group) {
+                    if (this.rulesList[rule].user) {
+                        msg += this.rulesList[rule].user+"/";
+                    }
+                    msg += this.rulesList[rule].group
+                }
+                else {
+                    msg += this.rulesList[rule].ipaddr;
+                }
+                msg += "</li>";
                 i += 1;
             }
             msg += "</ul>";
@@ -584,7 +651,7 @@
       }
     },
 
-    _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup) {
+    _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
       var thisObj = this;
       var req_params = "&GroupName=" + groupName;
       for (i=0; i<fromPort.length; i++) {
@@ -594,8 +661,11 @@
           if (cidr[i])
               req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + cidr[i];
           if (fromGroup[i])
-              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + fromGroup[i];
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.GroupName=" + fromGroup[i];
+          if (fromUser[i])
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.UserId=" + fromUser[i];
       }
+      alert("ingress params :"+req_params);
       var sgroupName = groupName;
       dialog.eucadialog("close");
       $.ajax({
