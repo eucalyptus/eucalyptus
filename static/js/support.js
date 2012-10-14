@@ -139,12 +139,12 @@ function clearRepeat() {
 function describe(resource, resourceId){
   var result= $('html body').eucadata('get', resource);
   if(!resourceId)
-    return escapeResponse(resource,result);
+    return result;
 
   if (result){
     for(i in result){
       if(result[i].id && result[i].id.toUpperCase() === resourceId.toUpperCase())
-        return escapeResponse(resource, result[i]);
+        return result[i];
     }
   }
   return null;
