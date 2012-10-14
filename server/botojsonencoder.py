@@ -39,7 +39,6 @@ class BotoJsonEncoder(JSONEncoder):
         'state_code',
         'monitored',
         'platform',
-        'output',
         'volume_id',
         'snapshot_id',
         'launch_time',

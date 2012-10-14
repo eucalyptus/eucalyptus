@@ -657,7 +657,7 @@
           async:true,
         })).done(function(data){
           if(data && data.results){
-            consoleOutput = data.results.output;   
+            consoleOutput = $('<div/>').html(data.results.output).text();   
             var newTitle = $.i18n.prop('instance_dialog_console_title', instances);
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();

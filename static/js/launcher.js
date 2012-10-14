@@ -1352,9 +1352,9 @@
 
       // it turns out that simply passing null for the file causes fileupload to complain. passing a bogus
       // string instead is the ticket.
-      file_param = "none";
+      var file_param = "none";
       if (param['data_file'] != null) {
-        file_param = param['data_file']
+        file_param = param['data_file'];
       }
       this.element.find('#launch-wizard-advanced-input-userfile').fileupload('send', {
         files: file_param,
