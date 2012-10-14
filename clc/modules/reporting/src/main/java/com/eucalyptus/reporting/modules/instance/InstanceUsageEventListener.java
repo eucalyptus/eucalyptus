@@ -16,149 +16,95 @@
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 package com.eucalyptus.reporting.modules.instance;
 
-import java.util.List;
+
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nonnull;
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.reporting.event.*;
+import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
-import com.google.common.collect.Lists;
 
-@ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
-public class InstanceUsageEventListener implements EventListener<InstanceUsageEvent> {
-    private static final Logger log = Logger.getLogger( InstanceUsageEventListener.class );
+@ConfigurableClass(root = "reporting", description = "Parameters controlling reporting")
+public class InstanceUsageEventListener implements
+	EventListener<InstanceUsageEvent> {
+    private static final Logger log = Logger
+	    .getLogger(InstanceUsageEventListener.class);
 
-    @ConfigurableField(initial = "49", description = "How often the reporting system requests information from the cluster controller")
-    public static long DEFAULT_WRITE_INTERVAL_MINS = 49;
-    
-    private static final ScheduledExecutorService eventFlushTimer   = Executors.newScheduledThreadPool( 50 );
-    
-    private static InstanceUsageEvent lastEvent = new InstanceUsageEvent("-1", "-1", "-1", -1L, "-1", -1D, -1L);
+    @ConfigurableField(initial = "15", description = "How often the reporting system requests information from the cluster controller")
+    public static long DEFAULT_WRITE_INTERVAL_MINS = 15;
 
-    private static List<InstanceUsageEvent> eventQueue = Lists.newArrayList();
-    
-    private static int MAX_QUEUE_SIZE = 50;
-    
-    public static void register( ) {
-	Listeners.register( InstanceUsageEvent.class, new InstanceUsageEventListener( ) );
+    private static final ScheduledExecutorService eventFlushTimer = Executors
+	    .newSingleThreadScheduledExecutor();
+
+    private static AtomicBoolean busy = new AtomicBoolean(false);
+
+    private static LinkedBlockingQueue<InstanceUsageEvent> eventQueue = new LinkedBlockingQueue<InstanceUsageEvent>();
+
+    public static void register() {
+	Listeners.register(InstanceUsageEvent.class,
+		new InstanceUsageEventListener());
     }
 
     @Override
     public void fireEvent(@Nonnull final InstanceUsageEvent event) {
-	
+
 	if (log.isDebugEnabled()) {
 	    log.debug("Received instance usage event:" + event);
 	}
-	if (lastEvent.getInstanceId().equals("-1")) {
-	    queueEvent(event);
-	    lastEvent = new InstanceUsageEvent(event.getUuid(),event.getInstanceId(), event.getMetric(), event.getSequenceNum(), event.getDimension(), event.getValue(), event.getValueTimestamp());
-	} else if (lastEvent.getInstanceId().equals(event.getInstanceId())
-		&& !lastEvent.getMetric().equals(event.getMetric())
-		&& !lastEvent.getDimension().equals(event.getDimension())
-		&& lastEvent.getValue() != event.getValue()) {
-	    queueEvent(event);
-	    lastEvent = new InstanceUsageEvent("-1", "-1", "-1", -1L, "-1", -1D, -1L);
-	} else {
-	    log.debug("Instance Usage Event : " + event.getInstanceId() + " : "
-		    + event.getValue() + "has already been record.");
+
+	try {
+	    eventQueue.offer(event, DEFAULT_WRITE_INTERVAL_MINS + 1,
+		    TimeUnit.MINUTES);
+	} catch (InterruptedException e) {
+	    log.debug("Unable to queue usage event " + event, e);
 	}
 
-	if (checkEventQueue()) {
-	    flushEventQueue();   
+	if (!busy.get()) {
+	    flushEventQueue();
 	}
-	
     }
 
-    private void queueEvent(InstanceUsageEvent event) {
-	eventQueue.add(event);
-    }
-    
     private void flushEventQueue() {
 
-	final List<InstanceUsageEvent> copyEventQueue = Lists.newArrayList(eventQueue);
+	busy.set(true);
 
 	Runnable safeRunner = new Runnable() {
 	    @Override
 	    public void run() {
-		for (final InstanceUsageEvent event : copyEventQueue) {
+		
+		Set<InstanceUsageEvent> eventBatch = new HashSet<InstanceUsageEvent>();
+		eventQueue.drainTo(eventBatch);
+		
+		for (final InstanceUsageEvent event : eventBatch) {
 		    insertEvent(event);
 		}
-		eventQueue.clear();
-		copyEventQueue.clear();
+		
+		eventBatch.clear();
+		busy.set(false);
 	    }
 	};
 
-	final long delayTime = TimeUnit.MINUTES.toMillis(DEFAULT_WRITE_INTERVAL_MINS);
-	
-	eventFlushTimer.scheduleAtFixedRate(safeRunner, delayTime, 500,
-		TimeUnit.MILLISECONDS);
-	
+	eventFlushTimer.schedule(safeRunner, DEFAULT_WRITE_INTERVAL_MINS,
+		TimeUnit.MINUTES);
+
     }
 
-    private boolean checkEventQueue() {
-	
-	if (eventQueue.size() >= MAX_QUEUE_SIZE ) {
-	    return true;
-	} else {
-	    return false; 
-	}
-	
-    }
     private void insertEvent(InstanceUsageEvent event) {
 	try {
 	    final ReportingInstanceEventStore eventStore = getReportingInstanceEventStore();

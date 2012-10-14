@@ -50,7 +50,7 @@
         <value name="Created" field="created" style="attribute"/>
         <value name="Occurred" field="occurred" style="attribute"/>
         <value name="Type" field="type" style="attribute"/>
-        <value name="TargetId" field="uuid" style="attribute"/>
+        <value name="TargetId" field="uuid" style="attribute" usage="optional"/>
         <value name="Action" field="action" style="attribute"/>
         <value name="AccountId" field="accountId" style="attribute" usage="optional"/>
         <value name="AccountName" field="accountName" style="attribute" usage="optional"/>

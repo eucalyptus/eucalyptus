@@ -572,7 +572,6 @@ monitoring_thread (void *arg)
                 if ((now - instance->terminationTime)>nc_state.teardown_state_duration) {
                     remove_instance (&global_instances, instance);
                     logprintfl (EUCAINFO, "[%s] forgetting about instance\n", instance->instanceId);
-                    sensor_remove_resource (instance->instanceId);
                     free_instance (&instance);
                     break;	// need to get out since the list changed
                 }
@@ -761,6 +760,7 @@ void *startup_thread (void * arg)
     
     save_instance_struct (instance); // to enable NC recovery
     sensor_add_resource (instance->instanceId, "instance", instance->uuid);
+    sensor_set_resource_alias (instance->instanceId, instance->ncnet.privateIp);
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 

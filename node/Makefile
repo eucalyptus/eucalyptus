@@ -95,7 +95,7 @@ generated/stubs: $(NCWSDL)
 	sh $(WSDL2C) -uri $(NCWSDL) -sd -ss -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Adding marshalling calls to server stubs
 #	../tools/add_marshalling.pl generated/axis2_skel_*.c generated/axis2_svc_skel_*.c
-	../tools/add_marshalling.pl generated/axis2_skel_*.c 
+	../tools/add_marshalling.pl generated/axis2_skel_*.c
 	@echo Generating client stubs
 	sh $(WSDL2C) -uri $(NCWSDL) -g -d adb -u -uw -f -o generated | grep -v 'the classpath'
 	@echo Compiling the stubs
@@ -123,7 +123,7 @@ server: $(SERVICE_SO)
 ../storage/walrus.o: ../storage/walrus.c ../util/log.o ../util/misc.o ../util/data.o
 	make -C ../storage
 
-../storage/iscsi.o: ../storage/iscsi.c 
+../storage/iscsi.o: ../storage/iscsi.c
 	make -C ../storage
 
 ../storage/http.o: ../storage/http.c ../util/log.o ../util/misc.o ../util/data.o
@@ -147,7 +147,7 @@ server: $(SERVICE_SO)
 ../util/euca_auth.o: ../util/euca_auth.c ../util/data.h ../util/eucalyptus.h
 	make -C ../util
 
-../util/sensor.o: ../util/sensor.o
+../util/sensor.o: ../util/sensor.c
 	make -C ../util
 
 ../util/windows-bundle.o: ../util/windows-bundle.c ../util/windows-bundle.h

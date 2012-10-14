@@ -77,6 +77,8 @@ public class InstanceUsageArtEntity
 	private Long diskWriteOps;
 	private Long netTotalInMegs;
 	private Long netTotalOutMegs;
+	private Long netExternalInMegs;
+	private Long netExternalOutMegs;
 	private Long diskReadTime;
 	private Long diskWriteTime;
 
@@ -89,6 +91,8 @@ public class InstanceUsageArtEntity
 				diskWriteOps == null &&
 				netTotalInMegs == null &&
 				netTotalOutMegs == null &&
+				netExternalInMegs == null &&
+				netExternalOutMegs == null &&
 				diskReadTime == null &&
 				diskWriteTime == null;
 	}
@@ -204,6 +208,43 @@ public class InstanceUsageArtEntity
 		this.netTotalOutMegs = plus(this.netTotalOutMegs, netTotalOutMegs);
 	}
 
+	public Long getNetExternalInMegs()
+	{
+		return netExternalInMegs;
+	}
+
+	public void addNetExternalInMegs(Long netExternalInMegs)
+	{
+		this.netExternalInMegs = plus(this.netExternalInMegs, netExternalInMegs);
+	}
+
+	public Long getNetExternalOutMegs()
+	{
+		return netExternalOutMegs;
+	}
+
+	public void addNetExternalOutMegs(Long netExternalOutMegs)
+	{
+		this.netExternalOutMegs = plus(this.netExternalOutMegs, netExternalOutMegs);
+	}
+
+    public void addUsage( final InstanceUsageArtEntity usage )
+    {
+        addDurationMs( usage.getDurationMs() );
+        addCpuUtilizationMs( usage.getCpuUtilizationMs() );
+        addDiskReadMegs( usage.getDiskReadMegs() );
+        addDiskWriteMegs( usage.getDiskWriteMegs() );
+        addDiskReadOps( usage.getDiskReadOps() );
+        addDiskWriteOps( usage.getDiskWriteOps() );
+        addDiskReadTime( usage.getDiskReadTime() );
+        addDiskWriteTime( usage.getDiskWriteTime() );
+        addNetTotalInMegs( usage.getNetTotalInMegs() );
+        addNetTotalOutMegs( usage.getNetTotalOutMegs() );
+        addNetExternalInMegs( usage.getNetExternalInMegs() );
+        addNetExternalOutMegs( usage.getNetExternalOutMegs() );
+        addInstanceCnt( 1 );
+    }
+	
 	private static Long plus(Long a, Long b)
 	{
 		if (a!=null || b!=null) {

@@ -116,6 +116,7 @@ install: build
 	@$(INSTALL) -m 644 libvirt-kvm-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 644 libvirt-xen-windows-example.xml $(DESTDIR)$(datarootdir)/eucalyptus/doc/
 	@$(INSTALL) -m 755 getstats.pl $(DESTDIR)$(datarootdir)/eucalyptus
+	@$(INSTALL) -m 755 getstats_net.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 euca-lictool $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 lic_template $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 lic_default $(DESTDIR)$(datarootdir)/eucalyptus

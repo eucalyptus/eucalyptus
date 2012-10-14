@@ -237,7 +237,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
             @Override
             public void write( final byte[] b, final int off, final int len ) throws IOException {
               final ChannelFuture future = Channels.write( channel,
-                  new DefaultHttpChunk(ChannelBuffers.copiedBuffer(b, off, len)));
+                  new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(b, off, len)));
               if ( !future.awaitUninterruptibly().isSuccess() ) {
                 throw new IOException( future.getCause() );
               }

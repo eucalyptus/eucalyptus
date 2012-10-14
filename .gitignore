@@ -39,6 +39,7 @@ clc/modules/storage-san-equallogic
 clc/modules/storage-san-netapp
 clc/modules/storage-san-netapp-libs
 clc/modules/vmware-broker
+clc/modules/storage-san
 clc/modules/www/build-war
 clc/modules/www/conf/eucalyptus-web.properties
 clc/modules/www/src/main/java/com/eucalyptus/webui/public/themes/active

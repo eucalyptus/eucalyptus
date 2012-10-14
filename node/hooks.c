@@ -102,7 +102,7 @@ int call_hooks (const char * event_name, const char * param1)
 {
     assert (event_name);
     if (!initialized) return 0; // return OK if hooks were not initialized
-    
+
     DIR * dir;
     if ((dir=opendir(hooks_path))==NULL) {
         return 1;
@@ -124,23 +124,23 @@ int call_hooks (const char * event_name, const char * param1)
         if (stat(entry_path, &sb)==-1)
             continue; // ignore access errors
 
-        // run the hook if... 
+        // run the hook if...
         if ((S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode)) // looks like a file or symlink
-            && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) { // is executable 
+            && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) { // is executable
             char cmd [MAX_PATH];
             snprintf (cmd, sizeof (cmd), "%s %s %s %s", entry_path, event_name, euca_path, param1?param1:"");
             ret = WEXITSTATUS (system (cmd));
-            logprintfl (EUCATRACE, "executed hook [%s %s%s%s] which returned %d\n", 
-                        entry_name, 
-                        event_name, 
-                        param1?" ":"", 
+            logprintfl (EUCATRACE, "executed hook [%s %s%s%s] which returned %d\n",
+                        entry_name,
+                        event_name,
+                        param1?" ":"",
                         param1?param1:"", ret);
             if (ret > 0 && ret < 100)
                 break; // bail if any hook returns code [1-99] (100+ are reserved for future use)
         }
     }
     closedir(dir);
-    
+
     return ret;
 }
 
@@ -150,6 +150,8 @@ int call_hooks (const char * event_name, const char * param1)
 
 #ifdef __STANDALONE
 
+const char * euca_this_component_name = "nc";
+
 int main (int argc, char ** argv)
 {
     int status = 0;
@@ -158,7 +160,7 @@ int main (int argc, char ** argv)
     assert (call_hooks ("e1", "p1")!=0);
     assert (init_hooks ("/tmp", "/foobar")!=0);
     assert (init_hooks ("/foobar", "/tmp")!=0);
-    
+
     char d [MAX_PATH] = "/tmp/euca-XXXXXX";
     assert (mkdtemp (d)!=NULL);
     assert (init_hooks ("/tmp", d)==0);

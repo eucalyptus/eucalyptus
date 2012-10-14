@@ -97,7 +97,7 @@
 #include <eucalyptus.h>
 
 #define SUPERUSER "eucalyptus"
-#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC 
+#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC
 
 // Globals
 
@@ -1732,7 +1732,8 @@ int refresh_instances(ncMetadata *ccMeta, int timeout, int dolock) {
               }
 	      logprintfl(EUCADEBUG, "storing instance state: %s/%s/%s/%s\n", myInstance->instanceId, myInstance->state, myInstance->ccnet.publicIp, myInstance->ccnet.privateIp);
 	      print_ccInstance("refresh_instances(): ", myInstance);
-
+	      sensor_set_resource_alias (myInstance->instanceId,
+					 myInstance->ncnet.privateIp);
 	      if (myInstance) free(myInstance);
 	    }
 
@@ -1811,20 +1812,20 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
     logprintfl(EUCAFATAL, "out of memory!\n");
     unlock_exit(1);
   }
-  
+
   for (int i=0; i<resourceCacheStage->numResources; i++) {
-    
+
     sem_mywait(REFRESHLOCK);
     pid_t pid = fork();
     if (!pid) {
       if (resourceCacheStage->resources[i].state == RESUP) {
 	int nctimeout = ncGetTimeout(op_start, timeout, 1, 1);
-	
+
 	sensorResource ** srs;
 	int srsLen;
 	int rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncDescribeSensors", history_size, collection_interval_time_ms, NULL, 0, NULL, 0, &srs, &srsLen);
-	
-	if (!rc) {	  
+
+	if (!rc) {
 	  // update our cache
 	  if (sensor_merge_records (srs, srsLen, TRUE) != OK) {
 	    logprintfl (EUCAWARN, "failed to store all sensor data due to lack of spacen");
@@ -1844,10 +1845,10 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
       pids[i] = pid;
     }
   }
-  
+
   for (int i=0; i<resourceCacheStage->numResources; i++) {
     int status;
-    
+
     int rc = timewait(pids[i], &status, 120);
     if (!rc) {
       // timed out, really bad failure (reset REFRESHLOCK semaphore)
@@ -1869,13 +1870,12 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
       logprintfl(EUCAWARN, "error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
     }
   }
-  
+
   sem_mywait(RESCACHE);
   memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
   sem_mypost(RESCACHE);
-  
+
   if (pids) free(pids);
-  
   logprintfl(EUCADEBUG,"done.\n");
   return(0);
 }
@@ -2526,6 +2526,9 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
 
 	  allocate_ccInstance(myInstance, instId, amiId, kernelId, ramdiskId, amiURL, kernelURL, ramdiskURL, ownerId, accountId, "Pending", "", time(NULL), reservationId, &ncnet, &ncnet, ccvm, resid, keyName, resourceCache->resources[resid].ncURL, userData, launchIndex, platform, myInstance->bundleTaskStateName, myInstance->groupNames, myInstance->volumes, myInstance->volumesSize);
 
+	  sensor_add_resource (myInstance->instanceId, "instance", uuid);
+	  sensor_set_resource_alias (myInstance->instanceId, myInstance->ncnet.privateIp);
+
 	  // start up DHCP
 	  sem_mywait(CONFIG);
 	  config->kick_dhcp = 1;
@@ -2875,14 +2878,14 @@ int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionInt
     * outResources = malloc (num_resources * sizeof (sensorResource *));
     if ((*outResources) == NULL) {
       return OUT_OF_MEMORY;
-    }    
+    }
     for (int i = 0; i < num_resources; i++) {
       (* outResources) [i] = calloc (1, sizeof (sensorResource));
       if (((* outResources) [i]) == NULL) {
 	return OUT_OF_MEMORY;
       }
     }
-    
+
     // if number of resources has changed since the call to sensor_get_num_resources(),
     // then either we won't report on everything (ok, since we'll get it next time)
     // or we'll have fewer records in outResrouces[] (ok, since empty ones will be ignored)
@@ -3500,9 +3503,9 @@ int init_pthreads() {
     }
   }
 
-  // sensor initialization should preceed monitor thread creation so 
+  // sensor initialization should preceed monitor thread creation so
   // that monitor thread has its sensor subsystem initialized
-  
+
   if (config->threads[MONITOR] == 0 || check_process(config->threads[MONITOR], "httpd-cc.conf")) {
     int pid;
     pid = fork();
@@ -5430,7 +5433,7 @@ int image_cache_proxykick(ccResource *res, int *numHosts) {
     strcat(nodestr, res[i].hostname);
     strcat(nodestr, " ");
   }
-  
+
   snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
   logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
   rc = system(cmd);

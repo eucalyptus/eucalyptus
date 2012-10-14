@@ -71,6 +71,8 @@
 #include "misc.h"
 #include "data.h"
 
+const char * euca_this_component_name = "nc";
+
 void test_command (char * command)
 {
     char * result = system_output(command);
@@ -86,7 +88,7 @@ void test_command (char * command)
     free (result);
 }
 
-int main (int argc, char **argv) 
+int main (int argc, char **argv)
 {
     printf ("=====> testing misc.c\n");
 
@@ -122,7 +124,7 @@ int main (int argc, char **argv)
         ncInstance * inst = NULL;
         ncInstance * Insts[INSTS];
         int i, n;
-        
+
         printf ("========> testing instance struct management\n");
         free_instance (NULL);
         free_instance (&inst);
@@ -130,19 +132,19 @@ int main (int argc, char **argv)
         assert(inst!=NULL);
         free_instance (&inst);
         assert(inst==NULL);
-        
+
         n = total_instances (&bag);
         assert(n==0);
         bag=NULL;
-        
+
         inst = find_instance(&bag, "foo");
         assert(inst==NULL);
         bag=NULL;
-        
+
         n = remove_instance(&bag, NULL);
         assert(n!=0);
         bag=NULL;
-        
+
         for (i=0; i<INSTS; i++) {
             char id[10];
             sprintf(id, "i-%d", i);
@@ -192,7 +194,7 @@ int main (int argc, char **argv)
             assert (v!=NULL);
         }
         free_instance (&inst);
-        assert(inst==NULL);        
+        assert(inst==NULL);
     }
 
     printf ("OK\n");
