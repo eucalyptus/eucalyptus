@@ -1558,11 +1558,16 @@ public class OverlayManager implements LogicalStorageManager {
 				for(LVMVolumeInfo foundLVMVolumeInfo : volumes) {
 					if(foundLVMVolumeInfo.getCleanup()) {
 						VolumeOpMonitor monitor = getMonitor(foundLVMVolumeInfo.getVolumeId());
-						synchronized (monitor) {							
-							LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
+						synchronized (monitor) {
 							volumeManager = new VolumeEntityWrapperManager();
 							String volumeId = foundLVMVolumeInfo.getVolumeId();
 							LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+							if(!volInfo.getCleanup()) {
+								LOG.info("Volume: " + volumeId + " no longer marked for cleanup...aborting");
+								volumeManager.abort();
+								continue;
+							}
+							LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
 							try {
 								exportManager.cleanup(volInfo);
 							} catch(EucalyptusCloudException ee) {

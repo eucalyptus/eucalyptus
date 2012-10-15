@@ -203,6 +203,7 @@ public class ISCSIManager implements StorageExportManager {
 		String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
 		if(returnValue.length() > 0) {
 			LOG.info("Target: " + tid + " already exported");
+			return;
 		} 
 
 		Runtime rt = Runtime.getRuntime();
