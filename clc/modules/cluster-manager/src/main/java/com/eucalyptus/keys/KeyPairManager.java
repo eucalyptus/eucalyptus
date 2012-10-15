@@ -163,11 +163,13 @@ public class KeyPairManager {
     return reply;
   }
   
-  public ImportKeyPairResponseType importKeyPair( final ImportKeyPairType request ) throws AuthException {
+  public ImportKeyPairResponseType importKeyPair( final ImportKeyPairType request ) throws AuthException, EucalyptusCloudException {
     final ImportKeyPairResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
+    boolean duplicate = false;
     try {
       KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
+      duplicate = true;
     } catch ( Exception e1 ) {
       try {
         final RSAPublicKey key = decodeKeyMaterial( request.getPublicKeyMaterial( ) );
@@ -193,8 +195,11 @@ public class KeyPairManager {
         RestrictedTypes.allocateUnitlessResource( allocator );
       } catch (GeneralSecurityException e) {
         LOG.warn("Error importing SSH public key", e);
-        reply.set_return(false);
+        throw new EucalyptusCloudException("Key import error.");
       }
+    }
+    if ( duplicate ) {
+      throw new EucalyptusCloudException("Duplicate key '"+request.getKeyName()+"'");
     }
     return reply;
   }
