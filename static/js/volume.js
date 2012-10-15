@@ -232,7 +232,16 @@
          }]},
        };
       this.addDialog = $add_dialog.eucadialog(option);
-       // volume create dialog end
+      var $volSize = thisObj.addDialog.find('#volume-size');
+      var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector');
+      $snapSelector.change( function(){
+        snapshotId = $snapSelector.val();
+        if (snapshotId) {
+          var snapshot = describe('snapshot', snapshotId);
+          $volSize.val(snapshot['volume_size']);
+        }
+      });
+      // volume create dialog end
     },
 
     _destroy : function() {
@@ -624,13 +633,16 @@
       this.attachDialog.eucadialog('open');
     },
 
-    dialogAddVolume : function(snapshot){
+    dialogAddVolume : function(snapshotId){
       var thisObj = this;
-      if (snapshot) {
+      if (snapshotId) {
         var openCallback = function() {
           var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector');
-          $snapSelector.val(snapshot);
+          var $size = thisObj.addDialog.find('#volume-size');
+          var snapshot = describe('snapshot', snapshotId);
+          $snapSelector.val(snapshotId);
           $snapSelector.attr('disabled', 'disabled');
+          $size.val(snapshot['volume_size']);
         }
         var on_open = this.addDialog.eucadialog('option', 'on_open');
         // create dialog has its own on_open
