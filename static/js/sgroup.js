@@ -633,8 +633,7 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           async:"true",
-          success:
-          (function(sgroupName) {
+          success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
@@ -644,8 +643,7 @@
               }
            }
           })(sgroupName),
-          error:
-          (function(sgroupName) {
+          error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('sgroup_delete_error', sgroupName), errorThrown);
             }
@@ -675,18 +673,18 @@
         url:"/ec2?Action=AuthorizeSecurityGroupIngress",
         data:"_xsrf="+$.cookie('_xsrf') + req_params,
         dataType:"json",
-        async:"false",
+        async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', sgroupName));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
-        }),
+        })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
             }
-        }),
+        })(sgroupName),
       });
     },
 
@@ -716,18 +714,18 @@
         url:"/ec2?Action=RevokeSecurityGroupIngress",
         data:"_xsrf="+$.cookie('_xsrf') + req_params,
         dataType:"json",
-        async:"false",
+        async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', sgroupName));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
-        }),
+        })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
             }
-        }),
+        })(sgroupName),
       });
     },
 
