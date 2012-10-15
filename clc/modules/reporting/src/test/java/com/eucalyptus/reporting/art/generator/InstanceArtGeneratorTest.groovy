@@ -73,7 +73,7 @@ class InstanceArtGeneratorTest {
 
   @Test
   void testBasicMultipleUsageEvents() {
-    InstanceArtGenerator generator = testGeneratorWith( basicUsageMultipleEvents() )
+    InstanceArtGenerator generator = testGeneratorWith( basicUsageMultipleEvents(), "2012-08-31T23:50:00" )
     ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
     assertArt( art )
   }
@@ -400,7 +400,7 @@ class InstanceArtGeneratorTest {
         "VolumeTotalReadTime": 0,
         "VolumeTotalWriteTime": 0,
     ] ] )
-    addUsage( instanceUsageList, INSTANCE1, "2012-09-01T00:00:00", 4, [
+    addUsage( instanceUsageList, INSTANCE1, "2012-09-01T01:00:00", 4, [
         "NetworkIn": mbd(12),
         "NetworkOut": mbd(23),
         "CPUUtilization": msd(1),
