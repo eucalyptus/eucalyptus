@@ -625,6 +625,20 @@
     },
 
     dialogAddVolume : function(snapshot){
+      var thisObj = this;
+      if (snapshot) {
+        var openCallback = function() {
+          var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector');
+          $snapSelector.val(snapshot);
+          $snapSelector.attr('disabled', 'disabled');
+        }
+        var on_open = this.addDialog.eucadialog('option', 'on_open');
+        // create dialog has its own on_open
+        if (on_open.callback.length == 2)
+          on_open.callback.pop();
+        on_open.callback.push(openCallback);
+        this.addDialog.eucadialog('option', 'on_open', on_open);
+      }
       this.addDialog.eucadialog('open');
     }
 /**** End of Public Methods ****/

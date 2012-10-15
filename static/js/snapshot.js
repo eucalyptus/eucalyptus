@@ -215,6 +215,7 @@
       var itemsList = {};
       (function(){
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) {;}, disabled: function(){ return true;} };
+        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
       if ( selectedSnapshots.length > 0 && onlyInArray('completed', selectedSnapshots)){
@@ -223,6 +224,7 @@
       
       if ( selectedSnapshots.length === 1 && onlyInArray('completed', selectedSnapshots)){
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) { thisObj._registerAction(); } }
+        itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) { thisObj._createVolumeAction(); } }
       }
       return itemsList;
     },
@@ -347,8 +349,12 @@
     },
 
     _registerAction : function() {
-      var thisObj = this;
-      thisObj.regDialog.eucadialog('open');
+      this.regDialog.eucadialog('open');
+    },
+
+    _createVolumeAction : function() {
+      var snapshot = this.tableWrapper.eucatable('getSelectedRows', 1)[0];
+      addVolume(snapshot);
     },
 
     _registerSnapshots : function(name, desc, windows) {
