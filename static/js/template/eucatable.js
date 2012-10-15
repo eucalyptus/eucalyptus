@@ -118,7 +118,7 @@
       if(!dt_arg['oLanguage']) 
         dt_arg['oLanguage'] = {};
 
-      dt_arg.oLanguage['sProcessing'] = "<img src='images/dots32.gif'/> &nbsp; <span>"+processing_data+"</span>";
+      dt_arg.oLanguage['sProcessing'] = null;
       dt_arg.oLanguage['sLoadingRecords'] =  please_wait_loading_data;
       dt_arg.oLanguage['sZeroRecords'] = please_wait_loading_data;
       dt_arg.oLanguage['sSearch'] = search_label;
