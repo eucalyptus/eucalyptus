@@ -236,6 +236,7 @@
               var protocol = new Array();
               var cidr = new Array();
               var fromGroup = new Array();
+              var fromUser = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].deletethis == true) {
                       fromPort.push(thisObj.rulesList[rule].from_port);
@@ -260,13 +261,14 @@
               }
               if (fromPort.length > 0) {
                   
-                  thisObj._removeIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
+                  thisObj._removeIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
               }
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
               var cidr = new Array();
               var fromGroup = new Array();
+              var fromUser = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
                       fromPort.push(thisObj.rulesList[rule].from_port);
@@ -290,9 +292,10 @@
                   }
               }
               if (fromPort.length > 0) {
-                  thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup);
+                  thisObj._addIngressRule($edit_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
               }
-              thisObj._getTableWrapper().eucatable('refreshTable');
+              // this handled in the _add and _remove functions
+              //thisObj._getTableWrapper().eucatable('refreshTable');
             }},
         'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $edit_dialog.eucadialog("close");}},
         },
@@ -665,7 +668,6 @@
           if (fromUser[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.UserId=" + fromUser[i];
       }
-      alert("ingress params :"+req_params);
       var sgroupName = groupName;
       dialog.eucadialog("close");
       $.ajax({
@@ -688,7 +690,7 @@
       });
     },
 
-    _removeIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup) {
+    _removeIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
       var thisObj = this;
       var req_params = "&GroupName=" + groupName;
       for (i=0; i<fromPort.length; i++) {
@@ -702,6 +704,10 @@
           if (fromGroup[i]) {
               var tmp = $("<div/>").html(fromGroup[i]).text();
               req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + tmp
+          }
+          if (fromUser[i]) {
+              var tmp = $("<div/>").html(fromUser[i]).text();
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.UserId=" + tmp;
           }
       }
       var sgroupName = groupName;
