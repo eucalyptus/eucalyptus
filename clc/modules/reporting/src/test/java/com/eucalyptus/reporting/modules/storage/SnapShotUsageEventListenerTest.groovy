@@ -97,8 +97,8 @@ class SnapShotUsageEventListenerTest {
     listener.fireEvent( event )
 
     assertNotNull( "Persisted event", persisted )
-    assertEquals( "Account Id", "eucalyptus", updatedAccountId  )
-    assertEquals( "Account Name", "000000000000", updatedAccountName )
+    assertEquals( "Account Id","000000000000" , updatedAccountId  )
+    assertEquals( "Account Name", "eucalyptus", updatedAccountName )
     assertEquals( "User Id", "eucalyptus", updatedUserId )
     assertEquals( "User Name", "eucalyptus", updatedUserName )
 
