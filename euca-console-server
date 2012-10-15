@@ -13,7 +13,6 @@ import tornado.httpserver
 import tornado.ioloop
 import server
 from server import api
-from server import support
 from server.configloader import ConfigLoader
 
 PIDFILE = "/var/run/eucalyptus-console.pid"
