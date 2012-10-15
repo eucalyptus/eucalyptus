@@ -129,7 +129,8 @@ public class Logs {
 	  LogManager.setRepositorySelector(new DefaultRepositorySelector(eucaHierarchy), null);
 
 	  // Now set it back
-	  System.setProperty(logLevelProp, oldLogLevel);
+	  if ( oldLogLevel != null )
+	    System.setProperty(logLevelProp, oldLogLevel);
   }
   private static Logger       LOG                     = Logger.getLogger( Logs.class );
   /**
