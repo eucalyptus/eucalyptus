@@ -134,6 +134,7 @@
         },
         help : { content: $add_help, url: help_keypair.dialog_add_content_url, pop_height: 600 },
       });
+      $add_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
       $add_dialog.eucadialog('buttonOnKeyup', $add_dialog.find('#key-name'), createButtonId); 
 
       $tmpl = $('html body').find('.templates #keypairImportDlgTmpl').clone();
@@ -161,6 +162,8 @@
         },
         help : { content: $import_help, url: help_keypair.dialog_import_content_url, pop_height: 600 },
       });
+      $import_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
+      $import_dialog.find("#key-import-contents").watermark(keypair_dialog_import_contents_watermark);
       $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId); 
       $import_dialog.find("input[type=file]").on('change', function(evt) {
             var file = evt.target.files[0];
