@@ -388,17 +388,6 @@ int sensor_set_hyp_sem (sem * sem)
     return 0;
 }
 
-int sensor_set_hyp_sem (sem * sem)
-{
-    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
-
-    sem_p (state_sem);
-    hyp_sem = sem;
-    sem_v (state_sem);
-
-    return 0;
-}
-
 int sensor_get_config (int *history_size, long long * collection_interval_time_ms)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;

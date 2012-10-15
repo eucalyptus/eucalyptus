@@ -179,11 +179,7 @@ doRunInstance(	struct nc_state_t *nc,
 
     // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
-<<<<<<< HEAD
     if (!attr) { 
-=======
-    if (!attr) {
->>>>>>> team/clc-dev/reporting
         logprintfl (EUCAERROR, "[%s] out of memory\n", instanceId);
         goto error;
     }
@@ -212,13 +208,8 @@ doRunInstance(	struct nc_state_t *nc,
 }
 
 static int
-<<<<<<< HEAD
 doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId) 
 {    
-=======
-doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId)
-{
->>>>>>> team/clc-dev/reporting
 	logprintfl(EUCAERROR, "[%s] no default for %s!\n", instanceId, __func__);
 	return ERROR_FATAL;
 }
@@ -691,11 +682,7 @@ doAttachVolume (	struct nc_state_t *nc,
          if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
              logprintfl(EUCAERROR, "[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
              remoteDevReal[0] = '\0';
-<<<<<<< HEAD
          } else { 
-=======
-         } else {
->>>>>>> team/clc-dev/reporting
              logprintfl(EUCADEBUG, "[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
              snprintf(remoteDevReal, 32, "%s", remoteDevStr);
              have_remote_device = 1;
@@ -789,11 +776,6 @@ doAttachVolume (	struct nc_state_t *nc,
 
      if (ret==OK)
          logprintfl (EUCAINFO, "[%s][%s] attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
-<<<<<<< HEAD
-          
-=======
-
->>>>>>> team/clc-dev/reporting
      return ret;
  }
 
@@ -897,11 +879,7 @@ doDetachVolume (	struct nc_state_t *nc,
     // make sure there is a block device
     if (check_block (remoteDevReal)) {
         logprintfl(EUCAERROR, "[%s][%s] cannot verify that host device '%s' is available for hypervisor detach\n", instanceId, volumeId, remoteDevReal);
-<<<<<<< HEAD
         if (!force) 
-=======
-        if (!force)
->>>>>>> team/clc-dev/reporting
             ret = ERROR;
         goto release;
     }
@@ -929,11 +907,7 @@ doDetachVolume (	struct nc_state_t *nc,
     if (err) {
         logprintfl (EUCAERROR, "[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
         logprintfl (EUCAERROR, "[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-<<<<<<< HEAD
         if (!force) 
-=======
-        if (!force)
->>>>>>> team/clc-dev/reporting
             ret = ERROR;
     } else {
         char path [MAX_PATH];
@@ -969,22 +943,14 @@ doDetachVolume (	struct nc_state_t *nc,
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
             logprintfl (EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
-<<<<<<< HEAD
             if (!force) 
-=======
-            if (!force)
->>>>>>> team/clc-dev/reporting
                 ret = ERROR;
         }
     }
 
     if (ret==OK)
         logprintfl (EUCAINFO, "[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
-<<<<<<< HEAD
     
-=======
-
->>>>>>> team/clc-dev/reporting
     if (force) {
         return(OK);
     }
@@ -1039,19 +1005,11 @@ static void * createImage_thread (void *arg)
 	char cmd[MAX_PATH];
 	char buf[MAX_PATH];
 	int rc;
-<<<<<<< HEAD
     
 	logprintfl (EUCADEBUG, "[%s] spawning create-image thread\n", instance->instanceId);
 	logprintfl (EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
 	// wait until monitor thread changes the state of the instance instance 
 	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) { 
-=======
-
-	logprintfl (EUCADEBUG, "[%s] spawning create-image thread\n", instance->instanceId);
-	logprintfl (EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
-	// wait until monitor thread changes the state of the instance instance
-	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) {
->>>>>>> team/clc-dev/reporting
         if (instance->createImageCanceled) { // cancel request came in while the instance was shutting down
             logprintfl (EUCAINFO, "[%s] cancelled while createImage for instance\n", instance->instanceId);
             cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
@@ -1061,11 +1019,6 @@ static void * createImage_thread (void *arg)
         }
         return NULL;
 	}
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> team/clc-dev/reporting
 	logprintfl (EUCAINFO, "[%s] started createImage for instance\n", instance->instanceId);
 	{
         rc = 0;
@@ -1093,11 +1046,6 @@ doCreateImage(	struct nc_state_t *nc,
                 char *remoteDev)
 {
 	logprintfl (EUCAINFO, "[%s][%s] invoked\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId), ((volumeId == NULL) ? "UNKNOWN" : volumeId));
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> team/clc-dev/reporting
 	// sanity checking
 	if (instanceId==NULL
 	    || remoteDev==NULL
@@ -1215,7 +1163,6 @@ static void unset_bundling_env(void) {
 */
 
 static int restart_instance(ncInstance *instance)
-<<<<<<< HEAD
 {
 	int              error = -1;
 	pid_t            pid   = -1;
@@ -1293,85 +1240,6 @@ error:
 // helper for cleaning up 
 static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_t * params, bundling_progress result)
 {
-=======
-{
-	int              error = -1;
-	pid_t            pid   = -1;
-	pthread_attr_t  *attr  = NULL;
-
-	// Reset a few fields to prevent future confusion
-	instance->state                = STAGING;
-	instance->retries              = LIBVIRT_QUERY_RETRIES;
-	instance->launchTime           = time(NULL);
-	//instance->expiryTime           = xxx?
-	instance->bootTime             = 0;
-	instance->bundlingTime         = 0;
-	instance->createImageTime      = 0;
-	instance->terminationTime      = 0;
-	instance->bundlePid            = 0;
-	instance->bundleCanceled       = 0;
-	instance->bundleBucketExists   = 0;
-	instance->stateCode            = EXTANT;
-	instance->bundleTaskState      = NOT_BUNDLING;
-	instance->createImageTaskState = NOT_CREATEIMAGE;
-	instance->createImagePid       = 0;
-	instance->createImageCanceled  = 0;
-
-	safe_strncpy(instance->stateName, instance_state_names[EXTANT], CHAR_BUFFER_SIZE);
-	safe_strncpy(instance->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
-	safe_strncpy(instance->createImageTaskStateName, createImage_progress_names[NOT_CREATEIMAGE], CHAR_BUFFER_SIZE);
-
-	// Reset our pthread structure
-	memset(&(instance->tcb), 0, sizeof(instance->tcb));
-
-	// to enable NC recovery
-	save_instance_struct(instance);
-
-	// do the potentially long tasks in a thread
-	if ((attr = (pthread_attr_t *)calloc(1, sizeof(pthread_attr_t))) == NULL) {
-		logprintfl(EUCAERROR, "[%s] out of memory\n", instance->instanceId);
-		goto error;
-	}
-
-	pthread_attr_init(attr);
-	pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
-
-	if (pthread_create(&(instance->tcb), attr, restart_thread, ((void *) instance))) {
-		pthread_attr_destroy(attr);
-		logprintfl(EUCAERROR, "[%s] failed to spawn a VM startup thread\n", instance->instanceId);
-
-		sem_p(inst_sem);
-		{
-			remove_instance(&global_instances, instance);
-			copy_instances();
-		}
-		sem_v(inst_sem);
-
-		if (attr != NULL) {
-			free(attr);
-			attr = NULL;
-		}
-
-		goto error;
-	}
-
-	pthread_attr_destroy(attr);
-	if (attr != NULL) {
-		free(attr);
-		attr = NULL;
-	}
-
-	return(OK);
-
-error:
-	free_instance(&instance);
-	return(ERROR);
-}
-
-// helper for cleaning up
-static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_t * params, bundling_progress result)
-{
->>>>>>> team/clc-dev/reporting
 	int   rc            = 0;
 	char  cmd[MAX_PATH] = { 0 };
 	char  buf[MAX_PATH] = { 0 };
@@ -1459,13 +1327,8 @@ static void * bundling_thread (void *arg)
 
 	logprintfl (EUCADEBUG, "[%s] spawning bundling thread\n", instance->instanceId);
 	logprintfl (EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
-<<<<<<< HEAD
 	// wait until monitor thread changes the state of the instance instance 
 	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) { 
-=======
-	// wait until monitor thread changes the state of the instance instance
-	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
->>>>>>> team/clc-dev/reporting
 		if (instance->bundleCanceled) { // cancel request came in while the instance was shutting down
 			logprintfl (EUCAINFO, "[%s] cancelled while bundling instance\n", instance->instanceId);
 			cleanup_bundling_task (instance, params, BUNDLING_CANCELLED);
@@ -1596,11 +1459,7 @@ doBundleInstance(
 
 	// "marshall" thread parameters
 	struct bundling_params_t * params = malloc (sizeof (struct bundling_params_t));
-<<<<<<< HEAD
-	if (params==NULL) 
-=======
 	if (params==NULL)
->>>>>>> team/clc-dev/reporting
 		return cleanup_bundling_task (instance, params, BUNDLING_FAILED);
 
 	bzero (params, sizeof (struct bundling_params_t));
@@ -1634,11 +1493,7 @@ doBundleInstance(
 	instance->bundlingTime = time (NULL);
 	change_state (instance, BUNDLING_SHUTDOWN);
 	change_bundling_state (instance, BUNDLING_IN_PROGRESS);
-<<<<<<< HEAD
-	
-=======
 
->>>>>>> team/clc-dev/reporting
 	int err = find_and_terminate_instance(nc, meta, instanceId, 0, &instance, 1);
 	copy_instances();
 	sem_v(inst_sem);
@@ -1647,11 +1502,7 @@ doBundleInstance(
 		if (params) free(params);
 		return err;
 	}
-<<<<<<< HEAD
-	
-=======
 
->>>>>>> team/clc-dev/reporting
 	// do the rest in a thread
 	pthread_attr_t tattr;
 	pthread_t tid;
@@ -1812,11 +1663,7 @@ doDescribeSensors (struct nc_state_t *nc,
     * outResourcesLen = k;
     * outResources = rss;
 	sem_v (inst_copy_sem);
-<<<<<<< HEAD
    
-=======
-
->>>>>>> team/clc-dev/reporting
 	logprintfl (EUCADEBUG, "found %d resource(s)\n", k);
     return 0;
 }
