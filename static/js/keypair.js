@@ -148,9 +148,8 @@
         'create': { domid: createButtonId, text: keypair_dialog_import_btn, disabled: true,  click: function() {
                       var keyName = $.trim(asText($import_dialog.find('#key-name').val()));
                       var keyContents = $.trim(asText($import_dialog.find('#key-import-contents').val()));
-                      var keyFile = $.trim($import_dialog.find('#key-import-file').val());
                       if (KEY_PATTERN.test(keyName)){
-                        thisObj._importKeyPair(keyName, keyContents, keyFile);
+                        thisObj._importKeyPair(keyName, keyContents);
                         $import_dialog.eucadialog("close"); 
                       }
                       else{
@@ -163,6 +162,16 @@
         help : { content: $import_help, url: help_keypair.dialog_import_content_url, pop_height: 600 },
       });
       $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId); 
+      $import_dialog.find("input[type=file]").on('change', function(evt) {
+            var file = evt.target.files[0];
+            var reader = new FileReader();
+            reader.onloadend = function(evt) {
+                if (evt.target.readyState == FileReader.DONE) {
+                    $import_dialog.find("#key-import-contents").val(evt.target.result);
+                }
+            }
+            reader.readAsText(file);
+        });
     },
 
     _destroy : function() {
@@ -225,67 +234,34 @@
       }
     },
    
-    _importKeyPair : function (keyName, keyContents, keyFile) {
+    _importKeyPair : function (keyName, keyContents) {
       var thisObj = this;
-      if (keyFile == "") {
-          var parms = "_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName;
-          if (keyFile -= null) {
-            params += "&PublicKeyMaterial="+btoa(keyContents)
+      var params = "_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName;
+      params += "&PublicKeyMaterial="+btoa(keyContents)
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=ImportKeyPair",
+        data:params,
+        dataType:"json",
+        async:true,
+        success:
+        (function(keyName) {
+          return function(data, textStatus, jqXHR){
+            if (data.results && data.results.fingerprint) {
+              notifySuccess(null, $.i18n.prop('keypair_import_success', keyName));
+              thisObj.tableWrapper.eucatable('refreshTable');
+            } else {
+              notifyError($.i18n.prop('keypair_import_error', keyName), undefined_error);
+            }
+         }
+        })(keyName),
+        error:
+        (function(keyName) {
+          return function(jqXHR, textStatus, errorThrown){
+            notifyError($.i18n.prop('keypair_import_error', keyName), getErrorMessage(jqXHR));
           }
-          $.ajax({
-            type:"POST",
-            url:"/ec2?Action=ImportKeyPair",
-            data:params,
-            dataType:"json",
-            async:true,
-            success:
-            (function(keyName) {
-              return function(data, textStatus, jqXHR){
-                if (data.results && data.results.fingerprint) {
-                  notifySuccess(null, $.i18n.prop('keypair_import_success', keyName));
-                  thisObj.tableWrapper.eucatable('refreshTable');
-                } else {
-                  notifyError($.i18n.prop('keypair_import_error', keyName), undefined_error);
-                }
-             }
-            })(keyName),
-            error:
-            (function(keyName) {
-              return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('keypair_import_error', keyName), getErrorMessage(jqXHR));
-              }
-            })(keyName, keyContents)
-          });
-      }
-      else {
-          var reqParam = new Array();
-          reqParam.push({name: 'Action', value: 'ImportKeyPair'});
-          reqParam.push({name: '_xsrf', value: $.cookie('_xsrf')});
-          reqParam.push({name: 'KeyName', value: keyName});
-              
-          this.importDialog.find('#key-import-file').fileupload({
-            dataType: 'json',
-            url: "/ec2",
-            fileInput: null,
-            formData: reqParam,  
-            paramName: 'key_file',
-          });
-          var file_param = "none";
-          if (keyFile != null) {
-            file_param = keyFile;
-          }
-          alert("about to import key from file :"+file_param);
-          this.importDialog.find('#key-import-file').fileupload('send', {
-              files: file_param,
-              success: function (results, textStatus, jqXHR) {
-                  notifySuccess(null, $.i18n.prop('keypair_import_success', keyName));
-                  thisObj.tableWrapper.eucatable('refreshTable');
-              },
-              error: function (jqXHR, textStatus, errorthrown) {
-                notifyError($.i18n.prop('keypair_import_error', keyName), getErrorMessage(jqXHR));
-              }
-          });
-      }
+        })(keyName, keyContents)
+      });
     },
    
 /**** Public Methods ****/ 

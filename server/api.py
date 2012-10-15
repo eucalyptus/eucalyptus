@@ -233,13 +233,7 @@ class ComputeHandler(server.BaseHandler):
             return clc.delete_key_pair(name)
         elif action == 'ImportKeyPair':
             name = self.get_argument('KeyName')
-            try:
-                key_file = self.request.files['key_file']
-                material = key_file[0].body
-            except KeyError:
-                material = self.get_argument('PublicKeyMaterial', None)
-                if material:
-                    material = base64.b64decode(none)
+            material = base64.b64decode(self.get_argument('PublicKeyMaterial', None))
             return clc.import_key_pair(name, material)
 
     def handleGroups(self, action, clc):
