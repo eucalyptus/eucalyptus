@@ -2932,6 +2932,7 @@ public class WalrusManager {
 										destinationBucket,
 										null)))) {
 							// all ok
+							Long destinationObjectOldSize = 0L;
 							String destinationVersionId = sourceVersionId;
 							ObjectInfo destinationObjectInfo = null;
 							String destinationObjectName;
@@ -2990,6 +2991,7 @@ public class WalrusManager {
 									destinationObjectInfo.addGrants(account.getAccountNumber(), foundDestinationBucketInfo.getOwnerId(), grantInfos, accessControlList);
 									destinationObjectInfo.setGrants(grantInfos);
 								}
+								destinationObjectOldSize = destinationObjectInfo.getSize();
 							}
 							destinationObjectInfo.setSize(sourceObjectInfo
 									.getSize());
@@ -3070,6 +3072,16 @@ public class WalrusManager {
 								reply.setVersionId(destinationVersionId);
 							}							
 							db.commit();
+							
+							// Fixes EUCA-3756. Reporting event for copy objects
+							fireObjectCreationEvent(
+									destinationBucket,
+									destinationObjectName,
+									destinationVersionId,
+									ctx.getUser().getUserId(),
+									destinationObjectInfo.getSize(),
+									destinationObjectOldSize );
+							
 							return reply;
 						} else {
 							db.rollback();
