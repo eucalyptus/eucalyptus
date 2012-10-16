@@ -381,12 +381,12 @@
     },
 
     activateButton : function(buttonId) {
-      $button = this.element.parent().find('#'+buttonId.replace('#',''));
+      var $button = this.element.parent().find('#'+buttonId.replace('#',''));
       $button.prop("disabled", false).removeClass("ui-state-disabled");
     },
 
     onChange : function(evt_src_id, button_id, checkFunction) {
-      evt_src_id = evt_src_id.replace('#','');
+      var evt_src_id = evt_src_id.replace('#','');
       var $evt_src = this.element.find('#'+evt_src_id);
 
       $evt_src.unbind('change').bind('change',function(e){
@@ -397,9 +397,9 @@
     },
 
     validateOnType : function(fieldSelector, checkFunction) {
-      thisObj = this;
+      var thisObj = this;
       if (isFunction(checkFunction)) {
-        this.element.find(fieldSelector).keyup( function() {
+        thisObj.element.find(fieldSelector).keyup( function() {
           errorMsg = checkFunction.call();
           if (errorMsg)
             thisObj.showFieldError(fieldSelector, errorMsg);
@@ -410,7 +410,7 @@
     },
 
     hideFieldError : function(fieldSelector) {
-      $input = this.element.find(fieldSelector);
+      var $input = this.element.find(fieldSelector);
       $next = $input.next();
       if ($next && 'field-error' == $next.attr('class')) {
         $next.detach();
@@ -418,7 +418,7 @@
     },
 
     showFieldError : function(fieldSelector, error) {
-      $input = this.element.find(fieldSelector);
+      var $input = this.element.find(fieldSelector);
       $next = $input.next();
       if ($next && 'field-error' != $next.attr('class')) {
         $input.after($('<div>').addClass('field-error').html(error));
