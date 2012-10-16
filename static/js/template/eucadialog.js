@@ -396,6 +396,37 @@
       });
     },
 
+    validateOnType : function(fieldSelector, checkFunction) {
+      thisObj = this;
+      if (isFunction(checkFunction)) {
+        this.element.find(fieldSelector).keyup( function() {
+          errorMsg = checkFunction.call();
+          if (errorMsg)
+            thisObj.showFieldError(fieldSelector, errorMsg);
+          else
+            thisObj.hideFieldError(fieldSelector);
+        });
+      }
+    },
+
+    hideFieldError : function(fieldSelector) {
+      $input = this.element.find(fieldSelector);
+      $next = $input.next();
+      if ($next && 'field-error' == $next.attr('class')) {
+        $next.detach();
+      }
+    },
+
+    showFieldError : function(fieldSelector, error) {
+      $input = this.element.find(fieldSelector);
+      $next = $input.next();
+      if ($next && 'field-error' != $next.attr('class')) {
+        $input.after($('<div>').addClass('field-error').html(error));
+      } else {
+        $next.html(error);
+      }
+    },
+
     showError : function(error, append){
       if(!append)
         this.$error_div.children().detach();
@@ -403,7 +434,7 @@
         this.$error_div.append($('<br>'));
       this.$error_div.append(
         $('<span>').html(error)); 
-    } 
+    }
 /**** End of Public Methods ****/
   });
 })(jQuery,
