@@ -2487,9 +2487,9 @@ span.on-error {
 .launch-wizard-type-size li.selected-type {
   border: 1px solid #d7d5d5;
   
-  -webkit-box-shadow: inset 0px 0px 10px 15px #e2f4c0;
-  -moz-box-shadow: inset 0px 0px 10px 15px #e2f4c0; 
-  box-shadow: inset 0px 0px 10px 15px #e2f4c0;
+  -webkit-box-shadow: inset 0px 0px 8px 6px #e2f4c0;
+  -moz-box-shadow: inset 0px 0px 8px 6px #e2f4c0; 
+  box-shadow: inset 0px 0px 8px 6px #e2f4c0;
 }  
 
 .launch-wizard-type-size li a {
