@@ -44,7 +44,7 @@ var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 var KEEP_VIEW = 'keep_view';
 
 function asText(input) {
-  return $('<div>').html(input).text();
+  return input; /* we don't do any transformation at this point */
 }
 
 function asHTML(input) {
