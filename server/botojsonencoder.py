@@ -34,7 +34,7 @@ class BotoJsonEncoder(JSONEncoder):
         'reservation_id',
         'owner_id',
         'root_device_type',
-        'state_reason',
+        'state',
         'state_reason',
         'state_code',
         'monitored',
@@ -49,7 +49,8 @@ class BotoJsonEncoder(JSONEncoder):
         'zone',
         'progress',
         'ip_protocol',
-        'fingerprint'
+        'fingerprint',
+        'root_device_name'
     ];
     
     def __sanitize_and_copy__(self, dict):
