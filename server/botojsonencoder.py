@@ -50,7 +50,6 @@ class BotoJsonEncoder(JSONEncoder):
         'progress',
         'ip_protocol',
         'fingerprint',
-        'root_device_name'
     ];
     
     def __sanitize_and_copy__(self, dict):

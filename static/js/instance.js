@@ -119,7 +119,7 @@
                      break;
                    }
                  }
-                 return image ? image.location : '';
+                 return image ? image.location.replace('&#x2f;','/') : '';
               }
             }
           ]
@@ -870,7 +870,7 @@
 
       var platform = image.platform ? image.platform : 'linux';
       var $summary = $('<div>').append($('<div>').text(launch_instance_summary_platform), $('<span>').text(platform));;
-      var imgName = inferImageName(image.location, image.description, platform);
+      var imgName = inferImageName(image.location.replace('&#x2f;','/'), image.description, platform);
       var $image = thisObj.launchMoreDialog.find('#launch-more-summary-image');
       $image.addClass(imgName);
       $image.children().detach();
@@ -944,7 +944,7 @@
       var manifest = '';
       var image = describe('image',instance['image_id']);
       if(image && image.location)
-        manifest = image.location; 
+        manifest = image.location.replace('&#x2f;','/'); 
       var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
       $('<div>').addClass('expanded-section-label').text(instance_table_expanded_instance),
       $('<div>').addClass('expanded-section-content').addClass('clearfix').append(
