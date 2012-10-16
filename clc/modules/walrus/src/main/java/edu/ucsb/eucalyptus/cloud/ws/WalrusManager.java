@@ -1094,14 +1094,18 @@ public class WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
-							fireObjectCreationEvent(
-									bucketName,
-									objectKey,
-									versionId,
-									ctx.getUser().getUserId(),
-									size,
-									oldObjectSize );
-
+							try {
+								fireObjectCreationEvent(
+										bucketName,
+										objectKey,
+										versionId,
+										ctx.getUser().getUserId(),
+										size,
+										oldObjectSize );								
+							} catch (Exception ex) {
+								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
+							}
+							
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -1422,13 +1426,18 @@ public class WalrusManager {
 						reply.setLogData(logData);
 					}
 
-					fireObjectCreationEvent(
-							foundObject.getBucketName(),
-							foundObject.getObjectKey(),
-							foundObject.getVersionId(),
-							ctx.getUser().getUserId(),
-							foundObject.getSize(),
-							oldObjectSize );
+					try {
+						fireObjectCreationEvent(
+								foundObject.getBucketName(),
+								foundObject.getObjectKey(),
+								foundObject.getVersionId(),
+								ctx.getUser().getUserId(),
+								foundObject.getSize(),
+								oldObjectSize );
+					} catch (Exception ex) {
+						LOG.debug("Failed to fire reporting event for walrus inline PUT object operation", ex);
+					}
+					
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -1731,8 +1740,12 @@ public class WalrusManager {
 
 				/* Send an event to reporting to report this S3 usage. */
 				if ( size > 0 ) {
-					fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
-						this.bucketName, this.objectKey, this.version, this.userId, this.size );
+					try {
+						fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
+								this.bucketName, this.objectKey, this.version, this.userId, this.size );
+					} catch (Exception ex) {
+						LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
+					}
 				}
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
@@ -3073,14 +3086,18 @@ public class WalrusManager {
 							}							
 							db.commit();
 							
-							// Fixes EUCA-3756. Reporting event for copy objects
-							fireObjectCreationEvent(
-									destinationBucket,
-									destinationObjectName,
-									destinationVersionId,
-									ctx.getUser().getUserId(),
-									destinationObjectInfo.getSize(),
-									destinationObjectOldSize );
+							try {
+								// Fixes EUCA-3756. Reporting event for copy objects
+								fireObjectCreationEvent(
+										destinationBucket,
+										destinationObjectName,
+										destinationVersionId,
+										ctx.getUser().getUserId(),
+										destinationObjectInfo.getSize(),
+										destinationObjectOldSize );
+							} catch (Exception ex) {
+								LOG.debug("Failed to fire reporting event for walrus COPY object operation", ex);
+							}
 							
 							return reply;
 						} else {
