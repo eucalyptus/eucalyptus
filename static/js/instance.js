@@ -922,6 +922,9 @@
       $advanced.find('#launch-wizard-advanced-kernelramdisk').children().detach();
       $advanced.find('#launch-wizard-advanced-network').children().detach();
       $advanced.find('#launch-wizard-advanced-storage').children().detach();
+      advHeader = $advanced.find('.wizard-section-label')[0];
+      if (advHeader)
+        $(advHeader).detach();
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
     },
     _expandCallback : function(row){
