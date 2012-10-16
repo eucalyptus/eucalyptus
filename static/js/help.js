@@ -21,16 +21,60 @@
 (function($, eucalyptus) {
   eucalyptus.help = function(args){
     language = args['language']; // not used yet
-    help_keypair.load({language:language});
-    help_volume.load({language:language});
-    help_sgroup.load({language:language}); 
-    help_instance.load({language:language});
-    help_snapshot.load({language:language});
-    help_image.load({language:language}); 
-    help_eip.load({language:language});
-    help_launcher.load({language:language});
-    help_dashboard.load({language:language});
-    help_about.load({language:language});
+    try{
+      try{
+        help_keypair.load({language:language});
+      }catch(e){
+        help_keypair.load({language:'en_US'});
+      }
+      try{
+        help_volume.load({language:language});
+      }catch(e){
+        help_volume.load({language:'en_US'});
+      }
+      try{
+        help_sgroup.load({language:language}); 
+      }catch(e){
+        help_sgroup.load({language:'en_US'}); 
+      }
+      try{
+        help_instance.load({language:language});
+      }catch(e){
+        help_instance.load({language:'en_US'});
+      }
+      try{
+        help_snapshot.load({language:language});
+      }catch(e){
+        help_snapshot.load({language:'en_US'});
+      }
+      try{
+        help_image.load({language:language}); 
+      }catch(e){
+        help_image.load({language:'en_US'}); 
+      }
+      try{
+        help_eip.load({language:language});
+      }catch(e){
+        help_eip.load({language:'en_US'});
+      }
+      try{
+        help_launcher.load({language:language});
+      }catch(e){
+        help_launcher.load({language:'en_US'});
+      }
+      try{
+        help_dashboard.load({language:language});
+      }catch(e){
+        help_dashboard.load({language:'en_US'});
+      }
+      try{
+        help_about.load({language:language});
+      }catch(e){
+        help_about.load({language:'en_US'});
+      }
+    }catch(e){
+      ;
+    }
   }
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});
@@ -52,7 +96,8 @@ function loadHtml(url, handler){
           handler(data);
         },
         error : function (){
-          handler($.i18n.prop('error_loading_help_file'));
+          //handler($.i18n.prop('error_loading_help_file'));
+          throw "static html files not found";
         }
     });
 }
