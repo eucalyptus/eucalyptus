@@ -2367,49 +2367,49 @@ span.on-error {
 .image-type.rhel,
 .image-type.rhel5,
 .image-type.rhel6 {
-  background-position: 0 -100px;
+  background-position: 0 -150px;
 }
 
 .image-type.fedora {
-  background-position: 0 -200px;
+  background-position: 0 -300px;
 }
 
 .image-type.gentoo {
-  background-position: 0 -300px;
+  background-position: 0 -450px;
 }
 
 .image-type.ubuntu,
 .image-type.lucid,
 .image-type.precise {
-  background-position: 0 -400px;
+  background-position: 0 -600px;
 }
 
 .image-type.centos,
 .image-type.centos5,
 .image-type.centos6 {
-  background-position: 0 -500px;
+  background-position: 0 -750px;
 }
 
 .image-type.opensuse,
 .image-type.suse
  {
-  background-position: 0 -600px;
+  background-position: 0 -900px;
 }
 
 .image-type.debian {
-  background-position: 0 -700px;
+  background-position: 0 -1050px;
 }
 
 .image-type.linux {
-  background-position: 0 -800px;
+  background-position: 0 -1200px;
 }
 
 #summary-type .summary {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -900px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1350px;
 }
 
 #summary-security .summary {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1100px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1550px;
 
 }
 
@@ -2424,7 +2424,7 @@ span.on-error {
 }
 
 #summary-advanced li {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1300px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1750px;
   padding: 0 0 4px 22px;
 }
 
@@ -2633,49 +2633,49 @@ span.on-error {
 .launch-more-summary-section.rhel,
 .launch-more-summary-section.rhel5,
 .launch-more-summary-section.rhel6 {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -111px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -161px;
 }
 
 .launch-more-summary-section.fedora {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -211px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -311px;
 }
 
 .launch-more-summary-section.gentoo {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -311px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -461px;
 }
 
 .launch-more-summary-section.ubuntu,
 .launch-more-summary-section.lucid,
 .launch-more-summary-section.precise {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -411px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -611px;
 }
 
 .launch-more-summary-section.centos,
 .launch-more-summary-section.centos5,
 .launch-more-summary-section.centos6 {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -511px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -761px;
 }
 
 .launch-more-summary-section.opensuse,
 .launch-more-summary-section.suse {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -614px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -914px;
 }
 
 .launch-more-summary-section.debian {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -711px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1061px;
 }
 
 .launch-more-summary-section.linux {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -811px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1211px;
 }
 
 #launch-more-summary-type {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -911px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1361px;
   width: 135px;
 }
 
 #launch-more-summary-security {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1113px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1563px;
 }
 
 .launch-more {
