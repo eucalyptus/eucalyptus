@@ -549,7 +549,6 @@ ol li {
   color: #02405f;
 }
 
-
 .form-row label.long-label {
   width: 195px;
 }
@@ -562,10 +561,9 @@ ol li {
   width: 360px;
 }
 
-
 #login .form-row label {
   margin-right: 13px;
-  width: 90px;
+  width: 100px;
 }
 
 .checkbox-row {
@@ -579,7 +577,7 @@ ol li {
 }
 
 .checkbox-row input[type='checkbox'] {
-  margin: 0 2px 0 108px;
+  margin: 0 2px 0 115px;
   width: auto;
 }
 
@@ -667,7 +665,7 @@ input[type='text'].medium-textinput {
 .password-help {
   color: #666;
   font-size: 11px;
-  margin: 15px 225px 30px 0;
+  margin: 15px 240px 30px 0;
   text-align: right;
 }
 
@@ -1255,16 +1253,21 @@ ul.ramdisk-expanded li:nth-child(5) {
 
 .help-link,
 .help-return,
-.help-euca {
+.help-euca,
+.help-popout {
   position: absolute;
   top: 4px;
   right: 25px;
 }
 
+.help-popout {
+  right: 60px;
+}
 
 .help-link a,
 .help-return a,
-.help-euca a {
+.help-euca a,
+.help-popout a {
   display: inline-block;
   overflow: hidden;
   width: 24px;
@@ -1279,7 +1282,11 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 .help-euca a {
-  background: transparent url(../images/euca.png) no-repeat left center;
+  background-position: left -700px;
+}
+
+.help-popout a {
+  background-position: left -210px;
 }
 
 .help-content {
@@ -1762,36 +1769,36 @@ ul.ramdisk-expanded li:nth-child(5) {
 
 .paging_full_numbers span.first  {
   width: 45px;
-  background-position: 0 -600px;
+  background-position: 0 -650px;
   border-left: 0;
 }
 .paging_full_numbers span.first.paginate_button_disabled {
-  background-position: 0 -630px;
+  background-position: 0 -680px;
 }
 
 .paging_full_numbers span.previous {
   width: 30px;
-  background-position: -50px -600px;
+  background-position: -50px -650px;
 }
 .paging_full_numbers span.previous.paginate_button_disabled {
-  background-position: -50px -630px;
+  background-position: -50px -680px;
 }
 
 .paging_full_numbers span.next  {
   width: 30px; 
-  background-position: -85px -600px; 
+  background-position: -85px -650px; 
 }
 .paging_full_numbers span.next.paginate_button_disabled {
-  background-position: -85px -630px;
+  background-position: -85px -680px;
 }
 
 .paging_full_numbers span.last  {
   width: 45px;
-  background-position: -120px -600px;
+  background-position: -120px -650px;
   border-right: 0;
 }
 .paging_full_numbers span.last.paginate_button_disabled {
-  background-position: -120px -630px;
+  background-position: -120px -680px;
 }
 
 .paging_full_numbers span.paginate_active {
@@ -2367,49 +2374,49 @@ span.on-error {
 .image-type.rhel,
 .image-type.rhel5,
 .image-type.rhel6 {
-  background-position: 0 -100px;
+  background-position: 0 -150px;
 }
 
 .image-type.fedora {
-  background-position: 0 -200px;
+  background-position: 0 -300px;
 }
 
 .image-type.gentoo {
-  background-position: 0 -300px;
+  background-position: 0 -450px;
 }
 
 .image-type.ubuntu,
 .image-type.lucid,
 .image-type.precise {
-  background-position: 0 -400px;
+  background-position: 0 -600px;
 }
 
 .image-type.centos,
 .image-type.centos5,
 .image-type.centos6 {
-  background-position: 0 -500px;
+  background-position: 0 -750px;
 }
 
 .image-type.opensuse,
 .image-type.suse
  {
-  background-position: 0 -600px;
+  background-position: 0 -900px;
 }
 
 .image-type.debian {
-  background-position: 0 -700px;
+  background-position: 0 -1050px;
 }
 
 .image-type.linux {
-  background-position: 0 -800px;
+  background-position: 0 -1200px;
 }
 
 #summary-type .summary {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -900px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1350px;
 }
 
 #summary-security .summary {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1100px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1550px;
 
 }
 
@@ -2424,7 +2431,7 @@ span.on-error {
 }
 
 #summary-advanced li {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1300px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1750px;
   padding: 0 0 4px 22px;
 }
 
@@ -2487,9 +2494,9 @@ span.on-error {
 .launch-wizard-type-size li.selected-type {
   border: 1px solid #d7d5d5;
   
-  -webkit-box-shadow: inset 0px 0px 10px 15px #e2f4c0;
-  -moz-box-shadow: inset 0px 0px 10px 15px #e2f4c0; 
-  box-shadow: inset 0px 0px 10px 15px #e2f4c0;
+  -webkit-box-shadow: inset 0px 0px 8px 6px #e2f4c0;
+  -moz-box-shadow: inset 0px 0px 8px 6px #e2f4c0; 
+  box-shadow: inset 0px 0px 8px 6px #e2f4c0;
 }  
 
 .launch-wizard-type-size li a {
@@ -2633,49 +2640,49 @@ span.on-error {
 .launch-more-summary-section.rhel,
 .launch-more-summary-section.rhel5,
 .launch-more-summary-section.rhel6 {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -111px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -161px;
 }
 
 .launch-more-summary-section.fedora {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -211px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -311px;
 }
 
 .launch-more-summary-section.gentoo {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -311px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -461px;
 }
 
 .launch-more-summary-section.ubuntu,
 .launch-more-summary-section.lucid,
 .launch-more-summary-section.precise {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -411px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -611px;
 }
 
 .launch-more-summary-section.centos,
 .launch-more-summary-section.centos5,
 .launch-more-summary-section.centos6 {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -511px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -761px;
 }
 
 .launch-more-summary-section.opensuse,
 .launch-more-summary-section.suse {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -614px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -914px;
 }
 
 .launch-more-summary-section.debian {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -711px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1061px;
 }
 
 .launch-more-summary-section.linux {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -811px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1211px;
 }
 
 #launch-more-summary-type {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -911px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1361px;
   width: 135px;
 }
 
 #launch-more-summary-security {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1113px;
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1563px;
 }
 
 .launch-more {
@@ -2718,6 +2725,7 @@ textarea.console-output {
 #wizard-img-table-size {
  text-align: right; 
 }
+
 /* ======= Euca credits ======= */
 
 .euca-credits {
@@ -2741,24 +2749,6 @@ textarea.console-output {
   margin: 0 0 15px;
   padding: 0;
   list-style-type: none;
-}
-
-/* Pop-out help */
-
-.help-popout {
-  position: absolute;
-  top: 4px;
-  right: 60px;
-}
-
-.help-popout a{
-  display: inline-block;
-  overflow: hidden;
-  width: 24px;
-  height: 24px;
-  background: transparent url(../images/css-sprites-small.png) no-repeat left -210px;
-  text-indent: 100%;
-  white-space: nowrap;
 }
 
 .dataTables_processing{
