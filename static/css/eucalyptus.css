@@ -1762,36 +1762,36 @@ ul.ramdisk-expanded li:nth-child(5) {
 
 .paging_full_numbers span.first  {
   width: 45px;
-  background-position: 0 -600px;
+  background-position: 0 -650px;
   border-left: 0;
 }
 .paging_full_numbers span.first.paginate_button_disabled {
-  background-position: 0 -630px;
+  background-position: 0 -680px;
 }
 
 .paging_full_numbers span.previous {
   width: 30px;
-  background-position: -50px -600px;
+  background-position: -50px -650px;
 }
 .paging_full_numbers span.previous.paginate_button_disabled {
-  background-position: -50px -630px;
+  background-position: -50px -680px;
 }
 
 .paging_full_numbers span.next  {
   width: 30px; 
-  background-position: -85px -600px; 
+  background-position: -85px -650px; 
 }
 .paging_full_numbers span.next.paginate_button_disabled {
-  background-position: -85px -630px;
+  background-position: -85px -680px;
 }
 
 .paging_full_numbers span.last  {
   width: 45px;
-  background-position: -120px -600px;
+  background-position: -120px -650px;
   border-right: 0;
 }
 .paging_full_numbers span.last.paginate_button_disabled {
-  background-position: -120px -630px;
+  background-position: -120px -680px;
 }
 
 .paging_full_numbers span.paginate_active {
