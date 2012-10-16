@@ -72,6 +72,7 @@ import com.eucalyptus.config.StorageControllerConfiguration;
 import com.eucalyptus.entities.Entities;
 import com.google.common.base.Strings;
 
+@Deprecated
 public class BlockStorageManagerFactory {
 	private static Logger LOG = Logger.getLogger(BlockStorageManagerFactory.class);	
 
