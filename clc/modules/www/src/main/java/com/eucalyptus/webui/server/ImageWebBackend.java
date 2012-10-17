@@ -64,22 +64,36 @@ package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.PutGetImageInfo;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.eucalyptus.webui.client.service.SearchResultRow;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 public class ImageWebBackend {
   
@@ -114,25 +128,55 @@ public class ImageWebBackend {
     COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( DESC, "Description", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
   }
   
-  public static List<SearchResultRow> searchImages( User requestUser, String query ) throws EucalyptusServiceException {
-    List<SearchResultRow> results = Lists.newArrayList( );
-    try {
-      Account requestAccount = requestUser.getAccount( );
-      for ( ImageInfo image : Images.listAllImages( ) ) {
-        if ( requestUser.isSystemAdmin( ) ||
-    		     ( ( image.getImagePublic( ) ||
-    		         image.getOwnerAccountNumber( ).equals( requestAccount.getAccountNumber( ) ) ||
-    		         image.hasPermission( requestAccount.getAccountNumber( ), requestAccount.getName( ) ) ) &&
-    		       Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, image.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser ) ) ) {
-          results.add( serializeImage( image ) );
+  private static Function<ImageInfo, SearchResultRow> TO_IMAGE_SEARCH_RESULT = new Function<ImageInfo, SearchResultRow>( ) {
+    @Override
+    public SearchResultRow apply( ImageInfo image ) {
+      return serializeImage( image );
+    }
+  };
+    
+  public static List<SearchResultRow> searchImages( final User requestUser, String query ) throws EucalyptusServiceException {
+    Predicate<ImageInfo> inter_account_permission_filter = new Predicate<ImageInfo>( ) {
+      @Override
+      public boolean apply( ImageInfo input ) {
+        try {
+          if ( requestUser.isSystemAdmin( ) ) {
+            return true;
+          } else {
+            if ( input.getImagePublic( ) ) {
+              return true;
+            } else if ( input.getOwnerAccountNumber( ).equals( requestUser.getAccount( ).getAccountNumber( ) ) ) {
+              return true;
+            } else if ( input.hasPermission( requestUser.getAccount( ).getAccountNumber( ), requestUser.getUserId( ) ) ) {
+              return true;
+            } else {
+              for ( AccessKey key : requestUser.getKeys( ) ) {
+                if ( input.hasPermission( key.getAccessKey( ) ) ) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        } catch ( Exception e ) {
+          LOG.error( e, e );
+          return false;
         }
       }
+    };
+    Predicate<ImageInfo> intra_account_permission_filter = new Predicate<ImageInfo>( ) {
+      @Override
+      public boolean apply( ImageInfo input) {
+        return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, input.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser );
+      }      
+    };
+    try {
+      return Transactions.filteredTransform( new ImageInfo( ), Predicates.and( inter_account_permission_filter, intra_account_permission_filter ), TO_IMAGE_SEARCH_RESULT );
     } catch ( Exception e ) {
-      LOG.error( "Failed to get image info", e );
+      LOG.error( "Failed to lookup image", e );
       LOG.debug( e, e );
-      throw new EucalyptusServiceException( "Failed to get image info" );
+      throw new EucalyptusServiceException( "Failed to get image info", e );
     }
-    return results;
   }
 
   private static SearchResultRow serializeImage( ImageInfo image ) {
