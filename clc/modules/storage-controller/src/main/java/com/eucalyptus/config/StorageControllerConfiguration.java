@@ -163,12 +163,10 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 	}
 		
 	public String getPropertyPrefix() {
-		//return this.propertyPrefix;
 		return this.getPartition();
 	}
 	
 	public void setPropertyPrefix(String p) {
-		//this.propertyPrefix = p;
 		this.setPartition(p);
 	}
 	
