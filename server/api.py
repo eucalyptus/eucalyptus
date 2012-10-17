@@ -402,6 +402,7 @@ class ComputeHandler(server.BaseHandler):
                     time.sleep(int(server.config.get('test','apidelay'))/1000.0);
             except ConfigParser.NoOptionError:
                 pass
+            self.set_header("Content-type", "application/json;charset=UTF-8")
             self.write(data)
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0][1])
@@ -486,6 +487,12 @@ class ComputeHandler(server.BaseHandler):
                 ret = {'instance':instanceid, 'password': ret} # wrap all responses in an object for security purposes
             ret = Response(ret) # wrap all responses in an object for security purposes
             data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+            try:
+                if(server.config.get('test','apidelay')):
+                    time.sleep(int(server.config.get('test','apidelay'))/1000.0);
+            except ConfigParser.NoOptionError:
+                pass
+            self.set_header("Content-type", "application/json;charset=UTF-8")
             self.write(data)
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0][1])
