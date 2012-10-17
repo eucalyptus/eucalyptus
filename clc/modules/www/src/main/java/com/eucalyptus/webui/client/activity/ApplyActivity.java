@@ -145,23 +145,6 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
     InputView dialog = this.clientFactory.getInputView( );
     dialog.setPresenter( this );
     dialog.display( PASSWORD_RESET_CAPTION, PASSWORD_RESET_SUBJECT, new ArrayList<InputField>( Arrays.asList( new InputField( ) {
-
-      @Override
-      public String getTitle( ) {
-        return RESET_USER_INPUT_TITLE;
-      }
-
-      @Override
-      public ValueType getType( ) {
-        return ValueType.TEXT;
-      }
-
-      @Override
-      public ValueChecker getChecker( ) {
-        return ValueCheckerFactory.createUserAndGroupNameChecker( );
-      }
-      
-    }, new InputField( ) {
       
       @Override
       public String getTitle( ) {
@@ -176,6 +159,23 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
       @Override
       public ValueChecker getChecker( ) {
         return ValueCheckerFactory.createAccountNameChecker( );
+      }
+      
+    }, new InputField( ) {
+
+      @Override
+      public String getTitle( ) {
+        return RESET_USER_INPUT_TITLE;
+      }
+
+      @Override
+      public ValueType getType( ) {
+        return ValueType.TEXT;
+      }
+
+      @Override
+      public ValueChecker getChecker( ) {
+        return ValueCheckerFactory.createUserAndGroupNameChecker( );
       }
       
     }, new InputField( ) {
