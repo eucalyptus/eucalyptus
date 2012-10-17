@@ -321,7 +321,7 @@
                  arch=arch.replace('x86_64', '64 bit');
 
                  var name = '';
-                 var imgKey = inferImageName(oObj.aData.location, desc, oObj.aData.platform);
+                 var imgKey = inferImage(oObj.aData.location, desc, oObj.aData.platform);
                  if(imgKey)
                    name = getImageName(imgKey);
                  var $cell = $('<div>').addClass(imgKey).addClass('image-type').append(
@@ -1298,10 +1298,10 @@
         return thisObj._showError('type');
       if(!param['zone'])
         return thisObj._showError('type');
-      if(!param['keypair'])
-        return thisObj._showError('security');
-      if(!param['sgroup'])
-        return thisObj._showError('security'); 
+     //if(!param['keypair'])
+     //  return thisObj._showError('security');
+     // if(!param['sgroup'])
+     //  return thisObj._showError('security'); 
 
       //prepare for the actual request parameters
       var reqParam = new Array();
@@ -1313,9 +1313,9 @@
 
       if(param['zone'].toLowerCase() !== 'any')
         reqParam.push({name: 'Placement.AvailabilityZone', value: param['zone']});
-      //reqParam.push({name: 'Placement.GroupName', value: param['sgroup']});
-      reqParam.push({name: 'SecurityGroup.1', value: param['sgroup']});
-      if (param['keypair'] !== 'none')
+      if (param['sgroup'])
+        reqParam.push({name: 'SecurityGroup.1', value: param['sgroup']});
+      if (param['keypair'] && param['keypair'] !== 'none')
         reqParam.push({name: 'KeyName', value: param['keypair']});
 
       if(param['kernel'] && param['kernel'].length > 0)

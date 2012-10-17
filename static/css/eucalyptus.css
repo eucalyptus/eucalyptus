@@ -2635,7 +2635,7 @@ span.on-error {
 }
 
 .launch-more-summary-section.windows {
-  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -11px;
+  background-image: none;
 }
 
 .launch-more-summary-section.rhel,

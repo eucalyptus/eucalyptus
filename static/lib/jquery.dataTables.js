@@ -5970,6 +5970,8 @@
 		function _fnGetTrNodes ( oSettings )
 		{
 			var aNodes = [];
+                        if (!oSettings)
+                          return null;
 			for ( var i=0, iLen=oSettings.aoData.length ; i<iLen ; i++ )
 			{
 				if ( oSettings.aoData[i].nTr !== null )

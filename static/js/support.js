@@ -345,7 +345,7 @@ function isValidIp(s) {
   return true;
 }
 
-function inferImageName(manifest, desc, platform) {
+function inferImage(manifest, desc, platform) {
   if(!platform)
     platform='linux';
   var name = platform;
