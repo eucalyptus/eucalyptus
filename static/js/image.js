@@ -173,7 +173,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                              $('<div>').addClass('expanded-value').text(image['owner_id'])),
                            $('<li>').append(
                              $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                             $('<div>').addClass('expanded-value').text(image['location']))))));
+                             $('<div>').addClass('expanded-value').text(image['location'].replace('&#x2f;','/')))))));
 
       var $kernelInfo = null;
       if(kernel){
@@ -192,7 +192,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                 $('<div>').addClass('expanded-value').text(kernel['architecture'])),
                               $('<li>').append(
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                $('<div>').addClass('expanded-value').text(kernel['location'])),
+                                $('<div>').addClass('expanded-value').text(kernel['location'].replace('&#x2f;','/'))),
                               $('<li>').append(
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
                                 $('<div>').addClass('expanded-value').html(kernel['description'] ? kernel['description'] : '&nbsp;'))))));
@@ -214,7 +214,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                  $('<div>').addClass('expanded-value').text(ramdisk['architecture'])),
                                $('<li>').append(
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['location'])),
+                                 $('<div>').addClass('expanded-value').text(ramdisk['location'].replace('&#x2f;','/'))),
                                $('<li>').append(
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
                                  $('<div>').addClass('expanded-value').html(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'))))));

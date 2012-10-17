@@ -319,7 +319,8 @@ function getErrorMessage(jqXHR) {
 function isRootVolume(instanceId, volumeId) {
   var instance = describe('instance', instanceId);
   if ( instance && instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
-    var rootVolume = instance.block_device_mapping[instance.root_device_name];
+    var rootDeviceName = instance.root_device_name ? instance.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
+    var rootVolume = instance.block_device_mapping[rootDeviceName];
     if ( rootVolume && rootVolume.volume_id === volumeId ) {
       return true;
     }

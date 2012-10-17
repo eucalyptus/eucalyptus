@@ -381,12 +381,12 @@
     },
 
     activateButton : function(buttonId) {
-      $button = this.element.parent().find('#'+buttonId.replace('#',''));
+      var $button = this.element.parent().find('#'+buttonId.replace('#',''));
       $button.prop("disabled", false).removeClass("ui-state-disabled");
     },
 
     onChange : function(evt_src_id, button_id, checkFunction) {
-      evt_src_id = evt_src_id.replace('#','');
+      var evt_src_id = evt_src_id.replace('#','');
       var $evt_src = this.element.find('#'+evt_src_id);
 
       $evt_src.unbind('change').bind('change',function(e){
@@ -408,6 +408,37 @@
       }
     },
 
+    validateOnType : function(fieldSelector, checkFunction) {
+      var thisObj = this;
+      if (isFunction(checkFunction)) {
+        thisObj.element.find(fieldSelector).keyup( function() {
+          errorMsg = checkFunction.call();
+          if (errorMsg)
+            thisObj.showFieldError(fieldSelector, errorMsg);
+          else
+            thisObj.hideFieldError(fieldSelector);
+        });
+      }
+    },
+
+    hideFieldError : function(fieldSelector) {
+      var $input = this.element.find(fieldSelector);
+      $next = $input.next();
+      if ($next && 'field-error' == $next.attr('class')) {
+        $next.detach();
+      }
+    },
+
+    showFieldError : function(fieldSelector, error) {
+      var $input = this.element.find(fieldSelector);
+      $next = $input.next();
+      if ($next && 'field-error' != $next.attr('class')) {
+        $input.after($('<div>').addClass('field-error').html(error));
+      } else {
+        $next.html(error);
+      }
+    },
+
     showError : function(error, append){
       if(!append)
         this.$error_div.children().detach();
@@ -415,7 +446,7 @@
         this.$error_div.append($('<br>'));
       this.$error_div.append(
         $('<span>').html(error)); 
-    } 
+    }
 /**** End of Public Methods ****/
   });
 })(jQuery,
