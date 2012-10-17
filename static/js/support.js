@@ -38,6 +38,8 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    hidden:'.euca-hidden-container',
                   };
 
+var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
+var SGROUP_DESC_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,1024}$');// not sure if 1K is actual limit.
 var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 

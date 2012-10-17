@@ -396,15 +396,21 @@
       });
     },
     
-    getalphanumval : function(val_name) {
+    // This function takes the name of a value (input field's id) and a regular
+    // expression object to match against. It tests the value of the field and if it matches,
+    // returns the value, otherwise a null is returned and an error message is set on a
+    // div named for the field (with "-error" appended to the id)
+    // i.e.  <input id="sgroup-name" type="text" class="required" maxlength="254"/>
+    //       <div id="sgroup-name-error" class="sg-error-msg"></div>
+    get_validate_value : function(val_name, pattern, msg) {
       var val = $.trim(asText(this.element.parent().find('#'+val_name).val()));
-      if (val.match('^[a-zA-Z0-9 _-]*$') == null) {
-        this.element.find("#"+val_name+"-error").html(alphanum_warning);
-        return null;
-      }
-      else {
+      if (pattern.test(val)) {
         this.element.find("#"+val_name+"-error").html("");
         return val;
+      }
+      else {
+        this.element.find("#"+val_name+"-error").html(msg);
+        return null;
       }
     },
 

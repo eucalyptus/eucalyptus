@@ -136,9 +136,11 @@
         title: sgroup_dialog_add_title,
         buttons: { 
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
-              var name = $add_dialog.eucadialog("getalphanumval", "sgroup-name");
+              var name = $add_dialog.eucadialog("get_validate_value", "sgroup-name",
+                                                SGROUP_NAME_PATTERN, alphanum_warning);
               if (name == null) return;
-              var desc = $add_dialog.eucadialog("getalphanumval", "sgroup-description");
+              var desc = $add_dialog.eucadialog("get_validate_value", "sgroup-description",
+                                                SGROUP_DESC_PATTERN, alphanum_warning);
               if (desc == null) return;
 
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
