@@ -1300,8 +1300,8 @@
         return thisObj._showError('type');
       if(!param['keypair'])
         return thisObj._showError('security');
-      if(!param['sgroup'])
-        return thisObj._showError('security'); 
+     // if(!param['sgroup'])
+      //  return thisObj._showError('security'); 
 
       //prepare for the actual request parameters
       var reqParam = new Array();

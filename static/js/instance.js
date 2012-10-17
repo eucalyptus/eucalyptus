@@ -814,7 +814,11 @@
       var zone = thisObj.launchMoreDialog.find('#summary-type-zone').children().last().text();
       var inst_num = asText(thisObj.launchMoreDialog.find('input#launch-more-num-instance').val());
       var keyname = thisObj.launchMoreDialog.find('#summary-security-keypair').children().last().text();
-      var sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
+      var sgroup = thisObj.launchMoreDialog.find('#launch-more-sgroup-input');
+      if (!sgroup || sgroup.length <= 0)
+        sgroup = thisObj.launchMoreDialog.find('#summary-security-sg').children().last().text(); 
+      else
+        sgroup = sgroup.val();  
 
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'emi', emi);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'type', type);
