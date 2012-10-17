@@ -171,9 +171,7 @@ sub delete_lun {
   my $sid;
   my $host_number;
   for $session (lookup_session()) {
-    if (($session->{$SK_TARGET} eq $store) &&
-        ($session->{$SK_PORTAL} eq $ip) &&
-        (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
+    if (match_iscsi_session($session, $netdev, $ip, $store)) {
       $sid = $session->{$SK_SID};
       $host_number = $session->{$SK_HOSTNUMBER};
       last;
@@ -195,9 +193,7 @@ sub delete_lun {
 sub has_device_attached {
   my ($netdev, $ip, $store) = @_;
   for $session (lookup_session()) {
-    if (($session->{$SK_TARGET} eq $store) &&
-        ($session->{$SK_PORTAL} eq $ip) &&
-        (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
+    if (match_iscsi_session($session, $netdev, $ip, $store)) {
       return has_lun(keys %$session);
     }
   }
