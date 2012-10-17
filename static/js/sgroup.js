@@ -136,8 +136,11 @@
         title: sgroup_dialog_add_title,
         buttons: { 
         'create': { domid: createButtonId, text: sgroup_dialog_create_btn, disabled: true,  click: function() {
-              var name = $.trim(asText($add_dialog.find('#sgroup-name').val()));
-              var desc = $.trim(asText($add_dialog.find('#sgroup-description').val()));
+              var name = $add_dialog.eucadialog("getalphanumval", "sgroup-name");
+              if (name == null) return;
+              var desc = $add_dialog.eucadialog("getalphanumval", "sgroup-description");
+              if (desc == null) return;
+
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
               var fromPort = new Array();
               var toPort = new Array();
@@ -762,6 +765,8 @@
       thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.addDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
       thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
+      thisObj.addDialog.find("#sgroup-name-error").html("");
+      thisObj.addDialog.find("#sgroup-description-error").html("");
     },
 
     _editAction : function() {

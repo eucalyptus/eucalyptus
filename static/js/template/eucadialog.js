@@ -221,7 +221,7 @@
     open : function() {
       this.element.dialog('open');      
     },
-    
+
     close : function() {
       var thisObj = this;
       this.element.dialog('close');
@@ -394,6 +394,18 @@
            checkFunction.call(this);
          }
       });
+    },
+    
+    getalphanumval : function(val_name) {
+      var val = $.trim(asText(this.element.parent().find('#'+val_name).val()));
+      if (val.match('^[a-zA-Z0-9 _-]*$') == null) {
+        this.element.find("#"+val_name+"-error").html(alphanum_warning);
+        return null;
+      }
+      else {
+        this.element.find("#"+val_name+"-error").html("");
+        return val;
+      }
     },
 
     showError : function(error, append){
