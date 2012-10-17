@@ -402,7 +402,7 @@ class ComputeHandler(server.BaseHandler):
                     time.sleep(int(server.config.get('test','apidelay'))/1000.0);
             except ConfigParser.NoOptionError:
                 pass
-            self.set_header("Content-type", "application/json;charset=UTF-8")
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.write(data)
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0][1])
@@ -446,7 +446,7 @@ class ComputeHandler(server.BaseHandler):
             if action == 'CreateKeyPairFile':
                 name = self.get_argument('KeyName')
                 result = self.user_session.clc.create_key_pair(name)
-                self.set_header("Content-type", "application/x-pem-file;charset=ISO-8859-1")
+                self.set_header("Content-Type", "application/x-pem-file;charset=ISO-8859-1")
                 self.set_header("Content-Disposition", "attachment; filename=\"" + name + '.pem"')
                 self.write(result.material)
                 return
@@ -492,7 +492,7 @@ class ComputeHandler(server.BaseHandler):
                     time.sleep(int(server.config.get('test','apidelay'))/1000.0);
             except ConfigParser.NoOptionError:
                 pass
-            self.set_header("Content-type", "application/json;charset=UTF-8")
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.write(data)
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0][1])
