@@ -148,7 +148,7 @@ ol li {
   margin: 0 auto;
   padding: 0 10px;
   position: relative;
-  width: 960px;
+  width: 1000px;
 }
 
 .templates {
@@ -296,7 +296,7 @@ ol li {
 
 .resources-nav li {
   float: left;
-  width: 192px;
+  width: 200px;
   /* Needed so submenus that can be positioned absolutely */
   position: relative;
 }
@@ -938,13 +938,13 @@ input[type='text'].medium-textinput {
 
 .db-instances-running .status-readout,
 .db-instances-stopped .status-readout {
-  margin: 5px 0 5px 32px;
+  margin: 5px 0 5px 30px;
 }
 
 #dashboard-instance-launch {
   position: absolute;
   top: 2px;
-  left: 610px;
+  left: 638px;
   height: 120px;
   border-left: 2px solid #ecebeb;
 }
@@ -1045,7 +1045,7 @@ table.display {
 }
 
 table.display thead th {
-  padding: 8px 22px 8px 22px;
+  padding: 8px 19px 8px 19px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 11px;
   font-weight: normal;
@@ -1380,11 +1380,12 @@ ul.ramdisk-expanded li:nth-child(5) {
   /* This element shares styling with .input-field */
   background: transparent url(../images/css-sprites-small.png) no-repeat right -294px;
   margin-left: 3px;
+  width: 174px;
 }
 
 .table-refresh {
   display: inline-block;
-  margin: 0 0 0 30px;
+  margin: 0;
   padding-left: 23px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 12px;
