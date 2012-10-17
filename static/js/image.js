@@ -61,7 +61,7 @@
                  var os = oObj.aData.platform ? 'windows' : 'linux';
                  var manifest = oObj.aData.location;
                  var desc = oObj.aData.description;
-                 var name = inferImageName(manifest, desc, os); 
+                 var name = inferImage(manifest, desc, os); 
                  
                  return $('<div>').append($('<div>').addClass(name).text(os)).html();
                },

@@ -22,6 +22,7 @@
   $.widget('eucalyptus.eucadata', $.eucalyptus.eucawidget, {
     options : {  
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
+      max_refresh_attempt : 3,
       endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
                   {name:'image', url: '/ec2?Action=DescribeImages'},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},
@@ -82,7 +83,7 @@
                var last = thisObj._data[name]['lastupdated'];
                var now = new Date();
                var elapsedSec = Math.round((now-last)/1000);              
-               if(elapsedSec > thisObj.options.refresh_interval_sec*3){
+               if(elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt){
                  delete thisObj._data[name];
                  thisObj._data[name] = null;
                }
