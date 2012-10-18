@@ -407,17 +407,20 @@ class ComputeHandler(server.BaseHandler):
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.finish(json.dumps(ret, cls=BotoJsonEncoder))
         except Exception as ex:
             if isinstance(ex, socket.timeout):
                 ret = ClcError(504, 'Timed out', '')
                 self.set_status(504);
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
             else:
                 logging.error("Could not fullfil request, exception to follow")
                 logging.exception(ex)
                 ret = ClcError(500, ex.message, '')
                 self.set_status(500);
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
 
     def post(self):
@@ -497,15 +500,18 @@ class ComputeHandler(server.BaseHandler):
         except EC2ResponseError as err:
             ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.finish(json.dumps(ret, cls=BotoJsonEncoder))
         except Exception as ex:
             if isinstance(ex, socket.timeout):
                 ret = ClcError(504, 'Timed out', None)
                 self.set_status(504);
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
             else:
                 logging.error("Could not fullfil request, exception to follow")
                 logging.exception(ex)
                 ret = ClcError(500, ex.message, None)
                 self.set_status(500);
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.finish(json.dumps(ret, cls=BotoJsonEncoder))
