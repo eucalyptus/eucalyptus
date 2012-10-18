@@ -1647,8 +1647,7 @@ ul.ramdisk-expanded li:nth-child(5) {
 }
 
 #snapshot-table .table-row-status {
-  padding: 0px 0 0 25px;
-  width: auto;
+  padding: 0px 0 0 20px;
   text-align: left;
   line-height: 26px; 
 }

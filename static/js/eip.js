@@ -141,7 +141,8 @@
        });
       var $ip_count_edit = $eip_allocate_dialog.find('#eip-allocate-count');
       $eip_allocate_dialog.eucadialog('buttonOnKeyup', $ip_count_edit,  allocateButtonId, function(){
-        return $ip_count_edit.val() == parseInt($ip_count_edit.val());
+        var count = parseInt($ip_count_edit.val())
+        return $ip_count_edit.val() == count && count > 0;
       });
       // allocate eip dialog end
       // associate eip dialog end
@@ -156,10 +157,15 @@
            'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
                fixedValue = $eip_associate_dialog.find('#associate-fixed-value').html();
                selectedValue = asText($eip_associate_dialog.find('#associate-selected-value').val());
-               $eip_associate_dialog.eucadialog("close");
                if (thisObj.options.from_instance) {
-                 thisObj._associateIp(selectedValue, fixedValue);
+                 if ( isValidIPv4Address(selectedValue) ) {
+                   $eip_associate_dialog.eucadialog("close");
+                   thisObj._associateIp(selectedValue, fixedValue);
+                 } else {
+                   thisObj.associateDialog.eucadialog('showFieldError', '#associate-selected-value', eip_associate_invalid_ip_address);
+                 }
                } else {
+                 $eip_associate_dialog.eucadialog("close");
                  thisObj._associateIp(fixedValue, selectedValue);
                }
               } 

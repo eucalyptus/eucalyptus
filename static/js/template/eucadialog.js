@@ -103,6 +103,8 @@
                    thisObj.options.on_open.callback();
                }
              }
+             // clean old errors on open
+             thisObj.element.find('.field-error').detach();
          },
          close: function(event, ui) { 
            if( thisObj.options.on_close) { 

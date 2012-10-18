@@ -65,6 +65,7 @@
               "sClass": "narrow-cell",
               "bSearchable": false,
               "iDataSort": 8, // sort on hidden status column
+              "sWidth": 50,
             },
             { 
               "mDataProp": "size",
