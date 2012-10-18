@@ -42,8 +42,28 @@ var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
 var SGROUP_DESC_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,1024}$');// not sure if 1K is actual limit.
 var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
+var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
 
 var KEEP_VIEW = 'keep_view';
+
+function isValidIPv4Address(ipaddr) {
+  ipaddr = ipaddr.replace( /\s/g, "")
+  if (IP_PATTER.test(ipaddr)) {
+    var parts = ipaddr.split(".");
+    if (parseInt(parts[0]) == 0) {
+      return false;
+    }
+    for (var i=0; i<parts.length; i++) {
+      var j = parseInt(parts[i]);
+      if ( j > 255 || j < 0){
+        return false;
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
 
 function asText(input) {
   return input; /* we don't do any transformation at this point */

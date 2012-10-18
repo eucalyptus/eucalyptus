@@ -156,10 +156,15 @@
            'associate': { domid: this.associateBtnId, text: eip_associate_dialog_associate_btn, disabled: true, click: function() {
                fixedValue = $eip_associate_dialog.find('#associate-fixed-value').html();
                selectedValue = asText($eip_associate_dialog.find('#associate-selected-value').val());
-               $eip_associate_dialog.eucadialog("close");
                if (thisObj.options.from_instance) {
-                 thisObj._associateIp(selectedValue, fixedValue);
+                 if ( isValidIPv4Address(selectedValue) ) {
+                   $eip_associate_dialog.eucadialog("close");
+                   thisObj._associateIp(selectedValue, fixedValue);
+                 } else {
+                   thisObj.associateDialog.eucadialog('showFieldError', '#associate-selected-value', eip_associate_invalid_ip_address);
+                 }
                } else {
+                 $eip_associate_dialog.eucadialog("close");
                  thisObj._associateIp(fixedValue, selectedValue);
                }
               } 
