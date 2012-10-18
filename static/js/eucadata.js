@@ -83,7 +83,7 @@
                var last = thisObj._data[name]['lastupdated'];
                var now = new Date();
                var elapsedSec = Math.round((now-last)/1000);             
-               if((jqXHR.status === 401 || jzXHR === 403)  ||
+               if((jqXHR.status === 401 || jqXHR === 403)  ||
                   (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
                  delete thisObj._data[name];
                  thisObj._data[name] = null;
