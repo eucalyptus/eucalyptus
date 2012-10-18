@@ -1163,7 +1163,7 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
         }
         if (head == NULL) {
             // OK, can't find this thing anywhere.
-            logprintfl (EUCAWARN, "unable to get metrics for instance %s\n", name);
+            logprintfl (EUCADEBUG, "unable to get metrics for instance %s\n", name);
             // TODO3.2: decide what to do when some metrics for an instance aren't available
         }
     }

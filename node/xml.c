@@ -508,7 +508,7 @@ char ** get_xpath_content (const char * xml_path, const char * xpath)
 
     INIT();
 
-    logprintfl (EUCADEBUG, "searching for '%s' in '%s'\n", xpath, xml_path);
+    logprintfl (EUCATRACE, "searching for '%s' in '%s'\n", xpath, xml_path);
     pthread_mutex_lock (&xml_mutex);
     xmlDocPtr doc = xmlParseFile (xml_path);
     if (doc) {
