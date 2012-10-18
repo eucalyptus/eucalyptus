@@ -70,6 +70,8 @@
 
 int gen_instance_xml (const ncInstance * instance);
 int gen_libvirt_instance_xml (const ncInstance * instance);
-int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, const char * localDevReal, const char * remoteDev, char * xml, unsigned int xml_size);
+int gen_volume_xml (const char *volumeId, const ncInstance *instance, const char * localDevReal, const char * remoteDev);
+int gen_libvirt_volume_xml (const char *volumeId, const ncInstance *instance);
+char ** get_xpath_content (const char * xml_path, const char * xpath);
 
 #endif

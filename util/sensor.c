@@ -768,7 +768,8 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
                             // this can happen when sensor resets; if, additionally,
                             // network outage prevented delivery for a while, there
                             // may also be a gap in numbers, rather than a reset to 0
-                            logprintfl (EUCAINFO, "reset in sensor values detected [%lld < %lld], clearing history\n", snv, sov);
+                            logprintfl (EUCAINFO, "reset in sensor values detected [%lld < %lld], clearing history for %s:%s:%s:%s\n", 
+                                        snv, sov, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                             inv_start = 0;                           // copy all new values
                             iov_start = 0;                           // overwrite what is in cache
                             cache_sc->sequenceNum = sc->sequenceNum; // reset the seq number to the new value
@@ -789,7 +790,8 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
                         if ((sd->values[vn_adj].timestampMs != cache_sd->values[vo_adj].timestampMs)
                             || (sd->values[vn_adj].available != cache_sd->values[vo_adj].available)
                             || (sd->values[vn_adj].value != cache_sd->values[vo_adj].value)) {
-                            logprintfl (EUCAWARN, "mismatch in sensor data being merged into in-memory cache, clearing history\n");
+                            logprintfl (EUCAWARN, "mismatch in sensor data being merged into in-memory cache, clearing history for %s:%s:%s:%s\n",
+                                        sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                             inv_start = 0;
                             iov_start = 0;
                             break;
@@ -1028,9 +1030,10 @@ int sensor_set_resource_alias (const char * resourceName, const char * resourceA
     sensorResource * sr = find_or_alloc_sr (FALSE, resourceName, NULL, NULL);
     if (sr != NULL) {
         if (resourceAlias) {
-            logprintfl (EUCATRACE, "Setting alias '%s' for resource '%s'\n",
-                        resourceAlias, resourceName);
-            safe_strncpy (sr->resourceAlias, resourceAlias, sizeof (sr->resourceAlias));
+            if (strcmp (sr->resourceAlias, resourceAlias) != 0) {
+                safe_strncpy (sr->resourceAlias, resourceAlias, sizeof (sr->resourceAlias));
+                logprintfl (EUCADEBUG, "set alias for sensor resource %s to %s\n", resourceName, resourceAlias);
+            }
         } else {
             logprintfl (EUCATRACE, "Clearing alias for resource '%s'\n",
                         resourceName);
@@ -1069,26 +1072,41 @@ int sensor_set_dimension_alias (const char * resourceName,
     if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
 
     sem_p (state_sem);
+
+    // do not allocate resource structure here
+    // (it should be done prior to calling this function,
+    // by somebody who knows resource type and uuid)
     sensorResource * sr = find_or_alloc_sr (FALSE, resourceName, NULL, NULL);
     if (sr == NULL)
         goto bail;
-
-    sensorMetric * sm = find_or_alloc_sm (FALSE, sr, metricName);
+    
+    sensorMetric * sm = find_or_alloc_sm (TRUE, sr, metricName); // allocate metric if necessary
     if (sm == NULL)
         goto bail;
-
-    sensorCounter * sc = find_or_alloc_sc (FALSE, sm, counterType);
+    
+    sensorCounter * sc = find_or_alloc_sc (TRUE, sm, counterType); // allocate counter if necessary
     if (sc == NULL)
         goto bail;
-
-    sensorDimension * sd = find_or_alloc_sd (FALSE, sc, dimensionName);
+    
+    sensorDimension * sd = find_or_alloc_sd (TRUE, sc, dimensionName); // allocate dimension if necessary
     if (sd == NULL)
         goto bail;
-
+    
+    boolean changed = FALSE;
     if (dimensionAlias) {
-        safe_strncpy (sd->dimensionAlias, dimensionAlias, sizeof (sd->dimensionAlias));
+        if (strcmp (sd->dimensionAlias, dimensionAlias) != 0) {
+            safe_strncpy (sd->dimensionAlias, dimensionAlias, sizeof (sd->dimensionAlias));
+            changed = TRUE;
+        }
     } else {
-        sd->dimensionAlias [0] = '\0'; // clear the alias
+        if (strlen (sd->dimensionAlias) > 0) {
+            sd->dimensionAlias [0] = '\0'; // clear the alias
+            changed = TRUE;
+        }
+    }
+    if (changed) {
+        logprintfl (EUCADEBUG, "set alias for sensor dimension %s:%s:%s:%s to '%s'\n", 
+                    resourceName, metricName, sensor_type2str(counterType), dimensionName, sd->dimensionAlias);
     }
 
     ret = 0;
@@ -1102,12 +1120,12 @@ int sensor_set_dimension_alias (const char * resourceName,
 int sensor_set_volume (const char * instanceId, const char * volumeId, const char * guestDev)
 {
     int ret = 0;
-
-    ret += sensor_set_dimension_alias (instanceId, "DiskReadOps", SENSOR_SUMMATION, volumeId, guestDev);
-    ret += sensor_set_dimension_alias (instanceId, "DiskWriteOps", SENSOR_SUMMATION, volumeId, guestDev);
-    ret += sensor_set_dimension_alias (instanceId, "DiskReadBytes", SENSOR_SUMMATION, volumeId, guestDev);
-    ret += sensor_set_dimension_alias (instanceId, "DiskWriteBytes", SENSOR_SUMMATION, volumeId, guestDev);
-    ret += sensor_set_dimension_alias (instanceId, "VolumeTotalReadTime", SENSOR_SUMMATION, volumeId, guestDev);
+    
+    ret += sensor_set_dimension_alias (instanceId, "DiskReadOps",          SENSOR_SUMMATION, volumeId, guestDev);
+    ret += sensor_set_dimension_alias (instanceId, "DiskWriteOps",         SENSOR_SUMMATION, volumeId, guestDev);
+    ret += sensor_set_dimension_alias (instanceId, "DiskReadBytes",        SENSOR_SUMMATION, volumeId, guestDev);
+    ret += sensor_set_dimension_alias (instanceId, "DiskWriteBytes",       SENSOR_SUMMATION, volumeId, guestDev);
+    ret += sensor_set_dimension_alias (instanceId, "VolumeTotalReadTime",  SENSOR_SUMMATION, volumeId, guestDev);
     ret += sensor_set_dimension_alias (instanceId, "VolumeTotalWriteTime", SENSOR_SUMMATION, volumeId, guestDev);
 
     return ret;
@@ -1135,7 +1153,7 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
         if (name [0] == '\0')
             continue;
         getstat * head = getstat_find (name);
-        if (head == NULL) {
+        if (head == NULL && alias [0] != '\0') {
             // Check for aliased resource.
             head = getstat_find (alias);
         }

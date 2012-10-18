@@ -179,8 +179,8 @@ static void * rebooting_thread (void *arg)
         if (strcmp (volume->stateName, VOL_STATE_ATTACHED) &&
             strcmp (volume->stateName, VOL_STATE_ATTACHING))
             continue; // skip the entry unless attached or attaching
-        
-        char attach_xml[1024];
+
+        char * xml = NULL;
         int rc;
         // get credentials, decrypt them
         remoteDevStr = get_iscsi_target (volume->remoteDev);
@@ -188,12 +188,18 @@ static void * rebooting_thread (void *arg)
             logprintfl(EUCAERROR, "[%s] Reattach-volume: failed to get local name of host iscsi device\n", instance->instanceId);
             rc = 1;
         } else {
-            rc = gen_libvirt_attach_xml (volume->volumeId,
-                                         instance, 
-                                         volume->localDevReal, 
-                                         remoteDevStr, 
-                                         attach_xml, 
-                                         sizeof(attach_xml));
+            // set the path
+            char path [MAX_PATH];
+            char lpath [MAX_PATH];
+            snprintf (path,  sizeof (path),  EUCALYPTUS_VOLUME_XML_PATH_FORMAT,         instance->instancePath, volume->volumeId); // vol-XXX.xml
+            snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId); // vol-XXX-libvirt.xml
+            
+            // read in libvirt XML, which may have been modified by the hook above
+            char * xml = file2str (lpath);
+            if (xml == NULL) {
+                logprintfl (EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
+                rc = 1;
+            }
         }
 
         if (remoteDevStr)
@@ -202,14 +208,17 @@ static void * rebooting_thread (void *arg)
         if (!rc) {
             int err;
             sem_p (hyp_sem);
-            err = virDomainAttachDevice (dom, attach_xml);
+            err = virDomainAttachDevice (dom, xml);
             sem_v (hyp_sem);      
             if (err) {
-                logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed (err=%d) XML=%s\n", instance->instanceId, err, attach_xml);
+                logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed (err=%d) XML=%s\n", instance->instanceId, err, xml);
             } else {
                 logprintfl (EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
             }
         }
+        
+        if (xml)
+            free (xml);
     }
     if (dom==NULL) {
         logprintfl (EUCAERROR, "[%s] Failed to restart instance\n", instance->instanceId);

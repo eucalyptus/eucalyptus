@@ -98,6 +98,8 @@ static char xslt_path [MAX_PATH];
 
 #ifdef __STANDALONE // if compiling as a stand-alone binary (for unit testing)
 #define INIT() if (!initialized) init(NULL)
+#elif __STANDALONE2
+#define INIT() if (!initialized) init(NULL)
 #else // if linking against an NC, find nc_state symbol
 extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
@@ -424,7 +426,7 @@ static int apply_xslt_stylesheet (const char * xsltStylesheetPath, const char * 
         return err;
 }
 
-int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, const char * localDevReal, const char * remoteDev, char * xml, unsigned int xml_size)
+int gen_volume_xml (const char *volumeId, const ncInstance *instance, const char * localDevReal, const char * remoteDev)
 {
     INIT();
 
@@ -473,14 +475,73 @@ int gen_libvirt_attach_xml (const char *volumeId, const ncInstance *instance, co
 
     char path [MAX_PATH];
     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
-    ret = write_xml_file (doc, instance->instanceId, path, "volume")
-        || apply_xslt_stylesheet (xslt_path, path, NULL, xml, xml_size);
-    logprintfl (EUCATRACE, "XML={%s}\n", xml);
-
+    ret = write_xml_file (doc, instance->instanceId, path, "volume");
     xmlFreeDoc(doc);
     pthread_mutex_unlock (&xml_mutex);
 
     return ret;
+}
+
+int gen_libvirt_volume_xml (const char *volumeId, const ncInstance *instance)
+{
+    INIT();
+
+    char path [MAX_PATH];
+    char lpath [MAX_PATH];
+    snprintf (path,  sizeof (path),  EUCALYPTUS_VOLUME_XML_PATH_FORMAT,         instance->instancePath, volumeId); // vol-XXX.xml
+    snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId); // vol-XXX-libvirt.xml
+
+    pthread_mutex_lock (&xml_mutex);
+    int ret = apply_xslt_stylesheet (xslt_path, path, lpath, NULL, 0);
+    pthread_mutex_unlock (&xml_mutex);
+
+    return ret;
+}
+
+// Returns text content of results of an xpath query as
+// a NULL-terminated  array of string pointers, which
+// the caller must free. (To be useful, the query should
+// point to an element that does not have any children.) 
+char ** get_xpath_content (const char * xml_path, const char * xpath)
+{
+    char ** res = NULL;
+
+    INIT();
+
+    logprintfl (EUCADEBUG, "searching for '%s' in '%s'\n", xpath, xml_path);
+    pthread_mutex_lock (&xml_mutex);
+    xmlDocPtr doc = xmlParseFile (xml_path);
+    if (doc) {
+        xmlXPathContextPtr context = xmlXPathNewContext (doc);
+        if (context) {
+            xmlXPathObjectPtr result = xmlXPathEvalExpression (xpath, context);
+            if (result) {
+                if(! xmlXPathNodeSetIsEmpty(result->nodesetval)) {
+                    xmlNodeSetPtr nodeset = result->nodesetval;
+                    res = calloc (nodeset->nodeNr + 1, sizeof (char *));
+                    for (int i=0; i < nodeset->nodeNr && res != NULL; i++) {
+                        if (nodeset->nodeTab[i]->children != NULL &&
+                            nodeset->nodeTab[i]->children->content != NULL) {
+                            xmlChar * val = nodeset->nodeTab[i]->children->content;
+                            res [i] = strdup ((char *)val);
+                        }
+                    }
+                }
+                xmlXPathFreeObject(result);
+            } else {
+                logprintfl (EUCAERROR, "no results for '%s' in '%s'\n", xpath, xml_path);
+            }
+            xmlXPathFreeContext(context);
+        } else {
+            logprintfl (EUCAERROR, "failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
+        }
+        xmlFreeDoc(doc);        
+    } else {
+        logprintfl (EUCAERROR, "failed to parse XML in '%s'\n", xml_path);
+    }
+    pthread_mutex_unlock (&xml_mutex);
+
+    return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -575,5 +636,27 @@ out:
         free (in_path);
         free (out_path);
         return err;
+}
+#endif
+
+#ifdef __STANDALONE2
+int main (int argc, char ** argv)
+{
+    if (argc!=3) {
+        logprintfl (EUCAERROR, "please, supply a path to an XML file and an Xpath\n");
+        return 1;
+    }
+
+    char * inputXmlPath = argv [1];
+    char ** devs = get_xpath_content (argv [1], argv [2]);
+    if (devs) {
+        for (int j=0; devs [j]; j++) {
+            logprintfl (EUCAINFO, "devs[%d] = '%s'\n", j, devs [j]);
+            free (devs [j]);
+        }
+        free (devs);
+    } else {
+        logprintfl (EUCAERROR, "devs[] are empty\n");
+    }
 }
 #endif

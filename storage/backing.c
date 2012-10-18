@@ -93,6 +93,10 @@
 #define DELETE_TIMEOUT_USEC 1000000LL*10
 #define FIND_TIMEOUT_USEC   50000LL // TODO: use 1000LL or less to induce rare timeouts
 
+#define INSTANCE_FILE_NAME         "instance.xml"
+#define INSTANCE_LIBVIRT_FILE_NAME "instance-libvirt.xml"
+#define INSTANCE_CONSOLE_FILE_NAME "console.log"
+
 static char instances_path [MAX_PATH] = "";
 static blobstore * cache_bs = NULL;
 static blobstore * work_bs = NULL;
@@ -298,9 +302,9 @@ static int stale_blob_examiner (const blockblob * bb)
         // TODO: ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
         char path [MAX_PATH];
 #define del_file(filename) snprintf (path, sizeof (path), "%s/work/%s/%s/%s", instances_path, user_id, inst_id, filename); unlink (path);
-        del_file("instance.xml");
-        del_file("libvirt.xml");
-        del_file("console.log");
+        del_file(INSTANCE_FILE_NAME);
+        del_file(INSTANCE_LIBVIRT_FILE_NAME);
+        del_file(INSTANCE_CONSOLE_FILE_NAME);
         del_file("instance.checkpoint");
         return 1;
     }
@@ -410,9 +414,9 @@ int create_instance_backing (ncInstance * instance)
         goto out;
 
     // set various instance-directory-relative paths in the instance struct
-    set_path (instance->xmlFilePath,     sizeof (instance->xmlFilePath),     instance, "instance.xml");
-    set_path (instance->libvirtFilePath, sizeof (instance->libvirtFilePath), instance, "libvirt.xml");
-    set_path (instance->consoleFilePath, sizeof (instance->consoleFilePath), instance, "console.log");
+    set_path (instance->xmlFilePath,     sizeof (instance->xmlFilePath),     instance, INSTANCE_FILE_NAME);
+    set_path (instance->libvirtFilePath, sizeof (instance->libvirtFilePath), instance, INSTANCE_LIBVIRT_FILE_NAME);
+    set_path (instance->consoleFilePath, sizeof (instance->consoleFilePath), instance, INSTANCE_CONSOLE_FILE_NAME);
     if (strstr (instance->platform, "windows")) {
         // generate the floppy file for windows instances
         if (makeWindowsFloppy (nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {

@@ -208,6 +208,95 @@ int convert_dev_names(	const char *localDev,
     return 0;
 }
 
+// This updates the 'aliases' of sensor 'dimensions' that
+// store sensor data for specific block devices. Dimensions
+// are strings like 'root', 'ephemeral0', 'vol-XYZ', etc.
+// The purpose of aliases is to map block device statistics
+// returned by getstats.pl script, which use guest block 
+// device names, such as 'sda' or 'vdb', into dimensions.
+// To deduce the mapping, we use .xml files that are passed
+// to libvirt. This is somewhat awkward, but it gets us the
+// guest device actually used by the hypervisor. (The device
+// we request may be modified by XSL transforms and NC hooks.)
+int update_disk_aliases (ncInstance * instance)
+{
+    // update block devices from instance XML file
+    char ** devs = get_xpath_content (instance->libvirtFilePath, "/domain/devices/disk/target[@dev]/@dev");
+    boolean saw_ephemeral0 = FALSE;
+    boolean saw_root = FALSE;
+    if (devs) {
+        for (int i=0; devs [i]; i++) {
+            char * volumeId = NULL;
+            if (strstr (devs [i], "da1")) { // regexp: [hsvx]v?da1?
+                volumeId = "root";
+                saw_root = TRUE;
+                
+            } else if (strstr (devs [i], "da2")) {
+                if (saw_ephemeral0) {
+                    logprintfl (EUCAERROR, "[%s] unexpected disk layout in instance", instance->instanceId);
+                } else {
+                    volumeId = "ephemeral0";
+                    saw_ephemeral0 = TRUE;
+                }
+                
+            } else if (strstr (devs [i], "da")) {
+                volumeId = "root";
+                saw_root = TRUE;
+                
+            } else if (strstr (devs [i], "db")) {
+                if (saw_ephemeral0) {
+                    logprintfl (EUCAERROR, "[%s] unexpected disk layout in instance", instance->instanceId);
+                } else {
+                    volumeId = "ephemeral0";
+                    saw_ephemeral0 = TRUE;
+                }
+            } else if (strstr (devs [i], "dc")) {
+                volumeId = "ephemeral1";
+            } else if (strstr (devs [i], "dd")) {
+                volumeId = "ephemeral2";
+            } else if (strstr (devs [i], "de")) {
+                volumeId = "ephemeral3";
+            }
+            
+            if (volumeId) {
+                sensor_set_volume (instance->instanceId, volumeId, devs [i]);
+            }
+            free (devs [i]);
+        }
+        free (devs);
+    }
+    if (! saw_root) {
+        logprintfl (EUCAWARN, "[%s] failed to find 'dev' entry for root\n", instance->instanceId);
+    }
+
+    // now update attached or detached volumes, if any
+    for (int i=0; i < EUCA_MAX_VOLUMES; ++i) {
+        ncVolume * volume = &instance->volumes[i];
+        if (strlen (volume->volumeId)==0)
+            continue;
+
+        char lpath [MAX_PATH];
+        snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId); // vol-XXX-libvirt.xml
+        char ** devs = get_xpath_content (lpath, "/disk/target[@dev]/@dev");
+        
+        if (devs) {
+            if (devs [0] && devs [1] == NULL) {
+                sensor_set_volume (instance->instanceId, volume->volumeId, devs [0]);
+            } else {
+                logprintfl (EUCAWARN, "[%s] failed to find 'dev' entry in %s\n", lpath, instance->instanceId);
+            }
+            for (int j=0; devs [j]; j++) {
+                free (devs [j]);
+            }
+            free (devs);
+        } else {
+            sensor_set_volume (instance->instanceId, volume->volumeId, NULL);
+        }
+    }
+    
+    return 0;
+}
+
 void
 print_running_domains (void)
 {
@@ -587,8 +676,8 @@ monitoring_thread (void *arg)
                 && (now - instance->bundlingTime) < nc_state.bundling_cleanup_threshold) continue;
             if ((instance->state==CREATEIMAGE_SHUTDOWN || instance->state==CREATEIMAGE_SHUTOFF)
                 && (now - instance->createImageTime) < nc_state.createImage_cleanup_threshold) continue;
-            
-            //DAN: need to destroy the domain here, just in case...
+
+            // terminate a booting instance as a special case
             if (instance->state == BOOTING) {
                 ncInstance *tmpInstance=NULL;
                 logprintfl(EUCADEBUG, "[%s] finding and terminating BOOTING instance (%d)\n", instance->instanceId, find_and_terminate_instance (nc, NULL, instance->instanceId, 1, &tmpInstance, 1));
@@ -761,6 +850,7 @@ void *startup_thread (void * arg)
     save_instance_struct (instance); // to enable NC recovery
     sensor_add_resource (instance->instanceId, "instance", instance->uuid);
     sensor_set_resource_alias (instance->instanceId, instance->ncnet.privateIp);
+    update_disk_aliases (instance);
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests 
@@ -1098,6 +1188,8 @@ void adopt_instances()
 			continue;
 		}
         sensor_add_resource (instance->instanceId, "instance", instance->uuid); // ensure the sensor system monitors this instance
+        sensor_set_resource_alias (instance->instanceId, instance->ncnet.privateIp);
+        update_disk_aliases (instance);
 
 		logprintfl (EUCAINFO, "[%s] - adopted running domain from user %s\n", instance->instanceId, instance->userId); // TODO: try to re-check IPs?
 

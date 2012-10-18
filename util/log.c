@@ -74,6 +74,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/syscall.h> // to get thread id
+#include <sys/resource.h> // rusage
+#include <errno.h>
 
 #include "eucalyptus.h"
 #include "log.h"
@@ -459,6 +461,18 @@ int logprintfl (int level, const char *format, ...)
             char file_and_line [64];
             snprintf (file_and_line, sizeof (file_and_line), "%s:%d", _log_curr_file, _log_curr_line);
             size = print_field_truncated (&prefix_spec, s, left, file_and_line);
+            break;
+        }
+
+        case 's': { // max RSS of the process
+            struct rusage u;
+            bzero (&u, sizeof (struct rusage));
+            getrusage (RUSAGE_SELF, &u);
+            
+            // unfortunately, many fields in 'struct rusage' aren't supported on Linux (notably: ru_ixrss, ru_idrss, ru_isrss)
+            char size_str [64];
+            snprintf (size_str, sizeof (size_str), "%05ld", u.ru_maxrss/1024);
+            size = print_field_truncated (&prefix_spec, s, left, size_str);
             break;
         }
         case '?':

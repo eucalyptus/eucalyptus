@@ -1876,6 +1876,7 @@ int refresh_sensors(ncMetadata *ccMeta, int timeout, int dolock) {
   sem_mypost(RESCACHE);
 
   if (pids) free(pids);
+
   logprintfl(EUCADEBUG,"done.\n");
   return(0);
 }

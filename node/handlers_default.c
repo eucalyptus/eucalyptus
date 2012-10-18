@@ -104,6 +104,8 @@ extern sem * inst_copy_sem;
 extern bunchOfInstances * global_instances;
 extern bunchOfInstances * global_instances_copy;
 
+int update_disk_aliases (ncInstance * instance); // defined in handlers.c
+
 static int
 doInitialize (struct nc_state_t *nc)
 {
@@ -179,7 +181,7 @@ doRunInstance(	struct nc_state_t *nc,
 
     // do the potentially long tasks in a thread
     pthread_attr_t* attr = (pthread_attr_t*) malloc(sizeof(pthread_attr_t));
-    if (!attr) { 
+    if (!attr) {
         logprintfl (EUCAERROR, "[%s] out of memory\n", instanceId);
         goto error;
     }
@@ -208,8 +210,8 @@ doRunInstance(	struct nc_state_t *nc,
 }
 
 static int
-doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId) 
-{    
+doRebootInstance(struct nc_state_t *nc, ncMetadata *meta, char *instanceId)
+{
 	logprintfl(EUCAERROR, "[%s] no default for %s!\n", instanceId, __func__);
 	return ERROR_FATAL;
 }
@@ -281,7 +283,7 @@ find_and_terminate_instance (
         virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
 		sem_v(hyp_sem);
 		if (dom) {
-			// protect 'destroy' commands as we do with 'create', just in case
+			// protect 'destroy' commands as we do with 'create' because we've seen problems during concurrent libvirt invocations 
 			sem_p (hyp_sem);
 			if (destroy)
                 err = virDomainDestroy (dom);
@@ -315,6 +317,8 @@ doTerminateInstance( struct nc_state_t *nc,
 {
 	ncInstance *instance;
 	int err;
+    
+    sensor_refresh_resources (instanceId, "", 1); // refresh stats so latest instance measurements are captured before it disappears
 
 	sem_p (inst_sem);
 	err = find_and_terminate_instance (nc, meta, instanceId, force, &instance, 1);
@@ -682,7 +686,7 @@ doAttachVolume (	struct nc_state_t *nc,
          if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
              logprintfl(EUCAERROR, "[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
              remoteDevReal[0] = '\0';
-         } else { 
+         } else {
              logprintfl(EUCADEBUG, "[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
              snprintf(remoteDevReal, 32, "%s", remoteDevStr);
              have_remote_device = 1;
@@ -708,8 +712,8 @@ doAttachVolume (	struct nc_state_t *nc,
      }
 
      // generate XML for libvirt attachment request
-     char xml [1024];
-     if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
+     if (gen_volume_xml (volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
+         || gen_libvirt_volume_xml (volumeId, instance)) {                // creates vol-XXX-libvirt.xml via XSLT transform
          logprintfl(EUCAERROR, "[%s][%s] could not produce attach device xml\n", instanceId, volumeId);
          ret = ERROR;
          goto release;
@@ -717,17 +721,24 @@ doAttachVolume (	struct nc_state_t *nc,
 
      // invoke hooks
      char path [MAX_PATH];
-     snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
-     if (call_hooks (NC_EVENT_PRE_ATTACH, path)) {
+     char lpath [MAX_PATH];
+     snprintf (path,  sizeof (path),  EUCALYPTUS_VOLUME_XML_PATH_FORMAT,         instance->instancePath, volumeId); // vol-XXX.xml
+     snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId); // vol-XXX-libvirt.xml
+     if (call_hooks (NC_EVENT_PRE_ATTACH, lpath)) {
          logprintfl (EUCAERROR, "[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volumeId);
          ret = ERROR;
          goto release;
      }
+     
+     // read in libvirt XML, which may have been modified by the hook above
+     char * xml = file2str (lpath);
+     if (xml == NULL) {
+         logprintfl (EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
+         ret = ERROR;
+         goto release;
+     }
 
-     // ask sensor subsystem to track the volume
-     sensor_set_volume (instance->instanceId, volumeId, localDevReal); // TODO: localDevReal may be overwritten by XSL transform or the hook above
-
-     // protect libvirt calls, just in case
+     // protect libvirt calls because we've seen problems during concurrent libvirt invocations
      sem_p (hyp_sem);
      int err = virDomainAttachDevice (dom, xml);
      sem_v (hyp_sem);
@@ -754,8 +765,9 @@ doAttachVolume (	struct nc_state_t *nc,
      volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state); // now we can record remoteDevReal
      save_instance_struct (instance);
      copy_instances();
+     update_disk_aliases (instance); // ask sensor subsystem to track the volume
      sem_v (inst_sem);
-     if (volume==NULL) {
+     if (volume==NULL && xml!=NULL) {
          logprintfl (EUCAERROR, "[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
          sem_p (hyp_sem);
          err = virDomainDetachDevice (dom, xml);
@@ -776,6 +788,10 @@ doAttachVolume (	struct nc_state_t *nc,
 
      if (ret==OK)
          logprintfl (EUCAINFO, "[%s][%s] attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+          
+     if (xml)
+         free (xml);
+
      return ret;
  }
 
@@ -879,24 +895,27 @@ doDetachVolume (	struct nc_state_t *nc,
     // make sure there is a block device
     if (check_block (remoteDevReal)) {
         logprintfl(EUCAERROR, "[%s][%s] cannot verify that host device '%s' is available for hypervisor detach\n", instanceId, volumeId, remoteDevReal);
-        if (!force) 
+        if (!force)
             ret = ERROR;
         goto release;
     }
 
-    // generate XML for libvirt detachment request
-    char xml [1024];
-    if (gen_libvirt_attach_xml (volumeId, instance, localDevReal, remoteDevReal, xml, sizeof(xml))) {
-        logprintfl(EUCAERROR, "[%s][%s] could not produce detach device xml\n", instanceId, volumeId);
+    sensor_refresh_resources (instance->instanceId, "", 1); // refresh stats so volume measurements are captured before it disappears
+
+    char path [MAX_PATH];
+    char lpath [MAX_PATH];
+    snprintf (path,  sizeof (path),  EUCALYPTUS_VOLUME_XML_PATH_FORMAT,         instance->instancePath, volumeId); // vol-XXX.xml
+    snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId); // vol-XXX-libvirt.xml
+    
+    // read in libvirt XML
+    char * xml = file2str (lpath);
+    if (xml == NULL) {
+        logprintfl (EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
         ret = ERROR;
         goto release;
     }
-
-     // ask sensor subsystem to stop tracking the volume
-    sensor_refresh_resources (instance->instanceId, instance->instanceId, 1); // refresh stats so volume stats are captured before it disappears
-    sensor_set_volume (instance->instanceId, volumeId, NULL);
-
-    // protect libvirt calls, just in case
+    
+    // protect libvirt calls because we've seen problems during concurrent libvirt invocations 
     sem_p (hyp_sem);
     int err = virDomainDetachDevice (dom, xml);
     if (!strcmp (nc->H->name, "xen")) {
@@ -907,13 +926,12 @@ doDetachVolume (	struct nc_state_t *nc,
     if (err) {
         logprintfl (EUCAERROR, "[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
         logprintfl (EUCAERROR, "[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-        if (!force) 
+        if (!force)
             ret = ERROR;
     } else {
-        char path [MAX_PATH];
-        snprintf (path, sizeof (path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
         call_hooks (NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
-        unlink (path); // remove vol-XXXX.xml file
+        unlink (lpath); // remove vol-XXX-libvirt.xml
+        unlink (path);  // remove vol-XXXX.xml file
     }
 
  release:
@@ -932,6 +950,7 @@ doDetachVolume (	struct nc_state_t *nc,
     volume = save_volume (instance, volumeId, NULL, NULL, NULL, next_vol_state);
     save_instance_struct (instance);
     copy_instances();
+    update_disk_aliases (instance); // ask sensor subsystem to stop tracking the volume
     if (grab_inst_sem) sem_v (inst_sem);
     if (volume==NULL) {
         logprintfl (EUCAWARN, "[%s][%s] failed to save the volume record\n", instanceId, volumeId);
@@ -943,7 +962,7 @@ doDetachVolume (	struct nc_state_t *nc,
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
             logprintfl (EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
-            if (!force) 
+            if (!force)
                 ret = ERROR;
         }
     }
@@ -951,6 +970,9 @@ doDetachVolume (	struct nc_state_t *nc,
     if (ret==OK)
         logprintfl (EUCAINFO, "[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     
+    if (xml)
+        free (xml);
+
     if (force) {
         return(OK);
     }
@@ -1005,11 +1027,11 @@ static void * createImage_thread (void *arg)
 	char cmd[MAX_PATH];
 	char buf[MAX_PATH];
 	int rc;
-    
+
 	logprintfl (EUCADEBUG, "[%s] spawning create-image thread\n", instance->instanceId);
 	logprintfl (EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
-	// wait until monitor thread changes the state of the instance instance 
-	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) { 
+	// wait until monitor thread changes the state of the instance instance
+	if (wait_state_transition (instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) {
         if (instance->createImageCanceled) { // cancel request came in while the instance was shutting down
             logprintfl (EUCAINFO, "[%s] cancelled while createImage for instance\n", instance->instanceId);
             cleanup_createImage_task (instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
@@ -1019,6 +1041,7 @@ static void * createImage_thread (void *arg)
         }
         return NULL;
 	}
+
 	logprintfl (EUCAINFO, "[%s] started createImage for instance\n", instance->instanceId);
 	{
         rc = 0;
@@ -1046,6 +1069,7 @@ doCreateImage(	struct nc_state_t *nc,
                 char *remoteDev)
 {
 	logprintfl (EUCAINFO, "[%s][%s] invoked\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId), ((volumeId == NULL) ? "UNKNOWN" : volumeId));
+
 	// sanity checking
 	if (instanceId==NULL
 	    || remoteDev==NULL
@@ -1237,7 +1261,7 @@ error:
 	return(ERROR);
 }
 
-// helper for cleaning up 
+// helper for cleaning up
 static int cleanup_bundling_task (ncInstance * instance, struct bundling_params_t * params, bundling_progress result)
 {
 	int   rc            = 0;
@@ -1327,8 +1351,8 @@ static void * bundling_thread (void *arg)
 
 	logprintfl (EUCADEBUG, "[%s] spawning bundling thread\n", instance->instanceId);
 	logprintfl (EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
-	// wait until monitor thread changes the state of the instance instance 
-	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) { 
+	// wait until monitor thread changes the state of the instance instance
+	if (wait_state_transition (instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
 		if (instance->bundleCanceled) { // cancel request came in while the instance was shutting down
 			logprintfl (EUCAINFO, "[%s] cancelled while bundling instance\n", instance->instanceId);
 			cleanup_bundling_task (instance, params, BUNDLING_CANCELLED);
@@ -1663,7 +1687,7 @@ doDescribeSensors (struct nc_state_t *nc,
     * outResourcesLen = k;
     * outResources = rss;
 	sem_v (inst_copy_sem);
-   
+
 	logprintfl (EUCADEBUG, "found %d resource(s)\n", k);
     return 0;
 }
