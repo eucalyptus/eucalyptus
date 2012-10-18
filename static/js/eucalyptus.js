@@ -83,9 +83,8 @@
               var remember = (args.param.remember!=null)?"yes":"no";
 	      $.ajax({
 	        type:"POST",
- 	        data:"action=login&remember="+remember, 
+ 	        data:"action=login&remember="+remember+"&Authorization="+hash, 
                 beforeSend: function (xhr) { 
-                   xhr.setRequestHeader('Authorization', 'Basic '+hash); 
                    $main.find('#euca-main-container').append(
                      $('<div>').addClass('spin-wheel').append( 
                       $('<img>').attr('src','images/dots32.gif'))); // spinwheel
