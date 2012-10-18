@@ -429,7 +429,7 @@ function errorAndLogout(errorCode){
   $('html body').eucadata('disable');
   $('html body').find(DOM_BINDING['hidden']).login();
   var errorMsg = null;
-  if (errorCode === 401)
+  if (errorCode === 401 || errorCode === 403)
     errorMsg = $.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>');
   else
     errorMsg = $.i18n.prop('connection_failure', '<a href="#">'+cloud_admin+'</a>');
