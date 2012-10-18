@@ -142,7 +142,11 @@ public class SnapshotManager {
     Snapshot snap = RestrictedTypes.allocateUnitlessResource( allocator );
     snap = Snapshots.startCreateSnapshot( volReady, snap );
 
-    fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue(), volReady.getNaturalId(), snap.getDisplayName() ) );
+    try {
+      fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue(), volReady.getNaturalId(), snap.getDisplayName() ) );
+    } catch (Exception reportEx) {
+      LOG.debug("Unable to fire snap shot creation reporting event", reportEx);
+    }
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
     edu.ucsb.eucalyptus.msgs.Snapshot snapMsg = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );

@@ -61,7 +61,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.generator;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -70,37 +70,39 @@ import com.eucalyptus.reporting.art.entity.AccountArtEntity;
 import com.eucalyptus.reporting.art.entity.BucketUsageArtEntity;
 import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.art.entity.UserArtEntity;
-import com.eucalyptus.reporting.art.util.DurationCalculator;
-import com.eucalyptus.reporting.domain.ReportingAccount;
-import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
-import com.eucalyptus.reporting.domain.ReportingUserDao;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent;
 import com.eucalyptus.reporting.units.SizeUnit;
+import com.eucalyptus.reporting.units.TimeUnit;
 import com.eucalyptus.reporting.units.UnitUtil;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 public class S3ArtGenerator
 	extends AbstractArtGenerator
 {
-    private static Logger log = Logger.getLogger( S3ArtGenerator.class );
+	private static Logger log = Logger.getLogger( S3ArtGenerator.class );
 
-    public S3ArtGenerator()
+	@Override
+  public ReportArtEntity generateReportArt(final ReportArtEntity report)
 	{
-		
-	}
-	
-	public ReportArtEntity generateReportArt(final ReportArtEntity report)
-	{
-		log.debug("GENERATING REPORT ART");
+		log.debug("Generating S3 report ART");
 
 		/* NOTE: careful! This is subtler than it appears at first. A single object can
 		 * be repeatedly created and deleted within the period, so we cannot just hang on
 		 * to start times and end times then subtract at the end. Furthermore, an object
 		 * can be created but never deleted.
 		 */
-		
+
+		/* Find end timestamps for objects which are subsequently deleted, including
+				 * objects which are created and deleted repeatedly during a single period.
+				 */
+		final Map<S3ObjectKey,List<Long>> endTimesMap = Maps.newHashMap();
+		foreachReportingS3ObjectDeleteEvent( report.getEndMs(), buildTimestampMap( report, endTimesMap, key() ) );
+
 		/* Generate a tree of zones, accounts, users, and bucket usages.
 		 * Retain a Map of bucket usages at the leaf nodes.
 		 * Find and retain start times and sizes for S3 objects.
@@ -108,122 +110,115 @@ public class S3ArtGenerator
 		 *   subsequent delete event is ever encountered), to be overwritten
 		 *   if there is later found a delete event (or multiple delete events).
 		 */
-		final Map<String,BucketUsageArtEntity> bucketUsageEntities = new HashMap<String,BucketUsageArtEntity>();
-		final Map<S3ObjectKey,S3ObjectData> objectData = new HashMap<S3ObjectKey,S3ObjectData>();
-		final DurationCalculator<S3ObjectKey> objectDurationCalculator = new DurationCalculator<S3ObjectKey>(report.getBeginMs(),report.getEndMs());
+		final Map<String,ReportingUser> users = Maps.newHashMap();
+		final Map<String,String> accounts = Maps.newHashMap();
+		final Map<BucketUsageArtEntity,List<S3ObjectData>> bucketObjectData = Maps.newHashMap();
 		foreachReportingS3ObjectCreateEvent( report.getEndMs(), new Predicate<ReportingS3ObjectCreateEvent>() {
 			@Override
 			public boolean apply( final ReportingS3ObjectCreateEvent createEvent ) {
-			
-				ReportingUser reportingUser = ReportingUserDao.getInstance().getReportingUser(createEvent.getUserId());
+				final S3ObjectKey objectKey = new S3ObjectKey(createEvent.getS3BucketName(),
+						createEvent.getS3ObjectKey(), createEvent.getObjectVersion());
+				final Long objectEndTime = Math.min( findTimeAfter( endTimesMap, objectKey, createEvent.getTimestampMs() ), report.getEndMs() );
+				if ( objectEndTime < report.getBeginMs() ) {
+					return true; // usage not relevant for this report
+				}
+				final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
 				if (reportingUser==null) {
 					log.error("No user corresponding to event:" + createEvent.getUserId());
+					return true;
 				}
-				ReportingAccount reportingAccount = ReportingAccountDao.getInstance().getReportingAccount(reportingUser.getAccountId());
-				if (reportingAccount==null) {
+				final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
+				if (accountName==null) {
 					log.error("No account corresponding to user:" + reportingUser.getAccountId());
+					return true;
 				}
-				if (! report.getAccounts().containsKey(reportingAccount.getName())) {
-					report.getAccounts().put(reportingAccount.getName(), new AccountArtEntity());
+				if (!report.getAccounts().containsKey( accountName )) {
+					report.getAccounts().put(accountName, new AccountArtEntity());
 				}
-				AccountArtEntity account = report.getAccounts().get(reportingAccount.getName());
+				final AccountArtEntity account = report.getAccounts().get(accountName);
 				if (! account.getUsers().containsKey(reportingUser.getName())) {
 					account.getUsers().put(reportingUser.getName(), new UserArtEntity());
 				}
-				UserArtEntity user = account.getUsers().get(reportingUser.getName());
+				final UserArtEntity user = account.getUsers().get(reportingUser.getName());
 				if (! user.getBucketUsage().containsKey(createEvent.getS3BucketName())) {
 					user.getBucketUsage().put(createEvent.getS3BucketName(), new BucketUsageArtEntity());
 				}
-				BucketUsageArtEntity bucketUsage = user.getBucketUsage().get(createEvent.getS3BucketName());
-				bucketUsageEntities.put(createEvent.getS3BucketName(), bucketUsage);
+				final BucketUsageArtEntity bucketUsage = user.getBucketUsage().get(createEvent.getS3BucketName());
 
-				S3ObjectKey objectKey = new S3ObjectKey(createEvent.getS3BucketName(),
-						createEvent.getS3ObjectKey(), createEvent.getObjectVersion());
-				/* A duration calculator, rather than a simple Map of start and end times,
-				 * is necessary here. This is because a single object can be subsequently
-				 * created and deleted within the period.
-				 */
-				objectDurationCalculator.addStart(objectKey, createEvent.getTimestampMs());
 				/* Retain the information necessary to calculate GB-secs from object durations
-				 * later. The default duration is the remaining length of the report but this
-				 * will be overwritten later if we encounter a delete event (or multiple delete
-				 * events) for an object before the end of the report.
+				 * later.
 				 */
-				objectData.put(objectKey, new S3ObjectData(createEvent.getSize()));
-				return true;
-			}
-		});
-		
-		/* Find end timestamps for objects which are subsequently deleted, including
-		 * objects which are created and deleted repeatedly during a single period, which
-		 * is the purpose of using the duration calculator rather than just keeping a Map
-		 * of start and end times. 
-		 */
-		foreachReportingS3ObjectDeleteEvent( report.getEndMs(), new Predicate<ReportingS3ObjectDeleteEvent>() {
-			@Override
-			public boolean apply( final ReportingS3ObjectDeleteEvent deleteEvent ) {
-				if (deleteEvent.getTimestampMs() < report.getEndMs()) {
-					S3ObjectKey key = new S3ObjectKey(deleteEvent.getS3BucketName(), deleteEvent.getS3ObjectKey(),
-							deleteEvent.getObjectVersion());
-					objectDurationCalculator.addEnd(key, deleteEvent.getTimestampMs());
+				final S3ObjectData data = new S3ObjectData(
+						createEvent.getSize(),
+						objectEndTime - Math.max(createEvent.getTimestampMs(),report.getBeginMs()) );
+				List<S3ObjectData> bucketUserData = bucketObjectData.get( bucketUsage );
+				if ( bucketUserData == null ) {
+					bucketUserData = Lists.newLinkedList();
+					bucketObjectData.put( bucketUsage, bucketUserData );
 				}
+				bucketUserData.add(data);
 				return true;
 			}
 		});
-		Map<S3ObjectKey,Long> durationMap = objectDurationCalculator.getDurationMap();
-		for (S3ObjectKey key: durationMap.keySet()) {
-			if (objectData.containsKey(key)) {
-				objectData.get(key).durationMs = durationMap.get(key);
-			}
-		}
-		
-		/* Go through all object data and update buckets
-		 */
-		for (S3ObjectKey objKey : objectData.keySet()) {
-			S3ObjectData data = objectData.get(objKey);
-			if (bucketUsageEntities.containsKey(objKey.bucketName)) {
-				BucketUsageArtEntity usage = bucketUsageEntities.get(objKey.bucketName);
-				usage.setObjectsNum(usage.getObjectsNum()+1);
-				long gBSecs = (data.durationMs/1000) * //TODO:STEVE: should sum first then calc GB secs
-						UnitUtil.convertSize( data.size, SizeUnit.BYTES, SizeUnit.GB );
-				usage.setGBSecs( usage.getGBSecs() + gBSecs );
-				usage.setSize( usage.getSize() + data.size );
-			} else {
-				log.error("Object without corresponding bucket:" + objKey.bucketName);
-			}
-		}
 		
 		/* Perform totals and summations for user, account, zone, and bucket
 		 */
-		for (String accountName : report.getAccounts().keySet()) {
-			AccountArtEntity account = report.getAccounts().get(accountName);
-			for (String userName : account.getUsers().keySet()) {
-				UserArtEntity user = account.getUsers().get(userName);
-				for (String bucketName : user.getBucketUsage().keySet()) {
-					BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
+		for ( final String accountName : report.getAccounts().keySet() ) {
+			final AccountArtEntity account = report.getAccounts().get(accountName);
+			for ( final String userName : account.getUsers().keySet() ) {
+				final UserArtEntity user = account.getUsers().get(userName);
+				for ( final String bucketName : user.getBucketUsage().keySet() ) {
+					final BucketUsageArtEntity usage = user.getBucketUsage().get(bucketName);
+					final List<S3ObjectData> objectUsages = bucketObjectData.get( usage );
+					if ( objectUsages == null ) {
+						log.error("Missing object usage for bucket");
+						continue;
+					}
+
+					usage.setObjectsNum( objectUsages.size() );
+					long size = 0;
+					long KBSecs = 0;
+					for ( final S3ObjectData data : objectUsages ) {
+						size += data.size;
+						KBSecs += (data.durationMs/1000) *
+								UnitUtil.convertSize( data.size, SizeUnit.BYTES, SizeUnit.KB );
+					}
+
+					long gBSecs =
+							UnitUtil.convertSizeTime( KBSecs, SizeUnit.KB,  SizeUnit.GB, TimeUnit.SECS,TimeUnit.SECS );
+					usage.setGBSecs( gBSecs );
+					usage.setSize( size );
 					updateUsageTotals(user.getUsageTotals().getBucketTotals(), usage);
 					updateUsageTotals(account.getUsageTotals().getBucketTotals(), usage);
 				}
 			}
 		}
 
-
 		return report;
 	}
 	
-	private static void updateUsageTotals(BucketUsageArtEntity totalEntity,
+	private static void updateUsageTotals(
+			BucketUsageArtEntity totalEntity,
 			BucketUsageArtEntity newEntity)
 	{
-
-		totalEntity.setObjectsNum(totalEntity.getObjectsNum() + newEntity.getObjectsNum());
+		totalEntity.setObjectsNum( totalEntity.getObjectsNum() + newEntity.getObjectsNum() );
 		totalEntity.setSize( totalEntity.getSize() + newEntity.getSize() );
-		totalEntity.setGBSecs(totalEntity.getGBSecs() + newEntity.getGBSecs());
-		totalEntity.setNumGetRequests(totalEntity.getNumGetRequests() + newEntity.getNumGetRequests());
-		totalEntity.setNumPutRequests(totalEntity.getNumPutRequests() + newEntity.getNumPutRequests());
-
+		totalEntity.setGBSecs( totalEntity.getGBSecs() + newEntity.getGBSecs() );
 	}
 
-	
+
+	private Function<ReportingS3ObjectDeleteEvent, S3ObjectKey> key() {
+		return new Function<ReportingS3ObjectDeleteEvent, S3ObjectKey>() {
+			@Override
+			public S3ObjectKey apply( final ReportingS3ObjectDeleteEvent reportingEventSupport ) {
+				return new S3ObjectKey(
+						reportingEventSupport.getS3BucketName(),
+						reportingEventSupport.getS3ObjectKey(),
+						reportingEventSupport.getObjectVersion() );
+			}
+		};
+	}
+
 	private class S3ObjectKey
 	{
 		private final String bucketName;
@@ -290,12 +285,12 @@ public class S3ArtGenerator
 	
 	private static class S3ObjectData
 	{
-		private long durationMs;
-		private long size;
+		private final long durationMs;
+		private final long size;
 		
-		private S3ObjectData(long size)
+		private S3ObjectData( final long size, final long durationMs )
 		{
-			this.durationMs = 0l;
+			this.durationMs = durationMs;
 			this.size = size;
 		}
 	}

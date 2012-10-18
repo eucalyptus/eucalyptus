@@ -3,17 +3,25 @@ package com.eucalyptus.reporting;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.reporting.art.entity.AccountArtEntity;
+import com.eucalyptus.reporting.art.entity.AvailabilityZoneArtEntity;
+import com.eucalyptus.reporting.art.entity.InstanceUsageArtEntity;
+import com.eucalyptus.reporting.art.entity.ReportArtEntity;
+import com.eucalyptus.reporting.art.entity.UserArtEntity;
+import com.eucalyptus.reporting.art.generator.InstanceArtGenerator;
+import com.eucalyptus.reporting.domain.ReportingAccountCrud;
+import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpEventStore;
 import com.eucalyptus.reporting.event_store.ReportingInstanceEventStore;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore;
 import com.eucalyptus.reporting.event_store.ReportingVolumeEventStore;
 import com.eucalyptus.reporting.event_store.ReportingVolumeSnapshotEventStore;
-import com.eucalyptus.reporting.domain.ReportingAccountCrud;
-import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.util.ExposedCommand;
 
 /**
@@ -223,11 +231,11 @@ public class FalseDataGenerator
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "NetworkIn", 0L, "total", oneMB*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0L, "internal", oneMB*2*periodNum);
+										timeMs, "NetworkIn", 0L, "external", oneMB*2*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "NetworkOut", 0L, "total", oneMB*3*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0L, "internal", oneMB*4*periodNum);
+										timeMs, "NetworkOut", 0L, "external", oneMB*4*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "DiskReadBytes", 0L, "root", oneMB*5*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
@@ -461,7 +469,118 @@ public class FalseDataGenerator
 		log.debug(" ----> REMOVING FALSE DATA");
 	}
 
+	private static final int NUM_USER_TEST = 3;
+	private static final String METRIC_NAME_TEST = InstanceArtGenerator.METRIC_DISK_IN_BYTES;
+	private static final String DIM_NAME_TEST = InstanceArtGenerator.DIM_TOTAL;
+	
+	@ExposedCommand
+	public static void createTestInstanceData()
+	{
+		log.debug(" ----> TESTING INSTANCE ART GENERATOR");
+		
+		ReportingInstanceEventStore store = ReportingInstanceEventStore.getInstance();
+		ReportingAccountCrud.getInstance().createOrUpdateAccount("acc-0","account0");
+		final double oneMB = 1024d*1024d;
+		
+		for (int i=0; i<NUM_USER_TEST; i++) {
 
+			String userId = "user-" + i;
+			ReportingUserCrud.getInstance().createOrUpdateUser(userId, "acc-0", "user " + i);
+			/* An instance which is created during the report period (requires zeroeth event) and terminated before report
+			 *  end. Also includes sensor reset. Should result in usage of 700d (0-200 for initial instance event, 200-300,
+			 *  0-200 for reset, 200-300, 300-400).
+			 */
+			String uuid = "a-0-" + i;
+			store.insertCreateEvent(uuid, "i-0-" + i, 1200l, "m1.small", userId, "zone0");
+			/* Should insert zeroeth event for usage 0-200 */
+			store.insertUsageEvent(uuid, 1300l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 200d*oneMB);
+			store.insertUsageEvent(uuid, 1400l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
+			/* RESET */
+			store.insertUsageEvent(uuid, 1500l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 200d*oneMB);
+			store.insertUsageEvent(uuid, 1600l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
+			store.insertUsageEvent(uuid, 1700l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 400d*oneMB);
+
+			/* An instance which is created before report beginning and terminated after report end. Beginning and ending
+			 * does not correspond to report beginning and ending times, so fractional usage is required. Should result in
+			 * 1000d usage (300 * 0.6666=200 for initial period,  300*2=600, 300*0.6666=200 for final usage).
+			 * 
+			 */
+			uuid = "b-0-" + i;
+			store.insertCreateEvent(uuid, "i-1", 500l, "m1.small", userId, "zone0");
+			store.insertUsageEvent(uuid,  600l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
+			store.insertUsageEvent(uuid,  900l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
+			store.insertUsageEvent(uuid, 1200l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 600d*oneMB);
+			store.insertUsageEvent(uuid, 1500l, METRIC_NAME_TEST, 3l, DIM_NAME_TEST, 900d*oneMB);
+			store.insertUsageEvent(uuid, 1800l, METRIC_NAME_TEST, 4l, DIM_NAME_TEST, 1200d*oneMB);
+			store.insertUsageEvent(uuid, 2100l, METRIC_NAME_TEST, 5l, DIM_NAME_TEST, 1500d*oneMB);
+
+			/* Instance outside of report bounds (before) should cause no usage */
+			uuid = "c-0-" + i;
+			store.insertCreateEvent(uuid, "i-2", 50l, "m1.small", userId, "zone0");
+			store.insertUsageEvent(uuid,  100l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
+			store.insertUsageEvent(uuid,  200l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
+			store.insertUsageEvent(uuid,  300l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 600d*oneMB);
+
+			/* Instance outside of report bounds (after) should cause no usage */
+			uuid = "d-0-" + i;
+			store.insertCreateEvent(uuid, "i-3", 2000l, "m1.small", userId, "zone0");
+			store.insertUsageEvent(uuid,  2100l, METRIC_NAME_TEST, 0l, DIM_NAME_TEST, 100d*oneMB);
+			store.insertUsageEvent(uuid,  2200l, METRIC_NAME_TEST, 1l, DIM_NAME_TEST, 300d*oneMB);
+			store.insertUsageEvent(uuid,  2300l, METRIC_NAME_TEST, 2l, DIM_NAME_TEST, 600d*oneMB);
+		}
+	}
+
+	@ExposedCommand
+	public static void testInstanceArtGenerator()
+	{
+		ReportArtEntity report = new ReportArtEntity(1000l, 2000l);
+		InstanceArtGenerator generator = new InstanceArtGenerator();
+		generator.generateReportArt(report);
+		AvailabilityZoneArtEntity zone = report.getZones().get("zone0");
+		if (zone==null) {
+			throw new IllegalStateException("zone0 not found");
+		}
+		/* TODO: verify zone totals */
+		InstanceUsageArtEntity zoneUsage = zone.getUsageTotals().getInstanceTotals();
+		checkDiskInMetric("Zone Totals", zoneUsage, 1700d*NUM_USER_TEST); // Each user has 1700d (1000d+700d for instance a+b)	
+		
+		AccountArtEntity account = zone.getAccounts().get("account0");
+		if (account==null) {
+			throw new IllegalStateException("account0 not found");
+		}
+		Map<String,UserArtEntity> users = account.getUsers();
+		for (int i=0; i<NUM_USER_TEST; i++) {
+			String userId = "user " + i;
+			UserArtEntity user = users.get(userId);
+			if (user==null) {
+				throw new IllegalStateException("user " + userId + " not found");
+			}
+
+			/* Verify user totals */
+			InstanceUsageArtEntity userUsage = user.getUsageTotals().getInstanceTotals();
+			checkDiskInMetric("User Totals", userUsage, 1700d);	// Each user has 1700d (1000d+700d for instance a+b)
+			
+			for (String uuid: user.getInstances().keySet()) {
+				InstanceUsageArtEntity usage = user.getInstances().get(uuid).getUsage();
+				if (uuid.startsWith("a")) {
+					checkDiskInMetric("Instance A", usage, 700d);  // See comment in geneation method for 700d
+				} else if (uuid.startsWith("b")) {
+					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1000d
+				} else if (uuid.startsWith("c") || uuid.startsWith("d")) {
+					throw new IllegalStateException("Instance included without any usage in report boundaries");
+				}
+			}
+		}
+	}
+	
+	private static boolean checkDiskInMetric(String testName, InstanceUsageArtEntity usage, double foundVal)
+	{
+		long got = new Double(usage.getDiskReadMegs()).longValue();
+		long expected = new Double(foundVal).longValue();
+		log.debug(String.format("test:%s expected:%d got:%d", testName, expected, got));
+		return (expected==got);
+	}
+	
 	@ExposedCommand
 	public static void removeAllData()
 	{

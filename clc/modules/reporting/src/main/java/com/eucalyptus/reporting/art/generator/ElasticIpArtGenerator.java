@@ -19,6 +19,7 @@ import com.eucalyptus.reporting.event_store.ReportingElasticIpDeleteEvent;
 import com.eucalyptus.reporting.event_store.ReportingElasticIpDetachEvent;
 import com.eucalyptus.reporting.event_store.ReportingEventSupport;
 import com.eucalyptus.reporting.event_store.ReportingInstanceCreateEvent;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -34,7 +35,7 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 
 		// Find end times for the elastic ips (key is uuid)
 		final Map<String,List<Long>> ipToDeleteTimesMap = Maps.newHashMap();
-		foreachElasticIpDeleteEvent( buildTimestampMap( report, ipToDeleteTimesMap ) );
+		foreachElasticIpDeleteEvent( buildTimestampMap( report, ipToDeleteTimesMap, ipUuid() ) );
 
 		// cache for user/account info
 		final Map<String,ReportingUser> reportingUsersById = Maps.newHashMap();
@@ -115,7 +116,7 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 
 		// Find end times for the elastic ips (key is uuid)
 		final Map<String,List<Long>> ipToDetachTimesMap = Maps.newHashMap();
-		foreachElasticIpDetachEvent( buildTimestampMap( report, ipToDetachTimesMap ) );
+		foreachElasticIpDetachEvent( buildTimestampMap( report, ipToDetachTimesMap, ipUuid() ) );
 
 		/* Find attachment start times
 				 */
@@ -192,24 +193,11 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 		return Math.min( report.getEndMs(), end ) - Math.max( report.getBeginMs(), start );
 	}
 
-	private Predicate<ReportingEventSupport> buildTimestampMap( final ReportArtEntity report, final Map<String,List<Long>> ipToTimesMap ) {
-		return new Predicate<ReportingEventSupport>(){
+	private Function<ReportingEventSupport,String> ipUuid() {
+		return new Function<ReportingEventSupport, String>() {
 			@Override
-			public boolean apply( final ReportingEventSupport event ) {
-				if ( event.getTimestampMs() <= report.getEndMs() ) {
-					List<Long> endTimes = ipToTimesMap.get( getIpUuid( event ) );
-					if ( endTimes == null ) {
-						endTimes = Lists.newArrayList( event.getTimestampMs() );
-						ipToTimesMap.put( getIpUuid( event ), endTimes );
-					} else if ( endTimes.size() == 1 && event.getTimestampMs() < report.getBeginMs() ) {
-						endTimes.set( 0, event.getTimestampMs() );
-					} else {
-						endTimes.add( event.getTimestampMs() );
-					}
-				} else {
-					return false; // end of relevant data
-				}
-				return true;
+			public String apply( final ReportingEventSupport reportingEventSupport ) {
+				return getIpUuid( reportingEventSupport );
 			}
 		};
 	}
@@ -221,22 +209,6 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 			return ((ReportingElasticIpDetachEvent) event).getIpUuid();
 		}
 		throw new IllegalStateException("Unsupported event type: " + event.getClass());
-	}
-
-	private Long findTimeAfter( final Map<String, List<Long>> ipToEndTimesMap, final String uuid, final Long startTime ) {
-		Long timeAfter = Long.MAX_VALUE;
-
-		final List<Long> endTimesForIp = ipToEndTimesMap.get( uuid );
-		if ( endTimesForIp != null ) {
-			for ( final Long endTime : endTimesForIp ) {
-				if ( endTime > startTime ) {
-					timeAfter = endTime;
-					break;
-				}
-			}
-		}
-
-		return timeAfter;
 	}
 
 	protected void foreachElasticIpCreateEvent( final Predicate<? super ReportingElasticIpCreateEvent> callback ) {

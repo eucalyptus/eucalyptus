@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.reporting.art.generator;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.hibernate.CacheMode;
@@ -28,11 +30,15 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.reporting.art.entity.ReportArtEntity;
 import com.eucalyptus.reporting.domain.ReportingAccount;
 import com.eucalyptus.reporting.domain.ReportingAccountDao;
 import com.eucalyptus.reporting.domain.ReportingUser;
 import com.eucalyptus.reporting.domain.ReportingUserDao;
+import com.eucalyptus.reporting.event_store.ReportingEventSupport;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.Lists;
 
 /**
  *
@@ -82,6 +88,49 @@ public abstract class AbstractArtGenerator implements ArtGenerator {
 
   protected Criterion before( final Long endExclusive ) {
     return Restrictions.lt( TIMESTAMP_MS, endExclusive );
+  }
+
+  protected <KT,ET extends ReportingEventSupport> Predicate<ET> buildTimestampMap(
+      final ReportArtEntity report,
+      final Map<KT,List<Long>> keyToTimesMap,
+      final Function<ET,KT> keyBuilder ) {
+    return new Predicate<ET>(){
+      @Override
+      public boolean apply( final ET event ) {
+        if ( event.getTimestampMs() <= report.getEndMs() ) {
+          final KT key = keyBuilder.apply( event );
+          List<Long> endTimes = keyToTimesMap.get( key );
+          if ( endTimes == null ) {
+            endTimes = Lists.newArrayList( event.getTimestampMs() );
+            keyToTimesMap.put( key, endTimes );
+          } else {
+            endTimes.add( event.getTimestampMs() );
+          }
+          Collections.sort( endTimes );
+        } else {
+          return false; // end of relevant data
+        }
+        return true;
+      }
+    };
+  }
+
+  protected <KT> Long findTimeAfter( final Map<KT, List<Long>> keyToEndTimesMap,
+                                     final KT key,
+                                     final Long startTime ) {
+    Long timeAfter = Long.MAX_VALUE;
+
+    final List<Long> endTimesForKey = keyToEndTimesMap.get( key );
+    if ( endTimesForKey != null ) {
+      for ( final Long endTime : endTimesForKey ) {
+        if ( endTime > startTime ) {
+          timeAfter = endTime;
+          break;
+        }
+      }
+    }
+
+    return timeAfter;
   }
 
   @SuppressWarnings( "unchecked" )

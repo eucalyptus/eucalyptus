@@ -79,89 +79,53 @@ public class InstanceArtGenerator
     private static Logger log = Logger.getLogger( InstanceArtGenerator.class );
 
     /* Metric names */
-    private static final String METRIC_NET_IN_BYTES   = "NetworkIn";
-    private static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
-    private static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
-    private static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
-    private static final String METRIC_DISK_READ_OPS  = "DiskReadOps";
-    private static final String METRIC_DISK_WRITE_OPS = "DiskWriteOps";
-    private static final String METRIC_CPU_USAGE_MS   = "CPUUtilization";
-    private static final String METRIC_VOLUME_READ    = "VolumeTotalReadTime";
-    private static final String METRIC_VOLUME_WRITE   = "VolumeTotalWriteTime";
+    public static final String METRIC_NET_IN_BYTES   = "NetworkIn";
+    public static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
+    public static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
+    public static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
+    public static final String METRIC_DISK_READ_OPS  = "DiskReadOps";
+    public static final String METRIC_DISK_WRITE_OPS = "DiskWriteOps";
+    public static final String METRIC_CPU_USAGE_MS   = "CPUUtilization";
+    public static final String METRIC_VOLUME_READ    = "VolumeTotalReadTime";
+    public static final String METRIC_VOLUME_WRITE   = "VolumeTotalWriteTime";
 
-    private static final String DIM_TOTAL     = "total";
-    private static final String DIM_DEFAULT   = "default";
+    public static final String DIM_TOTAL     = "total";
+    public static final String DIM_DEFAULT   = "default";
+    public static final String DIM_EXTERNAL  = "external";
     
     private static final long USAGE_SEARCH_PERIOD = TimeUnit.DAYS.toMillis( 12 );
 
-    
-    
     public InstanceArtGenerator()
 	{
 		
 	}
 	
 	@Override
-  public ReportArtEntity generateReportArt(final ReportArtEntity report)
+	public ReportArtEntity generateReportArt(final ReportArtEntity report)
 	{
 		log.debug("GENERATING REPORT ART");
 
-    final Map<String, ReportingUser> users = Maps.newHashMap();
-    final Map<String, String> accounts = Maps.newHashMap();
+		final Map<String, ReportingInstanceCreateEvent> createEvents = new HashMap<String, ReportingInstanceCreateEvent>();
 
-		/* Create super-tree of availZones, clusters, accounts, users, and instances;
-		 * and create a Map of the instance usage nodes at the bottom.
+		/* Find all instance create events. These will be used to populate the ART tree with instances etc, 
+		 * if there is usage for them within the report boundaries (determined below).
 		 */
-		final Map<String,InstanceUsageArtEntity> usageEntities = new HashMap<String,InstanceUsageArtEntity>();
-		final Map<String, Long> instanceStartTimes = new HashMap<String, Long>();
-
         foreachInstanceCreateEvent( report.getEndMs(), new Predicate<ReportingInstanceCreateEvent>() {
             @Override
             public boolean apply( final ReportingInstanceCreateEvent createEvent ) {
-
-            	if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
-            		report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
-            	}
-            	AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
-
-            	final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
-            	if (reportingUser==null) {
-            		log.error("No user corresponding to event:" + createEvent.getUserId());
-                return true;
-            	}
-            	final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
-            	if (accountName==null) {
-            		log.error("No account corresponding to user:" + reportingUser.getAccountId());
-                return true;
-              }
-            	if (! zone.getAccounts().containsKey(accountName)) {
-            		zone.getAccounts().put(accountName, new AccountArtEntity());
-            	}
-            	AccountArtEntity account = zone.getAccounts().get(accountName);
-            	if (! account.getUsers().containsKey(reportingUser.getName())) {
-            		account.getUsers().put(reportingUser.getName(), new UserArtEntity());
-            	}
-            	UserArtEntity user = account.getUsers().get(reportingUser.getName());
-            	if (! user.getInstances().containsKey(createEvent.getUuid())) {
-            		user.getInstances().put(createEvent.getUuid(), new InstanceArtEntity(createEvent.getInstanceType(),
-            				createEvent.getInstanceId()));
-            	}
-            	InstanceArtEntity instance = user.getInstances().get(createEvent.getUuid());
-            	instance.getUsage().addInstanceCnt(1);
-            	usageEntities.put(createEvent.getUuid(), instance.getUsage());
-            	instanceStartTimes.put(createEvent.getUuid(), createEvent.getTimestampMs());
+            	createEvents.put(createEvent.getUuid(), createEvent);
             	return true;            
             }
         } );
 
 
-        /* Scan through events in order, and update the total usage in the instance usage art entity, for each
-         * uuid/metric/dimension combo. Metric values are cumulative, so we must subtract each from the last.
-         * For this reason, we must retain previous values of each uuid/metric/dim combo. We must also retain
-         * the earliest and latest times for each combo, to update the duration.
+        /* Scan through usage events in order, and populate the ART tree with nodes and usage.
          */
 		final Map<InstanceMetricDimensionKey, MetricPrevData> prevDataMap =
 			new HashMap<InstanceMetricDimensionKey, MetricPrevData>();
+		final Map<String, InstanceUsageArtEntity> usageEntities =
+			new HashMap<String, InstanceUsageArtEntity>();
+		
         foreachInstanceUsageEvent( report.getBeginMs()-USAGE_SEARCH_PERIOD,
         		report.getEndMs()+USAGE_SEARCH_PERIOD,
         		new Predicate<ReportingInstanceUsageEvent>() {
@@ -173,19 +137,43 @@ public class InstanceArtGenerator
             				event.getDimension());
             	final long eventMs = event.getTimestampMs();
         		if (event.getValue()==null) return true;
-        		final InstanceUsageArtEntity usageEntity = usageEntities.get(event.getUuid());
-        		if (usageEntity==null) return true;
 
+        		if (!usageEntities.containsKey(event.getUuid())) {
+        			usageEntities.put(event.getUuid(), new InstanceUsageArtEntity());
+        		}
+        		final InstanceUsageArtEntity usageEntity = usageEntities.get(event.getUuid());
+        		final ReportingInstanceCreateEvent createEvent = createEvents.get(event.getUuid());
+        		if (createEvent==null) {
+        			log.error("Usage event without create event:" + event.getUuid());
+        			return true;
+        		}
+        		
+        		/* Populate the nodes in the tree for this usage, if the usage falls within report boundaries */
+        		if (eventMs >= report.getBeginMs() || eventMs <= report.getEndMs()) {
+        			addParentNodes(report, createEvent, usageEntity);      			
+        		}
+
+        		/* Update the total usage in the usage art entity, for this uuid/metric/dimension combo.
+        		 * Metric values are cumulative, so we must subtract each from the last. For this reason,
+        		 * we must retain previous values of each uuid/metric/dim combo, the earliest and latest times
+        		 * for each combo (to update the duration), and the sequence numbers (to detect sensor resets)
+        		 */
         		if (!prevDataMap.containsKey(key)) {
-        			/* No prior value. Use usage from instance creation to present */
-            		if (instanceStartTimes.containsKey(event.getUuid())) {
-            			//Equivalent to inserting a zero-usage event at instance creation time
-            			Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
-            					instanceStartTimes.get(event.getUuid()), eventMs, event.getValue());
-        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
-        						fractionalVal);
-            		}
-        			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue()));
+        			/* No prior value. Use usage from instance creation to present
+        			 * Equivalent to inserting a zero-usage event at instance creation time
+        			 */
+        			
+        			/* Find the fraction of this period which falls within report boundaries. This is
+        			 * needed because period boundaries do not align with report boundaries.
+        			 */
+        			Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+        					createEvent.getTimestampMs(), eventMs, event.getValue());
+        			addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        					fractionalVal);
+        			log.debug(String.format("new metric time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f fraction:%f",
+        					createEvent.getTimestampMs(), eventMs, report.getBeginMs(), report.getEndMs(),
+        					event.getUuid(), event.getMetric(),	event.getDimension(), event.getValue(), fractionalVal));
+        			prevDataMap.put(key, new MetricPrevData(eventMs, eventMs, event.getValue(), event.getSequenceNum()));
         		} else {
         			/* Previous value exists */
                 	final MetricPrevData prevData = prevDataMap.get(key);
@@ -194,23 +182,30 @@ public class InstanceArtGenerator
         			usageEntity.setDurationMs(Math.max(usageEntity.getDurationMs(),
 							overlap(report.getBeginMs(), report.getEndMs(), prevData.firstMs, eventMs)));        			
 
-        			if (event.getValue() < prevData.lastVal) {
+        			if (event.getSequenceNum() < prevData.lastSeq) {
         				/* SENSOR RESET; we lost data; just take whatever amount greater than 0 */
+        				
+        				/* Find the fraction of this period which falls within report boundaries. */
         				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
-        						prevData.lastMs, eventMs, event.getValue());        				
+        						prevData.lastMs, eventMs, event.getValue());
         				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
         						fractionalVal);
-        			} else {
-        				/* Increase total by val minus lastVal */
-        				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
+        				log.debug(String.format("reset time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f fraction:%f",
+        						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
+        						event.getDimension(), event.getValue(), fractionalVal));
+       			} else {
+        			/* Increase total by val minus lastVal */
+
+    				/* Find the fraction of this period which falls within report boundaries. */
+       				Double fractionalVal = fractionalUsage(report.getBeginMs(), report.getEndMs(),
         						prevData.lastMs, eventMs, event.getValue()-prevData.lastVal);
+        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
+        						fractionalVal);
         				log.debug(String.format("event time:%d-%d report:%d-%d uuid:%s metric:%s dim:%s val:%f lastVal:%f fraction:%f",
         						prevData.lastMs, eventMs, report.getBeginMs(), report.getEndMs(), event.getUuid(), event.getMetric(),
         						event.getDimension(), event.getValue(), prevData.lastVal, fractionalVal));
-        				addMetricValueToUsageEntity(usageEntity, event.getMetric(), event.getDimension(),
-        						fractionalVal);
         			}
-        			prevDataMap.put(key, new MetricPrevData(prevData.firstMs, eventMs, event.getValue()));
+        			prevDataMap.put(key, new MetricPrevData(prevData.firstMs, eventMs, event.getValue(), event.getSequenceNum()));
         		}
             	return true;
             }
@@ -237,14 +232,47 @@ public class InstanceArtGenerator
 		return report;
 	}
 
+    private void addParentNodes(ReportArtEntity report, ReportingInstanceCreateEvent createEvent, InstanceUsageArtEntity usageEntity)
+    {
+		final Map<String, ReportingUser> users = Maps.newHashMap();
+		final Map<String, String> accounts = Maps.newHashMap();
 
+    	if (! report.getZones().containsKey(createEvent.getAvailabilityZone())) {
+    		report.getZones().put(createEvent.getAvailabilityZone(), new AvailabilityZoneArtEntity());
+    	}
+    	AvailabilityZoneArtEntity zone = report.getZones().get(createEvent.getAvailabilityZone());
+
+    	final ReportingUser reportingUser = getUserById( users, createEvent.getUserId() );
+    	if (reportingUser==null) {
+    		log.error("No user corresponding to event:" + createEvent.getUserId());
+    	}
+    	final String accountName = getAccountNameById( accounts, reportingUser.getAccountId() );
+    	if (accountName==null) {
+    		log.error("No account corresponding to user:" + reportingUser.getAccountId());
+    	}
+    	if (! zone.getAccounts().containsKey(accountName)) {
+    		zone.getAccounts().put(accountName, new AccountArtEntity());
+    	}
+    	AccountArtEntity account = zone.getAccounts().get(accountName);
+    	if (! account.getUsers().containsKey(reportingUser.getName())) {
+    		account.getUsers().put(reportingUser.getName(), new UserArtEntity());
+    	}
+    	UserArtEntity user = account.getUsers().get(reportingUser.getName());
+    	if (! user.getInstances().containsKey(createEvent.getUuid())) {
+    		InstanceArtEntity instance = new InstanceArtEntity(createEvent.getInstanceType(),
+    				createEvent.getInstanceId(), usageEntity);
+    		user.getInstances().put(createEvent.getUuid(), instance);
+    		instance.getUsage().addInstanceCnt(1);
+    	}
+    }
+    
 	private static void updateUsageTotals(UsageTotalsArtEntity totals, InstanceArtEntity instance)
 	{
 		InstanceUsageArtEntity totalEntity = totals.getInstanceTotals();
 		InstanceUsageArtEntity usage = instance.getUsage();
-		
+				
 		/* Update metrics */
-        addUsage( totalEntity, usage );
+		totalEntity.addUsage(usage);
 		
 		/* Update total running time and type count for this instance type */
 		Map<String,InstanceUsageArtEntity> typeTotals = totals.getTypeTotals();
@@ -254,25 +282,9 @@ public class InstanceArtGenerator
 		}
 		InstanceUsageArtEntity typeTotal =
 			typeTotals.get(instance.getInstanceType().toLowerCase());
-		
-        addUsage( typeTotal, usage );
-		
-	}
 
-    private static void addUsage( final InstanceUsageArtEntity total, final InstanceUsageArtEntity usage )
-    {
-        total.addDurationMs( usage.getDurationMs() );
-        total.addCpuUtilizationMs( usage.getCpuUtilizationMs() );
-        total.addDiskReadMegs( usage.getDiskReadMegs() );
-        total.addDiskWriteMegs( usage.getDiskWriteMegs() );
-        total.addDiskReadOps( usage.getDiskReadOps() );
-        total.addDiskWriteOps( usage.getDiskWriteOps() );
-        total.addDiskReadTime( usage.getDiskReadTime() );
-        total.addDiskWriteTime( usage.getDiskWriteTime() );
-        total.addNetTotalInMegs( usage.getNetTotalInMegs() );
-        total.addNetTotalOutMegs( usage.getNetTotalOutMegs() );
-        total.addInstanceCnt( 1 );
-    }
+		typeTotal.addUsage(usage);
+	}
 
     private static void addMetricValueToUsageEntity(InstanceUsageArtEntity usage, String metric, String dim, double val)
     {
@@ -282,6 +294,10 @@ public class InstanceArtGenerator
             usage.addNetTotalInMegs(valueMB);
         } else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_TOTAL)) {
             usage.addNetTotalOutMegs(valueMB);
+        } else if (metric.equals(METRIC_NET_IN_BYTES) && dim.equals(DIM_EXTERNAL)) {
+        	usage.addNetExternalInMegs(valueMB);            
+        } else if (metric.equals(METRIC_NET_OUT_BYTES) && dim.equals(DIM_EXTERNAL)) {
+        	usage.addNetExternalOutMegs(valueMB);
         } else if (metric.equals(METRIC_DISK_IN_BYTES)) {
             usage.addDiskReadMegs(valueMB);
         } else if (metric.equals(METRIC_DISK_OUT_BYTES)) {
@@ -352,12 +368,14 @@ public class InstanceArtGenerator
 		private final long   firstMs;
 		private final double lastVal;
 		private final long   lastMs;
+		private final long   lastSeq;
 		
-		private MetricPrevData(long firstMs, long lastMs, double lastVal)
+		private MetricPrevData(long firstMs, long lastMs, double lastVal, long lastSeq)
 		{
 			this.firstMs = firstMs;
 			this.lastMs  = lastMs;
 			this.lastVal = lastVal;
+			this.lastSeq = lastSeq;
 		}
 	}
 

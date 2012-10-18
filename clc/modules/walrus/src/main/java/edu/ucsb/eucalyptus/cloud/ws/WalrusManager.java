@@ -824,6 +824,9 @@ public class WalrusManager {
 						} 
 						objectName = foundObject.getObjectName();
 						oldObjectSize = foundObject.getSize();
+						// Fix for EUCA-2275:
+						// If an existing object is overwritten, the size difference must be taken into account. Size of the already existing object was ignored before
+						oldBucketSize = -oldObjectSize;
 					} catch(AccessDeniedException ex) { 
 						throw ex;
 					} catch(EucalyptusCloudException ex) {
@@ -912,21 +915,58 @@ public class WalrusManager {
 									if(fileIO != null) {										
 										fileIO.finish();
 									}
-									ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
-											tempObjectName,
-											null,
-											null,
-											-1L,
-											ctx.getUser().getName(),
-											ctx.getUser().getUserId(),
-											ctx.getAccount().getName(),
-											ctx.getAccount().getAccountNumber());
-									Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
+									cleanupTempObject(ctx, bucketName, tempObjectName);
 									messenger.removeQueue(key, randomKey);
 									LOG.error("ETag did not match for: " + randomKey + " Expected: " + contentMD5AsHex + " Computed: " + md5);
 									throw new ContentMismatchException(bucketName + "/" + objectKey);
 								}
 							}
+							
+							// Fix for EUCA-2275:
+							// Moved up policy and bucket size checks on the temporary object. The temp object is committed (renamed) only after it clears the checks.
+							// If any of the checks fail, temp object is cleaned up and the process errors out. If the PUT request is overwriting an existing object, the object is left untouched.
+							// So the fix ensures proper clean up of temp files (no orphaned files) and does not overwrite existing data when policy or bucket size checks fail
+				
+							if (!ctx.hasAdministrativePrivileges() &&
+									!Permissions.canAllocate(PolicySpec.VENDOR_S3,
+											PolicySpec.S3_RESOURCE_OBJECT,
+											bucketName,
+											PolicySpec.S3_PUTOBJECT,
+											ctx.getUser(),
+											oldBucketSize + size)) {
+								//dbObject.rollback();
+								cleanupTempObject(ctx, bucketName, tempObjectName);
+								messenger.removeQueue(key, randomKey);
+								LOG.error("Quota exceeded for Walrus putObject");
+								throw new EntityTooLargeException("Key", objectKey);
+							}							
+							boolean success = false;
+							int retryCount = 0;
+							do {
+								try {
+									incrementBucketSize(bucketName, objectKey, oldBucketSize, size);
+									success = true;
+								} catch (EntityTooLargeException ex) {
+									cleanupTempObject(ctx, bucketName, tempObjectName);
+									messenger.removeQueue(key, randomKey);
+									//dbObject.rollback();
+									throw ex;
+								} catch (NoSuchBucketException ex) {
+									//dbObject.rollback();
+									cleanupTempObject(ctx, bucketName, tempObjectName);
+									messenger.removeQueue(key, randomKey);
+									throw ex;
+								} catch (RollbackException ex) {
+									retryCount++;
+									LOG.trace("retrying update: " + bucketName);
+								} catch (EucalyptusCloudException ex) {
+									//dbObject.rollback();
+									cleanupTempObject(ctx, bucketName, tempObjectName);
+									messenger.removeQueue(key, randomKey);
+									throw ex;
+								}
+							} while(!success && (retryCount < 5));
+							
 							// commit object
 							try {
 								if (fileIO != null) { 
@@ -984,38 +1024,7 @@ public class WalrusManager {
 							foundObject.setLast(true);
 							foundObject.setDeleted(false);
 							reply.setSize(size);
-							if (!ctx.hasAdministrativePrivileges() &&
-									!Permissions.canAllocate(PolicySpec.VENDOR_S3,
-											PolicySpec.S3_RESOURCE_OBJECT,
-											bucketName,
-											PolicySpec.S3_PUTOBJECT,
-											ctx.getUser(),
-											oldBucketSize + size)) {
-								dbObject.rollback();
-								LOG.error("Quota exceeded for Walrus putObject");
-								throw new EntityTooLargeException("Key", objectKey);
-							}							
-							boolean success = false;
-							int retryCount = 0;
-							do {
-								try {
-									incrementBucketSize(bucketName, objectKey, oldBucketSize, size);
-									success = true;
-								} catch (EntityTooLargeException ex) {
-									messenger.removeQueue(key, randomKey);
-									dbObject.rollback();
-									throw ex;
-								} catch (NoSuchBucketException ex) {
-									dbObject.rollback();
-									throw ex;
-								} catch (RollbackException ex) {
-									retryCount++;
-									LOG.trace("retrying update: " + bucketName);
-								} catch (EucalyptusCloudException ex) {
-									dbObject.rollback();
-									throw ex;
-								}
-							} while(!success && (retryCount < 5));
+							
 							if (WalrusProperties.trackUsageStatistics) {
 								walrusStatistics.updateBytesIn(size);
 								walrusStatistics.updateSpaceUsed(size);
@@ -1085,14 +1094,18 @@ public class WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
-							fireObjectCreationEvent(
-									bucketName,
-									objectKey,
-									versionId,
-									ctx.getUser().getUserId(),
-									size,
-									oldObjectSize );
-
+							try {
+								fireObjectCreationEvent(
+										bucketName,
+										objectKey,
+										versionId,
+										ctx.getUser().getUserId(),
+										size,
+										oldObjectSize );								
+							} catch (Exception ex) {
+								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
+							}
+							
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -1134,6 +1147,19 @@ public class WalrusManager {
 				+ ".000Z");
 		return reply;
 	}
+	
+	private void cleanupTempObject(Context ctx, String bucketName, String tempObjectName){
+		ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
+				tempObjectName,
+				null,
+				null,
+				-1L,
+				ctx.getUser().getName(),
+				ctx.getUser().getUserId(),
+				ctx.getAccount().getName(),
+				ctx.getAccount().getAccountNumber());
+		Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
+	}
 
 	private void incrementBucketSize(String bucketName, String objectKey, Long oldBucketSize, Long size) throws EucalyptusCloudException, RollbackException, NoSuchBucketException, EntityTooLargeException {
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
@@ -1147,7 +1173,7 @@ public class WalrusManager {
 				throw new NoSuchBucketException(bucketName);
 			}
 			Long bucketSize = bucket.getBucketSize();
-			long newSize = bucketSize + oldBucketSize
+			long newSize = bucketSize + oldBucketSize 
 					+ size;
 			if (WalrusProperties.shouldEnforceUsageLimits
 					&& !Contexts.lookup().hasAdministrativePrivileges()) {
@@ -1329,21 +1355,12 @@ public class WalrusManager {
 					byte[] base64Data = Hashes.base64decode(
 							request.getBase64Data()).getBytes();
 					foundObject.setObjectName(objectName);
-					try {
-						FileIO fileIO = storageManager.prepareForWrite(
-								bucketName, objectName);
-						if (fileIO != null) {
-							fileIO.write(base64Data);
-							fileIO.finish();
-						}
-					} catch (Exception ex) {
-						db.rollback();
-						throw new EucalyptusCloudException(ex);
-					}
-					md5 = Hashes.getHexString(Digest.MD5.get().digest(base64Data));
-					foundObject.setEtag(md5);
 					Long size = (long) base64Data.length;
-					foundObject.setSize(size);
+					
+					// Fix for EUCA-2275:
+					// Moved up policy and bucket size checks on the temporary object. The object is committed (written) only after it clears the checks.
+					// So the fix ensures that no files are orphaned and does not overwrite existing data when policy or bucket size checks fail
+					
 					if (!ctx.hasAdministrativePrivileges() &&
 							!Permissions.canAllocate(PolicySpec.VENDOR_S3,
 									PolicySpec.S3_RESOURCE_OBJECT,
@@ -1375,6 +1392,22 @@ public class WalrusManager {
 							throw ex;
 						}
 					} while(!success && (retryCount < 5));
+					
+					try {
+						FileIO fileIO = storageManager.prepareForWrite(
+								bucketName, objectName);
+						if (fileIO != null) {
+							fileIO.write(base64Data);
+							fileIO.finish();
+						}
+					} catch (Exception ex) {
+						db.rollback();
+						throw new EucalyptusCloudException(ex);
+					}
+					md5 = Hashes.getHexString(Digest.MD5.get().digest(base64Data));
+					foundObject.setEtag(md5);
+					foundObject.setSize(size);
+					
 					if (WalrusProperties.trackUsageStatistics) {
 						walrusStatistics.updateBytesIn(size);
 						walrusStatistics.updateSpaceUsed(size);
@@ -1393,13 +1426,18 @@ public class WalrusManager {
 						reply.setLogData(logData);
 					}
 
-					fireObjectCreationEvent(
-							foundObject.getBucketName(),
-							foundObject.getObjectKey(),
-							foundObject.getVersionId(),
-							ctx.getUser().getUserId(),
-							foundObject.getSize(),
-							oldObjectSize );
+					try {
+						fireObjectCreationEvent(
+								foundObject.getBucketName(),
+								foundObject.getObjectKey(),
+								foundObject.getVersionId(),
+								ctx.getUser().getUserId(),
+								foundObject.getSize(),
+								oldObjectSize );
+					} catch (Exception ex) {
+						LOG.debug("Failed to fire reporting event for walrus inline PUT object operation", ex);
+					}
+					
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -1702,8 +1740,12 @@ public class WalrusManager {
 
 				/* Send an event to reporting to report this S3 usage. */
 				if ( size > 0 ) {
-					fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
-						this.bucketName, this.objectKey, this.version, this.userId, this.size );
+					try {
+						fireObjectUsageEvent( S3ObjectAction.OBJECTDELETE,
+								this.bucketName, this.objectKey, this.version, this.userId, this.size );
+					} catch (Exception ex) {
+						LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
+					}
 				}
 			} catch (Exception ex) {
 				LOG.error(ex, ex);
@@ -2903,6 +2945,7 @@ public class WalrusManager {
 										destinationBucket,
 										null)))) {
 							// all ok
+							Long destinationObjectOldSize = 0L;
 							String destinationVersionId = sourceVersionId;
 							ObjectInfo destinationObjectInfo = null;
 							String destinationObjectName;
@@ -2961,6 +3004,7 @@ public class WalrusManager {
 									destinationObjectInfo.addGrants(account.getAccountNumber(), foundDestinationBucketInfo.getOwnerId(), grantInfos, accessControlList);
 									destinationObjectInfo.setGrants(grantInfos);
 								}
+								destinationObjectOldSize = destinationObjectInfo.getSize();
 							}
 							destinationObjectInfo.setSize(sourceObjectInfo
 									.getSize());
@@ -3041,6 +3085,20 @@ public class WalrusManager {
 								reply.setVersionId(destinationVersionId);
 							}							
 							db.commit();
+							
+							try {
+								// Fixes EUCA-3756. Reporting event for copy objects
+								fireObjectCreationEvent(
+										destinationBucket,
+										destinationObjectName,
+										destinationVersionId,
+										ctx.getUser().getUserId(),
+										destinationObjectInfo.getSize(),
+										destinationObjectOldSize );
+							} catch (Exception ex) {
+								LOG.debug("Failed to fire reporting event for walrus COPY object operation", ex);
+							}
+							
 							return reply;
 						} else {
 							db.rollback();

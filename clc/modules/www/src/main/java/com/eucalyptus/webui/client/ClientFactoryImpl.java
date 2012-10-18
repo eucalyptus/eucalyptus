@@ -274,7 +274,7 @@ public class ClientFactoryImpl implements ClientFactory {
   @Override
   public ReportView getReportView( ) {
     if ( reportView == null ) {
-      reportView = new ReportViewImpl( );
+      reportView = new ReportViewImpl( this );
     }
     return reportView;
   }

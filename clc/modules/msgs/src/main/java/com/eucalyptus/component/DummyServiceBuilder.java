@@ -96,7 +96,10 @@ public class DummyServiceBuilder implements ServiceBuilder<ServiceConfiguration>
     ComponentId compId = this.getComponentId( );
     return ServiceConfigurations.createEphemeral( compId );
   }
-  
+
+  @Override
+  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {}
+
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     EventRecord.here( ServiceBuilder.class, EventType.COMPONENT_SERVICE_START, config.getFullName( ).toString( ), config.toString( ) ).exhaust( );

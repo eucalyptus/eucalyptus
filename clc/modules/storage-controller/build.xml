@@ -75,6 +75,7 @@
 		<javah classpath="${build.dir}" destdir="include" force="yes">
 			<class name="com.eucalyptus.storage.OverlayManager" />
 			<class name="com.eucalyptus.storage.AOEManager" />
+			<class name="com.eucalyptus.storage.DASManager" />
 		</javah>
 		<native-make dir="native" target="all"/>
 	</target>

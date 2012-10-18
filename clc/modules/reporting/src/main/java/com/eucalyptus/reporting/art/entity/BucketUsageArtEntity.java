@@ -69,13 +69,6 @@ public class BucketUsageArtEntity
 	private long size;
 	private long objectsNum = 0;
 	private long gBSecs;
-	private long numGetRequests;
-	private long numPutRequests;
-	
-	public BucketUsageArtEntity()
-	{
-		
-	}
 
 	public long getSize()
 	{
@@ -97,11 +90,6 @@ public class BucketUsageArtEntity
 		this.objectsNum = objectsNum;
 	}
 	
-	public void incrementObjectsNum()
-	{
-		this.objectsNum++;
-	}
-
 	public long getGBSecs()
 	{
 		return gBSecs;
@@ -111,28 +99,4 @@ public class BucketUsageArtEntity
 	{
 		this.gBSecs = gBSecs;
 	}
-
-	public long getNumGetRequests()
-	{
-		return numGetRequests;
-	}
-
-	public void setNumGetRequests(long numGetRequests)
-	{
-		this.numGetRequests = numGetRequests;
-	}
-
-	public long getNumPutRequests()
-	{
-		return numPutRequests;
-	}
-
-	public void setNumPutRequests(long numPutRequests)
-	{
-		this.numPutRequests = numPutRequests;
-	}
-	
-	
-	
-	
 }

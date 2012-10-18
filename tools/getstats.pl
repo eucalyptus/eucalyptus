@@ -75,7 +75,7 @@ my %diskstats;
 foreach my $disk_stat (@diskstats) {
     $disk_stat =~ s/^\s*(.*)\s*$/$1/; # trim whitespace before and after a line
     my %d; # struct to contain disk stats
-    ($d{dev_maj}, 
+    ($d{dev_maj},
      $d{dev_min},
      $d{dev_name},     # Explanations from http://www.kernel.org/doc/Documentation/iostats.txt
      $d{reads_comp},   #  1) This is the total number of reads completed successfully
@@ -104,7 +104,7 @@ foreach my $dom (@domains) {
     # multiple samples can be used by the caller of this script to calculate a
     # running average using the technique at the bottom of the URL
     #   %CPU = 100 x cpu_time_diff_nano / (time_interval_seconds x nr_cores x 10^9)
-    print_stat ($dom, get_ts(), "default", "CPUUtilization", $dom->get_info()->{cpuTime}); 
+    print_stat ($dom, get_ts(), "default", "CPUUtilization", (($dom->get_info()->{cpuTime})/1000000));  # convert nanos to millis
 
     my $xml_text = $dom->get_xml_description($flags=0);
     my $xml_struct = XMLin($xml_text, ForceArray => [ 'disk', 'interface' ]); # parse domain's XML dump to find disks and NICs
@@ -149,8 +149,8 @@ sub print_stat {
     my $s = "\t"; # separator
     print $dom->get_name() . $s
 	. $ts              . $s
-	. $counter         . $s 
-	. "summation"      . $s 
+	. $counter         . $s
+	. "summation"      . $s
 	. $dimension       . $s
 	. $value           . "\n";
 }

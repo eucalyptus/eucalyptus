@@ -91,6 +91,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.FullName;
@@ -108,6 +109,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private static final long serialVersionUID = 1L;
   @Transient
   private static Logger     LOG              = Logger.getLogger( ComponentConfiguration.class );
+
   @Column( name = "config_component_partition" )
   private String            partition;
   @NaturalId

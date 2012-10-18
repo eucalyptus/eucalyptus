@@ -66,7 +66,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -116,7 +115,7 @@ public interface LogicalStorageManager {
 	public void setStorageProps(ArrayList<ComponentProperty> storageParams);
 
 	public String getStorageRootDirectory();
-	
+
 	public String getVolumePath(String volumeId) throws EucalyptusCloudException;
 
 	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException;
@@ -138,4 +137,8 @@ public interface LogicalStorageManager {
 	public void disable() throws EucalyptusCloudException;
 
 	public boolean getFromBackend(String snapshotId) throws EucalyptusCloudException;
+	
+	public void checkVolume(String volumeId) throws EucalyptusCloudException;
+
+	public List<CheckerTask> getCheckers();
 }

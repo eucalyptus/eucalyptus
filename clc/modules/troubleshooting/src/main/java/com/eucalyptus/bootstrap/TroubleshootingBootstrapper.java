@@ -64,29 +64,30 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.listeners.LogLevelListener;
-import com.eucalyptus.bootstrap.listeners.TriggerFaultListener;
+
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.troubleshooting.fault.FaultSubsystem;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.DBCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.DBCheckThresholdListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.GarbageCollectionCountCheckNameListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.GarbageCollectionCountCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.GarbageCollectionCountCheckThresholdListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.LogFileDiskCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.LogFileDiskCheckThresholdListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.MXBeanMemoryCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.MXBeanMemoryCheckThresholdListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.SimpleMemoryCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.resourcefaults.listeners.SimpleMemoryCheckThresholdListener;
-import com.eucalyptus.troubleshooting.resourcefaults.schedulers.DBCheckScheduler;
-import com.eucalyptus.troubleshooting.resourcefaults.schedulers.GarbageCollectionCountCheckScheduler;
-import com.eucalyptus.troubleshooting.resourcefaults.schedulers.LogFileDiskCheckScheduler;
-import com.eucalyptus.troubleshooting.resourcefaults.schedulers.MXBeanMemoryCheckScheduler;
-import com.eucalyptus.troubleshooting.resourcefaults.schedulers.SimpleMemoryCheckScheduler;
+import com.eucalyptus.troubleshooting.changelisteners.DBCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.DBCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.GarbageCollectionCountCheckNameListener;
+import com.eucalyptus.troubleshooting.changelisteners.GarbageCollectionCountCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.GarbageCollectionCountCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.LogFileDiskCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.LogFileDiskCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.LogLevelListener;
+import com.eucalyptus.troubleshooting.changelisteners.MXBeanMemoryCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.MXBeanMemoryCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.SimpleMemoryCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.SimpleMemoryCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.TriggerFaultListener;
+import com.eucalyptus.troubleshooting.checker.schedule.DBCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.GarbageCollectionCountCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.LogFileDiskCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.MXBeanMemoryCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.SimpleMemoryCheckScheduler;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.CloudServiceInit)
@@ -109,7 +110,7 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		SimpleMemoryCheckScheduler.resetMemoryCheck();
 		MXBeanMemoryCheckScheduler.resetMXBeanMemoryCheck();
 		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
-		FaultSubsystem.init();
+		Faults.init();
 		return true;
 	}
 

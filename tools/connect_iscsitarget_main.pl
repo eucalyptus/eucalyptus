@@ -260,9 +260,7 @@ sub retry_until_exists {
 sub check_session_exists {
   my ($netdev, $ip, $store) = @_;
   for $session (lookup_session()) {
-    if (($session->{$SK_TARGET} eq $store) &&
-        ($session->{$SK_PORTAL} eq $ip) &&
-        (is_null_or_empty($netdev) || ($session->{$SK_NETDEV} eq $netdev))) {
+    if (match_iscsi_session($session, $netdev, $ip, $store)) {
       return 1;
     }
   }

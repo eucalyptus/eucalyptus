@@ -153,7 +153,7 @@ public class Export {
       final Criterion criterion,
       final boolean includeDependencies ) {
     return new Iterator<ReportingEventSupport>() {
-      private static final int batchSize = 100;
+      private static final int batchSize = 5000;
       private int offset = 0;
       private final LinkedList<ReportingEventSupport> data = Lists.newLinkedList();
 
@@ -203,7 +203,7 @@ public class Export {
         .setReadOnly(true)
         .setCacheable(false)
         .setCacheMode(CacheMode.IGNORE)
-        .setFetchSize(100)
+        .setFetchSize(500)
         .add( criterion );
   }
 

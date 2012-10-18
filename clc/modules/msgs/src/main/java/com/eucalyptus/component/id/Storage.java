@@ -70,8 +70,8 @@ import com.eucalyptus.component.ComponentId.Partition;
 @Partition( value = { Eucalyptus.class } )
 @GenerateKeys
 @FaultLogPrefix( "sc" )
-public class Storage extends ComponentId {
-  
+public class Storage extends ComponentId {	
+	
   @Override
   public Boolean hasCredentials( ) {
     return true;

@@ -71,6 +71,9 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 
 public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> implements ServiceBuilder<T> {
+  @Override
+  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {}
+
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
   
   @Override

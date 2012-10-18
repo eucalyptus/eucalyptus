@@ -95,6 +95,8 @@ public class LVMVolumeInfo extends AbstractPersistent {
 	private String status;
 	@Column(name = "snapshot_of")
 	private String snapshotOf;
+	@Column(name = "cleanup")
+	private Boolean cleanup;
 
 	public LVMVolumeInfo() {
 		super();
@@ -183,6 +185,14 @@ public class LVMVolumeInfo extends AbstractPersistent {
 
 	public void setSnapshotOf(String snapshotOf) {
 		this.snapshotOf = snapshotOf;
+	}
+
+	public Boolean getCleanup() {
+		return cleanup == null ? false : cleanup;
+	}
+
+	public void setCleanup(Boolean cleanup) {
+		this.cleanup = cleanup;
 	}
 
 	@Override

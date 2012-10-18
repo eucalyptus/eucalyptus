@@ -684,13 +684,8 @@ char * system_output (char * shell_command )
   if ( (fp=popen(shell_command, "r")) == NULL) 
     return NULL; /* caller can check errno */
   buf = fp2str (fp);
-
   pclose(fp);
 
-  if (buf && (strlen(buf) == 0)) {
-      free(buf);
-      buf = NULL;
-  }
   return buf;
 }
 
@@ -2123,9 +2118,6 @@ int main (int argc, char ** argv)
     assert (strlen (s) != 0);
     printf("echo Hello == |%s|\n", s);
     free (s);
-
-    s = system_output("echo -n");
-    assert(!s);
 
     printf ("testing fp2str in misc.c\n");
     FILE * fp = tmpfile ();

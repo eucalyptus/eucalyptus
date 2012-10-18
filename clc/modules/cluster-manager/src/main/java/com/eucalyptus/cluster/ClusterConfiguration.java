@@ -67,7 +67,6 @@ import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
-import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -84,7 +83,6 @@ import com.eucalyptus.network.NetworkGroups;
 @Entity
 @javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_config" )
-@Table( name = "config_clusters" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( ClusterController.class )
 @ConfigurableClass( root = "cluster", alias = "basic", description = "Basic cluster controller configuration.", singleton = false, deferred = true )
@@ -281,11 +279,11 @@ public class ClusterConfiguration extends ComponentConfiguration implements Seri
   }
   
   public String getPropertyPrefix( ) {
-    return this.propertyPrefix;
+  	return this.getPartition();
   }
   
   public void setPropertyPrefix( String propertyPrefix ) {
-    this.propertyPrefix = propertyPrefix;
+  	this.setPartition(propertyPrefix);
   }
 
   public String getSourceHostName( ) {

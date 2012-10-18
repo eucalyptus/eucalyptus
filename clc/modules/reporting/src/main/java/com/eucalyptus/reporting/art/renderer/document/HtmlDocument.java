@@ -107,7 +107,7 @@ public class HtmlDocument
 	public Document tableOpen()
     	throws IOException
     {
-    	writer.write("<table>\n");
+    	writer.write("<table style=\"white-space: nowrap\">\n");
     	return this;
     }
 

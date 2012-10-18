@@ -52,6 +52,7 @@ typedef struct {
 
 typedef struct {
     char dimensionName [MAX_SENSOR_NAME_LEN]; // e.g. "default", "root", "vol-123ABC"
+    char dimensionAlias [MAX_SENSOR_NAME_LEN];// e.g. "sda1", "vda", "sdc"
     sensorValue values [MAX_SENSOR_VALUES];   // array of values (not pointers, to simplify shared-memory region use)
     int valuesLen;                            // size of the array
     int firstValueIndex;                      // index into values[] of the first value (one that matches sequenceNum)
@@ -79,6 +80,7 @@ typedef struct {
 
 typedef struct {
     char resourceName [MAX_SENSOR_NAME_LEN];   // e.g. "i-1234567"
+    char resourceAlias [MAX_SENSOR_NAME_LEN];  // e.g. "123.45.67.89" (its private IP address)
     char resourceType [10];                    // e.g. "instance"
     char resourceUuid [64];                    // e.g. "550e8400-e29b-41d4-a716-446655443210"
     sensorMetric metrics [MAX_SENSOR_METRICS]; // array of values (not pointers, to simplify shared-memory region use)
@@ -107,10 +109,18 @@ typedef struct {
 
 int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half);
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
+int sensor_set_hyp_sem (sem * hyp_sem);
 int sensor_get_config (int *new_history_size, long long * new_collection_interval_time_ms);
 int sensor_get_num_resources (void);
 int sensor_add_resource (const char * resourceName, const char * resourceType, const char * resourceUuid);
+int sensor_set_resource_alias (const char * resourceName, const char * resourceAlias);
 int sensor_remove_resource (const char * resourceName);
+int sensor_set_dimension_alias (const char * resourceName,
+                                const char * metricName,
+                                const int counterType,
+                                const char * dimensionName,
+                                const char * dimensionAlias);
+int sensor_set_volume (const char * instanceId, const char * volumeId, const char * guestDev);
 int sensor_str2type (const char * counterType);
 const char * sensor_type2str (int type);
 int sensor_res2str (char * buf, int bufLen, sensorResource **res, int resLen);
@@ -125,5 +135,6 @@ int sensor_add_value (const char * instanceId,
                       const boolean available,
                       const double value);
 int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail_on_oom);
+int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], const char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
 
 #endif
