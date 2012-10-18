@@ -378,6 +378,7 @@
                 }
             }
          }
+         thisObj._validateForm('sgroup-add-btn', thisDialog);
       });
       dialog.find('#sgroup-allow-ip').change(function () {
         thisDialog.find('#allow-ip').prop('disabled', false);
