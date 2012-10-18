@@ -70,9 +70,7 @@ class BotoJsonEncoder(JSONEncoder):
             values['__obj_name__'] = obj.__class__.__name__
             return (values)
         elif isinstance(obj, RegionInfo):
-            values = self.__sanitize_and_copy__(obj.__dict__)
-            values['__obj_name__'] = 'RegionInfo'
-            return (values)
+            return []
         elif isinstance(obj, ClcError):
             return self.__sanitize_and_copy__(obj.__dict__)
         elif isinstance(obj, Response):
