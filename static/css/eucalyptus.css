@@ -1241,6 +1241,11 @@ ul.ramdisk-expanded li:nth-child(5) {
   padding: 40px 5px 15px; 
 }
 
+/* This class is added to the body tag of every help file */
+.help-page-body {
+  padding: 0 25px 20px;
+}
+
 /* To override the background-color inline style added by the jQuery Flip */
 #volumes-table,
 #keys-table,
@@ -1312,23 +1317,28 @@ ul.ramdisk-expanded li:nth-child(5) {
 .dialog-help-content h1,
 .help-content h1,
 .dialog-help-content h2,
-.help-content h2 {
+.help-content h2,
+.help-page-body h1,
+.help-page-body h2 {
   color: #02405f;
   font-weight: normal;
   font-family: 'PlayRegular', Arial, sans-serif;
 }
 
-.help-content h1 {
+.help-content h1,
+.help-page-body h1 {
   font-size: 28px;
   margin: .3em 0 .2em;
 }
 
-.help-content h2 {
+.help-content h2,
+.help-page-body h2 {
   font-size: 22px;
   margin: .8em 0 0;
 }
 
-.help-content p {
+.help-content p,
+.help-page-body p {
   margin: 0 0 1em;
 }  
 
