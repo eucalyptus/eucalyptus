@@ -212,8 +212,8 @@
         var keyName = keysToDelete[i];
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=DeleteKeyPair&KeyName=" + keyName,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DeleteKeyPair",
+          data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName,
           dataType:"json",
           async:true,
           success:

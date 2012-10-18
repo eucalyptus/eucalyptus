@@ -436,8 +436,8 @@
         instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
           type:"POST",
-          url:"/ec2?Action=TerminateInstances"+instIds,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=TerminateInstances",
+          data:"_xsrf="+$.cookie('_xsrf')+instIds,
           dataType:"json",
           async:true,
           success: function(data, textStatus, jqXHR){
@@ -486,8 +486,8 @@
      
       $.ajax({
           type:"POST",
-          url:"/ec2?Action=RebootInstances"+instIds,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=RebootInstances",
+          data:"_xsrf="+$.cookie('_xsrf')+instIds,
           dataType:"json",
           async:true,
           success: function(data, textStatus, jqXHR){
@@ -525,8 +525,8 @@
         instIds+= '&InstanceId.'+parseInt(i+1)+'='+instances[i];
       $.ajax({
           type:"POST",
-          url:"/ec2?Action=StopInstances"+instIds,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=StopInstances",
+          data:"_xsrf="+$.cookie('_xsrf')+instIds,
           dataType:"json",
           async:true,
           success: function(data, textStatus, jqXHR){
@@ -563,8 +563,8 @@
 
       $.ajax({
         type:"POST",
-        url:"/ec2?Action=StartInstances"+instIds, 
-        data:"_xsrf="+$.cookie('_xsrf'),
+        url:"/ec2?Action=StartInstances",
+        data:"_xsrf="+$.cookie('_xsrf')+instIds,
         dataType:"json",
         async:true,
         success: function(data, textStatus, jqXHR){
@@ -651,8 +651,8 @@
       $.when( 
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=GetConsoleOutput&InstanceId=" + instances,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=GetConsoleOutput",
+          data:"_xsrf="+$.cookie('_xsrf')+"&InstanceId="+instances,
           dataType:"json",
           async:true,
         })).done(function(data){
@@ -746,8 +746,8 @@
         var volumeId = $(checkbox).val();
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=DetachVolume&VolumeId=" + volumeId,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DetachVolume",
+          data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
           async:true,
           success: (function(volumeId) {

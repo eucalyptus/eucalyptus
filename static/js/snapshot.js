@@ -281,8 +281,8 @@
         var snapshotId = snapshotsToDelete[i];
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=DeleteSnapshot&SnapshotId=" + snapshotId,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DeleteSnapshot",
+          data:"_xsrf="+$.cookie('_xsrf')+"&SnapshotId="+snapshotId,
           dataType:"json",
           async:true,
           success:
@@ -310,8 +310,8 @@
       var thisObj = this;
       $.ajax({
         type:"POST",
-        url:"/ec2?Action=CreateSnapshot&VolumeId=" + volumeId + "&Description=" + description,
-        data:"_xsrf="+$.cookie('_xsrf'),
+        url:"/ec2?Action=CreateSnapshot",
+        data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId+"&Description="+description,
         dataType:"json",
         async:true,
         success:
@@ -361,14 +361,14 @@
     _registerSnapshots : function(name, desc, windows) {
       var thisObj = this;
       var snapshot = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      var url = "/ec2?Action=RegisterImage&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
+      var data = "&SnapshotId=" + snapshot + "&Name=" + name + "&Description=" + desc;
       if(windows)
-        url += "&KernelId=windows";
+        data += "&KernelId=windows";
 
       $.ajax({
         type:"POST",
-        url:url,
-        data:"_xsrf="+$.cookie('_xsrf'),
+        url:"/ec2?Action=RegisterImage",
+        data:"_xsrf="+$.cookie('_xsrf')+data,
         dataType:"json",
         async:true,
         success:
