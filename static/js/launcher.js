@@ -1358,12 +1358,14 @@
       }
       this.element.find('#launch-wizard-advanced-input-userfile').fileupload('send', {
         files: file_param,
-        success: function (results, textStatus, jqXHR) {
-          if ( results ){
+        success: function (result, textStatus, jqXHR) {
+          if ( result && result['results'] ){
+            var results = result.results;
             var inst_ids = [];
-            $.each(results, function(idx, instance){
+            for (i in results){
+              var instance = results[i];
               inst_ids.push(instance.id);
-            });
+            }
             var instances = inst_ids.join(' ');
             notifySuccess(null, $.i18n.prop('instance_run_success', instances));
             //TODO: move to instance page?
