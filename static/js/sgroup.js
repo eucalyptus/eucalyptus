@@ -634,8 +634,8 @@
         var sgroupName = $(rowsToDelete[i]).html();
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=DeleteSecurityGroup&GroupName=" + sgroupName,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DeleteSecurityGroup",
+          data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+sgroupName,
           dataType:"json",
           async:"true",
           success: (function(sgroupName) {

@@ -390,8 +390,8 @@
         var volumeId = volumesToDelete[i];
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=DeleteVolume&VolumeId=" + volumeId,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DeleteVolume",
+          data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
           async:true,
           success:
@@ -419,8 +419,8 @@
       var thisObj = this;
       $.ajax({
         type:"POST",
-        url:"/ec2?Action=AttachVolume&VolumeId=" + volumeId + "&InstanceId=" + instanceId + "&Device=" + device,
-        data:"_xsrf="+$.cookie('_xsrf'),
+        url:"/ec2?Action=AttachVolume",
+        data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId+"&InstanceId="+instanceId+"&Device="+device,
         dataType:"json",
         async:true,
         success:
@@ -444,8 +444,8 @@
       sid = snapshotId != '' ? "&SnapshotId=" + snapshotId : '';
       $.ajax({
         type:"POST",
-        url:"/ec2?Action=CreateVolume&Size=" + size + "&AvailabilityZone=" + az + sid,
-        data:"_xsrf="+$.cookie('_xsrf'),
+        url:"/ec2?Action=CreateVolume",
+        data:"_xsrf="+$.cookie('_xsrf')+"&Size="+size+"&AvailabilityZone="+az+sid,
         dataType:"json",
         async:true,
         success:
@@ -473,8 +473,8 @@
         var volumeId = volumes[i];
         $.ajax({
           type:"POST",
-          url:"/ec2?Action=DetachVolume&VolumeId=" + volumeId,
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DetachVolume",
+          data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
           async:true,
           success:
