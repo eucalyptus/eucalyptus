@@ -1440,6 +1440,8 @@ ul.ramdisk-expanded li:nth-child(5) {
   background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
   background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
   background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
+
+  background-position: right 0;
 }
 
 .actionmenu a.inactive-menu {
@@ -1448,7 +1450,7 @@ ul.ramdisk-expanded li:nth-child(5) {
   padding: 5px 30px 5px 17px;
   border: 1px solid rgba(128, 128, 128, 0.4);
 
-  background: #dddddd url(gray-gradient.svg) no-repeat 0 0;
+  background: #dddddd url(gray-gradient.svg) no-repeat right 0;
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
