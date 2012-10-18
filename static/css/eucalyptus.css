@@ -612,6 +612,7 @@ textarea {
 
 input[type='text'],
 textarea,
+.ui-widget textarea,
 .input-field,
 .dataTables_filter input {
   padding: 6px;
@@ -1447,7 +1448,7 @@ ul.ramdisk-expanded li:nth-child(5) {
   padding: 5px 30px 5px 17px;
   border: 1px solid rgba(128, 128, 128, 0.4);
 
-  background: #c8df83 url(gray-gradient.svg) no-repeat 0 0;
+  background: #dddddd url(gray-gradient.svg) no-repeat 0 0;
 
   background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
@@ -1901,7 +1902,7 @@ ul.ramdisk-expanded li:nth-child(5) {
   opacity: 1.00;
   border: 1px solid rgba(128, 128, 128, 0.4);
 
-  background: #c8df83 url(gray-gradient.svg) no-repeat 0 0;
+  background: #dddddd url(gray-gradient.svg) no-repeat 0 0;
 
   background-image: -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
   background-image: -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
