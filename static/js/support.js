@@ -475,3 +475,18 @@ function setupAjax(){
    timeout: 30000,
  });
 }
+
+function doMultiAjax(array, callback){
+  if (!array || !callback)
+    return;
+  for (i = 0; i<array.length; i++){
+    $.when( 
+      (function(){ 
+        var dfd = $.Deferred();
+        callback(array[i],dfd);
+        dfd.promise();
+      })()
+    ).done(function() { ; })
+     .fail(function() { ; });
+  }
+}

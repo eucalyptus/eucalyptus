@@ -688,11 +688,12 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
+
     _deleteSelectedSecurityGroups : function () {
       var thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var sgroupName = $(rowsToDelete[i]).html();
+      doMultiAjax(rowsToDelete, function(item, dfd){
+        var sgroupName = $(item).html();
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup",
@@ -703,19 +704,22 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('sgroup_delete_error', sgroupName), undefined_error);
+                dfd.reject();
               }
            }
           })(sgroupName),
           error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('sgroup_delete_error', sgroupName), errorThrown);
+              dfd.reject();
             }
           })(sgroupName)
         });
-      }
+      });
+      thisObj._getTableWrapper().eucatable('refreshTable');
     },
 
     _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
