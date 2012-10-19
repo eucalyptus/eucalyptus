@@ -145,7 +145,7 @@
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
                 volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = $.trim(asText($snapshot_dialog.find('#snapshot-create-description').val()));
+                  description = $.trim(toBase64(asText($snapshot_dialog.find('#snapshot-create-description').val())));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -183,7 +183,7 @@
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
-               var desc = asText(thisObj.regDialog.find('#snapshot-register-image-desc').val());
+               var desc = toBase64(asText(thisObj.regDialog.find('#snapshot-register-image-desc').val()));
                var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
                var windows = $checkbox.is(':checked') ? true : false; 
                thisObj._registerSnapshots(name, desc, windows);

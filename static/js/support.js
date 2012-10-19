@@ -73,6 +73,10 @@ function asHTML(input) {
   return $('<div/>').append(input).html();
 }
 
+function toBase64(input){
+  return $.base64.encode(input);
+}
+
 function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }

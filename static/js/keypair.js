@@ -264,7 +264,7 @@
       var thisObj = this;
       var params = "_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName;
 //    params += "&PublicKeyMaterial="+btoa(keyContents);  // sounds like btoa won't work on IE9?
-      params += "&PublicKeyMaterial="+$.base64.encode(keyContents);
+      params += "&PublicKeyMaterial="+toBase64(keyContents);
       $.ajax({
         type:"POST",
         url:"/ec2?Action=ImportKeyPair",
