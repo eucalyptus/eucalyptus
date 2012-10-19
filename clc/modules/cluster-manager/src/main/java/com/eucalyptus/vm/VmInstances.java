@@ -565,6 +565,11 @@ public class VmInstances {
       Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
+
+  public static void restored( final String instanceId ) {
+    terminateDescribeCache.remove( instanceId );
+    terminateCache.remove( instanceId );
+  }
   
   public static void terminated( final VmInstance vm ) throws TransactionException {
     VmInstances.cache( Entities.asTransaction( VmInstance.class, Transitions.TERMINATED, VmInstances.TX_RETRIES ).apply( vm ) );
