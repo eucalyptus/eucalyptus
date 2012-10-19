@@ -278,8 +278,8 @@
 
     _deleteListedSnapshots : function (snapshotsToDelete) {
       var thisObj = this;
-      for ( i = 0; i<snapshotsToDelete.length; i++ ) {
-        var snapshotId = snapshotsToDelete[i];
+      doMultiAjax(snapshotsToDelete, function(item, dfd){
+        var snapshotId = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSnapshot",
@@ -291,9 +291,10 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null,$.i18n.prop('snapshot_delete_success', snapshotId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('snapshot_delete_error', snapshotId), undefined_error);
+                dfd.reject();
               }
            }
           })(snapshotId),
@@ -301,10 +302,12 @@
           (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('snapshot_delete_error', snapshotId), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(snapshotId)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _createSnapshot : function (volumeId, description) {

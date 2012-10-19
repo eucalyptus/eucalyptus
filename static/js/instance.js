@@ -747,8 +747,10 @@
 
     _detachVolume : function (force) {
       var thisObj = this;
-      $.each(thisObj.detachDialog.find("input:checked"), function(idx, checkbox){
-        var volumeId = $(checkbox).val();
+
+      var selectedVolumes = thisObj.detachDialog.find("input:checked"); 
+      doMultiAjax(selectedVolumes, function(item, dfd){
+        var volumeId = $(item).val();
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DetachVolume",
@@ -759,19 +761,22 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
                 notifySuccess(null, volume_detach_success(volumeId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
-                 notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
-              }
+                notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
+                dfd.reject();
+              } 
              }
            })(volumeId),
            error: (function(volumeId) {
              return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
+                dfd.reject();
              }
            })(volumeId)
         });
       });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
     _associateAction : function(){
       var thisObj = this;

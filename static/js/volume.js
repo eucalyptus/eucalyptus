@@ -388,8 +388,8 @@
 
     _deleteListedVolumes : function (volumesToDelete) {
       var thisObj = this;
-      for ( i = 0; i<volumesToDelete.length; i++ ) {
-        var volumeId = volumesToDelete[i];
+      doMultiAjax(volumesToDelete, function(item, dfd){
+        var volumeId = item; 
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteVolume",
@@ -401,9 +401,10 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('volume_delete_success', volumeId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('volume_delete_error', volumeId), undefined_error);
+                dfd.reject();
               }
            }
           })(volumeId),
@@ -411,10 +412,12 @@
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('volume_delete_error', volumeId), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(volumeId)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _attachVolume : function (volumeId, instanceId, device) {
@@ -471,8 +474,8 @@
     _detachListedVolumes : function (volumes, force) {
       var thisObj = this;
       dialogToUse = this.detachDialog;
-      for ( i = 0; i<volumes.length; i++ ) {
-        var volumeId = volumes[i];
+      doMultiAjax( volumes, function(item, dfd){
+        var volumeId = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DetachVolume",
@@ -487,12 +490,13 @@
                   notifySuccess(null, $.i18n.prop('volume_force_detach_success', volumeId));
                 else
                   notifySuccess(null, $.i18n.prop('volume_detach_success', volumeId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 if (force)
                   notifyError($.i18n.prop('volume_force_detach_error', volumeId), undefined_error);
                 else
                   notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
+                dfd.reject();
               }
            }
           })(volumeId),
@@ -503,10 +507,12 @@
                 notifyError($.i18n.prop('volume_force_detach_error', volumeId), getErrorMessage(jqXHR));
               else
                 notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(volumeId)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _deleteAction : function() {
