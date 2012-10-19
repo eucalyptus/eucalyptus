@@ -227,7 +227,9 @@ class ComputeHandler(server.BaseHandler):
             return clc.get_all_key_pairs()
         elif action == 'CreateKeyPair':
             name = self.get_argument('KeyName')
-            return clc.create_key_pair(name)
+            ret = clc.create_key_pair(name)
+            self.user_session.keypair_cache[name] = ret.material
+            return ret
         elif action == 'DeleteKeyPair':
             name = self.get_argument('KeyName')
             return clc.delete_key_pair(name)
@@ -446,12 +448,13 @@ class ComputeHandler(server.BaseHandler):
                 self.check_xsrf_cookie()
 
             # this call returns a file vs. a json envelope, so it is self-contained
-            if action == 'CreateKeyPairFile':
+            if action == 'GetKeyPairFile':
                 name = self.get_argument('KeyName')
-                result = self.user_session.clc.create_key_pair(name)
+                result = self.user_session.keypair_cache[name]
                 self.set_header("Content-Type", "application/x-pem-file;charset=ISO-8859-1")
                 self.set_header("Content-Disposition", "attachment; filename=\"" + name + '.pem"')
-                self.write(result.material)
+                self.write(result)
+                del self.user_session.keypair_cache[name]
                 return
 
             if action == 'RunInstances':

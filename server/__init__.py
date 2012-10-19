@@ -33,6 +33,7 @@ class UserSession(object):
         self.session_start = time.time()
         self.session_last_used = time.time()
         self.session_lifetime_requests = 0
+        self.keypair_cache = {}
 
     @property
     def account(self):

@@ -199,11 +199,34 @@
     _addKeyPair : function(keyName) {
       var thisObj = this;
 
-      $.generateFile({
-          keyname : keyName,
-          _xsrf   : $.cookie('_xsrf'),
-          script  : "/ec2?Action=CreateKeyPairFile"
-        });
+      $.ajax({
+        type:"POST",
+        url:"/ec2?Action=CreateKeyPair",
+        data:"_xsrf="+$.cookie('_xsrf') + "&KeyName=" + keyName,
+        dataType:"json",
+        async:false,
+        success:
+        function(data, textStatus, jqXHR){
+          if (data.results && data.results.material) {
+            $.generateFile({
+              filename  : keyName,
+              keyname   : keyName,
+              _xsrf     : $.cookie('_xsrf'),
+              script    : '/ec2?Action=GetKeyPairFile'
+            });
+            notifySuccess(null, $.i18n.prop('keypair_create_success', keyName));
+            thisObj.tableWrapper.eucatable('refreshTable');
+            thisObj.tableWrapper.eucatable('glowRow', keyName);
+          } else {
+            notifyError($.i18n.prop('keypair_create_error', keyName), undefined_error);
+          }
+        },
+        error:
+        function(jqXHR, textStatus, errorThrown){
+          notifyError($.i18n.prop('keypair_create_error', keyName), getErrorMessage(jqXHR));
+        }
+     });
+       
     },
 
     _deleteSelectedKeyPairs : function (keysToDelete) {
@@ -240,7 +263,8 @@
     _importKeyPair : function (keyName, keyContents) {
       var thisObj = this;
       var params = "_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName;
-      params += "&PublicKeyMaterial="+btoa(keyContents)
+//    params += "&PublicKeyMaterial="+btoa(keyContents);  // sounds like btoa won't work on IE9?
+      params += "&PublicKeyMaterial="+$.base64.encode(keyContents);
       $.ajax({
         type:"POST",
         url:"/ec2?Action=ImportKeyPair",
