@@ -215,8 +215,8 @@ public class VmInstances {
                       initial = "10" )
   public static final int TX_RETRIES                    = 10;
   @ConfigurableField( description = "Amount of time (in minutes) before a previously running instance which is not reported will be marked as terminated.",
-                      initial = "60" )
-  public static Integer   INSTANCE_TIMEOUT              = 60;
+                      initial = "720" )
+  public static Integer   INSTANCE_TIMEOUT              = 720;
   @ConfigurableField( description = "Amount of time (in minutes) before a VM which is not reported by a cluster will be marked as terminated.",
                       initial = "10" )
   public static Integer   SHUT_DOWN_TIME                = 10;
