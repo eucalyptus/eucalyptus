@@ -240,6 +240,9 @@
         if (snapshotId) {
           var snapshot = describe('snapshot', snapshotId);
           $volSize.val(snapshot['volume_size']);
+          //check is create button can be activated
+          if (thisObj.addDialog.find('#volume-add-az-selector').val() != '')
+            thisObj.addDialog.eucadialog('enableButton', createButtonId);
         }
       });
       $add_dialog.eucadialog('validateOnType', '#volume-size', function() {
