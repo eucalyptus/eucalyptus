@@ -231,8 +231,8 @@
 
     _deleteSelectedKeyPairs : function (keysToDelete) {
       var thisObj = this;
-      for ( i = 0; i<keysToDelete.length; i++ ) {
-        var keyName = keysToDelete[i];
+      doMultiAjax(keysToDelete, function(item, dfd){
+        var keyName = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteKeyPair",
@@ -244,9 +244,10 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('keypair_delete_success', keyName));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('keypair_delete_error', keyName), undefined_error);
+                dfd.reject();
               }
            }
           })(keyName),
@@ -254,10 +255,12 @@
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('keypair_delete_error', keyName), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(keyName)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
    
     _importKeyPair : function (keyName, keyContents) {

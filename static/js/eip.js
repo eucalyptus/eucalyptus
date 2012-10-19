@@ -240,8 +240,8 @@
 
     _releaseListedIps : function (rowsToDelete) {
       var thisObj = this;
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var eipId = rowsToDelete[i];
+      doMultiAjax(rowsToDelete, function(item, dfd){
+        var eipId = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=ReleaseAddress",
@@ -254,9 +254,10 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('eip_release_success', eipId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('eip_release_error', eipId), undefined_error);
+                dfd.reject();
               }
            }
           })(eipId),
@@ -264,16 +265,18 @@
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('eip_release_error', eipId), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(eipId)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _disassociateListedIps : function (ipsToDisassociate) {
       var thisObj = this;
-      for ( i = 0; i<ipsToDisassociate.length; i++ ) {
-        var eipId = ipsToDisassociate[i];
+      doMultiAjax(ipsToDisassociate, function(item, dfd){
+        var eipId = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DisassociateAddress",
@@ -286,9 +289,10 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('eip_disassociate_success', eipId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('eip_disassociate_error', eipId), undefined_error);
+                dfd.reject();
               }
            }
           })(eipId),
@@ -296,15 +300,22 @@
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('eip_disassociate_error', eipId), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(eipId)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _allocateIps : function (numberIpsToAllocate) {
       var thisObj = this;
+      var arrayIps = [];
       for ( i=0; i<numberIpsToAllocate; i++)
+        arrayIps.push(0);
+
+      var allocatedIps = [];
+      doMultiAjax(arrayIps, function(item, dfd){
         $.ajax({
           type:"POST",
           url:"/ec2?Action=AllocateAddress",
@@ -316,18 +327,25 @@
             function(data, textStatus, jqXHR){
               if ( data.results ) {
                 ip = data.results.public_ip;
+                allocatedIps.push(ip);
                 notifySuccess(null, $.i18n.prop('eip_allocate_success', ip));
-                thisObj.tableWrapper.eucatable('refreshTable');
-                thisObj.tableWrapper.eucatable('glowRow', ip);
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('eip_allocate_error'), undefined_error);
+                dfd.reject();
               }
             },
           error:
             function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('eip_allocate_error'), getErrorMessage(jqXHR));
+              dfd.reject();
             }
         });
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
+      $.each(allocatedIps, function(idx, ip){
+        thisObj.tableWrapper.eucatable('glowRow', ip);
+      });
     },
 
     _associateIp : function (publicIp, instanceId) {
