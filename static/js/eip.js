@@ -62,13 +62,22 @@
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell"
             },
-            { "mDataProp": "public_ip" },
+            {
+              "mDataProp": "public_ip",
+              "iDataSort": 4
+            },
             { "mDataProp": "instance_id" },
             {
               "bVisible": false,
               "fnRender": function(oObj) { 
                 return oObj.aData.instance_id ? 'assigned' : 'unassigned' 
               } 
+            },
+            {
+              "bVisible": false,
+              "fnRender": function(oObj) {
+                return ipv4AsInteger(oObj.aData.public_ip);
+              }
             }
           ],
         },

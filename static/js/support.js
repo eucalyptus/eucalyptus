@@ -65,6 +65,19 @@ function isValidIPv4Address(ipaddr) {
   }
 }
 
+function ipv4AsInteger(ipaddr) {
+  var count = 0;
+  if (IP_PATTER.test(ipaddr)) {
+    var parts = ipaddr.split(".");
+    for (var i=0; i<4; i++) {
+      var j = parseInt(parts[i]);
+      count += Math.pow(256, 3-i)*j
+    }
+    return count;
+  } else {
+    return 0;
+  }
+}
 function asText(input) {
   return input; /* we don't do any transformation at this point */
 }
