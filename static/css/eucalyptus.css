@@ -2742,9 +2742,7 @@ textarea.console-output {
 /* ======= Euca credits ======= */
 
 .euca-credits {
-  overflow: auto;
   margin: 25px 0;
-  height: 400px;
   text-align: center;
 }
 
@@ -2762,6 +2760,13 @@ textarea.console-output {
   margin: 0 0 15px;
   padding: 0;
   list-style-type: none;
+}
+
+.animated {
+  float:top;
+  overflow:scroll;
+  height:150px;
+  overflow-x:hidden;
 }
 
 .dataTables_processing{

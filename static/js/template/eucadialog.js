@@ -32,6 +32,7 @@
        on_close: null,
        width : null,
        afterHelpFlipped : null,
+       beforeHelpFlipped : null,
     },
     $error_div : null,
     help_flipped : false,
@@ -126,7 +127,7 @@
     _destroy : function() {
     },
 
-   _setOption: function(key, value) {
+    _setOption: function(key, value) {
       if (key === 'title') {
         this.element.dialog('option', 'title', value);
       }
@@ -165,6 +166,8 @@
       $helpLink.click(function(evt) {
         if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
           thisObj.element.data('dialog').option('closeOnEscape', false);
+          if (thisObj.options.beforeHelpFlipped && isFunction(thisObj.options.beforeHelpFlipped))
+            thisObj.options.beforeHelpFlipped.call();
           $contentPane.fadeOut(function(){
             $helpPane.fadeIn();
             thisObj.help_flipped = true;
@@ -454,7 +457,16 @@
         this.$error_div.append($('<br>'));
       this.$error_div.append(
         $('<span>').html(error)); 
-    }
+    },
+
+    getDialogOption : function(option){
+      return this.element.dialog('option', option);
+    },
+
+    setDialogOption : function(option, value) {
+      this.element.dialog('option', option, value);
+    },
+
 /**** End of Public Methods ****/
   });
 })(jQuery,
