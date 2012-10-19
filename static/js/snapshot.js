@@ -219,7 +219,8 @@
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
-      if ( selectedSnapshots.length > 0 && onlyInArray('completed', selectedSnapshots)){
+
+      if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       

@@ -42,16 +42,58 @@
     "connection": []
   }, 
   {
+    "instance_id": null,
+    "__obj_name__": "Address",
+    "region": {
+      "connection": null,
+      "endpoint": "192.168.25.10",
+      "name": "eucalyptus",
+      "__obj_name__": "RegionInfo",
+      "connection_cls": null
+    },
+    "public_ip": "1.5.122.6",
+    "item": "",
+    "connection": []
+  },
+  {
+    "instance_id": null,
+    "__obj_name__": "Address",
+    "region": {
+      "connection": null,
+      "endpoint": "192.168.25.10",
+      "name": "eucalyptus",
+      "__obj_name__": "RegionInfo",
+      "connection_cls": null
+    },
+    "public_ip": "224.19.12.61",
+    "item": "",
+    "connection": []
+  },
+  {
+    "instance_id": null,
+    "__obj_name__": "Address",
+    "region": {
+      "connection": null,
+      "endpoint": "192.168.25.10",
+      "name": "eucalyptus",
+      "__obj_name__": "RegionInfo",
+      "connection_cls": null
+    },
+    "public_ip": "11.118.152.232",
+    "item": "",
+    "connection": []
+  },
+  {
     "instance_id": "i-DDC44064", 
     "__obj_name__": "Address", 
     "region": {
       "connection": null, 
-      "endpoint": "192.168.25.10", 
+      "endpoint": "1.18.25.10", 
       "name": "eucalyptus", 
       "__obj_name__": "RegionInfo", 
       "connection_cls": null
     }, 
-    "public_ip": "192.168.9.213", 
+    "public_ip": "12.168.10.13", 
     "item": "", 
     "connection": []
   }, 
@@ -88,7 +130,7 @@
     "__obj_name__": "Address", 
     "region": {
       "connection": null, 
-      "endpoint": "192.168.25.10", 
+      "endpoint": "10.168.252.1", 
       "name": "eucalyptus", 
       "__obj_name__": "RegionInfo", 
       "connection_cls": null
@@ -107,7 +149,7 @@
       "__obj_name__": "RegionInfo", 
       "connection_cls": null
     }, 
-    "public_ip": "192.168.9.217", 
+    "public_ip": "1.1.1.1", 
     "item": "", 
     "connection": []
   }, 
@@ -121,7 +163,7 @@
       "__obj_name__": "RegionInfo", 
       "connection_cls": null
     }, 
-    "public_ip": "192.168.9.218", 
+    "public_ip": "1.1.1.10", 
     "item": "", 
     "connection": []
   }, 
@@ -135,7 +177,7 @@
       "__obj_name__": "RegionInfo", 
       "connection_cls": null
     }, 
-    "public_ip": "192.168.9.219", 
+    "public_ip": "1.1.1.2", 
     "item": "", 
     "connection": []
   }, 
