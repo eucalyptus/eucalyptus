@@ -2759,7 +2759,7 @@ textarea.console-output {
   overflow: scroll;
   overflow-x: hidden;
   padding-top: 15px;
-  height: 150px;
+  height: 250px;
 }
 
 .euca-credits p {
@@ -2773,5 +2773,6 @@ textarea.console-output {
   margin: 4px 0 25px;
   padding: 0;
   list-style-type: none;
+  color: #444;
 }
 
