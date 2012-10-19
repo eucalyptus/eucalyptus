@@ -91,8 +91,7 @@ public class VmInstanceNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action, String resourceType ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action ) &&
-         PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_INSTANCE ).equals( resourceType ) ) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RUNINSTANCES ).equals( action ) ) {
       return true;
     }
     return false;

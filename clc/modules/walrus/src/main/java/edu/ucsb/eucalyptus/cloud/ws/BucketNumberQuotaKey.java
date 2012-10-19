@@ -82,8 +82,7 @@ public class BucketNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action, String resourceType ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_S3, PolicySpec.S3_CREATEBUCKET ).equals( action ) &&
-         PolicySpec.qualifiedName( PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET ).equals( resourceType ) ) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_S3, PolicySpec.S3_CREATEBUCKET ).equals( action ) ) {
       return true;
     }
     return false;

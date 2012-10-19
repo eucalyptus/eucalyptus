@@ -83,8 +83,7 @@ public class AddressNumberQuotaKey extends QuotaKey {
   
   @Override
   public boolean canApply( String action, String resourceType ) {
-    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_ALLOCATEADDRESS ).equals( action ) &&
-        PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_ADDRESS ).equals( resourceType ) ) {
+    if ( PolicySpec.qualifiedName( PolicySpec.VENDOR_EC2, PolicySpec.EC2_ALLOCATEADDRESS ).equals( action ) ) {
      return true;
    }
    return false;
