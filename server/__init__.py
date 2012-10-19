@@ -276,12 +276,10 @@ def terminateSession(id, expired=False):
 class LoginProcessor(ProxyProcessor):
     @staticmethod
     def post(web_req):
-        auth_hdr = web_req.request.headers.get('Authorization')
+        auth_hdr = web_req.get_argument('Authorization')
         if not auth_hdr:
             raise NotImplementedError("auth header not found")
-        if not auth_hdr.startswith('Basic '):
-            raise NotImplementedError("auth header in wrong format")
-        auth_decoded = base64.decodestring(auth_hdr[6:])
+        auth_decoded = base64.decodestring(auth_hdr)
         account, user, passwd = auth_decoded.split(':', 3)
         remember = web_req.get_argument("remember")
 
