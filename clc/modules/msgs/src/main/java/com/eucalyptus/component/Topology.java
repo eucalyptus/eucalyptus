@@ -95,6 +95,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
@@ -426,7 +427,7 @@ public class Topology {
       }
     }
     try {
-      ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE.fire( config );
+      ((Callback<ServiceConfiguration>)ServiceTransitions.StateCallbacks.PROPERTIES_REMOVE).fire( config );
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
       LOG.error( ex );
