@@ -205,6 +205,7 @@ public class Logs {
 	    }
 	  }
   enum LogLevel implements Callable<Boolean> {
+    ALL,
     EXHAUST {
       @Override
       String level( ) {
@@ -234,7 +235,8 @@ public class Logs {
     INFO,
     WARN,
     ERROR,
-    FATAL;
+    FATAL,
+    OFF;
     private static final String PROP_LOG_LEVEL   = "euca.log.level";
     private final Logger        logger;
     
