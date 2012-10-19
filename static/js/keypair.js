@@ -136,7 +136,15 @@
       });
       $add_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
       $add_dialog.eucadialog('buttonOnKeyup', $add_dialog.find('#key-name'), createButtonId); 
-
+      $add_dialog.eucadialog('validateOnType', '#key-name', function(val) {
+        keyName = $.trim(asText(val));
+        if (keyName == '')
+          return null;
+        if (!KEY_PATTERN.test(keyName))
+          return keypair_dialog_error_msg;
+        else
+          return null;
+      });
       $tmpl = $('html body').find('.templates #keypairImportDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       $import_dialog = $rendered.children().first();

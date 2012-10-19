@@ -245,8 +245,7 @@
             thisObj.addDialog.eucadialog('enableButton', createButtonId);
         }
       });
-      $add_dialog.eucadialog('validateOnType', '#volume-size', function() {
-        size = $volSize.val();
+      $add_dialog.eucadialog('validateOnType', '#volume-size', function(size) {
         if ( size != '' && (size != parseInt(size) || size < 1) )
           return volume_dialog_size_error_msg;
         else

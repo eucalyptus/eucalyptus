@@ -421,9 +421,10 @@
 
     validateOnType : function(fieldSelector, checkFunction) {
       var thisObj = this;
-      if (isFunction(checkFunction)) {
-        thisObj.element.find(fieldSelector).keyup( function() {
-          errorMsg = checkFunction.call();
+      var field = thisObj.element.find(fieldSelector);
+      if (field && isFunction(checkFunction)) {
+        field.keyup( function() {
+          errorMsg = checkFunction.call(this, field.val());
           if (errorMsg)
             thisObj.showFieldError(fieldSelector, errorMsg);
           else
