@@ -328,13 +328,16 @@ public class ReportingEventTest {
 
   @Test
   public void testSnapshotCreateEvent() {
-    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotCreate(4L, uuid("vol-00000001"), "vol-00000001" ), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId() );
+    final SnapShotEvent event = SnapShotEvent.with( SnapShotEvent.forSnapShotCreate(4, uuid("vol-00000001"), "vol-00000001" ), uuid("snap-00000001"), "snap-00000001", Principals.systemFullName().getUserId() );
 
     assertEquals( "uuid", uuid("snap-00000001"), event.getUuid() );
     assertEquals( "id", "snap-00000001", event.getSnapshotId() );
     assertEquals( "owner", Principals.systemFullName().getUserId(), event.getUserId() );
     assertEquals( "action info type", SnapShotEvent.CreateActionInfo.class, event.getActionInfo().getClass() );
     assertEquals( "action info action", SnapShotEvent.SnapShotAction.SNAPSHOTCREATE, event.getActionInfo().getAction() );
+    assertEquals( "action info size", Integer.valueOf(4), ((SnapShotEvent.CreateActionInfo)event.getActionInfo()).getSize() );
+    assertEquals( "action info volume id", "vol-00000001", ((SnapShotEvent.CreateActionInfo)event.getActionInfo()).getVolumeId() );
+    assertEquals( "action info volume uuid", uuid("vol-00000001"), ((SnapShotEvent.CreateActionInfo)event.getActionInfo()).getVolumeUuid() );
     assertEquals( "event string", "SnapShotEvent [actionInfo=[action:SNAPSHOTCREATE,size:4], userId=eucalyptus, snapshotId=snap-00000001, uuid=110a7f12-de63-3b1d-b5bc-ced21b270ae4]", event.toString() );
   }
 

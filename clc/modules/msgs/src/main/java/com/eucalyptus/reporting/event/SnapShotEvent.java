@@ -21,6 +21,7 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
@@ -37,11 +38,11 @@ public class SnapShotEvent implements Event {
 
   public static class CreateActionInfo extends EventActionInfo<SnapShotAction> {
     private static final long serialVersionUID = 1L;
-    private final Long size;
+    private final Integer size;
     private final String volumeId;
     private final String volumeUuid;
 
-    private CreateActionInfo( final Long size,
+    private CreateActionInfo( final Integer size,
                               final String volumeUuid,
                               final String volumeId ) {
       super( SnapShotAction.SNAPSHOTCREATE );
@@ -53,7 +54,7 @@ public class SnapShotEvent implements Event {
     /**
      * Get the size in GiB
      */
-    public Long getSize() {
+    public Integer getSize() {
       return size;
     }
 
@@ -87,10 +88,10 @@ public class SnapShotEvent implements Event {
    * @param size The snapshot size in GiB
    * @return The action info
    */
-  public static EventActionInfo<SnapShotAction> forSnapShotCreate( final Long size,
+  public static EventActionInfo<SnapShotAction> forSnapShotCreate( final Integer size,
                                                                    final String volumeUuid,
                                                                    final String volumeId ) {
-    assertThat(size, notNullValue());
+    assertThat(size, greaterThan( -1 ));
     assertThat(volumeUuid, not( isEmptyOrNullString() ));
     assertThat(volumeId, not( isEmptyOrNullString() ));
 

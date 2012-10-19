@@ -33,7 +33,7 @@ class VolumeUsageEventListenerTest {
         VolumeEvent.forVolumeCreate(),
         uuid("vol-00000001"),
         "vol-00000001",
-        1234L,
+        1234,
         Principals.systemFullName() ,
         "PARTI00"
     ), timestamp )
@@ -43,7 +43,7 @@ class VolumeUsageEventListenerTest {
     assertEquals( "Persisted event uuid", uuid("vol-00000001"), event.getUuid() )
     assertEquals( "Persisted event name", "vol-00000001", event.getVolumeId() )
     assertEquals( "Persisted event zone", "PARTI00", event.getAvailabilityZone() )
-    assertEquals( "Persisted event size", 1234L, event.getSizeGB() )
+    assertEquals( "Persisted event size", 1234, event.getSizeGB() )
     assertEquals( "Persisted event user id", Principals.systemFullName().getUserId(), event.getUserId() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -56,7 +56,7 @@ class VolumeUsageEventListenerTest {
         VolumeEvent.forVolumeDelete(),
         uuid("vol-00000001"),
         "vol-00000001",
-        1234L,
+        1234,
         Principals.systemFullName() ,
         "PARTI00"
     ), timestamp )
@@ -75,7 +75,7 @@ class VolumeUsageEventListenerTest {
         VolumeEvent.forVolumeAttach( uuid("i-00000002"), "i-00000002" ),
         uuid("vol-00000001"),
         "vol-00000001",
-        12345L,
+        12345,
         Principals.systemFullName() ,
         "PARTI00"
     ), timestamp )
@@ -84,7 +84,7 @@ class VolumeUsageEventListenerTest {
     ReportingVolumeAttachEvent event = persisted
     assertEquals( "Persisted event volume uuid", uuid("vol-00000001"), event.getVolumeUuid() )
     assertEquals( "Persisted event instance uuid", uuid("i-00000002"), event.getInstanceUuid() )
-    assertEquals( "Persisted event size", 12345L, event.getSizeGB() )
+    assertEquals( "Persisted event size", 12345, event.getSizeGB() )
     assertEquals( "Persisted event timestamp", timestamp, event.getTimestampMs() )
   }
 
@@ -96,7 +96,7 @@ class VolumeUsageEventListenerTest {
         VolumeEvent.forVolumeDetach( uuid("i-00000002"), "i-00000002" ),
         uuid("vol-00000001"),
         "vol-00000001",
-        12345L,
+        12345,
         Principals.systemFullName() ,
         "PARTI00"
     ), timestamp )
@@ -155,4 +155,5 @@ class VolumeUsageEventListenerTest {
 
   private String uuid( String seed ) {
     return UUID.nameUUIDFromBytes( seed.getBytes(Charsets.UTF_8) ).toString()
-  }}
+  }
+}

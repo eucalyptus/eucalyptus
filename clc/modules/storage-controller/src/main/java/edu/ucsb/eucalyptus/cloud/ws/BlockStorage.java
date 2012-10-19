@@ -770,17 +770,17 @@ public class BlockStorage {
 				}
 
 				if ( snapshotInfo != null ) try {
-					final long snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
+					final int snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
 					final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
 					ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
 							SnapShotEvent.forSnapShotCreate(
-									snapshotSize,
-									volumeUuid,
-									volumeId ),
-									snapshotInfo.getNaturalId(),
-									snapshotInfo.getSnapshotId(),
-									snapshotInfo.getUserName() ) ); // snapshot info user name is user id
-				} catch ( final Exception e ) {
+								snapshotSize,
+								volumeUuid,
+								volumeId ),
+							snapshotInfo.getNaturalId(),
+							snapshotInfo.getSnapshotId(),
+							snapshotInfo.getUserName() ) ); // snapshot info user name is user id
+				} catch ( final Throwable e ) {
 					LOG.error( e, e  );
 				}
 			} catch(Exception ex) {
