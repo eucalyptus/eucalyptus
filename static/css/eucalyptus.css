@@ -800,6 +800,10 @@ input[type='text'].medium-textinput {
   min-height: 400px;
 }
 
+.dataTables_processing {
+  display: none;
+}
+
 /* Ribbon headers */
 
 .box-header,
@@ -2742,28 +2746,33 @@ textarea.console-output {
 /* ======= Euca credits ======= */
 
 .euca-credits {
-  overflow: auto;
   margin: 25px 0;
-  height: 400px;
   text-align: center;
 }
 
 .euca-credits img {
   display: block;
-  margin: 10px auto;
+  margin: 10px auto 25px;
+}
+
+.animated {
+  overflow: scroll;
+  overflow-x: hidden;
+  padding-top: 15px;
+  height: 250px;
 }
 
 .euca-credits p {
-  font-size: 14px;
-  font-weight: bold;
+  margin-bottom: 0;
+  color: #02405f;
+  font-size: 16px;
+  font-family: 'PlayBold', Arial, sans-serif;
 }
 
 .euca-credits ul {
-  margin: 0 0 15px;
+  margin: 4px 0 25px;
   padding: 0;
   list-style-type: none;
+  color: #444;
 }
 
-.dataTables_processing{
-  display: none;
-}

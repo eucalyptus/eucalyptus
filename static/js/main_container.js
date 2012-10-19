@@ -52,8 +52,18 @@
            'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
          },
          afterHelpFlipped : function() {
-           $scrollable = thisObj._aboutDialog.find(".euca-credits");
-           $scrollable.animate({scrollTop : $scrollable[0].scrollHeight}, 10*1000, undefined, function() {$scrollable.stop()});
+           $scrollable = thisObj._aboutDialog.find(".animated");
+           $scrollable.css('overflow-y', 'hidden');
+           $scrollable.stop();
+           $scrollable.animate({scrollTop : 0}, 1);
+           $scrollable.animate({scrollTop : $scrollable[0].scrollHeight}, 40*1000, undefined, function() {$scrollable.stop()});
+           $scrollable.click( function() {
+             $scrollable.stop();
+             $scrollable.css('overflow-y', 'scroll');
+           });
+         },
+         beforeHelpFlipped : function() {
+           thisObj._aboutDialog.eucadialog('setDialogOption','position', 'top');
          },
          help: { content: $dialog_help },
          help_icon_class : 'help-euca',
