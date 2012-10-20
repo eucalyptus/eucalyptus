@@ -444,10 +444,6 @@ class upgrade_30_31 extends AbstractUpgradeScript {
                                it.metadata_user_name,
                                it.metadata_account_id,
                                it.metadata_account_name);
-                    phantomUserMap.put(it.metadata_user_id,
-                                       [it.metadata_user_name,
-                                        it.metadata_account_name,
-                                        it.metadata_account_id])
                 }
             }
         }
@@ -470,15 +466,36 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         try {
             AccountEntity account = null;
             try {
-                account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", acctname );
+                account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "accountNumber", acctid );
                 initMetaClass(account, AccountEntity.class);
             } catch (java.util.NoSuchElementException e) {
                 account = AccountEntity.newInstanceWithAccountNumber(acctid);
                 initMetaClass(account, AccountEntity.class);
-                phantomAcctMap.put(acctid, acctname);
-                account.setName(acctname);
+                LOG.info("setting account number to " + acctid);
+                account.setAccountNumber(acctid);
+
+                // Check for duplicate account name
+                AccountEntity dupAccount = null;
+                try {
+                    dupAccount = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", acctname );
+                    account.setName(acctname + acctid);
+                    phantomAcctMap.put(acctid, acctname + acctid);
+                    LOG.debug("Phantom: ${userid} : [ ${username}, " + acctname + acctid + ", ${acctid} ]")
+                    phantomUserMap.put(userid, [username, acctname + acctid, acctid])
+                } catch (java.util.NoSuchElementException nse) {
+                    account.setName(acctname);
+                    phantomAcctMap.put(acctid, acctname);
+                    LOG.debug("Phantom: ${userid} : [ ${username}, ${acctname}, ${acctid} ]")
+                    phantomUserMap.put(userid, [username, acctname, acctid])
+                }
                 db.add(account);
+                db.commit();
             }
+
+            db = EntityWrapper.get(AccountEntity.class);
+            account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", account.getName( ) );
+            initMetaClass(account, AccountEntity.class);
+            account.setAccountNumber(acctid);
 
             newGroup = db.recast( GroupEntity.class ).merge( newGroup );
             initMetaClass(newGroup, newGroup.class);
@@ -499,12 +516,14 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         for (String userId : phantomUserMap.keySet()) {
             // deleteUser
             EntityWrapper<AccountEntity> db = EntityWrapper.get(AccountEntity.class);
-            AccountEntity acctEnt = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", phantomUserMap[userId][1] );
+            AccountEntity acctEnt = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "accountNumber", phantomUserMap[userId][2] );
             initMetaClass(acctEnt, AccountEntity.class);
             Account acct = new DatabaseAccountProxy(acctEnt);
+            LOG.debug("Deleting user: ${userId} " + phantomUserMap[userId][0] + " acctNo " + phantomUserMap[userId][2] );
             acct.deleteUser(phantomUserMap[userId][0], true, true);
         }
         for (String acctId : phantomAcctMap.keySet()) {
+            LOG.debug("Deleting acct: ${acctId}, " + phantomAcctMap[acctId]);
             Accounts.deleteAccount(phantomAcctMap[acctId], false, true);
         }
     }
