@@ -4,9 +4,9 @@ package com.eucalyptus.troubleshooting.changelisteners;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.troubleshooting.checker.schedule.GarbageCollectionCountCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.MemoryCheckScheduler;
 
-public class GarbageCollectionCountCheckThresholdListener implements PropertyChangeListener {
+public class MemoryCheckPollTimeListener implements PropertyChangeListener {
 	/**
 	 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 	 *      java.lang.Object)
@@ -14,20 +14,14 @@ public class GarbageCollectionCountCheckThresholdListener implements PropertyCha
 	@Override
 	public void fireChange(ConfigurableProperty t, Object newValue)
 			throws ConfigurablePropertyException {
-		if (newValue == null) {
+		long pollTime = -1;
+		try {
+			pollTime = Long.parseLong((String) newValue);
+		} catch (Exception ex) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
-		} else if (!(newValue instanceof String)) {
+		}
+		if (pollTime <=0) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
-		} else {
-			long collectionCount = -1;
-			try {
-				collectionCount = Long.parseLong((String) newValue);
-			} catch (Exception ex) {
-				throw new ConfigurablePropertyException("Invalid value " + newValue);
-			}
-			if (collectionCount <= 0) {
-				throw new ConfigurablePropertyException("Invalid value " + newValue);
-			}
 		}
 		try {
 			t.getField().set(null, t.getTypeParser().apply(newValue));
@@ -38,6 +32,6 @@ public class GarbageCollectionCountCheckThresholdListener implements PropertyCha
 			e1.printStackTrace();
 			throw new ConfigurablePropertyException(e1);
 		}
-		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
+		MemoryCheckScheduler.memoryCheck();
 	}
 }

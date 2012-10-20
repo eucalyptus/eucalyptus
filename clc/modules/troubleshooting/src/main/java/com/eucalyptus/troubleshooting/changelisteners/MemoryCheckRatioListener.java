@@ -4,9 +4,9 @@ package com.eucalyptus.troubleshooting.changelisteners;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.troubleshooting.checker.schedule.GarbageCollectionCountCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.MemoryCheckScheduler;
 
-public class GarbageCollectionCountCheckPollTimeListener implements PropertyChangeListener {
+public class MemoryCheckRatioListener implements PropertyChangeListener {
 	/**
 	 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 	 *      java.lang.Object)
@@ -14,15 +14,22 @@ public class GarbageCollectionCountCheckPollTimeListener implements PropertyChan
 	@Override
 	public void fireChange(ConfigurableProperty t, Object newValue)
 			throws ConfigurablePropertyException {
-		long pollTime = -1;
-		try {
-			pollTime = Long.parseLong((String) newValue);
-		} catch (Exception ex) {
+		if (newValue == null) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
-		}
-		if (pollTime <=0) {
+		} else if (!(newValue instanceof String)) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
-		}
+		} else { 
+			String ratioStr = ((String) newValue).substring(0, ((String) newValue).length() - 1);
+			double ratio = -1.0;
+			try {
+				ratio = Double.parseDouble(ratioStr);
+			} catch (Exception ex) {
+				throw new ConfigurablePropertyException("Invalid value " + newValue);
+			}
+			if (ratio < 0 || ratio > 1) {
+				throw new ConfigurablePropertyException("Invalid value " + newValue);
+			}
+		} 
 		try {
 			t.getField().set(null, t.getTypeParser().apply(newValue));
 		} catch (IllegalArgumentException e1) {
@@ -32,6 +39,6 @@ public class GarbageCollectionCountCheckPollTimeListener implements PropertyChan
 			e1.printStackTrace();
 			throw new ConfigurablePropertyException(e1);
 		}
-		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
+		MemoryCheckScheduler.memoryCheck();
 	}
 }

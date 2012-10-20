@@ -4,9 +4,9 @@ package com.eucalyptus.troubleshooting.changelisteners;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.troubleshooting.checker.schedule.GarbageCollectionCountCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.PermGenMemoryCheckScheduler;
 
-public class GarbageCollectionCountCheckNameListener implements PropertyChangeListener {
+public class PermGenMemoryCheckPollTimeListener implements PropertyChangeListener {
 	/**
 	 * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
 	 *      java.lang.Object)
@@ -14,9 +14,13 @@ public class GarbageCollectionCountCheckNameListener implements PropertyChangeLi
 	@Override
 	public void fireChange(ConfigurableProperty t, Object newValue)
 			throws ConfigurablePropertyException {
-		if (newValue == null) {
+		long pollTime = -1;
+		try {
+			pollTime = Long.parseLong((String) newValue);
+		} catch (Exception ex) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
-		} else if (!(newValue instanceof String)) {
+		}
+		if (pollTime <=0) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
 		}
 		try {
@@ -28,6 +32,6 @@ public class GarbageCollectionCountCheckNameListener implements PropertyChangeLi
 			e1.printStackTrace();
 			throw new ConfigurablePropertyException(e1);
 		}
-		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
+		PermGenMemoryCheckScheduler.resetMXBeanMemoryCheck();
 	}
 }
