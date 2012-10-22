@@ -408,7 +408,7 @@
     // i.e.  <input id="sgroup-name" type="text" class="required" maxlength="254"/>
     //       <div id="sgroup-name-error" class="sg-error-msg"></div>
     get_validate_value : function(val_name, pattern, msg) {
-      var val = $.trim(asText(this.element.parent().find('#'+val_name).val()));
+      var val = this.getValue('#'+val_name);
       if (pattern.test(val)) {
         this.element.find("#"+val_name+"-error").html("");
         return val;
@@ -419,12 +419,21 @@
       }
     },
 
+    getValue : function(fieldSelector) {
+      var field = this.element.find(fieldSelector);
+      if (field) {
+        return asText($.trim(field.val()));
+      } else {
+        return undefined;
+      }
+    },
+
     validateOnType : function(fieldSelector, checkFunction) {
       var thisObj = this;
       var field = thisObj.element.find(fieldSelector);
       if (field && isFunction(checkFunction)) {
         field.keyup( function() {
-          errorMsg = checkFunction.call(this, field.val());
+          errorMsg = checkFunction.call(this, $.trim(field.val()));
           if (errorMsg)
             thisObj.showFieldError(fieldSelector, errorMsg);
           else

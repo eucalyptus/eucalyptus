@@ -145,7 +145,7 @@
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
                 volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = $.trim(toBase64(asText($snapshot_dialog.find('#snapshot-create-description').val())));
+                  description = toBase64(asText($.trim($snapshot_dialog.find('#snapshot-create-description').val())));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -162,10 +162,16 @@
            return dfd.promise();
          }]},
        });
-       var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
-       this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
-         return VOL_ID_PATTERN.test(asText($vol_selector.val()));
-       });
+      var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
+      this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
+        return VOL_ID_PATTERN.test(asText($vol_selector.val()));
+      });
+      this.createDialog.eucadialog('validateOnType', '#snapshot-create-description', function(description) {
+        if (description && description.length>255)
+          return long_description;
+        else
+          return null;
+      });
       // create snapshot dialog end
       // snapshot register dialog start
       var $tmpl = $('html body').find('.templates #snapshotRegDlgTmpl').clone();

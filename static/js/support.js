@@ -39,7 +39,6 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                   };
 
 var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
-var SGROUP_DESC_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,1024}$');// not sure if 1K is actual limit.
 var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
@@ -86,7 +85,7 @@ function asHTML(input) {
   return $('<div/>').append(input).html();
 }
 
-function toBase64(input){
+function toBase64(input) {
   return $.base64.encode(input);
 }
 

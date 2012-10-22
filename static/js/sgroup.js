@@ -215,8 +215,7 @@
               var name = $add_dialog.eucadialog("get_validate_value", "sgroup-name",
                                                 SGROUP_NAME_PATTERN, alphanum_warning);
               if (name == null) return;
-              var desc = $add_dialog.eucadialog("get_validate_value", "sgroup-description",
-                                                SGROUP_DESC_PATTERN, alphanum_warning);
+              var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
               if (desc == null) return;
 
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
@@ -288,7 +287,6 @@
                     thisObj._refreshRulesList(thisObj.addDialog);
         },
       });
-
       var group_ids = [];
       var results = describe('sgroup');
       if ( results ) {
@@ -410,8 +408,11 @@
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateFormAdd(createButtonId, thisDialog);
       });
-      dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-description'), createButtonId, function () {
-         thisObj._validateFormAdd(createButtonId, thisDialog);
+      dialog.eucadialog('validateOnType', '#sgroup-description', function(description) {
+        if (description && description.length>255)
+          return long_description;
+        else
+          return null;
       });
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
@@ -492,8 +493,9 @@
     _validateFormAdd : function(createButtonId, dialog) {
       var name = dialog.eucadialog("get_validate_value", "sgroup-name",
                                         SGROUP_NAME_PATTERN, alphanum_warning);
-      var desc = dialog.eucadialog("get_validate_value", "sgroup-description",
-                                        SGROUP_DESC_PATTERN, alphanum_warning);
+      var desc = dialog.eucadialog("getValue", "#sgroup-description");
+      if (desc && desc.length>255)
+          dialog.eucadialog("showFieldError", "#sgroup-description", long_description);
       var $button = dialog.parent().find('#' + createButtonId);
       if ( name == null || desc == null || name.length == 0 || desc.length == 0 )     
         $button.prop("disabled", false).addClass("ui-state-disabled");
