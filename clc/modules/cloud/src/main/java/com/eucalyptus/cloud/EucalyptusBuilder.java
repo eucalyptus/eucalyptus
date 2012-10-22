@@ -62,6 +62,8 @@
 
 package com.eucalyptus.cloud;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
@@ -81,6 +83,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Predicate;
@@ -123,6 +126,7 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       for ( Host h : Hosts.list( ) ) {
         if ( h.getHostAddresses( ).contains( config.getInetAddress( ) ) ) {
           EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.toString( ) ).info( );
+          SubDirectory.DB.getChildFile("disabled.lock").delete();
           return;
         }
       }
@@ -135,11 +139,21 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         + config.getFullName( )
         + " is not currently the coordinator "
         + Hosts.list( ) ) );
+    } else if ( config.isVmLocal() && Hosts.isCoordinator() ) {
+        SubDirectory.DB.getChildFile("data","disabled.lock").delete();
+        LOG.info("The disabled.lock file was deleted");
     }
   }
   
   @Override
-  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {}
+  public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
+      try {
+	  SubDirectory.DB.getChildFile("data", "disabled.lock").createNewFile();
+	  LOG.debug("Created the disabled.lock file"); 
+      } catch (IOException e) {
+	  LOG.debug("Unable to create the disabled.lock file"); 
+      }
+  }
   
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}

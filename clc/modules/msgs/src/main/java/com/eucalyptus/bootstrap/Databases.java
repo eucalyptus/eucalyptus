@@ -139,6 +139,7 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
@@ -255,6 +256,13 @@ public class Databases {
     
     @Override
     public boolean load( ) throws Exception {
+	
+      if( SubDirectory.DB.getChildFile("data", "disabled.lock" ).exists() ) {
+	  //TODO Add fault : FaultSubsystem.forComponent(Eucalyptus.class).havingId(1010).withVar("DISABLED_CLC", "disable.lock" ).log();
+	  LOG.error("WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE disabled.lock FILE TO PROCEED WITH RISK");
+	  System.exit(1);
+      }
+	
       Hosts.awaitDatabases( );
       Groovyness.run( "setup_dbpool.groovy" );
       OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
@@ -292,6 +300,11 @@ public class Databases {
             TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
           }
         }
+        
+        if (SubDirectory.DB.getChildFile("data","disabled.lock").createNewFile()) {
+            LOG.debug("The disabled.lock file was created.");
+        }
+        
         Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
       }
