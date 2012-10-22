@@ -126,7 +126,6 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       for ( Host h : Hosts.list( ) ) {
         if ( h.getHostAddresses( ).contains( config.getInetAddress( ) ) ) {
           EventRecord.here( EucalyptusBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.toString( ) ).info( );
-          SubDirectory.DB.getChildFile("disabled.lock").delete();
           return;
         }
       }
