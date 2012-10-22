@@ -224,6 +224,7 @@ public class Bootstrap {
     SystemCredentialsInit, /* <-- this means system credentials, not user. */
     RemoteConfiguration,
     DatabaseInit,
+    UpgradeDatabase,
     PoolInit,
     PersistenceInit,
     RemoteServicesInit,

@@ -81,11 +81,11 @@ public class SystemIds {
   }
 
   public static String createCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), BillOfMaterials.getVersion( ), subName, Signatures.SHA256withRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
   
   public static String createShortCloudUniqueName( String subName ) {
-    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), subName, Signatures.SHA1WithRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
+    return Joiner.on( "." ).join( Eucalyptus.class.getSimpleName( ), BillOfMaterials.getVersion( ), subName, Signatures.SHA1WithRSA.trySign( Eucalyptus.class, subName.getBytes( ) ) );
   }
   
   public static String cloudName( ) {

@@ -62,20 +62,26 @@
 
 package com.eucalyptus.configurable;
 
+import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 
 @Entity
 @javax.persistence.Entity
@@ -195,5 +201,26 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       return false;
     }
     return true;
+  }
+  
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_2_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          LOG.debug( "Upgrading: " + entry.getPropName( ) + "=" + entry.getValue( ) );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
   }
 }

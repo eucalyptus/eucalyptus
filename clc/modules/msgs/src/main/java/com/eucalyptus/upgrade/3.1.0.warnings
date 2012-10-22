@@ -1,0 +1,35 @@
+ls: cannot access /root/euca_builder/internal/eucalyptus/devel/*.jar: No such file or directory
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-vmware-broker-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-cloud-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-storagesan-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-core-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-config-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-msgs-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-component-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-bootstrap-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-auth-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-reporting-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-notifications-common-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-clustermgr-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-dns-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-euare-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-euare-common-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-storagecontroller-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-ws-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-postgresql-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-walrus-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-storage-common-3.1.0.jar
+Reading /root/euca_builder/internal/eucalyptus/clc/target/eucalyptus-www-3.1.0.jar
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo.volumeId
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo.scName
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo.iqn
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo.storeUser
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo.encryptedPassword
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo.encryptedPassword
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo.storeName
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo.tid
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo.lun
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo.storeUser
+Missing @Column: edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo.encryptedPassword
+Missing @Column: com.eucalyptus.component.Faults.CheckException.severity
+Missing @Column: com.eucalyptus.config.ArbitratorConfiguration.propertyPrefix

@@ -73,7 +73,6 @@
 #include <sys/stat.h>
 #include <linux/capability.h>
 #include "eucalyptus-opts.h"
-#include <eucalyptus.h>
 
 #define PRINT_NULL(x) ((x) == NULL ? "null" : (x))
 #define LIMIT_FILENO 65535
@@ -123,7 +122,38 @@ static int debug = 0;
 #define __error(format,...) do { fprintf(stderr,"[error:%04d] ", __LINE__);fprintf(stderr, format "\n", ##__VA_ARGS__ );fflush(stderr); } while(0)
 #define EUCA_MAIN "com/eucalyptus/bootstrap/SystemBootstrapper"
 #define EUCA_RET_RELOAD 123
+
+#ifndef LIBDIR
+#define LIBDIR "/usr/lib"
+#endif
+#ifndef SYSCONFDIR
+#define SYSCONFDIR "/etc"
+#endif
+#ifndef DATADIR
+#define DATADIR	"/usr/share"
+#endif
+#ifndef LIBEXECDIR
+#define LIBEXECDIR	"/usr/lib"
+#endif
+#ifndef SBINDIR
+#define SBINDIR	"/usr/sbin"
+#endif
+#ifndef LOCALSTATEDIR
+#define LOCALSTATEDIR	"/var"
+#endif
+#define EUCALYPTUS_DATA_DIR        "%s" DATADIR "/eucalyptus"
+#define EUCALYPTUS_CONF_DIR        "%s" SYSCONFDIR "/eucalyptus"
+#define EUCALYPTUS_LIB_DIR         "%s" LIBDIR "/eucalyptus"
+#define EUCALYPTUS_LIBEXEC_DIR     "%s" LIBEXECDIR "/eucalyptus"
+#define EUCALYPTUS_RUN_DIR         "%s" LOCALSTATEDIR "/run/eucalyptus"
+#define EUCALYPTUS_STATE_DIR       "%s" LOCALSTATEDIR "/lib/eucalyptus"
+#define EUCALYPTUS_LOG_DIR         "%s" LOCALSTATEDIR "/log/eucalyptus"
+#define EUCALYPTUS_ETC_DIR         EUCALYPTUS_CONF_DIR "/cloud.d"
+#define EUCALYPTUS_SCRIPT_DIR      EUCALYPTUS_ETC_DIR "/scripts"
+#define EUCALYPTUS_JAVA_LIB_DIR    EUCALYPTUS_DATA_DIR
+#define EUCALYPTUS_CLASSCACHE_DIR  EUCALYPTUS_RUN_DIR "/classcache"
 #define java_load_bootstrapper euca_load_bootstrapper
+
 void euca_load_bootstrapper(void);
 
 typedef struct {
@@ -166,7 +196,7 @@ static char *jvm_default_opts[] = {
 	    "-XX:MaxPermSize=256m",
 	    "-XX:+UseConcMarkSweepGC",
 	    "-Djava.net.preferIPv4Stack=true",
-	    "-Djava.security.policy=" EUCA_ETC_DIR "/security.policy", 
+	    "-Djava.security.policy=" EUCALYPTUS_ETC_DIR "/security.policy",
 	    "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
 	    "-Djava.awt.headless=true",
 	    "-Dsun.java.command=Eucalyptus",
