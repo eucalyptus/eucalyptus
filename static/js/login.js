@@ -51,6 +51,11 @@
           $form.find('input[name=login]').removeAttr('disabled');
       });
       $form.find('input[type=submit]').click(function(evt) {
+        $(this).attr('disabled','disabled');
+        $(this).hide();
+        $form.find('.button-bar').append(
+          $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
+
         var param = {
           account:$form.find('input[id=account]').val(),
           username:$form.find('input[id=username]').val(),
@@ -61,8 +66,11 @@
           onSuccess: function(args){
             $login.remove();
             eucalyptus.main($.eucaData);
-   	      },
+   	    },
           onError: function(args){
+            $form.find('.button-bar img').remove();
+            $form.find('.button-bar input').removeAttr('disabled');
+            $form.find('.button-bar input').show();
             thisObj.errorDialog.eucadialog('open');
             var msgdiv = thisObj.errorDialog.find("#login-error-message p")
             if (args.search("Timeout")>-1) {
