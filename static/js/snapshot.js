@@ -291,6 +291,7 @@
           url:"/ec2?Action=DeleteSnapshot",
           data:"_xsrf="+$.cookie('_xsrf')+"&SnapshotId="+snapshotId,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(snapshotId) {

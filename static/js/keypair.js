@@ -246,6 +246,7 @@
           url:"/ec2?Action=DeleteKeyPair",
           data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(keyName) {

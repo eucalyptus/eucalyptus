@@ -395,6 +395,7 @@
           url:"/ec2?Action=DeleteVolume",
           data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(volumeId) {
@@ -481,6 +482,7 @@
           url:"/ec2?Action=DetachVolume",
           data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(volumeId) {

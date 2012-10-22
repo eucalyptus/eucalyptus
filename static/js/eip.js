@@ -247,6 +247,7 @@
           url:"/ec2?Action=ReleaseAddress",
           data:"_xsrf="+$.cookie('_xsrf')+"&PublicIp="+eipId,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:false,
           cache:false,
           success:
@@ -282,6 +283,7 @@
           url:"/ec2?Action=DisassociateAddress",
           data:"_xsrf="+$.cookie('_xsrf')+"&PublicIp="+eipId,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:false,
           cache:false,
           success:
@@ -322,6 +324,7 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           cache:false,
+          timeout:PROXY_TIMEOUT,
           async:false,
           success:
             function(data, textStatus, jqXHR){

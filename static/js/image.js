@@ -45,16 +45,10 @@
 
           },
           "aoColumns": [
-            {
-              "bSortable": false,
-              "sClass": "centered-cell",
-              "fnRender": function(oObj) { 
-                return  '<a href="#" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;">' + image_launch_btn +'</a>' },
-            },
             { 
               "fnRender" : function(oObj) { 
                  return $('<div>').append($('<a>').addClass('twist').attr('href','#').text(oObj.aData.name)).html();
-              }
+              },
             },
             { 
               "fnRender": function(oObj) {
@@ -78,6 +72,13 @@
             { "mDataProp": "architecture" },
             { "mDataProp": "description" },
             { "mDataProp": "root_device_type" },
+            {
+              "bSortable": false,
+              "sClass": "centered-cell",
+              "fnRender": function(oObj) { 
+                return  '<a href="#" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;">' + image_launch_btn +'</a>' },
+              "sWidth": 80,
+            },
             {
               "bVisible": false,
               "mDataProp": "state"

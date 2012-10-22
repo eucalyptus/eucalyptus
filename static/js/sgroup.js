@@ -701,8 +701,9 @@
           url:"/ec2?Action=DeleteSecurityGroup",
           data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+sgroupName,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:"true",
-          success: (function(sgroupName) {
+          success: (function(sgroupName, refresh_table) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
