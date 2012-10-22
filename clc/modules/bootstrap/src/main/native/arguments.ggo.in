@@ -76,6 +76,10 @@ option "home"                  h   "Eucalyptus home directory."                 
 option "extra-version"         -   "Extra version string."                             string  typestr="EXTRAVERSION"    default="@EXTRA_VERSION@" no  hidden
 
 option "initialize"            -   "Perform first-time setup.  This is run one time (only!) on the first cloud controller before the first time it is run." flag                              off
+option "upgrade"               -   "Perform database upgrade procedure and exit immediately after completion.  Normally, upgrade is performed in-line with regular execution.  This flag causes upgrade to be run and then for the process to terminate.  Useful for debugging upgrade failures." flag        off     
+option "upgrade-old-version"   -   "Upgrade from specified version."                  string   typestr="VERSION"                                 no      dependon="upgrade" hidden
+option "upgrade-old-dir"       -   "Upgrade from specified directory."                string   typestr="VERSION"                                 no      dependon="upgrade" hidden
+option "upgrade-force"         -   "Skip version check to force upgrade to run again." flag                               off                            dependon="upgrade" hidden
 option "bind-addr"             i   "Specifying this option causes eucalyptus-cloud to only bind the specified local addresses.  The default behaviour is to listen on the any address while determining the user facing local address based on default route and netmask size."  string  typestr="HOSTNAME"                            optional multiple
 option "bootstrap-host"        b   "Host to be used for bootstrapping group membership.  Many can be provided.  Note this should only be necessary when UDP multicast is not available." string  typestr="HOSTNAME"                            optional multiple
 option "force-remote-bootstrap" -  "Force the system to boot as a remote component."   flag                              off                   hidden

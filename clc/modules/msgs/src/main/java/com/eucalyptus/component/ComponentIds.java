@@ -90,7 +90,7 @@ public class ComponentIds {
       T newInstance = Classes.newInstance( compIdClass );
       compIdMap.putInstance( compIdClass, newInstance );
       compIdName.put( newInstance.name( ), compIdClass );
-      LOG.debug( "Registered ComponentId: " + compIdClass.getCanonicalName( ) );
+      LOG.debug( "Registered ComponentId: " + compIdClass.toString( ) );
       return newInstance;
     } else {
       return ( T ) compIdMap.get( compIdClass );

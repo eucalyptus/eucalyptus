@@ -1,0 +1,531 @@
+AOEMetaInfo edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo hostname
+AOEMetaInfo edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo major_number
+AOEMetaInfo edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo minor_number
+AOEVolumeInfo edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo majornumber
+AOEVolumeInfo edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo minornumber
+AOEVolumeInfo edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo vbladepid
+ARecords edu.ucsb.eucalyptus.cloud.entities.ARecordInfo address
+ARecords edu.ucsb.eucalyptus.cloud.entities.ARecordInfo name
+ARecords edu.ucsb.eucalyptus.cloud.entities.ARecordInfo recordclass
+ARecords edu.ucsb.eucalyptus.cloud.entities.ARecordInfo ttl
+ARecords edu.ucsb.eucalyptus.cloud.entities.ARecordInfo zone
+auth_access_key com.eucalyptus.auth.entities.AccessKeyEntity auth_access_key_active
+auth_access_key com.eucalyptus.auth.entities.AccessKeyEntity auth_access_key_create_date
+auth_access_key com.eucalyptus.auth.entities.AccessKeyEntity auth_access_key_key
+auth_access_key com.eucalyptus.auth.entities.AccessKeyEntity auth_access_key_query_id
+auth_access_key com.eucalyptus.auth.entities.AccessKeyEntity user n-1-RELATION
+auth_account com.eucalyptus.auth.entities.AccountEntity auth_account_name
+auth_account com.eucalyptus.auth.entities.AccountEntity auth_account_number
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity actions ELEMENTCOLLECTION
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity auth_auth_effect
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity auth_auth_not_action
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity auth_auth_not_resource
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity auth_auth_type
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity resources ELEMENTCOLLECTION
+auth_auth com.eucalyptus.auth.entities.AuthorizationEntity statement n-1-RELATION
+auth_cert com.eucalyptus.auth.entities.CertificateEntity auth_certificate_active
+auth_cert com.eucalyptus.auth.entities.CertificateEntity auth_certificate_create_date
+auth_cert com.eucalyptus.auth.entities.CertificateEntity auth_certificate_id
+auth_cert com.eucalyptus.auth.entities.CertificateEntity auth_certificate_pem
+auth_cert com.eucalyptus.auth.entities.CertificateEntity auth_certificate_revoked
+auth_cert com.eucalyptus.auth.entities.CertificateEntity user n-1-RELATION
+auth_condition com.eucalyptus.auth.entities.ConditionEntity auth_condition_key
+auth_condition com.eucalyptus.auth.entities.ConditionEntity auth_condition_type
+auth_condition com.eucalyptus.auth.entities.ConditionEntity statement n-1-RELATION
+auth_condition com.eucalyptus.auth.entities.ConditionEntity values ELEMENTCOLLECTION
+auth_group com.eucalyptus.auth.entities.GroupEntity account n-1-RELATION
+auth_group com.eucalyptus.auth.entities.GroupEntity auth_group_id_external
+auth_group com.eucalyptus.auth.entities.GroupEntity auth_group_name
+auth_group com.eucalyptus.auth.entities.GroupEntity auth_group_path
+auth_group com.eucalyptus.auth.entities.GroupEntity auth_group_user_group
+auth_group com.eucalyptus.auth.entities.GroupEntity policies 1-n-RELATION
+auth_group com.eucalyptus.auth.entities.GroupEntity users n-n-RELATION
+auth_policy com.eucalyptus.auth.entities.PolicyEntity auth_policy_name
+auth_policy com.eucalyptus.auth.entities.PolicyEntity auth_policy_text
+auth_policy com.eucalyptus.auth.entities.PolicyEntity auth_policy_version
+auth_policy com.eucalyptus.auth.entities.PolicyEntity group n-1-RELATION
+auth_policy com.eucalyptus.auth.entities.PolicyEntity statements 1-n-RELATION
+auth_statement com.eucalyptus.auth.entities.StatementEntity authorizations 1-n-RELATION
+auth_statement com.eucalyptus.auth.entities.StatementEntity auth_statement_sid
+auth_statement com.eucalyptus.auth.entities.StatementEntity conditions 1-n-RELATION
+auth_statement com.eucalyptus.auth.entities.StatementEntity policy n-1-RELATION
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_confirmation_code
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_id_external
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_is_enabled
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_name
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_password
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_password_expires
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_path
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_reg_stat
+auth_user com.eucalyptus.auth.entities.UserEntity auth_user_token
+auth_user com.eucalyptus.auth.entities.UserEntity certificates 1-n-RELATION
+auth_user com.eucalyptus.auth.entities.UserEntity groups n-n-RELATION
+auth_user com.eucalyptus.auth.entities.UserEntity info ELEMENTCOLLECTION
+auth_user com.eucalyptus.auth.entities.UserEntity keys 1-n-RELATION
+broker_config com.eucalyptus.broker.vmware.VMwareBrokerInfo broker_name
+broker_config com.eucalyptus.broker.vmware.VMwareBrokerInfo vmware_config_xml
+broker_groups com.eucalyptus.cloud.ws.BrokerGroupInfo broker_group_name
+broker_groups com.eucalyptus.cloud.ws.BrokerGroupInfo broker_group_name_broker_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_account_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_broker_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_bundletaskstatename
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_cores
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_creation_date
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_datastore
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_disk
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_expiry_time
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_goal
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_host
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_image_url
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_kernel_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_kernel_url
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_key_name
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_launch_index
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_launch_time
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_mage_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_memory
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_network_index
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_owner_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_platform
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_private_ip
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_private_mac_address
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_public_ip
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_ramdisk_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_ramdisk_url
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_reservation_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_service_tag
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_state
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_state_name
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_user_data
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_user_id
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_uuid
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_vlan
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo broker_instance_vmtype_name
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo groupNames 1-n-RELATION
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo vbrs 1-n-RELATION
+broker_instances com.eucalyptus.cloud.ws.BrokerInstanceInfo volumes 1-n-RELATION
+broker_vbrs com.eucalyptus.cloud.ws.BrokerVirtualBootRecordInfo broker_vbr_format
+broker_vbrs com.eucalyptus.cloud.ws.BrokerVirtualBootRecordInfo broker_vbr_guest_device_name
+broker_vbrs com.eucalyptus.cloud.ws.BrokerVirtualBootRecordInfo broker_vbr_id
+broker_vbrs com.eucalyptus.cloud.ws.BrokerVirtualBootRecordInfo broker_vbr_resource_location
+broker_vbrs com.eucalyptus.cloud.ws.BrokerVirtualBootRecordInfo broker_vbr_size
+broker_vbrs com.eucalyptus.cloud.ws.BrokerVirtualBootRecordInfo broker_vbr_type
+broker_volumes com.eucalyptus.cloud.ws.BrokerVolumeInfo broker_volume_device
+broker_volumes com.eucalyptus.cloud.ws.BrokerVolumeInfo broker_volume_id
+broker_volumes com.eucalyptus.cloud.ws.BrokerVolumeInfo broker_volume_remote_device
+broker_volumes com.eucalyptus.cloud.ws.BrokerVolumeInfo broker_volume_status
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo bucket_creation_date
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo bucket_location
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo bucket_name
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo bucket_size
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo global_read
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo global_read_acp
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo global_write
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo global_write_acp
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo grants 1-n-RELATION
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo hidden
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo logging_enabled
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo owner_id
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo target_bucket
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo target_prefix
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo user_id
+Buckets edu.ucsb.eucalyptus.cloud.entities.BucketInfo versioning
+CHAPUserInfo edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo encryptedPassword
+CHAPUserInfo edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo username
+cloud_address_configuration com.eucalyptus.address.AddressingConfiguration config_addr_do_dynamic_public_addresses
+cloud_address_configuration com.eucalyptus.address.AddressingConfiguration config_addr_orphan_grace
+cloud_address_configuration com.eucalyptus.address.AddressingConfiguration config_addr_orphan_ticks
+cloud_address_configuration com.eucalyptus.address.AddressingConfiguration config_addr_reserved_public_addresses
+cloud_cluster_configuration com.eucalyptus.cluster.Clusters.Configuration config_cluster_interval_disabled
+cloud_cluster_configuration com.eucalyptus.cluster.Clusters.Configuration config_cluster_interval_enabled
+cloud_cluster_configuration com.eucalyptus.cluster.Clusters.Configuration config_cluster_interval_notready
+cloud_cluster_configuration com.eucalyptus.cluster.Clusters.Configuration config_cluster_interval_pending
+cloud_cluster_configuration com.eucalyptus.cluster.Clusters.Configuration config_cluster_startup_sync_retries
+cloud_cluster_configuration com.eucalyptus.cluster.Clusters.Configuration config_cluster_workers
+cloud_image_configuration com.eucalyptus.images.ImageConfiguration config_image_default_kernel_id
+cloud_image_configuration com.eucalyptus.images.ImageConfiguration config_image_default_ramdisk_id
+cloud_image_configuration com.eucalyptus.images.ImageConfiguration config_image_is_public
+cloud_vm_types com.eucalyptus.vm.VmType metadata_vm_type_cpu
+cloud_vm_types com.eucalyptus.vm.VmType metadata_vm_type_disk
+cloud_vm_types com.eucalyptus.vm.VmType metadata_vm_type_memory
+cloud_vm_types com.eucalyptus.vm.VmType metadata_vm_type_name
+CNAMERecords edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo alias
+CNAMERecords edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo name
+CNAMERecords edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo recordclass
+CNAMERecords edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo ttl
+CNAMERecords edu.ucsb.eucalyptus.cloud.entities.CNAMERecordInfo zone
+config_arbitrator com.eucalyptus.config.ArbitratorConfiguration arbitrator_gateway_host
+config_arbitrator com.eucalyptus.config.ArbitratorConfiguration propertyPrefix
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_addrs_per_net
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_alt_source_hostname
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_max_network_tag
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_min_addr
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_min_network_tag
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_min_vlan
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_network_mode
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_use_network_tags
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_vnet_netmask
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_vnet_subnet
+config_clusters com.eucalyptus.cluster.ClusterConfiguration cluster_vnet_type
+config_component_base com.eucalyptus.config.ComponentConfiguration config_component_hostname
+config_component_base com.eucalyptus.config.ComponentConfiguration config_component_name
+config_component_base com.eucalyptus.config.ComponentConfiguration config_component_partition
+config_component_base com.eucalyptus.config.ComponentConfiguration config_component_port
+config_component_base com.eucalyptus.config.ComponentConfiguration config_component_service_path
+config_partition com.eucalyptus.component.Partition config_partition_kp
+config_partition com.eucalyptus.component.Partition config_partition_name
+config_partition com.eucalyptus.component.Partition config_partition_node_kp
+config_partition com.eucalyptus.component.Partition config_partition_node_x509_certificate
+config_partition com.eucalyptus.component.Partition config_partition_x509_certificate
+config_static_property com.eucalyptus.configurable.StaticDatabasePropertyEntry config_static_field_name
+config_static_property com.eucalyptus.configurable.StaticDatabasePropertyEntry config_static_field_value
+config_static_property com.eucalyptus.configurable.StaticDatabasePropertyEntry config_static_prop_name
+config_system com.eucalyptus.config.System config_system_default_kernel
+config_system com.eucalyptus.config.System config_system_default_ramdisk
+config_system com.eucalyptus.config.System config_system_registration_id
+config_unique_ids com.eucalyptus.util.UniqueIds.PersistedCounter config_unique_ids_current_base
+config_unique_ids com.eucalyptus.util.UniqueIds.PersistedCounter config_unique_ids_name
+das_info edu.ucsb.eucalyptus.cloud.entities.DASInfo das_device
+das_info edu.ucsb.eucalyptus.cloud.entities.DASInfo storage_name
+direct_storage_info edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo storage_interface
+direct_storage_info edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo storage_name
+direct_storage_info edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo system_storage_volumes_dir
+direct_storage_info edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo zero_fill_volumes
+drbd_info edu.ucsb.eucalyptus.cloud.entities.DRBDInfo block_device
+drbd_info edu.ucsb.eucalyptus.cloud.entities.DRBDInfo resource_name
+drbd_info edu.ucsb.eucalyptus.cloud.entities.DRBDInfo walrus_name
+embedded com.eucalyptus.network.NetworkPeer networkRule PARENT
+embedded com.eucalyptus.network.NetworkPeer network_rule_peer_network_user_group
+embedded com.eucalyptus.network.NetworkPeer network_rule_peer_network_user_query_key
+embedded com.eucalyptus.reporting.modules.s3.S3SnapshotKey account_id
+embedded com.eucalyptus.reporting.modules.s3.S3SnapshotKey owner_id
+embedded com.eucalyptus.reporting.modules.s3.S3SnapshotKey timestamp_ms
+embedded com.eucalyptus.reporting.modules.s3.S3UsageData buckets_num
+embedded com.eucalyptus.reporting.modules.s3.S3UsageData objects_megs
+embedded com.eucalyptus.reporting.modules.s3.S3UsageData objects_num
+embedded com.eucalyptus.reporting.modules.storage.StorageSnapshotKey account_id
+embedded com.eucalyptus.reporting.modules.storage.StorageSnapshotKey availability_zone
+embedded com.eucalyptus.reporting.modules.storage.StorageSnapshotKey cluster_name
+embedded com.eucalyptus.reporting.modules.storage.StorageSnapshotKey owner_id
+embedded com.eucalyptus.reporting.modules.storage.StorageSnapshotKey timestamp_ms
+embedded com.eucalyptus.reporting.modules.storage.StorageUsageData snapshot_megs
+embedded com.eucalyptus.reporting.modules.storage.StorageUsageData snapshot_num
+embedded com.eucalyptus.reporting.modules.storage.StorageUsageData volumes_megs
+embedded com.eucalyptus.reporting.modules.storage.StorageUsageData volumes_num
+embedded com.eucalyptus.vm.VmBootRecord kernel n-1-RELATION
+embedded com.eucalyptus.vm.VmBootRecord machineImage n-1-RELATION
+embedded com.eucalyptus.vm.VmBootRecord metadata_vm_platform
+embedded com.eucalyptus.vm.VmBootRecord metadata_vm_sshkey
+embedded com.eucalyptus.vm.VmBootRecord metadata_vm_user_data
+embedded com.eucalyptus.vm.VmBootRecord persistentVolumes ELEMENTCOLLECTION
+embedded com.eucalyptus.vm.VmBootRecord ramdisk n-1-RELATION
+embedded com.eucalyptus.vm.VmBootRecord vmInstance PARENT
+embedded com.eucalyptus.vm.VmBootRecord vmType n-1-RELATION
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_bucket
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_error_code
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_error_msg
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_policy
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_prefix
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_progress
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_start_time
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_state
+embedded com.eucalyptus.vm.VmBundleTask metadata_vm_bundle_update_time
+embedded com.eucalyptus.vm.VmBundleTask vmInstance PARENT
+embedded com.eucalyptus.vm.VmId metadata_vm_instance_id
+embedded com.eucalyptus.vm.VmId metadata_vm_reservation_id
+embedded com.eucalyptus.vm.VmId vmInstance PARENT
+embedded com.eucalyptus.vm.VmLaunchRecord metadata_vm_launch_index
+embedded com.eucalyptus.vm.VmLaunchRecord metadata_vm_launch_time
+embedded com.eucalyptus.vm.VmLaunchRecord vmInstance PARENT
+embedded com.eucalyptus.vm.VmNetworkConfig metadata_vm_mac_address
+embedded com.eucalyptus.vm.VmNetworkConfig metadata_vm_private_address
+embedded com.eucalyptus.vm.VmNetworkConfig metadata_vm_private_addressing
+embedded com.eucalyptus.vm.VmNetworkConfig metadata_vm_private_dns
+embedded com.eucalyptus.vm.VmNetworkConfig metadata_vm_public_address
+embedded com.eucalyptus.vm.VmNetworkConfig metadata_vm_public_dns
+embedded com.eucalyptus.vm.VmNetworkConfig parent PARENT
+embedded com.eucalyptus.vm.VmPlacement metadata_vm_cluster_name
+embedded com.eucalyptus.vm.VmPlacement metadata_vm_partition_name
+embedded com.eucalyptus.vm.VmPlacement metadata_vm_placement
+embedded com.eucalyptus.vm.VmPlacement vmInstance PARENT
+embedded com.eucalyptus.vm.VmRuntimeState bundleTask EMBEDDED
+embedded com.eucalyptus.vm.VmRuntimeState createImageTask EMBEDDED
+embedded com.eucalyptus.vm.VmRuntimeState metadata_vm_password_data
+embedded com.eucalyptus.vm.VmRuntimeState metadata_vm_pending
+embedded com.eucalyptus.vm.VmRuntimeState metadata_vm_reason
+embedded com.eucalyptus.vm.VmRuntimeState metadata_vm_service_tag
+embedded com.eucalyptus.vm.VmRuntimeState reasonDetails ELEMENTCOLLECTION
+embedded com.eucalyptus.vm.VmRuntimeState vmInstance PARENT
+embedded com.eucalyptus.vm.VmUsageStats metadata_vm_block_bytes
+embedded com.eucalyptus.vm.VmUsageStats metadata_vm_network_bytes
+embedded com.eucalyptus.vm.VmUsageStats vmInstance PARENT
+embedded com.eucalyptus.vm.VmVolumeAttachment metadata_vm_vol_delete_on_terminate
+embedded com.eucalyptus.vm.VmVolumeAttachment metadata_vm_volume_attach_time
+embedded com.eucalyptus.vm.VmVolumeAttachment metadata_vm_volume_device
+embedded com.eucalyptus.vm.VmVolumeAttachment metadata_vm_volume_id
+embedded com.eucalyptus.vm.VmVolumeAttachment metadata_vm_volume_remove_device
+embedded com.eucalyptus.vm.VmVolumeAttachment metadata_vm_volume_status
+embedded com.eucalyptus.vm.VmVolumeAttachment vmInstance PARENT
+embedded com.eucalyptus.vm.VmVolumeState attachments ELEMENTCOLLECTION
+embedded com.eucalyptus.vm.VmVolumeState vmInstance PARENT
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo encryptedPassword
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo iqn
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo scName
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo size
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo snapshot_of
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo status
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo storeUser
+EquallogicVolumeInfo edu.ucsb.eucalyptus.cloud.entities.SANVolumeInfo volumeId
+faults_records com.eucalyptus.component.Faults.CheckException creation_timestamp
+faults_records com.eucalyptus.component.Faults.CheckException fault_event_epoch
+faults_records com.eucalyptus.component.Faults.CheckException fault_msg_correlation_id
+faults_records com.eucalyptus.component.Faults.CheckException fault_service_full_name
+faults_records com.eucalyptus.component.Faults.CheckException fault_service_name
+faults_records com.eucalyptus.component.Faults.CheckException fault_service_state
+faults_records com.eucalyptus.component.Faults.CheckException fault_stack_trace
+faults_records com.eucalyptus.component.Faults.CheckException fault_timestamp
+faults_records com.eucalyptus.component.Faults.CheckException id
+faults_records com.eucalyptus.component.Faults.CheckException last_update_timestamp
+faults_records com.eucalyptus.component.Faults.CheckException metadata_perm_uuid
+faults_records com.eucalyptus.component.Faults.CheckException severity
+faults_records com.eucalyptus.component.Faults.CheckException version
+Grants edu.ucsb.eucalyptus.cloud.entities.GrantInfo allow_read
+Grants edu.ucsb.eucalyptus.cloud.entities.GrantInfo allow_read_acp
+Grants edu.ucsb.eucalyptus.cloud.entities.GrantInfo allow_write
+Grants edu.ucsb.eucalyptus.cloud.entities.GrantInfo allow_write_acp
+Grants edu.ucsb.eucalyptus.cloud.entities.GrantInfo grantGroup
+Grants edu.ucsb.eucalyptus.cloud.entities.GrantInfo user_id
+Igroups edu.ucsb.eucalyptus.cloud.entities.IgroupInfo igroup_name
+Igroups edu.ucsb.eucalyptus.cloud.entities.IgroupInfo iqn
+Igroups edu.ucsb.eucalyptus.cloud.entities.IgroupInfo lun_id
+Igroups edu.ucsb.eucalyptus.cloud.entities.IgroupInfo volume_name
+ImageCache edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo bucket_name
+ImageCache edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo image_name
+ImageCache edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo in_cache
+ImageCache edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo manifest_name
+ImageCache edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo size
+ImageCache edu.ucsb.eucalyptus.cloud.entities.ImageCacheInfo use_count
+instance_usage_snapshot com.eucalyptus.reporting.modules.instance.InstanceUsageSnapshot timestamp_ms
+instance_usage_snapshot com.eucalyptus.reporting.modules.instance.InstanceUsageSnapshot total_disk_io_megs
+instance_usage_snapshot com.eucalyptus.reporting.modules.instance.InstanceUsageSnapshot total_network_io_megs
+instance_usage_snapshot com.eucalyptus.reporting.modules.instance.InstanceUsageSnapshot uuid
+ISCSIMetadata edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo hostname
+ISCSIMetadata edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo store_number
+ISCSIMetadata edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo store_prefix
+ISCSIMetadata edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo store_user
+ISCSIMetadata edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo tid
+ISCSIVolumeInfo edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo encryptedPassword
+ISCSIVolumeInfo edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo lun
+ISCSIVolumeInfo edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo storeName
+ISCSIVolumeInfo edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo storeUser
+ISCSIVolumeInfo edu.ucsb.eucalyptus.cloud.entities.ISCSIVolumeInfo tid
+metadata_device_mappings com.eucalyptus.images.BlockStorageDeviceMapping metadata_device_mapping_blockstorage_delete
+metadata_device_mappings com.eucalyptus.images.BlockStorageDeviceMapping metadata_device_mapping_blockstorage_size
+metadata_device_mappings com.eucalyptus.images.BlockStorageDeviceMapping metadata_device_mapping_blockstorage_snapshot_id
+metadata_device_mappings com.eucalyptus.images.DeviceMapping metadata_device_mapping_device_name
+metadata_device_mappings com.eucalyptus.images.DeviceMapping metadata_device_mapping_type
+metadata_device_mappings com.eucalyptus.images.DeviceMapping metadata_device_mapping_virtual_name
+metadata_device_mappings com.eucalyptus.images.DeviceMapping parent n-1-RELATION
+metadata_device_mappings com.eucalyptus.images.EphemeralDeviceMapping metadata_device_mapping_ephemeral_number
+MetaData edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo name
+MetaData edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo object_id
+MetaData edu.ucsb.eucalyptus.cloud.entities.MetaDataInfo value
+metadata_extant_network com.eucalyptus.network.ExtantNetwork indexes 1-n-RELATION
+metadata_extant_network com.eucalyptus.network.ExtantNetwork metadata_extant_network_tag
+metadata_extant_network com.eucalyptus.network.ExtantNetwork networkGroup 1-1-RELATION
+metadata_images com.eucalyptus.images.BlockStorageImageInfo metadata_image_del_vol_on_terminate
+metadata_images com.eucalyptus.images.BlockStorageImageInfo metadata_image_kernel_id
+metadata_images com.eucalyptus.images.BlockStorageImageInfo metadata_image_ramdisk_id
+metadata_images com.eucalyptus.images.BlockStorageImageInfo metadata_image_snapshot_id
+metadata_images com.eucalyptus.images.ImageInfo deviceMappings 1-n-RELATION
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_arch
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_description
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_is_public
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_name
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_platform
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_size_bytes
+metadata_images com.eucalyptus.images.ImageInfo metadata_image_type
+metadata_images com.eucalyptus.images.ImageInfo permissions ELEMENTCOLLECTION
+metadata_images com.eucalyptus.images.ImageInfo productCodes ELEMENTCOLLECTION
+metadata_images com.eucalyptus.images.MachineImageInfo metadata_image_kernel_id
+metadata_images com.eucalyptus.images.MachineImageInfo metadata_image_ramdisk_id
+metadata_images com.eucalyptus.images.PutGetImageInfo metadata_image_bundle_size
+metadata_images com.eucalyptus.images.PutGetImageInfo metadata_image_manifest_path
+metadata_images com.eucalyptus.images.PutGetImageInfo metadata_image_signature
+metadata_images com.eucalyptus.images.PutGetImageInfo metadata_image_unencrypted_checksum
+metadata_images com.eucalyptus.images.PutGetImageInfo metadata_image_unencrypted_checksum_type
+metadata_instances com.eucalyptus.vm.VmInstance bootRecord EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance launchRecord EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance metadata_vm_expiration
+metadata_instances com.eucalyptus.vm.VmInstance metadata_vm_private_networking
+metadata_instances com.eucalyptus.vm.VmInstance networkConfig EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance networkGroups n-n-RELATION
+metadata_instances com.eucalyptus.vm.VmInstance networkIndex 1-1-RELATION
+metadata_instances com.eucalyptus.vm.VmInstance placement EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance runtimeState EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance transientVolumeState EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance usageStats EMBEDDED
+metadata_instances com.eucalyptus.vm.VmInstance vmId EMBEDDED
+metadata_keypairs com.eucalyptus.keys.SshKeyPair metadata_keypair_finger_print
+metadata_keypairs com.eucalyptus.keys.SshKeyPair metadata_keypair_public_key
+metadata_network_group com.eucalyptus.network.NetworkGroup extantNetwork 1-1-RELATION
+metadata_network_group com.eucalyptus.network.NetworkGroup metadata_network_group_description
+metadata_network_group com.eucalyptus.network.NetworkGroup networkRules 1-n-RELATION
+metadata_network_indices com.eucalyptus.network.PrivateNetworkIndex extantNetwork n-1-RELATION
+metadata_network_indices com.eucalyptus.network.PrivateNetworkIndex instance 1-1-RELATION
+metadata_network_indices com.eucalyptus.network.PrivateNetworkIndex metadata_network_index
+metadata_network_indices com.eucalyptus.network.PrivateNetworkIndex metadata_network_index_bogus_id
+metadata_network_rule com.eucalyptus.network.NetworkRule ipRanges ELEMENTCOLLECTION
+metadata_network_rule com.eucalyptus.network.NetworkRule metadata_network_rule_high_port
+metadata_network_rule com.eucalyptus.network.NetworkRule metadata_network_rule_low_port
+metadata_network_rule com.eucalyptus.network.NetworkRule metadata_network_rule_protocol
+metadata_network_rule com.eucalyptus.network.NetworkRule networkPeers ELEMENTCOLLECTION
+metadata_snapshots com.eucalyptus.blockstorage.Snapshot metadata_snapshot_parentvolume
+metadata_snapshots com.eucalyptus.blockstorage.Snapshot metadata_snapshot_progress
+metadata_snapshots com.eucalyptus.blockstorage.Snapshot metadata_snapshot_vol_partition
+metadata_snapshots com.eucalyptus.blockstorage.Snapshot metadata_snapshot_vol_sc
+metadata_snapshots com.eucalyptus.blockstorage.Snapshot metadata_snapshot_vol_size
+metadata_volumes com.eucalyptus.blockstorage.Volume metadata_volume_localdevice
+metadata_volumes com.eucalyptus.blockstorage.Volume metadata_volume_parentsnapshot
+metadata_volumes com.eucalyptus.blockstorage.Volume metadata_volume_partition
+metadata_volumes com.eucalyptus.blockstorage.Volume metadata_volume_remotedevice
+metadata_volumes com.eucalyptus.blockstorage.Volume metadata_volume_sc_name
+metadata_volumes com.eucalyptus.blockstorage.Volume metadata_volume_size
+netapp_info edu.ucsb.eucalyptus.cloud.entities.NetappInfo clone_retries
+netapp_info edu.ucsb.eucalyptus.cloud.entities.NetappInfo netapp_aggregate
+netapp_info edu.ucsb.eucalyptus.cloud.entities.NetappInfo snap_percent
+netapp_info edu.ucsb.eucalyptus.cloud.entities.NetappInfo storage_name
+NSRecords edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo name
+NSRecords edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo recordClass
+NSRecords edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo target
+NSRecords edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo ttl
+NSRecords edu.ucsb.eucalyptus.cloud.entities.NSRecordInfo zone
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo bucket_name
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo content_disposition
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo content_type
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo etag
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo global_read
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo global_read_acp
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo global_write
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo global_write_acp
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo grants 1-n-RELATION
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo is_deleted
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo is_last
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo last_modified
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo metaData 1-n-RELATION
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo object_key
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo object_name
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo owner_id
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo size
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo storage_class
+Objects edu.ucsb.eucalyptus.cloud.entities.ObjectInfo version_id
+records com.eucalyptus.records.BaseRecord record_class
+records com.eucalyptus.records.BaseRecord record_code_location
+records com.eucalyptus.records.BaseRecord record_correlation_id
+records com.eucalyptus.records.BaseRecord record_creator
+records com.eucalyptus.records.BaseRecord record_extra
+records com.eucalyptus.records.BaseRecord record_level
+records com.eucalyptus.records.BaseRecord record_timestamp
+records com.eucalyptus.records.BaseRecord record_type
+records com.eucalyptus.records.BaseRecord record_user_id
+records_logs com.eucalyptus.records.LogFileRecord record_caller
+reporting_account com.eucalyptus.reporting.user.ReportingAccount account_id
+reporting_account com.eucalyptus.reporting.user.ReportingAccount account_name
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes account_id
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes availability_zone
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes cluster_name
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes instance_id
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes instance_type
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes user_id
+reporting_instance com.eucalyptus.reporting.modules.instance.InstanceAttributes uuid
+reporting_user com.eucalyptus.reporting.user.ReportingUser user_id
+reporting_user com.eucalyptus.reporting.user.ReportingUser user_name
+s3_usage_snapshot com.eucalyptus.reporting.modules.s3.S3UsageSnapshot is_all_snapshot
+s3_usage_snapshot com.eucalyptus.reporting.modules.s3.S3UsageSnapshot key EMBEDDED
+s3_usage_snapshot com.eucalyptus.reporting.modules.s3.S3UsageSnapshot usageData EMBEDDED
+san_info edu.ucsb.eucalyptus.cloud.entities.SANInfo san_host
+san_info edu.ucsb.eucalyptus.cloud.entities.SANInfo san_password
+san_info edu.ucsb.eucalyptus.cloud.entities.SANInfo san_user
+san_info edu.ucsb.eucalyptus.cloud.entities.SANInfo storage_name
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo progress
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo sc_name
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo should_transfer
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshot_name
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo snapshot_user_name
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo start_time
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo status
+Snapshots edu.ucsb.eucalyptus.cloud.entities.SnapshotInfo volume_name
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo admin
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo expires
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo minimum
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo name
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo nameserver
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo recordclass
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo refresh
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo retry
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo serialnumber
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo ttl
+SOARecords edu.ucsb.eucalyptus.cloud.entities.SOARecordInfo zone
+storage_info edu.ucsb.eucalyptus.cloud.entities.StorageInfo storage_name
+storage_info edu.ucsb.eucalyptus.cloud.entities.StorageInfo system_storage_max_volume_size_gb
+storage_info edu.ucsb.eucalyptus.cloud.entities.StorageInfo system_storage_transfer_snapshots
+storage_info edu.ucsb.eucalyptus.cloud.entities.StorageInfo system_storage_volume_size_gb
+storage_stats_info edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo number_volumes
+storage_stats_info edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo storage_name
+storage_stats_info edu.ucsb.eucalyptus.cloud.entities.StorageStatsInfo total_space_used
+storage_usage_snapshot com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot is_all_snapshot
+storage_usage_snapshot com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot key EMBEDDED
+storage_usage_snapshot com.eucalyptus.reporting.modules.storage.StorageUsageSnapshot usageData EMBEDDED
+superclass com.eucalyptus.cloud.AccountMetadata metadata_account_id
+superclass com.eucalyptus.cloud.AccountMetadata metadata_account_name
+superclass com.eucalyptus.cloud.AccountMetadata metadata_unique_name
+superclass com.eucalyptus.cloud.UserMetadata metadata_user_id
+superclass com.eucalyptus.cloud.UserMetadata metadata_user_name
+superclass com.eucalyptus.entities.AbstractPersistent creation_timestamp
+superclass com.eucalyptus.entities.AbstractPersistent id
+superclass com.eucalyptus.entities.AbstractPersistent last_update_timestamp
+superclass com.eucalyptus.entities.AbstractPersistent metadata_perm_uuid
+superclass com.eucalyptus.entities.AbstractPersistent version
+superclass com.eucalyptus.entities.AbstractStatefulPersistent metadata_display_name
+superclass com.eucalyptus.entities.AbstractStatefulPersistent metadata_last_state
+superclass com.eucalyptus.entities.AbstractStatefulPersistent metadata_state
+superclass com.eucalyptus.entities.AbstractStatefulPersistent metadata_state_change_stack
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo lodev_name
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo lofile_name
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo lv_name
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo pv_name
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo sc_name
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo size
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo snapshot_of
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo status
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo vg_name
+superclass edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo volume_name
+system_info edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration dns_domain
+system_info edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration nameserver
+system_info edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration ns_address
+system_info edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration system_registration_id
+Torrents edu.ucsb.eucalyptus.cloud.entities.TorrentInfo bucket_name
+Torrents edu.ucsb.eucalyptus.cloud.entities.TorrentInfo object_key
+Torrents edu.ucsb.eucalyptus.cloud.entities.TorrentInfo torrent_file
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo create_time
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo sc_name
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo size
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo snapshot_id
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo status
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo volume_name
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo volume_user_name
+Volumes edu.ucsb.eucalyptus.cloud.entities.VolumeInfo zone
+walrus_info edu.ucsb.eucalyptus.cloud.entities.WalrusInfo storage_cache_size_mb
+walrus_info edu.ucsb.eucalyptus.cloud.entities.WalrusInfo storage_dir
+walrus_info edu.ucsb.eucalyptus.cloud.entities.WalrusInfo storage_max_bucket_size_mb
+walrus_info edu.ucsb.eucalyptus.cloud.entities.WalrusInfo storage_max_buckets_per_user
+walrus_info edu.ucsb.eucalyptus.cloud.entities.WalrusInfo storage_snapshot_size_gb
+walrus_info edu.ucsb.eucalyptus.cloud.entities.WalrusInfo walrus_name
+WalrusSnapshots edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo size
+WalrusSnapshots edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo snapshot_bucket
+WalrusSnapshots edu.ucsb.eucalyptus.cloud.entities.WalrusSnapshotInfo snapshot_name
+walrus_stats_info edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo number_buckets
+walrus_stats_info edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo total_space_used
+walrus_stats_info edu.ucsb.eucalyptus.cloud.entities.WalrusStatsInfo walrus_name
+Zones edu.ucsb.eucalyptus.cloud.entities.ZoneInfo name

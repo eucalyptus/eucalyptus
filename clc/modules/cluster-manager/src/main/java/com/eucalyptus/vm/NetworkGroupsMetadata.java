@@ -115,7 +115,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     StringBuilder buf = new StringBuilder( );
     Multimap<String, String> networks = ArrayListMultimap.create( );
     Multimap<String, String> rules = ArrayListMultimap.create( );
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       Predicate<VmInstance> filter = Predicates.and( VmState.TERMINATED.not( ), VmState.STOPPED.not( ) );
       for ( VmInstance vm : VmInstances.list( filter ) ) {
@@ -167,9 +167,9 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
       }
       buf.append( rulesToString( rules ) );
       buf.append( groupsToString( networks ) );
-      db.rollback( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
+    } finally {
       db.rollback( );
     }
     return buf.toString( );

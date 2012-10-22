@@ -171,7 +171,7 @@ public class ImageWebBackend {
       }      
     };
     try {
-      return Transactions.filteredTransform( new ImageInfo( ), Predicates.and( inter_account_permission_filter, intra_account_permission_filter ), TO_IMAGE_SEARCH_RESULT );
+      return Transactions.filteredTransform( new ImageInfo( ), Predicates.<ImageInfo>and( inter_account_permission_filter, intra_account_permission_filter ), TO_IMAGE_SEARCH_RESULT );
     } catch ( Exception e ) {
       LOG.error( "Failed to lookup image", e );
       LOG.debug( e, e );

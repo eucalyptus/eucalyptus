@@ -62,6 +62,9 @@
 
 package com.eucalyptus.bootstrap;
 
+import groovy.sql.Sql;
+import java.io.File;
+import java.util.List;
 import java.util.Map;
 
 public interface DatabaseBootstrapper {
@@ -84,6 +87,23 @@ public interface DatabaseBootstrapper {
   boolean isRunning( );
   
   void hup( );
+  
+  List<String> listDatabases();
+
+  List<String> listTables(String database);
+
+  File backupDatabase(String name, String backupIdentifier);
+
+  void createDatabase(String name);
+
+  void deleteDatabase(String name);
+
+  void copyDatabase(String from, String to);
+  
+  void renameDatabase(String from, String to);
+
+  Sql getConnection(String database) throws Exception;  
+  
   String getDriverName( );
   
   String getJdbcDialect( );

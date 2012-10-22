@@ -21,6 +21,7 @@
 package com.eucalyptus.reporting.event;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
@@ -39,7 +40,7 @@ public class VolumeEvent implements Event {
   private final EventActionInfo<VolumeAction> actionInfo;
   private final String uuid;
   private final String volumeId;
-  private final long sizeGB;
+  private final int sizeGB;
   private final OwnerFullName ownerFullName;
   private final String availabilityZone;
 
@@ -64,7 +65,7 @@ public class VolumeEvent implements Event {
   public static VolumeEvent with( final EventActionInfo<VolumeAction> actionInfo,
                                   final String uuid,
                                   final String volumeId,
-                                  final long sizeGB,
+                                  final int sizeGB,
                                   final OwnerFullName ownerFullName,
                                   final String availabilityZone ) {
     return new VolumeEvent( actionInfo, uuid, volumeId, sizeGB, ownerFullName, availabilityZone );
@@ -73,12 +74,12 @@ public class VolumeEvent implements Event {
   private VolumeEvent( final EventActionInfo<VolumeAction> actionInfo,
                        final String uuid,
                        final String volumeId,
-                       final long sizeGB,
+                       final int sizeGB,
                        final OwnerFullName ownerFullName,
                        final String availabilityZone ) {
     assertThat(actionInfo, notNullValue());
     assertThat(uuid, not( isEmptyOrNullString() ));
-    assertThat(sizeGB, notNullValue());
+    assertThat(sizeGB, greaterThan( -1 ));
     assertThat(volumeId, not( isEmptyOrNullString() ));
     assertThat(availabilityZone, notNullValue());
     assertThat(ownerFullName.getUserId(), not( isEmptyOrNullString() ));

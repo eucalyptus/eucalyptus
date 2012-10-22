@@ -688,9 +688,9 @@ char* java_library_path(euca_opts *args) {
 	__die((strlen(GETARG(args, home)) + strlen(EUCALYPTUS_JAVA_LIB_DIR) >= 256),
 			"Directory path too long: " EUCALYPTUS_JAVA_LIB_DIR, GETARG(args, home));
 	snprintf(lib_dir, 255, EUCALYPTUS_JAVA_LIB_DIR, GETARG(args, home));
-	snprintf(etc_dir, 255, EUCA_ETC_DIR, GETARG(args, home));
-	snprintf(class_cache_dir, 255, EUCA_CLASSCACHE_DIR, GETARG(args, home));
-	snprintf(script_dir, 255, EUCA_SCRIPT_DIR, GETARG(args, home));
+	snprintf(etc_dir, 255, EUCALYPTUS_ETC_DIR, GETARG(args, home));
+	snprintf(class_cache_dir, 255, EUCALYPTUS_CLASSCACHE_DIR, GETARG(args, home));
+	snprintf(script_dir, 255, EUCALYPTUS_SCRIPT_DIR, GETARG(args, home));
 	if (!CHECK_ISDIR(lib_dir))
 		__die(1, "Can't find library directory %s", lib_dir);
 	int wb = 0;
@@ -812,6 +812,13 @@ int java_init(euca_opts *args, java_home_t *data) {
 	if (args->initialize_flag) {
 		JVM_ARG(opt[++x], "-Deuca.initialize=true");
 		JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
+	} else if (args->upgrade_flag) {
+		JVM_ARG(opt[++x], "-Deuca.upgrade=true");
+		if(args->upgrade_force_flag){
+			JVM_ARG(opt[++x], "-Deuca.upgrade.force=true");
+		}
+		JVM_ARG(opt[++x], "-Deuca.upgrade.old.dir=%1$s",GETARG(args,upgrade_old_dir));
+		JVM_ARG(opt[++x], "-Deuca.upgrade.old.version=%1$s",GETARG(args,upgrade_old_version));
 	} else {
 		if (args->remote_dns_flag) {
 			JVM_ARG(opt[++x], "-Deuca.remote.dns=true");
@@ -832,9 +839,9 @@ int java_init(euca_opts *args, java_home_t *data) {
                 JVM_ARG(opt[++x], "-Deuca.db.home=%s", GETARG(args, db_home));
         }
  
+	JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
+	JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 	if (args->debug_flag) {
-		JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
-		JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
 		JVM_ARG(opt[++x], "-Xdebug");
 		JVM_ARG(
 				opt[++x],

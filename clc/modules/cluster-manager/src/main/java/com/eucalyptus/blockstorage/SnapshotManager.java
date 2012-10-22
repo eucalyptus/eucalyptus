@@ -143,9 +143,9 @@ public class SnapshotManager {
     snap = Snapshots.startCreateSnapshot( volReady, snap );
 
     try {
-      fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize().longValue(), volReady.getNaturalId(), snap.getDisplayName() ) );
-    } catch (Exception reportEx) {
-      LOG.debug("Unable to fire snap shot creation reporting event", reportEx);
+      fireUsageEvent( snap, SnapShotEvent.forSnapShotCreate( snap.getVolumeSize(), volReady.getNaturalId(), snap.getDisplayName() ) );
+    } catch (Throwable reportEx) {
+      LOG.error("Unable to fire snap shot creation reporting event", reportEx);
     }
     
     CreateSnapshotResponseType reply = ( CreateSnapshotResponseType ) request.getReply( );
@@ -283,7 +283,7 @@ public class SnapshotManager {
     try {
       ListenerRegistry.getInstance().fireEvent(
           SnapShotEvent.with(actionInfo, snap.getNaturalId(), snap.getDisplayName(), snap.getOwner().getUserId() ));
-    } catch (final Exception e) {
+    } catch (final Throwable e) {
       LOG.error(e, e);
     }
   }
