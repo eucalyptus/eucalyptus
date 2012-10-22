@@ -66,12 +66,29 @@ function isValidIPv4Address(ipaddr) {
   }
 }
 
+function ipv4AsInteger(ipaddr) {
+  var count = 0;
+  if (IP_PATTER.test(ipaddr)) {
+    var parts = ipaddr.split(".");
+    for (var i=0; i<4; i++) {
+      var j = parseInt(parts[i]);
+      count += Math.pow(256, 3-i)*j
+    }
+    return count;
+  } else {
+    return 0;
+  }
+}
 function asText(input) {
   return input; /* we don't do any transformation at this point */
 }
 
 function asHTML(input) {
   return $('<div/>').append(input).html();
+}
+
+function toBase64(input){
+  return $.base64.encode(input);
 }
 
 function isFunction(obj) {
@@ -471,4 +488,19 @@ function setupAjax(){
    type: "POST",
    timeout: 30000,
  });
+}
+
+function doMultiAjax(array, callback){
+  if (!array || !callback)
+    return;
+  for (i = 0; i<array.length; i++){
+    $.when( 
+      (function(){ 
+        var dfd = $.Deferred();
+        callback(array[i],dfd);
+        dfd.promise();
+      })()
+    ).done(function() { ; })
+     .fail(function() { ; });
+  }
 }

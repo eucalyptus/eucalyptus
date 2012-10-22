@@ -79,7 +79,7 @@
           var $main = $('html body').find('.euca-main-outercontainer .inner-container');
           $main.login({ 'support_url' : support_url, doLogin : function(evt, args) {
               var tok = args.param.account+':'+args.param.username+':'+args.param.password;
-              var hash = $.base64.encode(tok);  // btoa(tok) --> not supported on ie9
+              var hash = toBase64(tok);  // btoa(tok) --> not supported on ie9
               var remember = (args.param.remember!=null)?"yes":"no";
 	      $.ajax({
 	        type:"POST",

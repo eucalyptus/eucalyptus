@@ -60,12 +60,88 @@
               }
             },
             { "mDataProp": "description" },
-         /*   {
-              "bSortable": false,
-              "fnRender": function(oObj) { return '<a href="#">Show rules</a>' },
-              "sWidth": "200px",
-              "sClass": "table_center_cell",
-            }*/
+            { // protocol to appear in search result
+              "bVisible": false,
+              "fnRender" : function(oObj){
+                 var groupName = oObj.aData.name;
+                 var results = describe('sgroup');
+                 var group = null;
+                 for(i in results){
+                   if (results[i].name === groupName){
+                     group = results[i];
+                     break;
+                   }
+                 }
+                 if(!group || !group.rules || group.rules.length <= 0)
+                   return '';
+                 var protocol = '';
+                 $.each(group.rules, function (idx, rule){
+                   protocol += rule['ip_protocol']+';';
+                   /*var port = rule['from_port'];
+                   if(rule['to_port'] !== rule['from_port'])
+                     port += '-'+rule['to_port']; 
+                   var type = '';
+                   if(protocol === 'icmp'){
+                    // TODO : define icmp type
+                       ;
+                   }*/
+                });
+                return protocol;
+              },
+            },  
+            { // port to appear in search result
+              "bVisible": false,
+              "fnRender" : function(oObj){
+                 var groupName = oObj.aData.name;
+                 var results = describe('sgroup');
+                 var group = null;
+                 for(i in results){
+                   if (results[i].name === groupName){
+                     group = results[i];
+                     break;
+                   }
+                 }
+                 if(!group || !group.rules || group.rules.length <= 0)
+                   return '';
+                 var port = '';
+                 $.each(group.rules, function (idx, rule){
+                   if(rule['from_port'])
+                     port += rule['from_port']+';';
+                   if(rule['to_port'])
+                     port += rule['to_port']+';';
+                 });
+                 return port;
+               }
+            },
+            { // source to appear in search result
+              "bVisible": false,
+              "fnRender" : function(oObj){
+                 var groupName = oObj.aData.name;
+                 var results = describe('sgroup');
+                 var group = null;
+                 for(i in results){
+                   if (results[i].name === groupName){
+                     group = results[i];
+                     break;
+                   }
+                 }
+                 if(!group || !group.rules || group.rules.length <= 0)
+                   return '';
+                 var src = '';
+                 $.each(group.rules, function (idx, rule){
+                   if (rule.grants && rule.grants.length > 0){
+                     for(i in rule.grants){
+                       var grant = rule.grants[i];
+                       if(grant['cidr_ip'])
+                         src += grant['cidr_ip'].replace('&#x2f;','/') + ';';
+                       else if(grant['groupName'] && grant['owner_id'])
+                         src += grant['owner_id'] + '/' + grant['groupName'] +';';
+                     }
+                   } 
+                 });
+                 return src;
+               }
+            },
           ],
         },
         text : {
@@ -612,12 +688,12 @@
       this.tableWrapper.eucatable('reDrawTable');
     },
 
+
     _deleteSelectedSecurityGroups : function () {
       var thisObj = this;
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
-      for ( i = 0; i<rowsToDelete.length; i++ ) {
-        var sgroupName = $(rowsToDelete[i]).html();
-        var refresh_table = (i == (rowsToDelete.length-1));
+      doMultiAjax(rowsToDelete, function(item, dfd){
+        var sgroupName = $(item).html();
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup",
@@ -629,20 +705,22 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
-                if (refresh_table)
-                    thisObj._getTableWrapper().eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('sgroup_delete_error', sgroupName), undefined_error);
+                dfd.reject();
               }
            }
-          })(sgroupName, refresh_table),
+          })(sgroupName),
           error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('sgroup_delete_error', sgroupName), errorThrown);
+              dfd.reject();
             }
           })(sgroupName)
         });
-      }
+      });
+      thisObj._getTableWrapper().eucatable('refreshTable');
     },
 
     _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {

@@ -21,6 +21,27 @@
     "owner_id": "072279894205"
   },
   {
+    "status": "error", 
+    "__obj_name__": "Snapshot", 
+    "description": null, 
+    "tags": {}, 
+    "start_time": "2012-06-28T16:27:05.662Z", 
+    "id": "snap-917C38D5", 
+    "volume_size": 2, 
+    "connection": [], 
+    "item": "", 
+    "volume_id": "", 
+    "progress": "100%", 
+    "region": {
+      "connection": null, 
+      "endpoint": "192.168.25.10", 
+      "name": "eucalyptus", 
+      "__obj_name__": "RegionInfo", 
+      "connection_cls": null
+    }, 
+    "owner_id": "072279894205"
+  },
+  {
     "status": "pending", 
     "__obj_name__": "Snapshot", 
     "description": null, 

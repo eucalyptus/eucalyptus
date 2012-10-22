@@ -95,7 +95,11 @@
               "fnRender" : function(oObj) {
                 return oObj.aData.platform ? oObj.aData.platform : 'linux';
               }
-            }
+            },
+            {
+              "bVisible" : false,
+              "mDataProp" : "location",
+            },
           ],
         },
         text : {

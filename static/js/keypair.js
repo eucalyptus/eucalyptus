@@ -136,7 +136,15 @@
       });
       $add_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
       $add_dialog.eucadialog('buttonOnKeyup', $add_dialog.find('#key-name'), createButtonId); 
-
+      $add_dialog.eucadialog('validateOnType', '#key-name', function(val) {
+        keyName = $.trim(asText(val));
+        if (keyName == '')
+          return null;
+        if (!KEY_PATTERN.test(keyName))
+          return keypair_dialog_error_msg;
+        else
+          return null;
+      });
       $tmpl = $('html body').find('.templates #keypairImportDlgTmpl').clone();
       $rendered = $($tmpl.render($.extend($.i18n.map, help_keypair)));
       $import_dialog = $rendered.children().first();
@@ -231,22 +239,24 @@
 
     _deleteSelectedKeyPairs : function (keysToDelete) {
       var thisObj = this;
-      for ( i = 0; i<keysToDelete.length; i++ ) {
-        var keyName = keysToDelete[i];
+      doMultiAjax(keysToDelete, function(item, dfd){
+        var keyName = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteKeyPair",
           data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(keyName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('keypair_delete_success', keyName));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('keypair_delete_error', keyName), undefined_error);
+                dfd.reject();
               }
            }
           })(keyName),
@@ -254,17 +264,19 @@
           (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('keypair_delete_error', keyName), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(keyName)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
    
     _importKeyPair : function (keyName, keyContents) {
       var thisObj = this;
       var params = "_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName;
 //    params += "&PublicKeyMaterial="+btoa(keyContents);  // sounds like btoa won't work on IE9?
-      params += "&PublicKeyMaterial="+$.base64.encode(keyContents);
+      params += "&PublicKeyMaterial="+toBase64(keyContents);
       $.ajax({
         type:"POST",
         url:"/ec2?Action=ImportKeyPair",

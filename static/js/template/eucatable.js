@@ -524,6 +524,8 @@
         return;
       if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
         return;
+      if(! $('html body').eucadata('isEnabled'))
+        return;
       this.table.fnReloadAjax();
     },
 
@@ -531,6 +533,8 @@
     // this reloads data and refresh table
     refreshTable : function() {
       if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
+        return;
+      if(! $('html body').eucadata('isEnabled'))
         return;
       this.table.fnReloadAjax();
     },

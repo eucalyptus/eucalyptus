@@ -1192,7 +1192,7 @@ tr.expanded td {
 .expanded ul li {
   float: left;
   margin: 0;
-  width: 100px;
+  width: 90px; /*100px;*/
 }
 
 .expanded ul li:last-child {

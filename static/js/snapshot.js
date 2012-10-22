@@ -145,7 +145,7 @@
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
                 volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = $.trim(asText($snapshot_dialog.find('#snapshot-create-description').val()));
+                  description = $.trim(toBase64(asText($snapshot_dialog.find('#snapshot-create-description').val())));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -183,7 +183,7 @@
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
-               var desc = asText(thisObj.regDialog.find('#snapshot-register-image-desc').val());
+               var desc = toBase64(asText(thisObj.regDialog.find('#snapshot-register-image-desc').val()));
                var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
                var windows = $checkbox.is(':checked') ? true : false; 
                thisObj._registerSnapshots(name, desc, windows);
@@ -219,7 +219,8 @@
         itemsList['create_volume'] = { "name": snapshot_action_create_volume, callback: function(key, opt) {;}, disabled: function(){ return true;} };
         itemsList['register'] = { "name": snapshot_action_register, callback: function(key, opt) {;}, disabled: function(){ return true;} }
       })();
-      if ( selectedSnapshots.length > 0 && onlyInArray('completed', selectedSnapshots)){
+
+      if ( selectedSnapshots.length > 0 && selectedSnapshots.indexOf('pending') == -1 ){
         itemsList['delete'] = { "name": snapshot_action_delete, callback: function(key, opt) { thisObj._deleteAction(); } }
       }
       
@@ -277,22 +278,24 @@
 
     _deleteListedSnapshots : function (snapshotsToDelete) {
       var thisObj = this;
-      for ( i = 0; i<snapshotsToDelete.length; i++ ) {
-        var snapshotId = snapshotsToDelete[i];
+      doMultiAjax(snapshotsToDelete, function(item, dfd){
+        var snapshotId = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSnapshot",
           data:"_xsrf="+$.cookie('_xsrf')+"&SnapshotId="+snapshotId,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(snapshotId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null,$.i18n.prop('snapshot_delete_success', snapshotId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
                 notifyError($.i18n.prop('snapshot_delete_error', snapshotId), undefined_error);
+                dfd.reject();
               }
            }
           })(snapshotId),
@@ -300,10 +303,12 @@
           (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('snapshot_delete_error', snapshotId), getErrorMessage(jqXHR));
+              dfd.reject();
             }
           })(snapshotId)
         });
-      }
+      });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _createSnapshot : function (volumeId, description) {

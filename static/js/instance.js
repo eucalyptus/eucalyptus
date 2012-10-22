@@ -63,6 +63,7 @@
               "sClass": "checkbox-cell",
             },
             { // platform
+              "bVisible" : false,
               "fnRender" : function(oObj) { 
                var result = describe('image', oObj.aData.image_id);
                if(result && result.platform) 
@@ -121,7 +122,11 @@
                  }
                  return image ? image.location.replace('&#x2f;','/') : '';
               }
-            }
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "instance_type",
+            },
           ]
         },
         text : {
@@ -742,8 +747,10 @@
 
     _detachVolume : function (force) {
       var thisObj = this;
-      $.each(thisObj.detachDialog.find("input:checked"), function(idx, checkbox){
-        var volumeId = $(checkbox).val();
+
+      var selectedVolumes = thisObj.detachDialog.find("input:checked"); 
+      doMultiAjax(selectedVolumes, function(item, dfd){
+        var volumeId = $(item).val();
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DetachVolume",
@@ -754,19 +761,22 @@
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
                 notifySuccess(null, volume_detach_success(volumeId));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                dfd.resolve();
               } else {
-                 notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
-              }
+                notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
+                dfd.reject();
+              } 
              }
            })(volumeId),
            error: (function(volumeId) {
              return function(jqXHR, textStatus, errorThrown){
                 notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
+                dfd.reject();
              }
            })(volumeId)
         });
       });
+      thisObj.tableWrapper.eucatable('refreshTable');
     },
     _associateAction : function(){
       var thisObj = this;
@@ -951,8 +961,14 @@
       var prodCode = ''; 
       if(instance['product_codes'] && instance['product_codes'].length > 0)
         prodCode = instance['product_codes'].join(' ');
-      var manifest = '';
       var image = describe('image',instance['image_id']);
+ 
+      var os = 'unknown';
+      if(image && image['platform'])
+        os = image['platform']
+      else 
+        os = 'linux';
+      var manifest = 'unknown';
       if(image && image.location)
         manifest = image.location.replace('&#x2f;','/'); 
       var $instInfo = $('<div>').addClass('instance-table-expanded-instance').addClass('clearfix').append(
@@ -962,6 +978,9 @@
           $('<li>').append( 
             $('<div>').addClass('expanded-title').text(instance_table_expanded_type),
             $('<div>').addClass('expanded-value').text(instance['instance_type'])),
+          $('<li>').append(
+            $('<div>').addClass('expanded-title').text(inst_tbl_hdr_os),
+            $('<div>').addClass('expanded-value').text(os)),
           $('<li>').append(
             $('<div>').addClass('expanded-title').text(instance_table_expanded_kernel),
             $('<div>').addClass('expanded-value').text(instance['kernel'])),

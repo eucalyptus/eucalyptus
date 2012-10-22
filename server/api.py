@@ -165,6 +165,7 @@ class ComputeHandler(server.BaseHandler):
             image_location = self.get_argument('ImageLocation', None)
             name = self.get_argument('Name')
             description = self.get_argument('Description', None)
+            description = base64.b64decode(description);
             architecture = self.get_argument('Architecture', None)
             kernel_id = self.get_argument('KernelId', None)
             ramdisk_id = self.get_argument('RamdiskId', None)
@@ -331,6 +332,7 @@ class ComputeHandler(server.BaseHandler):
         elif action == 'CreateSnapshot':
             volumeid = self.get_argument('VolumeId')
             description = self.get_argument('Description', None)
+            description = base64.b64decode(description)
             return clc.create_snapshot(volumeid, description)
         elif action == 'DeleteSnapshot':
             snapshotid = self.get_argument('SnapshotId')

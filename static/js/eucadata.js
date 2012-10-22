@@ -190,6 +190,10 @@
 
     enable : function(){
       this._enabled = true;
+    },
+
+    isEnabled : function(){
+      return this._enabled;
     }
 /**************************/ 
   });
