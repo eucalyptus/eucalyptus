@@ -96,7 +96,6 @@
         var az=$instObj.find('#dashboard-instance-az select').val();
         var results = describe('instance');
         $.each(results, function (idx, instance){
-           // TODO: check if placement is the right identifier of availability zones
           if (az==='all' || instance.placement === az ){
             if (instance.state === 'running')
               numRunning++;
