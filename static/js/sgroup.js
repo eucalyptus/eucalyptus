@@ -617,22 +617,25 @@
       var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
       for ( i = 0; i<rowsToDelete.length; i++ ) {
         var sgroupName = $(rowsToDelete[i]).html();
+        var refresh_table = (i == (rowsToDelete.length-1));
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup",
           data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+sgroupName,
           dataType:"json",
+          timeout:PROXY_TIMEOUT,
           async:"true",
-          success: (function(sgroupName) {
+          success: (function(sgroupName, refresh_table) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
                 notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                if (refresh_table)
+                    thisObj._getTableWrapper().eucatable('refreshTable');
               } else {
                 notifyError($.i18n.prop('sgroup_delete_error', sgroupName), undefined_error);
               }
            }
-          })(sgroupName),
+          })(sgroupName, refresh_table),
           error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
               notifyError($.i18n.prop('sgroup_delete_error', sgroupName), errorThrown);
