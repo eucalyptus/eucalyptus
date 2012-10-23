@@ -667,7 +667,7 @@
             thisObj.consoleDialog.data('eucadialog').option('title', newTitle);
             thisObj.consoleDialog.find('#instance-console-output').children().detach();
             thisObj.consoleDialog.find('#instance-console-output').append(
-              $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').val(consoleOutput));
+              $('<textarea>').attr('id', 'instance-console-output-text').addClass('console-output').html(consoleOutput));
             thisObj.consoleDialog.eucadialog('open');
           }else{
             notifyError($.i18n.prop('instance_console_error', instances), undefined_error);
