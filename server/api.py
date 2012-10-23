@@ -36,7 +36,8 @@ class ComputeHandler(server.BaseHandler):
                     inst['reservation_id'] = res['id']
                     inst['owner_id'] = res['owner_id']
                     inst['groups'] = res['groups']
-                    inst['group_name'] = res['groups'][0]['id']
+                    if res['groups']:
+                        inst['group_name'] = res['groups'][0]['id']
                     ret.append(inst)
         return ret
 
@@ -204,10 +205,7 @@ class ComputeHandler(server.BaseHandler):
         if action == 'DescribeInstances':
             # apply transformation of data to normalize instances
             instances = clc.get_all_instances()
-            if self.should_use_mock():
-              return instances
-            else:
-              return self.__normalize_instances__(instances)
+            return self.__normalize_instances__(instances)
         elif action == 'RunInstances':
             return self.handleRunInstances(action, clc, None)
         elif action == 'TerminateInstances':
