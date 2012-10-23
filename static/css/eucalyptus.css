@@ -750,6 +750,12 @@ input[type='text'].medium-textinput {
   margin: 20px 0 20px 10px;
 }
 
+.table-button {
+  font-size: 12px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
 
 /* ======== Content styles ======= */
 
@@ -1148,7 +1154,14 @@ tr.glow td.sorting_3 {
 tr.expanded td {
   padding: 0;
   border-top: 1px solid #a9a9a9;
-  background: #fdfdfd url(../images/expanded-row-shadows.png) no-repeat left top;
+}
+
+tr.even + tr.expanded td { 
+  background-color : #f4f4ef;
+}
+
+tr.odd + tr.expanded td { 
+  background-color : #fff;
 }
 
 .expanded-row-inner-wrapper {
