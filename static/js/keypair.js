@@ -130,7 +130,7 @@
                       }
                     }
                   },
-        'cancel': {domid: 'keys-cancel-btn', text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}},
+        'cancel': {domid: 'keys-cancel-btn', text: dialog_cancel_btn, click: function() { $add_dialog.eucadialog("close");}},
         },
         help : { content: $add_help, url: help_keypair.dialog_add_content_url, pop_height: 600 },
       });

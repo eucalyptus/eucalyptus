@@ -215,7 +215,7 @@
                 thisObj._createVolume(size, az, asText($snapshot.val()));
               } 
             }},
-           'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $add_dialog.eucadialog("close");}} 
+           'cancel': {text: dialog_cancel_btn, click: function() { $add_dialog.eucadialog("close");}} 
          },
          help: { content: $add_help , url: help_volume.dialog_add_content_url, pop_height: 500},
          on_open: {spin: true, callback: [ function(args) {

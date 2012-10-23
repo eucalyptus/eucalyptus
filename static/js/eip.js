@@ -144,7 +144,7 @@
                 }
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, click: function() { $eip_allocate_dialog.eucadialog("close"); } }
          },
          help: { content: $eip_allocate_dialog_help, url: help_eip.dialog_allocate_content_url },
        });
@@ -179,7 +179,7 @@
                }
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus: true, click: function() { $eip_associate_dialog.eucadialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, click: function() { $eip_associate_dialog.eucadialog("close"); } }
          },
          help: { content: $eip_associate_dialog_help, url: help_eip.dialog_associate_content_url },
          on_open: {spin: true, callback: function(args) {

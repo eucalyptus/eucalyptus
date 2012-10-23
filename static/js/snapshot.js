@@ -153,7 +153,7 @@
                 }
               } 
             },
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $snapshot_dialog.eucadialog("close"); } }
+           'cancel': { text: dialog_cancel_btn, click: function() { $snapshot_dialog.eucadialog("close"); } }
          },
          help: { content: $snapshot_dialog_help, url: help_snapshot.dialog_create_content_url },
          on_open: {spin: true, callback: [ function(args) {
