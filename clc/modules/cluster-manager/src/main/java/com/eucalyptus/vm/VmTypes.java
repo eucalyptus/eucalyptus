@@ -201,11 +201,11 @@ public class VmTypes {
       }
 
       if ( vmTypeList.isEmpty( ) ) {
-        db.add( new VmType( "m1.small", 1, 2, 128 ) );
-        db.add( new VmType( "c1.medium", 2, 5, 128 ) );
-        db.add( new VmType( "m1.large", 2, 10, 512 ) );
-        db.add( new VmType( "m1.xlarge", 2, 10, 1024 ) );
-        db.add( new VmType( "c1.xlarge", 4, 10, 2048 ) );
+        db.add( new VmType( "m1.small",  1,  5,  512 ) );
+        db.add( new VmType( "c1.medium", 2, 10,  512 ) );
+        db.add( new VmType( "m1.large",  2, 15, 1024 ) );
+        db.add( new VmType( "m1.xlarge", 2, 20, 2048 ) );
+        db.add( new VmType( "c1.xlarge", 4, 20, 4096 ) );
       }
       db.commit( );
     } catch ( Exception e ) {
