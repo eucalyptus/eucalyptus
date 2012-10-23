@@ -1,34 +1,12 @@
 [
-  {
-    "__obj_name__": "Zone",
-    "name": "PARTI00",
-    "item": "",
-    "state": "192.168.25.10 arn:euca:eucalyptus:PARTI00:cluster:cc_01/",
-    "messageSet": "",
-    "region": {
-      "connection": null,
-      "endpoint": "192.168.25.10",
-      "name": "eucalyptus",
-      "__obj_name__": "RegionInfo",
-      "connection_cls": null
-    },
-    "regionName": "",
-    "connection": []
-  },
-  {
-    "__obj_name__": "Zone",
-    "name": "PARTI01",
-    "item": "",
-    "state": "192.168.25.10 arn:euca:eucalyptus:PARTI00:cluster:cc_00/",
-    "messageSet": "",
-    "region": {
-      "connection": null,
-      "endpoint": "192.168.25.10",
-      "name": "eucalyptus",
-      "__obj_name__": "RegionInfo",
-      "connection_cls": null
-    },
-    "regionName": "",
-    "connection": []
-  }
+    {
+      "item": "", 
+      "state": "192.168.51.98 arn:euca:eucalyptus:PARTI00:cluster:CC_98/", 
+      "__obj_name__": "Zone", 
+      "region_name": "", 
+      "region": [], 
+      "messages": [], 
+      "connection": [], 
+      "name": "PARTI00"
+    }
 ]
