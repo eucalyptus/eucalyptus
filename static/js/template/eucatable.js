@@ -526,7 +526,7 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
-      this.table.fnReloadAjax();
+      this.table.fnReloadAjax(undefined, undefined, true);
     },
 
 /**** Public Methods ****/
@@ -536,7 +536,7 @@
         return;
       if(! $('html body').eucadata('isEnabled'))
         return;
-      this.table.fnReloadAjax();
+      this.table.fnReloadAjax(undefined, undefined, true);
     },
 
     glowRow : function(val, columnId) {
