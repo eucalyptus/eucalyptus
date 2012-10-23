@@ -538,6 +538,9 @@
         return;
       this.table.fnReloadAjax();
     },
+    // finds a row by provided id, navigates to the correct page and expends the row
+    findAndExpendRow : function(val, columnId) {
+    },
 
     glowRow : function(val, columnId) {
       var thisObj = this;

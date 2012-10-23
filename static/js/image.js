@@ -50,16 +50,7 @@
                  return $('<div>').append($('<a>').addClass('twist').attr('href','#').text(oObj.aData.name)).html();
               },
             },
-            { 
-              "fnRender": function(oObj) {
-                 var os = oObj.aData.platform ? 'windows' : 'linux';
-                 var manifest = oObj.aData.location;
-                 var desc = oObj.aData.description;
-                 var name = inferImage(manifest, desc, os); 
-                 
-                 return $('<div>').append($('<div>').addClass(name).text(os)).html();
-               },
-            },
+            { "mDataProp": "id" },
             {
               "fnRender": function(oObj) { 
                  return '<div class="table-row-status status-'+oObj.aData.state+'">&nbsp;</div>';
