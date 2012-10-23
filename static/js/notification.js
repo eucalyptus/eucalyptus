@@ -57,7 +57,7 @@
     notify : function(args) {
       var thisObj = this;
       if(args.title){
-        this.element.find('#euca-notification-title').text(args.title);
+        this.element.find('#euca-notification-title').html(args.title);
         this.element.find('#euca-notification-title').show();
       }
       else
@@ -65,7 +65,7 @@
       
       var desc = args.code ? args.desc + ' (code: '+args.code+')' : args.desc;
       if(args.desc){
-        this.element.find('#euca-notification-desc').text(desc);
+        this.element.find('#euca-notification-desc').html(desc);
         this.element.find('#euca-notification-desc').show();
       }
       else
