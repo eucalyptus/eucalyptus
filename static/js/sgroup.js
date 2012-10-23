@@ -426,6 +426,9 @@
       dialog.find('#allow-ip').keyup(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
+      dialog.find('#allow-group').keyup(function () {
+         thisObj._validateForm(createButtonId, thisDialog);
+      });
       dialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
          var thediv = dialog.find('#sgroup-more-rules');
          var sel = dialog.find('#sgroup-template');
@@ -461,11 +464,13 @@
         thisDialog.find('#allow-ip').prop('disabled', false);
         thisDialog.find('#sgroup-ip-check').prop('disabled', false);
         thisDialog.find('#allow-group').prop('disabled', true);
+        thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-allow-group').change(function () {
         thisDialog.find('#allow-ip').prop('disabled', true);
         thisDialog.find('#sgroup-ip-check').prop('disabled', true);
         thisDialog.find('#allow-group').prop('disabled', false);
+        thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-ip-check').click(function () {
         $.ajax({
@@ -517,7 +522,6 @@
       dialog.find('#sgroup-ports-error').html("");
       if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
         if (ports == '') {
-          dialog.find('#sgroup-ports-error').html(sgroup_error_port);
           enable = false;
         }
         else {
@@ -544,7 +548,10 @@
 
       if (template != 'none') {
           if (dialog.find("input[@name='allow-group']:checked").val() == 'ip') {
-            if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([1-9]|[1-3][0-9])$/.test(allow_ip))
+            if (allow_ip == "") {
+              enable = false;
+            }
+            else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([1-9]|[1-3][0-9])$/.test(allow_ip))
               dialog.find('#allow-ip-error').html("");
             else {
               dialog.find('#allow-ip-error').html(sgroup_error_address_range);
@@ -552,8 +559,8 @@
             }
           }
           else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
-            if (allow-group == '')
-                enable = false;
+            if (allow_group == '')
+              enable = false;
           }
       }
 
