@@ -281,7 +281,13 @@ class LoginProcessor(ProxyProcessor):
         if not auth_hdr:
             raise NotImplementedError("auth header not found")
         auth_decoded = base64.decodestring(auth_hdr)
-        account, user, passwd = auth_decoded.split(':', 3)
+        # this fails when passwd contains a ':', contrary to python docs
+        #account, user, passwd = auth_decoded.split(':', 3)
+        first = auth_decoded.index(':')
+        second = auth_decoded.index(':', first+1)
+        account = auth_decoded[:first]
+        user = auth_decoded[first+1:second]
+        passwd = auth_decoded[second+1:]
         remember = web_req.get_argument("remember")
 
         if config.getboolean('test', 'usemock') == False:
