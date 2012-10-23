@@ -27,6 +27,7 @@
     addDialog : null,
     editDialog : null,
     rulesList : null,
+    user_id : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
@@ -292,6 +293,9 @@
       if ( results ) {
         for( res in results) {
           var group = results[res];
+          if (group.name == "default") {
+            this.user_id = group.owner_id;
+          }
           group_ids.push(group.name);
         }
       }
@@ -628,6 +632,9 @@
                 rule.user = user_group[0];
                 rule.group = user_group[1];
             }
+            else {  // user is current user
+                rule.user = this.user_id
+            }
         }
         rule.isnew = true;
         this.rulesList.push(rule);
@@ -684,7 +691,8 @@
             if (rules[i].grants[0].cidr_ip != '')
                 rule.ipaddr = rules[i].grants[0].cidr_ip;
             if (rules[i].grants[0].group_id != '')
-                rule.group = rules[i].grants[0].group_id;
+                rule.user = rules[i].grants[0].owner_id;
+                rule.group = rules[i].grants[0].groupName;
             this.rulesList.push(rule);
         }
     },
