@@ -1,0 +1,12 @@
+[
+  {
+    "item": "", 
+    "state": "192.168.51.98 arn:euca:eucalyptus:PARTI00:cluster:CC_98/", 
+    "__obj_name__": "Zone", 
+    "region_name": "", 
+    "region": [], 
+    "messages": [], 
+    "connection": [], 
+    "name": "PARTI00"
+  }
+]

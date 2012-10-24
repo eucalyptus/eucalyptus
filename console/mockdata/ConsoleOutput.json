@@ -1,0 +1,8 @@
+{
+    "__obj_name__": "ConsoleOutput", 
+    "parent": [], 
+    "timestamp": "2012-10-23T20&#x3a;35&#x3a;40.730Z", 
+    "instance_id": "i-54F93E21", 
+    "GetConsoleOutputResponse": "", 
+    "output": "\u001b[1;256r\u001b[256;256H\u001b[6n\r\nGoogle, Inc.\r\nSerial Graphics Adapter 12/07/11\r\nSGABIOS $Id: sgabios.S 8 2010-04-22 00:03:40Z nlaredo $ (mockbuild@c6b18n1.dev.centos.org) Wed Dec  7 17:04:47 UTC 2011\r\nTerm: 80x24\r\n4 0\r\n\u001b[2J\rSeaBIOS (version seabios-0.6.1.2-19.el6)\r\r\n\r\r\n\r\n\r\r\n\r\rgPXE (http://etherboot.org) - 00:03.0 C100 PCI2.10 PnP BBS PMM07E0@10 C100\n\r\rPress Ctrl-B to configure gPXE (PCI 00:03.0)...\r\r                                                                               \r\r\n\r\r\n\r\rBooting from Hard Disk...\r\r\n\rerror: no suitable mode found.\n\r\rerror: unknown command `terminal'.\n\r"
+}

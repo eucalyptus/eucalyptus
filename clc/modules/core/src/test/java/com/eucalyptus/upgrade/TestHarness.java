@@ -199,7 +199,6 @@ public class TestHarness
 					ServiceJarDiscovery.processLibraries( );
 					ServiceJarDiscovery.runDiscovery( new ComponentDiscovery( ) );
 					StandalonePersistence.setupInitProviders();
-					StandalonePersistence.runSetupDiscovery();
 					StandalonePersistence.setupProviders();
 					StandalonePersistence.setupNewDatabase();
 				} catch (Exception e) {

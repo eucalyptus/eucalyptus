@@ -1,0 +1,2791 @@
+
+/* Add a stylesheet to normalize the rendering by different web browsers */
+
+@import "../css/normalize.css";
+
+/* ======= Common Color Codes ======= */
+
+/*
+
+Main text color: #444
+
+Grey text: #666
+
+Light grey text: #999
+
+Blue text & links: #02405f
+
+Green links: #73a434
+
+*/
+
+/* ======= Settings for PlayRegular and PlayBold fonts ======= */
+
+@font-face {
+  font-family: 'PlayRegular';
+  src: url('../fonts/play/Play-Regular-webfont.eot');
+  src: url('../fonts/play/Play-Regular-webfont.eot?#iefix') format('embedded-opentype'),
+       url('../fonts/play/Play-Regular-webfont.woff') format('woff'),
+       url('../fonts/play/Play-Regular-webfont.ttf') format('truetype'),
+       url('../fonts/play/Play-Regular-webfont.svg#PlayRegular') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'PlayBold';
+  src: url('../fonts/play/Play-Bold-webfont.eot');
+  src: url('../fonts/play/Play-Bold-webfont.eot?#iefix') format('embedded-opentype'),
+       url('../fonts/play/Play-Bold-webfont.woff') format('woff'),
+       url('../fonts/play/Play-Bold-webfont.ttf') format('truetype'),
+       url('../fonts/play/Play-Bold-webfont.svg#PlayBold') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+/* ======== Base HTML styles ======= */
+
+body {
+  margin: 0;
+  padding: 0;
+  border-top: 10px solid #02405f;
+  background: #fff;
+  color: #444;
+  font-size: 13px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+a {
+  color: #73a434;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #73a434;
+  text-decoration: underline;
+}
+
+ol li {
+  margin-bottom: .6em;
+}
+
+/* ======= Helper classes ======= */
+
+.clearfix:before,
+.clearfix:after {
+  content:"";
+  display:table;
+}
+.clearfix:after {
+  clear:both;
+}
+.clearfix {
+  zoom:1; /* For IE 6/7 (trigger hasLayout) */
+}
+
+.hide-text {
+  text-indent: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+
+/* ======== Page layout styles ======= */
+
+.euca-container {
+  /* No attributes at this time */
+}
+
+.euca-header-container {
+  background: transparent url(../images/css-sprites.png) repeat left -25px;
+  height: 50px;
+}
+
+.euca-explorer-container {
+ /* display:none;*/
+  background: transparent url(../images/css-sprites.png) repeat-x left -75px;
+
+  /* Needed so the drop shadow will appear above the next section */
+  position: relative;
+  z-index: 20;
+
+  -webkit-box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+  box-shadow: 0px 4px 7px rgba(0,0,0,0.34);
+}
+
+.euca-notification-container {
+  position: relative; /* Needed so z-index will be respected */
+  z-index: 10;
+}
+
+.euca-main-outercontainer {
+  background: #eaedee url(../images/main-bgfill.png) repeat left top;
+  min-height: 450px;
+  padding: 30px 0;
+  /* Set to a lower number than the Explorer, so the drop shadow will work */
+  z-index: 1;
+}
+
+.euca-footer-container {
+  background: transparent url(../images/footer-bgfill.png) repeat-x left top;
+  color: #999;
+  font-size: 12px;
+  margin-bottom: 20px;
+  min-height: 30px;
+  padding: 10px 0;
+}
+
+.euca-hidden-container {
+  display : none;
+}
+
+/* ==== NOTE: The inner-container class determines the content area within all major layout sections ==== */
+
+.inner-container {
+  margin: 0 auto;
+  padding: 0 10px;
+  position: relative;
+  width: 1000px;
+}
+
+.templates {
+  margin: 0 auto;
+  display: none;
+}
+
+
+/* ======== Header styles ======= */
+
+#euca-logo {
+  float: left;
+  height: 22px;
+  width: 207px;
+  margin-top: 13px;
+  background: transparent url(../images/css-sprites.png) no-repeat left 0;
+  border: none;
+}
+
+
+/* ======== Navigator styles ======= */
+
+#euca-navigator {
+  display: none;
+  position: absolute;
+  left: 235px;
+  border: 1px solid #e3e1e1;
+  border-width: 0 1px;
+}
+
+#euca-navigator.toggle-on {
+  background-color: #eceaec;
+  border-color: #ccc;
+  padding-bottom: 4px;
+}
+
+#resources-link {
+  display: none; /* Turned off the Manage resources link */
+  background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 47px;
+  margin: 0 10px 0 0;
+  padding: 0 32px 0 20px;
+  outline: 0 none;
+  text-decoration: none;
+}
+
+.toggle-on #resources-link, 
+#resources-link:hover {
+  background-position: right -50px;
+  color: #73a434;
+}
+
+
+/* ======= User and Help Header Navs ======= */
+
+#euca-help {
+  display: none;
+  float: right;
+}
+
+#euca-user {
+  display: none;
+  float: right;   
+}
+
+.header-nav {
+  border: 1px solid #e3e1e1;
+  border-width: 0 1px;
+}
+
+#euca-help .header-nav {
+  border-left: 0;
+}
+
+.header-nav,
+.header-nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.header-nav a {
+  display: block;
+  background: transparent url(../images/css-sprites-small.png) no-repeat right 0;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+  outline: 0 none;
+  padding: 17px 28px 16px 12px;
+  text-decoration: none;
+}
+
+.header-nav .toggle-on,
+.header-nav a:hover {
+  background-position: right -50px;
+  color: #73a434;
+  text-decoration: none;
+}
+
+/* ==== User and Help Submenus ==== */
+
+.header-nav ul {
+  display: none;
+  position: absolute;
+  top: 48px;
+  z-index: 25;  
+  background-color: #fff;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+}
+
+#euca-user .header-nav ul {
+  /* User nav should position, so it flys out to the left */
+  /* right: 10px;  TO-DO */
+} 
+
+.header-nav ul li {
+  border-top: 1px solid #ccc;
+  min-width: 135px;
+}
+
+.header-nav ul li:first-child {
+  border-top: 0;
+}
+
+.header-nav ul li a {
+  background-image: none;
+  padding: 9px 12px;
+}
+
+/* ======== Explorer Resource Navigation styles ======= */
+
+.resources-nav {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+} 
+
+.resources-nav li {
+  float: left;
+  width: 200px;
+  /* Needed so submenus that can be positioned absolutely */
+  position: relative;
+}
+
+.resources-nav li a {
+  display: block;
+  background-image: url(../images/resources-nav-sprites.png);
+  background-repeat: no-repeat;
+  border-left: 1px solid #e3e1e1;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1em;
+  margin: 3px 0;
+  outline: 0 none;
+  padding: 52px 0 4px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.resources-nav li:last-child a {
+  border-right: 1px solid #e3e1e1;
+}
+
+.resources-nav li:hover a,
+.resources-nav li a:hover {
+  color: #73a434;
+  text-decoration: none;
+}
+
+
+/* ==== Link specific styling (including hover and selected states) ==== */
+
+.lnk-dashboard {
+  background-position: 0 0;
+}
+.resources-nav li:hover a.lnk-dashboard,
+.lnk-dashboard:hover {
+  background-position: 0 -125px;
+}
+
+.lnk-image {
+  background-position: -200px 0;
+}
+.resources-nav li:hover a.lnk-image,
+.lnk-image:hover {
+  background-position: -200px -121px;
+}
+
+.lnk-instance {
+  background-position: -400px 0;
+}
+.resources-nav li:hover a.lnk-instance,
+.lnk-instance:hover {
+  background-position: -400px -107px;
+}
+
+.lnk-storage {
+  background-position: -600px 0;
+}
+.resources-nav li:hover a.lnk-storage,
+.resources-nav li.toggle-on a.lnk-storage,
+.lnk-storage:hover {
+  background-position: -600px -125px;
+}
+
+.lnk-netsec {
+  background-position: -800px 0;
+}
+.resources-nav li:hover a.lnk-netsec,
+.resources-nav li.toggle-on a.lnk-netsec,
+.lnk-netsec:hover {
+  background-position: -800px -129px;
+}
+
+
+/* ==== Explorer Submenus ==== */
+
+.resources-nav li ul {
+  display: none;
+  background-color: #fff;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 74px;
+  left: 0;
+  width: 192px;
+  /* Set so the submenu appears under the shadow of the parent, but above the content below it */
+  z-index: 2;
+
+  -webkit-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
+  -moz-box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50); 
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.34), inset 0px 12px 10px -9px rgba(0,0,0,0.50);
+}
+
+.resources-nav li ul li {
+  float: none;
+  width: auto;
+  border-top: 1px solid #ccc;
+}
+
+.resources-nav li ul li:first-child {
+  border-top: 0;
+}
+
+.resources-nav li:hover ul li a,
+.resources-nav li ul li a {
+  background-image: none;
+  border: 0;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  height: auto;
+  margin: 0;
+  padding: 9px 10px 9px 35px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.resources-nav li:hover ul li a:hover,
+.resources-nav li ul li a:hover {
+  color: #73a434;
+} 
+
+/* Override the border inherited from the parent menu */
+
+.resources-nav li:last-child li a,
+.resources-nav li ul li:last-child a {
+  border-right: 0;
+}
+
+/* ======= Notification bar styles ======= */
+
+
+.notification-box {
+  display: none;
+  position: absolute;
+  width: 960px;
+  min-height: 15px;
+  margin-top: 5px;
+  padding: 15px 0;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  text-align: center;
+  border: 2px solid #aaabab;
+  background-color: #fff;
+
+  border-radius: 2px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+}
+
+.success-msg {
+  border: 2px solid #aac684;
+  background-color: #E7FFC6;
+}
+
+.error-msg {
+  border: 2px solid #efa4a4;
+  background-color: #fedddf;  
+}
+
+#euca-notification-title {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 1.2em;
+}
+
+#euca-notification-desc {
+
+}
+
+#euca-notification-close a {
+  float: right;
+  position: relative;
+  top: -7px;
+  left: -10px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -270px;
+  width: 16px;
+  height: 16px;
+  text-decoration: none;
+  text-indent: -9999px;
+  outline: 0 none;
+}
+
+/* ======= Notifications ======= */
+
+.euca-notification {
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  border-style: solid;
+  border-color: black;
+}
+
+.error {
+  color: red;
+  padding: 5px;
+}
+
+.success {
+  color: green;
+  padding: 5px;
+}
+
+.hide-notification  {
+  float: right;
+}
+
+
+/* ======== Login styles ======= */
+
+#login {
+  margin: 55px auto 0;
+  padding-top: 90px;
+  min-height: 200px;
+  width: 660px;
+}
+
+#login .box-header {
+  width: 660px;
+}
+
+#login form {
+  margin: 0 35px 30px 20px;
+}
+
+.spin-wheel { /* positioning the spin-wheel during the log-in */
+  position: absolute;
+  top: 196px;
+  left: 480px;
+}
+
+.form-row {
+  margin-bottom: 10px;
+}
+
+.top-form-row {
+  /* Used to get consistent layout in the dialog boxes where there is no <p> above the first form-row */
+  margin-top: 16px;
+}
+
+.form-row label {
+  display: inline-block;
+  width: 170px;
+  margin-right: 5px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  text-align: right;
+  color: #02405f;
+}
+
+.form-row label.long-label {
+  width: 195px;
+}
+
+.form-row label.extra-long-label {
+  width: auto;
+}
+
+.form-row label.mega-long-label {
+  width: 360px;
+}
+
+#login .form-row label {
+  margin-right: 13px;
+  width: 100px;
+}
+
+.checkbox-row {
+  padding-top: 3px;
+}
+
+.checkbox-row label {
+  color: #02405f;
+  font-size: 13px;
+  font-family: 'PlayBold', Arial, sans-serif;
+}
+
+.checkbox-row input[type='checkbox'] {
+  margin: 0 2px 0 115px;
+  width: auto;
+}
+
+.checkbox-only input[type='checkbox'] { 
+  margin: 0 3px 0 177px;
+}
+
+.checkbox-only label {
+  width: auto;
+  color: #444;
+  text-align: left;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+/* Select list dropdown menus */
+
+select {
+  margin-right: 10px;
+  padding: 3px;
+  outline: 0 none;
+  font-size: 13px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+option {
+
+}
+
+textarea {
+  resize: vertical;
+}
+
+input[type='text'],
+textarea,
+.ui-widget textarea,
+.input-field,
+.dataTables_filter input {
+  padding: 6px;
+  width: 230px;
+  outline: 0 none;
+  border: 1px solid #9eb1c3;
+  border-radius: 4px;
+  background-color: #f3f6f9;
+  color: #555;
+  font-size: 12px;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+
+  -moz-box-shadow: inset 0 0 3px #a8b9c8;
+  -webkit-box-shadow: inset 0 0 3px #a8b9c8;
+  box-shadow: inset 0 0 3px #a8b9c8;
+}
+
+input[type='text']:focus,
+textarea:focus,
+.input-field:focus,
+.dataTables_filter input:focus {
+  border-color: #6699cc;
+
+  -moz-box-shadow: inset 0 0 4px #6699cc;
+  -webkit-box-shadow: inset 0 0 4px #6699cc;
+  box-shadow: inset 0 0 4px #6699cc;
+}
+
+input[type='text'].short-textinput {
+  width: 40px;
+  text-align: center;
+}
+
+input[type='text'].medium-textinput {
+  width: 185px;
+}
+
+ input[type='text'][disabled] { 
+
+  /* Used in several of the dialog modals */
+  
+  border: 1px solid #d0d0d0;
+  background-color: #fff;
+  color: #999;
+
+  -moz-box-shadow: inset 0 0 0px #6699cc;
+  -webkit-box-shadow: inset 0 0 0px #6699cc;
+  box-shadow: inset 0 0 0px #6699cc;
+ }
+
+.password-help {
+  color: #666;
+  font-size: 11px;
+  margin: 15px 240px 30px 0;
+  text-align: right;
+}
+
+.password-help a {
+  color: #73a434;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.password-help a:hover {
+  color: #73a434;
+  text-decoration: underline;
+}
+
+.button-bar {
+  text-align: right;
+}
+
+.button,
+.large-button,
+.xlarge-button,
+.actionmenu span,
+.ui-widget-content .ui-state-default {
+  display: inline-block;
+  color: #fff;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1;
+  text-decoration: none;
+  padding: 5px 24px;
+  border-radius: 5px;
+  border: 1px solid rgba(90,110,90,0.4);
+
+  background: #c8df83 url(green-gradient.svg) no-repeat 0 0;
+
+  background-image: -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: -moz-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: -o-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
+
+  -webkit-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+  -moz-box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.30);
+}
+
+.large-button,
+.ui-widget-content .ui-state-default {
+  /* Used on Login page and jQuery dialogs */
+  padding: 10px 24px;
+}
+
+.xlarge-button {
+  /* Used on Dashboard */
+  padding: 20px 24px;
+}
+
+.button:hover,
+.large-button:hover,
+.xlarge-button:hover,
+.ui-widget-content .ui-state-default:hover {
+  color: #fff;
+  text-decoration: none;
+
+  background: #c8df83 url(green-gradient-hover.svg) no-repeat 0 0;
+
+  background-image: -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
+}
+
+/* An additional button class used in dialog sections */
+
+.section-button {
+  font-size: 14px;
+}
+
+.section-button-bar {
+  margin: 20px 0 20px 10px;
+}
+
+.table-button {
+  font-size: 12px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+
+/* ======== Content styles ======= */
+
+.content-box,
+.euca-dialog-container {
+  background-color: #fff;
+  border: 1px solid #aaabab;
+  min-height: 285px;
+  margin: 0 8px;
+  padding-top: 95px;
+  position: relative;
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30), inset 0 1px 4px rgba(44,46,50,0.32);
+}
+
+/* This style of container box is used on several classes */
+/* Grouped here to make global changes. Differences are usually just margin and padding */
+
+/* TODO: See if a common class could be used on some of them */
+
+.page-content-box,
+.dataTables_wrapper, 
+.wizard-summary,
+.launcher-wrapper,
+.help-page-wrapper {
+  position: relative;
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+  margin: 0 8px 35px;
+  padding: 47px 0 10px 0; 
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.30);
+}
+
+.dataTables_wrapper {
+  min-height: 400px;
+}
+
+.dataTables_processing {
+  display: none;
+}
+
+/* Ribbon headers */
+
+.box-header,
+.euca-table-header,
+.euca-dialog-container .ui-dialog-titlebar {
+  background-color: #eaf2f5;
+  border-top: 1px solid #e2e0e0;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 18px;
+  font-weight: normal;
+  line-height: 18px;
+  min-height: 22px;
+  margin: 0 0 20px;
+  position: absolute;
+  top: 14px;
+  left: -8px;
+  padding: 6px 8px 4px;
+  width: 100%;
+
+  -webkit-box-shadow: 0px 2px 3px rgba(3,3,3,0.3);
+  -moz-box-shadow: 0px 2px 3px rgba(3,3,3,0.3);
+  box-shadow: 0px 2px 3px rgba(3,3,3,0.3);    
+}
+
+/* Ribbon corners */
+
+.box-header::before,
+.box-header::after,
+.euca-table-header::before,
+.euca-table-header::after,
+.euca-dialog-container .ui-dialog-titlebar::before,
+.euca-dialog-container .ui-dialog-titlebar::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 9px;
+  position: absolute;
+  bottom: -9px;
+  text-indent: -9999px;
+  /* z-index: -10;
+   border: 8px solid;
+  border-color: #023149 transparent transparent transparent; */
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -130px;   
+}
+.box-header::before,
+.euca-table-header::before,
+.euca-dialog-container .ui-dialog-titlebar::before {
+    left: 0;
+}
+.box-header::after,
+.euca-table-header::after,
+.euca-dialog-container .ui-dialog-titlebar::after {
+  right: 0;
+  background-position: right -130px;
+}
+
+/* Differences for the ui-dialog-titlebar ribbon corner positioning */
+
+.euca-dialog-container .ui-dialog-titlebar::before {
+    left: -1px;
+}
+
+.euca-dialog-container .ui-dialog-titlebar::after {
+  right: -1px;
+  background-position: right -130px;
+}
+
+
+.box-header p,
+.box-header span,
+.euca-table-header span {
+  margin: 0;
+  padding-left: 35px;
+  line-height: 1em;
+}
+
+.inner-box {
+  padding: 10px;
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  -webkit-box-shadow: inset 0 0 7px rgba(44,46,50,0.40);
+  -moz-box-shadow: inset 0 0 7px rgba(44,46,50,0.40);
+  box-shadow: inset 0 0 7px rgba(44,46,50,0.40);
+}
+
+#euca-main-container {
+  display: none;
+}
+
+/* ======= Dashboard ======= */
+
+#dashboard-page {
+  padding: 75px 30px 30px;
+  font-size: 14px;
+}
+
+.inner-box h3 {
+  position: absolute;
+  top: 9px;
+  left: -9px;
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: normal;
+  color: #02405f;
+  margin: 0;
+  padding: 1px 0 9px 20px;
+  width: 170px;
+}
+
+#dashboard-instance-az {
+  float: left;
+  margin: 15px 0 0 10px;
+  padding: 10px 25px 0 10px;
+}
+
+#dashboard-instance-az select {
+  margin-right: 0;
+  width: 190px;
+}
+
+.db-instances-running,
+.db-instances-stopped {
+  float: left;
+  background: transparent url(../images/css-sprites.png) no-repeat left -200px;
+  margin-top: 10px;
+}
+
+.db-instances-stopped {
+  background-position: -150px -200px;
+}
+
+.db-instances-running .status-readout,
+.db-instances-stopped .status-readout {
+  margin: 5px 0 5px 30px;
+}
+
+#dashboard-instance-launch {
+  position: absolute;
+  top: 2px;
+  left: 638px;
+  height: 120px;
+  border-left: 2px solid #ecebeb;
+}
+
+#dashboard-instance-launch a {
+  margin: 32px 0 0 35px;
+}
+
+#dashboard-instance-img,
+#dashboard-storage-img,
+#dashboard-netsec-img {
+  float: left;
+  margin: 2px 18px 0 0;
+  height: 87px;
+  width: 110px;
+  background: transparent url(../images/css-sprites.png) no-repeat -150px -325px;
+}
+
+#dashboard-instance-img {
+  margin-right: 0;
+}
+
+#dashboard-storage-img {
+  background-position: 0 -425px;
+}
+
+#dashboard-netsec-img {
+  background-position: -150px -425px;
+}
+
+.instances,
+.storage,
+.netsec,
+.groups,
+.rules {
+  position: relative;
+  padding-top: 25px;
+}
+
+.instances {
+  margin-bottom: 30px;
+  height: 90px;
+}
+
+.storage,
+.netsec {
+  float: left;
+  width: 40%;
+  min-height: 85px; 
+}
+
+.netsec {
+  float: right;
+  width: 52%;
+}
+
+.status-readout {
+  float:left;
+  color: #02405f;
+  font-size: 13px;
+  margin: 15px 5px 0 0;
+  text-align: center;
+  width: 95px;
+}
+ 
+.status-readout span {
+  display: block;
+  color: #222;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+a:hover .status-readout,
+a:hover .status-readout span {
+  color: #73a434;
+}
+
+.status-readout img {
+  display: inline-block;
+  /* Margin will need to change if a different indicator image is used */
+  margin: 11px auto 8px;
+}
+
+
+/* ======= jQuery table style overrides ======= */
+
+.dataTables_wrapper {
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
+  margin: 0 8px 35px;
+  padding: 47px 0 12px 0; 
+}
+
+table.display {
+  background-color: #fff;
+  border: 1px solid #dae2e8;
+  border-width: 1px 0;
+}
+
+table.display thead th {
+  padding: 8px 19px 8px 19px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 11px;
+  font-weight: normal;
+  color: #7aa92a;
+  text-transform: uppercase;
+  border: 1px solid #dae2e8;
+  border-width: 2px 0 2px;
+  background: transparent url(../images/table-header-bg.png) repeat-x left center;
+}
+
+table.display thead th.sorting_asc {
+  background: transparent url(../images/table-header-sort-asc.png) no-repeat left center;
+}
+
+table.display thead th.sorting_desc {
+  background: transparent url(../images/table-header-sort-desc.png) no-repeat left center;
+}
+
+table.display tr.heading2 td {
+  /*border-bottom: 1px solid #aaa;*/
+}
+
+table.display td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 11px;
+  text-align: center;
+}
+
+table.display td.dataTables_empty {
+  padding: 10px;
+}
+
+tr.odd,
+tr.odd td.sorting_1 {
+  background-color: #fff;
+}
+
+tr.even,
+tr.even td.sorting_1 {
+  background-color: #f4f4ef;
+}
+
+.table_center_cell {
+  text-align: center;
+}
+
+tr.selected-row,
+tr.selected-row td.sorting_1
+ {
+  background-color: #f1ffe3;
+}
+
+.checkbox-cell,
+table.display thead th.checkbox-cell {
+  width: 20px;
+  padding: 0;
+  text-align: center;
+}
+
+.narrow-cell {
+  width: 20px;
+}
+
+.centered-cell {
+  text-align: center;
+}
+
+tr.glow td,
+tr.glow td.sorting_1,
+tr.glow td.sorting_2,
+tr.glow td.sorting_3 {
+  background-color: #ffffdc;
+}
+
+/* ======= Expanded rows of the jQuery tables ======= */
+
+/* Have to target these instances specifically, as the same class is used elsewhere */
+
+.dataTables_wrapper .twist {
+  display: inline-block;
+  padding: 3px 0 3px 20px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -615px;
+  outline: 0 none;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: left;
+}
+
+.dataTables_wrapper .twist.expanded {
+   background-color: transparent;
+   background-position: left -645px;
+}
+
+tr.expanded td {
+  padding: 0;
+  border-top: 1px solid #a9a9a9;
+}
+
+tr.even + tr.expanded td { 
+  background-color : #f4f4ef;
+}
+
+tr.odd + tr.expanded td { 
+  background-color : #fff;
+}
+
+.expanded-row-inner-wrapper {
+  padding: 0 10px 8px;
+  border-bottom: 1px solid #a9a9a9;
+  background: transparent url(../images/expanded-row-shadows.png) no-repeat right bottom;
+  text-align: left;
+}
+
+.expanded-section-label,
+.rule-label {
+  padding: 8px 3px 2px;
+  color: #02405f;
+  font-weight: bold;
+  font-size: 12px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.rule-label {
+  float: left;
+  padding: 0 3px;
+  width: 60px;
+}
+
+.expanded-section-content {
+  float: left;
+}
+
+.sgroup-expanded-rule {
+  float: left;
+  width: 460px;
+}
+
+.expanded ul {
+  float: left;
+  margin: 0 0 5px;
+  padding: 0;
+  list-style-type: none;
+}
+
+.expanded ul li {
+  float: left;
+  margin: 0;
+  width: 90px; /*100px;*/
+}
+
+.expanded ul li:last-child {
+  width: 320px;
+}
+
+ul.volume-expanded li:last-child {
+  width: 200px;
+}
+
+ul.rule-expanded li:last-child {
+  width: 250px;
+}
+
+ul.image-expanded li:nth-child(3),
+ul.kernel-expanded li:nth-child(3),
+ul.ramdisk-expanded li:nth-child(3) {
+  width: 130px;
+}
+
+ul.image-expanded li:nth-child(4),
+ul.kernel-expanded li:nth-child(4),
+ul.ramdisk-expanded li:nth-child(4) {
+  width: 320px;
+}
+
+ul.image-expanded li:nth-child(5),
+ul.kernel-expanded li:nth-child(5),
+ul.ramdisk-expanded li:nth-child(5) {
+  width: 260px;
+}
+
+.expanded-title {
+  padding: 0 4px;
+  color: #02405f;
+  font-size: 10px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.expanded-value {
+  padding: 0 4px;
+}
+
+/* ======= Help page related ===== */
+
+.help-page-wrapper {
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
+  margin: 0 8px 35px;
+  padding: 40px 5px 15px; 
+}
+
+/* This class is added to the body tag of every help file */
+.help-page-body {
+  padding: 0 25px 20px;
+}
+
+/* To override the background-color inline style added by the jQuery Flip */
+#volumes-table,
+#keys-table,
+#eip-table,
+#sgroups-table,
+#instances-table,
+#snapshot-table,
+#images-table {
+  background-color: transparent !important;
+}
+
+.help-link,
+.help-return,
+.help-euca,
+.help-popout {
+  position: absolute;
+  top: 4px;
+  right: 25px;
+}
+
+.help-popout {
+  right: 60px;
+}
+
+.help-link a,
+.help-return a,
+.help-euca a,
+.help-popout a {
+  display: inline-block;
+  overflow: hidden;
+  width: 24px;
+  height: 24px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left -150px;
+  text-indent: 100%;
+  white-space: nowrap;
+}
+
+.help-return a {
+  background-position: left -180px;
+}
+
+.help-euca a {
+  background-position: left -700px;
+}
+
+.help-popout a {
+  background-position: left -210px;
+}
+
+.help-content {
+  padding: 10px 20px 20px;
+}
+
+.help-revert-button {
+  float: right;
+  padding: 0 25px 5px 0;
+}
+
+.dialog-inner-content .help-revert-button {
+  padding: 0 0 10px 0;
+}
+
+/* ==== Page help and dialog help content ==== */
+
+.dialog-help-content {
+  padding: 0 5px;
+}
+
+.dialog-help-content h1,
+.help-content h1,
+.dialog-help-content h2,
+.help-content h2,
+.help-page-body h1,
+.help-page-body h2 {
+  color: #02405f;
+  font-weight: normal;
+  font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.help-content h1,
+.help-page-body h1 {
+  font-size: 28px;
+  margin: .3em 0 .2em;
+}
+
+.help-content h2,
+.help-page-body h2 {
+  font-size: 22px;
+  margin: .8em 0 0;
+}
+
+.help-content p,
+.help-page-body p {
+  margin: 0 0 1em;
+}  
+
+.dialog-help-content h1 {
+  font-size: 24px;
+  margin: .7em 0 0;
+}
+
+.dialog-help-content h2 {
+  font-size: 20px;
+}
+
+.dialog-help-content p {
+  margin: .3em 0 1em;
+}  
+
+/* ==== Search and optional filters will appear before the table ==== */
+
+/* == Optional filters == */
+
+.table-filter-wrapper {
+  padding: 12px 15px;
+  min-height: 31px;
+  background: transparent url(../images/css-sprites.png) repeat-x left -530px;
+}
+
+.euca-table-filter {
+  float: left;
+}
+
+.filter-label {
+  padding-right: 5px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  color: #02405F;
+}
+
+/* == Search == */
+
+.dataTables_filter {
+  width: auto;
+}
+
+.dataTables_filter label {
+  margin-right: 10px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  color: #02405f;
+}
+
+.dataTables_filter input {
+  /* This element shares styling with .input-field */
+  background: transparent url(../images/css-sprites-small.png) no-repeat right -294px;
+  margin-left: 3px;
+  width: 174px;
+}
+
+.table-refresh {
+  display: inline-block;
+  margin: 0;
+  padding-left: 23px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 27px;
+  color: #73a434;
+  background: transparent url(../images/css-sprites-small.png) no-repeat 0 -236px;
+  text-decoration: none;
+}
+
+.table-refresh:hover {
+  text-decoration: underline;
+}
+
+/* ==== Create/Add buttons and menus, and the results and table size selector ==== */
+
+.euca-table-length {
+  padding: 10px 10px 10px 15px;
+}
+
+/* == Table add and action menu  == */
+
+.euca-table-add {
+  float: left;
+}
+
+.euca-table-extra {
+  float: left;
+  margin-left: 15px;
+}
+
+.euca-table-action {
+  float: left;
+}
+
+.actionmenu {
+  position: relative;
+  margin-left: 15px;
+  z-index: 10;
+}
+
+.actionmenu a.button {
+
+  /* These are the differences from the button styles in order to accomodate the arrow */
+  /* If button gradients are changed, they will need to be changed here as well */
+
+  cursor: pointer;
+  padding: 5px 30px 5px 17px;
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #c8df8e, #73a434 49%, #8dc63f 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #c8df8e, #73a434 49%, #8dc63f 100%);
+
+  background-position: right 0;
+}
+
+.actionmenu a.inactive-menu {
+
+  cursor: default;
+  padding: 5px 30px 5px 17px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+
+  background: #dddddd url(gray-gradient.svg) no-repeat right 0;
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.euca-table-action .button {
+  z-index: 10;
+}
+
+.euca-table-action ul {
+  position: absolute;
+  min-width: 138px;
+  top: 30px;
+  left: 4px;
+  margin: 0;
+  padding: 0;
+  list-style-type: none;
+  background-color: #fff;
+  z-index: 2;
+
+  -webkit-box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+  -moz-box-shadow: 0px 5px 8px rgba(0,0,0,0.34); 
+  box-shadow: 0px 5px 8px rgba(0,0,0,0.34);
+
+  display: block;
+}
+
+.euca-table-action li {
+  margin: 0;
+  border-top: 1px solid #ccc;
+}
+
+.euca-table-action li:first-child {
+  border: 0;
+}
+
+.euca-table-action li a {
+  padding: 9px 12px;
+  color: #02405F;
+  display: block;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+  outline: 0 none;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.euca-table-action li a:hover {
+  color: #73a434;
+  text-decoration: none;
+}
+
+.euca-table-action li.disabled a {
+  color: #ccc;
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Overrides for jQuery context menu styles */
+
+.context-menu-list {
+  background-color: #fff;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 1em;
+  z-index: 30;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  color: #02405f;
+  border-top: 1px solid #ccc;
+  background-color: #fff;
+  min-width: 125px;
+}
+
+.context-menu-item:first-child {
+  border-top: 0;
+}
+
+.context-menu-item:hover {
+  color: #73a434;
+  background-color: #fff;
+}
+
+.context-menu-item.disabled,
+.context-menu-item.disabled:hover {
+  color: #aaa;
+}
+
+
+/* == Results and table size == */
+
+.euca-table-size {
+  float: right;
+  margin-top: 15px;
+  font-size: 12px;
+  color: #666;
+}
+
+.resources-found {
+  margin-right: 5px;
+}
+
+.show {
+  display: inline-block;
+  padding: 0 8px;
+  color: #87b932
+}
+
+.selected {
+  color: #02405f;
+  font-weight: bold;
+}
+
+
+/* ==== Legend and Pagination appear after the table ==== */
+
+/* == Legend == */
+
+.legend-pagination-wrapper {
+  position: absolute;
+  width: 100%;
+  bottom: -45px;
+}
+
+.table-legend,
+.dataTables_paginate {
+  height: 27px;
+  background-color: #fff;
+  border: 1px solid #d7d5d5;
+  border-radius: 5px;
+
+  -webkit-box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+  -moz-box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35),  inset 0 0 8px rgba(128,128,128,0.35);
+}
+
+.table-legend {
+  float:left;
+}
+
+.legend-title {
+  float: left;
+  padding: 0 15px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 11px;
+  color: #455560;
+  line-height: 28px;
+  text-transform: uppercase;
+  border-right: 1px solid #d7d5d5;  
+}
+
+.legend-items-wrapper {
+  float: left;
+  padding-right: 15px;
+}
+
+.legend-item {
+  display: inline-block;
+  margin-left: 15px;
+  padding-left: 23px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left 100px;
+  color: #02405f;
+  font-size: 11px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  line-height: 28px;
+}
+
+.table-row-status {
+  margin: 0 auto;
+  width: 19px;
+  height: 26px;
+  background: transparent url(../images/css-sprites-small.png) no-repeat left 100px;
+}
+
+#snapshot-table .table-row-status {
+  padding: 0px 0 0 20px;
+  text-align: left;
+  line-height: 26px; 
+}
+
+
+/*  Legend & Status icons */
+
+.legend-creating,
+.legend-pending {
+  background-position: left -324px;
+}
+
+.status-creating,
+.status-pending {
+  background-position: left -325px;
+}
+
+.legend-available,
+.legend-running,
+.legend-completed {
+  background-position: left -355px;
+}
+
+.status-available,
+.status-running,
+.status-completed {
+  background-position: left -356px;
+}
+
+.legend-in-use {
+  background-position: left -385px;
+}
+
+.status-in-use {
+  background-position: left -386px;
+}
+
+.legend-stopping {
+  background-position: left -415px;
+}
+
+.status-stopping {
+  background-position: left -416px; 
+}
+
+.legend-stopped {
+  background-position: left -445px;
+}
+
+.status-stopped {
+  background-position: left -446px; 
+}
+
+.legend-deleting,
+.legend-terminating,
+.legend-shuttingdown {
+  background-position: left -475px;
+}
+
+.status-deleting,
+.status-terminating,
+.status-shuttingdown {
+  background-position: left -476px;
+}
+
+.legend-deleted,
+.legend-terminated {
+  background-position: left -505px;
+}
+
+.status-deleted,
+.status-terminated {
+  background-position: left -506px;
+}
+
+/* Rename class as '-failed' in code to match label text */
+.legend-error,
+.legend-failed {
+  background-position: left -535px;
+}
+
+.status-error,
+.status-failed {
+  background-position: left -536px;
+}
+
+
+/* == Pagination == */
+
+.dataTables_paginate {
+  float: right;
+  text-align: center;
+}
+
+/* Override the jQuery-table default pagination styling */
+
+.paging_full_numbers {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 12px;
+  color: #73a434;
+  line-height: 26px;
+  width: auto;
+}
+
+.paging_full_numbers span.paginate_button,
+.paging_full_numbers span.paginate_active {
+  display: inline-block;
+  margin: 0;
+  background-color: transparent;
+  border: 0;
+  height: 23px;
+  line-height: 23px;
+  width: 30px;
+  border-left: 1px solid #fff;
+  border-right: 1px solid #d7d5d5;
+  border-radius: 0;
+
+}
+.paging_full_numbers span.paginate_button:hover {
+  background-color: transparent;
+  text-decoration: underline;
+}
+
+.paging_full_numbers span.first,
+.paging_full_numbers span.previous,
+.paging_full_numbers span.next,
+.paging_full_numbers span.last {
+  text-indent: -9999px;
+  background-image: url(../images/css-sprites.png);
+  background-repeat: no-repeat;
+}
+
+.paging_full_numbers span.first  {
+  width: 45px;
+  background-position: 0 -650px;
+  border-left: 0;
+}
+.paging_full_numbers span.first.paginate_button_disabled {
+  background-position: 0 -680px;
+}
+
+.paging_full_numbers span.previous {
+  width: 30px;
+  background-position: -50px -650px;
+}
+.paging_full_numbers span.previous.paginate_button_disabled {
+  background-position: -50px -680px;
+}
+
+.paging_full_numbers span.next  {
+  width: 30px; 
+  background-position: -85px -650px; 
+}
+.paging_full_numbers span.next.paginate_button_disabled {
+  background-position: -85px -680px;
+}
+
+.paging_full_numbers span.last  {
+  width: 45px;
+  background-position: -120px -650px;
+  border-right: 0;
+}
+.paging_full_numbers span.last.paginate_button_disabled {
+  background-position: -120px -680px;
+}
+
+.paging_full_numbers span.paginate_active {
+  color: #02405f;
+  cursor: default;
+}
+
+.paging_full_numbers span.paginate_button_disabled {
+  cursor: default;
+}
+
+/* ======= Overrides for jQuery UI dialog boxes ======= */
+
+.ui-widget {
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.ui-widget-overlay {
+  background: url(../images/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
+  opacity: 0.6;
+}
+
+.euca-dialog-container {
+  /* Class added to each jQuery dialog, so we can target elements */
+  margin: 0 8px;
+  padding: 50px 0 5px;
+  overflow: visible;
+  min-height: 50px;
+}
+
+.euca-dialog-container .ui-dialog-titlebar {
+  /*padding: 4px 8px;*/
+  border-radius: 0;
+  background-image: none;
+  font-size: 15px;
+  left: -9px;
+}
+
+.euca-dialog-container .ui-dialog-title {
+  margin-left: 30px;
+}
+
+.ui-dialog-titlebar-close {
+  display: none;
+}
+
+.euca-dialog {
+  /* This doesn't appear on every dialog */
+}
+
+.ui-dialog .ui-dialog-content {
+  padding: 0 15px;
+}
+
+.dialog-inner-content {
+  padding: 0 15px 10px;
+  color: #444;
+  font-size: 13px;
+}
+
+.dialog-error {
+  color: red;
+  padding: 5px 15px;
+}
+
+.ui-dialog .ui-dialog-buttonpane {
+  margin: 0;
+  padding: 0 5px 5px 0;
+  border: 0;
+  background-color: transparent;
+}
+
+.ui-dialog .ui-dialog-buttonpane button {
+  margin: 0 12px 8px 0;
+  outline: 0 none;
+}    
+
+.ui-button-text-only .ui-button-text  {
+  padding: 0;
+  line-height: 1;  
+}
+
+.ui-widget-content a {
+  color: #73a434;
+}
+
+.ui-widget-content a.button {
+  color: #fff;
+}
+
+
+.ui-widget-content .ui-state-disabled,
+.ui-widget-content .ui-state-disabled:hover {
+
+/* Disabled buttons in the jQuery dialog modals */
+/* Uses the same gradient as the 'actionmenu span.inactive-menu' */
+
+  cursor: default;
+  opacity: 1.00;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+
+  background: #dddddd url(gray-gradient.svg) no-repeat 0 0;
+
+  background-image: -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image: linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
+
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ======= Dialog box content styles ======= */
+
+.label {
+  display: inline-block;
+  width: 170px;
+  text-align: right;
+}
+
+.required-label {
+  display: inline-block;
+/*  width: 170px;
+  text-align: right;*/
+}
+
+
+.required-hint {
+  position: relative;
+  top: 5px;
+  margin-bottom: 0;
+}
+
+#launch-wizard-required.required-hint {
+  margin: 0 0 6px 13px;
+}
+
+.required-hint:before,
+.required-label:after {
+  color: #e36f1e;
+  content: "*";
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.required-hint:before {
+  padding-right: 2px;
+}
+
+.required-label:after {
+  padding-left: 2px;
+} 
+
+.selected-resources,
+#instance-connect-uname-password {
+  color: #02405f;
+  text-align: center;
+  font-size: 14px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.selected-resources table,
+#instance-connect-uname-password table {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.selected-resources th,
+#instance-connect-uname-password th {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-weight: normal;
+}
+
+.dialog-table-grid {
+  /* No attributes at this time */
+}
+
+.dialog-table-grid td {
+  padding: 6px 60px 6px 0;
+}
+
+.sg-name-desc {
+  margin: 10px 0;
+  color: #02405f;
+  font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.sg-name {
+  font-size: 14px;
+  font-family: 'PlayBold', Arial, sans-serif;
+}
+
+.sg-inline-options {
+  padding: 15px 0 0 10px;  
+}
+
+.sg-inline-options span {
+  padding: 0 7px;  
+}
+
+.sg-options-row {
+  padding-left: 128px;
+}
+
+.sg-options-row span {
+  padding: 0 7px;  
+}
+
+.sg-options-row input[type='text'].medium-textinput {
+  width: 126px;
+}
+
+a.sg-my-ip {
+  display: block;
+  padding: 5px 93px 0 0;
+  text-align: right;
+  outline: 0 none;
+}
+
+.sg-error-msg {
+  color: #ff0000;
+  text-align: center;
+}
+
+.sg-rules-list {
+  margin: 10px 0 0 15px;
+  padding: 0;
+  list-style-type: none;
+}
+
+.sg-rules-list li {
+  margin-bottom: 5px;
+}
+
+.sg-rules-list li a {
+  margin-right: 10px;
+}
+
+
+
+/* ======= Footer styles ======= */
+
+.copyright {
+  float: left;
+  margin-left: 5px;
+}
+
+.footer-nav {
+  float: right;
+  list-style-type: none;
+  margin: 0 5px 0 0;
+  padding: 0;
+}
+
+.footer-nav li {
+  float: left;
+  display: inline;
+  margin-left: 12px;
+}
+
+.footer-nav li a {
+  color: #73a434;
+  text-decoration: none;
+}
+
+.footer-nav li a:hover {
+  color: #73a434;
+  text-decoration: underline;
+}
+
+/* ======= Reusable Wizard styles ======= */
+
+.wizard-wrapper {
+  float: left;
+  width: 730px;
+}
+
+.launch-wizard-intro-text {
+  padding: 15px 20px 0; 
+}
+
+.wizard-steps,
+.content-sections-wrapper {
+  margin: 15px 0 0 5px;
+  padding: 0 0 15px 15px;
+  background: transparent url(../images/side-shadow.png) repeat-y left top;
+}
+
+.content-sections-wrapper {
+  /* To counteract the padding of the dialog-inner-content class */
+  position: relative;
+  margin-left: 0;
+  left: -20px;
+  padding-bottom: 0;
+}
+
+
+.wizard-step,
+.content-section {
+  margin: 0;
+  padding: 20px 10px 25px;
+  position: relative;
+}
+
+.content-section h3 {
+  position: absolute;
+  top: -1px;
+  left: -9px;
+  margin: 0;
+  padding: 1px 0 9px 25px;
+  width: 150px;
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  color: #02405F;
+  font-weight: normal;
+  font-size: 13px;
+  text-align: left;
+  display: inline-block;
+  font-family: 'PlayBold', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+/* Security Group dialogs get narrower labels, due to narrow dialog width */
+
+.group.content-section .form-row label,
+.rules.content-section .form-row label  {
+  width: 140px;
+}
+
+.content-section-label {
+  font-weight: bold;
+  color: #02405F;
+  margin: 10px 0 10px 15px; 
+}
+
+.intro-text .required-hint {
+  margin-top: 5px;
+}
+
+/* Have to undo all of the styling used on the landing pages */
+
+.wizard-step .dataTables_wrapper {
+  margin: 0;
+  padding: 0 0 25px;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.wizard-step .dataTables_wrapper table {
+  border: 1px solid #e5e5e5;
+}
+
+.wizard-step .dataTables_wrapper table td {
+  text-align: left;
+}
+
+
+/* Have to self-clear since I can't add the clearfix class directly */
+
+.wizard-step .dataTables_wrapper:before,
+.wizard-step .dataTables_wrapper:after {
+  content:"";
+  display:table;
+}
+.wizard-step .dataTables_wrapper:after {
+  clear:both;
+}
+
+.wizard-step .euca-table-filter {
+  float: none;
+  margin-bottom: 10px;
+}
+
+.wizard-step .euca-table-filter select {
+  width: 100%;
+}
+
+.wizard-step .dataTables_filter {
+  float: none;
+  text-align: left;
+  width: 100%;
+}
+
+.wizard-step .dataTables_filter label {
+  margin: 0;
+  width: 100%;
+}
+
+.image-name {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 14px; 
+  color: #02405f;  
+}
+
+.wizard-summary-wrapper {
+  float: right;
+  width: 200px;
+}
+
+.wizard-summary {
+  margin: 0;
+  padding: 10px 14px;
+  color: #02405f;
+  font-family: 'PlayBold', Arial, sans-serif;  
+}
+
+.summary-title {
+  font-family: 'PlayBold', Arial, sans-serif;
+  font-size: 24px; 
+  color: #02405f;
+}
+
+.summary {
+  border-top: 1px solid #ccc;
+  padding: 10px 0px 10px 60px;
+}
+
+#summary-image .summary {
+  border: 0;
+}
+
+.summary span {
+  font-family: 'Trebuchet', Arial, sans-serif;
+  color: #444;   
+}
+
+.wizard-cancel {
+  text-align: center;
+  padding: 6px;
+  font-family: 'PlayRegular', Arial, sans-serif;
+  font-size: 14px;
+}
+
+.wizard-cancel a {
+  padding: 0 2px;
+} 
+
+/* ==== When error reason is displayed on dialog ==== */
+
+span.on-error {
+  color : red;
+}
+
+/* ===== Instance Launch Wizard ===== */
+
+.launcher-wrapper {
+  
+  /* NOTE: Some common styles are set above with the page-content-box */
+  /* Only the differences are placed here */
+  margin: 0 8px 35px;
+  padding: 47px 0 0 0;
+}
+
+.launch-wizard-section {
+  display: none;
+  padding: 15px 0 0 5px;
+}
+
+.wizard-step #filter-wrapper {
+  float: left;
+  width : 185px;
+  margin-right: 20px;
+}
+.wizard-step #table-wrapper {
+  float: left;
+  width : 440px;
+}
+
+.wizard-step .dataTables_filter input {
+  background: #f3f6f9 url(../images/css-sprites-small.png) no-repeat 4px -294px;
+  border-radius: 4px;
+  border: 1px solid #9eb1c3;
+  color: #666;
+  font-size: 12px;
+  padding: 6px 6px 6px 27px;
+  width: 150px;
+  outline: 0 none;
+  position: relative;
+  left: -4px;
+
+  -moz-box-shadow: inset 0 0 3px #a8b9c8;
+  -webkit-box-shadow: inset 0 0 3px #a8b9c8;
+  box-shadow: inset 0 0 3px #a8b9c8;
+}
+
+.wizard-step .dataTables_wrapper table thead {
+  display:none;
+}
+
+.upper-sibling {
+  margin-bottom: 0;
+}
+
+.upper-sibling textarea {
+  margin-bottom: 7px;
+}
+
+.lower-sibling {
+  margin-bottom: 25px;
+}
+
+/* To line the 'Or' up with the upper-sibling form element */
+
+.lower-sibling label {
+  padding-left: 23px;
+}
+
+.orphan-row {
+  margin: 20px 0;
+}
+
+.form-row .plaintext-label {
+  margin-left: 5px;
+  width: 220px;
+  text-align: left;
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+#launch-wizard-security-sg-detail {
+  padding: 0 0 20px 170px;
+}
+
+.launcher-sgroup-details-label {
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.launcher-sgroup-rule {
+  margin-bottom: 2px;
+}
+
+.launcher-sgroup-rule-label {
+  float: left;
+}
+
+.launcher-sgroup-rule ul{
+  float: left;
+  margin: 0;
+  padding: 0;
+  list-style-type: none; 
+}
+
+.launcher-sgroup-rule ul li {
+  float: left;
+  padding: 0 0 0 10px;
+}
+
+.launch-wizard-buttons {
+  padding-right: 10px;
+  text-align: right;
+}
+
+.advanced-link-wrapper {
+  /* For the Advanced options link under the Launch Instances button */
+  margin: 5px 13px 0 0;
+}
+
+.image-type {
+  padding-left: 60px;
+  background-repeat: no-repeat;
+  background-image: url(../images/images-icon-sprites.png);
+}
+
+.wizard-summary .image-type {
+  background-image: url(../images/wizard-summary-sprites.png);
+}
+
+.image-type.windows {
+  /*background-position: 0 0;*/
+  background-image: none;
+}
+
+.image-type.rhel,
+.image-type.rhel5,
+.image-type.rhel6 {
+  background-position: 0 -150px;
+}
+
+.image-type.fedora {
+  background-position: 0 -300px;
+}
+
+.image-type.gentoo {
+  background-position: 0 -450px;
+}
+
+.image-type.ubuntu,
+.image-type.lucid,
+.image-type.precise {
+  background-position: 0 -600px;
+}
+
+.image-type.centos,
+.image-type.centos5,
+.image-type.centos6 {
+  background-position: 0 -750px;
+}
+
+.image-type.opensuse,
+.image-type.suse
+ {
+  background-position: 0 -900px;
+}
+
+.image-type.debian {
+  background-position: 0 -1050px;
+}
+
+.image-type.linux {
+  background-position: 0 -1200px;
+}
+
+#summary-type .summary {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1350px;
+}
+
+#summary-security .summary {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1550px;
+
+}
+
+#summary-advanced .summary {
+  padding: 10px 0;
+}
+
+#summary-advanced ul {
+  list-style-type: none;
+  margin: 5px 0 0;
+  padding: 0;
+}
+
+#summary-advanced li {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat 0 -1750px;
+  padding: 0 0 4px 22px;
+}
+
+.image-id-arch span {
+  margin-right: 10px;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.device-map-table {
+  border: 1px solid #e5e5e5;
+  border-width: 1px 1px 0 0;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.device-map-table tbody tr:nth-child(2n) {
+  background-color: #f4f4ef;
+}  
+
+#launch-wizard-advanced-storage th {
+  font-size: 11px;
+  border-bottom: 1px solid #e5e5e5;
+  border-left: 1px solid #e5e5e5;
+  padding: 5px;
+  background: transparent url(../images/table-header-bg.png) repeat-x left center;
+}
+
+#launch-wizard-advanced-storage td {
+  padding: 5px;
+  border-bottom: 1px solid #e5e5e5;
+  border-left: 1px solid #e5e5e5;
+  font-size: 11px;
+  width: auto;
+}
+
+#launch-wizard-advanced-storage input[type='text']{
+  width: 30px;
+}
+
+#launch-wizard-advanced-storage input[type='checkbox'] {
+  /*width: 10px;*/
+}
+
+.launch-wizard-type-size {
+    margin: 0 0 10px;
+    padding: 0;
+    list-style-type: none;
+}
+
+.launch-wizard-type-size li {
+    text-align: left;
+    float: left;
+    padding: 4px 4px;
+    margin: 1px;
+    width: 120px;
+    border: 1px solid #fff;
+}
+
+.launch-wizard-type-size li.selected-type {
+  border: 1px solid #d7d5d5;
+  
+  -webkit-box-shadow: inset 0px 0px 8px 6px #e2f4c0;
+  -moz-box-shadow: inset 0px 0px 8px 6px #e2f4c0; 
+  box-shadow: inset 0px 0px 8px 6px #e2f4c0;
+}  
+
+.launch-wizard-type-size li a {
+  display: block;
+  padding: 110px 0 0;
+  outline: 0 none;
+  background-image: url(../images/wizard-instances.png);
+  background-repeat: no-repeat;
+  color: #02405f;
+  text-align: center;
+  text-decoration: none;
+  font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.launch-wizard-type-size li a:hover {
+  color: #73a434;
+}
+
+.instance-type-m1_small a {
+  background-position: 0 0;
+}
+
+.instance-type-m1_small a:hover {
+  background-position: 0 -150px;
+}
+
+.instance-type-c1_medium a {
+  background-position: -178px 0;
+}
+
+.instance-type-c1_medium a:hover {
+  background-position: -178px -150px;
+}
+
+.instance-type-m1_large a {
+  background-position: -341px 0;
+}
+
+.instance-type-m1_large a:hover {
+  background-position: -341px -150px;
+}
+
+.instance-type-m1_xlarge a {
+  background-position: -513px 0;
+}
+
+.instance-type-m1_xlarge a:hover {
+  background-position: -513px -150px;
+}
+
+.instance-type-c1_xlarge a {
+  background-position: -678px 0;
+}
+
+.instance-type-c1_xlarge a:hover {
+  background-position: -678px -150px;
+}
+
+.wizard-type-size-legend {
+  color: #666;
+  margin-bottom: 40px;
+}
+
+.wizard-section-label {
+  color: #02405f;
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 10px;
+ } 
+
+.launch-wizard-section-header {
+  position: absolute;
+  top: -1px;
+  left: -9px;
+  margin: 0;
+  padding: 1px 0 9px 25px;
+  width: 150px;
+  background: transparent url(../images/css-sprites.png) no-repeat left -160px;
+  color: #02405F;
+  font-weight: normal;
+  font-size: 13px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.launch-wizard-section-header.expanded {
+  background-color: transparent;
+}  
+
+.launch-wizard-section-header .required-label {
+  display: inline-block;
+  width: auto;
+  text-align: left;
+}
+
+.launch-wizard-section-header a {
+  display: inline-block;
+  outline: 0 none;
+  color: #73a434;
+  text-decoration: none;
+}
+
+.launch-wizard-section-header.expanded a {
+  color: #02405F;
+}
+
+.launch-wizard-pointer {
+  position: absolute;
+  top: 85px;
+  right: -19px;
+  width: 19px;
+  height: 30px;
+  background: transparent url(../images/wizard-pointer.png) no-repeat left top;
+}
+
+/* ======= Instances - Launch More dialog ======= */
+
+.launch-more-summary-wrapper {
+  margin: 15px 0 0 20px;
+  font-family: 'PlayBold', Arial, sans-serif;
+  color: #02405F;
+}
+
+.launch-more-summary-wrapper span {
+  font-family: 'Trebuchet', Arial, sans-serif;
+  color: #444;
+}
+
+.launch-more-summary-section {
+  float : left;
+  width : 120px;
+  margin: 0 10px 0 0;
+  padding-left: 60px;
+  min-height: 60px;
+}
+
+.launch-more-summary-section.windows {
+  background-image: none;
+}
+
+.launch-more-summary-section.rhel,
+.launch-more-summary-section.rhel5,
+.launch-more-summary-section.rhel6 {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -161px;
+}
+
+.launch-more-summary-section.fedora {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -311px;
+}
+
+.launch-more-summary-section.gentoo {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -461px;
+}
+
+.launch-more-summary-section.ubuntu,
+.launch-more-summary-section.lucid,
+.launch-more-summary-section.precise {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -611px;
+}
+
+.launch-more-summary-section.centos,
+.launch-more-summary-section.centos5,
+.launch-more-summary-section.centos6 {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -761px;
+}
+
+.launch-more-summary-section.opensuse,
+.launch-more-summary-section.suse {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -914px;
+}
+
+.launch-more-summary-section.debian {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1061px;
+}
+
+.launch-more-summary-section.linux {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1211px;
+}
+
+#launch-more-summary-type {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1361px;
+  width: 135px;
+}
+
+#launch-more-summary-security {
+  background: transparent url(../images/wizard-summary-sprites.png) no-repeat left -1563px;
+}
+
+.launch-more {
+  height: 350px;
+}
+
+.launch-more-summary-section input[type='text']{
+    width: 20px;
+    text-align: center;
+}
+
+input#launch-more-sgroup-input {
+    width: 150px;
+}
+
+.launch-more-summary-section .form-row label {
+  text-align: left;
+  width: 63px;
+}
+
+.field-error {
+  color: red;
+}
+
+textarea.console-output {
+  width: 600px;
+  height: 400px;
+  margin: 10px;
+}
+
+#launch-images_paginate {
+  margin-top: 5px;
+}
+
+#launch-images td:hover,
+#launch-images td:hover .image-name {
+  color: #73a434;
+}
+
+#wizard-img-table-size {
+ text-align: right; 
+}
+
+/* ======= Euca credits ======= */
+
+.euca-credits {
+  margin: 25px 0;
+  text-align: center;
+}
+
+.euca-credits img {
+  display: block;
+  margin: 10px auto 25px;
+}
+
+.animated {
+  overflow: scroll;
+  overflow-x: hidden;
+  padding-top: 15px;
+  height: 250px;
+}
+
+.euca-credits p {
+  margin-bottom: 0;
+  color: #02405f;
+  font-size: 16px;
+  font-family: 'PlayBold', Arial, sans-serif;
+}
+
+.euca-credits ul {
+  margin: 4px 0 25px;
+  padding: 0;
+  list-style-type: none;
+  color: #444;
+}
+

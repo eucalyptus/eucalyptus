@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create Instances"/>
+<meta name="abstract" content="This screen allows you create a new instance."/>
+<meta name="description" content="This screen allows you create a new instance."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="launch_instances_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create Instances</title>
+</head>
+<body id="launch_instances_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">Create Instances</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> This screen allows you create a new instance.</p>
+</div>
+
+    <div class="topic task nested1" id="launch_instances_ui_image_steps">
+        <h2 class="title topictitle2">Select an Image</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to select a base image to use for creating your
+            instance.</p>
+
+            <ol class="ol steps"><li class="li step">
+
+                    <span class="ph cmd">Refine your results by selecting filter values using the drop-down list
+                        boxes or by typing text into the <span class="ph uicontrol">Search</span> text
+                        box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select an image by clicking on the image in the <span class="ph uicontrol">Select
+                            image</span> list. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Next: Select type</span> button to proceed to
+                        the <span class="ph uicontrol">Type</span> panel. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="launch_instances_ui_type_steps">
+        <h2 class="title topictitle2">Select a Type</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to specify the instance size, number of instances, and the
+            availability zone of your new instance(s).</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Select an instance size by clicking the appropriate icon. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span>  Information about the instance size is displayed when you click the
+                            instance size link. </div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can optionally type the number of instances to launch in the
+                            <span class="ph uicontrol">Number of instances</span> text box if you want to
+                        launch more than one instance.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> If you want to specify an availability zone other than the default, select
+                        an availability zone using the <span class="ph uicontrol">Availability zone</span>
+                        drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Next: Select security</span> button to proceed
+                        to the <span class="ph uicontrol">Security</span> panel. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="launch_instances_ui_security_steps">
+        <h2 class="title topictitle2">Specify Security</h2>
+
+        
+
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to specify the key pair and security group that will be
+            used by your new instance(s). NOTE: if you create a key pair or security group in this
+            section, they will automatically be selected for use in your new instance. </p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Select a key pair using the <span class="ph uicontrol">Key pair</span> drop-down list
+                        box. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span>  You can also create a new key pair by clicking the <span class="ph uicontrol">Create
+                                new key pair</span> link to display the <span class="ph uicontrol">Create new
+                                key pair</span> dialog box. </div>
+
+                    
+
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select a security group using the <span class="ph uicontrol">Security group</span>
+                        drop-down list box. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span>  You can also create a new security group by clicking the
+                                <span class="ph uicontrol">Create new security group</span> link to display the
+                                <span class="ph uicontrol">Create new security group</span> dialog box. </div>
+
+                        <div class="note note"><span class="notetitle">Note:</span> 
+                            If you select the default security group, make sure that you've added rules 
+                            to the default security group so that you can access your instances.
+                        </div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can optionally specify advanced options by clicking the
+                            <span class="ph uicontrol">Select advanced options</span> link. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Launch instance(s)</span> button. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="launch_instances_ui_advanced_steps">
+        <h2 class="title topictitle2">Specify Advanced Options</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to specify advanced options for your new instance(s). You
+            can add user data, override the kernel and RAM disk IDs, specify private networking, and
+            add additional storage.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Specify custom user data by typing it into the <span class="ph uicontrol">User
+                            data</span> text box or by attaching a file using the
+                            <span class="ph uicontrol">Attach file</span> link.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can override the kernel ID in the selected image with the
+                            <span class="ph uicontrol">Kernel ID</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can override the RAM disk ID in the selected image with the
+                            <span class="ph uicontrol">RAM disk ID</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Network</span> check box to specify that your
+                        new instance should use private addressing only. Private addresses cannot
+                        connect directly to the Internet and must go through a NAT (Network Address
+                        Translation) device or an elastic IP address mapped to the instance. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">You can add one or more additional storage devices to your instance:</span>
+                    <ol type="a" class="ol substeps" id="launch_instances_ui_advanced_steps__launch_instances_ui_advanced_storage_steps">
+                        <li class="li substep">
+                            <span class="ph cmd"> Specify the storage type (EBS or ephemeral) using the
+                                    <span class="ph uicontrol">Volume</span> drop-down list box. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> Type the desired device mapping into the
+                                    <span class="ph uicontrol">Map</span> text box (for example, sdc for
+                                /dev/sdc). </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> If you are creating the attached volume from a snapshot, specify
+                                the snapshot using the <span class="ph uicontrol">Create from snapshot</span>
+                                drop-down list box. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> Type the size of the attached storage in gigabytes into the
+                                    <span class="ph uicontrol">Size (GB) </span>text box. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> Select the <span class="ph uicontrol">Delete on termination</span> check box
+                                if you would like the attached storage to be deleted when the
+                                instance is terminated. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> Click the <span class="ph uicontrol">Add another</span> button to add the
+                                storage to your new instance. </span>
+                        </li>
+
+                    </ol>
+
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Launch instance(s)</span> button to launch your
+                        new instance(s). </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>
