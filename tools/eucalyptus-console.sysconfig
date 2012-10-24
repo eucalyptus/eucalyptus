@@ -1,0 +1,5 @@
+# Uncomment this line if you do *not* want
+# the Eucalyptus User Console to generate
+# a self-signed certificate on first run
+#GENERATE_CERT=NO
+
