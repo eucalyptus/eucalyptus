@@ -945,6 +945,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } else {
       this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.DEFAULT_IP );
     }
+    this.getNetworkConfig( ).updateDns( );
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
