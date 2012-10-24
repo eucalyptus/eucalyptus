@@ -245,7 +245,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.imagePublic = aPublic;
   }
   
-  private Set<String> getPermissions( ) {
+  protected Set<String> getPermissions( ) {
     return this.permissions;
   }
   
