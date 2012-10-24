@@ -96,13 +96,13 @@ for arg in "$@" ; do
     fi
 done
 
-CLuSSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
+CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
 echo -e "${CLASSPATH//:/\n}"
 java -Xms1g -Xmx3g -XX:MaxPermSize=768m -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} \
 	-Deuca.home=${EUCALYPTUS} \
 	-Deuca.lib.dir=${EUCALYPTUS} \
 	-Deuca.upgrade.new.dir=${EUCALYPTUS} \
-	-Deuca.upgrade.destination=com.eucalyptus.upgrade.MysqldbDestination \
+	-Deuca.upgrade.destination=com.eucalyptus.upgrade.PostgresqlDestination \
 	-Deuca.log.level=TRACE  \
 	-Deuca.log.appender=console \
 	-Djava.security.egd=file:/dev/./urandom \
