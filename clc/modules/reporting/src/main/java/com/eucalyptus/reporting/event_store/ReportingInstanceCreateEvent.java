@@ -31,7 +31,7 @@ import org.hibernate.annotations.Entity;
 public class ReportingInstanceCreateEvent extends ReportingEventSupport {
   private static final long serialVersionUID = 1L;
 
-  @Column( name = "uuid", nullable = false, unique = true )
+  @Column( name = "uuid", nullable = false )
   private String uuid;
   @Column( name = "instance_id", nullable = false )
   private String instanceId;
