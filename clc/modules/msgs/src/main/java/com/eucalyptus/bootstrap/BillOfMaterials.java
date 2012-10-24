@@ -217,6 +217,10 @@ public class BillOfMaterials {
     return RequiredFields.BRANCH.getValue( );
   }
  
+  public static String getVersion( ) {
+    return RequiredFields.VERSION.getValue( );
+  }
+
   public static String getExtraVersion( ) {
     return RequiredFields.EXTRA_VERSION.getValue( );
   }

@@ -44,9 +44,9 @@ public class ReportingUser implements Serializable
 {
 	private static final long serialVersionUID = 1L;
 
-	@Id @Column(name="id", nullable=false)
+	@Id @Column(name="user_id", nullable=false)
 	private String id;
-	@Column(name="account_id", nullable=false)
+	@Column(name="account_id", nullable=false, columnDefinition = "character varying(255) default '' not null")
 	private String accountId;
 	@Column(name="user_name", nullable=false)
 	private String name;

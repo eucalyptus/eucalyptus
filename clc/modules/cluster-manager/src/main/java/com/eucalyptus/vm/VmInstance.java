@@ -328,7 +328,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         @Override
         public NetworkGroup apply( final String arg0 ) {
           
-          EntityTransaction db = Entities.get( NetworkGroup.class );
+          final EntityTransaction db = Entities.get( NetworkGroup.class );
           try {
             SimpleExpression naturalId = Restrictions.like( "naturalId", arg0.replace( userFullName.getAccountNumber( ) + "-", "" ) + "%" );
             NetworkGroup result = ( NetworkGroup ) Entities.createCriteria( NetworkGroup.class )
@@ -344,8 +344,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             return result;
           } catch ( Exception ex ) {
             Logs.extreme( ).error( ex, ex );
-            db.rollback( );
             throw Exceptions.toUndeclared( ex );
+          } finally {
+            if ( db.isActive() ) db.rollback();
           }
         }
       };
@@ -359,11 +360,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       } else {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
         
-        final List<NetworkGroup> networks = RestoreAllocation.restoreNetworks( input, userFullName );
-        final PrivateNetworkIndex index = RestoreAllocation.restoreNetworkIndex( input, networks );
-        
         final EntityTransaction db = Entities.get( VmInstance.class );
+        boolean building = false;
         try {
+          final List<NetworkGroup> networks = RestoreAllocation.restoreNetworks( input, userFullName );
+          final PrivateNetworkIndex index = RestoreAllocation.restoreNetworkIndex( input, networks );
           final VmType vmType = RestoreAllocation.restoreVmType( input );
           final Partition partition = RestoreAllocation.restorePartition( input );
           final String imageId = RestoreAllocation.restoreImage( input );
@@ -373,9 +374,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final int launchIndex = RestoreAllocation.restoreLaunchIndex( input );
           final SshKeyPair keyPair = RestoreAllocation.restoreSshKeyPair( input, userFullName );
           final byte[] userData = RestoreAllocation.restoreUserData( input );
-          VmInstance vmInst;
-          try {
-            vmInst = new VmInstance.Builder( ).owner( userFullName )
+          building = true;
+          final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
                                               .withIds( input.getInstanceId( ), input.getReservationId( ) )
                                               .bootRecord( bootSet,
                                                            userData,
@@ -384,20 +384,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                               .placement( partition, partition.getName( ) )
                                               .networking( networks, index )
                                               .build( launchIndex );
-            vmInst.setNaturalId( input.getUuid( ) );
-            RestoreAllocation.restoreAddress( input, vmInst );
-            Entities.persist( vmInst );
-          } catch ( final Exception ex1 ) {
-            LOG.error( "Failed to restore instance " + input.getInstanceId( ) + " because of: " + ex1.getMessage( ) );
-            Logs.extreme( ).error( ex1, ex1 );
-          }
+          vmInst.setNaturalId( input.getUuid( ) );
+          RestoreAllocation.restoreAddress( input, vmInst );
+          Entities.persist( vmInst );
           db.commit( );
           return true;
         } catch ( final Exception ex ) {
-          LOG.error( ex );
+          LOG.error( "Failed to restore instance " + input.getInstanceId( ) + " because of: " + ex.getMessage( ), building ? null : ex );
           Logs.extreme( ).error( ex, ex );
-          db.rollback( );
           return false;
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
 //TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
@@ -433,7 +430,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           db.commit( );
         } catch ( final Exception ex ) {
           Logs.extreme( ).error( ex, ex );
-          db.rollback( );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
       return index;
@@ -455,8 +453,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          addr.assign( vmInst ).clearPending();
         } else {
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress( ) );
+        }
+      } catch ( NoSuchElementException e ) { // Address disabled
+        try {
+          final Address addr = Addresses.getInstance( ).lookupDisabled( input.getNetParams( ).getIgnoredPublicIp( ) );
+          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          addr.pendingAssignment().assign( vmInst ).clearPending();
+        } catch ( final Exception ex2 ) {
+          LOG.error( "Failed to restore address state (from disabled) " + input.getNetParams( )
+              + " for instance "
+              + input.getInstanceId( )
+              + " because of: "
+              + ex2.getMessage( ) );
+          Logs.extreme( ).error( ex2, ex2 );
         }
       } catch ( final Exception ex2 ) {
         LOG.error( "Failed to restore address state " + input.getNetParams( )
@@ -497,7 +509,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
       return launchIndex;
     }
-    
+
     private static BootableSet restoreBootSet( final VmInfo input, final String imageId, final String kernelId, final String ramdiskId ) {
       BootableSet bootSet = null;
       if ( imageId != null ) {
@@ -607,8 +619,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return entityObj;
         } catch ( final RuntimeException ex ) {
           Logs.extreme( ).error( ex, ex );
-          db.rollback( );
           throw ex;
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     },
@@ -623,8 +636,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return vm;
         } catch ( final RuntimeException ex ) {
           Logs.extreme( ).error( ex, ex );
-          db.rollback( );
           throw ex;
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     },
@@ -634,7 +648,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
-          Reason reason = Timeout.SHUTTING_DOWN.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED;
+          Reason reason = Timeout.UNREPORTED.apply( vm ) ? Reason.EXPIRED : Reason.USER_TERMINATED;
           if ( VmStateSet.RUN.apply( vm ) ) {
             vm.setState( VmState.SHUTTING_DOWN, reason );
           } else if ( VmState.SHUTTING_DOWN.equals( vm.getState( ) ) ) {
@@ -646,8 +660,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return vm;
         } catch ( final Exception ex ) {
           Logs.extreme( ).trace( ex, ex );
-          db.rollback( );
           throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     },
@@ -673,8 +688,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return vm;
         } catch ( final Exception ex ) {
           Logs.extreme( ).debug( ex, ex );
-          db.rollback( );
           throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     },
@@ -690,7 +706,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } catch ( final Exception ex ) {
           LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
-          db.rollback( );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
         try {
           v.cleanUp( );
@@ -716,8 +733,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           return vm;
         } catch ( final Exception ex ) {
           Logs.extreme( ).debug( ex, ex );
-          db.rollback( );
           throw new NoSuchElementException( "Failed to lookup instance: " + v );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     };
@@ -743,12 +761,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           db.commit( );
           return vm;
         } catch ( final NoSuchElementException ex ) {
-          db.rollback( );
           throw ex;
         } catch ( final Exception ex ) {
-          db.rollback( );
           throw new NoSuchElementException( "An error occurred while trying to lookup vm instance " + arg0 + ": " + ex.getMessage( ) + "\n"
                                             + Exceptions.causeString( ex ) );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     };
@@ -785,13 +803,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         token.setVmInstance( vmInst );
         return vmInst;
       } catch ( final ResourceAllocationException ex ) {
-        db.rollback( );
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( ex );
       } catch ( final Exception ex ) {
-        db.rollback( );
         Logs.extreme( ).error( ex, ex );
         throw Exceptions.toUndeclared( new TransactionExecutionException( ex ) );
+      } finally {
+        if ( db.isActive() ) db.rollback();
       }
     }
     
@@ -927,6 +945,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } else {
       this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.DEFAULT_IP );
     }
+    this.getNetworkConfig( ).updateDns( );
   }
   
   public void updatePrivateAddress( final String privateAddr ) {
@@ -956,19 +975,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private void firePersist( ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      if ( !Entities.isPersistent( this ) ) {
-        db.rollback( );
-      } else {
-        try {
-          Entities.merge( this );
-          db.commit( );
-        } catch ( final Exception ex ) {
-          db.rollback( );
-          LOG.debug( ex );
-        }
+      if ( Entities.isPersistent( this ) ) try {
+        Entities.merge( this );
+        db.commit( );
+      } catch ( final Exception ex ) {
+        LOG.debug( ex );
       }
     } catch ( final Exception ex ) {
-      db.rollback( );
+      Logs.extreme( ).error( ex, ex );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1217,7 +1233,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                           .relativeId( "instance", this.getDisplayName( ) );
   }
   
-  public enum Reason {
+  public enum Reason implements Predicate<VmInstance> {
     NORMAL( "" ),
     EXPIRED( "Instance expired after not being reported for %s mins.", VmInstances.Timeout.UNREPORTED.getMinutes( ) ),
     FAILED( "The instance failed to start on the NC." ),
@@ -1232,12 +1248,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       this.message = message;
       this.args = args;
     }
-    
+
     @Override
     public String toString( ) {
       return String.format( this.message.toString( ), this.args );
     }
-    
+
+    @Override
+    public boolean apply( final VmInstance vmInstance ) {
+      return this.equals( vmInstance.getRuntimeState().reason() );
+    }
   }
   
   PrivateNetworkIndex getNetworkIndex( ) {
@@ -1319,8 +1339,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
-      throw new RuntimeException( ex );
+      throw Exceptions.toUndeclared( ex );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1341,12 +1362,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return ret;
     } catch ( final NoSuchElementException ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
       throw ex;
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume with device: " + volumeDevice );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1366,8 +1387,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
       return volumeAttachment;
     } catch ( final Exception ex ) {
-      db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1464,8 +1486,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return ret;
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
       throw new NoSuchElementException( "Failed to lookup volume: " + volumeId );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1501,7 +1524,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1527,8 +1551,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               this.updateState( runVm );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmState.SHUTTING_DOWN.equals( runVmState ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.APPEND, "DONE" );
-            } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
-              VmInstance.this.setState( VmState.STOPPED, Reason.EXPIRED );
             } else if ( VmState.SHUTTING_DOWN.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
               VmInstance.this.setState( VmState.TERMINATED, Reason.EXPIRED );
             } else if ( VmState.STOPPING.apply( VmInstance.this ) && VmInstances.Timeout.SHUTTING_DOWN.apply( VmInstance.this ) ) {
@@ -1542,7 +1564,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             db.commit( );
           } catch ( final Exception ex ) {
             Logs.extreme( ).error( ex, ex );
-            db.rollback( );
+          } finally {
+            if ( db.isActive() ) db.rollback();
           }
         }
         return true;
@@ -1580,7 +1603,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       db.commit( );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -1701,11 +1725,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
           return runningInstance;
         } catch ( final NoSuchElementException ex ) {
-          db.rollback( );
           throw ex;
         } catch ( final Exception ex ) {
-          db.rollback( );
           throw new NoSuchElementException( "Failed to lookup vm instance: " + v );
+        } finally {
+          if ( db.isActive() ) db.rollback();
         }
       }
     }

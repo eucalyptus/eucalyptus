@@ -156,31 +156,15 @@ upgrade_db() {
     return
   fi
 
-  # setup the classpath
-  CLASSPATH=""
-  FILES=$(\ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/*.jar | egrep -v ".*eucalyptus-.*${OLD_EUCA_VERSION//\./\\.}.jar")
-  for FILE in $FILES; do
-    export CLASSPATH=${FILE}:${CLASSPATH}
-  done
-  CLASSPATH=${EUCALYPTUS}/etc/eucalyptus/cloud.d/upgrade:${EUCALYPTUS}/etc/eucalyptus/cloud.d/scripts:${CLASSPATH}
-
   # clean out the target DB directory
   # rm -rfv ${NEW_EUCA}/${DBDIR}/* > ${UP_LOG} 2>&1
   
-  # setup the upgrade command
-  UPGRADE_CLASS="com.eucalyptus.upgrade.StandalonePersistence"
-  # key=value pairs required to run the db update code
-  UPGRADE_DEST_DIR="euca.upgrade.new.dir=${NEW_EUCA}"
-  UPGRADE_SRC_DIR="euca.upgrade.old.dir=${OLD_EUCA}" 
-  UPGRADE_DEST_VERSION="euca.upgrade.new.version=${NEW_EUCA_VERSION}"
-  UPGRADE_SRC_VERSION="euca.upgrade.old.version=${OLD_EUCA_VERSION}" 
-  UPGRADE_DEST_DB="euca.upgrade.destination=com.eucalyptus.upgrade.PostgresqlDestination"
-  UPGRADE_SRC_DB="euca.upgrade.source=NONE"
   # Arbitrary string of properly formatted opts passed direct to jvm"
   UPGRADE_OPTS="-Deuca.log.level=DEBUG -Djava.security.egd=file:/dev/./urandom -XX:MaxPermSize=512m"
-  # Setup commands 
-  UPGRADE_ARGS=$( for arg in ${UPGRADE_DEST_DIR} ${UPGRADE_SRC_DIR} ${UPGRADE_SRC_DB} ${UPGRADE_DEST_DB} ${UPGRADE_DEST_VERSION} ${UPGRADE_SRC_VERSION}; do echo -n " -D${arg}"; done; )
-  UPGRADE_CMD="java -Xbootclasspath/p:${EUCALYPTUS}/usr/share/eucalyptus/openjdk-crypto.jar -classpath ${CLASSPATH} ${UPGRADE_OPTS} ${UPGRADE_ARGS} ${UPGRADE_CLASS}" 
+  # Upgrade version and directory info
+  UPGRADE_OLD_ARGS="--upgrade-old-version=${OLD_EUCA_VERSION} --upgrade-old-dir=${OLD_EUCA}"
+  UPGRADE_ARGS="--upgrade  ${UPGRADE_OLD_ARGS}"
+  UPGRADE_CMD="${EUCALYPTUS}/usr/sbin/eucalyptus-cloud -u ${EUCA_USER} -h ${EUCALYPTUS} ${UPGRADE_ARGS}"
   echo "${UPGRADE_CMD}" >> ${UP_LOG} 
   
   echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1
@@ -189,7 +173,7 @@ upgrade_db() {
   # This is to deal with possible database connection leaks in the upgrade script
   ulimit -n 65536
 
-  if ! ( su $EUCA_USER -c "${UPGRADE_CMD}" ); then
+  if ! ${UPGRADE_CMD} | tee -a ${UP_LOG} 2>&1; then
     echo "Database upgrade failed! Please ${UP_LOG} for details and contact Eucalyptus support for assistance."
     exit 1
   fi

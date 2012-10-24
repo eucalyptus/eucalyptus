@@ -77,6 +77,7 @@ public class BootstrapArgs {
   private static final List<String> bindAddrs      = Lists.newArrayList( );
   private static final List<String> bootstrapHosts = Lists.newArrayList( );
   private static boolean            initSystem     = false;
+  private static boolean            upgradeSystem  = false;
   
   enum BindAddressValidator implements Predicate<String> {
     INSTANCE;
@@ -112,6 +113,7 @@ public class BootstrapArgs {
     bindAddrs.addAll( BootstrapArgs.parseMultipleArgs( "euca.bind.addr", BindAddressValidator.INSTANCE ) );
     bootstrapHosts.addAll( BootstrapArgs.parseMultipleArgs( "euca.bootstrap.host", BindAddressValidator.INSTANCE ) );
     initSystem = System.getProperty( "euca.initialize" ) != null;
+    upgradeSystem = System.getProperty( "euca.upgrade" ) != null;
     try {
         InetAddress.getByName( "eucalyptus.com" ).isReachable( NetworkInterface.getByInetAddress(Internets.localHostInetAddress( )), 64, 10000 );//GRZE:attempted hack to allocate raw socket
     } catch ( Exception ex2 ) {
@@ -121,6 +123,10 @@ public class BootstrapArgs {
   
   public static boolean isInitializeSystem( ) {
     return initSystem;
+  }
+  
+  public static boolean isUpgradeSystem( ) {
+    return upgradeSystem;
   }
   
   public static List<String> parseBootstrapHosts( ) {

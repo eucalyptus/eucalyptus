@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <!--
+    Copyright 2009-2012 Eucalyptus Systems, Inc.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; version 3 of the License.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see http://www.gnu.org/licenses/.
+
+    Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+    CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+    additional information or have any questions.
+    --> 
+    <title>Eucalyptus</title>
+    <meta charset="UTF-8">
+    <style type="text/css" title="currentStyle">
+      @import "lib/jquery.css";
+      @import "lib/jquery-table.css";
+      @import "lib/jquery.contextMenu.css";
+      @import "lib/jquery-ui-1.9.0-beta1.css";
+      @import "lib/jquery.qtip.min.css";
+      @import "css/eucalyptus.css";
+    </style>
+
+    <!-- jQuery libraries -->
+    <script type="text/javascript" language="javascript" src="lib/jquery-1.7.2.min.js"></script> 
+    <!--<script type="text/javascript" language="javascript" src="lib/jquery.ui.core.min.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.ui.widget.min.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
+    -->
+
+    <!-- this ui library contains everything. need to slim down later by including only what's used here -->
+    <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
+    <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
+    <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/dataTables.fnGetTds.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.fileupload.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.watermark.min.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.qtip.min.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/moment.min.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.base64.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
+    <!-- Eucalyptus UI javascripts -->
+    <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jquery_generate_file.js"></script>
+    <script type="text/javascript" language="javascript" src="js/login.js"></script>
+    <script type="text/javascript" language="javascript" src="js/main.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucalyptus.js"></script>
+    <script type="text/javascript" language="javascript" src="js/explorer.js"></script>
+    <script type="text/javascript" language="javascript" src="js/support.js"></script>
+    <script type="text/javascript" language="javascript" src="js/header.js"></script>
+    <script type="text/javascript" language="javascript" src="js/footer.js"></script>
+    <script type="text/javascript" language="javascript" src="js/i18n.js"></script>
+    <script type="text/javascript" language="javascript" src="js/main_container.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucawidget.js"></script>
+    <script type="text/javascript" language="javascript" src="js/dashboard.js"></script>
+    <script type="text/javascript" language="javascript" src="js/instance.js"></script>
+    <script type="text/javascript" language="javascript" src="js/image.js"></script>
+    <script type="text/javascript" language="javascript" src="js/keypair.js"></script>
+    <script type="text/javascript" language="javascript" src="js/volume.js"></script>
+    <script type="text/javascript" language="javascript" src="js/snapshot.js"></script>
+    <script type="text/javascript" language="javascript" src="js/sgroup.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eip.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucaevent.js"></script>
+    <script type="text/javascript" language="javascript" src="js/notification.js"></script>
+    <script type="text/javascript" language="javascript" src="js/help.js"></script>
+    <script type="text/javascript" language="javascript" src="js/eucadata.js"></script>
+    <script type="text/javascript" language="javascript" src="js/launcher.js"></script>
+    <script type="text/javascript" language="javascript" src="js/template/eucatable.js"></script>
+    <script type="text/javascript" language="javascript" src="js/template/eucadialog.js"></script>
+  </head> 
+
+  <body>
+    <div class="euca-container">
+      <div class="euca-header-container">
+        <div class="inner-container clearfix">
+          <a id="euca-logo" class="hide-text" href="#">Eucalyptus</a>
+          <div id="euca-navigator"></div>
+          <div id="euca-help"></div>
+          <div id="euca-user"></div>
+        </div>
+      </div>
+
+      <div id="euca-explorer" class="euca-explorer-container">
+        <div class="inner-container clearfix"></div>
+      </div>      
+
+      <div class="euca-notification-container">
+        <div class="inner-container"> 
+          <div id="euca-notification" class="notification-box clearfix">
+            <div id="euca-notification-close"> </div>
+            <div id="euca-notification-title"> </div>
+            <div id="euca-notification-desc"> </div>            
+          </div>
+        </div>
+      </div>
+      <div class="euca-main-outercontainer">
+        <div class="inner-container">
+          <div id="euca-main-container" class="clearfix">
+          </div>
+        </div>       
+      </div>
+      
+      <footer class="euca-footer-container">
+        <div class="inner-container"> </div>  
+      </footer>
+    </div>
+    <div class="euca-hidden-container"> </div>
+    <!-- END euca-container -->
+
+    
+    <div class="templates">
+      <!-- Login template -->
+      <script id="loginTmpl" type="text/x-jsrender">
+        <div id="login" class="content-box">
+          <div id="title" class="box-header"><span>{{!>login_title}}</span></div>
+          <form action="/" method="post" name="loginform">
+            
+            <div class="form-row">
+              <label for="account">{{!>login_acct}}</label>
+              <input type="text" id="account" class="input-field" value=""/>
+            </div>
+            
+            <div class="form-row">
+              <label for="username">{{!>login_uname}}</label>
+              <input type="text" id="username" class="input-field" value=""/>
+            </div>
+            
+            <div class="form-row">
+              <label for="password">{{!>login_pwd}}</label>
+              <input type="password" id="password" class="input-field" value=""/>
+            </div>
+
+            <div class="checkbox-row">
+              <input type="checkbox" id="remember" class="input-field" />
+              <label for="remember">{{!>login_remember}}</label>
+            </div>
+            
+            <div class="password-help" id="password-help">
+            </div>
+            
+            <div class="button-bar">
+              <input type="submit" name="login" class="large-button" value="{{!>login_btn}}" disabled="disabled" />
+            </div>
+
+          </form>        
+        </div>
+      </script>
+
+      <script id="loginErrorDlgTmpl" type="text/x-jsrender">
+        <div id="login-euca-dialog-wrapper">
+          <div id="login-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content" id="login-error-message">
+              <p></p>
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_login_failure_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Login template -->
+
+      <!-- Footer template -->
+      <script id="footerTmpl" type="text/x-jsrender">
+        <div class="copyright">&copy; {{!>text_footer}}</div>
+      </script>
+
+      <!-- Dashboard template -->
+      <script id="dashboardTmpl" type="text/x-jsrender">
+      <div id="dashboard-wrapper"> 
+        <div id="dashboard-page" class="content-box clearfix">
+          <div class="box-header"> <span> {{!>dashboard_title}} </span> </div>
+          <div id="dashboard-content">
+            <div class="instances inner-box clearfix">
+              <h3>{{!>instances_label}}</h3>
+              <div id="dashboard-instance-img"></div>
+              <div id="dashboard-instance-az" title="{{!: dashboard_instance_az_tip }}">
+                <select>
+                 <option value="all" >{{!>dashboard_az_all}}</option>
+               </select>
+              </div>
+              <div id="dashboard-instance-running" class="db-instances-running clearfix" title="{{!: dashboard_instances_running_tip }}">
+                <div class="status-readout">
+                  <span></span> {{!>dashboard_instance_running}}
+                </div>
+              </div>
+              <div id="dashboard-instance-stopped" class="db-instances-stopped clearfix" title="{{!: dashboard_instances_stopped_tip }}">
+                <div class="status-readout">
+                  <span></span> {{!>dashboard_instance_stopped}}
+                </div>
+              </div>
+              <div id="dashboard-instance-launch">
+                <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">{{!>dashboard_launch_new_instance}}</a>
+              </div> 
+            </div>
+            <div class="storage inner-box clearfix">
+              <h3>{{!>storage_label}}</h3>
+              <div id="dashboard-storage-img"></div>
+              <div id="dashboard-storage-volume" class="status-readout" title="{{!: dashboard_volumes_tip }}">
+                <span></span> {{!>volumes_label}}
+              </div>
+              <div id="dashboard-storage-snapshot" class="status-readout" title="{{!: dashboard_snapshots_tip }}">
+                <span></span> {{!>snapshots_label}}
+              </div>
+            </div>
+            <div class="netsec inner-box clearfix">
+              <h3>{{!>netsec_label}}</h3>
+              <div id="dashboard-netsec-img"></div>
+              <div id="dashboard-netsec-sgroup" class="status-readout" title="{{!: dashboard_sgroup_tip }}">
+                <span></span> {{!>sgroups_label}}
+              </div>
+              <div id="dashboard-netsec-keypair" class="status-readout" title="{{!: dashboard_keypair_tip }}">
+                <span></span> {{!>keypairs_label}}
+              </div>
+              <div id="dashboard-netsec-eip" class="status-readout" title="{{!: dashboard_eip_tip }}">
+                <span></span> {{!>eips_label}}
+              </div>           
+            </div> <!-- END of netsec div -->
+          </div> <!-- END dashboard-content -->
+         </div> <!-- END of dashboard -->
+         <div id="dashboard-help">
+           <div class="help-content">
+              {{!: landing_content }}
+           </div>
+           <div class="help-revert-button"> 
+             <a href="#">{{!>revert_button}}</a>
+           </div>
+         </div>
+        </div> <!-- END of dashboard-wrapper -->
+      </script>
+      <!-- END Dashboard template -->
+
+      <!-- Keypair table -->
+      <script id="keypairTblTmpl" type="text/x-jsrender">
+        <div id="keys-wrapper">
+          <div id="keys-table">
+            <table id="keys" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="keys-check-all">
+                  </th>
+                  <th>{{!>kp_tbl_hdr_name}}</th>
+                  <th>{{!>kp_tbl_hdr_fingerprint}}</th>
+                </tr>
+               </thead>
+               <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div id="keypair-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Keypair table -->
+
+      <!-- Keypair dialog template -->
+      <script id="keypairAddDlgTmpl" type="text/x-jsrender">
+        <div id="keys-add-dialog-wrapper">
+          <div id="keys-add-dialog" class="add-dialog">
+            <div class="dialog-inner-content">
+              {{!: keypair_dialog_add_text }}
+              <div class="form-row">
+                <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
+                <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_add_name_tip }}" maxlength="254"/>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="keys-add-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_add_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="keypairImportDlgTmpl" type="text/x-jsrender">
+        <div id="keys-import-dialog-wrapper">
+          <div id="keys-import-dialog" class="add-dialog">
+            <div class="dialog-inner-content">
+              {{!: keypair_dialog_import_text }}
+              <div class="form-row">
+                <label for="key-name" class="required-label">{{!>keypair_dialog_add_name}}</label>
+                <input type="text" id="key-name" class="required" title="{{!: keypair_dialog_add_name_tip }}" maxlength="254"/>
+              </div>
+              <div class="form-row">
+                <label for="key-contents" class="required-label">{{!>keypair_dialog_import_contents}}</label>
+                <textarea id="key-import-contents" class="description" title="{{!: keypair_dialog_import_contents_tip }}"/>
+              </div>
+              <div class="form-row lower-sibling">
+                <label for="key-import-file">{{!>or_label}}</label>
+                <input type="file" id="key-import-file"/>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="keys-import-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_import_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="keypairDelDlgTmpl" type="text/x-jsrender">
+        <div id="keys-euca-dialog-wrapper">
+          <div id="keys-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: keypair_dialog_del_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+          <div id="keys-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_delete_content}}
+            </div>
+             <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div> 
+      </script>
+      <!-- END Keypair dialog template -->
+
+      <!-- Security Group table -->
+      <script id="sgroupTblTmpl" type="text/x-jsrender">
+        <div id="sgroups-wrapper">
+          <div id="sgroups-table">
+            <table id="sgroups" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="sgroups-check-all">
+                  </th>
+                  <th>{{!>sgroup_tbl_hdr_name}}</th>
+                  <th>{{!>sgroup_tbl_hdr_description}}</th>
+                </tr>
+               </thead>
+               <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div id="sgroup-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Security Group table -->
+
+      <!-- Security Group dialog template -->
+      <script id="sgroupAddDlgTmpl" type="text/x-jsrender">
+        <div id="sgroups-add-wrapper">
+
+          <div id="sgroups-add-dialog" class="euca-dialog">
+            <div class="dialog-inner-content"> 
+              
+              <div class="content-sections-wrapper">
+
+                <div class="group content-section">
+                  <h3>{{!:sgroup_dialog_group_title}}</h3>
+                  <div class="content-section-label">{{!: sgroup_dialog_add_group }}</div>
+                  <div class="form-row">
+                    <label for="sgroup-name" class="required-label">{{!>sgroup_dialog_add_name}}</label>
+                    <input type="text" id="sgroup-name" class="required" title="{{!: sgroup_dialog_add_name_tip }}" maxlength="254"/>
+                    <div id="sgroup-name-error" class="sg-error-msg"></div>
+                  </div>
+                  <div class="form-row">    
+                    <label for="sgroup-description" class="required-label">{{!>sgroup_dialog_add_description}}</label>
+                    <textarea id="sgroup-description" class="description" title="{{!: sgroup_dialog_add_description_tip }}"/>
+                    <div id="sgroup-description-error" class="sg-error-msg"></div>
+                  </div>  
+                </div>
+                <!-- END content-section -->   
+
+                <div class="rules content-section">
+                  <h3>{{!:sgroup_dialog_rule_title}}</h3>
+                  <div class="content-section-label">{{!: sgroup_dialog_add_rules }}</div>
+                  <div class="form-row"> 
+                    <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                    <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
+                      <option value="none">Select protocol</option>
+                      <optgroup label="">
+                      <option>SSH (TCP port 22, for terminal access)</option>
+                      <option>RDP (TCP port 3389, for Windows instances)</option>
+                      <option>HTTP (TCP port 80, for web servers)</option>
+                      <option>HTTPS (TCP port 443, for web servers)</option>
+                      <option>MS SQL (TCP port 1433)</option>
+                      <option>MySQL (TCP port 3306)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>POP3 (TCP port 110)</option>
+                      <option>POP3S (TCP port 995)</option>
+                      <option>LDAP (TCP port 389)</option>
+                      <option>IMAP (TCP port 143)</option>
+                      <option>SMTP (TCP port 465)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>Custom TCP</option>
+                      <option>Custom UDP</option>
+                      <option>Custom ICMP</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  <div id="sgroup-more-rules" style="display: none;">
+                    <div class="form-row"> 
+                      <div id="sgroup-port-option">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                        <div id="sgroup-ports-error" class="sg-error-msg"></div>
+                      </div>
+                      <div id="sgroup-type-option" style="display: none;">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
+                          <option value='0'>Echo reply</option>
+                          <option value='3'>Destination unreachable</option>
+                          <option value='4'>Source quench</option>
+                          <option value='5'>Redirect message</option>
+                          <option value='6'>Alternate host address</option>
+                          <option value='8'>Echo request</option>
+                          <option value='9'>Router advertisement</option>
+                          <option value='10'>Router solicitation</option>
+                          <option value='11'>Timeout exceeded</option>
+                          <option value='12'>Parameter problem: Bad IP header</option>
+                          <option value='13'>Timestamp</option>
+                          <option value='14'>Timestamp reply</option>
+                          <option value='15'>Information request</option>
+                          <option value='16'>Infromation reply</option>
+                          <option value='17'>Address mask request</option>
+                          <option value='18'>Address mask reply</option>
+                          <option value='30'>Traceroute</option>
+                          <option value='31'>Diagram conversion error</option>
+                          <option value='32'>Mobile host redirect</option>
+                          <option value='33'>Where are you</option>
+                          <option value='34'>Here I am</option>
+                          <option value='35'>Mobile registration request</option>
+                          <option value='36'>Mobile registration reply</option>
+                          <option value='37'>Domain name request</option>
+                          <option value='38'>Domain name reply</option>
+                          <option value='39'>SKIP algorithm discovery protocol</option>
+                          <option value='40'>Photuris, security failures</option>
+                          <option value='-1'>All</option>
+                        </select>
+                      </div>
+                      <div class="dialog-notifications"></div>
+                    </div>  
+                  
+                    <div class="form-row sg-inline-options">
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}" value="ip"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">{{!>sgroup_dialog_use_my_ip}}</a>
+                      <div id="allow-ip-error" class="sg-error-msg"></div>
+                    </div>
+  
+                    <div class="form-row sg-options-row">
+                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}" value="group"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    </div>
+                  
+                    <div class="section-button-bar">
+                      <a href='#' id='sgroup-add-rule' class="button section-button">{{!>sgroup_dialog_add_another_rule}}</a>
+                    </div> 
+                     
+                    <div id="sgroup-rules-list"></div>
+                    
+                  </div>
+                  <!-- END #sgroup-more-rules -->
+
+                </div>
+                <!-- END content-section -->   
+
+              </div>
+              <!-- END content-sections-wrapper -->
+
+              <p class="required-hint">{{!: required_fields }}</p>    
+            
+            </div>
+            <!-- END dialog-inner-content -->
+
+          </div>
+          <!-- END #sgroups-add-dialog -->
+
+          <div id="sgroup-add-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+                {{!: dialog_add_content }}
+            </div>
+            <div class="help-revert-button">
+                <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+        <!-- END #sgroups-add-wrapper -->
+      </script>
+
+      <script id="sgroupEditDlgTmpl" type="text/x-jsrender">
+        <div id="sgroups-edit-wrapper">
+          <div id="sgroups-edit-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+
+              <div class="sg-name-desc">
+                <div id="sgroups-edit-group-name" class="sg-name"></div>
+                <div id="sgroups-edit-group-desc" class="sg-desc"></div>
+                <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
+                <div id="sgroups-hidden-name" style='display: none;'></div>
+              </div>
+
+              <div class="content-sections-wrapper">
+
+                <div class="rules content-section">
+                  <h3>{{!:sgroup_dialog_rule_title}}</h3>
+                  <div class="content-section-label">{{!: sgroup_dialog_edit_rules }}</div>
+                  <div class="form-row">
+                    <label for="sgroup-template">{{!>sgroup_dialog_add_protocol}}</label>
+                    <select id="sgroup-template" title="{{!: sgroup_dialog_add_protocol_tip }}">
+                      <option value="none">Select protocol</option>
+                      <optgroup label="">
+                      <option>SSH (TCP port 22, for terminal access)</option>
+                      <option>RDP (TCP port 3389, for Windows instances)</option>
+                      <option>HTTP (TCP port 80, for web servers)</option>
+                      <option>HTTPS (TCP port 443, for web servers)</option>
+                      <option>MS SQL (TCP port 1433)</option>
+                      <option>MySQL (TCP port 3306)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>POP3 (TCP port 110)</option>
+                      <option>POP3S (TCP port 995)</option>
+                      <option>LDAP (TCP port 389)</option>
+                      <option>IMAP (TCP port 143)</option>
+                      <option>SMTP (TCP port 465)</option>
+                      </optgroup>
+                      <optgroup label="----------------">
+                      <option>Custom TCP</option>
+                      <option>Custom UDP</option>
+                      <option>Custom ICMP</option>
+                      </optgroup>
+                    </select>
+                  </div>
+    
+                  <div id="sgroup-more-rules" style='display: none;'>
+                    <div class="form-row">
+                      <div id="sgroup-port-option">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <input type="text" id="sgroup-ports" class="required" title="{{!: sgroup_dialog_add_ports_tip }}"/>
+                      </div>
+                      <div id="sgroup-type-option" style="display: none;">
+                        <label for="sgroup-ports">{{!>sgroup_dialog_add_ports}}</label>
+                        <select id="sgroup-type" title="{{!: sgroup_dialog_add_ports_tip }}">
+                          <option value='0'>Echo reply</option>
+                          <option value='3'>Destination unreachable</option>
+                          <option value='4'>Source quench</option>
+                          <option value='5'>Redirect message</option>
+                          <option value='6'>Alternate host address</option>
+                          <option value='8'>Echo request</option>
+                          <option value='9'>Router advertisement</option>
+                          <option value='10'>Router solicitation</option>
+                          <option value='11'>Timeout exceeded</option>
+                          <option value='12'>Parameter problem: Bad IP header</option>
+                          <option value='13'>Timestamp</option>
+                          <option value='14'>Timestamp reply</option>
+                          <option value='15'>Information request</option>
+                          <option value='16'>Infromation reply</option>
+                          <option value='17'>Address mask request</option>
+                          <option value='18'>Address mask reply</option>
+                          <option value='30'>Traceroute</option>
+                          <option value='31'>Diagram conversion error</option>
+                          <option value='32'>Mobile host redirect</option>
+                          <option value='33'>Where are you</option>
+                          <option value='34'>Here I am</option>
+                          <option value='35'>Mobile registration request</option>
+                          <option value='36'>Mobile registration reply</option>
+                          <option value='37'>Domain name request</option>
+                          <option value='38'>Domain name reply</option>
+                          <option value='39'>SKIP algorithm discovery protocol</option>
+                          <option value='40'>Photuris, security failures</option>
+                          <option value='-1'>All</option>
+                        </select>
+                      </div>
+                      <div class="dialog-notifications"></div>
+                    </div>
+  
+                    <div class="form-row sg-inline-options">
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}" value="ip"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
+                      <a href="#" id='sgroup-ip-check' class="sg-my-ip">{{!>sgroup_dialog_use_my_ip}}</a>
+                      <div id="allow-ip-error" class="sg-error-msg"></div>
+                    </div>
+  
+                    <div class="form-row sg-options-row"> 
+                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}" value="group"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                    </div>
+
+                    <div class="section-button-bar">
+                      <a href='#' id='sgroup-add-rule' class="button section-button">{{!>sgroup_dialog_add_another_rule}}</a>
+                    </div>
+
+                  </div>
+                  <!-- END #sgroup-more-rules -->
+
+                  <div class="content-section-label">{{!: sgroup_dialog_edit_existing_rules }}</div>
+                  <div id="sgroup-rules-list"></div>
+
+                </div>
+                <!-- END content-section --> 
+
+              </div>
+              <!-- END content-sections-wrapper --> 
+
+            </div>
+            <!-- END dialog-inner-content -->
+
+          </div>
+          <!-- END #sgroups-edit-dialog --> 
+
+          <div id="sgroup-edit-dialog-help" class="dialog-help">
+              <div class="dialog-help-content">
+                {{!: dialog_edit_content }}
+              </div>
+              <div class="help-revert-button">
+                <a href="#">{{!>revert_button}}</a>
+              </div>
+          </div>
+
+        </div>
+        <!-- END #sgroups-edit-wrapper -->
+      </script>
+
+      <script id="sgroupDelDlgTmpl" type="text/x-jsrender">
+        <div id="sgroups-delete-dialog-wrapper">
+          <div id="sgroups-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: sgroup_dialog_del_text }}</p>
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+          <div id="sgroup-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+                {{!: dialog_delete_content }}
+            </div>
+            <div class="help-revert-button">
+                <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Security Group dialog template -->
+
+      <!-- Volume table -->
+      <script id="volumeTblTmpl" type="text/x-jsrender">
+        <div id="volumes-wrapper">
+          
+          <div id="volumes-table">
+            <table id="volumes" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="volumes-check-all">
+                  </th>
+                  <th>{{!>vl_tbl_hdr_id}}</th>
+                  <th>{{!>vl_tbl_hdr_status}}</th>
+                  <th>{{!>vl_tbl_hdr_size}}</th>
+                  <th>{{!>vl_tbl_hdr_attached_to}}</th>
+                  <th>{{!>vl_tbl_hdr_snapshot_id}}</th>
+                  <th>{{!>vl_tbl_hdr_availability_zone}}</th>
+                  <th>{{!>vl_tbl_hdr_creation_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+
+          <div id="volume-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+          
+        </div>
+      </script>
+      <!-- END Volume table -->
+
+      <!-- Volume dialog template -->
+      <script id="volumeDelDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-euca-dialog-wrapper">
+          
+          <div id="volumes-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: volume_dialog_del_text }}</p>
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="volumes-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_delete_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="volumeDetachDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-detach-dialog-wrapper">
+          
+          <div id="volumes-detach-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: volume_dialog_detach_text }}</p>
+              <div class="selected-resources"></div>
+            </div>  
+          </div>
+
+          <div id="volumes-detach-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_detach_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="volumeInstDetachDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-detach-dialog-wrapper">
+          <div id="volumes-detach-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p id="volume-detach-msg"></p>
+              <p id="volume-detach-select-all"></p>
+              <table id="volume-detach-grid" class="dialog-table-grid">
+              </table>
+            </div>
+          </div> 
+
+          <div id="volumes-detach-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_detach_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="volumeAddDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-add-dialog-wrapper">
+          
+          <div id="volumes-add-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: volume_dialog_add_text }}</p>
+              <div class="form-row">
+                <label for="volume-add-snapshot-selector">{{!: volume_dialog_snapshot_label }}</label>
+                <select title="{{!: volume_dialog_snapshot_tip }}" id="volume-add-snapshot-selector"></select>
+              </div>
+              <div class="form-row">
+                <label for="volume-size" class="required-label">{{!: volume_dialog_size_label }}</label>
+                <input type="text" id="volume-size" class="short-textinput required" title="{{!: volume_dialog_size_tip }}"/>
+              </div>
+              <p>{{!: volume_dialog_az_text }}</p>
+              <div class="form-row">
+                <label for="volume-add-az-selector" class="required-label">{{!: volume_dialog_az_label }}</label>
+                <select title="{{!: volume_dialog_az_tip }}" id="volume-add-az-selector"></select>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+
+          <div id="volumes-add-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_add_content }}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="volumeAttachDlgTmpl" type="text/x-jsrender">
+        <div id="volumes-attach-dialog-wrapper">
+          <div id="volumes-attach-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div class="form-row top-form-row">
+                <label for="volume-attach-volume-id" class="required-label">{{!: volume_dialog_attach_volume_label }}</label>
+                <input type="text" id="volume-attach-volume-id" class="required" title="{{!: volume_attach_volume_id_text_tip }}"/>
+              </div>
+              <div class="form-row">
+                <label for="volume-attach-instance-id" class="required-label">{{!: volume_dialog_attach_instance_label }}</label>
+                <input type="text" id="volume-attach-instance-id" class="required" title="{{!: volume_attach_instance_id_text_tip }}"/>
+              </div>
+              <div class="form-row">
+                <label for="volume-attach-device-name" class="required-label">{{!: volume_dialog_attach_device_label }}</label>
+                <input type="text" id="volume-attach-device-name" class="required" title="{{!: volume_attach_device_name_text_tip }}"/>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+
+          <div id="volumes-attach-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_attach_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+      <!-- END Volume dialog template -->
+
+      <!-- Snapshot table -->
+      <script id="snapshotTblTmpl" type="text/x-jsrender">
+        <div id="snapshot-wrapper">
+
+          <div id="snapshot-table">
+            <table id="snapshots" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="snapshots-check-all">
+                  </th>
+                  <th>{{!>sn_tbl_hdr_id}}</th>
+                  <th>{{!>sn_tbl_hdr_status}}</th>
+                  <th>{{!>sn_tbl_hdr_size}}</th>
+                  <th>{{!>sn_tbl_hdr_volume_id}}</th>
+                  <th>{{!>sn_tbl_hdr_description}}</th>
+                  <th>{{!>sn_tbl_hdr_creation_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+
+          <div id="snapshot-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+      <!-- END Snapshot table -->
+
+      <!-- Snapshot dialog templates -->
+      <script id="snapshotCreateDlgTmpl" type="text/x-jsrender">
+        <div id="snapshot-create-dialog-wrapper">
+          <div id="snapshot-create-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div id="snapshot-create-dialog-some-volumes">
+              <p>{{!: snapshot_create_dialog_text }}</p>
+              <div class="form-row" id="snapshot-create-dialog-vol-id">
+                <label for="snapshot-create-volume-id" class="required-label">{{!: snapshot_create_dialog_volume_label }}</label>
+                <input type="text" id="snapshot-create-volume-id" class="required" title="{{!: snapshot_create_dialog_volume_tip }}"/>
+              </div>
+              <div class="form-row" id="snapshot-create-dialog-desc">
+                <label for="snapshot-create-description">{{!: snapshot_create_dialog_description_label }}</label>
+                <textarea id="snapshot-create-description" class="description" title="{{!: snapshot_create_dialog_description_tip }}"/>
+              </div>
+              </div>
+              <div id="snapshot-create-dialog-no-volumes" style="display:none">
+                 <p>{{!: snapshot_create_dialog_no_volumes_text }}</p>
+                 <p><a href="#" id="snapshot-create-dialog-new-vol">{{!: snapshot_create_dialog_no_volumes_link }}</a></p>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="snapshot-create-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_create_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="snapshotDelDlgTmpl" type="text/x-jsrender">
+        <div id="snapshot-euca-dialog-wrapper">
+          
+          <div id="snapshot-delete-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: snapshot_delete_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="snapshot-delete-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_delete_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="snapshotRegDlgTmpl" type="text/x-jsrender">
+        <div id="snapshot-euca-dialog-wrapper">
+          <div id="snapshot-register-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: snapshot_register_dialog_text }}</p>
+              <div class="form-row">
+                <label for="snapshot-register-image-name" class="required-label">{{!: snapshot_register_dialog_image_name }}</label>
+                <input type="text" id="snapshot-register-image-name" class="required"/>
+              </div>
+              <div class="form-row">
+                <label for="snapshot-register-image-desc">{{!: snapshot_register_dialog_image_desc }}</label>
+                <textarea id="snapshot-register-image-desc" class="description" />
+              </div>
+              <div class="form-row clearfix checkbox-only">
+                <input type="checkbox" id="snapshot-register-image-os"/>
+                <label for="snapshot-register-image-os">{{!:snapshot_register_dialog_image_os}} </label>
+              </div>
+              <div class="required-hint">{{!:required_fields}} </div>
+            </div>
+          </div>
+          <div id="snapshot-register-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_register_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <!-- END Snapshot dialog templates -->
+
+      <!-- IPs table -->
+      <script id="eipTblTmpl" type="text/x-jsrender">
+        <div id="eip-wrapper">
+          <div id="eip-table">
+            <table id="eips" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="eips-check-all">
+                  </th>
+                  <th>{{!>eip_tbl_hdr_address}}</th>
+                  <th>{{!>eip_tbl_hdr_instance}}</th>
+                </tr>
+               </thead>
+               <tbody>
+               </tbody>
+            </table>
+          </div>
+          <div id="eip-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END IPs table -->
+
+      <!-- IPs dialog template -->
+      <script id="eipAllocateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-allocate-dialog-wrapper">
+          <div id="eip-allocate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: eip_allocate_dialog_text }}
+              <div class="form-row">
+                <label for="eip-allocate-count" class="required-label mega-long-label">{{!: eip_allocate_dialog_count_label }}</label>
+                <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="3" title="{{!: eip_allocate_dialog_count_tip }}"/>
+              </div>
+              <p class="required-hint">{{!: required_fields }}</p>
+            </div>
+          </div>
+          <div id="snapshot-create-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_allocate_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <script id="eipReleaseDlgTmpl" type="text/x-jsrender">
+        <div id="eip-euca-dialog-wrapper">
+
+          <div id="eip-release-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: eip_release_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="eip-release-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_release_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="eipAssociateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-associate-dialog-wrapper">
+          
+          <div id="eip-associate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div class="form-row top-form-row">
+                <label for="eip-associate-instance-id" class="required-label extra-long-label" id="eip-associate-instance-txt"></label>
+                <input type="text" id="associate-selected-value" class="required" title="{{!: eip_associate_dialog_instance_tip }}"> </input>
+              </div>
+              <span style="display:none" id="associate-fixed-value"> </span>
+            </div>
+          </div>
+
+          <div id="eip-associate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_associate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="eipDisassociateDlgTmpl" type="text/x-jsrender">
+        <div id="eip-disassociate-dialog-wrapper">
+          
+          <div id="eip-disassociate-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: eip_disassociate_dialog_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="eip-disassociate-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_disassociate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <!-- END IPs dialog template -->
+
+      <!-- Instance landing table template -->
+      <script id="instanceTblTmpl" type="text/x-jsrender">
+        <div id="instances-wrapper">
+          <div id="instances-table">
+            <table id="instances" class="display">
+              <thead>
+                <tr>
+                  <th>
+                    <input type="checkbox" id="instances-check-all">
+                  </th>
+                  <th>{{!>inst_tbl_hdr_os}}</th>
+                  <th>{{!>inst_tbl_hdr_id}}</th>
+                  <th>{{!>inst_tbl_hdr_state}}</th>
+                  <th>{{!>inst_tbl_hdr_image_id}}</th>
+                  <th>{{!>inst_tbl_hdr_availability_zone}}</th>
+                  <th>{{!>inst_tbl_hdr_public_ip}}</th>
+                  <th>{{!>inst_tbl_hdr_private_ip}}</th>
+                  <th>{{!>inst_tbl_hdr_keyname}}</th>
+                  <th>{{!>inst_tbl_hdr_sgroup}}</th>
+                  <th>{{!>inst_tbl_hdr_launch_time}}</th>
+                </tr>
+               </thead>
+               <tbody>
+              </tbody>
+            </table>
+          </div>
+          <div id="instance-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+      <!-- END Instance landing table template -->
+
+      <!-- Instance dialog templates -->
+      <script id="instanceTermDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div id="ebs-backed-warning"> </div>
+              {{!: instance_dialog_term_text }}
+              <div class="selected-resources"> </div>
+            </div>
+          </div>
+
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_terminate_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+      <script id="instanceRebootDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_reboot_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_reboot_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+      <script id="instanceStopDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              {{!: instance_dialog_stop_text }}
+              <div class="selected-resources"></div>
+            </div>
+          </div>
+
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_stop_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="instanceConnectDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div id="instance-connect-text"> </div> 
+              <input id="fileupload" type="file" name="priv_key" data-url="../ec2" hidden="">
+              <div id="instance-connect-uname-password"> </div>
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_connect_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="instanceConsoleDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+             <div id="instance-console-output"> </div> 
+            </div>
+          </div>
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_console_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="instanceLaunchMoreDlgTmpl" type="text/x-jsrender">
+        <div id="instances-euca-dialog-wrapper">
+          <div id="instances-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <div class="content-sections-wrapper">
+                <div id="launch-more-summary" class="content-section"> 
+                    <div id="launch-more-summary-header" class="twist launch-wizard-section-header"> </div>
+                    <div id="launch-more-summary-contents" class="launch-more-summary-wrapper clearfix">
+                      <div id="launch-more-summary-image" class="launch-more-summary-section"> </div>
+                      <div id="launch-more-summary-type" class="launch-more-summary-section"> </div>
+                      <div id="launch-more-summary-security" class="launch-more-summary-section"> </div>
+                    </div>
+                </div>
+                <!-- END content-section -->
+
+                <div id="launch-wizard-advanced" class="content-section">
+                  <div id="launch-wizard-advanced-header" class="twist launch-wizard-section-header"> </div>
+                  <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
+                    <div id="launch-wizard-advanced-main-contents">
+                      <div id="launch-wizard-advanced-userdata"> </div>
+                      <div id="launch-wizard-advanced-kernelramdisk"> </div>
+                      <div id="launch-wizard-advanced-network"> </div>
+                      <div id="launch-wizard-advanced-storage"> </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- END content-section -->
+              </div>
+              <!-- END content-sections-wrapper -->
+            </div>
+            <!-- END dialog-inner-content -->
+          </div>
+          <!-- END instances-euca-dialog -->
+          <div id="instances-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_launchmore_content}}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+        <!-- END instances-euca-dialog-wrapper -->
+      </script>
+      <!-- END Instance dialog templates -->
+      
+      <!-- Image landing table template -->
+      <script id="imageTblTmpl" type="text/x-jsrender">
+        <div id="images-wrapper">
+
+          <div id="images-table">
+            <table id="images" class="display">
+              <thead>
+                <tr>
+                  <th>{{!>img_tbl_hdr_name}}</th>
+                  <th>{{!>inst_tbl_hdr_image_id}}</th>
+                  <th>{{!>img_tbl_hdr_status}}</th>
+                  <th>{{!>img_tbl_hdr_architecture}}</th>
+                  <th>{{!>img_tbl_hdr_description}}</th>
+                  <th>{{!>img_tbl_hdr_root}}</th>
+                  <th>&nbsp;</th>
+                </tr>
+               </thead>
+               <tbody>
+              </tbody>
+            </table>
+          </div>
+
+          <div id="instance-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+
+        </div>
+      </script>
+
+      <script id="aboutCloundDlgTmpl" type="text/x-jsrender">
+        <div id="aboutcloud-euca-dialog-wrapper">
+          <div id="about-clound-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: about_dialog_version }}&nbsp;<span id="version"/></p>
+              <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" target="_blank" id="admin-url">{{!: about_dialog_link_label }}</a>.</p>
+            </div>
+          </div>
+          <div id="about-clound-euca-dialog-help" class="dialog-help">
+            <div class="dialog-help-content">
+              {{!: dialog_content}}
+            </div>
+            <div class="help-revert-button">
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <!-- Launch Wizard & Help -->
+      <script id="launchWizardTmpl" type="text/x-jsrender"> 
+        <div id="launch-wizard-wrapper"> <!-- rendering will remove this extra div --> 
+         <div id="launch-wizard-and-summary-wrapper">
+            <!-- Wizard Wrapper (left side) -->
+            <div class="wizard-wrapper">
+
+              <div id="launch-wizard" class="launcher-wrapper">
+                <div id="launch-wizard-header" class="box-header"><span>{{!> launch_instance_header }}</span></div>
+
+                <div class="launch-wizard-intro-text">
+                  <div id="launch-wizard-note">{{!>launch_instance_note}}</div>
+                </div>
+                
+                <div class="launch-wizard-pointer"></div>       
+
+                <!-- Launch Wizard Steps -->
+                <div class="wizard-steps">
+
+                  <div id="launch-wizard-image" class="wizard-step"> 
+                    <div id="launch-wizard-image-header" class="twist launch-wizard-section-header"> </div>
+                    <div id="launch-wizard-image-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-image-main-contents">
+                        <div id="launch-wizard-image-table">
+                          <table id="launch-images" class="display">
+                            <tbody>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                      <div id="launch-wizard-buttons-image" class="launch-wizard-buttons"> </div>
+                    </div>
+                  </div>
+              
+                  <div id="launch-wizard-type" class="wizard-step"> 
+                    <div id="launch-wizard-type-header" class="twist launch-wizard-section-header"> </div>
+                    <div id="launch-wizard-type-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-type-main-contents">
+                        <div id="launch-wizard-type-size"> </div>
+                        <div id="launch-wizard-type-options"> </div>
+                      </div>
+                      <div id="launch-wizard-buttons-type" class="launch-wizard-buttons"></div>
+                    </div>
+                  </div>
+              
+                  <div id="launch-wizard-security" class="wizard-step">
+                    <div id="launch-wizard-security-header" class="twist launch-wizard-section-header"> </div>
+                    <div id="launch-wizard-security-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-security-main-contents">
+                        <div id="launch-wizard-security-keypair"> </div>
+                        <div id="launch-wizard-security-sgroup"> </div>
+                      </div>
+                      <div id="launch-wizard-buttons-security" class="launch-wizard-buttons"> </div>
+                    </div>
+                  </div>
+              
+                  <div id="launch-wizard-advanced" class="wizard-step">
+                    <div id="launch-wizard-advanced-header" class="twist launch-wizard-section-header"> </div>
+                    <div id="launch-wizard-advanced-contents" class="launch-wizard-section">
+                      <div id="launch-wizard-advanced-main-contents">
+                        <div id="launch-wizard-advanced-userdata"> </div>
+                        <div id="launch-wizard-advanced-kernelramdisk"> </div>
+                        <div id="launch-wizard-advanced-network"> </div>
+                        <div id="launch-wizard-advanced-storage"> </div>
+                      </div>
+                      <div id="launch-wizard-buttons-advanced" class="launch-wizard-buttons"> </div>
+                    </div>
+                  </div>
+
+                  <div id="launch-wizard-required" class="required-hint">{{!> required_fields }}</div>
+
+                </div>
+                <!-- END Launch Wizard Steps -->
+                
+              </div>
+              <!-- END launcher-wrapper -->
+
+            </div>
+            <!-- END Wizard Wrapper -->
+            
+            <!-- Launch Wizard Summary (right side) -->
+            <div id="launch-wizard-summary-wrapper" class="wizard-summary-wrapper">
+              <div id="launch-wizard-summary" class="wizard-summary">
+                <div class="summary-title">{{!>launch_instance_summary_header}}</div>
+                <div id="summary-image"> </div>
+                <div id="summary-type"> </div>
+                <div id="summary-security"> </div>
+                <div id="summary-advanced"> </div>
+              </div>
+              <div id="launch-wizard-cancel" class="wizard-cancel">
+                <span>[<a href="#">{{!> launch_instance_cancel}}</a>]</span>
+              </div>
+            </div>
+            <!-- END Launch Wizard Summary -->    
+
+          </div> 
+          <!-- END OLD-launch-wizard -->
+
+          <div id="launch-wizard-help">
+            <div class="help-content">
+              {{!: landing_content }}
+            </div>
+            <div class="help-revert-button"> 
+              <a href="#">{{!>revert_button}}</a>
+            </div>
+          </div> 
+        </div>
+      </script>
+      <!-- END Launch Wizard & Help --> 
+
+    </div>
+    <!-- END of templates --> 
+
+  </body>
+</html>

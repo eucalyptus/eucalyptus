@@ -34,6 +34,8 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.DatabaseAuthProvider;
+import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.Snapshot;
@@ -69,6 +71,8 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -82,6 +86,17 @@ import edu.ucsb.eucalyptus.cloud.entities.ObjectInfo;
  * cloud metadata. Views can be compared and synchronized.
  */
 public final class ReportingDataVerifier {
+
+  // Accounts.getAccountProvider() will be null during a DB upgrade
+  private static Supplier<AccountProvider> accountProviderSupplier =
+      Suppliers.memoize( new Supplier<AccountProvider>() {
+    @Override
+    public AccountProvider get() {
+      return Accounts.getAccountProvider() != null ?
+          Accounts.getAccountProvider() :
+          new DatabaseAuthProvider();
+    }
+  } );
 
   /**
    * Update the reporting database to ensure events are present for existing items.
@@ -311,7 +326,7 @@ public final class ReportingDataVerifier {
       verified = true;
     } else {
       try {
-        final User user = Accounts.getAccountProvider().lookupUserById( userId );
+        final User user = getAccountProvider().lookupUserById( userId );
         final Account account = user.getAccount();
         ReportingAccountCrud.getInstance().createOrUpdateAccount( account.getAccountNumber(), account.getName() );
         ReportingUserCrud.getInstance().createOrUpdateUser( user.getUserId(), account.getAccountNumber(), user.getName() );
@@ -329,7 +344,7 @@ public final class ReportingDataVerifier {
 
     if ( user==null && !accountNumberToAccountAdminMap.containsKey( accountNumber ) ) {
       try {
-        user = Accounts.getAccountProvider().lookupAccountById( accountNumber ).lookupUserByName( User.ACCOUNT_ADMIN );
+        user = getAccountProvider().lookupAccountById( accountNumber ).lookupUserByName( User.ACCOUNT_ADMIN );
         accountNumberToAccountAdminMap.put( accountNumber, user );
       } catch ( AuthException e ) {
         accountNumberToAccountAdminMap.put( accountNumber, null );
@@ -337,6 +352,10 @@ public final class ReportingDataVerifier {
     }
 
     return user;
+  }
+
+  private static AccountProvider getAccountProvider() {
+    return accountProviderSupplier.get();
   }
 
   private static Address findAddress( final String uuid ) {

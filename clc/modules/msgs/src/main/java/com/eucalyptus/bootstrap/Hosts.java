@@ -907,6 +907,8 @@ public class Hosts {
         LOG.info( "System view: " + HostMapStateListener.INSTANCE.printMap( ) );
         UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( "System coordinator: " + Hosts.getCoordinator( ) );
+        //TODO:GRZE:enable this
+        //        Hosts.checkHostVersions( );
         
         /** wait for db if needed **/
         Hosts.awaitDatabases( );
@@ -1318,5 +1320,5 @@ public class Hosts {
       TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
     }
   }
-  
+
 }

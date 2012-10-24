@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage;
 
 import static com.eucalyptus.reporting.event.VolumeEvent.VolumeAction;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -277,7 +278,10 @@ public class Volumes {
           v.setState( volumeState );
           try {
             if ( v.getSize( ) <= 0 ) {
-              v.setSize( new Integer( size ) );
+              v.setSize( size );
+              if ( EnumSet.of( State.GENERATING, State.EXTANT, State.BUSY ).contains( volumeState ) ) {
+                fireUsageEvent( v, VolumeEvent.forVolumeCreate() );
+              }
             }
           } catch ( final Exception ex ) {
             LOG.error( ex );
@@ -383,9 +387,10 @@ public class Volumes {
           final CreateStorageVolumeType req = new CreateStorageVolumeType( t.getDisplayName( ), t.getSize( ), snapId, null ).regardingUserRequest( request );
           final CreateStorageVolumeResponseType ret = AsyncRequests.sendSync( sc, req );
           LOG.debug("Volume created");
-          
-          fireUsageEvent( t, VolumeEvent.forVolumeCreate());
-          
+
+          if ( t.getSize() != null && t.getSize() > 0 ) {
+            fireUsageEvent( t, VolumeEvent.forVolumeCreate());
+          }
         } catch ( final Exception ex ) {
           LOG.error( "Failed to create volume: " + t, ex );
           t.setState( State.FAIL );
@@ -439,11 +444,11 @@ public class Volumes {
               actionInfo,
               volume.getNaturalId(),
               volume.getDisplayName(),
-              volume.getSize().longValue(),
+              volume.getSize(),
               volume.getOwner(),
               volume.getPartition())
       );
-    } catch (final Exception e) {
+    } catch (final Throwable e) {
       LOG.error(e, e);
     }
   }

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.images;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
@@ -305,14 +306,9 @@ public class ImageManager {
         if ( imgInfo.getImagePublic( ) ) {
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.getGroup( ) );
         }
-        /**
-         * TODO:GRZE:RESTORE: this is so very wrong now
-         * 
-         * @see {@link com.eucalyptus.auth.Accounts} for ID details
-         * @see {@link com.eucalyptus.auth.Account} for Account ID details
-         */
-//        for ( LaunchPermission auth : imgInfo.getPermissions( ) )
-        reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( Contexts.lookup( ).getAccount( ).getAccountNumber( ) ) );
+        Iterator <String> permItr = imgInfo.getPermissions( ).iterator();        
+        while( permItr.hasNext() )
+          reply.getLaunchPermission( ).add( LaunchPermissionItemType.getUser( permItr.next() ) );
       } else if ( request.getProductCodes( ) != null ) {
         reply.setRealResponse( reply.getProductCodes( ) );
         reply.getProductCodes( ).addAll( imgInfo.getProductCodes( ) );

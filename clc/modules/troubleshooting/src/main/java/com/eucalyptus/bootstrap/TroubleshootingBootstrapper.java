@@ -64,7 +64,6 @@ package com.eucalyptus.bootstrap;
 
 import org.apache.log4j.Logger;
 
-
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -72,22 +71,18 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.troubleshooting.changelisteners.DBCheckPollTimeListener;
 import com.eucalyptus.troubleshooting.changelisteners.DBCheckThresholdListener;
-import com.eucalyptus.troubleshooting.changelisteners.GarbageCollectionCountCheckNameListener;
-import com.eucalyptus.troubleshooting.changelisteners.GarbageCollectionCountCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.changelisteners.GarbageCollectionCountCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.MemoryCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.MemoryCheckRatioListener;
 import com.eucalyptus.troubleshooting.changelisteners.LogFileDiskCheckPollTimeListener;
 import com.eucalyptus.troubleshooting.changelisteners.LogFileDiskCheckThresholdListener;
 import com.eucalyptus.troubleshooting.changelisteners.LogLevelListener;
-import com.eucalyptus.troubleshooting.changelisteners.MXBeanMemoryCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.changelisteners.MXBeanMemoryCheckThresholdListener;
-import com.eucalyptus.troubleshooting.changelisteners.SimpleMemoryCheckPollTimeListener;
-import com.eucalyptus.troubleshooting.changelisteners.SimpleMemoryCheckThresholdListener;
+import com.eucalyptus.troubleshooting.changelisteners.PermGenMemoryCheckPollTimeListener;
+import com.eucalyptus.troubleshooting.changelisteners.PermGenMemoryCheckRatioListener;
 import com.eucalyptus.troubleshooting.changelisteners.TriggerFaultListener;
 import com.eucalyptus.troubleshooting.checker.schedule.DBCheckScheduler;
-import com.eucalyptus.troubleshooting.checker.schedule.GarbageCollectionCountCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.MemoryCheckScheduler;
 import com.eucalyptus.troubleshooting.checker.schedule.LogFileDiskCheckScheduler;
-import com.eucalyptus.troubleshooting.checker.schedule.MXBeanMemoryCheckScheduler;
-import com.eucalyptus.troubleshooting.checker.schedule.SimpleMemoryCheckScheduler;
+import com.eucalyptus.troubleshooting.checker.schedule.PermGenMemoryCheckScheduler;
 
 @Provides(Empyrean.class)
 @RunDuring(Bootstrap.Stage.CloudServiceInit)
@@ -107,9 +102,8 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 		LOG.info("Starting troubleshooting interface.");
 		LogFileDiskCheckScheduler.resetLogFileDiskCheck();
 		DBCheckScheduler.resetDBCheck();
-		SimpleMemoryCheckScheduler.resetMemoryCheck();
-		MXBeanMemoryCheckScheduler.resetMXBeanMemoryCheck();
-		GarbageCollectionCountCheckScheduler.garbageCollectionCountCheck();
+		PermGenMemoryCheckScheduler.resetMXBeanMemoryCheck();
+		MemoryCheckScheduler.memoryCheck();
 		Faults.init();
 		return true;
 	}
@@ -165,26 +159,17 @@ public class TroubleshootingBootstrapper extends Bootstrapper {
 	@ConfigurableField(description = "Threshold (num connections or %) for db connection check", initial = "2.0%", changeListener = DBCheckThresholdListener.class, displayName = "db.check.threshold")
 	public static String DB_CHECK_THRESHOLD = "2.0%";
 
-	@ConfigurableField(description = "Poll time (ms) for simple memory check", initial = "60000", changeListener = SimpleMemoryCheckPollTimeListener.class, displayName = "simple.memory.check.poll.time")
-	public static String SIMPLE_MEMORY_CHECK_POLL_TIME = "60000";
+	@ConfigurableField(description = "Poll time (ms) for perm-gen memory check", initial = "5000", changeListener = PermGenMemoryCheckPollTimeListener.class, displayName = "perm.gen.memory.check.poll.time")
+	public static String PERM_GEN_MEMORY_CHECK_POLL_TIME = "5000";
 
-	@ConfigurableField(description = "Threshold (bytes or %) for simple memory check", initial = "2.0%", changeListener = SimpleMemoryCheckThresholdListener.class, displayName = "simple.memory.check.threshold")
-	public static String SIMPLE_MEMORY_CHECK_THRESHOLD = "2.0%";
+	@ConfigurableField(description = "Ratio (of used memory) for perm-gen memory check", initial = "0.98", changeListener = PermGenMemoryCheckRatioListener.class, displayName = "perm.gen.memory.check.ratio")
+	public static String PERM_GEN_MEMORY_CHECK_RATIO = "0.98";
 
-	@ConfigurableField(description = "Poll time (ms) for mxbean memory check", initial = "60000", changeListener = MXBeanMemoryCheckPollTimeListener.class, displayName = "mxbean.memory.check.poll.time")
-	public static String MXBEAN_MEMORY_CHECK_POLL_TIME = "60000";
+	@ConfigurableField(description = "Poll time (ms) for memory check", initial = "5000", changeListener = MemoryCheckPollTimeListener.class, displayName = "memory.check.poll.time")
+	public static String MEMORY_CHECK_POLL_TIME = "5000";
 
-	@ConfigurableField(description = "Threshold (bytes or %) for mxbean memory check", initial = "2.0%", changeListener = MXBeanMemoryCheckThresholdListener.class, displayName = "mxbean.memory.check.threshold")
-	public static String MXBEAN_MEMORY_CHECK_THRESHOLD = "2.0%";
-
-	@ConfigurableField(description = "Poll time (ms) for gc count check", initial = "1000", changeListener = GarbageCollectionCountCheckPollTimeListener.class, displayName = "gc.count.check.poll.time")
-	public static String GC_COUNT_CHECK_POLL_TIME = "1000";
-
-	@ConfigurableField(description = "Threshold (number of collection counts) for gc count check", initial = "100", changeListener = GarbageCollectionCountCheckThresholdListener.class, displayName = "gc.count.check.threshold")
-	public static String GC_COUNT_CHECK_THRESHOLD = "100";
-
-	@ConfigurableField(description = "Name of the garbage collector to check for gc count check", initial = "PS MarkSweep", changeListener = GarbageCollectionCountCheckNameListener.class, displayName = "gc.count.check.name")
-	public static String GC_COUNT_CHECK_NAME = "PS MarkSweep";
+	@ConfigurableField(description = "Ratio (of post-garbage collected old-gen memory) for memory check", initial = "0.98", changeListener = MemoryCheckRatioListener.class, displayName = "memory.check.ratio")
+	public static String MEMORY_CHECK_RATIO = "0.98";
 
 	@ConfigurableField( description = "Fault id last used to trigger test", initial = "", changeListener = TriggerFaultListener.class, displayName = "trigger.fault" )
 	public static String TRIGGER_FAULT = "";

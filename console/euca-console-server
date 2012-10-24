@@ -1,0 +1,185 @@
+#!/usr/bin/python -tt
+
+import atexit
+import os
+import sys
+import fcntl
+import getopt
+import logging
+import signal
+import time
+import ConfigParser
+import tornado.httpserver
+import tornado.ioloop
+import server
+from server import api
+from server.configloader import ConfigLoader
+
+PIDFILE = "/var/run/eucalyptus-console.pid"
+
+
+def daemonize(func=None):
+    # Fork process
+    procid = os.fork()
+    if procid < 0:
+        sys.exit(1)
+    elif procid > 0:
+        sys.exit(0)
+    procid = os.setsid()
+    if procid == -1:
+        sys.exit(1)
+
+    # Close open file descriptors
+    for fd  in (0, 1, 2):
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+    # Point descriptors to /dev/null
+    os.open("/dev/null", os.O_RDWR)
+    os.dup(0)
+    os.dup(0)
+
+    os.umask(027)
+    os.chdir("/")
+
+    # Create pidfile
+    try:
+        f = open(PIDFILE, "w")
+        fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        f.write(str(os.getpid()))
+        f.flush()
+    except IOError:
+        sys.exit(1)
+
+    signal.signal(signal.SIGTERM, cleanpid)
+    atexit.register(cleanpid)
+
+    if func:
+        func()
+
+
+def cleanpid(signum=None, action=None):
+    os.remove(PIDFILE)
+    sys.exit(0)
+
+
+def sessionChecker():
+    now = time.time()
+    idle = server.config.getint('server', 'session.idle.timeout')
+    absolute = server.config.getint('server', 'session.abs.timeout')
+    expired = [];
+    # collect ids that expired (because we can't modify the dictionary we're iterating through)
+    for session_id in server.sessions:
+        session = server.sessions[session_id]
+        if (now - session.session_start) > absolute:
+            expired.append(session_id)
+        elif (now - session.session_last_used) > idle:
+            expired.append(session_id)
+
+    # now, actually expire the sessions we flagged
+    for id in expired:
+        server.terminateSession(id, expired=True)
+
+
+def start_console():
+    settings = {
+      "cookie_secret": "getting-from-config-now",
+      "xsrf_cookies": True,
+    }
+
+    ssl_settings = {
+    }
+
+    # default webroot location for development
+    webroot = os.path.join(os.path.dirname(__file__), 'static')
+
+    # When staticpath is in the config we will assume that it is
+    # not a relative path
+    try:
+        webroot = server.config.get('paths', 'staticpath')
+    except ConfigParser.Error:
+        pass
+
+    if server.config.has_option('server', 'cookie.secret'):
+        settings['cookie_secret'] = server.config.get('server', 'cookie.secret')
+
+    if server.config.has_option('server', 'sslcert'):
+        ssl_settings['certfile'] = server.config.get('server', 'sslcert')
+
+    if server.config.has_option('server', 'sslkey'):
+        ssl_settings['keyfile'] = server.config.get('server', 'sslkey')
+
+    if server.config.has_option('server', 'uiport'):
+        server_port = server.config.getint('server', 'uiport')
+
+    application = tornado.web.Application([
+            (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
+            (r"/css/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'css')}),
+            (r"/lib/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'lib')}),
+            (r"/js/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'js')}),
+            (r"/custom/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'custom')}),
+            (r"/images/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
+            (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'help')}),
+            (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
+            (r"/ec2", api.ComputeHandler),
+            (r"/checkip", server.CheckIpHandler),
+            (r"/(.*)", server.RootHandler),
+        ], **settings)
+
+    if len(ssl_settings.keys()) > 0:    # we're using ssl
+        server.using_ssl = True
+        httpserver = tornado.httpserver.HTTPServer(application,
+            ssl_options=ssl_settings)
+        httpserver.listen(server_port)
+    else:
+        application.listen(server_port)
+    main_loop = tornado.ioloop.IOLoop.instance()
+    # this runs the checker every 10 seconds
+    checker = tornado.ioloop.PeriodicCallback(sessionChecker, 10000, io_loop = main_loop)
+    checker.start()
+    main_loop.start()
+
+
+def usage():
+    print """
+    %s [-d | --daemonize] [-c <config file> | --config <config file>]
+    """ % (os.path.basename(sys.argv[0]))
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+#    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
+#    for ip in ipaddrs:
+#      print "host IP: "+ip
+    daemon = False
+    config_file = None
+    try:
+        opts, _ = getopt.getopt(sys.argv[1:],
+            "hdc:", ["--help", "--daemonize", "--config"])
+        for arg, value in opts:
+            if arg == "-d" or arg == "--daemonize":
+                daemon = True
+            elif arg == "-c" or arg == "--config":
+                config_file = value
+            elif arg == "-h" or arg == "--help":
+                usage()
+    except getopt.GetoptError:
+        usage()
+
+    if config_file:
+        server.config = ConfigLoader().getParser(config_file)
+    else:
+        server.config = ConfigLoader().getParser()
+
+    if daemon:
+        daemonize(start_console)
+    else:
+        try:
+            logging.info("Starting Eucalyptus Console")
+            start_console()
+        except KeyboardInterrupt:
+            logging.info("Interrupted By User")
+            sys.exit(0)
+

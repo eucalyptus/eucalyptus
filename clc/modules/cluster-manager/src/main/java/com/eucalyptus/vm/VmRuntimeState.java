@@ -62,18 +62,17 @@
 
 package com.eucalyptus.vm;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
-import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
@@ -83,7 +82,6 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Nodes;
@@ -92,9 +90,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -107,7 +102,6 @@ import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
-import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
@@ -479,7 +473,12 @@ public class VmRuntimeState {
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
     return builder.toString( );
   }
-  
+
+  @Nullable
+  Reason reason() {
+    return reason;
+  }
+
   private VmCreateImageTask getCreateImageTask( ) {
     return this.createImageTask;
   }

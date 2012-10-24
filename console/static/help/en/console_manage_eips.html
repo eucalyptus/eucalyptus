@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Manage Elastic IP Addresses"/>
+<meta name="abstract" content="Your Eucalyptus cloud can offer elastic IP addresses that you can associate with your running instances. This screen allows you to view a list of your available elastic IP addresses, allocate new elastic IP addresses, associate and disassociate elastic IP addresses with running instances, and release elastic IP addresses. You can page through the list of elastic IP addresses by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="description" content="Your Eucalyptus cloud can offer elastic IP addresses that you can associate with your running instances. This screen allows you to view a list of your available elastic IP addresses, allocate new elastic IP addresses, associate and disassociate elastic IP addresses with running instances, and release elastic IP addresses. You can page through the list of elastic IP addresses by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="manage_eip_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Manage Elastic IP Addresses</title>
+</head>
+<body id="manage_eip_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">Manage Elastic IP Addresses</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Your Eucalyptus cloud can offer elastic IP addresses that you can associate with
+        your running instances. This screen allows you to view a list of your available elastic IP
+        addresses, allocate new elastic IP addresses, associate and disassociate elastic IP
+        addresses with running instances, and release elastic IP addresses. You can page through the
+        list of elastic IP addresses by clicking the navigation buttons at the bottom of the screen. </p>
+</div>
+
+    <div class="topic task nested1" id="manage_eip_ui_sorting_steps">
+        <h2 class="title topictitle2">Sorting the IP Address List</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click on any column header to toggle sorting the list of IP addresses in
+                        ascending or descending order by the selected column.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_searching_steps">
+        <h2 class="title topictitle2">Searching the IP Address List</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Type some search text into the <span class="ph uicontrol">Search</span> text box to
+                        filter the list of IP addresses. </span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_allocate_steps">
+        <h2 class="title topictitle2">Allocate New IP Addresses</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Allocate new IP address</span> button. The <span class="ph uicontrol">Allocate IP Addresses</span> dialog box will appear.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_attach_steps">
+        <h2 class="title topictitle2">Attach an IP Address to a Running Instance</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">
+                        Select an unassociated IP address from the <span class="ph uicontrol">Manage IP Addresses</span> window.
+                    </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 
+                        Click the <span class="ph uicontrol">More actions</span> link at the top of the screen and select <span class="ph uicontrol">Associate to instance</span> from the context menu.
+                    </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> 
+                            You can also right-click the unassociated IP address and select <span class="ph uicontrol">Associate to instance</span> from the context menu.
+                        </div>
+
+                    
+                     
+                        The <span class="ph uicontrol">Assocate IP Address</span> to instance dialog appears.
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_detach_steps">
+        <h2 class="title topictitle2">Disassociate an IP Address from a Running Instance</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Right-click on the attached IP address you wish to disassociate from a running
+                        instance.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select <span class="ph uicontrol">Disassociate from instance</span> from the context
+                        menu. The <span class="ph uicontrol">Disassociate IP addresses from instance</span>
+                        dialog box will appear. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> You can also click on an associate IP address and select <span class="ph uicontrol">Disassociate from instance</span> item from  the <span class="ph uicontrol">More
+                            actions</span> menu link at the top of the list.</div>
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    
+    <div class="topic task nested1" id="manage_eip_ui_release_steps">
+        <h2 class="title topictitle2">Releasing IP Addresses</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Select one or more unassociated IP addresses from the list.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Right-click in the volume list and select <span class="ph uicontrol">Release to cloud</span>
+                        from the context menu. The <span class="ph uicontrol">Release IP addresses to cloud</span> dialog box
+                        will appear. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> You can also select the IP addresses to release and select <span class="ph uicontrol">Release to cloud</span> item from  the <span class="ph uicontrol">More
+                            actions</span> menu link at the top of the list.</div>
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

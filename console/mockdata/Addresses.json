@@ -1,0 +1,24 @@
+[
+  {
+    "public_ip": "192.168.46.191", 
+    "domain": null, 
+    "__obj_name__": "Address", 
+    "allocation_id": null, 
+    "region": [], 
+    "instance_id": "i-94604245", 
+    "association_id": null, 
+    "connection": [], 
+    "item": ""
+  }, 
+  {
+    "public_ip": "192.168.46.192", 
+    "domain": null, 
+    "__obj_name__": "Address", 
+    "allocation_id": null, 
+    "region": [], 
+    "instance_id": null, 
+    "association_id": null, 
+    "connection": [], 
+    "item": ""
+  }
+]

@@ -71,7 +71,7 @@ public class HtmlDocument
 	private static final int LABEL_WIDTH = 50;
 	private static final int VALUE_WIDTH = 80;
 	
-    private StringBuffer rowSb;
+    private StringBuilder rowSb;
     private Writer writer;
     private boolean rowHasLabel = false;
 
@@ -119,7 +119,8 @@ public class HtmlDocument
     		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
     	}
     	writer.write("</table>\n");
-    	return this;
+    rowSb = new StringBuilder();
+    return this;
 	}
     
     @Override
@@ -138,7 +139,7 @@ public class HtmlDocument
     	if (rowSb != null) {
     		writer.write("<tr>" + rowSb.toString() + "</tr>\n");
     	}
-        rowSb = new StringBuffer();
+        rowSb = new StringBuilder();
     	return this;    	
     }
 

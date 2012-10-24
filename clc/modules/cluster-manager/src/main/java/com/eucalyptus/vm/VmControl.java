@@ -168,7 +168,7 @@ public class VmControl {
   public static RunInstancesResponseType runInstances( RunInstancesType request ) throws Exception {
     RunInstancesResponseType reply = request.getReply( );
     Allocation allocInfo = Allocations.run( request );
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       Predicates.and( VerifyMetadata.get( ), AdmissionControl.run( ), ContractEnforcement.run() ).apply( allocInfo );
       allocInfo.commit( );
@@ -184,9 +184,10 @@ public class VmControl {
       db.commit( );
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
-      db.rollback( );
       allocInfo.abort( );
       throw ex;
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
     ClusterAllocator.get( ).apply( allocInfo );
     return reply;
@@ -208,13 +209,12 @@ public class VmControl {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
-        EntityTransaction db = Entities.get( VmInstance.class );
+        final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           VmInstance v = Entities.merge( vm );
           if ( instanceMap.put( v.getReservationId( ), VmInstances.transform( v ) ) && !reservations.containsKey( v.getReservationId( ) ) ) {
             reservations.put( v.getReservationId( ), new ReservationInfoType( v.getReservationId( ), v.getOwner( ).getAccountNumber( ), v.getNetworkNames( ) ) );
           }
-          db.rollback( );
         } catch ( Exception ex ) {
           Logs.exhaust( ).error( ex, ex );
           db.rollback( );
@@ -235,6 +235,8 @@ public class VmControl {
           } catch ( Exception ex1 ) {
             LOG.error( ex1, ex1 );
           }
+        } finally {
+          if (db.isActive()) db.rollback( );
         }
       }
       List<ReservationInfoType> replyReservations = reply.getReservationSet( );
@@ -391,7 +393,7 @@ public class VmControl {
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
     final DescribeBundleTasksResponseType reply = request.getReply( );
     
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       Predicate<VmInstance> filter = Predicates.and( VmInstance.Filters.BUNDLING, RestrictedTypes.filterPrivileged( ) );
       if ( request.getBundleIds( ).isEmpty( ) ) {
@@ -408,11 +410,11 @@ public class VmControl {
           } catch ( final NoSuchElementException e ) {}
         }
       }
-      db.rollback( );
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
       throw new EucalyptusCloudException( ex );
+    } finally {
+      db.rollback( );
     }
     return reply;
   }
@@ -425,7 +427,7 @@ public class VmControl {
   public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
     final StartInstancesResponseType reply = request.getReply( );
     for ( String instanceId : request.getInstancesSet( ) ) {
-      EntityTransaction db = Entities.get( VmInstance.class );
+      final EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
@@ -448,13 +450,12 @@ public class VmControl {
             allocInfo.abort( );
             throw ex;
           }
-        } else {
-          db.rollback( );
         }
       } catch ( Exception ex1 ) {
         LOG.trace( ex1, ex1 );
-        db.rollback( );
         throw ex1;
+      } finally {
+        if ( db.isActive() ) db.rollback();
       }
     }
     return reply;

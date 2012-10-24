@@ -99,11 +99,11 @@ public class MetadataStateBootstrapper extends Bootstrapper.Simple {
     EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
     try {
       if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
-        db.add( new VmType( "m1.small", 1, 2, 128 ) );
-        db.add( new VmType( "c1.medium", 1, 5, 256 ) );
-        db.add( new VmType( "m1.large", 2, 10, 512 ) );
-        db.add( new VmType( "m1.xlarge", 2, 20, 1024 ) );
-        db.add( new VmType( "c1.xlarge", 4, 20, 2048 ) );
+        db.add( new VmType( "m1.small",  1,  5,  512 ) );
+        db.add( new VmType( "c1.medium", 2, 10,  512 ) );
+        db.add( new VmType( "m1.large",  2, 15, 1024 ) );
+        db.add( new VmType( "m1.xlarge", 2, 20, 2048 ) );
+        db.add( new VmType( "c1.xlarge", 4, 20, 4096 ) );
       }
       db.commit( );
     } catch ( Exception e ) {

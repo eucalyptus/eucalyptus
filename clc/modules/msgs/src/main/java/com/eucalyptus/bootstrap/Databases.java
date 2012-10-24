@@ -83,6 +83,8 @@
 
 package com.eucalyptus.bootstrap;
 
+import groovy.sql.Sql;
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -90,14 +92,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -134,7 +139,9 @@ import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
+import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
@@ -163,8 +170,30 @@ public class Databases {
     }
     
   }
+  
+  private static Logger LOG = Logger.getLogger( Databases.class );
 
-  private static Logger                       LOG                       = Logger.getLogger( Databases.class );
+  public enum Events {
+    INSTANCE;
+    public static Sql getConnection( ) throws Exception {
+      return Databases.getBootstrapper( ).getConnection( INSTANCE.getName( ) );
+    }
+
+    public String getName( ) {
+      return "database_events";
+    }
+
+    public static void create( ) {
+      if ( !getBootstrapper( ).listDatabases( ).contains( INSTANCE.getName( ) ) ) {
+        try {
+          getBootstrapper( ).createDatabase( INSTANCE.getName( ) );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
+  }
+  
   private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
   private static final AtomicInteger          counter                   = new AtomicInteger( 500 );
   private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
@@ -227,6 +256,13 @@ public class Databases {
     
     @Override
     public boolean load( ) throws Exception {
+	
+      if( SubDirectory.DB.getChildFile("data", "disabled.lock" ).exists() ) {
+	  //TODO Add fault : FaultSubsystem.forComponent(Eucalyptus.class).havingId(1010).withVar("DISABLED_CLC", "disable.lock" ).log();
+	  LOG.error("WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE disabled.lock FILE TO PROCEED WITH RISK");
+	  System.exit(1);
+      }
+	
       Hosts.awaitDatabases( );
       Groovyness.run( "setup_dbpool.groovy" );
       OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
@@ -264,6 +300,11 @@ public class Databases {
             TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
           }
         }
+        
+        if (SubDirectory.DB.getChildFile("data","disabled.lock").createNewFile()) {
+            LOG.debug("The disabled.lock file was created.");
+        }
+        
         Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
       }
@@ -326,7 +367,9 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" )
+            ? ctx
+            : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -357,7 +400,9 @@ public class Databases {
       return new Function<String, Runnable>( ) {
         @Override
         public Runnable apply( final String ctx ) {
-          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" )
+            ? ctx
+            : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -436,9 +481,11 @@ public class Databases {
     private static void prepareConnections( final Host host, final String contextName ) throws NoSuchElementException {
       final String hostName = host.getDisplayName( );
       final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-      database.setUser( getUserName() );
-      database.setPassword( getPassword() );
-      database.setWeight( Hosts.isCoordinator( host ) ? 100 : 1 );
+      database.setUser( getUserName( ) );
+      database.setPassword( getPassword( ) );
+      database.setWeight( Hosts.isCoordinator( host )
+        ? 100
+        : 1 );
       database.setLocal( host.isLocalHost( ) );
     }
     
@@ -448,7 +495,9 @@ public class Databases {
         @Override
         public Runnable apply( final String ctx ) {
           final String hostName = host.getBindAddress( ).getHostAddress( );
-          final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
+          final String contextName = ctx.startsWith( "eucalyptus_" )
+            ? ctx
+            : "eucalyptus_" + ctx;
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
@@ -464,7 +513,9 @@ public class Databases {
                   String syncStrategy = "passive";
                   boolean activated = cluster.getActiveDatabases( ).contains( hostName );
                   boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
-                  syncStrategy = ( fullSync ? "full" : "passive" );
+                  syncStrategy = ( fullSync
+                    ? "full"
+                    : "passive" );
                   if ( activated ) {
 //                    LOG.info( "Deactivating existing database connections to: " + host );
 //                    cluster.deactivate( hostName );
@@ -485,7 +536,7 @@ public class Databases {
                       } catch ( IllegalStateException ex ) {
                         if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
                           ManagementFactory.getPlatformMBeanServer( ).unregisterMBean(
-                            new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
+                                                                                       new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
                           cluster.add( hostName, realJdbcDriver, dbUrl );
                         } else {
                           throw ex;
@@ -693,7 +744,9 @@ public class Databases {
     INSTANCE;
     @Override
     public DriverDatabaseClusterMBean apply( String ctx ) {
-      final String contextName = ctx.startsWith( "eucalyptus_" ) ? ctx : "eucalyptus_" + ctx;
+      final String contextName = ctx.startsWith( "eucalyptus_" )
+        ? ctx
+        : "eucalyptus_" + ctx;
       final DriverDatabaseClusterMBean cluster = lookup( contextName );
       return cluster;
     }
@@ -754,33 +807,36 @@ public class Databases {
         for ( String ctx : PersistenceContexts.list( ) ) {
           try {
             Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
-            if( BootstrapArgs.isCloudController( ) ) {
+            if ( BootstrapArgs.isCloudController( ) ) {
               activeDatabases.add( Hosts.localHost( ).getDisplayName( ) );
             }
             union.addAll( activeDatabases );
             intersection.retainAll( activeDatabases );
-          } catch ( Exception ex ) {
+          } catch ( Exception ex ) {}
+        }
+        Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
+        Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
+        boolean dbVolatile = !hosts.equals( intersection );
+        String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile
+          ? "volatile"
+          : "synchronized", hosts, dbVolatile
+          ? "!="
+          : "=", intersection );
+        if ( dbVolatile ) {
+          if ( last.compareAndSet( false, dbVolatile ) ) {
+            LOG.warn( msg );
+          } else {
+            LOG.debug( msg );
           }
-      }
-      Logs.extreme( ).debug( "ActiveHostSet: union of activated db connections: " + union );
-      Logs.extreme( ).debug( "ActiveHostSet: intersection of db hosts and activated db connections: " + intersection );
-      boolean dbVolatile = !hosts.equals( intersection );
-      String msg = String.format( "ActiveHostSet: %-14.14s %s%s%s", dbVolatile ? "volatile" : "synchronized", hosts, dbVolatile ? "!=" : "=", intersection );
-      if ( dbVolatile ) {
-        if ( last.compareAndSet( false, dbVolatile ) ) {
-          LOG.warn( msg );
         } else {
-          LOG.debug( msg );
+          if ( last.compareAndSet( true, dbVolatile ) ) {
+            LOG.warn( msg );
+          } else {
+            Logs.extreme( ).info( msg );
+          }
         }
-      } else {
-        if ( last.compareAndSet( true, dbVolatile ) ) {
-          LOG.warn( msg );
-        } else {
-          Logs.extreme( ).info( msg );
-        }
+        return intersection;
       }
-      return intersection;
-    }
     },
     DBHOSTS {
       @Override
@@ -799,7 +855,7 @@ public class Databases {
   private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
   
   private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or(
-                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
+                                                                                              Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
                                                                                               Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
                                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.system\\.Threads.*" ),
                                                                                               Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
@@ -810,7 +866,9 @@ public class Databases {
       return;
     } else {
       Collection<StackTraceElement> stack = Threads.filteredStack( stackFilter );
-      String caller = ( stack.isEmpty( ) ? "" : stack.iterator( ).next( ).toString( ) );
+      String caller = ( stack.isEmpty( )
+        ? ""
+        : stack.iterator( ).next( ).toString( ) );
       for ( int i = 0; i < MAX_TX_START_SYNC_RETRIES && isVolatile( ); i++ ) {
         try {
           TimeUnit.MILLISECONDS.sleep( 1000 );
@@ -829,11 +887,11 @@ public class Databases {
   }
   
   public static String getUserName( ) {
-    return singleton.getUserName();
+    return singleton.getUserName( );
   }
   
   public static String getPassword( ) {
-    return singleton.getPassword();
+    return singleton.getPassword( );
   }
   
   public static String getDriverName( ) {
@@ -872,7 +930,9 @@ public class Databases {
     }
     
     public boolean load( ) throws Exception {
-      return this.db.load( );
+      boolean result = this.db.load( );
+      Databases.Events.create( );
+      return result;
     }
     
     public boolean start( ) throws Exception {
@@ -894,17 +954,17 @@ public class Databases {
     public void hup( ) {
       this.db.hup( );
     }
-
+    
     @Override
-    public String getUserName() {
-      return db.getUserName();
+    public String getUserName( ) {
+      return db.getUserName( );
     }
-
+    
     @Override
-    public String getPassword() {
-      return db.getPassword();
+    public String getPassword( ) {
+      return db.getPassword( );
     }
-
+    
     public String getDriverName( ) {
       return this.db.getDriverName( );
     }
@@ -936,11 +996,11 @@ public class Databases {
     public String getServicePath( String... pathParts ) {
       return this.db.getServicePath( pathParts );
     }
-
-    public Map<String,String> getJdbcUrlQueryParameters() {
-      return this.db.getJdbcUrlQueryParameters();
+    
+    public Map<String, String> getJdbcUrlQueryParameters( ) {
+      return this.db.getJdbcUrlQueryParameters( );
     }
-
+    
     @Override
     public boolean check( ) throws Exception {
       return this.db.isRunning( );
@@ -953,6 +1013,71 @@ public class Databases {
     public String getJdbcScheme( ) {
       return this.db.getJdbcScheme( );
     }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#listDatabases()
+     */
+    @Override
+    public List<String> listDatabases( ) {
+      return this.db.listDatabases( );
+    }
+
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#listDatabases()
+     */
+    @Override
+    public List<String> listTables( String database ) {
+      return this.db.listTables( database );
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#backupDatabase(java.lang.String)
+     */
+    @Override
+    public File backupDatabase( String name, String backupIdentifier ) {
+      return this.db.backupDatabase( name, backupIdentifier );
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#backupDatabase(java.lang.String)
+     */
+    @Override
+    public void deleteDatabase( String name ) {
+      this.db.deleteDatabase( name );
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#copyDatabase(java.lang.String, java.lang.String)
+     */
+    @Override
+    public void copyDatabase( String from, String to ) {
+      this.db.copyDatabase( from, to );
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#copyDatabase(java.lang.String, java.lang.String)
+     */
+    @Override
+    public void renameDatabase( String from, String to ) {
+      this.db.renameDatabase( from, to );
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#getConnection(java.lang.String, java.lang.String)
+     */
+    @Override
+    public Sql getConnection( String database ) throws Exception {
+      return this.db.getConnection( database );
+    }
+    
+    /**
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#createDatabase(java.lang.String)
+     */
+    @Override
+    public void createDatabase( String name ) {
+      this.db.createDatabase( name );
+    }
+    
   }
   
   public static boolean isRunning( ) {
@@ -967,11 +1092,11 @@ public class Databases {
   public static String getServicePath( String... pathParts ) {
     return singleton.getServicePath( pathParts );
   }
-
-  public static Map<String,String> getJdbcUrlQueryParameters() {
-    return singleton.getJdbcUrlQueryParameters();
+  
+  public static Map<String, String> getJdbcUrlQueryParameters( ) {
+    return singleton.getJdbcUrlQueryParameters( );
   }
-
+  
   public static String getJdbcScheme( ) {
     return singleton.getJdbcScheme( );
   }

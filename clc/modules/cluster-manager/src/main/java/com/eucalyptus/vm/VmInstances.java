@@ -296,7 +296,7 @@ public class VmInstances {
   }
   
   public static VmInstance lookupByPrivateIp( final String ip ) throws NoSuchElementException {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance vmExample = VmInstance.exampleWithPrivateIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
@@ -310,14 +310,15 @@ public class VmInstances {
       return vm;
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
   public static VmVolumeAttachment lookupVolumeAttachment( final String volumeId ) {
     VmVolumeAttachment ret = null;
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       List<VmInstance> vms = Entities.query( VmInstance.create( ) );
       for ( VmInstance vm : vms ) {
@@ -336,14 +337,14 @@ public class VmInstances {
       db.commit( );
       return ret;
     } catch ( Exception ex ) {
-      db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
-    
   }
   
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
-    EntityTransaction db = Entities.get( VmInstance.class );
+    final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       VmInstance vmExample = VmInstance.exampleWithPublicIp( ip );
       VmInstance vm = ( VmInstance ) Entities.createCriteriaUnique( VmInstance.class )
@@ -357,8 +358,9 @@ public class VmInstances {
       return vm;
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
       throw new NoSuchElementException( ex.getMessage( ) );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -531,7 +533,7 @@ public class VmInstances {
         
         @Override
         public String apply( String input ) {
-          EntityTransaction db = Entities.get( VmInstance.class );
+          final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
             entity.cleanUp( );
@@ -540,7 +542,8 @@ public class VmInstances {
           } catch ( final Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
-            db.rollback( );
+          }finally {
+            if ( db.isActive() ) db.rollback();
           }
           return input;
         }
@@ -561,6 +564,11 @@ public class VmInstances {
       terminateCache.put( vm.getDisplayName( ), vm );
       Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
+  }
+
+  public static void restored( final String instanceId ) {
+    terminateDescribeCache.remove( instanceId );
+    terminateCache.remove( instanceId );
   }
   
   public static void terminated( final VmInstance vm ) throws TransactionException {
@@ -626,8 +634,9 @@ public class VmInstances {
       return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db.rollback( );
       return Lists.newArrayList( );
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   
@@ -651,11 +660,11 @@ public class VmInstances {
       db.commit( );
       return true;
     } catch ( final RuntimeException ex ) {
-      db.rollback( );
       return false;
     } catch ( final TransactionException ex ) {
-      db.rollback( );
       return false;
+    } finally {
+      if ( db.isActive() ) db.rollback();
     }
   }
   

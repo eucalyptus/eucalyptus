@@ -115,17 +115,16 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       
       @Override
       public Set<String> get( ) {
-        EntityTransaction db = Entities.get( VmInstance.class );
+        final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           Collection<VmInstance> clusterInstances =  Collections2.filter( VmInstances.list( ), filter );
           Collection<String> instanceNames = Collections2.transform( clusterInstances, CloudMetadatas.toDisplayName( ) );
-          Set<String> ret = Sets.newHashSet( instanceNames );
-          db.rollback( );
-          return ret;
+          return Sets.newHashSet( instanceNames );
         } catch ( Exception ex ) {
           Logs.extreme( ).error( ex, ex );
-          db.rollback( );
           return Sets.newHashSet( );
+        } finally {
+          db.rollback();
         }
       }
     } );
@@ -182,12 +181,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   }
   
   private static void handleUnreported( final String vmId ) {
-    EntityTransaction db1 = Entities.get( VmInstance.class );
+    final EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < VM_INITIAL_REPORT_TIMEOUT ) {
         //do nothing during first VM_INITIAL_REPORT_TIMEOUT millis of instance life
-        db1.rollback( );
         return;
       } else if ( vm.isBlockStorage( ) && VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
         VmInstances.stopped( vm );
@@ -204,22 +202,34 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       } else if ( VmInstances.Timeout.UNREPORTED.apply( vm ) ) {
         VmInstances.terminated( vm );
       } else {
-        db1.rollback( );
         return;
       }
       Entities.commit( db1 );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
-      db1.rollback( );
+    } finally {
+      if ( db1.isActive() ) db1.rollback();
     }
   }
   
   private static void handleReportedState( final VmInfo runVm ) {
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
     try {
-      EntityTransaction db = Entities.get( VmInstance.class );
+      final EntityTransaction db = Entities.get( VmInstance.class );
       try {
-        VmInstance vm = VmInstances.lookup( runVm.getInstanceId( ) );
+        VmInstance vm = VmInstances.cachedLookup( runVm.getInstanceId() );
+        if ( VmState.TERMINATED.apply( vm ) ) {
+          db.rollback( );
+          if ( VmInstance.Reason.EXPIRED.apply( vm ) ) {
+            if ( VmStateCallback.handleRestore( runVm ) ) {
+              VmInstances.restored( runVm.getInstanceId() );
+            }
+          } else {
+            LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
+          }
+          return;
+        }
+
         if ( VmInstances.Timeout.EXPIRED.apply( vm ) ) {
           if ( vm.isBlockStorage( ) ) {
             VmInstances.stopped( vm );
@@ -234,15 +244,15 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
                     && vm.lastUpdateMillis( ) > ( VmInstances.VOLATILE_STATE_TIMEOUT_SEC * 1000l ) ) {
           vm.doUpdate( ).apply( runVm );
         } else {
-          db.rollback( );
           return;
         }
         Entities.commit( db );
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
-        db.rollback( );
         throw ex;
+      } finally {
+        if ( db.isActive() ) db.rollback();
       }
     } catch ( TerminatedInstanceException ex1 ) {
       LOG.trace( "Ignore state update to terminated instance: " + runVm.getInstanceId( ) );
@@ -254,24 +264,27 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     }
   }
   
-  private static void handleRestore( final VmInfo runVm ) {
+  private static boolean handleRestore( final VmInfo runVm ) {
     final VmState runVmState = VmState.Mapper.get( runVm.getStateName( ) );
     if ( VmStateSet.RUN.contains( runVmState ) ) {
       try {
-        if ( VmInstances.cachedLookup( runVm.getInstanceId( ) ) != null ) {
-          return;
+        final VmInstance vm = VmInstances.cachedLookup( runVm.getInstanceId( ) );
+        if ( vm != null &&
+            !( VmState.TERMINATED.apply( vm ) && VmInstance.Reason.EXPIRED.apply( vm ) ) ) {
+          return false;
         }
       } catch ( Exception ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
       }
       try {
-        VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
+        return VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
       } catch ( Throwable ex ) {
         LOG.error( ex );
         Logs.extreme( ).error( ex, ex );
       }
     }
+    return false;
   }
   
   private static void handleReportedTeardown( VmInstance vm, final VmInfo runVm ) throws TransactionException {
