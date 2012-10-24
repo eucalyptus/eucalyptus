@@ -47,7 +47,7 @@ public class CsvDocument
     private void writeRow()
     	throws IOException
     {
-    	StringBuffer sb = new StringBuffer();
+    	StringBuilder sb = new StringBuilder();
     	for (int i=0; i<colVals.size(); i++) {
     		if (i>0) sb.append(",");
     		sb.append(colVals.get(i));
@@ -63,7 +63,8 @@ public class CsvDocument
     	if (colVals != null) {
     		writeRow();
     	}
-    	return this;
+    colVals = new ArrayList<String>();
+    return this;
 	}
     
     @Override
@@ -78,7 +79,7 @@ public class CsvDocument
 	public Document newRow()
     	throws IOException
     {
-    	if (colVals != null) {
+    	if (colVals != null && !colVals.isEmpty()) {
     		writeRow();
     	}
     	colVals = new ArrayList<String>();
