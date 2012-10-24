@@ -3468,14 +3468,6 @@ void *monitor_thread(void *in) {
   return(NULL);
 }
 
-int cc_update_config (void) {
-  int ret = 0;
-  logprintfl (EUCATRACE, "UP: CC about to call update_config()...\n");
-  ret = update_config ();
-  logprintfl (EUCATRACE, "UP: CC returned from call to update_config()...\n");
-  return ret;
-}
-
 int init_pthreads() {
   // start any background threads
   if (!config_init) {
@@ -3497,16 +3489,15 @@ int init_pthreads() {
 	sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
 	sigaction(SIGTERM, &newsigact, NULL);
 	logprintfl (EUCADEBUG, "sensor polling process running\n");
-	logprintfl (EUCATRACE, "UP: calling sensor_init() to not return.\n");
-	if (sensor_init (s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE, cc_update_config)==ERROR) // this call will not return
+	logprintfl (EUCATRACE, "calling sensor_init() to not return.\n");
+	if (sensor_init (s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE, update_config)==ERROR) // this call will not return
 	  logprintfl (EUCAERROR, "failed to invoke the sensor polling process\n");
 	exit(0);
       } else {
 	config->threads[SENSOR] = pid;
       }
     }
-    logprintfl (EUCATRACE, "UP: calling sensor_init(..., NULL) to return.\n");
-    //if (sensor_init (s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE, cc_update_config)==ERROR) { // this call will return
+    logprintfl (EUCATRACE, "calling sensor_init(..., NULL) to return.\n");
     if (sensor_init (s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE, NULL)==ERROR) { // this call will return
       logprintfl (EUCAERROR, "failed to initialize sensor subsystem in this process\n");
     } else {

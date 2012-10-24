@@ -231,10 +231,10 @@ static void sensor_bottom_half (void)
         usleep (next_sleep_duration_usec);
 
         if (sensor_update_euca_config) {
-            logprintfl (EUCATRACE, "UP: Calling sensor_update_euca_config()...\n");
+            logprintfl (EUCATRACE, "calling sensor_update_euca_config()...\n");
             sensor_update_euca_config ();
         } else {
-            logprintfl (EUCATRACE, "UP: NOT calling sensor_update_euca_config()...\n");
+            logprintfl (EUCATRACE, "NOT calling sensor_update_euca_config()...\n");
         }
         boolean skip = FALSE;
         sem_p (state_sem);
@@ -318,7 +318,7 @@ int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size,
         if (!sensor_state->initialized) {
             init_state (resources_size);
         }
-        logprintfl (EUCATRACE, "UP: Setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
+        logprintfl (EUCATRACE, "setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
         sensor_update_euca_config = update_euca_config_function;
         sem_v (state_sem);
 
