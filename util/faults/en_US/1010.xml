@@ -37,8 +37,7 @@
 
     <resolution>
       <message>
-       TBA : Need to detemine the resolution. 
-
+       Start the previously enabled cloud controller (clc) or post a question on https://engage.eucalyptus.com/
       </message>
     </resolution>
   </fault>
