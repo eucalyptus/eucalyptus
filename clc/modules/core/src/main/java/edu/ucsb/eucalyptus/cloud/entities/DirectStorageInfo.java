@@ -62,8 +62,12 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.List;
+
 import javax.persistence.Column;
 import org.hibernate.annotations.Entity;
+
+import javax.persistence.EntityTransaction;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
@@ -71,14 +75,24 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
+import com.eucalyptus.configurable.StaticDatabasePropertyEntry;
+import com.eucalyptus.configurable.StaticPropertyEntry;
+import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.StorageProperties;
+import com.google.common.base.Predicate;
 
 @Entity @javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
@@ -229,4 +243,26 @@ public class DirectStorageInfo extends AbstractPersistent {
 		}
 		return conf;
 	}
+	
+  @EntityUpgrade( entities = { DirectStorageInfo.class }, since = Version.v3_2_0, value = Storage.class )
+  public enum DirectStorageInfoUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( DirectStorageInfo.DirectStorageInfoUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( DirectStorageInfo.class );
+      try {
+        List<DirectStorageInfo> entities = Entities.query( new DirectStorageInfo( ) );
+        for ( DirectStorageInfo entry : entities ) {
+          LOG.debug( "Upgrading: " + entry );
+          entry.setTimeoutInMillis(StorageProperties.timeoutInMillis);
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
 }

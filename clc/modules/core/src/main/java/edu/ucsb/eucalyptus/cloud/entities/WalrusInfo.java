@@ -212,33 +212,41 @@ public class WalrusInfo extends AbstractPersistent {
 		return true;
 	}
 
+	private static int estimateWalrusCapacity() {
+    //Load the defaults.
+    //Try to determine available space on the bucket root directory.
+    int capacity = WalrusProperties.DEFAULT_INITIAL_CAPACITY;
+    try {
+      long bytesAvailable = new File(WalrusProperties.bucketRootDirectory).getUsableSpace(); //keep 1GB at least reserved.            
+
+      //Set initial capacity to available space minus 1GB unless there is less than 1GB avaiable.
+      //zhill: The cast to int should only affect systems with more than 2^31-1 GB capacity (2.1 Exabytes), so we should be safe for a while 
+      capacity = (int)(bytesAvailable / WalrusProperties.G);
+      capacity = (capacity > 1 ? capacity - 1 : capacity);
+      
+    } catch(Exception e) {
+      Log.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using Walrus default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
+    }
+    return capacity;
+	}
+	
 	public static WalrusInfo getWalrusInfo() {
 		EntityWrapper<WalrusInfo> db = EntityWrapper.get(WalrusInfo.class);
 		WalrusInfo walrusInfo = null;
 		try {
 			walrusInfo = db.getUnique(new WalrusInfo());
-		} catch(Exception ex) {
-			//Load the defaults.
-			//Try to determine available space on the bucket root directory.
-			int capacity = WalrusProperties.DEFAULT_INITIAL_CAPACITY;
-			try {
-				long bytesAvailable = new File(WalrusProperties.bucketRootDirectory).getUsableSpace(); //keep 1GB at least reserved.						
-
-				//Set initial capacity to available space minus 1GB unless there is less than 1GB avaiable.
-				//zhill: The cast to int should only affect systems with more than 2^31-1 GB capacity (2.1 Exabytes), so we should be safe for a while 
-				capacity = (int)(bytesAvailable / WalrusProperties.G);
-				capacity = (capacity > 1 ? capacity - 1 : capacity);
-				
-			} catch(Exception e) {
-				Log.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using Walrus default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
+			// cover the upgrade case
+			if (walrusInfo.getStorageMaxTotalCapacity() == null) {
+			  walrusInfo.setStorageMaxTotalCapacity(estimateWalrusCapacity());
 			}
-
+		} catch(Exception ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
 					WalrusProperties.MAX_BUCKETS_PER_ACCOUNT, 
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
-					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,capacity);
+					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,
+					estimateWalrusCapacity());
 			db.add(walrusInfo);     
 		} finally {
 			db.commit();

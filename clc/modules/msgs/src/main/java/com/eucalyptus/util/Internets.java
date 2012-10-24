@@ -74,7 +74,10 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
@@ -407,9 +410,62 @@ public class Internets {
            || ( !addr.isAnyLocalAddress( ) && !addr.isLoopbackAddress( ) && !addr.isLinkLocalAddress( ) && !addr.isMulticastAddress( ) );
   }
   
+  private static void addAddress(Set<String> out, InetAddress addr) {
+    if (addr instanceof Inet4Address &&
+        !addr.isMulticastAddress() &&
+        !addr.isLinkLocalAddress() &&
+        !addr.isLoopbackAddress()) {
+      out.add(addr.getCanonicalHostName());
+      out.add(addr.getHostName());
+      out.add(addr.getHostAddress());
+    }
+  }
+
+  private static void addName(Set<String> out, String name) {
+    try {
+      for (InetAddress addr : InetAddress.getAllByName(name)) {
+        addAddress(out, addr);
+      }
+    } catch (UnknownHostException uhe) {
+      LOG.error("Failed to get addresses for name " + name + ": " + uhe, uhe);
+    }
+  }
+
+  public static Set<String> getAllLocalHostNamesIps() {
+    Set<String> results = new HashSet<String>();
+    try {
+      InetAddress localHost = InetAddress.getLocalHost();
+      addAddress(results, localHost);
+      addName(results, localHost.getCanonicalHostName());
+      addName(results, localHost.getHostName());
+    } catch (UnknownHostException uhe) {
+      LOG.error("Failed to get localhost: " + uhe, uhe);
+    }
+    try {
+      Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+      if (ifaces != null) {
+        while (ifaces.hasMoreElements()) {
+          NetworkInterface iface = ifaces.nextElement();
+          Enumeration<InetAddress> addrs = iface.getInetAddresses();
+          if (addrs != null) {
+            while (addrs.hasMoreElements()) {
+              addAddress(results, addrs.nextElement());
+            }
+          }
+        }
+      }
+    } catch (SocketException se) {
+      LOG.error("Failed to get all network interfaces: " + se);
+    }
+    return results;
+  }
+  
   public static void main( String[] args ) throws Exception {
     for ( String addr : Internets.getAllAddresses( ) ) {
       System.out.println( addr );
+    }
+    for ( String addr : Internets.getAllLocalHostNamesIps() ) {
+      System.out.println( "Address: " + addr );
     }
     System.out.println( "Testing if 192.168.7.8 is reachable: " + Internets.testReachability( "192.168.7.8" ) );
   }
