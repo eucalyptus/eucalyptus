@@ -1,0 +1,114 @@
+[
+  {
+    "rules_egress": [], 
+    "__obj_name__": "SecurityGroup", 
+    "name": "group2", 
+    "tags": {}, 
+    "rules": [
+      {
+        "from_port": "22", 
+        "ip_protocol": "tcp", 
+        "parent": null, 
+        "to_port": "22", 
+        "__obj_name__": "IPPermissions", 
+        "item": "", 
+        "grants": [
+          {
+            "item": "", 
+            "__obj_name__": "GroupOrCIDR", 
+            "name": "default", 
+            "groupName": "default", 
+            "group_id": null, 
+            "userId": "601265054777", 
+            "cidr_ip": null, 
+            "owner_id": "601265054777"
+          }
+        ], 
+        "ipRanges": "", 
+        "groups": ""
+      }
+    ], 
+    "region": [], 
+    "item": "", 
+    "connection": [], 
+    "vpc_id": null, 
+    "owner_id": "878210294747", 
+    "id": null, 
+    "description": "test"
+  }, 
+  {
+    "rules_egress": [], 
+    "__obj_name__": "SecurityGroup", 
+    "name": "default", 
+    "tags": {}, 
+    "rules": [
+      {
+        "from_port": "3", 
+        "ip_protocol": "icmp", 
+        "parent": null, 
+        "to_port": "3", 
+        "__obj_name__": "IPPermissions", 
+        "item": "", 
+        "grants": [
+          {
+            "__obj_name__": "GroupOrCIDR", 
+            "name": null, 
+            "item": "", 
+            "group_id": null, 
+            "cidr_ip": "0.0.0.0&#x2f;0", 
+            "owner_id": null
+          }
+        ], 
+        "ipRanges": "", 
+        "groups": ""
+      }, 
+      {
+        "from_port": "3389", 
+        "ip_protocol": "tcp", 
+        "parent": null, 
+        "to_port": "3389", 
+        "__obj_name__": "IPPermissions", 
+        "item": "", 
+        "grants": [
+          {
+            "__obj_name__": "GroupOrCIDR", 
+            "name": null, 
+            "item": "", 
+            "group_id": null, 
+            "cidr_ip": "0.0.0.0&#x2f;0", 
+            "owner_id": null
+          }
+        ], 
+        "ipRanges": "", 
+        "groups": ""
+      }, 
+      {
+        "from_port": "22", 
+        "ip_protocol": "tcp", 
+        "parent": null, 
+        "to_port": "22", 
+        "__obj_name__": "IPPermissions", 
+        "item": "", 
+        "grants": [
+          {
+            "__obj_name__": "GroupOrCIDR", 
+            "name": null, 
+            "item": "", 
+            "group_id": null, 
+            "cidr_ip": "0.0.0.0&#x2f;0", 
+            "owner_id": null
+          }
+        ], 
+        "ipRanges": "", 
+        "groups": ""
+      }
+    ], 
+    "region": [], 
+    "item": "", 
+    "connection": [], 
+    "vpc_id": null, 
+    "owner_id": "878210294747", 
+    "id": null, 
+    "description": "default group"
+  }
+]

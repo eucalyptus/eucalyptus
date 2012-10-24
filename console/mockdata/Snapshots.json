@@ -1,0 +1,50 @@
+[
+ {
+      "status": "completed", 
+      "__obj_name__": "Snapshot", 
+      "description": "Windows 2003 image", 
+      "tags": {}, 
+      "start_time": "2012-10-18T16:50:53.359Z", 
+      "owner_alias": null, 
+      "id": "snap-E70B3D40", 
+      "volume_size": 8, 
+      "connection": [], 
+      "item": "", 
+      "volume_id": "vol-84873D61", 
+      "progress": "100%", 
+      "region": [], 
+      "owner_id": "878210294747"
+    }, 
+    {
+      "status": "pending", 
+      "__obj_name__": "Snapshot", 
+      "description": "a new snapshot", 
+      "tags": {}, 
+      "start_time": "2012-10-23T20:40:15.114Z", 
+      "owner_alias": null, 
+      "id": "snap-430E39D3", 
+      "volume_size": 2, 
+      "connection": [], 
+      "item": "", 
+      "volume_id": "vol-270A3EDB", 
+      "progress": "33%", 
+      "region": [], 
+      "owner_id": "878210294747"
+    }, 
+    {
+      "status": "completed", 
+      "__obj_name__": "Snapshot", 
+      "description": "bfebs Linux image", 
+      "tags": {}, 
+      "start_time": "2012-10-18T16:27:50.373Z", 
+      "owner_alias": null, 
+      "id": "snap-D9193F44", 
+      "volume_size": 2, 
+      "connection": [], 
+      "item": "", 
+      "volume_id": "vol-270A3EDB", 
+      "progress": "100%", 
+      "region": [], 
+      "owner_id": "878210294747"
+    }
+]

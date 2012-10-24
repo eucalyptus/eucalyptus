@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Manage Volumes"/>
+<meta name="abstract" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive. This screen allows you to view a list of your volumes, create new volumes, attach and detach volumes to a running instance, and delete volumes. You can page through the list of volumes by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="description" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive. This screen allows you to view a list of your volumes, create new volumes, attach and detach volumes to a running instance, and delete volumes. You can page through the list of volumes by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="manage_volume_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Manage Volumes</title>
+</head>
+<body id="manage_volume_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">Manage Volumes</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Eucalyptus offers persistent storage that you can attach to a running instance.
+        These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of
+        an instance. After you attach a block volume to an instance, you can use it like any other
+        physical hard drive. This screen allows you to view a list of your volumes, create new
+        volumes, attach and detach volumes to a running instance, and delete volumes. You can page
+        through the list of volumes by clicking the navigation buttons at the bottom of the screen. </p>
+</div>
+
+    <div class="topic task nested1" id="manage_volume_ui_sorting_steps">
+        <h2 class="title topictitle2">Sorting the Volume List</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click on any column header to toggle sorting the list of volumes in
+                        ascending or descending order by the selected column.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_searching_steps">
+        <h2 class="title topictitle2">Searching the Volume List</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Type some search text into the <span class="ph uicontrol">Search</span> text box to
+                        filter the list of volumes. </span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_create_steps">
+        <h2 class="title topictitle2">Creating a Volume</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create new volume</span> button. The Create
+                        Volume dialog box will appear.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_attach_steps">
+        <h2 class="title topictitle2">Attach a Volume to a Running Instance</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Right-click on the unattached volume you wish to attach to a running
+                        instance.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select <span class="ph uicontrol">Attach to instance</span> from the context menu.
+                        The <span class="ph uicontrol">Attach volume to instance</span> dialog box will appear. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> You can also click on a volume and click the <span class="ph uicontrol">More
+                                actions</span> link at the top of the list.</div>
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_detach_steps">
+        <h2 class="title topictitle2">Detach a Volume from a Running Instance</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Right-click on the attached volume you wish to detach from a running
+                        instance.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select <span class="ph uicontrol">Detach from instance</span> from the context menu.
+                        The <span class="ph uicontrol">Detach volumes</span> dialog box will appear. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> You can also click on a volume and click the <span class="ph uicontrol">More
+                                actions</span> link at the top of the list.</div>
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_snapshot_steps">
+        <h2 class="title topictitle2">Create a Snapshot from a Volume</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Right-click on the volume that you wish to use as the source of a new
+                        snapshot.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select <span class="ph uicontrol">Create snapshot from volume</span> from the context
+                        menu. The <span class="ph uicontrol">Create snapshot from volume</span> dialog box will
+                        appear. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_delete_steps">
+        <h2 class="title topictitle2">Deleting Volumes</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">
+        </p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Click the checkbox next to the volume.</span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span> You can't delete a volume that is attached to an instance.</div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Right-click in the volume list and select <span class="ph uicontrol">Delete</span>
+                        from the context menu. The <span class="ph uicontrol">Delete Volume</span> dialog box
+                        will appear. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>
