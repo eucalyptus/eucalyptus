@@ -63,13 +63,21 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import java.io.Serializable;
+import java.util.List;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.GenericGenerator;
 
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.StorageProperties;
+import com.google.common.base.Predicate;
 
 import javax.persistence.*;
 
@@ -227,5 +235,26 @@ public class LVMVolumeInfo extends AbstractPersistent {
 		return true;
 	}
 
+  @EntityUpgrade( entities = { LVMVolumeInfo.class }, since = Version.v3_2_0, value = Storage.class )
+  public enum LVMVolumeInfoUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( LVMVolumeInfo.LVMVolumeInfoUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( LVMVolumeInfo.class );
+      try {
+        List<LVMVolumeInfo> entities = Entities.query( new LVMVolumeInfo( ) );
+        for ( LVMVolumeInfo entry : entities ) {
+          LOG.debug( "Upgrading: " + entry.getVolumeId() );
+          entry.setCleanup(false);
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
 
 }

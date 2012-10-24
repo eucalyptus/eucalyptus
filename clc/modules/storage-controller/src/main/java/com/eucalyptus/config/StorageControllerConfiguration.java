@@ -62,15 +62,23 @@
 
 package com.eucalyptus.config;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.Column;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -86,8 +94,16 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.storage.StorageManagers;
+import com.eucalyptus.system.BaseDirectory;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.Internets;
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 
 @Entity
 @javax.persistence.Entity
@@ -170,4 +186,85 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 		this.setPartition(p);
 	}
 	
+	private static final String BLOCK_STORAGE_MANAGER_OVERLAY = "overlay";
+	private static final String BLOCK_STORAGE_MANAGER_DAS = "das";
+	private static final String BLOCK_STORAGE_MANAGER_EQUALLOGIC = "equallogic";
+	private static final String BLOCK_STORAGE_MANAGER_NETAPP = "netapp";
+	
+	private static final Pattern EBS_STORAGE_MANAGER_PATTERN = Pattern.compile(".*-Debs\\.storage\\.manager=(\\w+).*");
+	private static final Pattern EBS_SAN_PROVIDER_PATTERN = Pattern.compile(".*-Debs\\.san\\.provider=(\\w+).*");
+	
+	private static String matchParameter(Pattern pattern, String text) {
+	  Matcher matcher = pattern.matcher(text);
+	  if (matcher.matches()) {
+	    return matcher.group(1);
+	  }
+	  return null;
+	}
+	
+  @EntityUpgrade( entities = { StorageControllerConfiguration.class }, since = Version.v3_2_0, value = Storage.class )
+  public enum StorageControllerConfigurationUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StorageControllerConfiguration.StorageControllerConfigurationUpgrade.class );
+    
+    private static String loadLocalBlockStorageManagerConfig() throws Exception {
+      String manager = BLOCK_STORAGE_MANAGER_OVERLAY; // default
+      BufferedReader fileReader = new BufferedReader(new FileReader(
+          BaseDirectory.HOME + "/etc/eucalyptus/eucalyptus.conf"));
+      String ebsStorageManager = null;
+      String ebsSanProvider = null;
+      String line;
+      while ((line = fileReader.readLine()) != null) {
+        line.trim();
+        if (line.startsWith("CLOUD_OPTS")) {
+          ebsStorageManager = matchParameter(EBS_STORAGE_MANAGER_PATTERN, line);
+          ebsSanProvider = matchParameter(EBS_SAN_PROVIDER_PATTERN, line);
+          break;
+        }
+      }
+      fileReader.close();
+      if (Strings.isNullOrEmpty(ebsStorageManager)) {
+        manager = BLOCK_STORAGE_MANAGER_OVERLAY;
+      } else if ("DASManager".equals(ebsStorageManager)) {
+        manager = BLOCK_STORAGE_MANAGER_DAS;
+      } else if ("OverlayManager".equals(ebsStorageManager)) {
+        manager = BLOCK_STORAGE_MANAGER_OVERLAY;
+      } else if ("SANManager".equals(ebsStorageManager)){
+        if ("EquallogicProvider".equals(ebsSanProvider)) {
+          manager = BLOCK_STORAGE_MANAGER_EQUALLOGIC;
+        } else if ("NetappProvider".equals(ebsSanProvider)) {
+          manager = BLOCK_STORAGE_MANAGER_NETAPP;
+        } else {
+          LOG.error("Invalid SAN provider name: " + ebsSanProvider);
+        }
+      } else {
+        LOG.error("Invalid storage manager name: " + ebsStorageManager);
+      }
+      return manager;
+    }
+    
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( StorageControllerConfiguration.class );
+      try {
+        // Get local IP addresses or host names
+        Set<String> localAddresses = Internets.getAllLocalHostNamesIps();
+        List<StorageControllerConfiguration> entities = Entities.query( new StorageControllerConfiguration( ) );
+        for ( StorageControllerConfiguration entry : entities ) {
+          // This SC is running on the local machine, upgrade its block storage manager config
+          if (localAddresses.contains(entry.getHostName())) {
+            LOG.debug("Upgrading SC config " + entry.getPartition());
+            entry.setBlockStorageManager(loadLocalBlockStorageManagerConfig());
+            LOG.debug("Set storage manager " + entry.getBlockStorageManager() + " for SC " + entry.getPartition());
+            break;
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+  }
 }
