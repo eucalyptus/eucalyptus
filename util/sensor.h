@@ -107,7 +107,7 @@ typedef struct {
     sensorResource resources[1]; // if struct should be allocated with extra space after it for additional cache elements
 } sensorResourceCache;
 
-int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half);
+int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function)(void));
 int sensor_config (int new_history_size, long long new_collection_interval_time_ms);
 int sensor_set_hyp_sem (sem * hyp_sem);
 int sensor_get_config (int *new_history_size, long long * new_collection_interval_time_ms);

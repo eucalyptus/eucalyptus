@@ -45,6 +45,7 @@ static sensorResourceCache * sensor_state = NULL;
 static sem * state_sem = NULL;
 static sem * hyp_sem = NULL;
 static long long sn = 0L;
+static int (*sensor_update_euca_config) (void) = NULL;
 
 static void getstat_free (void)
 {
@@ -229,6 +230,12 @@ static void sensor_bottom_half (void)
     for (;;) {
         usleep (next_sleep_duration_usec);
 
+        if (sensor_update_euca_config) {
+            logprintfl (EUCATRACE, "UP: Calling sensor_update_euca_config()...\n");
+            sensor_update_euca_config ();
+        } else {
+            logprintfl (EUCATRACE, "UP: NOT calling sensor_update_euca_config()...\n");
+        }
         boolean skip = FALSE;
         sem_p (state_sem);
         if (sensor_state->collection_interval_time_ms == 0 ||
@@ -286,7 +293,7 @@ static void init_state (int resources_size)
 // memory and will perform data collection in a thread. If run_bottom_half
 // is TRUE, the logic normally running in a background thread will be
 // executed synchronously, causing sensor_init() to never return.
-int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half)
+int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function)(void))
 {
     int use_resources_size = MAX_SENSOR_RESOURCES;
 
@@ -311,6 +318,8 @@ int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size,
         if (!sensor_state->initialized) {
             init_state (resources_size);
         }
+        logprintfl (EUCATRACE, "UP: Setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
+        sensor_update_euca_config = update_euca_config_function;
         sem_v (state_sem);
 
         if (! run_bottom_half)
@@ -768,7 +777,7 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
                             // this can happen when sensor resets; if, additionally,
                             // network outage prevented delivery for a while, there
                             // may also be a gap in numbers, rather than a reset to 0
-                            logprintfl (EUCAINFO, "reset in sensor values detected [%lld < %lld], clearing history for %s:%s:%s:%s\n", 
+                            logprintfl (EUCAINFO, "reset in sensor values detected [%lld < %lld], clearing history for %s:%s:%s:%s\n",
                                         snv, sov, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                             inv_start = 0;                           // copy all new values
                             iov_start = 0;                           // overwrite what is in cache
@@ -1079,19 +1088,19 @@ int sensor_set_dimension_alias (const char * resourceName,
     sensorResource * sr = find_or_alloc_sr (FALSE, resourceName, NULL, NULL);
     if (sr == NULL)
         goto bail;
-    
+
     sensorMetric * sm = find_or_alloc_sm (TRUE, sr, metricName); // allocate metric if necessary
     if (sm == NULL)
         goto bail;
-    
+
     sensorCounter * sc = find_or_alloc_sc (TRUE, sm, counterType); // allocate counter if necessary
     if (sc == NULL)
         goto bail;
-    
+
     sensorDimension * sd = find_or_alloc_sd (TRUE, sc, dimensionName); // allocate dimension if necessary
     if (sd == NULL)
         goto bail;
-    
+
     boolean changed = FALSE;
     if (dimensionAlias) {
         if (strcmp (sd->dimensionAlias, dimensionAlias) != 0) {
@@ -1105,7 +1114,7 @@ int sensor_set_dimension_alias (const char * resourceName,
         }
     }
     if (changed) {
-        logprintfl (EUCADEBUG, "set alias for sensor dimension %s:%s:%s:%s to '%s'\n", 
+        logprintfl (EUCADEBUG, "set alias for sensor dimension %s:%s:%s:%s to '%s'\n",
                     resourceName, metricName, sensor_type2str(counterType), dimensionName, sd->dimensionAlias);
     }
 
@@ -1120,7 +1129,7 @@ int sensor_set_dimension_alias (const char * resourceName,
 int sensor_set_volume (const char * instanceId, const char * volumeId, const char * guestDev)
 {
     int ret = 0;
-    
+
     ret += sensor_set_dimension_alias (instanceId, "DiskReadOps",          SENSOR_SUMMATION, volumeId, guestDev);
     ret += sensor_set_dimension_alias (instanceId, "DiskWriteOps",         SENSOR_SUMMATION, volumeId, guestDev);
     ret += sensor_set_dimension_alias (instanceId, "DiskReadBytes",        SENSOR_SUMMATION, volumeId, guestDev);
