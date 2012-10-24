@@ -166,7 +166,8 @@ public class Fault implements Cloneable {
 		builder.append("ERR-" + df.format(id));
 		builder.append(" ");
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		// Remove UTC until logs match
+		//sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		builder.append(sdf.format(new Date()));
 		builder.append(" ");
 		builder.append(getEffectiveValueOrUnknown(message));
