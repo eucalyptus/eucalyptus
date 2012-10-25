@@ -131,6 +131,7 @@ import net.sf.hajdbc.util.Strings;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Hosts.DbFilter;
 import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Eucalyptus.Database;
@@ -258,7 +259,7 @@ public class Databases {
     public boolean load( ) throws Exception {
 	
       if( SubDirectory.DB.getChildFile("data", "disabled.lock" ).exists() ) {
-	  //TODO Add fault : FaultSubsystem.forComponent(Eucalyptus.class).havingId(1010).withVar("DISABLED_CLC", "disable.lock" ).log();
+	  Faults.forComponent(Eucalyptus.class).havingId(1010).withVar("DISABLED_CLC", "disable.lock" ).log();
 	  LOG.error("WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE disabled.lock FILE TO PROCEED WITH RISK");
 	  System.exit(1);
       }
