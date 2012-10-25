@@ -1249,6 +1249,9 @@ ul.ramdisk-expanded li:nth-child(5) {
   padding: 0 4px;
 }
 
+.selected-cell {
+  background-color : green !important;
+}
 /* ======= Help page related ===== */
 
 .help-page-wrapper {

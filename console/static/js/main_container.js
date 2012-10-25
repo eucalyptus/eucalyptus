@@ -176,7 +176,7 @@
     },
 
     getSelected : function () {
-      return this._curSelected;
+      return this.element.data(this._curSelected);
     }
   });
 })(jQuery,

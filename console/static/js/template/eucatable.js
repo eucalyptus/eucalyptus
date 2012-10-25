@@ -44,6 +44,7 @@
     table : null, // jQuery object to the table
     tableArg : null, 
     refreshCallback : null,
+    selectedCell : null,
     _init : function() {
       var thisObj = this; // 
       // add draw call back
@@ -130,6 +131,85 @@
       return dt_arg;
     },
 
+    _moveUpEvent : function() {
+      if (this.selectedCell != null) {
+        $tr = this.selectedCell.parent().prev();
+        if ($tr.length == 1) {
+          this.selectedCell.removeClass('selected-cell');
+          $td = $tr.find('td:nth-child('+(this.selectedCell.index()+1)+')');
+          this.selectedCell = $td;
+          $td.addClass('selected-cell');
+        }
+      }
+    },
+
+    _moveDownEvent : function() {
+      if (this.selectedCell != null) {
+        $tr = this.selectedCell.parent().next();
+        if ($tr.length == 1) {
+          this.selectedCell.removeClass('selected-cell');
+          $td = $tr.find('td:nth-child('+(this.selectedCell.index()+1)+')');
+          this.selectedCell = $td;
+          $td.addClass('selected-cell');
+        }
+      }
+    },
+
+    _selectEvent : function() {
+      if (this.selectedCell != null) {
+        $a = this.selectedCell.find('a');
+        if ($a.length == 1)
+          $a.click();
+        else
+          this.selectedCell.parent().click();
+      }
+    },
+
+    _cleanCellSelection : function() {
+      if (this.selectedCell) {
+        this.selectedCell.removeClass('selected-cell');
+        this.selectedCell = null;
+      }
+    },
+
+    _moveBackwardEvent : function() {
+      if (this.selectedCell != null) {
+        $td = this.selectedCell.prev();
+        if ($td.length == 1) {
+          this.selectedCell.removeClass('selected-cell');
+          this.selectedCell = $td;
+          $td.addClass('selected-cell');
+        } else {
+          $tr = this.selectedCell.parent().prev();
+          if ($tr.length == 1) {
+            this.selectedCell.removeClass('selected-cell');
+            $td = $tr.find('td:last');
+            this.selectedCell = $td;
+            $td.addClass('selected-cell');
+          }
+        }
+      }
+    },
+
+    _moveForwardEvent : function() {
+      if (this.selectedCell != null) {
+        $td = this.selectedCell.next();
+        if ($td.length == 1) {
+          this.selectedCell.removeClass('selected-cell');
+          this.selectedCell = $td;
+          $td.addClass('selected-cell');
+        } else {
+          $tr = this.selectedCell.parent().next();
+          if ($tr.length == 1) {
+            this.selectedCell.removeClass('selected-cell');
+            $td = $tr.find('td:first');
+            this.selectedCell = $td;
+            $td.addClass('selected-cell');
+          }
+        }
+      }
+    },
+
     _drawCallback : function(oSettings) {
       var thisObj = this;
       $('#table_' + this.options.id + '_count').html($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
@@ -147,6 +227,40 @@
           });
         }
       }); 
+
+      this.element.find('table tbody tr').each(function(index, tr){
+        var $checkRow = $(tr).find(':input[type="checkbox"]');
+        $checkRow.focus(function(){
+          if (thisObj.selectedCell == null) {
+            thisObj.selectedCell = $checkRow.parent();
+            thisObj.selectedCell.addClass('selected-cell');
+          }
+        });
+      });
+
+      this.element.find('table tbody tr').each(function(index, tr){
+        var $a = $(tr).find('a');
+        $a.focus(function(eventObject){
+          if (thisObj.selectedCell == null) {
+            thisObj.selectedCell = $(eventObject.target).parent();
+            thisObj.selectedCell.addClass('selected-cell');
+          }
+        });
+      });
+
+      this.element.find('table tbody').find('td').each(function(index, td) {
+        var $td = $(td);
+        $td.click(function(e){
+          if (thisObj.selectedCell != null)
+            thisObj.selectedCell.removeClass('selected-cell');
+          $td.addClass('selected-cell');
+          thisObj.selectedCell = $td;
+        });
+      });
+
+      this.element.find('table tbody').focusout( function() {
+        thisObj._cleanCellSelection();
+      });
 
       this.element.find('table tbody').find('tr').each(function(index, tr) {
         // add custom td handlers
@@ -579,10 +693,31 @@
       var oSettings = thisObj.table.fnSettings();
       oSettings.sAjaxSource = url;
       thisObj.refreshTable();
-    }, 
+    },
+ 
     close : function() {
       ; // cancelRepeat(this.refreshCallback);
-    }
+    },
+
+    keyAction : function(e) {
+      switch(e.which){
+        case 37: // left
+          this._moveBackwardEvent();
+          break;
+        case 38: // up
+          this._moveUpEvent();
+          break;
+        case 39: // right
+          this._moveForwardEvent();
+          break;
+        case 40: // down
+          this._moveDownEvent();
+          break;
+        case 13: //enter
+          this._selectEvent();
+          break;
+      }
+    },
 /**** End of Public Methods ****/ 
   });
 })(jQuery,

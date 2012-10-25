@@ -423,6 +423,9 @@
        // this.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
     },
 
+    keyAction : function(e) {
+      this.tableWrapper.eucatable('keyAction', e);
+    },
 /**** End of Public Methods ****/
   });
 })

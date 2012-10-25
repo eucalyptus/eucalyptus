@@ -456,6 +456,7 @@
         thisObj.associateDialog.dialog('open');
       }
     },
+
     dialogDisassociateIp : function(addresses){
       var thisObj = this;
       if ( addresses.length > 0 ) {
@@ -467,13 +468,19 @@
         thisObj.disassociateDialog.dialog('open');
       }
     },
+
     createAction : function() {
       this.allocateDialog.eucadialog('open');
     },
+
     close: function() {
 //      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
+    },
+
+    keyAction : function(e) {
+      this.tableWrapper.eucatable('keyAction', e);
     },
 /**** End of Public Methods ****/
   });
