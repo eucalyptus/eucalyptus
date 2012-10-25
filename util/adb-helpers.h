@@ -372,20 +372,40 @@ static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axu
     adb_sensorsResourceType_set_resourceName (resource, env, sr->resourceName);
     adb_sensorsResourceType_set_resourceType (resource, env, sr->resourceType);
     adb_sensorsResourceType_set_resourceUuid (resource, env, sr->resourceUuid);
+    if (sr->metricsLen<0 || sr->metricsLen>MAX_SENSOR_METRICS) {
+        logprintfl (EUCAERROR, "inconsistency in sensor database (metricsLen=%d for %s)\n",
+                    sr->metricsLen, sr->resourceName);
+        return resource;
+    }
     for (int m=0; m<sr->metricsLen; m++) {
         const sensorMetric * sm = sr->metrics + m;
         adb_metricsResourceType_t * metric = adb_metricsResourceType_create(env);
         adb_metricsResourceType_set_metricName (metric, env, sm->metricName);
+        if (sm->countersLen<0 || sm->countersLen>MAX_SENSOR_COUNTERS) {
+            logprintfl (EUCAERROR, "inconsistency in sensor database (countersLen=%d for %s:%s)\n",
+                        sm->countersLen, sr->resourceName, sm->metricName);
+            return resource;
+        }
         for (int c=0; c<sm->countersLen; c++) {
             const sensorCounter * sc = sm->counters + c;
             adb_metricCounterType_t * counter = adb_metricCounterType_create(env);
             adb_metricCounterType_set_type                 (counter, env, sensor_type2str(sc->type));
             adb_metricCounterType_set_collectionIntervalMs (counter, env, sc->collectionIntervalMs);
             adb_metricCounterType_set_sequenceNum          (counter, env, sc->sequenceNum);
+            if (sc->dimensionsLen<0 || sc->dimensionsLen>MAX_SENSOR_DIMENSIONS) {
+                logprintfl (EUCAERROR, "inconsistency in sensor database (dimensionsLen=%d for %s:%s:%s)\n",
+                            sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+                return resource;
+            }
             for (int d=0; d<sc->dimensionsLen; d++) {
                 const sensorDimension * sd = sc->dimensions + d;
                 adb_metricDimensionsType_t * dimension = adb_metricDimensionsType_create(env);
                 adb_metricDimensionsType_set_dimensionName (dimension, env, sd->dimensionName);
+                if (sd->valuesLen<0 || sd->valuesLen>MAX_SENSOR_VALUES) {
+                    logprintfl (EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
+                                sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                    return resource;
+                }
                 for (int v=0; v<sd->valuesLen; v++) {
                     int v_adj = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
                     const sensorValue * sv = sd->values + v_adj;

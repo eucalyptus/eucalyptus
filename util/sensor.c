@@ -72,6 +72,8 @@ static getstat * getstat_find (const char * instanceId)
     sem_p (state_sem);
     if (sensor_state->stats) {
         for (int i = 0; (gs = sensor_state->stats[i]) != NULL; i++) {
+            if (instanceId==NULL) // special case, for testing, return first thing in the list
+                break;
             if (strncmp (gs->instanceId, instanceId, sizeof (gs->instanceId)) == 0)
                 break;
         }
@@ -120,6 +122,7 @@ static int getstat_refresh (void)
     } else {
         // Right now !CC means the NC.
         output = system_output ("euca_rootwrap getstats.pl"); // invoke th Perl script
+        logprintfl (EUCATRACE, "getstats.pl output:\n%s\n", output);
     }
     if (hyp_sem) sem_v (hyp_sem);
     int ret = ERROR;
@@ -581,6 +584,13 @@ int sensor_get_dummy_instance_data (long long sn, const char * instanceId, const
 
 static sensorResource * find_or_alloc_sr (const boolean do_alloc, const char * resourceName, const char * resourceType, const char * resourceUuid)
 {
+    // sanity check
+    if (sensor_state->max_resources < 0 || sensor_state->max_resources > MAX_SENSOR_RESOURCES_HARD) {
+        logprintfl (EUCAERROR, "inconsistency in sensor database (max_resources=%d for %s)\n",
+                    sensor_state->max_resources, resourceName);
+        return NULL;
+    }
+
     sensorResource * unused_sr = NULL;
     for (int r=0; r<sensor_state->max_resources; r++) {
         sensorResource * sr = sensor_state->resources + r;
@@ -627,6 +637,13 @@ static sensorResource * find_or_alloc_sr (const boolean do_alloc, const char * r
 
 static sensorMetric * find_or_alloc_sm (const boolean do_alloc, sensorResource * sr, const char * metricName)
 {
+    // sanity check
+    if (sr->metricsLen<0 || sr->metricsLen>MAX_SENSOR_METRICS) {
+        logprintfl (EUCAERROR, "inconsistency in sensor database (metricsLen=%d for %s)\n",
+                    sr->metricsLen, sr->resourceName);
+        return NULL;
+    }
+
     for (int m=0; m < sr->metricsLen; m++) {
         sensorMetric * sm = sr->metrics + m;
         if (strcmp (sm->metricName, metricName) == 0) {
@@ -649,6 +666,13 @@ static sensorMetric * find_or_alloc_sm (const boolean do_alloc, sensorResource *
 
 static sensorCounter * find_or_alloc_sc (const boolean do_alloc, sensorMetric * sm, const int counterType)
 {
+    // sanity check
+    if (sm->countersLen<0 || sm->countersLen>MAX_SENSOR_COUNTERS) {
+        logprintfl (EUCAERROR, "inconsistency in sensor database (countersLen=%d for %s)\n",
+                    sm->countersLen, sm->metricName);
+        return NULL;
+    }
+
     for (int c=0; c < sm->countersLen; c++) {
         sensorCounter * sc = sm->counters + c;
         if (sc->type == counterType) {
@@ -672,6 +696,13 @@ static sensorCounter * find_or_alloc_sc (const boolean do_alloc, sensorMetric * 
 
 static sensorDimension * find_or_alloc_sd (const boolean do_alloc, sensorCounter * sc, const char * dimensionName)
 {
+    // sanity check
+    if (sc->dimensionsLen<0 || sc->dimensionsLen>MAX_SENSOR_DIMENSIONS) {
+        logprintfl (EUCAERROR, "inconsistency in sensor database (dimensionsLen=%d for %s)\n",
+                    sc->dimensionsLen, sensor_type2str(sc->type));
+        return NULL;
+    }
+
     for (int d=0; d < sc->dimensionsLen; d++) {
         sensorDimension * sd = sc->dimensions + d;
         if ((strcmp (sd->dimensionName,  dimensionName) == 0) ||
@@ -744,7 +775,9 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
                 }
 
                 // update the collection interval
-                cache_sc->collectionIntervalMs = sc->collectionIntervalMs;
+                if (sc->collectionIntervalMs > 0) {
+                    cache_sc->collectionIntervalMs = sc->collectionIntervalMs;
+                }
 
                 // run through dimensions merging in their values separately
                 long long dimension_seq [MAX_SENSOR_DIMENSIONS];
@@ -762,6 +795,12 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
 
                     if (sd->valuesLen < 1) // no values in this dimension at all
                         continue;
+
+                    if (cache_sd->valuesLen<0 || cache_sd->valuesLen>MAX_SENSOR_VALUES) { // sanity check
+                        logprintfl (EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s)\n",
+                                    cache_sd->valuesLen, cache_sr->resourceName, cache_sm->metricName, sensor_type2str(cache_sc->type), cache_sd->dimensionName);
+                        goto bail;
+                    }
 
                     // correlate new values with values already in the cache:
                     // phase 1: go backwards through sequence numbers of new and old
@@ -1172,7 +1211,7 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
         }
         if (head == NULL) {
             // OK, can't find this thing anywhere.
-            logprintfl (EUCADEBUG, "unable to get metrics for instance %s\n", name);
+            logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated)\n", name);
             // TODO3.2: decide what to do when some metrics for an instance aren't available
         }
     }
@@ -1192,6 +1231,7 @@ static void dump_sensor_cache (void)
         srs [i] = & (sensor_state->resources [i]);
     }
     log_sensor_resources ("whole cache", srs, sensor_state->max_resources);
+    free (srs);
 }
 
 static void clear_srs (sensorResource ** srs, int srsLen)
@@ -1201,11 +1241,14 @@ static void clear_srs (sensorResource ** srs, int srsLen)
     }
 }
 
+const char * euca_this_component_name   = "ignore";
+const char * euca_client_component_name = "ignore";
+
 int main (int argc, char ** argv)
 {
     int errors = 0;
 
-    logfile (NULL, EUCADEBUG, 4);
+    logfile (NULL, EUCATRACE, 4);
     logprintfl (EUCADEBUG, "testing sensor.c with MAX_SENSOR_VALUES=%d\n", MAX_SENSOR_VALUES);
 
     long long intervalMs = 50000;
@@ -1220,11 +1263,24 @@ int main (int argc, char ** argv)
     assert (0 == sensor_config (1, 50000));
     assert (0 == sensor_config (3, intervalMs));
 
-    // test the getstat functions
-    assert (getstat_refresh () == OK);
-    logprintfl (EUCADEBUG, "getstat_refresh() found %d instances\n", getstat_ninstances());
-    assert (getstat_refresh () == OK);
-    logprintfl (EUCADEBUG, "getstat_refresh(), 2nd time, found %d instances\n", getstat_ninstances());
+#define GETSTAT_ITERS 10
+    // test the getstat function
+    for (int i=1; i<=GETSTAT_ITERS; i++) {
+        if (i%2) {
+            euca_this_component_name = "nc";
+        } else {
+            euca_this_component_name = "cc";
+        }
+        assert (getstat_refresh () == OK);
+        getstat * gs = getstat_find (NULL);
+        if (gs != NULL) {
+            char * id = gs->instanceId;
+            assert (sensor_refresh_resources (id, "", 1) == OK);
+        }
+        if (i%101 == 0) {
+            logprintfl (EUCADEBUG, "getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances());
+        }
+    }
     char * anInstanceId = NULL;
     sem_p (state_sem);
     if (sensor_state->stats) {
@@ -1245,7 +1301,7 @@ int main (int argc, char ** argv)
             ts+=intervalMs;
             val+=1;
             assert (0 == sensor_add_value ("i-555", "CPUUtilization", SENSOR_AVERAGE, "default", sn, ts, (sn%2)?TRUE:FALSE, val));
-            //            assert (0 == sensor_add_value ("i-555", "CPUUtilization", SENSOR_AVERAGE, "default", sn, ts, (sn%2)?TRUE:FALSE, val)); // should be a no-op
+            assert (0 == sensor_add_value ("i-555", "CPUUtilization", SENSOR_AVERAGE, "default", sn, ts, (sn%2)?TRUE:FALSE, val)); // should be a no-op
             valLen++;
             if (valLen>MAX_SENSOR_VALUES)
                 valLen=MAX_SENSOR_VALUES;

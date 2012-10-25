@@ -70,6 +70,7 @@
 #include "misc.h"
 #include "euca_axis.h"
 #include "sensor.h"
+#include "adb-helpers.h"
 
 #define NC_ENDPOINT "/axis2/services/EucalyptusNC"
 #define WALRUS_ENDPOINT "/services/Walrus"
@@ -197,12 +198,13 @@ int main (int argc, char **argv)
     char * launch_index = NULL;
     char ** group_names = NULL;
     int group_names_size = 0;
+    char * timestamp_str = NULL;
 	char * command = NULL;
         int local = 0;
     int count = 1;
 	int ch;
     
-	while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:")) != -1) {
+	while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:")) != -1) {
 		switch (ch) {
         case 'c':
             count = atoi (optarg);
@@ -298,6 +300,9 @@ int main (int argc, char **argv)
                 fprintf (stderr, "ERROR: could not parse the virtual boot record (try -h)\n");
                 exit (1);
             }
+            break;
+        case 't':
+            timestamp_str = optarg;
             break;
         case 'h':
             usage (); // will exit
@@ -612,6 +617,14 @@ int main (int argc, char **argv)
         char buf [102400];
         sensor_res2str (buf, sizeof(buf), res, resSize);
         printf ("resources: %d\n%s\n", resSize, buf);
+
+    /***********************************************************/
+    } else if (!strcmp(command, "_convertTimestamp")) {
+        CHECK_PARAM(timestamp_str, "timestamp");
+
+        axutil_date_time_t * dt = unixms_to_datetime (stub->env, 0123L);
+        long long ts_l = datetime_to_unixms (dt, stub->env);
+        printf ("timestamp: %lld\n", ts_l);
 
     /***********************************************************/
     } else {

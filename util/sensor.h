@@ -43,6 +43,7 @@
 #define DEFAULT_SENSOR_SLEEP_DURATION_USEC 15000000L
 #define MIN_COLLECTION_INTERVAL_MS 1000L // below 1 second is too frequent
 #define MAX_COLLECTION_INTERVAL_MS 86400000L // above 24 hours is too infrequent
+#define MAX_SENSOR_RESOURCES_HARD  10000000L // 10 mil resources max, for sanity checking
 
 typedef struct {
     long long timestampMs; // in milliseconds

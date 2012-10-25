@@ -195,13 +195,12 @@ static void * rebooting_thread (void *arg)
             snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId); // vol-XXX-libvirt.xml
             
             // read in libvirt XML, which may have been modified by the hook above
-            char * xml = file2str (lpath);
+            xml = file2str (lpath);
             if (xml == NULL) {
                 logprintfl (EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
                 rc = 1;
             }
         }
-
         if (remoteDevStr)
             free (remoteDevStr);
 

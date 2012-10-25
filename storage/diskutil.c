@@ -827,7 +827,7 @@ int diskutil_ch (const char * path, const char * user, const char * group, const
     int ret = OK;
     char * output;
 
-    logprintfl (EUCAINFO, "ch(own|mod) '%s' %s.%s %o\n", 
+    logprintfl (EUCADEBUG, "ch(own|mod) '%s' %s.%s %o\n", 
                 path,
                 user?user:"*", 
                 group?group:"*", 
