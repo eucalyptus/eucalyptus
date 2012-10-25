@@ -808,6 +808,7 @@ doDetachVolume (	struct nc_state_t *nc,
     int ret = OK;
     int is_iscsi_target = 0;
     int have_remote_device = 0;
+    char * xml = NULL;
 
     char * tagBuf;
     char * localDevName;
@@ -908,7 +909,7 @@ doDetachVolume (	struct nc_state_t *nc,
     snprintf (lpath, sizeof (lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId); // vol-XXX-libvirt.xml
     
     // read in libvirt XML
-    char * xml = file2str (lpath);
+    xml = file2str (lpath);
     if (xml == NULL) {
         logprintfl (EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
         ret = ERROR;
@@ -972,7 +973,7 @@ doDetachVolume (	struct nc_state_t *nc,
     
     if (xml)
         free (xml);
-
+    
     if (force) {
         return(OK);
     }
@@ -1652,10 +1653,13 @@ doDescribeSensors (struct nc_state_t *nc,
 	else
 		total = instIdsLen;
 
-    sensorResource ** rss = malloc (total * sizeof (sensorResource *));
-    if (rss == NULL) {
-        sem_v (inst_copy_sem);
-        return OUT_OF_MEMORY;
+    sensorResource ** rss = NULL;
+    if (total > 0) {
+        rss = malloc (total * sizeof (sensorResource *));
+        if (rss == NULL) {
+            sem_v (inst_copy_sem);
+            return OUT_OF_MEMORY;
+        }
     }
 
 	int k = 0;
@@ -1679,6 +1683,7 @@ doDescribeSensors (struct nc_state_t *nc,
 				continue;
 		}
 
+        assert (k<total);
         rss [k] = malloc (sizeof (sensorResource));
         sensor_get_instance_data (instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1);
         k++;

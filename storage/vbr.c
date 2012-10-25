@@ -439,7 +439,7 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     for (i=0; i<EUCA_MAX_VBRS && i<params->virtualBootRecordLen; i++) {
         virtualBootRecord * vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation)>0) {
-            logprintfl (EUCAINFO, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%lld format=%s %s\n", 
+            logprintfl (EUCADEBUG, "[%s]                VBR[%d] type=%s id=%s dev=%s size=%lld format=%s %s\n", 
                         instanceId, i, vbr->typeName, vbr->id, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
             if (!strcmp(vbr->typeName, "machine")) 
                 found_image = 1;
@@ -455,9 +455,9 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
     // legacy support for image{Id|URL}
     if (imageId && imageURL) {
         if (found_image) {
-            logprintfl (EUCAINFO, "[%s] IGNORING image %s passed outside the virtual boot record\n", instanceId,  imageId);
+            logprintfl (EUCAWARN, "[%s] IGNORING image %s passed outside the virtual boot record\n", instanceId,  imageId);
         } else {
-            logprintfl (EUCAINFO, "[%s] LEGACY pre-VBR image id=%s URL=%s\n", instanceId,  imageId, imageURL);
+            logprintfl (EUCAWARN, "[%s] LEGACY pre-VBR image id=%s URL=%s\n", instanceId,  imageId, imageURL);
             if (i>=EUCA_MAX_VBRS-2) {
                 logprintfl (EUCAERROR, "[%s] error: out of room in the Virtual Boot Record for legacy image %s\n", instanceId,  imageId);
                 return ERROR;

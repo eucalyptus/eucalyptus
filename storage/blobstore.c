@@ -79,7 +79,6 @@
 #include <sys/file.h> // flock
 #include <dirent.h>
 #include <sys/wait.h> // wait
-#include <execinfo.h> // backtrace
 #include <pthread.h>
 #include "blobstore.h"
 #include <sys/types.h> // gettid
@@ -179,28 +178,6 @@ static void myprintf (int loglevel, const char * format, ...)
         puts (buf);
 }
 
-static void dump_trace (char * buf, int buf_size)
-{
-    void *array[64];
-    size_t size;
-    char **strings;
-    size_t i;
-    
-    size = backtrace (array, sizeof(array)/sizeof(void *));
-    strings = backtrace_symbols (array, size);
-    
-    buf [0] = '\0';
-    for (i = 0; i < size; i++) {
-        int left = buf_size - 1 - strlen (buf);
-        if (left < 0) break;
-        char line [512];
-        snprintf (line, sizeof(line), "\t%s\n", strings [i]);
-        strncat (buf, line, left);
-    }
-
-    free (strings);
-}
-
 const char * blobstore_get_error_str ( blobstore_error_t error ) {
     return _blobstore_error_strings [error];
 }
@@ -229,7 +206,7 @@ static void err (blobstore_error_t error, const char * custom_msg, const int src
         msg = blobstore_get_error_str (error);
     }
     snprintf (_blobstore_last_msg, sizeof(_blobstore_last_msg), "%s:%d %s", src_file_name, src_line_no, msg);
-    dump_trace (_blobstore_last_trace, sizeof(_blobstore_last_trace));
+    log_dump_trace (_blobstore_last_trace, sizeof(_blobstore_last_trace));
     
     if (_do_print_errors) {
         myprintf (EUCAERROR, "error: %s\n", _blobstore_last_msg);
@@ -1481,6 +1458,12 @@ static unsigned int check_in_use ( blobstore * bs, const char * bb_id, long long
     _err_off(); // do not complain if metadata files do not exist
     int fd = open_and_lock (path, BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // try opening to see what happens
     if (fd != -1) {
+        struct stat s;
+        if (fstat (fd, &s) == 0) {
+            if (s.st_size > 0) { // lock file was not truncated before being released => file not properly closed
+                in_use |= BLOCKBLOB_STATUS_ABANDONED; 
+            }
+        }
         close_and_unlock (fd); 
     } else {
         in_use |= BLOCKBLOB_STATUS_OPENED; // TODO: check if open failed for other reason?
@@ -1685,10 +1668,11 @@ static long long purge_blockblobs_lru ( blobstore * bs, blockblob * bb_list, lon
                     code = 'D';
                     deleted++;
                 }
-                logprintfl (EUCADEBUG, "LRU %d %08d: %29s %c%c%c %c %9llu %s", iteration, purged, bb->id,
-                            (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'), // o = open
-                            (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'), // p = has parents
-                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
+                logprintfl (EUCADEBUG, "LRU %d %08d: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id,
+                            (bb->in_use & BLOCKBLOB_STATUS_OPENED)    ? ('o') : ('-'), // o = open
+                            (bb->in_use & BLOCKBLOB_STATUS_BACKED)    ? ('p') : ('-'), // p = has parents
+                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED)    ? ('c') : ('-'), // c = has children
+                            (bb->in_use & BLOCKBLOB_STATUS_ABANDONED) ? ('a') : ('-'), // a = was abandoned
                             code, // outcome codes: D=deleted, else C=children, !=undeletable, O=open
                             bb->size_bytes / 512L, // size is in sectors
                             ctime (&(bb->last_modified))); // ctime adds a newline
@@ -1725,7 +1709,7 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
     meta->blocks_unlocked = 0;
     meta->blocks_locked = 0;
     meta->num_blobs = 0;
-    for (blockblob * abb = bbs; abb; abb=abb->next) { // TODO: unify this with locked/unlocked calculation in open()
+    for (blockblob * abb = bbs; abb; ) { // TODO: unify this with locked/unlocked calculation in open()
         long long abb_size_blocks = round_up_sec (abb->size_bytes) / 512;
         if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
             meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
@@ -1734,6 +1718,11 @@ int blobstore_stat (blobstore * bs, blobstore_meta * meta)
         }
         meta->blocks_allocated += abb->blocks_allocated;
         meta->num_blobs++;
+        
+        // free this node and move the pointer
+        blockblob * old_bb = abb;
+        abb=abb->next;
+        free (old_bb);
     }
     
  unlock:
@@ -2652,9 +2641,14 @@ static int blockblob_check (const blockblob * bb)
         }
     }
 
+    // check on .refs that point to blobs that no longer exist
     if (get_stale_refs (bb, NULL)>0)
         err++;
     
+    // check on .lock files that are non-zero => blobs that were not closed properly
+    if (bb->in_use & BLOCKBLOB_STATUS_ABANDONED)
+        err++;
+
     _err_on();
     return err;
 }
@@ -2718,7 +2712,7 @@ static int delete_blob_state (blockblob * bb, long long timeout_usec, char do_fo
             // TODO: print a warning about store/blob corruption?
         }
         
-        if (!check_in_use(dep_bs, blob_id, 0)) {
+        if (! (check_in_use(dep_bs, blob_id, 0) & ~(BLOCKBLOB_STATUS_ABANDONED))) { // in use except abandoned
             loop_remove (dep_bs, blob_id); // TODO: do we care about errors?
         }
         if (dep_bs != bs) {
@@ -2768,7 +2762,8 @@ int blockblob_delete ( blockblob * bb, long long timeout_usec, char do_force )
     
     // do not delete the blob if it is used by another one
     bb->in_use = check_in_use (bs, bb->id, 0); // update in_use status
-    if (!do_force && bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED)) { // in use other than opened (by this thread) or backed
+    // if in use other than opened (by this thread), backed, or abandoned
+    if (!do_force && bb->in_use & ~(BLOCKBLOB_STATUS_OPENED|BLOCKBLOB_STATUS_BACKED|BLOCKBLOB_STATUS_ABANDONED)) { 
         ERR (BLOBSTORE_ERROR_AGAIN, NULL);
         ret = -1;
     } else {
@@ -4406,10 +4401,11 @@ static int do_list (const char * regex)
             }
             char extras [100] = "";
             if (show_extras) {
-                snprintf (extras, sizeof (extras), "%c%c%c %9llu %s",
-                          (bm->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'), // o = open
-                          (bm->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'), // p = has parents
-                          (bm->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'), // c = has children
+                snprintf (extras, sizeof (extras), "%c%c%c%c %9llu %s",
+                          (bm->in_use & BLOCKBLOB_STATUS_OPENED)    ? ('o') : ('-'), // o = open
+                          (bm->in_use & BLOCKBLOB_STATUS_BACKED)    ? ('p') : ('-'), // p = has parents
+                          (bm->in_use & BLOCKBLOB_STATUS_MAPPED)    ? ('c') : ('-'), // c = has children
+                          (bm->in_use & BLOCKBLOB_STATUS_ABANDONED) ? ('a') : ('-'), // a = was abandoned
                           bm->size_bytes / 512L, // size is in sectors
                           ctime (&(bm->last_modified)));
                 extras [strlen (extras)-1] = ' '; // remove the newline from date

@@ -222,10 +222,10 @@ adb_ncStartNetworkResponse_t* ncStartNetworkMarshal (adb_ncStartNetwork_t* ncSta
             adb_ncStartNetworkResponseType_set_networkStatus(output, env, "SUCCESS");
             adb_ncStartNetworkResponseType_set_statusMessage(output, env, "0");
         }
-
-        if (peersLen) 
-            free (peers);
     }
+
+    if (peers) 
+        free (peers);
 
     // set response to output
     adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
@@ -511,6 +511,8 @@ adb_ncDescribeInstancesResponse_t* ncDescribeInstancesMarshal (adb_ncDescribeIns
         }
 	//        eventlog("NC", userId, correlationId, "DescribeInstances", "end");
     }
+    if (instIds)
+        free (instIds);
     
     // set response to output
     adb_ncDescribeInstancesResponse_set_ncDescribeInstancesResponse(response, env, output);
@@ -1068,6 +1070,10 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         }
     }
     // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
+    if (instIds)
+        free (instIds);
+    if (sensorIds)
+        free (sensorIds);
 
  reply:
     

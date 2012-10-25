@@ -287,8 +287,6 @@ int get_value(			char *s,
 int convert_dev_names(		const char *localDev,
 				char *localDevReal,
 				char *localDevTag);
-void libvirt_error_handler(	void * userData,
-				virErrorPtr error);
 void print_running_domains(	void);
 virConnectPtr *check_hypervisor_conn();
 void change_state(		ncInstance * instance,

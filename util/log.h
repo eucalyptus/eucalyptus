@@ -152,5 +152,6 @@ int logprintfl(int level, const char *format, ...);
 int logcat (int debug_level, const char * file_name);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
+void log_dump_trace (char * buf, int buf_size);
 
 #endif

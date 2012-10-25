@@ -170,7 +170,7 @@ get_value(	char *s,
 	return (sscanf_lines (s, buf, valp)==1 ? OK : ERROR);
 }
 
-void libvirt_error_handler (	void *userData,
+void libvirt_err_handler (	void *userData,
 				virErrorPtr error)
 {
 	if ( error==NULL) {
@@ -1117,7 +1117,7 @@ void adopt_instances()
 		return;
         
 	logprintfl (EUCAINFO, "looking for existing domains\n");
-	virSetErrorFunc (NULL, libvirt_error_handler);
+	virSetErrorFunc (NULL, libvirt_err_handler);
         
 	num_doms = virConnectListDomains(nc_state.conn, dom_ids, MAXDOMS);
 	if (num_doms == 0) {
@@ -1963,7 +1963,7 @@ int doTerminateInstance (ncMetadata *meta, char *instanceId, int force, int *shu
 	if (init())
 		return 1;
     
-	logprintfl (EUCAINFO, "[%s] invoked\n", instanceId);
+	logprintfl (EUCAINFO, "[%s] termination requested\n", instanceId);
     
 	if (nc_state.H->doTerminateInstance) 
 		ret = nc_state.H->doTerminateInstance(&nc_state, meta, instanceId, force, shutdownState, previousState);

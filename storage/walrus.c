@@ -466,6 +466,7 @@ static size_t write_header (void *buffer, size_t size, size_t nmemb, void *param
 static size_t write_data (void *buffer, size_t size, size_t nmemb, void *params)
 {
     assert (params !=NULL);
+
     int fd = ((struct request *)params)->fd;
     int wrote = write (fd, buffer, size * nmemb);
     ((struct request *)params)->total_wrote += wrote;

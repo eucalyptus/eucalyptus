@@ -75,22 +75,33 @@ int isConfigModified (char configFiles[][MAX_PATH], int numFiles)
 
 char *configFileValue(const char *key) 
 {
-  int i;
-  for (i=0; i<configRestartLen; i++) {
-    if (configKeysRestart[i].key) {
-      if (!strcmp(configKeysRestart[i].key, key)) {
-	return(configValuesRestart[i] ? strdup(configValuesRestart[i]) : (configKeysRestart[i].defaultValue ? strdup(configKeysRestart[i].defaultValue) : NULL));
-      }
+    int i;
+    for (i=0; i<configRestartLen; i++) {
+        if (configKeysRestart[i].key) {
+            if (!strcmp (configKeysRestart[i].key, key)) { // have a match among values that restart
+                if (configValuesRestart[i])
+                    return strdup(configValuesRestart[i]);
+                else if (configKeysRestart[i].defaultValue)
+                    return strdup(configKeysRestart[i].defaultValue);
+                else
+                    return NULL;
+            }
+        }
     }
-  }
-  for (i=0; i<configNoRestartLen; i++) {
-    if (configKeysNoRestart[i].key) {
-      if (!strcmp(configKeysNoRestart[i].key, key)) {
-	return(configValuesNoRestart[i] ? strdup(configValuesNoRestart[i]) : (configKeysNoRestart[i].defaultValue ? strdup(configKeysNoRestart[i].defaultValue) : NULL));
-      }
+    for (i=0; i<configNoRestartLen; i++) {
+        if (configKeysNoRestart[i].key) {
+            if (!strcmp(configKeysNoRestart[i].key, key)) {
+                if (configValuesNoRestart[i])
+                    return strdup(configValuesNoRestart[i]);
+                else if (configKeysNoRestart[i].defaultValue)
+                    return strdup(configKeysNoRestart[i].defaultValue);
+                else
+                    return NULL;
+            }
+        }
     }
-  }
-  return(NULL);
+    
+    return NULL;
 }
 
 int configFileValueLong(const char *key, long *val)
@@ -105,6 +116,7 @@ int configFileValueLong(const char *key, long *val)
             * val = v;
             found = 1;
         }
+        free (tmpstr);
     }
     return found;
 }
@@ -162,7 +174,8 @@ void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log
     char * s = configFileValue ("LOGLEVEL");
     assert (s!=NULL); // configFileValue should return default
     * log_level_out = log_level_int (s);
-    
+    return (s);
+
     long l;
     configFileValueLong ("LOGROLLNUMBER", &l);
     * log_roll_number_out = (int)l;
