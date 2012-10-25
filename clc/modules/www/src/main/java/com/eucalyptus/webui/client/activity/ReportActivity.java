@@ -86,8 +86,8 @@ public class ReportActivity extends AbstractActivity implements ReportView.Prese
     this.clientFactory.getShellView( ).getContentView( ).setContentTitle( TITLE );
     ReportView reportView = this.clientFactory.getReportView( );
     reportView.setPresenter( this );
-
-    reportView.init( new Date( ),
+    // start yesterday (current time - 24H * 60 M * 60 S * 1000MS)      
+    reportView.init( new Date( System.currentTimeMillis() - 24 * 60 * 60 * 1000L ),
                      new Date( ),
                      new String[] { "Instance", "S3", "Volume", "Snapshot", "Elastic-IP", "Capacity"});
     container.setWidget( reportView );
