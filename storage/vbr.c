@@ -547,7 +547,9 @@ static void update_vbr_with_backing_info (artifact * a)
     virtualBootRecord * vbr = a->vbr;
 
     assert (a->bb);
-    if (! a->must_be_file && strlen (blockblob_get_dev (a->bb))) {
+    if (! a->must_be_file && 
+        strlen (blockblob_get_dev (a->bb)) &&
+        (blobstore_snapshot_t)a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) { // without snapshots we can use files
         safe_strncpy (vbr->backingPath, blockblob_get_dev (a->bb), sizeof (vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
@@ -681,7 +683,14 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
     assert (dest_dev);
     logprintfl (EUCAINFO, "[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev (a->bb));
 
-    blockmap map [EUCA_MAX_PARTITIONS] = { {BLOBSTORE_SNAPSHOT, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
+    blockmap_relation_t mbr_op = BLOBSTORE_SNAPSHOT;
+    blockmap_relation_t part_op = BLOBSTORE_MAP; // use map by default as it is faster
+    if ((blobstore_snapshot_t)a->bb->store->snapshot_policy == BLOBSTORE_SNAPSHOT_NONE) {
+        // but fall back to copy when snapshots are not possible or desired
+        mbr_op = BLOBSTORE_COPY;
+        part_op = BLOBSTORE_COPY;
+    }
+    blockmap map [EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}, 0, 0, MBR_BLOCKS} }; // initially only MBR is in the map
  
     // run through partitions, add their sizes, populate the map
     virtualBootRecord * p1 = NULL;
@@ -709,7 +718,7 @@ static int disk_creator (artifact * a) // creates a 'raw' disk based on partitio
 
         assert (dep->bb);
         assert (dep->size_bytes>0);
-        map [map_entries].relation_type = BLOBSTORE_MAP;
+        map [map_entries].relation_type = part_op;
         map [map_entries].source_type = BLOBSTORE_BLOCKBLOB;
         map [map_entries].source.blob = dep->bb;
         map [map_entries].first_block_src = 0;
@@ -914,11 +923,15 @@ static int copy_creator (artifact * a)
                 return blobstore_get_error();
             }
         } else {
+            blockmap_relation_t op = BLOBSTORE_SNAPSHOT; // use snapshot by default as it is faster
+            if ((blobstore_snapshot_t)a->bb->store->snapshot_policy == BLOBSTORE_SNAPSHOT_NONE) {
+                op = BLOBSTORE_COPY; // but fall back to copy when snapshots are not possible or desired
+            }
             blockmap map [] = {
-                {BLOBSTORE_SNAPSHOT, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
+                {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec (dep->size_bytes) / 512}
             };
             if (blockblob_clone (a->bb, map, 1)==-1) {
-                logprintfl (EUCAERROR, "[%s] error: failed to clone blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
+                logprintfl (EUCAERROR, "[%s] error: failed to clone/copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id, blobstore_get_error(), blobstore_get_last_msg());
                 return blobstore_get_error();
             }
         }
@@ -2144,8 +2157,6 @@ int main (int argc, char ** argv)
         goto out;
     }
 
-    goto skip_cache_only; // TODO: figure out why only one or the other works
-
     printf ("running test that only uses cache blobstore\n");
     if (errors += provision_vm (GEN_ID, KEY1, EKI1, ERI1, EMI1, cache_bs, work_bs, FALSE))
         goto out;
@@ -2171,9 +2182,6 @@ int main (int argc, char ** argv)
     check_blob (cache_bs, "blocks", 0);
 
     printf ("done with vbr.c cache-only test errors=%d warnings=%d\n", errors, warnings);
-    exit (errors);
-
- skip_cache_only:
 
     printf ("\n\n\n\n\nrunning test with use of work blobstore\n");
 

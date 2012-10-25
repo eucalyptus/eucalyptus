@@ -195,15 +195,22 @@ int init_backing_store (const char * conf_instances_path, unsigned int conf_work
         work_limit_blocks = ULLONG_MAX;
     }
 
+    // by default we let blobstore pick the snapshot policy, which
+    // will use device mapper if available, which is faster than copying
+    blobstore_snapshot_t snapshot_policy = BLOBSTORE_SNAPSHOT_ANY;
+    if (nc_state.disable_snapshots) {
+        logprintfl (EUCAINFO, "if allocating storage, will avoid using snapshots\n");
+        snapshot_policy = BLOBSTORE_SNAPSHOT_NONE;
+    }
     blobstore_set_error_function ( &bs_errors );
     if (cache_limit_blocks) {
-        cache_bs = blobstore_open (cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_ANY);
+        cache_bs = blobstore_open (cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, snapshot_policy);
         if (cache_bs==NULL) {
             logprintfl (EUCAERROR, "ERROR: failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return ERROR;
         }
     }
-    work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_ANY);
+    work_bs = blobstore_open (work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, snapshot_policy);
     if (work_bs==NULL) {
         logprintfl (EUCAERROR, "ERROR: failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
         logprintfl (EUCAERROR, "ERROR: %s\n", blobstore_get_last_trace());
