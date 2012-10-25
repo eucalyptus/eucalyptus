@@ -174,7 +174,6 @@ void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log
     char * s = configFileValue ("LOGLEVEL");
     assert (s!=NULL); // configFileValue should return default
     * log_level_out = log_level_int (s);
-    return (s);
 
     long l;
     configFileValueLong ("LOGROLLNUMBER", &l);
