@@ -155,10 +155,16 @@ public class BlockStorage {
 		
 		try {
 			blockManager = StorageManagers.getInstance();
+			if(blockManager != null) {
+				blockManager.initialize();
+			}
+			else {
+				throw new EucalyptusCloudException("Got null block manager. Cannot configure.");
+			}
 		} catch (Exception e) {
 			throw new EucalyptusCloudException(e);
 		}
-		
+				
 		checker = new BlockStorageChecker(blockManager);
 		if(StorageProperties.trackUsageStatistics) { 
 			blockStorageStatistics = new BlockStorageStatistics();
@@ -193,6 +199,7 @@ public class BlockStorage {
 
 	public static void stop() throws EucalyptusCloudException {
 		if(blockManager != null) {
+			LOG.info("Stopping blockmanager");
 			blockManager.stop();
 		}
 		//clean all state.
@@ -213,7 +220,7 @@ public class BlockStorage {
 
 	public static void enable() throws EucalyptusCloudException {
 		blockManager.configure();
-		blockManager.initialize();
+		//blockManager.initialize();
 		try {
 			startupChecks();
 		} catch(EucalyptusCloudException ex) {

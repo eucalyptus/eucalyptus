@@ -80,14 +80,24 @@ import com.eucalyptus.storage.StorageManagers;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 
-
+/**
+ * Storage controller builder is responsible for handling the StorageManagers cache and ensuring that the proper values are
+ * populated and removed on the registration-lifecycle of the SC.
+ * @author zhill
+ *
+ */
 @ComponentPart( Storage.class )
 @Handles( { RegisterStorageControllerType.class, DeregisterStorageControllerType.class, DescribeStorageControllersType.class, ModifyStorageControllerAttributeType.class } )
 public class StorageControllerBuilder extends AbstractServiceBuilder<StorageControllerConfiguration> {
-  @Override
-  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {
+  
+	/**
+	 * Configure the block storage backend based on the blockstoragemanager found in the DB.
+	 */
+	@Override
+  public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {  	
     try {
       if ( parent.isVmLocal( ) ) {
+      	LOG.info("Firing LOAD for local config: " + parent.getName());
         EntityTransaction tx = Entities.get( parent ); 
         try {
           parent = Entities.merge( parent );
@@ -133,13 +143,25 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
     return super.checkAdd( partition, name, host, port );
   }
 
+  /**
+   * Flush the block storage manager from the cache such that the next startup cycle (or registration) will catch the new one.
+   */
   @Override
-  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {}
-  
+  public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
+  	try {
+      if ( config.isVmLocal( ) ) {
+      	LOG.info("Firing STOP for local config: " + config.getName());  
+        StorageManagers.flushManagerInstances();
+      }
+    } catch ( Exception ex ) {
+      throw Exceptions.toUndeclared( ex );
+    }
+  }
   
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( config.isVmLocal( ) ) {
+    	LOG.info("Firing START for local config: " + config.getName());      
       java.lang.System.setProperty( "euca.storage.name", config.getName( ) );
       LOG.info( LogUtil.subheader( "Setting euca.storage.name=" + config.getName( ) + " for: " + LogUtil.dumpObject( config ) ) );
     }

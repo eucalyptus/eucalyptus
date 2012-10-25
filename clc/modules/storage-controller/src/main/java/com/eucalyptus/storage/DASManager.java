@@ -1173,13 +1173,13 @@ public class DASManager implements LogicalStorageManager {
 		return false;
 	}
 
-        @Override
-        public void checkVolume(String volumeId) throws EucalyptusCloudException {
+	@Override
+	public void checkVolume(String volumeId) throws EucalyptusCloudException {
 	}
-
-        @Override
-        public List<CheckerTask> getCheckers() {
-                List<CheckerTask> checkers = new ArrayList<CheckerTask>();
-                return checkers;
-        }
+	
+	@Override
+	public List<CheckerTask> getCheckers() {
+		List<CheckerTask> checkers = new ArrayList<CheckerTask>();
+		return checkers;
+	}
 }

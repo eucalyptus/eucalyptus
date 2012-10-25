@@ -100,6 +100,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 
 	@Override
 	public boolean start( ) throws Exception {
+		LOG.debug("Starting BlockStorage");
 		BlockStorage.configure();
 		return true;
 	}
@@ -118,6 +119,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public boolean stop( ) throws Exception {
+		LOG.debug("Stopping BlockStorage");
 		BlockStorage.stop();
 		return true;
 	}
@@ -127,6 +129,7 @@ public class BlockStorageBootstrapper extends Bootstrapper {
 	 */
 	@Override
 	public void destroy( ) throws Exception {
+		LOG.debug("Destroying BlockStorage service");
 		BlockStorage.stop();
 	}
 

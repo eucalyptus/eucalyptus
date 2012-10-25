@@ -93,6 +93,7 @@ import com.google.common.collect.Maps;
 
 public class StorageManagers extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( StorageManagers.class );
+  private static final String UNSET = "unset";
   
   @Target( { ElementType.TYPE } )
   @Retention( RetentionPolicy.RUNTIME )
@@ -150,8 +151,8 @@ public class StorageManagers extends ServiceJarDiscovery {
   private static AtomicReference<String> lastManager = new AtomicReference<String>( );
   
   public static LogicalStorageManager getInstance( ) {
-    if ( lastManager.get( ) == null ) {
-      throw new NoSuchElementException( "Not a valid value:  " + lastManager + ".  Legal values are: " + Joiner.on( "," ).join( managers.keySet( ) ) );
+    if ( lastManager.get( ) == null || UNSET.equals(lastManager.get())) {
+      throw new NoSuchElementException( "SC blockstorageamanger not configured. Found empty or unset manager(" + lastManager + ").  Legal values are: " + Joiner.on( "," ).join( managers.keySet( ) ) );
     } else {
       return managerInstances.get( lastManager.get( ) );
     }
@@ -170,6 +171,20 @@ public class StorageManagers extends ServiceJarDiscovery {
   
   public static boolean contains( Object key ) {
     return managers.containsKey( key );
+  }
+  
+  public static synchronized void flushManagerInstances() throws EucalyptusCloudException {
+  	LOG.debug("Flushing all block storage manager instances");
+  	managerInstances.clear();
+  	lastManager.set(UNSET);
+  }
+  
+  public static synchronized void flushManagerInstance(String key) throws EucalyptusCloudException {
+  	LOG.debug("Flusing block storage manager instance: " + key);
+		lastManager.set(UNSET);
+  	if(managerInstances.containsKey(key)) {  		
+  		managerInstances.remove(key);
+  	}
   }
   
   public static Class<? extends LogicalStorageManager> lookupManager( String arg0 ) {
