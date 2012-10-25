@@ -62,9 +62,14 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.List;
+
 import javax.persistence.Column;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -72,9 +77,17 @@ import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.StorageProperties;
+import com.google.common.base.Predicate;
+
+import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 
 @Entity
 @javax.persistence.Entity
@@ -177,6 +190,10 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     return description;
   }
 
+  public void setDescription(String description) {
+    this.description = description;
+  }
+  
   public String getParentVolume( ) {
     return parentVolume;
   }
@@ -236,6 +253,28 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
 
   protected void setProgress( String progress ) {
     this.progress = progress;
+  }
+  
+  @EntityUpgrade( entities = { Snapshot.class }, since = Version.v3_2_0, value = Storage.class )
+  public enum SnapshotUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( Snapshot.SnapshotUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      EntityTransaction db = Entities.get( Snapshot.class );
+      try {
+        List<Snapshot> entities = Entities.query( new Snapshot( ) );
+        for ( Snapshot entry : entities ) {
+          LOG.debug( "Upgrading: " + entry.getDisplayName() );
+          entry.setDescription(null);
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        db.rollback();
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
   }
   
 }

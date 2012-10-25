@@ -88,10 +88,11 @@
 #define BLOBSTORE_FLAG_HOLLOW   02000 // means the blob being created should be viewed as not occupying space
 
 // in-use flags for blockblobs
-#define BLOCKBLOB_STATUS_OPENED 00002 // currently opened by someone (read or write)
-#define BLOCKBLOB_STATUS_LOCKED 00004 // locked by a process (TODO: remove this UNUSED status?)
-#define BLOCKBLOB_STATUS_MAPPED 00010 // loopback device dm-mapped by one or more other blobs
-#define BLOCKBLOB_STATUS_BACKED 00020 // loopback device used as a backing by device mapper
+#define BLOCKBLOB_STATUS_OPENED    00002 // currently opened by someone (read or write)
+#define BLOCKBLOB_STATUS_LOCKED    00004 // locked by a process (TODO: remove this UNUSED status?)
+#define BLOCKBLOB_STATUS_MAPPED    00010 // loopback device dm-mapped by one or more other blobs
+#define BLOCKBLOB_STATUS_BACKED    00020 // loopback device used as a backing by device mapper
+#define BLOCKBLOB_STATUS_ABANDONED 00040 // non-zero lock file size => blob not closed properly
 
 typedef enum { // make sure these match up with _blobstore_error_strings[] entries below
     BLOBSTORE_ERROR_OK = 0,
@@ -183,9 +184,21 @@ typedef struct _blockblob {
     struct _blockblob * prev;
 } blockblob;
 
+typedef enum { 
+    BLOBSTORE_COPY, 
+    BLOBSTORE_MAP, 
+    BLOBSTORE_SNAPSHOT
+} blockmap_relation_t;
+
+typedef enum { 
+    BLOBSTORE_DEVICE, 
+    BLOBSTORE_BLOCKBLOB, 
+    BLOBSTORE_ZERO 
+} blockmap_source_t;
+
 typedef struct _blockmap {
-    enum { BLOBSTORE_COPY, BLOBSTORE_MAP, BLOBSTORE_SNAPSHOT } relation_type;
-    enum { BLOBSTORE_DEVICE, BLOBSTORE_BLOCKBLOB, BLOBSTORE_ZERO } source_type;
+    blockmap_relation_t relation_type;
+    blockmap_source_t source_type;
     union {
         char device_path [BLOBSTORE_MAX_PATH];
         blockblob * blob;

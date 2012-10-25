@@ -164,7 +164,7 @@ upgrade_db() {
   # Upgrade version and directory info
   UPGRADE_OLD_ARGS="--upgrade-old-version=${OLD_EUCA_VERSION} --upgrade-old-dir=${OLD_EUCA}"
   UPGRADE_ARGS="--upgrade  ${UPGRADE_OLD_ARGS}"
-  UPGRADE_CMD="${EUCALYPTUS}/usr/sbin/eucalyptus-cloud -u ${EUCA_USER} -h ${EUCALYPTUS}"
+  UPGRADE_CMD="${EUCALYPTUS}/usr/sbin/eucalyptus-cloud -u ${EUCA_USER} -h ${EUCALYPTUS} ${UPGRADE_ARGS}"
   echo "${UPGRADE_CMD}" >> ${UP_LOG} 
   
   echo "Upgrading your database..." | tee -a ${UP_LOG} 2>&1

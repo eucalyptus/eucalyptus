@@ -138,7 +138,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @Enumerated( EnumType.STRING )
   private ImageMetadata.Architecture architecture;
   
-  @Column( name = "metadata_image_is_public", columnDefinition = "boolean default true" )
+  @Column( name = "metadata_image_is_public", columnDefinition = "boolean default false" )
   private Boolean                    imagePublic;
   
   @Column( name = "metadata_image_platform", nullable = false )
@@ -245,7 +245,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.imagePublic = aPublic;
   }
   
-  private Set<String> getPermissions( ) {
+  protected Set<String> getPermissions( ) {
     return this.permissions;
   }
   

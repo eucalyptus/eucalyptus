@@ -75,6 +75,7 @@
 #include <unistd.h>
 #include <sys/syscall.h> // to get thread id
 #include <sys/resource.h> // rusage
+#include <execinfo.h> // backtrace
 #include <errno.h>
 
 #include "eucalyptus.h"
@@ -556,4 +557,26 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
 
       logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
   }
+}
+
+void log_dump_trace (char * buf, int buf_size)
+{
+    void *array[64];
+    size_t size;
+    char **strings;
+    size_t i;
+    
+    size = backtrace (array, sizeof(array)/sizeof(void *));
+    strings = backtrace_symbols (array, size);
+    
+    buf [0] = '\0';
+    for (i = 0; i < size; i++) {
+        int left = buf_size - 1 - strlen (buf);
+        if (left < 0) break;
+        char line [512];
+        snprintf (line, sizeof(line), "\t%s\n", strings [i]);
+        strncat (buf, line, left);
+    }
+
+    free (strings);
 }
