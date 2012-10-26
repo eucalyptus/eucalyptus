@@ -112,8 +112,14 @@ public class ISCSIManager implements StorageExportManager {
 		if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
 			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
 			LOG.info("Attempting to start tgtd ISCSI daemon");
-			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "service", "tgtd", "start"}) != 0) {
-				throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
+			if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "service", "tgt", "status"}) != 0) {
+				if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "service", "tgtd", "start"}) != 0) {
+					throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
+				}
+			} else {
+                                if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "service", "tgt", "start"}) != 0) {
+                                        throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
+                                }
 			}
 		}
 	}
