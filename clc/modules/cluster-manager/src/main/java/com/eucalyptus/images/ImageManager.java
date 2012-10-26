@@ -63,6 +63,7 @@
 package com.eucalyptus.images;
 
 import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
@@ -72,6 +73,7 @@ import javax.xml.xpath.XPathExpressionException;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
@@ -337,6 +339,17 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {
+      String accountId = null;
+      try {
+      	 if (request.getQueryUserGroup( ).isEmpty( ) && request.getQueryUserId( ).isEmpty( ) )
+      		 throw new EucalyptusCloudException( "No AccountId provided");      		 
+      	 for ( int i = 0; i < request.getQueryUserId( ).size( ); i++ ) {
+      		 accountId = request.getQueryUserId( ).get( i );
+      		 Accounts.lookupAccountById( accountId );
+    	 }
+      }  catch ( AuthException e ) {
+           throw new EucalyptusCloudException( "Not a valid AccountId : " + accountId );
+      }
       imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
@@ -366,9 +379,9 @@ public class ImageManager {
       db.commit( );
       reply.set_return( true );
     } catch ( EucalyptusCloudException e ) {
-      LOG.error( e, e );
       db.rollback( );
       reply.set_return( false );
+      throw e;
     }
     
     return reply;
