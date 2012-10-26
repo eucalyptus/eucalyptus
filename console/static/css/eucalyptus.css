@@ -118,7 +118,7 @@ ol li {
 
 .euca-notification-container {
   position: relative; /* Needed so z-index will be respected */
-  z-index: 10;
+  z-index: 11;
 }
 
 .euca-main-outercontainer {
@@ -466,8 +466,24 @@ ol li {
   font-size: 1.2em;
 }
 
-#euca-notification-desc {
+#euca-notification-progress {
+  display: none;
+  position: relative;
+  width: 700px;
+  left: 130px; 
+}
 
+#euca-notification-desc .multiop-summary-success {
+  margin-top: 10px;
+}
+
+#euca-notification-desc .multiop-summary-failure {
+}
+
+#euca-notification-desc textarea {
+  width: 600px;
+  height: 200px;
+  margin: 10px;
 }
 
 #euca-notification-close a {

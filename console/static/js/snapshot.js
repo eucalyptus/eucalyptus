@@ -284,6 +284,10 @@
 
     _deleteListedSnapshots : function (snapshotsToDelete) {
       var thisObj = this;
+      var done = 0;
+      var all = snapshotsToDelete.length;
+      var error = [];
+
       doMultiAjax(snapshotsToDelete, function(item, dfd){
         var snapshotId = item;
         $.ajax({
@@ -293,25 +297,35 @@
           dataType:"json",
           timeout:PROXY_TIMEOUT,
           async:true,
-          success:
-          (function(snapshotId) {
+          success: (function(snapshotId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null,$.i18n.prop('snapshot_delete_success', snapshotId));
-                dfd.resolve();
+                ;
               } else {
-                notifyError($.i18n.prop('snapshot_delete_error', snapshotId), undefined_error);
-                dfd.reject();
+                error.push({id:snapshotId, reason: undefined_reason});
               }
            }
           })(snapshotId),
-          error:
-          (function(snapshotId) {
+          error: (function(snapshotId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('snapshot_delete_error', snapshotId), getErrorMessage(jqXHR));
-              dfd.reject();
+              error.push({id:snapshotId, reason: getErrorMessage(jqXHR)});
             }
-          })(snapshotId)
+          })(snapshotId),
+          complete: (function(snapshotId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('snapshot_delete_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('snapshot_delete_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(snapshotId),
         });
       });
       thisObj.tableWrapper.eucatable('refreshTable');

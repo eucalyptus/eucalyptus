@@ -49,6 +49,76 @@
     },
 
     /*
+       args.percent : percentage of the progress
+       args.desc : message after progress (e.g., 95/100 volumes deleted. Failed to delete 5 vollumes)
+       args.error: : [ {id:.., reason:.., code: }, {id:.., reason: .., code: } ]
+    */
+    multi : function(args) {
+       var thisObj = this;
+       var percent = args.percent;
+       var desc = args.desc;
+       var error = args.error;
+
+      //  if (id !== thisObj.element.attr('progress-id'))
+      //   return; 
+
+       percent = Math.min(100, percent);
+       percent = Math.max(0, percent);
+       thisObj.element.find('#euca-notification-progress').progressbar({value: percent});
+       thisObj.element.find('#euca-notification-progress').show();
+       if(desc)
+         thisObj.element.find('#euca-notification-desc').html(desc);
+
+       // check if the notification is in progress-mode and the id is for this progress report
+         // toggle and show the progress
+       if( !this.element.hasClass('toggle-on') && !thisObj.element.attr('in-progress') ){ 
+         this.element.slideToggle('fast');
+         this.element.toggleClass('toggle-on');
+       }
+
+       // set the percentage
+       if( percent === 100){
+         // now set the description and error
+         thisObj.element.find('#euca-notification-desc a').click(function(e) {
+           if(thisObj.element.find('#euca-notification-desc .euca-notification-error').length <=0){
+             var errorMsg = '';
+             $.each(error, function(idx, err){
+               if(!err.code)
+                 errorMsg += err.id+': '+err.reason+'\n';
+               else
+                 errorMsg += err.id+': '+err.reason+'('+err.code+')\n';
+             });
+             thisObj.element.find('#euca-notification-desc').append(
+               $('<div>').addClass('euca-notification-error').append(
+                 $('<textarea>').attr('id','euca-notification-error-list').attr('disabled','true').val(errorMsg)));
+           }else
+             thisObj.element.find('#euca-notification-desc .euca-notification-error').detach();
+         });
+         thisObj.element.removeAttr('in-progress');
+         if(error && error.length > 0)
+           this.element.removeClass('success-msg').addClass('error-msg');
+         else{
+           this.element.removeClass('error-msg').addClass('success-msg');
+           setTimeout(function(){ 
+             thisObj.element.find('#euca-notification-close a').trigger('click');
+           }, 5000);
+         }
+         // check if the notification is in progress-mode and the id is for this progress report
+         // toggle and show the progress
+         if( !this.element.hasClass('toggle-on') ){
+           this.element.slideToggle('fast');
+           this.element.toggleClass('toggle-on');
+         }
+       }else{
+         if( !this.element.hasClass('toggle-on')  && !thisObj.element.attr('in-progress') ){ 
+           this.element.slideToggle('fast');
+           this.element.toggleClass('toggle-on');
+         }
+         thisObj.element.attr('in-progress','true');
+       }  
+    },
+
+    /*
        args.success : boolean 
        args.title : title of the notification 
        args.desc : textual description of the notification
@@ -56,6 +126,10 @@
     */ 
     notify : function(args) {
       var thisObj = this;
+      // override notifyMulti if invoked
+      thisObj.element.removeAttr('in-progress');
+      thisObj.element.find('#euca-notification-progress').hide();
+
       if(args.title){
         this.element.find('#euca-notification-title').html(args.title);
         this.element.find('#euca-notification-title').show();

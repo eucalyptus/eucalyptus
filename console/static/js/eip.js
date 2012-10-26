@@ -240,6 +240,10 @@
 
     _releaseListedIps : function (rowsToDelete) {
       var thisObj = this;
+      var done = 0;
+      var all = rowsToDelete.length;
+      var error = [];
+
       doMultiAjax(rowsToDelete, function(item, dfd){
         var eipId = item;
         $.ajax({
@@ -254,28 +258,43 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, $.i18n.prop('eip_release_success', eipId));
-                dfd.resolve();
+                ;
               } else {
-                notifyError($.i18n.prop('eip_release_error', eipId), undefined_error);
-                dfd.reject();
+                error.push({id:eipId, reason: undefined_reason});
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_release_error', eipId), getErrorMessage(jqXHR));
-              dfd.reject();
+              error.push({id:eipId, reason:  getErrorMessage(jqXHR)});
             }
-          })(eipId)
+          })(eipId),
+          complete: (function(eipId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('eip_release_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('eip_release_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_release_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(eipId),
         });
-      });
+      }, 100);
       thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _disassociateListedIps : function (ipsToDisassociate) {
       var thisObj = this;
+      var done = 0;
+      var all = ipsToDisassociate.length;
+      var error = [];
       doMultiAjax(ipsToDisassociate, function(item, dfd){
         var eipId = item;
         $.ajax({
@@ -290,23 +309,35 @@
           (function(eipId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, $.i18n.prop('eip_disassociate_success', eipId));
-                dfd.resolve();
+                ;
               } else {
-                notifyError($.i18n.prop('eip_disassociate_error', eipId), undefined_error);
-                dfd.reject();
+                error.push({id:eipId, reason: undefined_reason});
               }
            }
           })(eipId),
           error:
           (function(eipId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_disassociate_error', eipId), getErrorMessage(jqXHR));
-              dfd.reject();
+              error.push({id:eipId, reason:  getErrorMessage(jqXHR)});
             }
-          })(eipId)
+          })(eipId),
+          complete: (function(eipId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('eip_disassociate_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('eip_disassociate_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_disassociate_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(eipId),
         });
-      });
+      }, 100);
       thisObj.tableWrapper.eucatable('refreshTable');
     },
 
@@ -316,6 +347,9 @@
       for ( i=0; i<numberIpsToAllocate; i++)
         arrayIps.push(0);
 
+      var done = 0;
+      var all = arrayIps.length;
+      var error = [];
       var allocatedIps = [];
       doMultiAjax(arrayIps, function(item, dfd){
         $.ajax({
@@ -326,25 +360,32 @@
           cache:false,
           timeout:PROXY_TIMEOUT,
           async:false,
-          success:
-            function(data, textStatus, jqXHR){
+          success: function(data, textStatus, jqXHR){
               if ( data.results ) {
                 ip = data.results.public_ip;
                 allocatedIps.push(ip);
-                notifySuccess(null, $.i18n.prop('eip_allocate_success', ip));
-                dfd.resolve();
               } else {
-                notifyError($.i18n.prop('eip_allocate_error'), undefined_error);
-                dfd.reject();
+                error.push({id:'unknown', reason: undefined_reason});
               }
-            },
-          error:
-            function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('eip_allocate_error'), getErrorMessage(jqXHR));
-              dfd.reject();
+          },
+          error: function(jqXHR, textStatus, errorThrown){
+              error.push({id:'unknown', reason:  getErrorMessage(jqXHR)});
+          },
+          complete: function(jqXHR, textStatus){
+            done++;
+            if(done < all)
+              notifyMulti(100*(done/all), $.i18n.prop('eip_allocate_progress', all));
+            else {
+              var $msg = $('<div>').addClass('multiop-summary').append(
+                $('<div>').addClass('multiop-summary-success').html($.i18n.prop('eip_allocate_done', (all-error.length), all)));
+              if (error.length > 0)
+                $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_allocate_fail', error.length)));
+              notifyMulti(100, $msg.html(), error);
             }
+            dfd.resolve();
+          }
         });
-      });
+      }, 100);
       thisObj.tableWrapper.eucatable('refreshTable');
       $.each(allocatedIps, function(idx, ip){
         thisObj.tableWrapper.eucatable('glowRow', ip);

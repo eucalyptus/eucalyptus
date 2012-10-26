@@ -708,9 +708,16 @@
 
     _deleteSelectedSecurityGroups : function () {
       var thisObj = this;
-      var rowsToDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
+      var toDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
+      var rowsToDelete = []; 
+      $.each(toDelete, function(idx, item){
+        rowsToDelete.push($(item).val());
+      });     
+      var done = 0;
+      var all = rowsToDelete.length;
+      var error = [];
       doMultiAjax(rowsToDelete, function(item, dfd){
-        var sgroupName = $(item).html();
+        var sgroupName = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup",
@@ -721,20 +728,32 @@
           success: (function(sgroupName, refresh_table) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, $.i18n.prop('sgroup_delete_success', sgroupName));
-                dfd.resolve();
+                ;
               } else {
-                notifyError($.i18n.prop('sgroup_delete_error', sgroupName), undefined_error);
-                dfd.reject();
+                error.push({id:sgroupName, reason: undefined_reason});
               }
-           }
+            }
           })(sgroupName),
           error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('sgroup_delete_error', sgroupName), errorThrown);
-              dfd.reject();
+              error.push({id:sgroupName, reason:  getErrorMessage(jqXHR)});
             }
-          })(sgroupName)
+          })(sgroupName),
+          complete: (function(sgroupName) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('sgroup_delete_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('sgroup_delete_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('sgroup_delete_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(sgroupName),
         });
       });
       thisObj._getTableWrapper().eucatable('refreshTable');
