@@ -321,7 +321,7 @@ int sensor_init (sem * sem, sensorResourceCache * resources, int resources_size,
         if (!sensor_state->initialized) {
             init_state (resources_size);
         }
-        logprintfl (EUCATRACE, "setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
+        logprintfl (EUCADEBUG, "setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
         sensor_update_euca_config = update_euca_config_function;
         sem_v (state_sem);
 
