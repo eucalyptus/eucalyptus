@@ -388,6 +388,9 @@
 
     _deleteListedVolumes : function (volumesToDelete) {
       var thisObj = this;
+      var done = 0;
+      var all = volumesToDelete.length;
+      var error = [];
       doMultiAjax(volumesToDelete, function(item, dfd){
         var volumeId = item; 
         $.ajax({
@@ -401,21 +404,35 @@
           (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, $.i18n.prop('volume_delete_success', volumeId));
-                dfd.resolve();
+                  ;
               } else {
-                notifyError($.i18n.prop('volume_delete_error', volumeId), undefined_error);
-                dfd.reject();
+                error.push({id:volumeId, reason: undefined_reason});
               }
            }
           })(volumeId),
           error:
           (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('volume_delete_error', volumeId), getErrorMessage(jqXHR));
-              dfd.reject();
+              error.push({id:volumeId, reason:  getErrorMessage(jqXHR)});
             }
-          })(volumeId)
+          })(volumeId),
+          complete:
+          (function(volumeId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('volume_delete_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_delete_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_delete_fail', error.length)));
+
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(volumeId),
         });
       });
       thisObj.tableWrapper.eucatable('refreshTable');
@@ -474,7 +491,9 @@
 
     _detachListedVolumes : function (volumes, force) {
       var thisObj = this;
-      dialogToUse = this.detachDialog;
+      var done = 0;
+      var all = volumes.length;
+      var error = [];
       doMultiAjax( volumes, function(item, dfd){
         var volumeId = item;
         $.ajax({
@@ -484,32 +503,33 @@
           dataType:"json",
           timeout:PROXY_TIMEOUT,
           async:true,
-          success:
-          (function(volumeId) {
+          success: (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
-                if (force)
-                  notifySuccess(null, $.i18n.prop('volume_force_detach_success', volumeId));
-                else
-                  notifySuccess(null, $.i18n.prop('volume_detach_success', volumeId));
-                dfd.resolve();
+                ;
               } else {
-                if (force)
-                  notifyError($.i18n.prop('volume_force_detach_error', volumeId), undefined_error);
-                else
-                  notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
-                dfd.reject();
+                error.push({id:volumeId, reason: undefined_reason});
               }
            }
           })(volumeId),
-          error:
-          (function(volumeId) {
+          error: (function(volumeId) {
             return function(jqXHR, textStatus, errorThrown){
-              if (force)
-                notifyError($.i18n.prop('volume_force_detach_error', volumeId), getErrorMessage(jqXHR));
-              else
-                notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
-              dfd.reject();
+              error.push({id:volumeId, reason:  getErrorMessage(jqXHR)});
+            }
+          })(volumeId),
+          complete: (function(volumeId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('volume_detach_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_detach_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
             }
           })(volumeId)
         });

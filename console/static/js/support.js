@@ -126,6 +126,10 @@ function notifyError(title, message, proxyMessage, code) {
   $('html body').find(DOM_BINDING['notification']).notification('error', title, desc, code);
 }
 
+function notifyMulti(percent, desc, error){
+  $('html body').find(DOM_BINDING['notification']).notification('multi', {percent:percent,desc:desc,error:error });
+}
+
 function allInArray(val_arr, larger_arr){
    var ret = true;
    for (i in val_arr){
@@ -489,17 +493,26 @@ function setupAjax(){
  });
 }
 
-function doMultiAjax(array, callback){
-  if (!array || !callback)
+function doMultiAjax(array, callback, delayMs){
+  if (!array || array.length <=0 || !callback)
     return;
-  for (i = 0; i<array.length; i++){
+  var i =0;
+  var doNext = function(array, i){
     $.when( 
       (function(){ 
-        var dfd = $.Deferred();
-        callback(array[i],dfd);
-        dfd.promise();
+        var dfd = new $.Deferred();
+        callback(array[i], dfd);
+        return dfd.promise();
       })()
-    ).done(function() { ; })
-     .fail(function() { ; });
-  }
+    ).always(function() {
+       if( i+1 < array.length){
+         if(delayMs && delayMs > 0)
+           setTimeout(function(){return doNext(array, i+1)}, delayMs);
+         else
+           doNext(array, i+1);
+       }
+    });
+  };
+
+  doNext(array, 0);
 }

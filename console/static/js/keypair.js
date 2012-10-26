@@ -239,6 +239,10 @@
 
     _deleteSelectedKeyPairs : function (keysToDelete) {
       var thisObj = this;
+      var done = 0;
+      var all = keysToDelete.length;
+      var error = [];
+
       doMultiAjax(keysToDelete, function(item, dfd){
         var keyName = item;
         $.ajax({
@@ -248,25 +252,35 @@
           dataType:"json",
           timeout:PROXY_TIMEOUT,
           async:true,
-          success:
-          (function(keyName) {
+          success: (function(keyName) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == true ) {
-                notifySuccess(null, $.i18n.prop('keypair_delete_success', keyName));
-                dfd.resolve();
+                ;
               } else {
-                notifyError($.i18n.prop('keypair_delete_error', keyName), undefined_error);
-                dfd.reject();
+                error.push({id:keyName, reason: undefined_reason});
               }
            }
           })(keyName),
-          error:
-          (function(keyName) {
+          error: (function(keyName) {
             return function(jqXHR, textStatus, errorThrown){
-              notifyError($.i18n.prop('keypair_delete_error', keyName), getErrorMessage(jqXHR));
-              dfd.reject();
+              error.push({id:keyName, reason:  getErrorMessage(jqXHR)});
             }
-          })(keyName)
+          })(keyName),
+          complete: (function(keyName) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('keypair_delete_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('keypair_delete_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('keypair_delete_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(keyName),
         });
       });
       thisObj.tableWrapper.eucatable('refreshTable');

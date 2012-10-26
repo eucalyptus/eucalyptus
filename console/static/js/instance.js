@@ -498,7 +498,6 @@
           success: function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
               notifySuccess(null, $.i18n.prop('instance_reboot_success', instances));
-              thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               notifyError($.i18n.prop('instance_reboot_error', instances), undefined_error);
             }
@@ -747,10 +746,16 @@
 
     _detachVolume : function (force) {
       var thisObj = this;
-
-      var selectedVolumes = thisObj.detachDialog.find("input:checked"); 
+      var checkedVolumes = thisObj.detachDialog.find("input:checked"); 
+      var selectedVolumes = [];
+      $.each(checkedVolumes, function(idx, vol){ 
+        selectedVolumes.push($(vol).val());
+      }); 
+      var done = 0;
+      var all = selectedVolumes.length;
+      var error = [];
       doMultiAjax(selectedVolumes, function(item, dfd){
-        var volumeId = $(item).val();
+        var volumeId = item; 
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DetachVolume",
@@ -760,20 +765,32 @@
           success: (function(volumeId) {
             return function(data, textStatus, jqXHR){
               if ( data.results && data.results == 'detaching' ) {
-                notifySuccess(null, volume_detach_success(volumeId));
-                dfd.resolve();
-              } else {
-                notifyError($.i18n.prop('volume_detach_error', volumeId), undefined_error);
-                dfd.reject();
-              } 
-             }
+                ;
+              }else{
+                error.push({id:volumeId, reason: undefined_reason});
+              }
+            }
            })(volumeId),
            error: (function(volumeId) {
              return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('volume_detach_error', volumeId), getErrorMessage(jqXHR));
-                dfd.reject();
+                error.push({id:volumeId, reason:  getErrorMessage(jqXHR)});
              }
-           })(volumeId)
+           })(volumeId),
+           complete: (function(volumeId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < all)
+                notifyMulti(100*(done/all), $.i18n.prop('volume_detach_progress', all));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_detach_done', (all-error.length), all)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(volumeId),
         });
       });
       thisObj.tableWrapper.eucatable('refreshTable');
