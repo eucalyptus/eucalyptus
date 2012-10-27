@@ -263,23 +263,33 @@
       var $azSelector = thisObj.addDialog.find('#volume-add-az-selector').html('');
       if (results && results.length > 1)
         $azSelector.append($('<option>').attr('value', '').text($.i18n.map['volume_dialog_zone_select']));
+      var azArr = []; 
       for( res in results) {
         var azName = results[res].name;
-        $azSelector.append($('<option>').attr('value', azName).text(azName));
+        azArr.push(azName);
       }
+      var sortedAz = sortArray(azArr);
+      $.each(sortedAz,function(idx, azName){
+        $azSelector.append($('<option>').attr('value', azName).text(azName));
+      });
      
       results = describe('snapshot'); 
       var $snapSelector = thisObj.addDialog.find('#volume-add-snapshot-selector').html('');
       $snapSelector.append($('<option>').attr('value', '').text($.i18n.map['selection_none']));
+      var snapshotArr = [];
       if ( results ) {
         for( res in results) {
           var snapshot = results[res];
-          if ( snapshot.status === 'completed' ) {
-            $snapSelector.append($('<option>').attr('value', snapshot.id).attr('title', snapshot.volume_size).text(
-               snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
-          }
-        } 
+          snapshotArr.push(snapshot);
+        }
       }
+      var sortedArr = sortArray(snapshotArr, function(snapshot1, snapshot2){ return snapshot1.id < snapshot2.id;});
+      $.each(sortedArr, function(idx, snapshot){
+        if ( snapshot.status === 'completed' ) {
+           $snapSelector.append($('<option>').attr('value', snapshot.id).attr('title', snapshot.volume_size).text(
+              snapshot.id + ' (' + snapshot.volume_size + ' ' + $.i18n.map['size_gb'] +')'));
+        }
+      });
       dfd.resolve();
     },
 
@@ -338,9 +348,9 @@
         }
         if ( inst_ids.length == 0 )
           this.attachDialog.eucadialog('showError', no_running_instances);
-
+        var sorted = sortArray(inst_ids);
         $instanceSelector.autocomplete({
-          source: inst_ids,
+          source: sorted,
           select: function(event, ui) {
             if ($.trim(asText($deviceName.val())) == ''){
               $deviceName.val(thisObj._suggestNextDeviceName(ui.item.value));
@@ -374,8 +384,9 @@
         }
         if (vol_ids.length == 0 )
           this.attachDialog.eucadialog('showError', no_available_volume);
+        var sorted = sortArray(vol_ids);
         $volumeSelector.autocomplete( {
-          source: vol_ids,
+          source: sorted,
           select: function() {
             if ($deviceName.val() != '' && $instanceSelector.val() != '')
               thisObj.attachDialog.eucadialog('activateButton', thisObj.attachButtonId);
@@ -398,7 +409,6 @@
           url:"/ec2?Action=DeleteVolume",
           data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:true,
           success:
           (function(volumeId) {
@@ -427,15 +437,14 @@
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('volume_delete_done', (all-error.length), all)));
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_delete_fail', error.length)));
-
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(volumeId),
         });
       });
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _attachVolume : function (volumeId, instanceId, device) {
@@ -501,7 +510,6 @@
           url:"/ec2?Action=DetachVolume",
           data:"_xsrf="+$.cookie('_xsrf')+"&VolumeId="+volumeId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:true,
           success: (function(volumeId) {
             return function(data, textStatus, jqXHR){
@@ -528,13 +536,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(volumeId)
         });
       });
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _deleteAction : function() {

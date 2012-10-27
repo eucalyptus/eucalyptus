@@ -498,6 +498,7 @@
           success: function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
               notifySuccess(null, $.i18n.prop('instance_reboot_success', instances));
+              thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               notifyError($.i18n.prop('instance_reboot_error', instances), undefined_error);
             }
@@ -787,13 +788,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(volumeId),
         });
       });
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
     _associateAction : function(){
       var thisObj = this;

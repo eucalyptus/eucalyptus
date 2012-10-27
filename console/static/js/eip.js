@@ -251,7 +251,6 @@
           url:"/ec2?Action=ReleaseAddress",
           data:"_xsrf="+$.cookie('_xsrf')+"&PublicIp="+eipId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:false,
           cache:false,
           success:
@@ -281,13 +280,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_release_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(eipId),
         });
       }, 100);
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _disassociateListedIps : function (ipsToDisassociate) {
@@ -302,7 +301,6 @@
           url:"/ec2?Action=DisassociateAddress",
           data:"_xsrf="+$.cookie('_xsrf')+"&PublicIp="+eipId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:false,
           cache:false,
           success:
@@ -332,13 +330,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_disassociate_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(eipId),
         });
       }, 100);
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _allocateIps : function (numberIpsToAllocate) {
@@ -358,7 +356,6 @@
           data:"_xsrf="+$.cookie('_xsrf'),
           dataType:"json",
           cache:false,
-          timeout:PROXY_TIMEOUT,
           async:false,
           success: function(data, textStatus, jqXHR){
               if ( data.results ) {
@@ -381,15 +378,15 @@
               if (error.length > 0)
                 $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_allocate_fail', error.length)));
               notifyMulti(100, $msg.html(), error);
+              thisObj.tableWrapper.eucatable('refreshTable');
+              $.each(allocatedIps, function(idx, ip){
+                thisObj.tableWrapper.eucatable('glowRow', ip);
+              });
             }
             dfd.resolve();
           }
         });
       }, 100);
-      thisObj.tableWrapper.eucatable('refreshTable');
-      $.each(allocatedIps, function(idx, ip){
-        thisObj.tableWrapper.eucatable('glowRow', ip);
-      });
     },
 
     _associateIp : function (publicIp, instanceId) {
@@ -432,8 +429,9 @@
         }
         if ( inst_ids.length === 0 )
           this.associateDialog.eucadialog('showError', no_running_instances);
+        var sorted_ids = sortArray(inst_ids);
         $selector.autocomplete({
-          source: inst_ids,
+          source: sorted_ids,
           select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(instance_id_watermark);
@@ -449,8 +447,9 @@
         } 
         if (addresses.length ===0 )
           this.associateDialog.eucadialog('showError', no_available_address);
+        var sorted = sortArray(addresses);
         $selector.autocomplete({
-          source: addresses,
+          source: sorted,
           select: function() { thisObj.associateDialog.eucadialog('activateButton', thisObj.associateBtnId); }
         });
         $selector.watermark(address_watermark);

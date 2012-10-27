@@ -56,7 +56,6 @@
            data:"_xsrf="+$.cookie('_xsrf'),
            dataType:"json",
            async:"false",
-           timeout:PROXY_TIMEOUT,
            beforeSend: function(jqXHR, settings){
              thisObj._numPending++;
            },

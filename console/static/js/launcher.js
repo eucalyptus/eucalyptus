@@ -660,14 +660,20 @@
         if (numOptions === results.length)
           return;
         $kp_selector.children().detach();
+        var keyNameArr = [];
         for( res in results) {
           var kpName = results[res].name;
+          keyNameArr.push(kpName);
+        }
+        var sortedArr = sortArray(keyNameArr);
+        $.each(sortedArr, function(idx, kpName){
           var $option = $('<option>').attr('value', kpName).text(kpName);
           if(oldKeypairs && $.inArray(kpName, oldKeypairs) < 0){
             $option.attr('selected', 'selected'); 
           }
           $kp_selector.append($option);
-        }
+        });
+
         $kp_selector.append($('<option>').attr('value', 'none').text(launch_instance_security_keypair_none));
         $kp_selector.change(function(e){
           var $summary = summarize(); 
@@ -739,15 +745,20 @@
         } //end of onSelectorChange
 
         $sg_selector.children().detach();
+        var sgNameArr = [];
         for(res in results){
           var sgName = results[res].name;
+          sgNameArr.push(sgName);
+        }
+        var sortedArr = sortArray(sgNameArr);
+        $.each(sortedArr, function(idx, sgName){
           var $option = $('<option>').attr('value',sgName).text(sgName);
           if(oldGroups && $.inArray(sgName, oldGroups) < 0){
             $option.attr('selected','selected');
             onSelectorChange(sgName);
           }
           $sg_selector.append($option);
-        }
+        });
         if(! oldGroups){
           $sg_selector.find('option').each(function(){
             if($(this).val() ==='default')

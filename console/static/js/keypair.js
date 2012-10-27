@@ -250,7 +250,6 @@
           url:"/ec2?Action=DeleteKeyPair",
           data:"_xsrf="+$.cookie('_xsrf')+"&KeyName="+keyName,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:true,
           success: (function(keyName) {
             return function(data, textStatus, jqXHR){
@@ -277,13 +276,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('keypair_delete_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(keyName),
         });
       });
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
    
     _importKeyPair : function (keyName, keyContents) {

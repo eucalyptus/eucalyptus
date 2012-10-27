@@ -651,6 +651,11 @@
       if(! $('html body').eucadata('isEnabled'))
         return;
       this.table.fnReloadAjax(undefined, undefined, true);
+      
+      var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
+      var checked = $checkAll.is(':checked');
+      if(checked)
+        $checkAll.trigger('click');
     },
 
     glowRow : function(val, columnId) {

@@ -262,8 +262,9 @@
           this.createDialog.eucadialog('showButton', thisObj.createSnapButtonId, 'create', true);
           this.createDialog.find('#snapshot-create-dialog-some-volumes').show();
           this.createDialog.find('#snapshot-create-dialog-no-volumes').hide(); 
+          var sorted = sortArray(volume_ids);
           $volSelector.autocomplete({
-            source: volume_ids,
+            source: sorted,
             select: function() { thisObj.createDialog.eucadialog('activateButton', thisObj.createSnapButtonId); }
           });
           $volSelector.watermark(volume_id_watermark);
@@ -295,7 +296,6 @@
           url:"/ec2?Action=DeleteSnapshot",
           data:"_xsrf="+$.cookie('_xsrf')+"&SnapshotId="+snapshotId,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:true,
           success: (function(snapshotId) {
             return function(data, textStatus, jqXHR){
@@ -322,13 +322,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('snapshot_delete_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj.tableWrapper.eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(snapshotId),
         });
       });
-      thisObj.tableWrapper.eucatable('refreshTable');
     },
 
     _createSnapshot : function (volumeId, description) {

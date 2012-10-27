@@ -24,7 +24,6 @@ var RETURN_MAC_KEY_CODE = 10;
 var BACKSPACE_KEY_CODE = 8;
 
 /* CONFIGURABLE */
-var PROXY_TIMEOUT = 120000;
 var REFRESH_INTERVAL_SEC = 10;
 var TABLE_REFRESH_INTERVAL_SEC = 20;
 var GLOW_DURATION_SEC = 10;
@@ -486,6 +485,7 @@ function popOutPageHelp(url, height){
   window.open(url, '_blank', option,true);
 }
 
+var PROXY_TIMEOUT = 120000;
 function setupAjax(){
  $.ajaxSetup({
    type: "POST",
@@ -515,4 +515,40 @@ function doMultiAjax(array, callback, delayMs){
   };
 
   doNext(array, 0);
+}
+
+function sortArray(array, comperator){
+  if(!comperator){
+    comperator = function(item1, item2){ return item1 < item2}
+  }
+  var mergeSort = function(arr, left, right){
+    if(left < right){
+      var leftArr = mergeSort(arr, left, Math.floor((left+right)/2));
+      var rightArr = mergeSort(arr, Math.floor((left+right)/2) +1 , right);
+      return merge(leftArr, rightArr); 
+    }else if (left === right){
+      return [arr[left]];
+    }   
+  };   
+  var merge = function(arr1, arr2){
+    var merged = [];
+    var idx1 = 0;
+    var idx2 = 0;
+    while(idx1 < arr1.length  || idx2 < arr2.length){
+      if(idx1 < arr1.length && idx2 < arr2.length){
+       // if(arr1[idx1] < arr2[idx2])
+        if(comperator(arr1[idx1], arr2[idx2]))
+          merged.push(arr1[idx1++]);
+        else
+          merged.push(arr2[idx2++]);
+      }else if(idx1 < arr1.length){
+        merged.push(arr1[idx1++]);
+      }else
+        merged.push(arr2[idx2++]);
+    }
+    return merged;
+  }
+  if(! array || array.length <= 1)
+    return array;
+  return mergeSort(array, 0, array.length-1);
 }

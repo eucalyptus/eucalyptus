@@ -403,8 +403,9 @@
       var thisDialog = dialog;
       var thisObj = this;
       var groupSelector = dialog.find('#allow-group');
+      var sorted = sortArray(group_ids);
       groupSelector.autocomplete({
-        source: group_ids,
+        source: sorted,
         select: function() {
         }
       });
@@ -723,7 +724,6 @@
           url:"/ec2?Action=DeleteSecurityGroup",
           data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+sgroupName,
           dataType:"json",
-          timeout:PROXY_TIMEOUT,
           async:"true",
           success: (function(sgroupName, refresh_table) {
             return function(data, textStatus, jqXHR){
@@ -750,13 +750,13 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('sgroup_delete_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
+                thisObj._getTableWrapper().eucatable('refreshTable');
               }
               dfd.resolve();
             }
           })(sgroupName),
         });
       });
-      thisObj._getTableWrapper().eucatable('refreshTable');
     },
 
     _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
