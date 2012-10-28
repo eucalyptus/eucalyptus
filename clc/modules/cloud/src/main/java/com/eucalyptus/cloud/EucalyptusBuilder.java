@@ -147,8 +147,11 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
       try {
-	  SubDirectory.DB.getChildFile("data", "disabled.lock").createNewFile();
-	  LOG.debug("Created the disabled.lock file"); 
+	  if (!Hosts.isCoordinator()) {
+	      SubDirectory.DB.getChildFile("data", "disabled.lock")
+	      .createNewFile();
+	      LOG.debug("Created the disabled.lock file");
+	  }
       } catch (IOException e) {
 	  LOG.debug("Unable to create the disabled.lock file"); 
       }
