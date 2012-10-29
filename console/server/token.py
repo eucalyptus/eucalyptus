@@ -24,7 +24,7 @@ class TokenAuthenticator(object):
                             (base64.b64encode(user), \
                             base64.b64encode(account), \
                             passwd)
-            encoded_auth = base64.b64encode(auth_string.encode('utf8'))
+            encoded_auth = base64.b64encode(auth_string)
             req.add_header('Authorization', "Basic %s" % encoded_auth)
             response = urllib2.urlopen(req, timeout=15)
             body = response.read()
