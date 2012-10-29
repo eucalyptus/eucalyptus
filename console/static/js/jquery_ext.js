@@ -39,6 +39,9 @@ $.fn.dataTableExt.oApi.fnReloadAjax = function ( oSettings, sNewSource, fnCallba
         oSettings.sAjaxSource = sNewSource;
     }
  
+    if (!oSettings){
+      return;
+    }   
     // Server-side processing should just call fnDraw
     if ( oSettings.oFeatures.bServerSide ) {
         this.fnDraw();
