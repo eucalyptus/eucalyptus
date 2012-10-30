@@ -64,7 +64,7 @@
               "iDataSort": 7,
             },
             { 
-              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.name, 50)+"</span>" },
+              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.description, 50)+"</span>" },
               "iDataSort": 6,
             },
             { // protocol to appear in search result
