@@ -28,6 +28,7 @@
     editDialog : null,
     rulesList : null,
     user_id : null,
+    group_ids : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
@@ -288,18 +289,7 @@
                     thisObj._refreshRulesList(thisObj.addDialog);
         },
       });
-      var group_ids = [];
-      var results = describe('sgroup');
-      if ( results ) {
-        for( res in results) {
-          var group = results[res];
-          if (group.name == "default") {
-            this.user_id = group.owner_id;
-          }
-          group_ids.push(group.name);
-        }
-      }
-      this._setupDialogFeatures(this.addDialog, group_ids, createButtonId);
+      this._setupDialogFeatures(this.addDialog, createButtonId);
 
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
@@ -393,22 +383,29 @@
                     thisObj._refreshRulesList(thisObj.editDialog);
         },
       });
-      this._setupDialogFeatures(this.editDialog, group_ids, createButtonId);
+      this._setupDialogFeatures(this.editDialog, createButtonId);
+
+      // set up global, which we'll use upon dialog show to populate list
+      this.group_ids = [];
+      var results = describe('sgroup');
+      if ( results ) {
+        for( res in results) {
+          var group = results[res]e
+          if (group.name == "default") {
+            this.user_id = group.owner_id;
+          }
+          this.group_ids.push(group.name);
+        }
+      }
     },
 
     _destroy : function() {
     },
 
-    _setupDialogFeatures : function(dialog, group_ids, createButtonId) {
+    _setupDialogFeatures : function(dialog, createButtonId) {
       var thisDialog = dialog;
       var thisObj = this;
       var groupSelector = dialog.find('#allow-group');
-      var sorted = sortArray(group_ids);
-      groupSelector.autocomplete({
-        source: sorted,
-        select: function() {
-        }
-      });
       groupSelector.watermark(sgroup_group_name);
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateFormAdd(createButtonId, thisDialog);
@@ -871,6 +868,14 @@
       thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
       thisObj.addDialog.find("#sgroup-name-error").html("");
       thisObj.addDialog.find("#sgroup-description-error").html("");
+
+      var groupSelector = thisObj.addDialog.find('#allow-group');
+      var sorted = sortArray(thisObj.group_ids);
+      groupSelector.autocomplete({
+        source: sorted,
+        select: function() {
+        }
+      });
     },
 
     _editAction : function() {
@@ -889,6 +894,16 @@
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
       thisObj.editDialog.find('#sgroup-more-rules').css('display','none')
       thisObj._refreshRulesList(thisObj.editDialog);
+      // set autocomplete based on list containing groups other than current group
+      var groupSelector = thisObj.editDialog.find('#allow-group');
+      var sorted = sortArray(thisObj.group_ids);
+      var idx = sorted.indexOf(firstRow.name);
+      sorted = sorted.slice(0, idx-1).concat(sorted.slice(idx+1, sorted.length));
+      groupSelector.autocomplete({
+        source: sorted,
+        select: function() {
+        }
+      });
     },
 
     _expandCallback : function(row){ 
