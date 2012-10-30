@@ -178,7 +178,7 @@ public class Images {
     @Override
     public ImageDetails apply( KernelImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
-      i.setName( arg0.getName( ) );
+      i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
@@ -204,7 +204,7 @@ public class Images {
     @Override
     public ImageDetails apply( RamdiskImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
-      i.setName( arg0.getName( ) );
+      i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       i.setImageId( arg0.getDisplayName( ) );
@@ -263,7 +263,7 @@ public class Images {
     @Override
     public ImageDetails apply( MachineImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
-      i.setName( arg0.getName( ) );
+      i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
       //TODO      i.setRootDeviceName( arg0.getD )

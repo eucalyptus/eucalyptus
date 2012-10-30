@@ -344,13 +344,13 @@
     _activateMenu : function() {
       $menu = $('#more-actions-'+this.options.id);
       $menu.removeClass("inactive-menu");
-      $menu.contextMenu(true);
+      //$menu.contextMenu(true);
     },
 
     _deactivateMenu : function() {
       $menu = $('#more-actions-'+this.options.id);
       $menu.addClass("inactive-menu");
-      $menu.contextMenu(false);
+      //$menu.contextMenu(false);
     },
 
     // args.title = title in the header (e.g.,'Manage key pairs');
