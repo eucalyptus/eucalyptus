@@ -92,7 +92,8 @@ class S3Renderer
 			throws IOException
 	{
         doc.setWriter(new OutputStreamWriter(os));
-        
+        doc.setUnlabeledRowIndent( 2 );
+
         doc.open();
         doc.textLine("S3 Report", 1);
         doc.textLine("Begin:" + new Date(report.getBeginMs()).toString(), 4);
@@ -101,14 +102,14 @@ class S3Renderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Bucket").addValCol("# Objects")
-        	.addValCol("Total Obj Size (" + units.getSizeUnit().toString() + ")").addValCol("Obj GB-Days");
+        	.addValCol("Total Size (" + units.labelForSize() + ")").addValCol( "Obj " + units.labelForTimeSize() );
         for (String accountName: report.getAccounts().keySet()) {
         	AccountArtEntity account = report.getAccounts().get(accountName);
-        	doc.newRow().addLabelCol(1, "Account: " + accountName).addValCol("cumul.");
+        	doc.newRow().addLabelCol(0, "Account: " + accountName).addValCol("cumul.");
         	addUsageCols(doc, account.getUsageTotals().getBucketTotals(),units);
         	for (String userName: account.getUsers().keySet()) {
         		UserArtEntity user = account.getUsers().get(userName);
-        		doc.newRow().addLabelCol(2, "User: " + userName)
+        		doc.newRow().addLabelCol(1, "User: " + userName)
         		.addValCol("cumul.");
         		addUsageCols(doc, user.getUsageTotals().getBucketTotals(),units);
         		for (String bucketName: user.getBucketUsage().keySet()) {

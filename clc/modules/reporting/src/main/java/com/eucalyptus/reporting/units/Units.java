@@ -64,6 +64,7 @@ package com.eucalyptus.reporting.units;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.google.common.base.CaseFormat;
 
 @ConfigurableClass(root = "reporting", description = "Parameters controlling reporting units")
 public class Units
@@ -175,4 +176,20 @@ public class Units
 		return true;
 	}
 
+  public String labelForTimeSize() {
+    return getSizeTimeSizeUnit() + "-" +
+        capitalize( getSizeTimeTimeUnit() );
+  }
+
+  public String labelForSize() {
+    return getSizeUnit().toString();
+  }
+
+  public String labelForTime() {
+    return capitalize( getTimeUnit() );
+  }
+
+  private String capitalize( final Object item ) {
+    return CaseFormat.LOWER_CAMEL.to( CaseFormat.UPPER_CAMEL, item.toString() );
+  }
 }

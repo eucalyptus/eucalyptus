@@ -69,6 +69,7 @@ import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -79,6 +80,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.StorageManagers;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
+import com.google.common.base.Joiner;
 
 /**
  * Storage controller builder is responsible for handling the StorageManagers cache and ensuring that the proper values are
@@ -100,11 +102,15 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
       	LOG.info("Firing LOAD for local config: " + parent.getName());
         EntityTransaction tx = Entities.get( parent ); 
         try {
-          parent = Entities.merge( parent );
-          tx.commit( );
+        	parent = Entities.merge( parent );
+        	//Load the available backends from this SC into the DB entry
+        	((StorageControllerConfiguration)parent).setAvailableBackends(Joiner.on(",").join(StorageManagers.list()));        	
+        	tx.commit( );
         } catch ( Exception ex ) {
+        	LOG.debug("Error merging parent transaction. Rolling back.");
           tx.rollback( );
-        }
+        }       
+       
         String propertyBackend = ( ( StorageControllerConfiguration ) parent ).getBlockStorageManager( );
         StorageManagers.getInstance( propertyBackend );
       }
