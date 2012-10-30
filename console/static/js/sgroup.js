@@ -28,7 +28,6 @@
     editDialog : null,
     rulesList : null,
     user_id : null,
-    group_ids : null,
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #sgroupTblTmpl').clone();
@@ -232,8 +231,8 @@
               var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
               if (desc == null) return;
 
-              thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
               var fromPort = new Array();
+              thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
               var toPort = new Array();
               var protocol = new Array();
               var cidr = new Array();
@@ -396,19 +395,6 @@
         },
       });
       this._setupDialogFeatures(this.editDialog, createButtonId);
-
-      // set up global, which we'll use upon dialog show to populate list
-      this.group_ids = [];
-      var results = describe('sgroup');
-      if ( results ) {
-        for( res in results) {
-          var group = results[res]e
-          if (group.name == "default") {
-            this.user_id = group.owner_id;
-          }
-          this.group_ids.push(group.name);
-        }
-      }
     },
 
     _destroy : function() {
@@ -561,7 +547,7 @@
       }
 
       if (template != 'none') {
-          if (dialog.find("input[@name='allow-group']:checked").val() == 'ip') {
+          if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
             if (allow_ip == "") {
               enable = false;
             }
@@ -572,7 +558,7 @@
               enable = false;
             }
           }
-          else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
+          else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
             if (allow_group == '')
               enable = false;
           }
@@ -632,10 +618,10 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-ip') {
+        if (dialog.find("input[name='allow-group']:checked").val() == 'id') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
-        else if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-group') {
+        else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
             rule.group = asText(dialog.find('#allow-group').val());
             var user_group = rule.group.split('/');
             if (user_group.length > 1) {
@@ -875,8 +861,19 @@
       thisObj.addDialog.find("#sgroup-name-error").html("");
       thisObj.addDialog.find("#sgroup-description-error").html("");
 
+      group_ids = [];
+      var results = describe('sgroup');
+      if ( results ) {
+        for( res in results) {
+          var group = results[res];
+          if (group.name == "default") {
+            this.user_id = group.owner_id;
+          }
+          group_ids.push(group.name);
+        }
+      }
       var groupSelector = thisObj.addDialog.find('#allow-group');
-      var sorted = sortArray(thisObj.group_ids);
+      var sorted = sortArray(group_ids);
       groupSelector.autocomplete({
         source: sorted,
         select: function() {
@@ -902,10 +899,22 @@ console.log(sgroup_dialog_edit_description, firstRow.name);
       thisObj.editDialog.find('#sgroup-more-rules').css('display','none')
       thisObj._refreshRulesList(thisObj.editDialog);
       // set autocomplete based on list containing groups other than current group
+      group_ids = [];
+      var results = describe('sgroup');
+      if ( results ) {
+        for( res in results) {
+          var group = results[res];
+          if (group.name == "default") {
+            this.user_id = group.owner_id;
+          }
+          if (group.name != firstRow.name) {
+            group_ids.push(group.name);
+          }
+        }
+      }
       var groupSelector = thisObj.editDialog.find('#allow-group');
-      var sorted = sortArray(thisObj.group_ids);
+      var sorted = sortArray(group_ids);
       var idx = sorted.indexOf(firstRow.name);
-      sorted = sorted.slice(0, idx-1).concat(sorted.slice(idx+1, sorted.length));
       groupSelector.autocomplete({
         source: sorted,
         select: function() {
