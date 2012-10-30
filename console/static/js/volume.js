@@ -701,11 +701,7 @@
         this.addDialog.eucadialog('option', 'on_open', on_open);
       }
       this.addDialog.eucadialog('open');
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
-    },
+    }
 /**** End of Public Methods ****/
   });
 })

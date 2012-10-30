@@ -1071,11 +1071,7 @@
       for( i in inst_ids){
         thisObj.tableWrapper.eucatable('glowRow', inst_ids[i], 2); 
       }
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
-    },
+    } 
 /**** End of Public Methods ****/
   });
 })(jQuery,
