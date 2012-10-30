@@ -248,16 +248,6 @@
         });
       });
 
-      this.element.find('table tbody').find('td').each(function(index, td) {
-        var $td = $(td);
-        $td.click(function(e){
-          if (thisObj.selectedCell != null)
-            thisObj.selectedCell.removeClass('selected-cell');
-          $td.addClass('selected-cell');
-          thisObj.selectedCell = $td;
-        });
-      });
-
       this.element.find('table tbody').focusout( function() {
         thisObj._cleanCellSelection();
       });
