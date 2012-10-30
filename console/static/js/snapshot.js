@@ -174,7 +174,7 @@
         return VOL_ID_PATTERN.test(asText($vol_selector.val()));
       });
       this.createDialog.eucadialog('validateOnType', '#snapshot-create-description', function(description) {
-        if (description && description.length>255)
+        if (description && description.length>MAX_DESCRIPTION_LEN)
           return long_description;
         else
           return null;

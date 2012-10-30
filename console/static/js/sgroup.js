@@ -409,7 +409,7 @@
          thisObj._validateFormAdd(createButtonId, thisDialog);
       });
       dialog.eucadialog('validateOnType', '#sgroup-description', function(description) {
-        if (description && description.length>255)
+        if (description && description.length>MAX_DESCRIPTION_LEN)
           return long_description;
         else
           return null;
@@ -499,7 +499,7 @@
       var name = dialog.eucadialog("get_validate_value", "sgroup-name",
                                         SGROUP_NAME_PATTERN, alphanum_warning);
       var desc = dialog.eucadialog("getValue", "#sgroup-description");
-      if (desc && desc.length>255)
+      if (desc && desc.length>MAX_DESCRIPTION_LEN)
           dialog.eucadialog("showFieldError", "#sgroup-description", long_description);
       var $button = dialog.parent().find('#' + createButtonId);
       if ( name == null || desc == null || name.length == 0 || desc.length == 0 )     
