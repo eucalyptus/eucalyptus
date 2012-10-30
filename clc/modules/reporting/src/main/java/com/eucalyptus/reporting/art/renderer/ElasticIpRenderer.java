@@ -31,6 +31,7 @@ class ElasticIpRenderer
 			throws IOException
 	{
         doc.setWriter(new OutputStreamWriter(os));
+        doc.setUnlabeledRowIndent( 2 );
         
         doc.open();
         doc.textLine("Elastic IP Report", 1);
@@ -40,14 +41,14 @@ class ElasticIpRenderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Elastic IP").addValCol("Instance ID").addValCol("# IPs")
-        	.addValCol("Duration");
+        	.addValCol("Duration ("+units.labelForTime()+")");
         for (String accountName: report.getAccounts().keySet()) {
         	AccountArtEntity account = report.getAccounts().get(accountName);
-        	doc.newRow().addLabelCol(1, "Account: " + accountName).addValCol("cumul.").addValCol("cumul.");
+        	doc.newRow().addLabelCol(0, "Account: " + accountName).addValCol("cumul.").addValCol("cumul.");
         	addUsageCols(doc, account.getUsageTotals().getElasticIpTotals(),units);
         	for (String userName: account.getUsers().keySet()) {
         		UserArtEntity user = account.getUsers().get(userName);
-        		doc.newRow().addLabelCol(2, "User: " + userName)
+        		doc.newRow().addLabelCol(1, "User: " + userName)
         			.addValCol("cumul.").addValCol("cumul.");
         		addUsageCols(doc, user.getUsageTotals().getElasticIpTotals(),units);
         		for (String ip: user.getElasticIps().keySet()) {
