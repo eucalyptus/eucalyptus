@@ -192,7 +192,10 @@
         }else{
           thisObj.element.data('dialog').option('closeOnEscape', true);
           $helpPane.fadeOut(function(){
-            $contentPane.fadeIn();
+            $contentPane.fadeIn('fast', function(){
+              if ($contentPane.css('opacity') == 0)
+                $contentPane.css('opacity', 1);
+            });
             thisObj.help_flipped = false;
             $titleBar.find('.help-popout').detach();
             $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
