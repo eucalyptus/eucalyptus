@@ -94,7 +94,7 @@ class VolumeSnapshotRenderer
 			throws IOException
 	{
         doc.setWriter(new OutputStreamWriter(os));
-        
+
         doc.open();
         doc.textLine("Volume Snapshot Report", 1);
         doc.textLine("Begin:" + new Date(report.getBeginMs()).toString(), 4);
@@ -103,7 +103,7 @@ class VolumeSnapshotRenderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Volume Id").addValCol("Snapshot Id").addValCol("# Snap")
-        	.addValCol("Size (" + units.getSizeUnit().toString() + ")").addValCol("GB-Days");
+        	.addValCol("Size (" + units.labelForSize() + ")").addValCol(units.labelForTimeSize());
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
             doc.newRow().addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.").addValCol("cumul.");
