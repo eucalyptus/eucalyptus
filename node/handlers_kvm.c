@@ -157,6 +157,7 @@ static void * rebooting_thread (void *arg)
 
     sem_p (hyp_sem);
     // for KVM, must stop and restart the instance
+    logprintfl (EUCADEBUG, "[%s] destroying domain\n", instance->instanceId);
     int error = virDomainDestroy (dom); // TODO: change to Shutdown?  TODO: is this synchronous?
     virDomainFree(dom);
     sem_v (hyp_sem);
@@ -168,6 +169,7 @@ static void * rebooting_thread (void *arg)
     
     // domain is now shut down, create a new one with the same XML
     sem_p (hyp_sem); 
+    logprintfl (EUCAINFO, "[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux (*conn, xml, 0);
     sem_v (hyp_sem);
     free (xml);
@@ -180,12 +182,13 @@ static void * rebooting_thread (void *arg)
             strcmp (volume->stateName, VOL_STATE_ATTACHING))
             continue; // skip the entry unless attached or attaching
 
+        logprintfl (EUCADEBUG, "[%s] volumes [%d] = '%'s'\n", instance->instanceId, i, volume->stateName);
         char * xml = NULL;
-        int rc;
+        int rc = 0;
         // get credentials, decrypt them
         remoteDevStr = get_iscsi_target (volume->remoteDev);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            logprintfl(EUCAERROR, "[%s] Reattach-volume: failed to get local name of host iscsi device\n", instance->instanceId);
+            logprintfl(EUCAERROR, "[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
             rc = 1;
         } else {
             // set the path
@@ -210,7 +213,7 @@ static void * rebooting_thread (void *arg)
             err = virDomainAttachDevice (dom, xml);
             sem_v (hyp_sem);      
             if (err) {
-                logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed (err=%d) XML=%s\n", instance->instanceId, err, xml);
+                logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instance->instanceId, err, xml);
             } else {
                 logprintfl (EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
             }
@@ -220,7 +223,7 @@ static void * rebooting_thread (void *arg)
             free (xml);
     }
     if (dom==NULL) {
-        logprintfl (EUCAERROR, "[%s] Failed to restart instance\n", instance->instanceId);
+        logprintfl (EUCAERROR, "[%s] failed to restart instance\n", instance->instanceId);
         change_state (instance, SHUTOFF);
         return NULL;
     }

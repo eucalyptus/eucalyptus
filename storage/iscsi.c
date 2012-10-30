@@ -117,12 +117,12 @@ char *connect_iscsi_target(const char *dev_string)
   assert(strlen(home));
 
   snprintf(command, MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
-  logprintfl(EUCAINFO, "connect_iscsi_target invoked: shell[ %s ]\n", command);
+  logprintfl(EUCADEBUG, "invoking `%s`\n", command);
 
   sem_p(iscsi_sem);
   ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, CONNECT_TIMEOUT);
   sem_v(iscsi_sem);
-  logprintfl(EUCAINFO, "connect_iscsi_target return: %d, stdout: [ %s ], stderr: [ %s ]\n", ret, stdout_str, stderr_str);
+  logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
   if (ret == 0) {
     return strdup(stdout_str);
@@ -139,12 +139,12 @@ int disconnect_iscsi_target(const char *dev_string)
   assert(strlen(home));
 
   snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
-  logprintfl(EUCAINFO, "disconnect_iscsi_target invoked: shell[ %s ]\n", command);
+  logprintfl(EUCADEBUG, "invoking `%s`\n", command);
 
   sem_p(iscsi_sem);
   ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, DISCONNECT_TIMEOUT);
   sem_v(iscsi_sem);
-  logprintfl(EUCAINFO, "disconnect_iscsi_target return: %d, stdout: [ %s ], stderr: [ %s ]\n", ret, stdout_str, stderr_str);
+  logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
   return ret;
 }
@@ -157,12 +157,12 @@ char *get_iscsi_target(const char *dev_string)
   assert(strlen(home));
 
   snprintf(command, MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
-  logprintfl(EUCAINFO, "get_iscsi_target invoked: shell[ %s ]\n", command);
+  logprintfl(EUCADEBUG, "invoking `%s`\n", command);
 
   sem_p(iscsi_sem);
   ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, GET_TIMEOUT);
   sem_v(iscsi_sem);
-  logprintfl(EUCAINFO, "get_iscsi_target return: %d, stdout: [ %s ], stderr: [ %s ]\n", ret, stdout_str, stderr_str);
+  logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
   if (ret == 0) {
     return strdup(stdout_str);
