@@ -622,7 +622,6 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
       try {
         ListenerRegistry.getInstance().fireEvent(
             AddressEvent.with(
-                getNaturalId(),
                 getDisplayName(),
                 ownerFullName,
                 Accounts.lookupAccountById(ownerFullName.getAccountNumber()).getName(),

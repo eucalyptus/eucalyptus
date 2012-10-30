@@ -58,6 +58,16 @@ class InstanceArtGeneratorTest {
   }
 
   @Test
+  void testBasicGenerationWithDuplicateCreate(){
+    InstanceArtGenerator generator = testGeneratorWith( [
+        instanceCreate( INSTANCE1, USER1, "2012-08-01T01:00:00", VMTYPE1, ZONE1 ),
+        instanceCreate( INSTANCE1, USER1, "2012-09-01T06:00:00", VMTYPE1, ZONE1 ),
+    ], basicUsageInReportPeriod() )
+    ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
+    assertArt( art )
+  }
+
+  @Test
   void testBasicGenerationMultipleZones(){
     InstanceArtGenerator generator = testGeneratorWith( basicUsageInReportPeriodMultipleZones() )
     ReportArtEntity art = generator.generateReportArt( new ReportArtEntity( millis("2012-09-01T00:00:00"), millis("2012-09-01T12:00:00") ) )
@@ -685,6 +695,12 @@ class InstanceArtGeneratorTest {
         instanceCreate( INSTANCE1, USER1, instance1CreateTime, VMTYPE1, ZONE1 ),
         instanceCreate( INSTANCE2, USER2, "2012-09-01T00:00:00", VMTYPE2, ZONE2 ),
     ]
+    testGeneratorWith( instanceCreateList, usage )
+  }
+
+  private InstanceArtGenerator testGeneratorWith( List<ReportingInstanceCreateEvent> create,
+                                                  List<ReportingInstanceUsageEvent> usage ) {
+    List<ReportingInstanceCreateEvent> instanceCreateList = create.sort{ event -> event.getTimestampMs() }
     List<ReportingInstanceUsageEvent> instanceUsageList = usage.sort{ event -> event.getTimestampMs() }
     new InstanceArtGenerator() {
 
@@ -700,7 +716,7 @@ class InstanceArtGeneratorTest {
       @Override
       protected void foreachInstanceCreateEvent( final long endExclusive,
                                                  final Predicate<? super ReportingInstanceCreateEvent> callback ) {
-        instanceCreateList.reverse().findAll{ event ->
+        instanceCreateList.findAll{ event ->
           event.getTimestampMs() < endExclusive }.every { event -> callback.apply( event ) }
       }
 

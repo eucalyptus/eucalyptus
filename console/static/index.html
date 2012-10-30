@@ -24,30 +24,19 @@
     <title>Eucalyptus</title>
     <meta charset="UTF-8">
     <style type="text/css" title="currentStyle">
-      @import "lib/jquery.css";
       @import "lib/jquery-table.css";
-      @import "lib/jquery.contextMenu.css";
-      @import "lib/jquery-ui-1.9.0-beta1.css";
+      @import "lib/jquery-ui-1.9.1.custom.css";
       @import "lib/jquery.qtip.min.css";
       @import "css/eucalyptus.css";
     </style>
 
     <!-- jQuery libraries -->
-    <script type="text/javascript" language="javascript" src="lib/jquery-1.7.2.min.js"></script> 
-    <!--<script type="text/javascript" language="javascript" src="lib/jquery.ui.core.min.js"></script> 
-    <script type="text/javascript" language="javascript" src="lib/jquery.ui.widget.min.js"></script> 
-    <script type="text/javascript" language="javascript" src="lib/jquery.ui.tabs.min.js"></script> 
-    -->
-
-    <!-- this ui library contains everything. need to slim down later by including only what's used here -->
-    <!--<script type="text/javascript" language="javascript" src="lib/jquery-ui-1.8.21.custom.min.js"></script> -->
-    <!-- jquery-ui 1.9.0 beta for inheritance of widgets -->
-    <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.0-beta1.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.dataTables.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/dataTables.fnGetTds.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery-1.8.2.js"></script> 
+    <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.1.custom.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/jquery.datatables-1.8.2.js "></script>
+    <script type="text/javascript" language="javascript" src="lib/datatables.fnGetTds.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery.i18n.properties-min-1.0.9.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jsrender.js"></script>
-    <script type="text/javascript" language="javascript" src="lib/jquery.contextMenu.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.flip.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.cookie.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.iframe-transport.js"></script>
@@ -57,6 +46,7 @@
     <script type="text/javascript" language="javascript" src="lib/moment.min.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.base64.js"></script>
     <script type="text/javascript" language="javascript" src="lib/jquery.ba-hashchange.js"></script>
+
     <!-- Eucalyptus UI javascripts -->
     <script type="text/javascript" language="javascript" src="js/jquery_ext.js"></script>
     <script type="text/javascript" language="javascript" src="js/jquery_generate_file.js"></script>
@@ -541,6 +531,7 @@
 
               <div class="sg-name-desc">
                 <div id="sgroups-edit-group-name" class="sg-name"></div>
+                <div class="sg-name">{{!:sgroup_dialog_edit_description}}</div>
                 <div id="sgroups-edit-group-desc" class="sg-desc"></div>
                 <!-- don't show this. It's a place to store the group name by itself since the API calls need it -->
                 <div id="sgroups-hidden-name" style='display: none;'></div>

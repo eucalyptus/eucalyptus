@@ -57,10 +57,10 @@ public class EventFactory {
   public static ReportingElasticIpAttachEvent newIpAttach( final String eventId,
                                                            final Date created,
                                                            final Date occurred,
-                                                           final String uuid,
+                                                           final String ip,
                                                            final String instanceUuid ) {
     final ReportingElasticIpAttachEvent event =
-        new ReportingElasticIpAttachEvent( uuid, instanceUuid, occurred.getTime() );
+        new ReportingElasticIpAttachEvent( ip, instanceUuid, occurred.getTime() );
     event.initialize( eventId, created );
     return event;
   }
@@ -68,11 +68,10 @@ public class EventFactory {
   public static ReportingElasticIpCreateEvent newIpCreate( final String eventId,
                                                            final Date created,
                                                            final Date occurred,
-                                                           final String uuid,
                                                            final String userId,
                                                            final String ip ) {
     final ReportingElasticIpCreateEvent event =
-        new ReportingElasticIpCreateEvent( uuid, occurred.getTime(), ip, userId );
+        new ReportingElasticIpCreateEvent( occurred.getTime(), ip, userId );
     event.initialize( eventId, created );
     return event;
   }
@@ -80,10 +79,10 @@ public class EventFactory {
   public static ReportingElasticIpDetachEvent newIpDetach( final String eventId,
                                                            final Date created,
                                                            final Date occurred,
-                                                           final String uuid,
+                                                           final String ip,
                                                            final String instanceUuid ) {
     final ReportingElasticIpDetachEvent event =
-        new ReportingElasticIpDetachEvent( uuid, instanceUuid, occurred.getTime() );
+        new ReportingElasticIpDetachEvent( ip, instanceUuid, occurred.getTime() );
     event.initialize( eventId, created );
     return event;
   }
@@ -91,9 +90,9 @@ public class EventFactory {
   public static ReportingElasticIpDeleteEvent newIpDelete( final String eventId,
                                                            final Date created,
                                                            final Date occurred,
-                                                           final String uuid ) {
+                                                           final String ip ) {
     final ReportingElasticIpDeleteEvent event =
-        new ReportingElasticIpDeleteEvent( uuid, occurred.getTime() );
+        new ReportingElasticIpDeleteEvent( ip, occurred.getTime() );
     event.initialize( eventId, created );
     return event;
   }

@@ -56,12 +56,18 @@
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
-            { 
-              "fnRender" : function(oObj) { 
-                 return $('<div>').append($('<a>').attr('href','#').addClass('twist').text(oObj.aData.name)).html();
-              }
+            {
+              "fnRender" : function(oObj) {
+                 shortName = addEllipsis(oObj.aData.name, 75);
+                 $a = $('<a>').attr('href','#').attr('title', oObj.aData.name).addClass('twist').text(shortName);
+                 return $('<div>').append($a).html();
+              },
+              "iDataSort": 7,
             },
-            { "mDataProp": "description" },
+            { 
+              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.name, 50)+"</span>" },
+              "iDataSort": 6,
+            },
             { // protocol to appear in search result
               "bVisible": false,
               "fnRender" : function(oObj){
@@ -144,6 +150,8 @@
                  return src;
                }
             },
+            { "mDataProp": "description", "bVisible": false },
+            { "mDataProp": "name", "bVisible": false },
           ],
         },
         text : {
@@ -197,7 +205,11 @@
          id: 'sgroups-delete',
          title: sgroup_dialog_del_title,
          buttons: {
-           'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.eucadialog("close");}},
+           'delete': {text: sgroup_dialog_del_btn, click: function() {
+             var groupsToDelete = thisObj.delDialog.eucadialog('getSelectedResources',1);
+             $del_dialog.eucadialog("close");
+             thisObj._deleteSelectedSecurityGroups(groupsToDelete);
+           }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: { content: $del_help, url: help_sgroup.dialog_delete_content_url },
@@ -704,17 +716,12 @@
     },
 
 
-    _deleteSelectedSecurityGroups : function () {
+    _deleteSelectedSecurityGroups : function (groupsToDelete) {
       var thisObj = this;
-      var toDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
-      var rowsToDelete = []; 
-      $.each(toDelete, function(idx, item){
-        rowsToDelete.push($(item).val());
-      });     
       var done = 0;
-      var all = rowsToDelete.length;
+      var all = groupsToDelete.length;
       var error = [];
-      doMultiAjax(rowsToDelete, function(item, dfd){
+      doMultiAjax(groupsToDelete, function(item, dfd){
         var sgroupName = item;
         $.ajax({
           type:"POST",
@@ -780,13 +787,13 @@
         async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', addEllipsis(sgroupName, 75)));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('sgroup_add_rule_error', addEllipsis(sgroupName, 75)), getErrorMessage(jqXHR));
             }
         })(sgroupName),
       });
@@ -821,13 +828,13 @@
         async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', addEllipsis(sgroupName, 75)));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('sgroup_revoke_rule_error', addEllipsis(sgroupName, 75)), getErrorMessage(jqXHR));
             }
         })(sgroupName),
       });
@@ -840,15 +847,14 @@
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
+      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 6);
       var matrix = [];
       $.each(rowsToDelete,function(idx, group){
-        group = $(group).html();
-        matrix.push([group]);
+        matrix.push([group, group]);
       });
 
       if ( rowsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_del_resource_title], contents: matrix});
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_del_resource_title], contents: matrix, limit:60, hideColumn: 1});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -885,10 +891,11 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-      thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
+console.log(sgroup_dialog_edit_description, firstRow.name);
+      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').attr('title', firstRow.name).text(addEllipsis(firstRow.name, 100)));
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
+      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').attr('title', firstRow.description).text(addEllipsis(firstRow.description, 100)));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
@@ -906,9 +913,9 @@
       });
     },
 
-    _expandCallback : function(row){ 
+    _expandCallback : function(row){
       var thisObj = this;
-      var groupName = $(row[1]).html();
+      var groupName = row[7];
       var results = describe('sgroup');
       var group = null;
       for(i in results){

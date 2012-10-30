@@ -26,10 +26,10 @@ import com.eucalyptus.reporting.event_store.ReportingInstanceUsageEvent
 class ExportUtilsTest {
 
   private Map<Class<? extends ReportingEventSupport>,ReportingEventSupport> instances = [
-    (ReportingElasticIpCreateEvent.class): EventFactory.newIpCreate( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "uuid", "userId", "ip" ),
-    ( ReportingElasticIpAttachEvent.class): EventFactory.newIpAttach( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "uuid", "instanceUuid" ),
-    ( ReportingElasticIpDetachEvent.class): EventFactory.newIpDetach( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "uuid", "instanceUuid" ),
-    ( ReportingElasticIpDeleteEvent.class): EventFactory.newIpDelete( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "uuid",  ),
+    (ReportingElasticIpCreateEvent.class): EventFactory.newIpCreate( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "userId", "ip" ),
+    ( ReportingElasticIpAttachEvent.class): EventFactory.newIpAttach( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "ip", "instanceUuid" ),
+    ( ReportingElasticIpDetachEvent.class): EventFactory.newIpDetach( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "ip", "instanceUuid" ),
+    ( ReportingElasticIpDeleteEvent.class): EventFactory.newIpDelete( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "ip",  ),
     ( ReportingInstanceCreateEvent.class): EventFactory.newInstanceCreate( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "uuid","instanceId", "instanceType", "userId", "availabilityZone" ),
     ( ReportingS3ObjectCreateEvent.class): EventFactory.newS3ObjectCreate( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "bucket", "key", "version", 1, "userId" ),
     ( ReportingS3ObjectDeleteEvent.class): EventFactory.newS3ObjectDelete( "EID", date("2012-09-01T11:55:00"), date("2012-09-01T11:55:01"), "bucket", "key", "version" ),

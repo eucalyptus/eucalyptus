@@ -248,16 +248,6 @@
         });
       });
 
-      this.element.find('table tbody').find('td').each(function(index, td) {
-        var $td = $(td);
-        $td.click(function(e){
-          if (thisObj.selectedCell != null)
-            thisObj.selectedCell.removeClass('selected-cell');
-          $td.addClass('selected-cell');
-          thisObj.selectedCell = $td;
-        });
-      });
-
       this.element.find('table tbody').focusout( function() {
         thisObj._cleanCellSelection();
       });
@@ -330,7 +320,8 @@
             }
           });
         }
-      }); 
+      });
+      this.element.qtip();
     },
 
     _onRowClick : function() {
@@ -343,13 +334,13 @@
     _activateMenu : function() {
       $menu = $('#more-actions-'+this.options.id);
       $menu.removeClass("inactive-menu");
-      $menu.contextMenu(true);
+      //$menu.contextMenu(true);
     },
 
     _deactivateMenu : function() {
       $menu = $('#more-actions-'+this.options.id);
       $menu.addClass("inactive-menu");
-      $menu.contextMenu(false);
+      //$menu.contextMenu(false);
     },
 
     // args.title = title in the header (e.g.,'Manage key pairs');
