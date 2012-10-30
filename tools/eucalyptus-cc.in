@@ -82,6 +82,8 @@
 # This allows Eucalyptus to use correct localization settings
 [ -f /etc/init.d/functions ] && . /etc/init.d/functions
 
+LOCKFILE=/var/lock/subsys/eucalyptus-cc
+
 # if we have lsb functions let's source them
 WE_HAVE_LSB="N"
 if [ -e /lib/lsb/init-functions ]; then
@@ -207,6 +209,8 @@ do_start() {
 		echo "Failed to start the CC!"
 		exit 1
 	fi
+
+	touch $LOCKFILE
 }
 
 do_status() {
@@ -317,6 +321,8 @@ do_stop() {
         if [ $dopkill -gt 0 ]; then
             pkill -9 -s $sids >/dev/null 2>&1
         fi
+
+        rm -f $LOCKFILE
 }
 
 # Read configuration variable file if it is present

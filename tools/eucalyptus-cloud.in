@@ -84,6 +84,7 @@ DESC="Eucalyptus services"
 NAME=""
 ANT="`which ant 2> /dev/null`"
 EUCA_USER="eucalyptus"
+LOCKFILE=/var/lock/subsys/eucalyptus-cloud
 
 if [ "$EUID" != "0" ]; then
 	echo "Eucalyptus init scripts must be run as root."
@@ -249,6 +250,8 @@ do_start() {
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f \
 		-L console-log -o $initlog -e $initlog
 	return $?
+
+	touch $LOCKFILE
 }
 
 do_status() {
@@ -311,7 +314,7 @@ do_stop() {
 		kill -9 $ppid > /dev/null 2>&1
 	fi
 	rm -f $pidfile
-
+	rm -f $LOCKFILE
 }
 
 # let's get the user to use
