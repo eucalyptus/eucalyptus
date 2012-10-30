@@ -1981,7 +1981,7 @@ int doRebootInstance (ncMetadata *meta, char *instanceId)
 	if (init())
 		return 1;
 
-	logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+	logprintfl(EUCADEBUG, "[%s] invoked\n", instanceId);
 
 	if (nc_state.H->doRebootInstance)
 		ret = nc_state.H->doRebootInstance (&nc_state, meta, instanceId);
