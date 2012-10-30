@@ -833,7 +833,7 @@
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 6);
+      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 7);
       var matrix = [];
       $.each(rowsToDelete,function(idx, group){
         matrix.push([group, group]);
