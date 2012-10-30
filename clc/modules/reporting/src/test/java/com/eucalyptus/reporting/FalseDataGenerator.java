@@ -164,7 +164,7 @@ public class FalseDataGenerator
 
 						String instanceUuid  = "(none)";
 						String volumeUuid    = "(none)";
-						String elasticIpUuid = "(none)";
+						String elasticIp = "(none)";
 						String bucketName    = "(none)";
 						int createdInstanceNum = 0;
 						for (int periodNum=0; periodNum<NUM_PERIODS; periodNum++) {
@@ -187,14 +187,14 @@ public class FalseDataGenerator
 								ReportingVolumeEventStore.getInstance().insertCreateEvent(volumeUuid, ("vol-" + userNum + "-" + periodNum),
 										timeMs, userId, availZone, VOLUME_SIZE);
 
-								elasticIpUuid = String.format(UUID_FORMAT, uniqueUserId, elasticIpUuidNum++);
-								log.debug(String.format("  Generating elastic ip uuid %s\n", elasticIpUuid));
 								String ip = String.format("%d.%d.%d.%d",
 										(userNum >> 8) % 256,
 										userNum % 256,
 										(periodNum >> 8) % 256,
 										periodNum % 256);
-								ReportingElasticIpEventStore.getInstance().insertCreateEvent(elasticIpUuid, timeMs, userId, ip);
+                elasticIp = ip;
+                log.debug(String.format("  Generating elastic ip %s\n", elasticIp));
+                ReportingElasticIpEventStore.getInstance().insertCreateEvent(timeMs, userId, ip);
 							}
 
 							/* Create a fake snapshot if one should be created in this period. */
@@ -258,19 +258,19 @@ public class FalseDataGenerator
 
 							/* Attach Volumes and Elastic IPs to Instances */
 							ReportingVolumeEventStore.getInstance().insertAttachEvent(volumeUuid, instanceUuid, VOLUME_SIZE, timeMs);
-							ReportingElasticIpEventStore.getInstance().insertAttachEvent(elasticIpUuid, instanceUuid, timeMs);
-							log.debug(String.format("  Attaching volume %s and ip %s to instance %s\n", volumeUuid, elasticIpUuid, instanceUuid));
-							attachments.add(new Attachment(instanceUuid, volumeUuid, elasticIpUuid));
+							ReportingElasticIpEventStore.getInstance().insertAttachEvent(elasticIp, instanceUuid, timeMs);
+							log.debug(String.format("  Attaching volume %s and ip %s to instance %s\n", volumeUuid, elasticIp, instanceUuid));
+							attachments.add(new Attachment(instanceUuid, volumeUuid, elasticIp));
 
 							/* Detach old Volumes and Elastic IPs from old Instances */
 							if (attachments.size() >= ATTACH_PERIODS_DURATION) {
 								Attachment attachment = attachments.remove(0);
 								ReportingVolumeEventStore.getInstance().insertDetachEvent(attachment.getVolumeUuid(),
 										attachment.getInstanceUuid(), timeMs);
-								ReportingElasticIpEventStore.getInstance().insertDetachEvent(attachment.getElasticIpUuid(),
+								ReportingElasticIpEventStore.getInstance().insertDetachEvent(attachment.getElasticIp(),
 										attachment.getInstanceUuid(), timeMs);
 								log.debug(String.format("  Detaching volume %s and ip %s to instance %s\n",
-										attachment.getVolumeUuid(), attachment.getElasticIpUuid(), attachment.getInstanceUuid()));
+										attachment.getVolumeUuid(), attachment.getElasticIp(), attachment.getInstanceUuid()));
 							}
 						}
 					}
@@ -283,14 +283,14 @@ public class FalseDataGenerator
 	{
 		private final String instanceUuid;
 		private final String volumeUuid;
-		private final String elasticIpUuid;
+		private final String elasticIp;
 				
 		public Attachment(String instanceUuid, String volumeUuid,
-				String elasticIpUuid)
+				String elasticIp)
 		{
 			this.instanceUuid = instanceUuid;
 			this.volumeUuid = volumeUuid;
-			this.elasticIpUuid = elasticIpUuid;
+			this.elasticIp = elasticIp;
 		}
 		
 		public String getInstanceUuid() {
@@ -301,8 +301,8 @@ public class FalseDataGenerator
 			return volumeUuid;
 		}
 		
-		public String getElasticIpUuid() {
-			return elasticIpUuid;
+		public String getElasticIp() {
+			return elasticIp;
 		}
 
 	}

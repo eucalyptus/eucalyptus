@@ -113,8 +113,11 @@ public class InstanceArtGenerator
         foreachInstanceCreateEvent( report.getEndMs(), new Predicate<ReportingInstanceCreateEvent>() {
             @Override
             public boolean apply( final ReportingInstanceCreateEvent createEvent ) {
-            	createEvents.put(createEvent.getUuid(), createEvent);
-            	return true;            
+            final ReportingInstanceCreateEvent prevEvent = createEvents.put(createEvent.getUuid(), createEvent);
+            if ( prevEvent != null && prevEvent.getTimestampMs() < createEvent.getTimestampMs()) {
+              createEvents.put( prevEvent.getUuid(), prevEvent ); // use first creation
+            }
+            return true;
             }
         } );
 
