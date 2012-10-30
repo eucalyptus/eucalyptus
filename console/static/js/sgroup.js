@@ -665,11 +665,16 @@
             msg += "</ul>";
             dialog.find('#sgroup-rules-list').html(msg);
             i=0;
+            j=0;
             for (rule in this.rulesList) {
-                if (this.rulesList[rule].deletethis == true) continue;
-                dialog.find('#sgroup-rule-number-'+i).on('click', {index: i, source: dialog}, function(event) {
+                if (this.rulesList[rule].deletethis == true) {
+                    i += 1;
+                    continue;
+                }
+                dialog.find('#sgroup-rule-number-'+j).on('click', {index: i, source: dialog}, function(event) {
                       event.data.source.dialog('option', 'user_val')(event.data.index);
                 });
+                j += 1;
                 i += 1;
             }
         }
@@ -798,7 +803,7 @@
           }
           if (fromGroup[i]) {
               var tmp = $("<div/>").html(fromGroup[i]).text();
-              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + tmp
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.GroupName=" + tmp
           }
           if (fromUser[i]) {
               var tmp = $("<div/>").html(fromUser[i]).text();
