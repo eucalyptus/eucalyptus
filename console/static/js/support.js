@@ -105,6 +105,16 @@ if( !Array.prototype.indexOf ) {
   };
 }
 
+function addEllipsis(input, maxLen){
+  if (input == undefined || input.length < maxLen)
+    return input;
+  input = input.substring(0, maxLen);
+  i = input.lastIndexOf(" ");
+  if ( i > 0)
+    input = input.substring(0, i);
+  return input + '...';
+}
+
 function S4() {
   return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
 }

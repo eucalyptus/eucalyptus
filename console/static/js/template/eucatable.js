@@ -330,7 +330,8 @@
             }
           });
         }
-      }); 
+      });
+      this.element.qtip();
     },
 
     _onRowClick : function() {

@@ -54,8 +54,12 @@
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
-            { "mDataProp": "name" },
-            { "mDataProp": "fingerprint", "bSortable": false }
+            {
+              "fnRender": function(oObj) { return oObj.aData.name == null ? "" : "<span title='"+oObj.aData.name+"'>"+addEllipsis(oObj.aData.name, 75)+"</span>" },
+              "iDataSort": 3,
+            },
+            { "mDataProp": "fingerprint", "bSortable": false },
+            { "mDataProp": "name", "bVisible": false },
           ],
         },
         text : {
@@ -99,7 +103,7 @@
          title: keypair_dialog_del_title,
          buttons: {
            'delete': {text: keypair_dialog_del_btn, click: function() {
-                var keysToDelete = thisObj.delDialog.eucadialog('getSelectedResources',0);
+                var keysToDelete = thisObj.delDialog.eucadialog('getSelectedResources',1);
                 $del_dialog.eucadialog("close");
                 thisObj._deleteSelectedKeyPairs(keysToDelete);
             }},
@@ -192,14 +196,14 @@
       var thisObj = this;
       var keysToDelete = [];
       var $tableWrapper = thisObj.tableWrapper;
-      keysToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
+      keysToDelete = $tableWrapper.eucatable('getSelectedRows', 3);
       var matrix = [];
       $.each(keysToDelete,function(idx, key){
-        matrix.push([key]);
+        matrix.push([key, key]);
       });
 
       if ( keysToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', {title:[keypair_label], contents: matrix});
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[keypair_label], contents: matrix, limit:60, hideColumn: 1});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -222,16 +226,16 @@
               _xsrf     : $.cookie('_xsrf'),
               script    : '/ec2?Action=GetKeyPairFile'
             });
-            notifySuccess(null, $.i18n.prop('keypair_create_success', keyName));
+            notifySuccess(null, $.i18n.prop('keypair_create_success', addEllipsis(keyName, 75)));
             thisObj.tableWrapper.eucatable('refreshTable');
             thisObj.tableWrapper.eucatable('glowRow', keyName);
           } else {
-            notifyError($.i18n.prop('keypair_create_error', keyName), undefined_error);
+            notifyError($.i18n.prop('keypair_create_error', addEllipsis(keyName, 75)), undefined_error);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          notifyError($.i18n.prop('keypair_create_error', keyName), getErrorMessage(jqXHR));
+          notifyError($.i18n.prop('keypair_create_error', addEllipsis(keyName, 75)), getErrorMessage(jqXHR));
         }
      });
        
@@ -300,7 +304,7 @@
         (function(keyName) {
           return function(data, textStatus, jqXHR){
             if (data.results && data.results.fingerprint) {
-              notifySuccess(null, $.i18n.prop('keypair_import_success', keyName));
+              notifySuccess(null, $.i18n.prop('keypair_import_success', addEllipsis(keyName, 75)));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
               notifyError($.i18n.prop('keypair_import_error', keyName), undefined_error);
@@ -310,7 +314,7 @@
         error:
         (function(keyName) {
           return function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('keypair_import_error', keyName), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('keypair_import_error', addEllipsis(keyName, 75)), getErrorMessage(jqXHR));
           }
         })(keyName, keyContents)
       });
