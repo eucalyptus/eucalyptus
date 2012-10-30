@@ -44,11 +44,11 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 		/* Create super-tree of availZones, clusters, accounts, users, and instances;
 		 * and create a Map of the instance nodes at the bottom.
 		 */
-		final Map<String,List<ElasticIpAllocation>> ipUuidToAllocationListMap = Maps.newHashMap();
+		final Map<String,List<ElasticIpAllocation>> ipToAllocationListMap = Maps.newHashMap();
 		foreachElasticIpCreateEvent( new Predicate<ReportingElasticIpCreateEvent>() {
 			@Override
 			public boolean apply( final ReportingElasticIpCreateEvent createEvent ) {
-				final Long deleteTime = findTimeAfter( ipToDeleteTimesMap, createEvent.getUuid(), createEvent.getTimestampMs() );
+				final Long deleteTime = findTimeAfter( ipToDeleteTimesMap, createEvent.getIp(), createEvent.getTimestampMs() );
 				if ( deleteTime < report.getBeginMs() ) {
 					return true; // usage not relevant for this report
 				}
@@ -57,18 +57,18 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 				}
 				final ReportingUser reportingUser = getUserById( reportingUsersById, createEvent.getUserId() );
 				if (reportingUser==null) {
-					log.error("No user corresponding to event:" + createEvent.getUserId() + " " + createEvent.getUuid());
+					log.error("No user corresponding to event:" + createEvent.getUserId() + " " + createEvent.getIp());
 					return true;
 				}
 				final String accountName = getAccountNameById( accountNamesById, reportingUser.getAccountId() );
 				if (accountName==null) {
-					log.error("No account corresponding to user:" + reportingUser.getAccountId()+ " " + createEvent.getUuid());
+					log.error("No account corresponding to user:" + reportingUser.getAccountId()+ " " + createEvent.getIp());
 					return true;
 				}
-				List<ElasticIpAllocation> allocations = ipUuidToAllocationListMap.get( createEvent.getUuid() );
+				List<ElasticIpAllocation> allocations = ipToAllocationListMap.get( createEvent.getIp() );
 				if ( allocations == null ) {
 					allocations = Lists.newArrayList();
-					ipUuidToAllocationListMap.put( createEvent.getUuid(), allocations );
+					ipToAllocationListMap.put( createEvent.getIp(), allocations );
 				}
 				allocations.add( new ElasticIpAllocation( accountName, reportingUser.getName(), createEvent.getIp(), createEvent.getTimestampMs(), deleteTime ) );
 				final AccountArtEntity account;
@@ -124,8 +124,8 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 			@Override
 			public boolean apply( final ReportingElasticIpAttachEvent attachEvent ) {
 				// tolerate missing detach events by accounting for delete events also
-				final Long deleteTime = findTimeAfter( ipToDeleteTimesMap, attachEvent.getIpUuid(), attachEvent.getTimestampMs() );
-				final Long detachTime = Math.min( deleteTime, findTimeAfter( ipToDetachTimesMap, attachEvent.getIpUuid(), attachEvent.getTimestampMs() ));
+				final Long deleteTime = findTimeAfter( ipToDeleteTimesMap, attachEvent.getIp(), attachEvent.getTimestampMs() );
+				final Long detachTime = Math.min( deleteTime, findTimeAfter( ipToDetachTimesMap, attachEvent.getIp(), attachEvent.getTimestampMs() ));
 				if ( detachTime < report.getBeginMs() ) {
 					return true; // usage not relevant for this report
 				}
@@ -133,7 +133,7 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 					return false; // end of relevant events for this report
 				}
 				final Long attachmentDuration = calculateDuration( report, attachEvent.getTimestampMs(), detachTime );
-				final ElasticIpArtEntity entity = findEntityForTimestamp( report, ipUuidToAllocationListMap, attachEvent.getIpUuid(), attachEvent.getTimestampMs() );
+				final ElasticIpArtEntity entity = findEntityForTimestamp( report, ipToAllocationListMap, attachEvent.getIp(), attachEvent.getTimestampMs() );
 				if ( entity == null ) {
 					log.error("Unable to find elastic ip owner for attachment, instance uuid: " + attachEvent.getInstanceUuid() );
 					return true;
@@ -204,9 +204,9 @@ public class ElasticIpArtGenerator extends AbstractArtGenerator
 
 	private String getIpUuid( final ReportingEventSupport event ) {
 		if ( event instanceof ReportingElasticIpDeleteEvent ) {
-			return ((ReportingElasticIpDeleteEvent) event).getUuid();
+			return ((ReportingElasticIpDeleteEvent) event).getIp();
 		} else if ( event instanceof  ReportingElasticIpDetachEvent ) {
-			return ((ReportingElasticIpDetachEvent) event).getIpUuid();
+			return ((ReportingElasticIpDetachEvent) event).getIp();
 		}
 		throw new IllegalStateException("Unsupported event type: " + event.getClass());
 	}

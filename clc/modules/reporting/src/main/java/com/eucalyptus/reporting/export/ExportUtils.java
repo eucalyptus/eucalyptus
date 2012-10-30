@@ -241,7 +241,6 @@ public class ExportUtils {
             reportedAction.getEventUuid(),
             reportedAction.getCreated(),
             reportedAction.getOccurred(),
-            reportedAction.getUuid(),
             reportedAction.getUserId(),
             reportedAction.getId() );
       }
@@ -253,7 +252,7 @@ public class ExportUtils {
             reportedAction.getEventUuid(),
             reportedAction.getCreated(),
             reportedAction.getOccurred(),
-            reportedAction.getUuid(),
+            reportedAction.getId(),
             reportedAction.getInstanceUuid() );
       }
     },
@@ -264,7 +263,7 @@ public class ExportUtils {
             reportedAction.getEventUuid(),
             reportedAction.getCreated(),
             reportedAction.getOccurred(),
-            reportedAction.getUuid(),
+            reportedAction.getId(),
             reportedAction.getInstanceUuid() );
       }
     },
@@ -275,7 +274,7 @@ public class ExportUtils {
             reportedAction.getEventUuid(),
             reportedAction.getCreated(),
             reportedAction.getOccurred(),
-            reportedAction.getUuid() );
+            reportedAction.getId() );
       }
     },
     INSTANCE_CREATE {
@@ -400,7 +399,6 @@ public class ExportUtils {
         final ReportedAction action = new ReportedAction( reportingEventSupport );
         action.setType( "ec2.ip" );
         action.setAction( "Allocate" );
-        action.setUuid( createEvent.getUuid() );
         action.setId( createEvent.getIp() );
         action.setUserId( createEvent.getUserId() );
         return action;
@@ -414,7 +412,7 @@ public class ExportUtils {
         final ReportedAction action = new ReportedAction( reportingEventSupport );
         action.setType( "ec2.ip" );
         action.setAction( "Associate" );
-        action.setUuid( attachEvent.getIpUuid() );
+        action.setId( attachEvent.getIp() );
         action.setInstanceUuid( attachEvent.getInstanceUuid() );
         return action;
       }
@@ -427,7 +425,7 @@ public class ExportUtils {
         final ReportedAction action = new ReportedAction( reportingEventSupport );
         action.setType( "ec2.ip" );
         action.setAction( "Disassociate" );
-        action.setUuid( detachEvent.getIpUuid() );
+        action.setId( detachEvent.getIp() );
         action.setInstanceUuid( detachEvent.getInstanceUuid() );
         return action;
       }
@@ -440,7 +438,7 @@ public class ExportUtils {
         final ReportedAction action = new ReportedAction( reportingEventSupport );
         action.setType( "ec2.ip" );
         action.setAction( "Release" );
-        action.setUuid( deleteEvent.getUuid() );
+        action.setId( deleteEvent.getIp() );
         return action;
       }
     },

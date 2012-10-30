@@ -217,7 +217,7 @@ public final class ReportingDataVerifier {
           final ReportingElasticIpEventStore store = ReportingElasticIpEventStore.getInstance();
           final Address address = findAddress( resource.resourceKey.toString() );
           if ( address != null && ensureUserAndAccount( verifiedUserIds, address.getUserId() ) ) {
-            store.insertCreateEvent( address.getNaturalId(), address.getCreationTimestamp().getTime(), address.getUserId(), address.getDisplayName() );
+            store.insertCreateEvent( address.getCreationTimestamp().getTime(), address.getUserId(), address.getDisplayName() );
           }
         } else if ( ObjectInfo.class.equals( holder.type ) ) {
           final ReportingS3ObjectEventStore store = ReportingS3ObjectEventStore.getInstance();
@@ -587,28 +587,28 @@ public final class ReportingDataVerifier {
       foreach( ReportingElasticIpCreateEvent.class, new Callback<ReportingElasticIpCreateEvent>() {
         @Override
         public void fire( final ReportingElasticIpCreateEvent input ) {
-          RelationTimestamp rt = addressRelationMap.get(input.getUuid());
+          RelationTimestamp rt = addressRelationMap.get(input.getIp());
           if ( rt == null || rt.timestamp < input.getTimestampMs() ) {
-            addressRelationMap.put( input.getUuid(), new RelationTimestamp( null, input.getTimestampMs() ) );
+            addressRelationMap.put( input.getIp(), new RelationTimestamp( null, input.getTimestampMs() ) );
           }
         }
       } );
       foreach(ReportingElasticIpDeleteEvent.class, new Callback<ReportingElasticIpDeleteEvent>() {
         @Override
         public void fire( final ReportingElasticIpDeleteEvent input ) {
-          RelationTimestamp rt = addressRelationMap.get(input.getUuid());
+          RelationTimestamp rt = addressRelationMap.get(input.getIp());
           if ( rt == null || rt.timestamp < input.getTimestampMs() ) {
-            addressRelationMap.remove(input.getUuid());
+            addressRelationMap.remove(input.getIp());
           }
         }
       } );
       foreach(ReportingElasticIpAttachEvent.class, new Callback<ReportingElasticIpAttachEvent>() {
         @Override
         public void fire( final ReportingElasticIpAttachEvent input ) {
-          if ( addressRelationMap.containsKey( input.getIpUuid() ) ) {
-            RelationTimestamp rt = addressRelationMap.get(input.getIpUuid());
+          if ( addressRelationMap.containsKey( input.getIp() ) ) {
+            RelationTimestamp rt = addressRelationMap.get(input.getIp());
             if ( rt == null || rt.relationId == null || rt.timestamp < input.getTimestampMs() ) {
-              addressRelationMap.put( input.getIpUuid(), new RelationTimestamp( input.getInstanceUuid(), input.getTimestampMs() ) );
+              addressRelationMap.put( input.getIp(), new RelationTimestamp( input.getInstanceUuid(), input.getTimestampMs() ) );
             }
           }
         }
@@ -616,10 +616,10 @@ public final class ReportingDataVerifier {
       foreach(ReportingElasticIpDetachEvent.class, new Callback<ReportingElasticIpDetachEvent>() {
         @Override
         public void fire( final ReportingElasticIpDetachEvent input ) {
-          if ( addressRelationMap.containsKey( input.getIpUuid() ) ) {
-            RelationTimestamp rt = addressRelationMap.get(input.getIpUuid());
+          if ( addressRelationMap.containsKey( input.getIp() ) ) {
+            RelationTimestamp rt = addressRelationMap.get(input.getIp());
             if ( rt != null && rt.relationId != null && rt.relationId.equals( input.getInstanceUuid() ) && rt.timestamp < input.getTimestampMs() ) {
-              addressRelationMap.put( input.getIpUuid(), null );
+              addressRelationMap.put( input.getIp(), null );
             }
           }
         }
