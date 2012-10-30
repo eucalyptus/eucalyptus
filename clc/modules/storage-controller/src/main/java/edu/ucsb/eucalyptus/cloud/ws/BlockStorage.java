@@ -86,7 +86,6 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.BlockStorageChecker;
-import com.eucalyptus.storage.BlockStorageManagerFactory;
 import com.eucalyptus.storage.CheckerTask;
 import com.eucalyptus.storage.LogicalStorageManager;
 import com.eucalyptus.storage.StorageManagers;

@@ -63,10 +63,10 @@
 package com.eucalyptus.config;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.Serializable;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,7 +74,6 @@ import java.util.regex.Pattern;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
-import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.Column;
 
@@ -83,7 +82,6 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ComponentId.ComponentPart;
@@ -93,6 +91,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.MultiDatabasePropertyEntry;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.storage.StorageManagers;
@@ -103,7 +102,10 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 @Entity
 @javax.persistence.Entity
@@ -125,29 +127,95 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 	private String blockStorageManager;
 	
 	/*
+	 * Available Backends is used *ONLY* for allowing the CLC to do sanity checks on the value being set for the block storage backend
+	 * by the user via a modify-property call. This obviates the need to have the CLC call the SC somehow and check the set of valid
+	 * values. The SC should set the value when the service is constructed.
+	*/
+	@Column( name = "available_storage_backends")
+	private String availableBackends;
+	
+	/*
 	 * Change Listener for san provider and backend config options.
 	 * The semantics enforced are that they can be set once per registered SC. If the value has already been configured it will
 	 * throw an exception if the user tries to reconfigure them.
 	 *
 	 * This is done to prevent data loss and database corruption that can occur if the user tries to change the backend after it
 	 * already has some state.
+	 * 
+	 * The semantics are that the value is valid if *any* of the SCs in the specified partition have proposed value
+	 * listed as an available backend manager.
 	 */
 	public static class StorageBackendChangeListener implements PropertyChangeListener<String> {
 		@Override
-		public void fireChange(ConfigurableProperty t, String newValue) throws ConfigurablePropertyException {
+		public void fireChange(ConfigurableProperty t, String newValue) throws ConfigurablePropertyException {			
 			String existingValue = (String)t.getValue();
 			if(existingValue != null && !"<unset>".equals(existingValue)) {
-				throw new ConfigurablePropertyException("Cannot change extant storage backend configuration.");
-			}
-			else if(!StorageManagers.contains(newValue)){
-				throw new ConfigurablePropertyException("Cannot modify " + t.getAlias() + " new value is not a valid value.  " +
-						"Legal values are: " + Joiner.on( "," ).join( StorageManagers.list( ) ) );
+				throw new ConfigurablePropertyException("Cannot change extant storage backend configuration. You must deregister all SCs in the partition before you can change the configuration value");
+			} else {
+				//Try to figure out the partition name for the request
+				String probablePartitionName = ((MultiDatabasePropertyEntry)t).getEntrySetName();
+				if(probablePartitionName == null) {
+					throw new ConfigurablePropertyException("Could not determing partition name from property to check validity");
+				}
+				
+				String[] parts = probablePartitionName.split("\\.");
+				if(parts == null || parts.length == 0) {
+					throw new ConfigurablePropertyException("Could not determing partition name from property to check validity: " + probablePartitionName);
+				}
+				probablePartitionName = parts[0];
+				
+				/*Look through the service configurations for each SC in the partition and see if the value is valid.
+				 * This step must work if we don't allow the user to change it once set.
+				 * The difficulty here is if 2 SCs are in an HA pair but have different backends installed (i.e. packages)
+				 * The implemented semantic is that if the proposed value is valid in either SC, then allow the change.
+				*/
+				List<ServiceConfiguration> scConfigs = null;
+				try {
+					scConfigs = ServiceConfigurations.listPartition(Storage.class, probablePartitionName);					
+				} catch(NoSuchElementException e) {
+					throw new ConfigurablePropertyException("No Storage Controller configurations found for partition: " + probablePartitionName);
+				}
+				
+				final String proposedValue = newValue;				
+				final Set<String> validEntries = Sets.newHashSet();				
+				EntityTransaction tx = Entities.get(StorageControllerConfiguration.class);
+				try {
+					if(!Iterables.any(scConfigs, new Predicate<ServiceConfiguration>( ) {
+						@Override
+						public boolean apply(ServiceConfiguration config) {
+							if(config.isVmLocal()) {
+								//Service is local, so add entries to the valid list (in case of HA configs)
+								// and then check the local memory state
+								validEntries.addAll(StorageManagers.list());
+								return StorageManagers.contains(proposedValue);
+							} else {
+								try {
+									//Remote SC, so check the db for the list of valid entries.
+									StorageControllerConfiguration scConfig = Entities.uniqueResult((StorageControllerConfiguration)config);
+									for(String entry : Splitter.on(",").split(scConfig.getAvailableBackends())) {
+										validEntries.add(entry);
+									}									
+									return validEntries.contains(proposedValue);
+								} catch(Exception e) {
+									return false;
+								}
+							}
+						}
+					})) {
+						//Nothing matched.
+						throw new ConfigurablePropertyException("Cannot modify " + t.getQualifiedName() + "." + t.getFieldName() + " new value is not a valid value.  " +				
+								"Legal values are: " + Joiner.on( "," ).join( validEntries) );
+					}
+				} finally {
+					tx.rollback();
+				}
 			}
 		}
 	}
 
 	@PrePersist
 	private void updateRedundantConfig( ) {
+		//Checks to see if other SCs exist in the same partition and uses the same backend config if it exists.
 		if ( this.blockStorageManager == null && this.getPartition( ) != null ) { 
 			for ( ServiceConfiguration s : ServiceConfigurations.listPartition( Storage.class, this.getPartition( ) ) ) {
 				StorageControllerConfiguration otherSc = ( StorageControllerConfiguration ) s;
@@ -202,7 +270,15 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 	  return null;
 	}
 	
-  @EntityUpgrade( entities = { StorageControllerConfiguration.class }, since = Version.v3_2_0, value = Storage.class )
+  public String getAvailableBackends() {
+		return availableBackends;
+	}
+
+	public void setAvailableBackends(String availableBackends) {
+		this.availableBackends = availableBackends;
+	}
+
+	@EntityUpgrade( entities = { StorageControllerConfiguration.class }, since = Version.v3_2_0, value = Storage.class )
   public enum StorageControllerConfigurationUpgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( StorageControllerConfiguration.StorageControllerConfigurationUpgrade.class );
