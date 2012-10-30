@@ -332,11 +332,7 @@
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
-     },
+    }, 
 /**** End of Public Methods ****/
   });
 })(jQuery,

@@ -231,10 +231,6 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
-    },
 /**** End of Public Methods ****/
   });
 })
