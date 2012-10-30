@@ -186,7 +186,7 @@ class InstanceRenderer
 		doc.addValCol((long)entity.getInstanceCnt());
 		doc.addValCol(UnitUtil.convertTime(entity.getDurationMs(), TimeUnit.MS, units.getTimeUnit()));
 		if (entity.getDurationMs()>0) {
-			doc.addValCol(entity.getCpuUtilizationMs()==null?null:((double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));			
+			doc.addValCol(entity.getCpuUtilizationMs()==null?null:(100.0d * (double)entity.getCpuUtilizationMs()/(double)entity.getDurationMs()));	// Percentage, so multiply ratio by 100		
 		} else {
 			doc.addValCol(0d); //Doesn't work if you divide by zero
 		}
