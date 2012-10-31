@@ -49,7 +49,7 @@ public class MemoryCheck {
 		private long pollInterval;
 		private Class <? extends ComponentId> componentIdClass;
 
-		private Set<String> alreadyFaulted = new HashSet<String>();
+		private boolean alreadyFaulted = false;
 
 		public GarbageCollectionChecker(double ratio) {
 			this.ratio = ratio;
@@ -69,7 +69,6 @@ public class MemoryCheck {
 			List<MemoryPoolMXBean> beans = ManagementFactory.getMemoryPoolMXBeans();
 			boolean noOldGenBeans = true;
 			if (null != beans) {
-				boolean alreadyFaulted = false;
 				for (MemoryPoolMXBean bean : beans) {
 					String name = bean.getName();
 					if (!name.contains("Old Gen")) continue;
