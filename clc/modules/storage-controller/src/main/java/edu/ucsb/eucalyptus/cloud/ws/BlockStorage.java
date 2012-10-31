@@ -71,6 +71,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 import javax.persistence.RollbackException;
@@ -180,7 +181,7 @@ public class BlockStorage {
 			checker.startupChecks();
 		}
 	}
-
+	
 	public static void checkPending() {
 		if(checker != null) {
 			StorageProperties.updateWalrusUrl();
@@ -744,17 +745,46 @@ public class BlockStorage {
 				} catch(InterruptedException ex) {
 					throw new EucalyptusCloudException("semaphore could not be acquired");
 				}
-				Boolean shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
-				List<String> returnValues = blockManager.createSnapshot(volumeId, 
-						snapshotId, 
-						shouldTransferSnapshots);
-				semaphore.release();
+				Boolean shouldTransferSnapshots = true;
+				List<String> returnValues = null;
+				
+				try {
+					shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
+					returnValues = blockManager.createSnapshot(volumeId, 
+							snapshotId, 
+							shouldTransferSnapshots);
+				} finally {
+					semaphore.release();
+				}
+				
 				if(shouldTransferSnapshots) {
 					if(returnValues.size() < 2) {
 						throw new EucalyptusCloudException("Unable to transfer snapshot");
 					}
 					snapshotFileName = returnValues.get(0);
-					transferSnapshot(returnValues.get(1));
+					String snapshotSize = returnValues.get(1);
+					int retry = StorageProperties.MAX_SNAP_TRANSFER_RETRIES;
+					boolean transferSuccess = false;
+					//Use a random backoff for retries
+					int backoffTime = 0;
+					Random r = new Random(System.currentTimeMillis());
+					while(!transferSuccess) {
+						try {							
+							transferSnapshot(snapshotSize);
+							transferSuccess = true;
+						} catch(Exception e) {
+							LOG.warn("Transfer failed. Retrying");
+							if(retry > 0) {
+								retry --;			
+								backoffTime = r.nextInt(10);
+								Thread.sleep(backoffTime * 1000);
+							} else {
+								//Use retry counter so that we can include this exception info
+								throw new EucalyptusCloudException("Snapshot transfer failed", e);
+							}
+						}
+					}
+					
 					try {
 						blockManager.finishVolume(snapshotId);
 					} catch(EucalyptusCloudException ex) {
@@ -762,6 +792,7 @@ public class BlockStorage {
 						LOG.error(ex);
 					}
 				}
+				
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				SnapshotInfo snapshotInfo = null;
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
@@ -775,28 +806,31 @@ public class BlockStorage {
 					db.commit();
 				}
 
-				if ( snapshotInfo != null ) try {
-					final int snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
-					final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
-					ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
-							SnapShotEvent.forSnapShotCreate(
-								snapshotSize,
-								volumeUuid,
-								volumeId ),
-							snapshotInfo.getNaturalId(),
-							snapshotInfo.getSnapshotId(),
-							snapshotInfo.getUserName() ) ); // snapshot info user name is user id
-				} catch ( final Throwable e ) {
-					LOG.error( e, e  );
+				if ( snapshotInfo != null ) {
+					try {						
+						final int snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
+						final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
+						ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
+								SnapShotEvent.forSnapShotCreate(
+										snapshotSize,
+										volumeUuid,
+										volumeId ),
+										snapshotInfo.getNaturalId(),
+										snapshotInfo.getSnapshotId(),
+										snapshotInfo.getUserName() ) ); // snapshot info user name is user id
+					} catch ( final Throwable e ) {
+						LOG.error( e, e  );
+					}
 				}
 			} catch(Exception ex) {
-				semaphore.release();
 				try {
+					LOG.error("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt");
 					blockManager.finishVolume(snapshotId);
-				} catch (EucalyptusCloudException e1) {
+				} catch (EucalyptusCloudException e1) {					
+					LOG.error("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt", e1);
 					blockManager.cleanSnapshot(snapshotId);
-					LOG.error(e1);
 				}
+				
 				SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 				EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
 				try {
@@ -821,8 +855,7 @@ public class BlockStorage {
 			try {
 				snapInStream = new FileInputStream(snapshotFile);
 				byte[] bytes = new byte[1024];
-				//Originally this was <=0, empty volume/snapshot would always return 0, so only check for <0
-				if(snapInStream.read(bytes) < 0) {
+				if(snapInStream.read(bytes) <= 0) {
 					throw new EucalyptusCloudException("Unable to read snapshot file: " + snapshotFileName);
 				}				
 			} catch (FileNotFoundException e) {

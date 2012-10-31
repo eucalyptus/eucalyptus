@@ -74,6 +74,7 @@ $DELIMITER = ",";
 
 $ERROR_CAUSE = "iscsiadm";
 $ERROR_MESSAGE = "iSCSI driver not found";
+$UDEVADM = "udevadm";
 
 sub parse_devstring {
   my ($dev_string) = @_;
@@ -180,6 +181,8 @@ sub match_iscsi_session {
 
 sub get_iscsi_device {
   my ($netdev, $ip, $store, $lun) = @_;
+  #Trigger udev explicitly
+  run_cmd(0,0,"$UDEVADM trigger");
   for $session (lookup_session()) {
     if (match_iscsi_session($session, $netdev, $ip, $store)) {
       if ($lun > -1) {
@@ -275,6 +278,7 @@ sub lookup_session {
     } elsif (/.*\s+Lun:\s+(\d+)/) {
       $lun = $1;
     } elsif (/^\s+Attached scsi disk\s+(\S+).*/) {
+    	print STDERR "Disk: $1 -- $_";
       $session->{"$SK_LUN-$lun"} = $1;
     } elsif (/^\s+SID:\s+(\d+)/) {
       $session->{$SK_SID} = $1;
