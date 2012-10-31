@@ -231,8 +231,8 @@
               var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
               if (desc == null) return;
 
-              var fromPort = new Array();
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
+              var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
               var cidr = new Array();
@@ -240,6 +240,7 @@
               var fromUser = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
+                      alert("saving rule : "+thisObj.rulesList[rule].ipaddr);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -273,21 +274,17 @@
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
                               thisObj._getTableWrapper().eucatable('refreshTable');
-//                              $add_dialog.eucadialog("close");
                           }
                           else {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
-//                              $add_dialog.eucadialog("close");
                           }
                       } else {
-//                          $add_dialog.eucadialog("close");
                           notifyError($.i18n.prop('sgroup_add_rule_error', name), getErrorMessage(jqXHR));
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-//                    $add_dialog.eucadialog("close");
                     notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                   }
               });
@@ -408,11 +405,8 @@
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateFormAdd(createButtonId, thisDialog);
       });
-      dialog.eucadialog('validateOnType', '#sgroup-description', function(description) {
-        if (description && description.length>MAX_DESCRIPTION_LEN)
-          return long_description;
-        else
-          return null;
+      dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-description'), createButtonId, function() {
+         thisObj._validateFormAdd(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
@@ -618,7 +612,7 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[name='allow-group']:checked").val() == 'id') {
+        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
         else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
@@ -768,6 +762,7 @@
           if (fromUser[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.UserId=" + fromUser[i];
       }
+      alert("adding rule :"+req_params);
       var sgroupName = groupName;
       dialog.eucadialog("close");
       $.ajax({
@@ -893,7 +888,6 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-console.log(sgroup_dialog_edit_description, firstRow.name);
       thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').attr('title', firstRow.name).text(addEllipsis(firstRow.name, 100)));
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');

@@ -35,15 +35,17 @@
     <location
       message="open iSCSI on ${component}"/>
 
+     <location
+      message="open iSCSI (iscsid) on ${component}"/>
+
     <resolution>
       <message>
-        1) Load all iSCSI kernel modules
+  			1) Ensure all iSCSI kernel modules are loaded (e.g. 'lsmod | grep iscsi' should output at least 'iscsi_tcp')
+  				
+				2) Restart iscsid service (e.g. service iscsid restart).
 
-	2) Restart iscsid service
+	    	3) Run 'iscsiadm -m session -P 1' should say: 'iscsiadm: no active sessions' or display session information.
 
-        3) Run iscsiadm and check the output
-
-	4) Please fix this file!
       </message>
     </resolution>
   </fault>
