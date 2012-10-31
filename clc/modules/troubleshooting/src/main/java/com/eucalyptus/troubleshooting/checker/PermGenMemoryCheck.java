@@ -47,6 +47,7 @@ public class PermGenMemoryCheck {
 		private double ratio;
 		private long pollInterval;
 		private Class <? extends ComponentId> componentIdClass;
+		private boolean alreadyFaulted = false;
 
 		public PermGenMemoryChecker(double ratio) {
 			this.ratio = ratio;
@@ -66,7 +67,6 @@ public class PermGenMemoryCheck {
 			List<MemoryPoolMXBean> beans = ManagementFactory.getMemoryPoolMXBeans();
 			boolean noPermGenBeans = true;
 			if (null != beans) {
-				boolean alreadyFaulted = false;
 				for (MemoryPoolMXBean bean : beans) {
 					String name = bean.getName();
 					if (!name.contains("Perm Gen")) continue;
