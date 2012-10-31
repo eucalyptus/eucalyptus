@@ -611,7 +611,7 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[name='allow-group']:phecked").val() == 'ip') {
+        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
         else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
