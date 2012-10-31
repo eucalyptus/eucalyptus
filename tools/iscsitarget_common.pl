@@ -115,12 +115,12 @@ sub check_and_log_fault {
 }
 
 sub do_exit {
-  $e = shift;
+  my $e = shift;
   exit($e);
 }
 
 sub untaint {
-  $str = shift;
+  my $str = shift;
   if ($str =~ /^([ &:#-\@\w.]+)$/) {
     $str = $1; #data is now untainted
   } else {
@@ -202,7 +202,7 @@ sub get_first_lun {
 sub get_mpath_device {
   %mpaths = lookup_mpath();
   foreach (@_) {
-    $mpathdev = $mpaths{$_};
+    my $mpathdev = $mpaths{$_};
     return $mpathdev if !is_null_or_empty($mpathdev);
   }
 }
@@ -223,7 +223,7 @@ sub get_conf_iface_map {
     chomp;
     if (/^$CONF_IFACES_KEY\s*=\s*\"(.*)\"/) {
       foreach my $pair (split(",", $1)) {
-        ($iface, $netdev) = split("=", $pair);
+        my ($iface, $netdev) = split("=", $pair);
         $iface_map{$iface} = $netdev;
       }
       last;
@@ -248,7 +248,7 @@ sub get_netdev_by_conf {
 
 sub get_iface {
   my ($netdev) = @_;
-  %ifaces = lookup_iface();
+  my %ifaces = lookup_iface();
   return $ifaces{$netdev};
 }
 
