@@ -473,7 +473,7 @@ public class EmpyreanService {
         {
           if ( request.getByPartition( ) != null ) {
             Partitions.exists( request.getByPartition( ) );
-            this.add( Filters.host( request.getByPartition( ) ) );
+            this.add( Filters.partition( request.getByPartition( ) ) );
           }
           if ( request.getByState( ) != null ) {
             final Component.State stateFilter = Component.State.valueOf( request.getByState( ).toUpperCase( ) );
