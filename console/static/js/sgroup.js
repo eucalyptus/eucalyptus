@@ -240,7 +240,6 @@
               var fromUser = new Array();
               for (rule in thisObj.rulesList){
                   if (thisObj.rulesList[rule].isnew == true) {
-                      alert("saving rule : "+thisObj.rulesList[rule].ipaddr);
                       fromPort.push(thisObj.rulesList[rule].from_port);
                       toPort.push(thisObj.rulesList[rule].to_port);
                       protocol.push(thisObj.rulesList[rule].protocol);
@@ -612,7 +611,7 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
+        if (dialog.find("input[name='allow-group']:phecked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
         else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
@@ -762,7 +761,6 @@
           if (fromUser[i])
               req_params += "&IpPermissions."+(i+1)+".Groups.1.UserId=" + fromUser[i];
       }
-      alert("adding rule :"+req_params);
       var sgroupName = groupName;
       dialog.eucadialog("close");
       $.ajax({
