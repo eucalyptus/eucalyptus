@@ -42,7 +42,7 @@ var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
 var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
-var MAX_DESCRIPTION_LEN = 255;
+var MAX_DESCRIPTION_LEN = 243;
 var KEEP_VIEW = 'keep_view';
 
 function isValidIPv4Address(ipaddr) {
