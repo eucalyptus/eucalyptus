@@ -72,11 +72,12 @@ $.fn.dataTableExt.oApi.fnReloadAjax = function ( oSettings, sNewSource, fnCallba
         if ( typeof bStandingRedraw != 'undefined' && bStandingRedraw === true )
         {
             oSettings._iDisplayStart = iStart;
-            that.fnDraw( false );
+            oSettings._bPreserveDisplayStart = true;
+            that.fnDraw(true); 
         }
         else
         {
-            that.fnDraw();
+            that.fnDraw(true);
         }
           
         that.oApi._fnProcessingDisplay( oSettings, false );
