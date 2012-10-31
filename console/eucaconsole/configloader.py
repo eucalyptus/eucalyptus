@@ -4,7 +4,7 @@ import logging
 
 # List of config file locations
 CONFIG_FILE_LIST = ['console.ini',
-                    'server/console.ini',
+                    'eucaconsole/console.ini',
                     '/etc/eucalyptus-console/console.ini']
 
 
