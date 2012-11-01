@@ -64,14 +64,33 @@ import java.io.*;
 import org.apache.tools.ant.DemuxOutputStream;
 import com.google.common.io.Files;
 
-def moduleBasePath = "${project.baseDir}/modules";
-def moduleDirs = new File(moduleBasePath).listFiles( { it.isDirectory() } as FileFilter ).collect{ it.getName() }
-def modulesList = new File("${moduleBasePath}/module-inc.order");
+/*
+ * Implements the following semantics:
+ * The ordering in a module-inc.order or submodule-inc.order file
+ * only guarantees 'builds-after' semantics.
+ * If entry Y is listed after entry X in module-inc.order or
+ * in a submodule-inc.order file then entry Y will be built after
+ * the module X.
+ * 
+ * module-inc.order is processed first and after each entry is added to
+ * the build order list it is checked for a submodule-inc.order file in
+ * the module directory and that file is then processed.
+ * 
+ * It is possible that if duplicate entries exist in the set of 
+ * entries in all submodule-inc.order and module-inc.order files then
+ * a build-after relation could be broken, this is up to the user to
+ * resolve.
+ * 
+ */
+
+moduleBasePath = "${project.baseDir}/modules";
+moduleDirs = new File(moduleBasePath).listFiles( { it.isDirectory() } as FileFilter ).collect{ it.getName() }
+modulesList = new File("${moduleBasePath}/module-inc.order");
 def antTarget=project.properties.antTarget
 def ant = new AntBuilder()
 def modulesBuild = []
 def modulesIgnore = []
-def buildOrder = []
+buildOrder = []
 def doBuild = { module ->
 
 	if ( new File("${moduleBasePath}/${module}/build.xml").exists() ) {
@@ -85,29 +104,34 @@ def doBuild = { module ->
 	}
 }
 
-modulesList.eachLine{
-	if ( it.startsWith("#") ) {
-		moduleDirs.remove(it.substring(1).trim())
+def processModuleEntry(String moduleEntry) {
+	if(moduleEntry.startsWith("#")) {
+		moduleDirs.remove(moduleEntry.substring(1).trim())
+		buildOrder.remove(moduleEntry)
 	} else {
-		moduleDirs.remove(it)
-		buildOrder += it;
-		//Do exactly one level of checks for further ordering in the module dir.
-		def submod = new File("${moduleBasePath}/${it}/module-inc.order");
+		moduleDirs.remove(moduleEntry)
+		buildOrder.remove(moduleEntry)
+		buildOrder += moduleEntry;
+
+		def submod = new File("${moduleBasePath}/${moduleEntry}/submodule-inc.order")
 		if(submod.exists()) {
-			println ( "Processing module-inc.order in module dir ${it}" )
 			submod.eachLine{
-				if( it.startsWith("#") )  {
-					//Exclude
-					moduleDirs.remove(it.substring(1).trim())
-				}
-				else {
-					//Add to build order
-					moduleDirs.remove(it);
-					buildOrder += it;
-				}
+				processModuleEntry( it )
 			}
 		}
 	}
+}
+
+//Process the main module-inc.order list
+modulesList.eachLine{
+	processModuleEntry( it )
+}
+
+def remainingList = []
+remainingList.addAll(moduleDirs)
+
+remainingList.each{
+	processModuleEntry( it )
 }
 
 buildOrder.addAll( moduleDirs )
