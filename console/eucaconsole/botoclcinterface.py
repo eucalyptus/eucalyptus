@@ -19,7 +19,7 @@ class BotoClcInterface(ClcInterface):
                                   port=8773, path='/services/Eucalyptus',
                                   is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2012-03-01'
-        self.conn.http_connection_kwargs['timeout'] = 10
+        self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
         f = open(name, 'w')
