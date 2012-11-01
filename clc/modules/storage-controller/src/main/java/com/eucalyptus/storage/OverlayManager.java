@@ -1572,7 +1572,7 @@ public class OverlayManager implements LogicalStorageManager {
 								exportManager.cleanup(volInfo);
 								volumeManager.finish();
 								volumeManager = new VolumeEntityWrapperManager();
-								LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+								volInfo = volumeManager.getVolumeInfo(volumeId);
 							} catch(EucalyptusCloudException ee) {
 								LOG.error(ee, ee);
 								volumeManager.abort();
