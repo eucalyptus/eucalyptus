@@ -1570,8 +1570,12 @@ public class OverlayManager implements LogicalStorageManager {
 							LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
 							try {
 								exportManager.cleanup(volInfo);
+								volumeManager.finish();
+								volumeManager = new VolumeEntityWrapperManager();
+								LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
 							} catch(EucalyptusCloudException ee) {
 								LOG.error(ee, ee);
+								volumeManager.abort();
 								continue;
 							}
 							String loDevName = foundLVMVolumeInfo.getLoDevName();
@@ -1586,15 +1590,17 @@ public class OverlayManager implements LogicalStorageManager {
 											LOG.info("Detaching loop device: " + loDevName);
 											removeLoopback(loDevName);
 											volInfo.setLoDevName(null);
+											LOG.info("Done cleaning up: " + volumeId);
+											volInfo.setCleanup(false);
+											volumeManager.finish();
 										} catch (EucalyptusCloudException e) {
 											LOG.error(e, e);
+											volumeManager.abort();
 										}
 									} else {
 										LOG.info("Snapshot in progress. Not detaching loop device.");
+										volumeManager.abort();
 									}
-									LOG.info("Done cleaning up: " + volumeId);
-									volInfo.setCleanup(false);
-									volumeManager.finish();
 								}
 							} else {
 								volumeManager.abort();
