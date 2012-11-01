@@ -459,12 +459,15 @@ function errorAndLogout(errorCode){
   $('html body').eucadata('disable');
   $('html body').find(DOM_BINDING['hidden']).login();
   var errorMsg = null;
+  var bError = false;
   if (errorCode === 401 || errorCode === 403)
     errorMsg = $.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>');
-  else
+  else{
     errorMsg = $.i18n.prop('connection_failure', '<a href="#">'+cloud_admin+'</a>');
+    bError = true;
+  }
 
-  $('html body').find(DOM_BINDING['hidden']).login('popupError', errorMsg, function(){
+  $('html body').find(DOM_BINDING['hidden']).login('popupDialog', bError, errorMsg, function(){
     logout();
   });
 }
