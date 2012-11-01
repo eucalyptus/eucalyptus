@@ -242,7 +242,8 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       RunInstancesType request = allocInfo.getRequest( );
-      String clusterName = allocInfo.getPartition( ).getName( );
+      Partition reqPartition = allocInfo.getPartition();
+      String clusterName = reqPartition.getName( );
       String vmTypeName = allocInfo.getVmType( ).getName( );
       
       /* Validate min and max amount */
@@ -252,9 +253,7 @@ public class AdmissionControl {
     	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
       
       Context ctx = Contexts.lookup( );
-      String zoneName = ( clusterName != null )
-        ? clusterName
-        : "default";
+      String zoneName = clusterName;
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
       int remaining = maxAmount;
       int available = 0;
@@ -275,22 +274,25 @@ public class AdmissionControl {
                 throw new NotEnoughResourcesException( "Not enough resources: Cannot run EBS instances in partition w/o a storage controller: " + ex.getMessage( ), ex );
               }
             }
+            
             try {
               int tryAmount = ( remaining > state.getAvailability( vmTypeName ).getAvailable( ) )
                 ? state.getAvailability( vmTypeName ).getAvailable( )
                 : remaining;
               
+              allocInfo.setPartition( partition );
               List<ResourceToken> tokens = this.requestResourceToken( allocInfo, tryAmount, maxAmount );
               remaining -= tokens.size( );
-              allocInfo.setPartition( partition );
             } catch ( Exception t ) {
               LOG.error( t );
               Logs.extreme( ).error( t, t );
               /* if we still have some allocation remaining AND no more resources are available */
               if ( ( ( available = checkAvailability( vmTypeName, authorizedClusters ) ) < remaining ) && ( remaining > 0 ) ) {
                 allocInfo.abort( );
+                allocInfo.setPartition( reqPartition );
                 throw new NotEnoughResourcesException( "Not enough resources (" + available + " in " + zoneName + " < " + minAmount + "): vm instances.", t );
               } else {
+                allocInfo.setPartition( reqPartition );
                 throw new NotEnoughResourcesException( t.getMessage(), t );
               }
             }
@@ -310,7 +312,7 @@ public class AdmissionControl {
     }
     
     private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName ) throws NotEnoughResourcesException {
-      if ( "default".equals( partitionName ) ) {
+      if ( Partition.DEFAULT_NAME.equals( partitionName ) ) {
         Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivileged( ) );
         Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
         for ( Cluster c : authorizedClusters ) {
