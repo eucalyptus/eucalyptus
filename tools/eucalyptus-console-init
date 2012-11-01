@@ -73,14 +73,14 @@ generate_cert() {
     local org="Eucalyptus Systems, Inc."
     local unit="Eucalyptus User Console"
 
-    if ! openssl genrsa -out $key &>/dev/null; then
+    if ! openssl genpkey -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -out $key &>/dev/null; then
         rm -f $csr
         failure $"Generating RSA key"
         echo
         exit 1
     fi
 
-    openssl req -new -key $key -out $csr &>/dev/null <<EOF
+    openssl req -new -key $key -sha512 -out $csr &>/dev/null <<EOF
 $country
 $state
 $location
@@ -99,7 +99,7 @@ EOF
         exit 1
     fi
 
-    if ! openssl x509 -req -in $csr -signkey $key -days 3650 -out $cert &>/dev/null; then
+    if ! openssl x509 -req -in $csr -signkey $key -days 365 -sha512 -out $cert &>/dev/null; then
         rm -f $key $csr
         failure $"Generating certificate"
         echo

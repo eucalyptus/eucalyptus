@@ -1,14 +1,9 @@
 /**
-*  3-5-2012 NSC
+*  Base64 encode / decode
+*  http://www.webtoolkit.info/
 *
-*  The jQuery base64 plugins I found out there didn't play nicely with characters > 255.
-*  The one from webtoolkit did, but it's just javascript.
-*
-*  So, this is that code, simply made into a jQuery plugin.
-*
-*  Sources:
-*  http://www.webtoolkit.info/javascript-base64.html
-*
+*  Source:  http://www.webtoolkit.info/javascript-base64.html
+*  Copyright: http://www.webtoolkit.info/license
 **/
 
 jQuery.base64 = {
