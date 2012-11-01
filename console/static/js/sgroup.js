@@ -231,8 +231,8 @@
               var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
               if (desc == null) return;
 
-              var fromPort = new Array();
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
+              var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
               var cidr = new Array();
@@ -273,21 +273,17 @@
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
                               thisObj._getTableWrapper().eucatable('refreshTable');
-//                              $add_dialog.eucadialog("close");
                           }
                           else {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
-//                              $add_dialog.eucadialog("close");
                           }
                       } else {
-//                          $add_dialog.eucadialog("close");
                           notifyError($.i18n.prop('sgroup_add_rule_error', name), getErrorMessage(jqXHR));
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-//                    $add_dialog.eucadialog("close");
                     notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                   }
               });
@@ -408,11 +404,8 @@
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateFormAdd(createButtonId, thisDialog);
       });
-      dialog.eucadialog('validateOnType', '#sgroup-description', function(description) {
-        if (description && description.length>MAX_DESCRIPTION_LEN)
-          return long_description;
-        else
-          return null;
+      dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-description'), createButtonId, function() {
+         thisObj._validateFormAdd(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
@@ -551,7 +544,7 @@
             if (allow_ip == "") {
               enable = false;
             }
-            else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([1-9]|[1-3][0-9])$/.test(allow_ip))
+            else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
               dialog.find('#allow-ip-error').html("");
             else {
               dialog.find('#allow-ip-error').html(sgroup_error_address_range);
@@ -618,7 +611,7 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[name='allow-group']:checked").val() == 'id') {
+        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
         else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
@@ -893,11 +886,10 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-console.log(sgroup_dialog_edit_description, firstRow.name);
-      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').attr('title', firstRow.name).text(addEllipsis(firstRow.name, 100)));
+      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').attr('title', firstRow.name).text(addEllipsis(firstRow.name, 70)));
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').attr('title', firstRow.description).text(addEllipsis(firstRow.description, 100)));
+      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').attr('title', firstRow.description).text(addEllipsis(firstRow.description, 70)));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');

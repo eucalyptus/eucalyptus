@@ -3,7 +3,7 @@ import ConfigParser
 import logging
 import json
 import tornado.web
-import server
+import eucaconsole
 import socket
 import time
 from M2Crypto import RSA
@@ -18,7 +18,7 @@ from .mockclcinterface import MockClcInterface
 from .response import ClcError
 from .response import Response
 
-class ComputeHandler(server.BaseHandler):
+class ComputeHandler(eucaconsole.BaseHandler):
 
     def __normalize_instances__(self, instances):
         ret = []
@@ -366,12 +366,12 @@ class ComputeHandler(server.BaseHandler):
             if self.should_use_mock():
                 self.user_session.clc = MockClcInterface()
             else:
-                self.user_session.clc = BotoClcInterface(server.config.get('server', 'clchost'),
+                self.user_session.clc = BotoClcInterface(eucaconsole.config.get('server', 'clchost'),
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config)
 
         self.user_session.session_lifetime_requests += 1
 
@@ -403,8 +403,8 @@ class ComputeHandler(server.BaseHandler):
             ret = Response(ret) # wrap all responses in an object for security purposes
             data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
             try:
-                if(server.config.get('test','apidelay')):
-                    time.sleep(int(server.config.get('test','apidelay'))/1000.0);
+                if(eucaconsole.config.get('test','apidelay')):
+                    time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
             except ConfigParser.NoOptionError:
                 pass
             self.set_header("Content-Type", "application/json;charset=UTF-8")
@@ -435,12 +435,12 @@ class ComputeHandler(server.BaseHandler):
             if self.should_use_mock():
                 self.user_session.clc = MockClcInterface()
             else:
-                self.user_session.clc = BotoClcInterface(server.config.get('server', 'clchost'),
+                self.user_session.clc = BotoClcInterface(eucaconsole.config.get('server', 'clchost'),
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.clc = CachingClcInterface(self.user_session.clc, server.config)
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config)
 
         self.user_session.session_lifetime_requests += 1
 
@@ -497,8 +497,8 @@ class ComputeHandler(server.BaseHandler):
             ret = Response(ret) # wrap all responses in an object for security purposes
             data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
             try:
-                if(server.config.get('test','apidelay')):
-                    time.sleep(int(server.config.get('test','apidelay'))/1000.0);
+                if(eucaconsole.config.get('test','apidelay')):
+                    time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
             except ConfigParser.NoOptionError:
                 pass
             self.set_header("Content-Type", "application/json;charset=UTF-8")

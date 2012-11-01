@@ -2,4 +2,4 @@
 
 export PYTHONPATH=`pwd`
 
-python -tt euca-console-server -c ./server/console.ini
+python -tt euca-console-server -c ./eucaconsole/console.ini

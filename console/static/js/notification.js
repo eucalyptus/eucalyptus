@@ -90,7 +90,7 @@
              });
              thisObj.element.find('#euca-notification-desc').append(
                $('<div>').addClass('euca-notification-error').append(
-                 $('<textarea>').attr('id','euca-notification-error-list').attr('disabled','true').html(errorMsg)));
+                 $('<textarea>').attr('id','euca-notification-error-list').attr('readonly','true').html(errorMsg)));
            }else
              thisObj.element.find('#euca-notification-desc .euca-notification-error').detach();
          });

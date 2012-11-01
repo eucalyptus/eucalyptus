@@ -4352,7 +4352,11 @@
 			$(oSettings.oInstance).trigger('filter', oSettings);
 			
 			/* Redraw the table */
-			oSettings._iDisplayStart = 0;
+                        if(typeof oSettings._bPreserveDisplayStart == undefined || oSettings._bPreserveDisplayStart ===false)
+			   oSettings._iDisplayStart = 0;
+                        else
+                           oSettings._bPreserveDisplayStart = false;
+
 			_fnCalculateEnd( oSettings );
 			_fnDraw( oSettings );
 			

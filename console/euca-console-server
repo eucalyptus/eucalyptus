@@ -11,9 +11,9 @@ import time
 import ConfigParser
 import tornado.httpserver
 import tornado.ioloop
-import server
-from server import api
-from server.configloader import ConfigLoader
+import eucaconsole
+from eucaconsole import api
+from eucaconsole.configloader import ConfigLoader
 
 PIDFILE = "/var/run/eucalyptus-console.pid"
 
@@ -67,12 +67,12 @@ def cleanpid(signum=None, action=None):
 
 def sessionChecker():
     now = time.time()
-    idle = server.config.getint('server', 'session.idle.timeout')
-    absolute = server.config.getint('server', 'session.abs.timeout')
+    idle = eucaconsole.config.getint('server', 'session.idle.timeout')
+    absolute = eucaconsole.config.getint('server', 'session.abs.timeout')
     expired = [];
     # collect ids that expired (because we can't modify the dictionary we're iterating through)
-    for session_id in server.sessions:
-        session = server.sessions[session_id]
+    for session_id in eucaconsole.sessions:
+        session = eucaconsole.sessions[session_id]
         if (now - session.session_start) > absolute:
             expired.append(session_id)
         elif (now - session.session_last_used) > idle:
@@ -80,7 +80,7 @@ def sessionChecker():
 
     # now, actually expire the sessions we flagged
     for id in expired:
-        server.terminateSession(id, expired=True)
+        eucaconsole.terminateSession(id, expired=True)
 
 
 def start_console():
@@ -98,21 +98,21 @@ def start_console():
     # When staticpath is in the config we will assume that it is
     # not a relative path
     try:
-        webroot = server.config.get('paths', 'staticpath')
+        webroot = eucaconsole.config.get('paths', 'staticpath')
     except ConfigParser.Error:
         pass
 
-    if server.config.has_option('server', 'cookie.secret'):
-        settings['cookie_secret'] = server.config.get('server', 'cookie.secret')
+    if eucaconsole.config.has_option('server', 'cookie.secret'):
+        settings['cookie_secret'] = eucaconsole.config.get('server', 'cookie.secret')
 
-    if server.config.has_option('server', 'sslcert'):
-        ssl_settings['certfile'] = server.config.get('server', 'sslcert')
+    if eucaconsole.config.has_option('server', 'sslcert'):
+        ssl_settings['certfile'] = eucaconsole.config.get('server', 'sslcert')
 
-    if server.config.has_option('server', 'sslkey'):
-        ssl_settings['keyfile'] = server.config.get('server', 'sslkey')
+    if eucaconsole.config.has_option('server', 'sslkey'):
+        ssl_settings['keyfile'] = eucaconsole.config.get('server', 'sslkey')
 
-    if server.config.has_option('server', 'uiport'):
-        server_port = server.config.getint('server', 'uiport')
+    if eucaconsole.config.has_option('server', 'uiport'):
+        server_port = eucaconsole.config.getint('server', 'uiport')
 
     application = tornado.web.Application([
             (r"/(favicon\.ico)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'images')}),
@@ -124,12 +124,12 @@ def start_console():
             (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'help')}),
             (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
             (r"/ec2", api.ComputeHandler),
-            (r"/checkip", server.CheckIpHandler),
-            (r"/(.*)", server.RootHandler),
+            (r"/checkip", eucaconsole.CheckIpHandler),
+            (r"/(.*)", eucaconsole.RootHandler),
         ], **settings)
 
     if len(ssl_settings.keys()) > 0:    # we're using ssl
-        server.using_ssl = True
+        eucaconsole.using_ssl = True
         httpserver = tornado.httpserver.HTTPServer(application,
             ssl_options=ssl_settings)
         httpserver.listen(server_port)
@@ -169,9 +169,9 @@ if __name__ == "__main__":
         usage()
 
     if config_file:
-        server.config = ConfigLoader().getParser(config_file)
+        eucaconsole.config = ConfigLoader().getParser(config_file)
     else:
-        server.config = ConfigLoader().getParser()
+        eucaconsole.config = ConfigLoader().getParser()
 
     if daemon:
         daemonize(start_console)

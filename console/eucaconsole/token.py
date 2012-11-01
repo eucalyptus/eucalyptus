@@ -8,7 +8,7 @@ import urllib2
 import xml.sax
 
 from boto.sts.credentials import Credentials
-import server
+import eucaconsole
 
 class TokenAuthenticator(object):
 
@@ -39,7 +39,7 @@ class TokenAuthenticator(object):
             traceback.print_exc(file=sys.stdout)
             if not(issubclass(err.__class__, urllib2.HTTPError)):
                 if isinstance(err.reason, socket.timeout):
-                    raise server.EuiException(504, 'Timed out')
-            raise server.EuiException(401, 'Not Authorized')
+                    raise eucaconsole.EuiException(504, 'Timed out')
+            raise eucaconsole.EuiException(401, 'Not Authorized')
 
 
