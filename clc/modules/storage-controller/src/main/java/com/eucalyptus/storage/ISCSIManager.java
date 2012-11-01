@@ -323,20 +323,65 @@ public class ISCSIManager implements StorageExportManager {
 			}
 		} catch(EucalyptusCloudException ex) {
 			// Windows iscsi initiator requires the password length to be 12-16 bytes
-			String password = Hashes.getRandom(16);
-			password = password.substring(0,16);
-			try {
-				addUser("eucalyptus", password);
-			} catch (EucalyptusCloudException e1) {
-				LOG.error(e1);
-				dbUser.rollback();
-				return;
+			// String password = Hashes.getRandom(16);
+			// password = password.substring(0,16);
+			// try {
+			//	addUser("eucalyptus", password);
+			// } catch (EucalyptusCloudException e1) {
+			//	LOG.error(e1);
+			//	dbUser.rollback();
+			//	return;
+			// }
+			// CHAPUserInfo userInfo;
+			// try {
+			//	userInfo = new CHAPUserInfo("eucalyptus", BlockStorageUtil.encryptSCTargetPassword(password));
+			//	dbUser.add(userInfo);
+			// } catch (EucalyptusCloudException e) {
+			//	LOG.error(e);
+			// }
+			
+			boolean addUser = true;
+			String encryptedPassword = null; 
+			
+			if (checkUser("eucalyptus"))
+			{
+				try {
+					LOG.debug("No DB record found for chapuser although a eucalyptus account exists on SC. Looking for all records with chapuser eucalyptus");
+					CHAPUserInfo uesrInfo = new CHAPUserInfo("eucalyptus");
+					uesrInfo.setScName(null);
+					CHAPUserInfo currentUserInfo = dbUser.getUnique(uesrInfo);
+					if (null != currentUserInfo && null != currentUserInfo.getEncryptedPassword()) {
+						LOG.debug("Found a DB record, copying the password to the new record");
+						addUser = false;
+						encryptedPassword = currentUserInfo.getEncryptedPassword();
+					}
+				} catch (Exception e1) {
+					LOG.debug("No old DB records found. The only way is to delete the chapuser and create a fresh account");
+					try {
+						deleteUser("eucalyptus");
+					} catch (Exception e) {
+						LOG.error("Failed to delete chapuser", e);
+					}
+				}
+			} 
+			
+			if (addUser) {
+				// Windows iscsi initiator requires the password length to be 12-16 bytes
+				String password = Hashes.getRandom(16);
+				password = password.substring(0,16);
+				try {
+					addUser("eucalyptus", password);
+					encryptedPassword = BlockStorageUtil.encryptSCTargetPassword(password);
+				} catch (Exception e) {
+					LOG.error("Failed to add chapuser to SC", e);
+					return;
+				}
 			}
-			CHAPUserInfo userInfo;
-			try {
-				userInfo = new CHAPUserInfo("eucalyptus", BlockStorageUtil.encryptSCTargetPassword(password));
-				dbUser.add(userInfo);
-			} catch (EucalyptusCloudException e) {
+			
+			try{
+				dbUser.add(new CHAPUserInfo("eucalyptus", encryptedPassword));
+			} catch (Exception e) {
+				dbUser.rollback();
 				LOG.error(e);
 			}
 		} finally {
