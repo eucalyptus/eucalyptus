@@ -856,7 +856,47 @@
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'number', inst_num);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'keypair', keyname);
       $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'sgroup', sgroup);
-      
+     
+      var deviceMap = [] 
+      thisObj.launchMoreDialog.find('#launch-wizard-advanced-storage').find('table tbody tr').each(function(){
+        var $selectedRow = $(this);
+        var $cells = $selectedRow.find('td');
+        var volume = $($cells[0]).find('select').val();
+        var mapping = '/dev/'+asText($($cells[1]).find('input').val());
+        var snapshot = $($cells[2]).find('select').val();
+        var size = asText($($cells[3]).find('input').val()); 
+        var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
+        
+        snapshot = (snapshot ==='none') ? null : snapshot; 
+        if(volume ==='ebs'){
+          var mapping = {
+            'volume':'ebs',
+            'dev':mapping,
+            'snapshot':snapshot, 
+            'size':size,
+            'delOnTerm':delOnTerm
+          };
+          deviceMap.push(mapping);
+      $('html body').find(DOM_BINDING['hidden']).launcher('launch');
+        }else if(volume.indexOf('ephemeral')>=0){
+          var mapping = {
+            'volume':volume,
+            'dev':mapping
+          }
+          deviceMap.push(mapping);
+        }else if(snapshot !== 'none') { // root volume
+          var mapping = {
+            'volume':'ebs',
+            'dev': mapping,
+            'snapshot':snapshot,
+            'size':size,
+            'delOnTerm':delOnTerm
+          }
+          deviceMap.push(mapping);
+        }
+      });
+      if(deviceMap.length > 0)
+        $('html body').find(DOM_BINDING['hidden']).launcher('updateLaunchParam', 'device_map', deviceMap);
       $('html body').find(DOM_BINDING['hidden']).launcher('launch');
     },
     _initLaunchMoreDialog : function(){
@@ -961,6 +1001,7 @@
       if (advHeader)
         $(advHeader).detach();
       $('html body').find(DOM_BINDING['hidden']).launcher('makeAdvancedSection', $advanced);
+      $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
     _expandCallback : function(row){
       var thisObj = this;
