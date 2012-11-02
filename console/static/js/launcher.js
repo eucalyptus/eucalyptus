@@ -1129,22 +1129,6 @@
         return $tr;
       } /// end of addNewRow()
 
-      $storage.children().detach();
-      $storage.append(
-        $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
-        $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
-          $('<table>').addClass('device-map-table').append(
-            $('<thead>').append(
-              $('<tr>').append(
-                $('<th>').text(launch_instance_advanced_th_volume),
-                  $('<th>').text(launch_instance_advanced_th_mapping),
-                  $('<th>').text(launch_instance_advanced_th_create),
-                  $('<th>').text(launch_instance_advanced_th_size),
-                  $('<th>').text(launch_instance_advanced_th_delete)/*,
-                  $('<th>').text(''),
-                  $('<th>').text('') */
-          )
-        ), $('<tbody>'))));
       $section.find('#launch-wizard-image-emi').change(function(e){
         var isEbsBacked = false;
         var snapshotId= null;
@@ -1158,6 +1142,22 @@
           }
         }
         if(isEbsBacked && snapshotId){
+          $storage.children().detach();
+          $storage.append(
+            $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
+            $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
+              $('<table>').addClass('device-map-table').append(
+                $('<thead>').append(
+                  $('<tr>').append(
+                    $('<th>').text(launch_instance_advanced_th_volume),
+                    $('<th>').text(launch_instance_advanced_th_mapping),
+                    $('<th>').text(launch_instance_advanced_th_create),
+                    $('<th>').text(launch_instance_advanced_th_size),
+                    $('<th>').text(launch_instance_advanced_th_delete)/*,
+                    $('<th>').text(''),
+                    $('<th>').text('') */
+            )
+            ), $('<tbody>'))));
           var $tbody = $storage.find('table tbody');
           var $tr = null;
           var snapshot = describe('snapshot', snapshotId);
