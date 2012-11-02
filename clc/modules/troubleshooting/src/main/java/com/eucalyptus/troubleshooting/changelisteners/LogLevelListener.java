@@ -51,12 +51,6 @@ public class LogLevelListener implements PropertyChangeListener {
 			LoggingResetter.resetLoggingWithXML();
 			//triggerDBFault();
 		}
-		LOG.fatal("test level FATAL");
-		LOG.error("test level ERROR");
-		LOG.warn("test level WARN");
-		LOG.info("test level INFO");
-		LOG.debug("test level DEBUG");
-		LOG.trace("test level TRACE");
 	}
 	private static void triggerDBFault() {
 		try {
