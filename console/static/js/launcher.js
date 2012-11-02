@@ -1186,7 +1186,7 @@
         var data = $section.find('#launch-wizard-advanced-input-userdata');
         if(data.val().length > 0){
           dataAdded = true;
-          thisObj.launchParam['data'] = asText(data.val());
+          thisObj.launchParam['data'] = toBase64(asText(data.val()));
         }
         if($userdata.find('#launch-wizard-advanced-input-userfile').val().length > 0){
           dataAdded = true;

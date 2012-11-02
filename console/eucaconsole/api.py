@@ -75,6 +75,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             user_data = user_data_file
         else:
             user_data = self.get_argument('UserData', None)
+            user_data = base64.b64decode(user_data)
         addr_type = self.get_argument('AddressingType', None)
         vm_type = self.get_argument('InstanceType', None)
         placement = self.get_argument('Placement.AvailabilityZone', None)
@@ -246,7 +247,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
             desc = self.get_argument('GroupDescription')
-            return clc.create_security_group(name, desc)
+            description = base64.b64decode(desc)
+            return clc.create_security_group(name, description)
         elif action == 'DeleteSecurityGroup':
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)

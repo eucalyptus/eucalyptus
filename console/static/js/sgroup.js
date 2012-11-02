@@ -228,7 +228,7 @@
               var name = $add_dialog.eucadialog("get_validate_value", "sgroup-name",
                                                 SGROUP_NAME_PATTERN, alphanum_warning);
               if (name == null) return;
-              var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
+              var desc = toBase64($add_dialog.eucadialog("getValue", "#sgroup-description"));
               if (desc == null) return;
 
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
