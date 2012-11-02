@@ -117,6 +117,9 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @Column( name = "config_partition_node_kp" )
   private String        pemNodePrivateKey;
   
+  public static final String     DEFAULT_NAME = "default";
+  public static final Partition  DEFAULT = new Partition(DEFAULT_NAME);
+  
   public Partition( ) {}
   
   private Partition( String name ) {
@@ -305,7 +308,11 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
+    if( this.name.equals(Partition.DEFAULT_NAME) ) {
+	    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( ":nc-cert-serial=" );
+    } else {
+	    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
+    }
     return builder.toString( );
   }
   
