@@ -103,7 +103,7 @@ class VolumeSnapshotRenderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Volume Id").addValCol("Snapshot Id").addValCol("# Snap")
-        	.addValCol("Size (" + units.labelForSize() + ")").addValCol(units.labelForTimeSize());
+        	.addValCol("Size (" + units.labelForSize() + ")").addValCol(units.labelForSizeTime());
         for(String zoneName : report.getZones().keySet()) {
         	AvailabilityZoneArtEntity zone = report.getZones().get(zoneName);
             doc.newRow().addLabelCol(0, "Zone: " + zoneName).addValCol("cumul.").addValCol("cumul.");

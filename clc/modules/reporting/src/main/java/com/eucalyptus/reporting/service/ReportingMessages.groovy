@@ -93,6 +93,10 @@ class GenerateReportType extends ReportingMessage {
   String endDate
   String type
   String format
+  String timeUnit
+  String sizeUnit
+  String sizeTimeTimeUnit
+  String sizeTimeSizeUnit
 }
 
 class GenerateReportResponseType extends ReportingMessage  {

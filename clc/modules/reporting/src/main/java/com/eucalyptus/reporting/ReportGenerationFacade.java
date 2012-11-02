@@ -21,6 +21,8 @@ package com.eucalyptus.reporting;
 
 import java.io.ByteArrayOutputStream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.eucalyptus.reporting.units.Units;
 import com.google.common.base.Charsets;
 
 /**
@@ -28,44 +30,52 @@ import com.google.common.base.Charsets;
  */
 public class ReportGenerationFacade {
 
-    public static String generateReport( @Nonnull  final String type,
+  public static String generateReport( @Nonnull  final String type,
+                                       @Nonnull  final String format,
+                                       final long start,
+                                       final long end ) throws ReportGenerationException {
+    return generateReport( type, format, null, start, end );
+  }
+
+  public static String generateReport( @Nonnull  final String type,
                                          @Nonnull  final String format,
+                                         @Nullable final Units units,
                                                    final long start,
                                                    final long end ) throws ReportGenerationException {
-      final long maxEndTime = System.currentTimeMillis();
-      final long adjustedEndTime = end > maxEndTime ? maxEndTime : end;
-      if ( start >= adjustedEndTime ) {
-        throw new ReportGenerationArgumentException( "Invalid report period" );
-      }
-
-      final ReportGenerator generator = ReportGenerator.getInstance();
-      final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
-      try {
-        generator.generateReport(
-            new Period( start, adjustedEndTime ),
-            ReportFormat.valueOf(format.toUpperCase()),
-            ReportType.valueOf(type.toUpperCase().replace('-','_')),
-            null,
-            reportOutput );
-      } catch ( final Exception e ) {
-        throw new ReportGenerationException( "Error generating report", e );
-      }
-
-      return new String( reportOutput.toByteArray(), Charsets.UTF_8 );
+    final long maxEndTime = System.currentTimeMillis();
+    final long adjustedEndTime = end > maxEndTime ? maxEndTime : end;
+    if ( start >= adjustedEndTime ) {
+      throw new ReportGenerationArgumentException( "Invalid report period" );
     }
 
-    public static class ReportGenerationException extends Exception {
-      private static final long serialVersionUID = 1L;
-
-      public ReportGenerationException( final String message ) {
-        super(message);
-      }
-
-      public ReportGenerationException( final String message,
-                                        final Throwable cause ) {
-        super(message, cause);
-      }
+    final ReportGenerator generator = ReportGenerator.getInstance();
+    final ByteArrayOutputStream reportOutput = new ByteArrayOutputStream(10240);
+    try {
+      generator.generateReport(
+          new Period( start, adjustedEndTime ),
+          ReportFormat.valueOf(format.toUpperCase()),
+          ReportType.valueOf(type.toUpperCase().replace('-','_')),
+          units,
+          reportOutput );
+    } catch ( final Exception e ) {
+      throw new ReportGenerationException( "Error generating report", e );
     }
+
+    return new String( reportOutput.toByteArray(), Charsets.UTF_8 );
+  }
+
+  public static class ReportGenerationException extends Exception {
+    private static final long serialVersionUID = 1L;
+
+    public ReportGenerationException( final String message ) {
+      super(message);
+    }
+
+    public ReportGenerationException( final String message,
+                                      final Throwable cause ) {
+      super(message, cause);
+    }
+  }
 
   public static final class ReportGenerationArgumentException extends ReportGenerationException {
     private static final long serialVersionUID = 1L;
