@@ -666,7 +666,7 @@
         }
         var sortedArr = sortArray(keyNameArr);
         $.each(sortedArr, function(idx, kpName){
-          var $option = $('<option>').attr('value', kpName).text(kpName);
+          var $option = $('<option>').attr('value', kpName).attr('title', kpName).text(addEllipsis(kpName, 70));
           if(oldKeypairs && $.inArray(kpName, oldKeypairs) < 0){
             $option.attr('selected', 'selected'); 
           }
@@ -751,7 +751,7 @@
         }
         var sortedArr = sortArray(sgNameArr);
         $.each(sortedArr, function(idx, sgName){
-          var $option = $('<option>').attr('value',sgName).text(sgName);
+          var $option = $('<option>').attr('value',sgName).attr('title',sgName).text(addEllipsis(sgName, 70));
           if(oldGroups && $.inArray(sgName, oldGroups) < 0){
             $option.attr('selected','selected');
             onSelectorChange(sgName);
