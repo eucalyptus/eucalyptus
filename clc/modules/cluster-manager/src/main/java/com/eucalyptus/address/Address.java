@@ -253,12 +253,12 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   }
   
   private boolean transition( State expectedState, State newState, boolean expectedMark, boolean newMark, SplitTransition transition ) {
-    this.transition = transition;
     if ( !this.atomicState.compareAndSet( expectedState, newState, expectedMark, newMark ) ) {
       throw new IllegalStateException( String.format( "Cannot mark address as %s[%s.%s->%s.%s] when it is %s.%s: %s", transition.getName( ), expectedState,
                                                       expectedMark, newState, newMark, this.atomicState.getReference( ), this.atomicState.isMarked( ),
                                                       this.toString( ) ) );
     }
+    this.transition = transition;
     EventRecord.caller( this.getClass( ), EventType.ADDRESS_STATE, "TOP", this.toString( ) ).info( );
     try {
       this.transition.top( );
