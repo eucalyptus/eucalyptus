@@ -41,7 +41,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
                     ret.append(inst)
         return ret
 
-    def get_argument_list(self, name, name_suffix=None, another_suffix=None):
+    def get_argument_list(self, name, name_suffix=None, another_suffix=None, size=None):
         ret = []
         index = 1
         index2 = 1
@@ -55,7 +55,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             val = self.get_argument(pattern % (index, index2), None)
         else:
             val = self.get_argument(pattern % (index), None)
-        while val:
+        while (index < (size+1)) if size else val:
             ret.append(val)
             index = index + 1
             if another_suffix:
@@ -255,12 +255,13 @@ class ComputeHandler(eucaconsole.BaseHandler):
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)
             ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
+            numRules = len(ip_protocol)
             from_port = self.get_argument_list('IpPermissions', 'FromPort')
             to_port = self.get_argument_list('IpPermissions', 'ToPort')
-            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
-            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
-            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
-            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
+            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName', numRules)
+            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId', numRules)
+            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId', numRules)
+            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp', numRules)
             ret = False
             for i in range(len(ip_protocol)):
                 ret = clc.authorize_security_group(name,
@@ -274,12 +275,13 @@ class ComputeHandler(eucaconsole.BaseHandler):
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)
             ip_protocol = self.get_argument_list('IpPermissions', 'IpProtocol')
+            numRules = len(ip_protocol)
             from_port = self.get_argument_list('IpPermissions', 'FromPort')
             to_port = self.get_argument_list('IpPermissions', 'ToPort')
-            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName')
-            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId')
-            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId')
-            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp')
+            src_security_group_name = self.get_argument_list('IpPermissions', 'Groups', 'GroupName', numRules)
+            src_security_group_owner_id = self.get_argument_list('IpPermissions', 'Groups', 'UserId', numRules)
+            src_security_group_group_id = self.get_argument_list('IpPermissions', 'Groups', 'GroupId', numRules)
+            cidr_ip = self.get_argument_list('IpPermissions', 'IpRanges', 'CidrIp', numRules)
             ret = False
             for i in range(len(ip_protocol)):
                 ret = clc.revoke_security_group(name,
