@@ -160,4 +160,16 @@ public class AbstractPersistent implements Serializable, HasNaturalId {
   public long lastUpdateMillis( ) {
     return System.currentTimeMillis( ) - ( this.getLastUpdateTimestamp( ) != null ? this.getLastUpdateTimestamp( ).getTime( ) : 0L );
   }
+
+  /**
+   * Clear low level persistent state.
+   *
+   * This useful for entities that may later be persisted with a new identity.
+   */
+  protected void resetPersistence() {
+    this.id = null;
+    this.version = null;
+    this.lastUpdateTimestamp = null;
+    this.creationTimestamp = null;
+  }
 }

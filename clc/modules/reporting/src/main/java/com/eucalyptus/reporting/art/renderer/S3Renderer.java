@@ -102,7 +102,7 @@ class S3Renderer
         doc.tableOpen();
 
         doc.newRow().addValCol("Bucket").addValCol("# Objects")
-        	.addValCol("Total Size (" + units.labelForSize() + ")").addValCol( "Obj " + units.labelForTimeSize() );
+        	.addValCol("Total Size (" + units.labelForSize() + ")").addValCol( "Obj " + units.labelForSizeTime() );
         for (String accountName: report.getAccounts().keySet()) {
         	AccountArtEntity account = report.getAccounts().get(accountName);
         	doc.newRow().addLabelCol(0, "Account: " + accountName).addValCol("cumul.");
@@ -128,7 +128,7 @@ class S3Renderer
 		throws IOException
 	{
 		doc.addValCol(entity.getObjectsNum());
-		doc.addValCol(UnitUtil.convertSize(entity.getSize(), SizeUnit.BYTES, units.getSizeUnit()));
+		doc.addValCol(UnitUtil.convertSize(entity.getSize(), SizeUnit.B, units.getSizeUnit()));
 		doc.addValCol(UnitUtil.convertSizeTime(entity.getGBSecs(), SizeUnit.GB,
 				units.getSizeUnit(), TimeUnit.SECS, units.getTimeUnit()));
 		return doc;

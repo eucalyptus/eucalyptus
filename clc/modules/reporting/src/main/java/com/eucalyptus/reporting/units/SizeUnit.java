@@ -62,23 +62,49 @@
 
 package com.eucalyptus.reporting.units;
 
+import java.util.List;
+import com.google.common.collect.ImmutableList;
+
 public enum SizeUnit
 {
-	BYTES(1L),
-	KB(1L<<10),
-	MB(1L<<20),
-	GB(1L<<30),
-	TB(1L<<40),
-	PB(1L<<50);
-	
-	private final long factor;
-	private SizeUnit(long factor)
-	{
-		this.factor = factor;
-	}
+  B(1L, "BYTES"),
+  KB(1L<<10),
+  MB(1L<<20),
+  GB(1L<<30),
+  TB(1L<<40),
+  PB(1L<<50);
 
-	public long getFactor()
-	{
-		return this.factor;
-	}
+  private final long factor;
+  private final List<String> aliases;
+
+  private SizeUnit(long factor, String... alias)
+  {
+    this.factor = factor;
+    this.aliases = ImmutableList.copyOf(alias);
+  }
+
+  public long getFactor()
+  {
+    return this.factor;
+  }
+
+  public static SizeUnit fromString( final String value,
+                                     final SizeUnit fallback )
+  {
+    SizeUnit sizeUnit = fallback;
+    if ( value != null ) {
+      final String upperValue = value.toUpperCase();
+      try {
+        sizeUnit = SizeUnit.valueOf( upperValue );
+      } catch ( IllegalArgumentException e ) {
+        for ( SizeUnit unit : SizeUnit.values() ) {
+          if ( unit.aliases.contains( upperValue ) ) {
+            sizeUnit = unit;
+            break;
+          }
+        }
+      }
+    }
+    return sizeUnit;
+  }
 }

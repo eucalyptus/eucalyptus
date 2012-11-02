@@ -83,6 +83,10 @@
         <value name="Format" field="format" usage="optional"/>
         <value name="Start" field="startDate" usage="optional"/>
         <value name="End" field="endDate" usage="optional"/>
+        <value name="TimeUnit" field="timeUnit" usage="optional"/>
+        <value name="SizeUnit" field="sizeUnit" usage="optional"/>
+        <value name="SizeTimeTimeUnit" field="sizeTimeTimeUnit" usage="optional"/>
+        <value name="SizeTimeSizeUnit" field="sizeTimeSizeUnit" usage="optional"/>
     </mapping>
     <mapping name="GenerateReportResponse" class="com.eucalyptus.reporting.service.GenerateReportResponseType" extends="com.eucalyptus.reporting.service.ReportingMessage">
         <structure map-as="com.eucalyptus.reporting.service.ReportingMessage"/>
