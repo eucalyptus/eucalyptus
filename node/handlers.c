@@ -1226,6 +1226,7 @@ static int init (void)
     // set up default signal handler for this child process (for SIGALRM)
     {
         struct sigaction newsigact;
+        memset(&newsigact, 0, sizeof(struct sigaction));
         newsigact.sa_handler = SIG_IGN;
         newsigact.sa_flags = 0;
         sigemptyset(&newsigact.sa_mask);
