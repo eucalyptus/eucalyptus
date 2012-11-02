@@ -127,6 +127,7 @@ sem *inst_sem;	/* guarding access to global instance structs */
 sem *inst_copy_sem;	/* guarding access to global instance structs */
 sem *addkey_sem;	/* guarding access to global instance structs */
 sem *loop_sem; // created in diskutils.c for serializing 'losetup' invocations
+sem *log_sem;  // used by log.c
 
 bunchOfInstances *global_instances = NULL;
 bunchOfInstances *global_instances_copy = NULL;
@@ -1398,7 +1399,7 @@ static int init (void)
 	inst_sem = sem_alloc (1, "mutex");
 	inst_copy_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-    sem * log_sem = sem_alloc (1, "mutex");
+    log_sem = sem_alloc (1, "mutex");
 	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
