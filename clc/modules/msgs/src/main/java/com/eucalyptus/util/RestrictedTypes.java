@@ -96,7 +96,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class RestrictedTypes {
@@ -353,7 +353,7 @@ public class RestrictedTypes {
    */
   @SuppressWarnings( "rawtypes" )
   private static <T extends RestrictedType> T doPrivileged( String identifier, Function<String, T> resolverFunction, boolean ignoreOwningAccount ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
-    assertThat( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue( ) );
+    checkParam( "Resolver function must be not null: " + identifier, resolverFunction, notNullValue() );
     Context ctx = Contexts.lookup( );
     if ( ctx.hasAdministrativePrivileges( ) ) {
       return resolverFunction.apply( identifier );

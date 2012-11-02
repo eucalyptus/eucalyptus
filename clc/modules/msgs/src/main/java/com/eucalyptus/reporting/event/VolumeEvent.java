@@ -20,7 +20,7 @@
 
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -77,14 +77,14 @@ public class VolumeEvent implements Event {
                        final int sizeGB,
                        final OwnerFullName ownerFullName,
                        final String availabilityZone ) {
-    assertThat(actionInfo, notNullValue());
-    assertThat(uuid, not( isEmptyOrNullString() ));
-    assertThat(sizeGB, greaterThan( -1 ));
-    assertThat(volumeId, not( isEmptyOrNullString() ));
-    assertThat(availabilityZone, notNullValue());
-    assertThat(ownerFullName.getUserId(), not( isEmptyOrNullString() ));
-    assertThat(ownerFullName.getAccountNumber(), not( isEmptyOrNullString() ));
-    assertThat(ownerFullName.getUserName(), not( isEmptyOrNullString() ));
+    checkParam( actionInfo, notNullValue() );
+    checkParam( uuid, not( isEmptyOrNullString() ) );
+    checkParam( sizeGB, greaterThan( -1 ) );
+    checkParam( volumeId, not( isEmptyOrNullString() ) );
+    checkParam( availabilityZone, notNullValue() );
+    checkParam( ownerFullName.getUserId(), not( isEmptyOrNullString() ) );
+    checkParam( ownerFullName.getAccountNumber(), not( isEmptyOrNullString() ) );
+    checkParam( ownerFullName.getUserName(), not( isEmptyOrNullString() ) );
     this.ownerFullName = ownerFullName;
     this.actionInfo = actionInfo;
     this.uuid = uuid;

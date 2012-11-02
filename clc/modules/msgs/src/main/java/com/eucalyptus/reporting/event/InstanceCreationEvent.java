@@ -20,7 +20,7 @@
 
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
 
@@ -43,13 +43,13 @@ public class InstanceCreationEvent implements Event{
           String instanceType, String userId, String userName, String accountId,
           String accountName, String availabilityZone) {
 
-      assertThat(uuid, not( isEmptyOrNullString() ));
-      assertThat(instanceId, not(isEmptyOrNullString()));
-      assertThat(instanceType, not(isEmptyOrNullString()));
-      assertThat(userId, not(isEmptyOrNullString()));
-      assertThat(userName, not(isEmptyOrNullString()));
-      assertThat(accountId, not(isEmptyOrNullString()));
-      assertThat(accountName, not(isEmptyOrNullString()));
+      checkParam( uuid, not( isEmptyOrNullString() ) );
+      checkParam( instanceId, not( isEmptyOrNullString() ) );
+      checkParam( instanceType, not( isEmptyOrNullString() ) );
+      checkParam( userId, not( isEmptyOrNullString() ) );
+      checkParam( userName, not( isEmptyOrNullString() ) );
+      checkParam( accountId, not( isEmptyOrNullString() ) );
+      checkParam( accountName, not( isEmptyOrNullString() ) );
 
       this.uuid = uuid;
       this.instanceId = instanceId;

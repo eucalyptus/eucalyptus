@@ -62,7 +62,7 @@
 
 package com.eucalyptus.cloud.run;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -73,7 +73,6 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
-import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
@@ -402,7 +401,7 @@ public class AdmissionControl {
           EntityTransaction db = Entities.get( ExtantNetwork.class );
           try {
             ExtantNetwork exNet = Entities.merge( rscToken.getExtantNetwork( ) );
-            assertThat( exNet, notNullValue( ) );
+            checkParam( exNet, notNullValue() );
             PrivateNetworkIndex addrIndex = exNet.allocateNetworkIndex( );
             rscToken.setNetworkIndex( addrIndex );
             rscToken.setExtantNetwork( Entities.merge( exNet ) );

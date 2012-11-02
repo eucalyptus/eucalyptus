@@ -96,15 +96,12 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Templates;
-import com.eucalyptus.ws.WebServicesException;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class ServiceContextManager {
@@ -182,7 +179,7 @@ public class ServiceContextManager {
       this.canHasWrite.lock( );
       try {
         this.context = this.createContext( );
-        assertThat( this.context, notNullValue( ) );
+        checkParam( this.context, notNullValue() );
         try {
           this.context.start( );
           this.client = new MuleClient( this.context );
@@ -311,7 +308,7 @@ public class ServiceContextManager {
   }
   
   public static String mapServiceToEndpoint( final String service ) throws Exception {
-    assertThat( service, notNullValue( ) );
+    checkParam( service, notNullValue() );
     if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
       try {
         String dest = service;
@@ -329,7 +326,7 @@ public class ServiceContextManager {
   }
   
   public static String mapEndpointToService( final String endpoint ) throws Exception {
-    assertThat( endpoint, notNullValue( ) );
+    checkParam( endpoint, notNullValue() );
     if ( singleton.canHasRead.tryLock( 120, TimeUnit.SECONDS ) ) {
       try {
         String dest = endpoint;

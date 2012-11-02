@@ -62,7 +62,7 @@
 
 package com.eucalyptus.images;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.HashSet;
 import java.util.List;
@@ -102,7 +102,6 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
-import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -190,11 +189,11 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
                        final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
                        final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform ) {
     this( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
-    assertThat( imageName, notNullValue( ) );
-    assertThat( imageType, notNullValue( ) );
-    assertThat( imageSizeBytes, notNullValue( ) );
-    assertThat( arch, notNullValue( ) );
-    assertThat( platform, notNullValue( ) );
+    checkParam( imageName, notNullValue() );
+    checkParam( imageType, notNullValue() );
+    checkParam( imageSizeBytes, notNullValue() );
+    checkParam( arch, notNullValue() );
+    checkParam( platform, notNullValue() );
     this.setState( ImageMetadata.State.pending );
     this.imageType = imageType;
     this.imageName = imageName;

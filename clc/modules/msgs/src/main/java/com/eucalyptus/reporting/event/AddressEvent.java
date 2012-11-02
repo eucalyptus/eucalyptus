@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
@@ -93,13 +93,13 @@ public class AddressEvent implements Event {
                         final String accountId,
                         final String accountName,
                         final EventActionInfo<AddressAction> actionInfo) {
-    assertThat( uuid, not( isEmptyOrNullString() ) );
-    assertThat( address, not(isEmptyOrNullString()) );
-    assertThat( userId, not(isEmptyOrNullString()) );
-    assertThat( userName, not(isEmptyOrNullString()) );
-    assertThat( accountId, not(isEmptyOrNullString()) );
-    assertThat( accountName, not(isEmptyOrNullString()) );
-    assertThat(actionInfo, notNullValue() );
+    checkParam( uuid, not( isEmptyOrNullString() ) );
+    checkParam( address, not( isEmptyOrNullString() ) );
+    checkParam( userId, not( isEmptyOrNullString() ) );
+    checkParam( userName, not( isEmptyOrNullString() ) );
+    checkParam( accountId, not( isEmptyOrNullString() ) );
+    checkParam( accountName, not( isEmptyOrNullString() ) );
+    checkParam( actionInfo, notNullValue() );
 
     this.uuid = uuid;
     this.address = address;

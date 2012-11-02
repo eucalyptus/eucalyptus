@@ -62,7 +62,7 @@
 
 package com.eucalyptus.entities;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
@@ -763,11 +763,11 @@ public class Entities {
       public TxState( final String ctx ) {
         try {
           final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
-          assertThat( anemf, notNullValue( ) );
+          checkParam( anemf, notNullValue() );
           this.em = anemf.createEntityManager( );
-          assertThat( this.em, notNullValue( ) );
+          checkParam( this.em, notNullValue() );
           this.transaction = this.em.getTransaction( );
-          assertThat( this.transaction, notNullValue( ) );
+          checkParam( this.transaction, notNullValue() );
           this.sessionRef = new WeakReference<Session>( ( Session ) this.em.getDelegate( ) );
         } catch ( final RuntimeException ex ) {
           this.doCleanup( );

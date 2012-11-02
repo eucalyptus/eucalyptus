@@ -62,7 +62,7 @@
 
 package com.eucalyptus.component;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
@@ -81,7 +81,7 @@ public class ComponentFullName implements FullName {
   private final static String PREFIX = "arn:euca";
   
   ComponentFullName( ComponentId componentType, String partition, String name, String... pathPartsArray ) {
-    assertThat( componentType, notNullValue( ) );
+    checkParam( componentType, notNullValue() );
     
     this.realComponentId = componentType;
     this.name = name != null

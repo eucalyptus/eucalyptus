@@ -92,7 +92,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.util.concurrent.ExecutionList;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 /**
@@ -192,15 +192,15 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
     private final ExecutorService            executor;
     
     ExecPair( final Callable callable, final ExecutorService executor ) {
-      assertThat( "BUG: callable is null.", callable, notNullValue( ) );
-      assertThat( "BUG: executor is null.", executor, notNullValue( ) );
+      checkParam( "BUG: callable is null.", callable, notNullValue() );
+      checkParam( "BUG: executor is null.", executor, notNullValue() );
       this.callable = callable;
       this.executor = executor;
     }
     
     ExecPair( final Runnable runnable, final ExecutorService executor ) {
-      assertThat( "BUG: runnable is null.", runnable, notNullValue( ) );
-      assertThat( "BUG: executor is null.", executor, notNullValue( ) );
+      checkParam( "BUG: runnable is null.", runnable, notNullValue() );
+      checkParam( "BUG: executor is null.", executor, notNullValue() );
       
       this.runnable = runnable;
       this.executor = executor;

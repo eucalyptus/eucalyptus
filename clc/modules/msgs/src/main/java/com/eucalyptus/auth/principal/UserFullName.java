@@ -62,9 +62,8 @@
 
 package com.eucalyptus.auth.principal;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
@@ -73,7 +72,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 
 public class UserFullName implements OwnerFullName {
   private static final long serialVersionUID = 1L;
@@ -90,11 +88,11 @@ public class UserFullName implements OwnerFullName {
   
   private UserFullName( final User user ) throws AuthException {
     this.userId = user.getUserId( );
-    assertThat( this.userId, notNullValue( ) );
+    checkParam( this.userId, notNullValue() );
     this.userName = user.getName( );
     final Account account = user.getAccount( );
     this.accountNumber = account.getAccountNumber( );
-    assertThat( this.accountNumber, notNullValue( ) );
+    checkParam( this.accountNumber, notNullValue() );
     //this.accountName = account.getName( );
     this.accountName = null;
     this.authority = new StringBuilder( ).append( FullName.PREFIX ).append( FullName.SEP ).append( VENDOR ).append( FullName.SEP ).append( FullName.SEP ).append( this.accountNumber ).append( FullName.SEP ).toString( );

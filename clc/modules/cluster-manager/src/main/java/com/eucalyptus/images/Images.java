@@ -62,7 +62,7 @@
 
 package com.eucalyptus.images;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
 import java.util.List;
@@ -318,8 +318,8 @@ public class Images {
     return new Function<BlockDeviceMappingItemType, DeviceMapping>( ) {
       @Override
       public DeviceMapping apply( BlockDeviceMappingItemType input ) {
-        assertThat( input, notNullValue( ) );
-        assertThat( input.getDeviceName( ), notNullValue( ) );
+        checkParam( input, notNullValue() );
+        checkParam( input.getDeviceName(), notNullValue() );
         if ( input.getEbs( ) != null ) {
           EbsDeviceMapping ebsInfo = input.getEbs( );
           Snapshot snap;

@@ -62,9 +62,6 @@
 
 package com.eucalyptus.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.not;
 import java.util.List;
 import java.util.concurrent.Future;
 import com.eucalyptus.util.Classes;

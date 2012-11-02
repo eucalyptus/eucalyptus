@@ -62,7 +62,7 @@
 
 package com.eucalyptus.vm;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.*;
 import java.util.Arrays;
 import java.util.Set;
@@ -77,9 +77,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
 
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -131,7 +129,7 @@ public class VmBootRecord {
   
   VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType ) {
     super( );
-    assertThat( "Bootset must not be null", bootSet, notNullValue( ) );
+    checkParam( "Bootset must not be null", bootSet, notNullValue() );
     this.machineImage = ( ImageInfo ) bootSet.getMachine( );
     if ( bootSet.hasKernel( ) )
       this.kernel = bootSet.getKernel( );

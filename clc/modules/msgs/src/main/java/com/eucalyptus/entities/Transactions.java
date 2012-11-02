@@ -76,7 +76,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class Transactions {
@@ -143,8 +143,8 @@ public class Transactions {
   }
   
   public static <T> List<T> each( T search, Callback<T> c ) throws TransactionException {
-    assertThat( search, notNullValue( ) );
-    assertThat( c, notNullValue( ) );
+    checkParam( search, notNullValue() );
+    checkParam( c, notNullValue() );
     EntityTransaction db = Transactions.get( search );
     try {
       List<T> res = Entities.query( search );
@@ -194,8 +194,8 @@ public class Transactions {
   }
 
   public static <S, T> S one( T search, Function<T, S> f ) throws TransactionException {
-    assertThat( search, notNullValue( ) );
-    assertThat( f, notNullValue( ) );
+    checkParam( search, notNullValue() );
+    checkParam( f, notNullValue() );
     EntityTransaction db = Transactions.get( search );
     try {
       T entity = Entities.uniqueResult( search );
@@ -236,9 +236,9 @@ public class Transactions {
   }
   
   public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) throws TransactionException {
-    assertThat( search, notNullValue( ) );
-    assertThat( condition, notNullValue( ) );
-    assertThat( transform, notNullValue( ) );
+    checkParam( search, notNullValue() );
+    checkParam( condition, notNullValue() );
+    checkParam( transform, notNullValue() );
     List<O> res = Lists.newArrayList( );
     EntityTransaction db = Transactions.get( search );
     try {
@@ -274,8 +274,8 @@ public class Transactions {
   }
   
   public static <T> T save( T saveMe, Callback<T> c ) throws TransactionException {
-    assertThat( saveMe, notNullValue( ) );
-    assertThat( c, notNullValue( ) );
+    checkParam( saveMe, notNullValue() );
+    checkParam( c, notNullValue() );
     EntityTransaction db = Transactions.get( saveMe );
     try {
       T entity = Entities.merge( saveMe );
@@ -309,8 +309,8 @@ public class Transactions {
   }
   
   public static <T> boolean delete( T search, Predicate<T> precondition ) throws TransactionException {
-    assertThat( search, notNullValue( ) );
-    assertThat( precondition, notNullValue( ) );
+    checkParam( search, notNullValue() );
+    checkParam( precondition, notNullValue() );
     EntityTransaction db = Transactions.get( search );
     try {
       T entity = Entities.uniqueResult( search );

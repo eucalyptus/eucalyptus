@@ -80,7 +80,6 @@
 package com.eucalyptus.util.async;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -94,10 +93,9 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.concurrent.GenericCheckedListenableFuture;
 import com.eucalyptus.util.concurrent.ListenableFuture;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.emptyArray;
 import static org.hamcrest.Matchers.not;
 
@@ -240,7 +238,7 @@ public class Futures {
   }
   
   public static <P> Callable<CheckedListenableFuture<P>> sequence( final Callable<CheckedListenableFuture<P>>... callables ) {
-    assertThat( callables, not( emptyArray( ) ) );
+    checkParam( callables, not( emptyArray() ) );
     if ( callables.length == 1 ) {
       return callables[0];
     } else if ( callables.length == 2 ) {

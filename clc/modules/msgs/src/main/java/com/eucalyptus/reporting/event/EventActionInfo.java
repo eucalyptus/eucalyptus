@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.event;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
@@ -33,7 +33,7 @@ public class EventActionInfo<E extends Enum<E>> implements Serializable {
   private final E action;
 
   EventActionInfo( final E action ) {
-    assertThat( action, notNullValue() );
+    checkParam( action, notNullValue() );
     this.action = action;
   }
 
@@ -57,8 +57,8 @@ public class EventActionInfo<E extends Enum<E>> implements Serializable {
                              final String instanceUuid,
                              final String instanceId ) {
       super( action );
-      assertThat( instanceUuid, not(isEmptyOrNullString()) );
-      assertThat(instanceId, not(isEmptyOrNullString()) );
+      checkParam( instanceUuid, not( isEmptyOrNullString() ) );
+      checkParam( instanceId, not( isEmptyOrNullString() ) );
       this.instanceUuid = instanceUuid;
       this.instanceId = instanceId;
     }

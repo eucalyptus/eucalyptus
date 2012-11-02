@@ -95,7 +95,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Sets;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
 public class Component implements HasName<Component> {
@@ -455,7 +455,7 @@ public class Component implements HasName<Component> {
      * @deprecated {@link #getServices(ServiceConfiguration)}
      */
     public ServiceConfiguration getService( String name ) throws NoSuchElementException {
-      assertThat( name, notNullValue( ) );
+      checkParam( name, notNullValue() );
       for ( ServiceConfiguration s : this.services.keySet( ) ) {
         if ( s.getName( ).equals( name ) ) {
           return s;
