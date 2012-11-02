@@ -108,7 +108,7 @@ public interface LogicalStorageManager {
 
 	public void finishVolume(String snapshotId) throws EucalyptusCloudException;
 
-	public String prepareSnapshot(String snapshotId, int sizeExpected) throws EucalyptusCloudException;
+	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException;
 
 	public ArrayList<ComponentProperty> getStorageProps();
 
@@ -136,7 +136,7 @@ public interface LogicalStorageManager {
 
 	public void disable() throws EucalyptusCloudException;
 
-	public boolean getFromBackend(String snapshotId) throws EucalyptusCloudException;
+	public boolean getFromBackend(String snapshotId, int size) throws EucalyptusCloudException;
 	
 	public void checkVolume(String volumeId) throws EucalyptusCloudException;
 

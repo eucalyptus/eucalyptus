@@ -104,34 +104,41 @@ def doBuild = { module ->
 	}
 }
 
-def processModuleEntry(String moduleEntry) {
+//Force allows for cases where the user is explicitly overwritting any previous ordering
+// that may have occured by coincidence. Force should = true when processing lines from
+// an ordering file
+def processModuleEntry(String moduleEntry, boolean force) {
 	if(moduleEntry.startsWith("#")) {
 		moduleDirs.remove(moduleEntry.substring(1).trim())
-		buildOrder.remove(moduleEntry)
+		buildOrder.remove(moduleEntry.substring(1).trim())
 	} else {
-		moduleDirs.remove(moduleEntry)
-		buildOrder.remove(moduleEntry)
-		buildOrder += moduleEntry;
+		if(moduleDirs.contains(moduleEntry) || force) {
+			moduleDirs.remove(moduleEntry)
+			buildOrder.remove(moduleEntry)
+			buildOrder += moduleEntry;
 
-		def submod = new File("${moduleBasePath}/${moduleEntry}/submodule-inc.order")
-		if(submod.exists()) {
-			submod.eachLine{
-				processModuleEntry( it )
+			def submod = new File("${moduleBasePath}/${moduleEntry}/submodule-inc.order")
+			if(submod.exists()) {
+				submod.eachLine{
+					//Force changes since this is explicitly ordered by user
+					processModuleEntry( it , true)
+				}
 			}
 		}
 	}
 }
 
-//Process the main module-inc.order list
+//Process the main module-inc.order list, force changes since these are explicit
 modulesList.eachLine{
-	processModuleEntry( it )
+	processModuleEntry( it , true)
 }
 
 def remainingList = []
 remainingList.addAll(moduleDirs)
 
+//Changes are not forced since these are not explicit by the user
 remainingList.each{
-	processModuleEntry( it )
+	processModuleEntry( it , false)
 }
 
 buildOrder.addAll( moduleDirs )

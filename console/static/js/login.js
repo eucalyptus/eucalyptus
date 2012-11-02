@@ -119,14 +119,16 @@
     _destroy : function() { },
 
   /////// PUBLIC METHODS //////
-    popupError : function(msg, callback) {
+    popupDialog : function(bError, msg, callback) {
      var thisObj = this;
      thisObj.errorDialog.eucadialog('open');
      if(callback){
        thisObj.errorDialog.data('eucadialog').option('on_close', {callback: callback});
      }
      var msgdiv = thisObj.errorDialog.find("#login-error-message p")
-     msgdiv.addClass('dialog-error').html(msg);
+     if(typeof bError != undefined && bError)
+       msgdiv.addClass('dialog-error');
+     msgdiv.html(msg);
      thisObj.errorDialog.find('#login-error-message a').click(function(e){
        if(thisObj.options.support_url.indexOf('mailto') >= 0)
          window.open(thisObj.options.support_url, '_self');
