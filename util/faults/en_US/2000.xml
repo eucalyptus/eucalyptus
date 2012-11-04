@@ -21,27 +21,29 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="2000"
-    message="tgtadm command is unresponsive">
+    message="tgtadm (Linux SCSI target administrator utility) is unresponsive">
 
     <condition
-      message="${operation} timed out"/>
+      message="${component} operation timed out after waiting for ${timeout} milliseconds for a response from tgtadm command"/>
 
     <cause
-      message="tgt deamon on ${component} is hung"/>
+      message="tgtd daemon on ${component} is hung"/>
 
     <initiator
       message="${component}"/>
 
     <location
-      message="tgt deamon on ${component}"/>
+      message="tgtd daemon on ${component}"/>
 
     <resolution>
       <message>
-        1) Run ps -ef | grep tgtd and kill tgt deamon processes.
+	1) Run 'ps -ef | grep tgtd', look for the process-ID of tgtd.
 
-	2) Run service tgtd start.
+	2) Kill the tgtd process with 'kill process-ID'.
 
-	3) Run tgtadm --op show --mode target again and check that this command runs correctly.
+	3) Start the tgtd daemon with 'service tgtd start'.
+
+	4) Run 'tgtadm --op show --mode target', check that it does not hang or return an error.
       </message>
     </resolution>
   </fault>
