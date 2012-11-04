@@ -99,12 +99,13 @@ static char * log_level_names [] = {
 };
 
 /////////////////////// prefix format
-// T = timestamp
-// L = loglevel
-// p = PID
-// t = thread id (same as PID in CC)
-// m = method
-// F = file:line_no
+// %T = timestamp
+// %L = loglevel
+// %p = PID
+// %t = thread id (same as PID in CC)
+// %m = method
+// %F = file:line_no
+// %s = max rss size, in MB
 //
 // p,t,m,F may be followed by (-)NNN,
 //         '-' means left-justified
@@ -112,13 +113,13 @@ static char * log_level_names [] = {
 /////////////////////////////////////
 static char * log_level_prefix [] = {
     "",
-    "T L t9 m-24 F-33 | ", // EXTREME
-    "T L t9 m-24 | ",      // TRACE
-    "T L t9 m-24 | ",      // DEBUG
-    "T L | ",              // INFO
-    "T L | ",              // WARN
-    "T L | ",              // ERROR
-    "T L | ",              // FATAL
+    "%T %L %t9 %m-24 %F-33 |", // EXTREME
+    "%T %L %t9 %m-24 |",       // TRACE
+    "%T %L %t9 %m-24 |",       // DEBUG
+    "%T %L |",                 // INFO
+    "%T %L |",                 // WARN
+    "%T %L |",                 // ERROR
+    "%T %L |",                 // FATAL
     ""
 };
 
@@ -145,6 +146,7 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char * file);
 int log_prefix_set (const char * log_spec);
+int log_facility_set (const char * log_facility, const char * component_name);
 int log_sem_set (sem * s);
 int logfile(char *file, int in_loglevel, int in_logrollnumber);
 int logprintf(const char *format, ...);

@@ -2860,6 +2860,11 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
 
 int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
+  int rc = initialize(meta);
+  if (rc || ccIsEnabled()) {
+    return 1;
+  }
+  
   logprintfl(EUCAINFO, "invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
   int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
   if (err != 0)
@@ -3567,6 +3572,14 @@ int init_log(void)
 	  free (log_prefix);
 	}
 
+	char * log_facility = configFileValue ("LOGFACILITY");
+	if (log_facility) {
+	  if (strlen(log_facility)>0) {
+	    safe_strncpy (config->log_facility, log_facility, sizeof (config->log_facility));
+	  }
+	  free (log_facility);
+	}
+
         // set the log file path (levels and size limits are set below)
         log_file_set(logFile);
 
@@ -3577,6 +3590,7 @@ int init_log(void)
     // by monitoring_thread will get picked up by other processes, too
     log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
     log_prefix_set (config->log_prefix);
+    log_facility_set (config->log_facility, "cc");
 
     return 0;
 }
@@ -3688,9 +3702,18 @@ int update_config(void) {
 	free (log_prefix);
       }
 
+      char * log_facility = configFileValue ("LOGFACILITY");
+      if (log_facility) {
+	if (strlen(log_facility)>0) {
+	  safe_strncpy (config->log_facility, log_facility, sizeof (config->log_facility));
+	}
+	free (log_facility);
+      }
+      
       // reconfigure the logging subsystem to use the new values, if any
       log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
       log_prefix_set (config->log_prefix);
+      log_facility_set (config->log_facility, "cc");
 
       // NODES
       logprintfl(EUCAINFO, "refreshing node list.\n");
