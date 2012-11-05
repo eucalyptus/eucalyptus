@@ -27,13 +27,13 @@
       message="${component} operation timed out after waiting for ${timeout} milliseconds for a response from tgtadm command"/>
 
     <cause
-      message="tgtd daemon on ${component} is hung"/>
+      message="tgt daemon on ${component} is unresponsive"/>
 
     <initiator
       message="${component}"/>
 
     <location
-      message="tgtd daemon on ${component}"/>
+      message="tgt daemon on ${component}"/>
 
     <resolution>
       <message>
@@ -41,7 +41,7 @@
 
 	2) Kill the tgtd process with 'kill process-ID'.
 
-	3) Start the tgtd daemon with 'service tgtd start'.
+	3) Start the tgt daemon with 'service tgtd start'.
 
 	4) Run 'tgtadm --op show --mode target', check that it does not hang or return an error.
       </message>
