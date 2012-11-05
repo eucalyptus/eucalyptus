@@ -1076,13 +1076,14 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
         }
     }
     // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
-    if (instIds)
-        free (instIds);
     if (sensorIds)
         free (sensorIds);
 
  reply:
     
+    if (instIds)
+        free (instIds);
+
     if (result == ERROR) {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
