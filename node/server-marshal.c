@@ -1049,7 +1049,13 @@ adb_ncDescribeSensorsResponse_t* ncDescribeSensorsMarshal (adb_ncDescribeSensors
 
         if (error) {
             logprintfl (EUCAERROR, "failed error=%d\n", error);
-
+            if (outResourcesLen) {
+				for (int i = 0; i < outResourcesLen; i++) {
+					if (outResources[i])
+						free(outResources[i]);
+				}
+                free (outResources);
+            }
         } else {
 
             // set standard fields in output
