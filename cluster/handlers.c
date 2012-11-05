@@ -3564,8 +3564,8 @@ int init_log(void)
         configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
 	if (log_prefix && strlen(log_prefix)>0) {
 	  safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
-	  free (log_prefix);
 	}
+	  free (log_prefix);
 
         // set the log file path (levels and size limits are set below)
         log_file_set(logFile);
