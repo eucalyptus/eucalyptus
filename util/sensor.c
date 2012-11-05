@@ -1260,6 +1260,7 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
 
     if (found_values)
         sn++;
+    return(0);
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
