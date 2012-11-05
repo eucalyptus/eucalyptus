@@ -710,7 +710,7 @@
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup",
-          data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+sgroupName,
+          data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+encodeURIComponent(sgroupName),
           dataType:"json",
           async:"true",
           success: (function(sgroupName, refresh_table) {
@@ -749,7 +749,7 @@
 
     _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
       var thisObj = this;
-      var req_params = "&GroupName=" + groupName;
+      var req_params = "&GroupName=" + encodeURIComponent(groupName);
       for (i=0; i<fromPort.length; i++) {
           req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
           req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
@@ -785,7 +785,7 @@
 
     _removeIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
       var thisObj = this;
-      var req_params = "&GroupName=" + groupName;
+      var req_params = "&GroupName=" + encodeURIComponent(groupName);
       for (i=0; i<fromPort.length; i++) {
           req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
           req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];

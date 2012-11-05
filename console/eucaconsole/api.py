@@ -6,6 +6,7 @@ import tornado.web
 import eucaconsole
 import socket
 import time
+from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
@@ -40,6 +41,14 @@ class ComputeHandler(eucaconsole.BaseHandler):
                         inst['group_name'] = res['groups'][0]['id']
                     ret.append(inst)
         return ret
+
+    # This method unescapes values that were escaped in the jsonbotoencoder.__sanitize_and_copy__ method
+    def get_argument(self, name, default=tornado.web.RequestHandler._ARG_DEFAULT, strip=True):
+        arg = super(ComputeHandler, self).get_argument(name, default, strip)
+        if arg:
+            return unescape(arg)
+        else:
+            return arg
 
     def get_argument_list(self, name, name_suffix=None, another_suffix=None, size=None):
         ret = []

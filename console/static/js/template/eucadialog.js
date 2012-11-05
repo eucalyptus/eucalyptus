@@ -303,7 +303,7 @@
             $td.css('display', 'none');
             $td.append(val);
           } else
-            $td.append($('<span>').attr('title', val).text(addEllipsis(val,maxLimit)));
+            $td.append($('<span>').attr('title', val).html(addEllipsis(val,maxLimit)));
           $tr.append($td);
         });
         $body.append($tr);
