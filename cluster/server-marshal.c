@@ -379,9 +379,15 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
         }
     }
 
+    if (sensorIds)
+        free (sensorIds);
+
  reply:
     
-    if (result == ERROR) {
+    if (instIds)
+        free (instIds);
+
+ 	if (result == ERROR) {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
