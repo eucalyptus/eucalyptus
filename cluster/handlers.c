@@ -3684,9 +3684,9 @@ int update_config(void) {
       char * log_prefix;
       configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
       if (log_prefix && strlen(log_prefix)>0) {
-	safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
-	free (log_prefix);
+          safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
       }
+      free (log_prefix);
 
       // reconfigure the logging subsystem to use the new values, if any
       log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
