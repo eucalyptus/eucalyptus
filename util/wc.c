@@ -276,17 +276,20 @@ c_varsub (const char * s, const char_map * vars [])
             char *vartok = NULL;
             if ((missed_var = strndup (var_start + pref_len, var_len)) == NULL) {
                 logprintfl (EUCAWARN, "failed to substitute variable\n");
+                continue;
             } else {
 
-                logprintfl (EUCAWARN, "failed to substitute variable: %s%s%s\n",
+                logprintfl (EUCAWARN, "substituted variable: %s%s%s\n",
                             C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
             }
+
             if ((vartok = (char *)malloc (strlen (C_VAR_PREFIX) +
                                           strlen (C_VAR_SUFFIX) +
                                           strlen (missed_var) + 1)) == NULL) {
                 if (result != NULL) {
                     free (result);
                 }
+            	free(missed_var);
                 return NULL;
             }
             sprintf (vartok, "%s%s%s", C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
@@ -295,6 +298,7 @@ c_varsub (const char * s, const char_map * vars [])
                 if (result == NULL) {
                     logprintfl (EUCAERROR, "failed to append during variable substitution"); // TODO: more specific error
                     free(vartok);
+                    free(missed_var);
                     break;
                 }
             }
