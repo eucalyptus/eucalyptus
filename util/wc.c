@@ -294,6 +294,7 @@ c_varsub (const char * s, const char_map * vars [])
                 result = c_wcappendn (result, remainder, var_start - remainder);
                 if (result == NULL) {
                     logprintfl (EUCAERROR, "failed to append during variable substitution"); // TODO: more specific error
+                    free(vartok);
                     break;
                 }
             }
