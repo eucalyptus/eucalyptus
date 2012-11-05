@@ -102,13 +102,7 @@ public class ISCSIManager implements StorageExportManager {
 	private static final int TGT_HOSED = 2000;
 
 	@Override
-	public void checkPreconditions() throws EucalyptusCloudException {
-		// String returnValue;
-		// returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--help"});
-		// if(returnValue.length() == 0) {
-		// throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
-		// }
-		
+	public void checkPreconditions() throws EucalyptusCloudException {		
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
 		CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--help" }, timeout);
@@ -116,21 +110,17 @@ public class ISCSIManager implements StorageExportManager {
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		}
 		
-		// if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}) != 0) {
 		output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}, timeout);
 		if (output.returnValue != 0) {
 			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
 			LOG.info("Attempting to start tgtd ISCSI daemon");
-			// if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "service", "tgt", "status"}) != 0) {
 			output = execute(new String[] { ROOT_WRAP, "service", "tgt", "status" }, timeout);
 			if (output.returnValue != 0) {
-				//if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "service", "tgtd", "start"}) != 0) {
 				output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "start" }, timeout);
 				if (output.returnValue != 0) {
 					throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
 				}
 			} else {
-				// if (SystemUtil.runAndGetCode(new String[] { ROOT_WRAP, "service", "tgt", "start" }) != 0) {
 				output = execute(new String[] { ROOT_WRAP, "service", "tgt", "start" } ,timeout);
 				if (output.returnValue != 0) {
 					throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
@@ -140,13 +130,11 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	public void addUser(String username, String password) throws EucalyptusCloudException {
-		// SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "account", "--user", username, "--password", password});
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 		execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "account", "--user", username, "--password", password }, timeout);
 	}
 
 	public void deleteUser(String username) throws EucalyptusCloudException {
-		// SystemUtil.run(new String[]{ROOT_WRAP , "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", "--user", username});
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 		execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "account", "--user", username }, timeout);
 	}
@@ -223,12 +211,6 @@ public class ISCSIManager implements StorageExportManager {
 	public void exportTarget(int tid, String name, int lun, String path, String user) throws EucalyptusCloudException {
 		checkAndAddUser();
 
-		// String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
-		// if(returnValue.length() > 0) {
-		// LOG.info("Target: " + tid + " already exported");
-		// return;
-		// }
-
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 		
 		// Check to see if the target is already exported. If it is dont do anything further
@@ -263,14 +245,6 @@ public class ISCSIManager implements StorageExportManager {
 	public void unexportTarget(int tid, int lun) {
 		try
 		{
-			// String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
-			// if(returnValue.length() > 0) {
-			// LOG.info("Attempting to unexport target: " + tid);
-			// } else {
-			// LOG.info("Target: " + tid + " not found");
-			// return;
-			// }
-			
 			Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 			
 			CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(tid) }, timeout);
@@ -281,14 +255,12 @@ public class ISCSIManager implements StorageExportManager {
 				return;
 			}
 			
-			//if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"}) != 0) {
 			output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"} ,timeout);
 			if (output.returnValue != 0) {
 				LOG.error("Unable to unbind tid: " + tid);
 			}
 			int retryCount = 0;
 			do {
-				//if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid" , String.valueOf(tid), "--lun", String.valueOf(lun)}) != 0) {
 				output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun) }, timeout);
 				if(output.returnValue != 0) {
 					LOG.warn("Unable to delete lun for: " + tid);
@@ -304,7 +276,6 @@ public class ISCSIManager implements StorageExportManager {
 
 			retryCount = 0;
 			do {
-				// if(SystemUtil.runAndGetCode(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid)}) != 0) {
 				output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target", "--tid", String.valueOf(tid) }, timeout);
 				if (output.returnValue != 0) {
 					LOG.warn("Unable to delete target: " + tid);
@@ -312,8 +283,6 @@ public class ISCSIManager implements StorageExportManager {
 					continue;
 				}
 				
-				// returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(tid)});
-				// if(returnValue.length() > 0) {
 				output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(tid) }, timeout);
 				if (output.returnValue == 0) {
 					LOG.warn("Target: " + tid + " still exists...");
@@ -373,24 +342,6 @@ public class ISCSIManager implements StorageExportManager {
 				}
 			}
 		} catch(EucalyptusCloudException ex) {
-			// Windows iscsi initiator requires the password length to be 12-16 bytes
-			// String password = Hashes.getRandom(16);
-			// password = password.substring(0,16);
-			// try {
-			//	addUser("eucalyptus", password);
-			// } catch (EucalyptusCloudException e1) {
-			//	LOG.error(e1);
-			//	dbUser.rollback();
-			//	return;
-			// }
-			// CHAPUserInfo userInfo;
-			// try {
-			//	userInfo = new CHAPUserInfo("eucalyptus", BlockStorageUtil.encryptSCTargetPassword(password));
-			//	dbUser.add(userInfo);
-			// } catch (EucalyptusCloudException e) {
-			//	LOG.error(e);
-			// }
-			
 			boolean addUser = true;
 			String encryptedPassword = null; 
 			
@@ -464,8 +415,6 @@ public class ISCSIManager implements StorageExportManager {
 			CommandOutput output = null;
 
 			do {
-				// String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(i)});
-				// if(returnValue.length() == 0) {
 				output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(i) }, timeout);
 				if(output.returnValue != 0) {
 					tid = i;
@@ -495,33 +444,6 @@ public class ISCSIManager implements StorageExportManager {
 	}
 
 	private boolean checkUser(String username) {
-		// Runtime rt = Runtime.getRuntime();
-		// Process proc;
-		// try {
-		// proc = rt.exec(new String[]{ROOT_WRAP, "tgtadm", "--op", "show", "--mode", "account"});
-		// StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-		// StreamConsumer output = new StreamConsumer(proc.getInputStream());
-		// error.start();
-		// output.start();
-		// proc.waitFor();
-		// output.join();
-		// String returnValue = output.getReturnValue();
-		// if(returnValue.length() > 0) {
-		// Pattern p = Pattern.compile(username);
-		// Matcher m = p.matcher(returnValue);
-		// if(m.find())
-		// return true;
-		// else
-		// return false;
-		// }
-		// } catch (IOException e) {
-		// LOG.error(e);
-		// return false;
-		// } catch (InterruptedException e) {
-		// LOG.error(e);
-		// return false;
-		// }
-
 		try {
 			Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
@@ -562,8 +484,6 @@ public class ISCSIManager implements StorageExportManager {
 			if(((ISCSIVolumeInfo) volumeInfo).getTid() > -1) {
 				ISCSIVolumeInfo iscsiVolumeInfo = (ISCSIVolumeInfo) volumeInfo;
 				unexportTarget(iscsiVolumeInfo.getTid(), iscsiVolumeInfo.getLun());
-				// String returnValue = SystemUtil.run(new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid" , String.valueOf(iscsiVolumeInfo.getTid())});
-				// if(returnValue.length() == 0) {
 				Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 				CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(iscsiVolumeInfo.getTid()) }, timeout);
 				if (output.returnValue != 0) {
