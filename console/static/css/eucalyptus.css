@@ -731,6 +731,8 @@ input[type='text'].medium-textinput {
 
 ul.ui-autocomplete {
   background: #f3f6f9;
+  border-radius: 5px;
+  border: 1px solid rgba(90,110,90,0.4);
 }
 
 .large-button,
