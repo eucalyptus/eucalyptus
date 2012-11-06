@@ -352,7 +352,13 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
 
         if (error) {
             logprintfl (EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
-
+            if (outResourcesLen > 0 && outResources != NULL) {
+				for (int i = 0; i < outResourcesLen; i++) {
+					if (outResources[i])
+						free(outResources[i]);
+				}
+                free (outResources);
+            }
         } else {
 
             // set standard fields in output
@@ -373,9 +379,15 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
         }
     }
 
+    if (sensorIds)
+        free (sensorIds);
+
  reply:
 
-    if (result == ERROR) {
+    if (instIds)
+        free (instIds);
+
+   if (result == ERROR) {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_TRUE);

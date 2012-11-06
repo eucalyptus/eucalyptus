@@ -60,6 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -3569,8 +3572,8 @@ int init_log(void)
         configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
 	if (log_prefix && strlen(log_prefix)>0) {
 	  safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
-	  free (log_prefix);
 	}
+	  free (log_prefix);
 
 	char * log_facility = configFileValue ("LOGFACILITY");
 	if (log_facility) {
@@ -3698,9 +3701,9 @@ int update_config(void) {
       char * log_prefix;
       configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
       if (log_prefix && strlen(log_prefix)>0) {
-	safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
-	free (log_prefix);
+          safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
       }
+      free (log_prefix);
 
       char * log_facility = configFileValue ("LOGFACILITY");
       if (log_facility) {
