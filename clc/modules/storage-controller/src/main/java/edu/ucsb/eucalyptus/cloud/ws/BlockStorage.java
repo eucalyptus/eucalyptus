@@ -838,7 +838,7 @@ public class BlockStorage {
 					}
 					snapshotFileName = returnValues.get(0);
 					String snapshotSize = returnValues.get(1);
-					int retry = StorageProperties.MAX_SNAP_TRANSFER_RETRIES;
+					int retry = StorageInfo.getStorageInfo().getMaxSnapTransferRetries();
 					boolean transferSuccess = false;
 					//Use a random backoff for retries
 					int backoffTime = 0;
@@ -852,7 +852,7 @@ public class BlockStorage {
 							if(retry > 0) {
 								retry --;			
 								backoffTime = r.nextInt(10);
-								Thread.sleep(backoffTime * 1000);
+								Thread.sleep(backoffTime * 5000);
 							} else {
 								//Use retry counter so that we can include this exception info
 								throw new EucalyptusCloudException("Snapshot transfer failed", e);

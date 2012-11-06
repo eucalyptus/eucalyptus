@@ -93,7 +93,6 @@ public class StorageProperties {
 	public static final String iface = "eth0";
 	public static final int MAX_TOTAL_VOLUME_SIZE = 100;
 	public static final int MAX_VOLUME_SIZE = 15;
-	public static final int MAX_SNAP_TRANSFER_RETRIES = 3;
 	public static int TRANSFER_CHUNK_SIZE = 8192;
 	public static final boolean zeroFillVolumes = false;
 	public static final long timeoutInMillis = 10000;
