@@ -544,17 +544,12 @@ public class OverlayManager implements LogicalStorageManager {
 					//create file and attach to loopback device
 					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
-					// long absoluteSize;
-					// if(size > 0) {
-					// 	absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
-					// } else {
-					// 	size = (int)(snapshotFile.length() / StorageProperties.GB);
-					// 	absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
-					// }
-					
-					long absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
-					if (size <= 0) {
-						size = (int)(absoluteSize / StorageProperties.GB);
+					long absoluteSize;
+					if (size <= 0 || size == foundSnapshotInfo.getSize()) {
+						size = (int)(snapshotFile.length() / StorageProperties.GB);
+					 	absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
+					} else {
+						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
 					}
 					
 					String loDevName = createLoopback(rawFileName, absoluteSize);
@@ -1527,8 +1522,7 @@ public class OverlayManager implements LogicalStorageManager {
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		exportManager.stop();
 	}
 
 	@Override

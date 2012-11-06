@@ -120,9 +120,11 @@ static configEntry configKeysNoRestartCC[] = {
   {"NC_POLLING_FREQUENCY", "6"},
   {"CLC_POLLING_FREQUENCY", "6"},
   {"CC_ARBITRATORS", NULL},
-  {"LOGLEVEL", "DEBUG"},
+  {"LOGLEVEL", "INFO"},
   {"LOGROLLNUMBER", "4"},
   {"LOGMAXSIZE", "10485760"},
+  {"LOGPREFIX", ""},
+  {"LOGFACILITY", ""},
   {NULL, NULL}
 };
 
@@ -217,6 +219,7 @@ typedef struct ccConfig_t {
   int log_roll_number;
   int log_level;
   char log_prefix[64];
+  char log_facility[32];
   char proxyPath[MAX_PATH];
   char proxyIp[32];
   int use_proxy;

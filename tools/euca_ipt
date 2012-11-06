@@ -66,6 +66,9 @@ use MIME::Base64;
 delete @ENV{qw(IFS CDPATH ENV BASH_ENV)};
 $ENV{'PATH'}='/bin:/usr/bin:/sbin:/usr/sbin/';
 
+# set to '1' for more debugging to httpd_cc_err-log
+$debug = 0;
+
 if (@ARGV == 3) {
     print STDERR "DO NEW EUCA_IPT\n";
     doexit(new_euca_ipt(@ARGV), "done\n");
@@ -95,6 +98,10 @@ sub old_euca_ipt() {
 
     @workingfiles = ("$rulefile.orig", "$rulefile.new");
 
+
+    if ($debug) {
+	system("iptables-save > /tmp/save.$$");
+    }
     open my $fh, '-|' or exec 'iptables-save', ("-c", "-t", "$table") or dodie ("iptables-save failed: $!\n");
     open(OFH, ">$rulefile.orig") or dodie ("cannot open $rulefile.orig");
     $outbuf = "";
@@ -117,16 +124,19 @@ sub old_euca_ipt() {
 	$line =~ s/\s+$//g;
 	$line =~ s/^\s+//g;
 	if ($line eq "COMMIT") {
-	    # time to load the input rules
+	    # time to load the new input rules since we found the COMMIT
 	    open (RFH, "$rulefile");
 	    while(<RFH>) {
 		chomp;
 		my $line = $_;
 		$line =~ s/\s+$//g;
 		$line =~ s/^\s+//g;
+		# check to make sure that the new rule is not already in the rulehash (new rule doesn't already exist)
 		if ($line ne "" && !$rulehash{$line}) {
 		    $buf .= "$line\n";
 		    $rulehash{$line} = 1;
+		    if ($debug) {print STDERR "DEBUG: decided to add new rule: '$line'\n";}
+		    $addline = $line;
 		    $added=1;
 		}
 	    }
@@ -134,15 +144,31 @@ sub old_euca_ipt() {
 	}
 	if ($line ne "" && !$rulehash{$line}) {
 	    $buf .= "$line\n";
+	    #add the line and known permutations of equiv. lines to the rulehash to checking duplication
 	    $rulehash{$line} = 1;
+	    if ($debug) {print STDERR "DEBUG: adding '$line' to rulehash\n";}
+	    $line =~ s/\[\d+:\d+\]\s+//;
+	    $rulehash{$line} = 1;
+	    if ($debug) {print STDERR "DEBUG: adding '$line' to rulehash\n";}
+	    $line =~ s/\/32//;
+	    $rulehash{$line} = 1;
+	    if ($debug) {print STDERR "DEBUG: adding '$line' to rulehash\n";}
+	    if ($line =~ /^-A/) {
+		my $iline = $line;
+		$iline =~ s/-A/-I/;
+		$rulehash{$iline} = 1;
+		if ($debug) {print STDERR "DEBUG: adding '$line' to rulehash\n";}
+	    }
 	}
     }
     close(FH);
 
+    # nothing to do?  just return
     if (!$added) {
 	return(0);
     }
 
+    # write new rulefile
     open (OFH, ">$rulefile.new");
     print OFH "$buf\n";
     close(OFH);
@@ -150,21 +176,22 @@ sub old_euca_ipt() {
 	dodie("cannot find $rulefile.new");
     }
 
+    if ($debug) {
+	if ($added) {
+	    open(OFH, ">/tmp/new.$$");
+	    print OFH "TO ADD LINE: $addline\n";
+	    close(OFH);
+	}
+	system("cat $rulefile.new >> /tmp/new.$$");
+    }
 
+    # install new rulefile
     $rc = system("cat $rulefile.new | iptables-restore -c");
     if ($rc) {
 	print STDERR "iptables-restore failed: rulefile contents:\n";
 	system("cat $rulefile.new 1>&2");
 	dodie("iptables-restore failed\n");
     }
-
-#    open my $fh, '|-' or exec 'iptables-restore' or dodie( "iptables-restore failed: $!\n");
-#    open(IFH, "$rulefile.new") or dodie( "cannot open $rulefile.new");
-#    while(<IFH>) {
-#	print $fh "$_";
-#    }
-#    close($fh) || dodie( "iptables-restore failed\n");
-#    close(IFH);
 
     return(0);
 }

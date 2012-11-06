@@ -595,6 +595,14 @@ update_log_params (void)
     log_prefix_set (log_prefix);
     if (log_prefix)
         free (log_prefix);
+
+	char * log_facility = configFileValue ("LOGFACILITY");
+	if (log_facility) {
+        if (strlen(log_facility)>0) {
+            log_facility_set (log_facility, "nc");
+        }
+        free (log_facility);
+	}
 }
 
 void *

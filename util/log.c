@@ -77,6 +77,8 @@
 #include <sys/resource.h> // rusage
 #include <execinfo.h> // backtrace
 #include <errno.h>
+#define SYSLOG_NAMES // we want facilities as strings
+#include <syslog.h>
 
 #include "eucalyptus.h"
 #include "log.h"
@@ -85,8 +87,9 @@
 
 #define LOGLINEBUF 101024 // enough for a log line, hopefully
 #define MAX_FIELD_LENGTH 100 // any prefix value beyond this will be truncated, even if in spec
-#define DEFAULT_LOG_LEVEL 3 // log level if none is specified (3==DEBUG)
+#define DEFAULT_LOG_LEVEL 4 // log level if none is specified (4==INFO)
 #define LOGFH_DEFAULT stdout // without a file, this is where log output goes
+#define USE_STANDARD_PREFIX "(standard)" // a special string that means no custom prefix
 
 // the log file stream that will remain open:
 // - unless do_close_fd==TRUE
@@ -99,14 +102,17 @@ static ino_t log_ino = -1; // the current inode
 static const boolean timelog = FALSE; // change to TRUE for 'TIMELOG' entries
 static const boolean do_close_fd = FALSE; // whether to close log fd after each message
 static const boolean do_stat_log = TRUE; // whether to monitor file for changes
+static char log_name [32] = "euca"; // name of the log, such as "euca-nc" or "euca-cc" for syslog
+static const int syslog_options = 0; // flags to be passed to openlog(), such as LOG_PID
 
 // these can be modified through setters
 static int log_level=DEFAULT_LOG_LEVEL;
 static int log_roll_number=4;
 static long log_max_size_bytes=MAXLOGFILESIZE;
 static char log_file_path [EUCA_MAX_PATH] = "";
-static char log_custom_prefix [34] = ""; // non-empty if a custom prefix was specified
+static char log_custom_prefix [34] = USE_STANDARD_PREFIX; // any other string means use it as custom prefix
 static sem * log_sem = NULL; // if set, the semaphore will be used when logging & rotating logs
+static int syslog_facility = -1; // if not -1 then we are logging to a syslog facility
 
 // these are set by _EUCA_CONTEXT_SETTER, which is included in log-level macros, such as EUCAWARN
 __thread const char * _log_curr_method = "";
@@ -138,6 +144,10 @@ int log_level_int (const char * level)
 // this function should be called while holding a lock.
 static FILE * get_file (boolean do_reopen)
 {
+    // if max size is 0, there will be no logging except syslog, if configured
+    if (log_max_size_bytes == 0)
+        return NULL;
+
     // no log file has been set
     if (strlen (log_file_path) == 0)
         return LOGFH_DEFAULT;
@@ -233,7 +243,7 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     }
     
     // update the max size for any file
-    if (log_max_size_bytes_in > 0 &&
+    if (log_max_size_bytes_in >= 0 &&
         log_max_size_bytes != log_max_size_bytes_in) {
 
         log_max_size_bytes = log_max_size_bytes_in;
@@ -270,10 +280,43 @@ int log_file_set(const char * file)
 
 int log_prefix_set (const char * log_spec)
 {
-    if (log_spec==NULL)
-        log_custom_prefix [0] = '\0';
+    if (log_spec==NULL || strlen (log_spec)==0) // TODO: eventually, enable empty prefix
+        strncpy (log_custom_prefix, USE_STANDARD_PREFIX, sizeof (log_custom_prefix));
     else
         strncpy (log_custom_prefix, log_spec, sizeof (log_custom_prefix));
+    return 0;
+}
+
+int log_facility_set (const char * facility, const char * component_name)
+{
+    int facility_int = -1;
+
+    if (facility && strlen (facility) > 0) {
+        boolean matched = FALSE;
+        for (CODE * c = facilitynames; c->c_name != NULL; c++) {
+            if (strcmp (c->c_name, facility) == 0) {
+                facility_int = c->c_val;
+                matched = TRUE;
+                break;
+            }
+        }
+        if (! matched) {
+            logprintfl (EUCAERROR, "unrecognized log facility '%s' requested, ignoring\n", facility);
+            return -1;
+        }
+    }
+
+    if (facility_int != syslog_facility) {
+        syslog_facility = facility_int;
+        if (component_name)
+            snprintf (log_name, sizeof (log_name) - 1, "euca-%s", component_name);
+        closelog (); // in case it was open
+        if (syslog_facility != -1) {
+            logprintfl (EUCAINFO, "opening syslog '%s' in facility '%s'\n", log_name, facility);
+            openlog (log_name, syslog_options, syslog_facility);
+        }
+    }
+
     return 0;
 }
 
@@ -418,18 +461,42 @@ int logprintfl (int level, const char *format, ...)
 
     char buf [LOGLINEBUF];
     int offset = 0;
+    boolean custom_spec;
+    char * prefix_spec;
+    if (strcmp(log_custom_prefix, USE_STANDARD_PREFIX) == 0) {
+        prefix_spec = log_level_prefix [log_level];
+        custom_spec = FALSE;
+    } else { 
+        prefix_spec = log_custom_prefix;
+        custom_spec = TRUE;
+    }
 
-    // go over prefix format for the log level (defined in log.h)
-    for (char * prefix_spec = (strlen(log_custom_prefix) > 0) ? log_custom_prefix : log_level_prefix [log_level];
+    // go over prefix format for the log level (defined in log.h or custom)
+    for ( ; // prefix_spec is initialized above
          * prefix_spec != '\0'; 
-         prefix_spec++) { 
+         prefix_spec++) {
         
         char * s = buf + offset;
         int left = sizeof (buf) - offset - 1;
         if (left < 1) {
             return -1; // not enough room in internal buffer for a prefix
         }
-        
+
+        // see if we have a formatting character or a regular one
+        char c  = prefix_spec [0];
+        char cn = prefix_spec [1];
+        if (c != '%' // not a special formatting char
+            || (c == '%' && cn == '%') // formatting char, escaped
+            || (c == '%' && cn == '\0')) { // formatting char at the end
+            s [0] = c;
+            s [1] = '\0';
+            offset++;
+            if (c == '%' && cn == '%')
+                prefix_spec++; // swallow the one extra '%' in input
+            continue;
+        }
+        prefix_spec++; // move past the '%' to the formatting char
+
         int size = 0;
         switch (* prefix_spec) {
         case 'T': // timestamp
@@ -494,6 +561,12 @@ int logprintfl (int level, const char *format, ...)
         }
         offset += size;
     }
+
+    // add a space between the prefix and the message proper
+    if (offset > 0 && ((sizeof (buf) - offset - 1) > 0)) {
+        buf [offset++] = ' ';
+        buf [offset] = '\0';
+    }
     
     // append the log message passed via va_list
     va_list ap;
@@ -502,7 +575,19 @@ int logprintfl (int level, const char *format, ...)
     va_end(ap);
     if (rc<0)
         return rc;
-    
+
+    if (syslog_facility != -1) {
+        // log to syslog, at the appropriate level
+        int l = LOG_DEBUG; // euca DEBUG, TRACE, and EXTREME use syslog's DEBUG
+        if (level==EUCAERROR)     l = LOG_ERR;
+        else if (level==EUCAWARN) l = LOG_WARNING;
+        else if (level==EUCAINFO) l = LOG_INFO;
+        if (custom_spec)
+            syslog (l, buf);
+        else 
+            syslog (l, buf + offset);
+    }
+
     return log_line (buf);
 }
 

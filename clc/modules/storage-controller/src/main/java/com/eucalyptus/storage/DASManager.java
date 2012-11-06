@@ -451,10 +451,13 @@ public class DASManager implements LogicalStorageManager {
 				try {
 					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
-					long absoluteSize = snapshotFile.length() / StorageProperties.MB;
-					if(size <= 0) {
+					long absoluteSize;
+					if (size <= 0 || size == foundSnapshotInfo.getSize()) {
 						// size = (int)(snapshotFile.length() / StorageProperties.GB);
+						absoluteSize = snapshotFile.length() / StorageProperties.MB;
 						size = (int)(absoluteSize / StorageProperties.KB);
+					} else {
+						absoluteSize = size * StorageProperties.KB;
 					}
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(lvName, absoluteSize);

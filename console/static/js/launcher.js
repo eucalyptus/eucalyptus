@@ -290,7 +290,7 @@
         $section.find('div#launch-images_filter').find('input').attr('title', launch_instance_image_search_text_tip);
       };
 
-      
+      var image_self = false; 
       var dtArg = { 
           "sAjaxSource": "../ec2?Action=DescribeImages",
           "fnServerData": function (sSource, aoData, fnCallback) {
@@ -343,10 +343,18 @@
              {
                "bVisible": false,
                "fnRender" : function(oObj){
-                 if(oObj.aData.ownerId ==='000000000001')
-                   return 'all';
+                 var results = describe('sgroup');
+                 var group = null;
+                 for(i in results){
+                   if(results[i].name === 'default'){
+                     group = results[i];
+                     break;
+                   }
+                 } 
+                 if(group && group.owner_id === oObj.aData.ownerId)
+                   return 'self'; // equivalent of 'describe-images -self'
                  else
-                   return 'me';
+                   return 'all'; 
                }
              },
              {
@@ -383,21 +391,6 @@
       $section.find('#filter-wrapper').prepend($('<div>').addClass('wizard-section-label').html(launch_instance_image_table_refine));
       $section.find('#table-wrapper').prepend($('<div>').addClass('wizard-section-label required-label').html(launch_instance_image_table_header));
 
-      // special owner filter
-      $section.find('#owner-filter').addClass('euca-table-filter').append(
-        $('<select>').append(
-          $('<option>').val('all').text(launch_instance_image_table_owner_all).attr('selected','selected'),
-          $('<option>').val('me').text(launch_instance_image_table_owner_me)));
-      $section.find('#owner-filter').find('select').change(function(e){
-        var val = $(e.target).val();
-        var oSettings = thisObj._imageTable.fnSettings();
-        if(val === 'me')
-          oSettings.sAjaxSource = "../ec2?Action=DescribeImages&Owner=self";
-        else 
-          oSettings.sAjaxSource = "../ec2?Action=DescribeImages";
-        thisObj._imageTable.fnReloadAjax();
-      });
-
       $.fn.dataTableExt.afnFiltering = [];
       $.fn.dataTableExt.afnFiltering.push(
         function( oSettings, aData, iDataIndex ) {
@@ -409,8 +402,7 @@
       var filters = [{name:"platform", options: ['all', 'linux','windows'], text: [launch_instance_image_table_platform_all, launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:1}, 
                      {name:"arch", options: ['all','i386','x86_64'], text: [launch_instance_image_table_arch_all, launch_instance_image_table_arch_32, launch_instance_image_table_arch_64], filter_col:4 },
                      {name:"root", options: ['all', 'instance-store', 'ebs'], text: [launch_instance_image_table_root_all, launch_instance_image_table_root_inst_store, launch_instance_image_table_root_ebs], filter_col:5 },
-                    ];
-                   //{name:"owner", options: ['all', 'me'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], filter_col:2}];
+                     {name:"owner", options: ['all', 'self'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], filter_col:2}];
       $.each(filters, function (idx, filter){
         var $filter = $section.find('#'+filter['name']+'-filter');
         $filter.addClass('euca-table-filter');
@@ -666,7 +658,7 @@
         }
         var sortedArr = sortArray(keyNameArr);
         $.each(sortedArr, function(idx, kpName){
-          var $option = $('<option>').attr('value', kpName).text(kpName);
+          var $option = $('<option>').attr('value', kpName).attr('title', kpName).text(addEllipsis(kpName, 70));
           if(oldKeypairs && $.inArray(kpName, oldKeypairs) < 0){
             $option.attr('selected', 'selected'); 
           }
@@ -751,7 +743,7 @@
         }
         var sortedArr = sortArray(sgNameArr);
         $.each(sortedArr, function(idx, sgName){
-          var $option = $('<option>').attr('value',sgName).text(sgName);
+          var $option = $('<option>').attr('value',sgName).attr('title',sgName).text(addEllipsis(sgName, 70));
           if(oldGroups && $.inArray(sgName, oldGroups) < 0){
             $option.attr('selected','selected');
             onSelectorChange(sgName);
@@ -1129,22 +1121,6 @@
         return $tr;
       } /// end of addNewRow()
 
-      $storage.children().detach();
-      $storage.append(
-        $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
-        $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
-          $('<table>').addClass('device-map-table').append(
-            $('<thead>').append(
-              $('<tr>').append(
-                $('<th>').text(launch_instance_advanced_th_volume),
-                  $('<th>').text(launch_instance_advanced_th_mapping),
-                  $('<th>').text(launch_instance_advanced_th_create),
-                  $('<th>').text(launch_instance_advanced_th_size),
-                  $('<th>').text(launch_instance_advanced_th_delete)/*,
-                  $('<th>').text(''),
-                  $('<th>').text('') */
-          )
-        ), $('<tbody>'))));
       $section.find('#launch-wizard-image-emi').change(function(e){
         var isEbsBacked = false;
         var snapshotId= null;
@@ -1158,6 +1134,22 @@
           }
         }
         if(isEbsBacked && snapshotId){
+          $storage.children().detach();
+          $storage.append(
+            $('<div>').addClass('wizard-section-label').text(launch_instance_advanced_storage),
+            $('<div>').attr('id', 'launch-wizard-advanced-storage-table-wrapper').append(
+              $('<table>').addClass('device-map-table').append(
+                $('<thead>').append(
+                  $('<tr>').append(
+                    $('<th>').text(launch_instance_advanced_th_volume),
+                    $('<th>').text(launch_instance_advanced_th_mapping),
+                    $('<th>').text(launch_instance_advanced_th_create),
+                    $('<th>').text(launch_instance_advanced_th_size),
+                    $('<th>').text(launch_instance_advanced_th_delete)/*,
+                    $('<th>').text(''),
+                    $('<th>').text('') */
+            )
+            ), $('<tbody>'))));
           var $tbody = $storage.find('table tbody');
           var $tr = null;
           var snapshot = describe('snapshot', snapshotId);
@@ -1186,7 +1178,7 @@
         var data = $section.find('#launch-wizard-advanced-input-userdata');
         if(data.val().length > 0){
           dataAdded = true;
-          thisObj.launchParam['data'] = asText(data.val());
+          thisObj.launchParam['data'] = toBase64(asText(data.val()));
         }
         if($userdata.find('#launch-wizard-advanced-input-userfile').val().length > 0){
           dataAdded = true;

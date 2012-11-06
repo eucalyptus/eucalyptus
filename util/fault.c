@@ -1064,6 +1064,8 @@ main (int argc, char **argv)
 
 #ifdef EUCA_GENERATE_FAULT
 
+const char * euca_this_component_name = "generate-fault";
+
 static void
 usage (const char *argv0)
 {
@@ -1074,7 +1076,7 @@ int main (int argc, char **argv)
 {
     drop_privs (); // become 'eucalyptus' so log file is created with the right privs
     log_params_set (EUCAWARN, 0, 0); // set log level
-    log_prefix_set ("L "); // only print log level
+    log_prefix_set ("%L"); // only print log level
     log_file_set (NULL); // log output goes to STANDARD_FILESTREAM
 
     char * component = NULL;

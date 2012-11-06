@@ -1008,15 +1008,20 @@ public class BlockStorage {
 			this.size = size;
 		}
 
-		private void cleanFailedSnapshot(String snapshotId) throws EucalyptusCloudException {
+		// DO NOT throw any exceptions from cleaning routines. Log the errors and move on
+		private void cleanFailedSnapshot(String snapshotId) {
 			if(snapshotId == null) return;
 			LOG.debug("Disconnecting and cleaning local snapshot after failed snapshot transfer: " + snapshotId);			
 			try {
 				blockManager.finishVolume(snapshotId);
 			} catch(Exception e) {
-				throw new EucalyptusCloudException("Error during cleanup of failed snapshot download of " + snapshotId, e);
+				LOG.error("Error finishing failed snapshot " + snapshotId, e);
 			} finally {
-				blockManager.cleanSnapshot(snapshotId);
+				try {
+					blockManager.cleanSnapshot(snapshotId);
+				} catch (Exception e) {
+					LOG.error("Error deleting failed snapshot " + snapshotId, e);
+				}
 			}
 		}
 		
@@ -1155,7 +1160,7 @@ public class BlockStorage {
 								}
 								db = StorageProperties.getEntityWrapper();
 								snapshotInfo = new SnapshotInfo(snapshotId);
-								snapshotInfo.setVolumeId(volumeId);
+								//snapshotInfo.setVolumeId(volumeId);
 								snapshotInfo.setProgress("100");
 								snapshotInfo.setStartTime(new Date());
 								snapshotInfo.setStatus(StorageProperties.Status.available.toString());
