@@ -23,6 +23,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def __normalize_instances__(self, instances):
         ret = []
+        if not(instances):
+            return None
         for res in instances:
             if issubclass(res.__class__, EC2Object):
                 for inst in res.instances:
@@ -150,14 +152,14 @@ class ComputeHandler(eucaconsole.BaseHandler):
                             instance_profile_arn=instance_profile_arn,
                             tenancy=tenancy)])
 
-    def handleImages(self, action, clc):
+    def handleImages(self, action, clc, callback=None):
         if action == 'DescribeImages':
             owner = self.get_argument('Owner', None);
             if not owner:
                 owners = None
             else:
                 owners = [owner]
-            return clc.get_all_images(owners)
+            return clc.get_all_images(owners, callback)
         elif action == 'DescribeImageAttribute':
             imageid = self.get_argument('ImageId')
             attribute = self.get_argument('Attribute')
@@ -212,10 +214,10 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 bdm = None
             return clc.register_image(name, image_location, description, architecture, kernel_id, ramdisk_id, root_dev_name, bdm)
 
-    def handleInstances(self, action, clc):
+    def handleInstances(self, action, clc, callback=None):
         if action == 'DescribeInstances':
             # apply transformation of data to normalize instances
-            instances = clc.get_all_instances()
+            instances = clc.get_all_instances(callback)
             return self.__normalize_instances__(instances)
         elif action == 'RunInstances':
             return self.handleRunInstances(action, clc, None)
@@ -235,9 +237,9 @@ class ComputeHandler(eucaconsole.BaseHandler):
             instance_id = self.get_argument('InstanceId')
             return clc.get_console_output(instance_id)
 
-    def handleKeypairs(self, action, clc):
+    def handleKeypairs(self, action, clc, callback=None):
         if action == 'DescribeKeyPairs':
-            return clc.get_all_key_pairs()
+            return clc.get_all_key_pairs(callback)
         elif action == 'CreateKeyPair':
             name = self.get_argument('KeyName')
             ret = clc.create_key_pair(name)
@@ -251,18 +253,18 @@ class ComputeHandler(eucaconsole.BaseHandler):
             material = base64.b64decode(self.get_argument('PublicKeyMaterial', None))
             return clc.import_key_pair(name, material)
 
-    def handleGroups(self, action, clc):
+    def handleGroups(self, action, clc, callback=None):
         if action == 'DescribeSecurityGroups':
-            return clc.get_all_security_groups()
+            return clc.get_all_security_groups(callback)
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
             desc = self.get_argument('GroupDescription')
-            description = base64.b64decode(desc)
-            return clc.create_security_group(name, description)
+            desc = base64.b64decode(desc)
+            return clc.create_security_group(name, desc, callback)
         elif action == 'DeleteSecurityGroup':
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)
-            return clc.delete_security_group(name, group_id)
+            return clc.delete_security_group(name, group_id, callback)
         elif action == 'AuthorizeSecurityGroupIngress':
             name = self.get_argument('GroupName', None)
             group_id = self.get_argument('GroupId', None)
@@ -281,7 +283,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
                                  src_security_group_owner_id[i] if src_security_group_owner_id else None,
                                  ip_protocol[i], from_port[i], to_port[i],
                                  cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
-                                 src_security_group_group_id[i] if src_security_group_group_id else None)
+                                 src_security_group_group_id[i] if src_security_group_group_id else None,
+                                 callback)
             return ret
         elif action == 'RevokeSecurityGroupIngress':
             name = self.get_argument('GroupName', None)
@@ -301,12 +304,13 @@ class ComputeHandler(eucaconsole.BaseHandler):
                                  src_security_group_owner_id[i] if src_security_group_owner_id else None,
                                  ip_protocol[i], from_port[i], to_port[i],
                                  cidr_ip[i] if cidr_ip else None, group_id[i] if group_id else None,
-                                 src_security_group_group_id[i] if src_security_group_group_id else None)
+                                 src_security_group_group_id[i] if src_security_group_group_id else None,
+                                 callback)
             return ret
 
-    def handleAddresses(self, action, clc):
+    def handleAddresses(self, action, clc, callback=None):
         if action == 'DescribeAddresses':
-            return clc.get_all_addresses()
+            return clc.get_all_addresses(callback)
         elif action == 'AllocateAddress':
             return clc.allocate_address()
         elif action == 'ReleaseAddress':
@@ -320,9 +324,9 @@ class ComputeHandler(eucaconsole.BaseHandler):
             publicip = self.get_argument('PublicIp')
             return clc.disassociate_address(publicip)
 
-    def handleVolumes(self, action, clc):
+    def handleVolumes(self, action, clc, callback=None):
         if action == 'DescribeVolumes':
-            return clc.get_all_volumes()
+            return clc.get_all_volumes(callback)
         elif action == 'CreateVolume':
             size = self.get_argument('Size')
             zone = self.get_argument('AvailabilityZone')
@@ -341,9 +345,9 @@ class ComputeHandler(eucaconsole.BaseHandler):
             force = self.get_argument('Force', False)
             return clc.detach_volume(volumeid, force)
 
-    def handleSnapshots(self, action, clc):
+    def handleSnapshots(self, action, clc, callback=None):
         if action == "DescribeSnapshots":
-            return clc.get_all_snapshots()
+            return clc.get_all_snapshots(callback)
         elif action == 'CreateSnapshot':
             volumeid = self.get_argument('VolumeId')
             description = self.get_argument('Description', None)
@@ -372,6 +376,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
     # This is the main entry point for API calls for EC2 from the browser
     # other calls are delegated to handler methods based on resource type
     #
+    @tornado.web.asynchronous
     def get(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
@@ -399,17 +404,29 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.user_session.session_last_used = time.time()
                 self.check_xsrf_cookie()
             if action == 'DescribeAvailabilityZones':
-                ret = self.user_session.clc.get_all_zones()
+                ret = self.user_session.clc.get_all_zones(self.callback)
+                if ret == None:
+                    return
             elif action.find('Image') > -1:
-                ret = self.handleImages(action, self.user_session.clc)
+                ret = self.handleImages(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
-                ret = self.handleInstances(action, self.user_session.clc)
+                ret = self.handleInstances(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Address') > -1:
-                ret = self.handleAddresses(action, self.user_session.clc)
+                ret = self.handleAddresses(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('KeyPair') > -1:
-                ret = self.handleKeypairs(action, self.user_session.clc)
+                ret = self.handleKeypairs(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('SecurityGroup') > -1:
-                ret = self.handleGroups(action, self.user_session.clc)
+                ret = self.handleGroups(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Volume') > -1:
                 ret = self.handleVolumes(action, self.user_session.clc)
             elif action.find('Snapshot') > -1:
@@ -442,6 +459,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.write(json.dumps(ret, cls=BotoJsonEncoder))
 
+    @tornado.web.asynchronous
     def post(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
@@ -485,21 +503,37 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 else:
                     ret = self.handleRunInstances(action, self.user_session.clc, None)
             elif action == 'DescribeAvailabilityZones':
-                ret = self.user_session.clc.get_all_zones()
+                ret = self.user_session.clc.get_all_zones(self.callback)
+                if ret == None:
+                    return
             elif action.find('Image') > -1:
-                ret = self.handleImages(action, self.user_session.clc)
+                ret = self.handleImages(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
-                ret = self.handleInstances(action, self.user_session.clc)
+                ret = self.handleInstances(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Address') > -1:
-                ret = self.handleAddresses(action, self.user_session.clc)
+                ret = self.handleAddresses(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('KeyPair') > -1:
-                ret = self.handleKeypairs(action, self.user_session.clc)
+                ret = self.handleKeypairs(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('SecurityGroup') > -1:
-                ret = self.handleGroups(action, self.user_session.clc)
+                ret = self.handleGroups(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Volume') > -1:
-                ret = self.handleVolumes(action, self.user_session.clc)
+                ret = self.handleVolumes(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action.find('Snapshot') > -1:
-                ret = self.handleSnapshots(action, self.user_session.clc)
+                ret = self.handleSnapshots(action, self.user_session.clc, self.callback)
+                if ret == None:
+                    return
             elif action == 'GetPassword':
                 instanceid = self.get_argument('InstanceId')
                 passwd_data = self.user_session.clc.get_password_data(instanceid)
@@ -518,6 +552,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.write(data)
         except EC2ResponseError as err:
+            print err
             ret = ClcError(err.status, err.reason, err.errors[0][1])
             self.set_status(err.status);
             self.set_header("Content-Type", "application/json;charset=UTF-8")
@@ -535,3 +570,21 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.set_status(500);
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
                 self.write(json.dumps(ret, cls=BotoJsonEncoder))
+
+    def callback(self, response):
+        if response.error:
+            print response.error
+            ret = ClcError(response.error.status, response.error.reason, response.error.errors[0][1])
+            self.set_status(response.error.status);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.write(json.dumps(ret, cls=BotoJsonEncoder))
+        else:
+            try:
+                ret = Response(response.data) # wrap all responses in an object for security purposes
+                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.write(data)
+                self.flush()
+                self.finish()
+            except Exception, err:
+                print err

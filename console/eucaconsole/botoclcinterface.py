@@ -26,13 +26,13 @@ class BotoClcInterface(ClcInterface):
         json.dump(obj, f, cls=BotoJsonEncoder, indent=2)
         f.close()
 
-    def get_all_zones(self):
+    def get_all_zones(self, callback=None):
         obj = self.conn.get_all_zones()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Zones.json")
         return obj
 
-    def get_all_images(self, owners):
+    def get_all_images(self, owners, callback=None):
         obj = self.conn.get_all_images(owners=owners)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Images.json")
@@ -50,7 +50,7 @@ class BotoClcInterface(ClcInterface):
     def reset_image_attribute(self, image_id, attribute):
         return self.conn.reset_image_attribute(image_id, attribute)
 
-    def get_all_instances(self):
+    def get_all_instances(self, callback=None):
         obj = self.conn.get_all_instances()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Instances.json")
@@ -112,7 +112,7 @@ class BotoClcInterface(ClcInterface):
     def get_password_data(self, instance_id):
         return self.conn.get_password_data(instance_id)
 
-    def get_all_addresses(self):
+    def get_all_addresses(self, callback=None):
         obj = self.conn.get_all_addresses()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Addresses.json")
@@ -134,7 +134,7 @@ class BotoClcInterface(ClcInterface):
     def disassociate_address(self, publicip):
         return self.conn.disassociate_address(publicip)
 
-    def get_all_key_pairs(self):
+    def get_all_key_pairs(self, callback=None):
         obj = self.conn.get_all_key_pairs()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Keypairs.json")
@@ -152,7 +152,7 @@ class BotoClcInterface(ClcInterface):
     def import_key_pair(self, key_name, public_key_material):
         return self.conn.import_key_pair(key_name, public_key_material)
 
-    def get_all_security_groups(self):
+    def get_all_security_groups(self, callback=None):
         obj = self.conn.get_all_security_groups()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Groups.json")
@@ -163,7 +163,7 @@ class BotoClcInterface(ClcInterface):
         return self.conn.create_security_group(name, description)
 
     # returns True if successful
-    def delete_security_group(self, name=None, group_id=None):
+    def delete_security_group(self, name=None, group_id=None, callback=None):
         return self.conn.delete_security_group(name, group_id)
 
     # returns True if successful
@@ -194,7 +194,7 @@ class BotoClcInterface(ClcInterface):
                                  cidr_ip)#, group_id,
                                  #src_security_group_group_id)
 
-    def get_all_volumes(self):
+    def get_all_volumes(self, callback=None):
         obj = self.conn.get_all_volumes()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Volumes.json")
@@ -216,7 +216,7 @@ class BotoClcInterface(ClcInterface):
     def detach_volume(self, volume_id, force=False):
         return self.conn.detach_volume(volume_id, None, None, force)
 
-    def get_all_snapshots(self):
+    def get_all_snapshots(self, callback=None):
         obj = self.conn.get_all_snapshots()
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Snapshots.json")
