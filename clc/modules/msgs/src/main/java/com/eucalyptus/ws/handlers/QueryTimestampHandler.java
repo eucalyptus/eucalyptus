@@ -137,7 +137,7 @@ public class QueryTimestampHandler extends MessageStackHandler {
         String expiryTime = String.format( "%4d-%02d-%02dT%02d:%02d:%02d",
                                            expires.get( Calendar.YEAR ),
                                            expires.get( Calendar.MONTH ) + 1,
-                                           expires.get( Calendar.DAY_OF_MONTH ) + 1,
+                                           expires.get( Calendar.DAY_OF_MONTH ),
                                            expires.get( Calendar.HOUR_OF_DAY ),
                                            expires.get( Calendar.MINUTE ),
                                            expires.get( Calendar.SECOND ) );
