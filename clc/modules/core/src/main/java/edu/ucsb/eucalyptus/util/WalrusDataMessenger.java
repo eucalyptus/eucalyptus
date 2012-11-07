@@ -116,8 +116,10 @@ public class WalrusDataMessenger {
 			ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
 			if(queues.containsKey(key2)) {
 				queues.remove(key2);
-				if(queues.size() == 0) {
-					queueMap.remove(key1);
+				synchronized(queues) {
+					if(queues.size() == 0) {
+						queueMap.remove(key1);
+					}	
 				}
 			}
 		}
