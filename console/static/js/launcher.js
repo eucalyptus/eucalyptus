@@ -916,7 +916,7 @@
       var usedVolumes = [];
       var usedMappings = [];
 
-      var validate = function($selectedRow){
+      var validate = function($selectedRow, emi){
         if(! $selectedRow || $selectedRow.length <= 0)
           return true;
 
@@ -946,18 +946,26 @@
           return false;
         }
         if(volume === 'ebs' || volume === 'root'){
+          var snapshotSize = -1;
+          if(volume==='ebs'){
           //find the size of the chosen snapshot;
-          var result = describe('snapshot');
-          for (i in result){
-            var s = result[i]; 
-            if(s.id === snapshot){
-              if(s.volume_size > size){
-                thisObj.element.find('.field-error').remove();
-                $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size));
-                return false;
-              }else
-                break; 
+            var result = describe('snapshot');
+            for (i in result){
+              var s = result[i]; 
+              if(s.id === snapshot){
+                snapshotSize = s.volume_size;
+                break;
+              }
             }
+          }else if (emi){ //root volume
+            var image = describe('image', emi);
+            if(image['block_device_mapping'] && image['block_device_mapping']['/dev/sda1']) 
+             snapshotSize = parseInt(image['block_device_mapping']['/dev/sda1']['size']);
+          }
+          if(snapshotSize > size){
+            thisObj.element.find('.field-error').remove();
+            $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size));
+            return false;
           }
         } 
         thisObj.element.find('.field-error').remove();
@@ -1036,7 +1044,7 @@
         var $size = $('<input>').attr('title', launch_wizard_advanced_storage_size_input_tip).attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
         $size.change(function(e){  
           $(e.target).parent().find('.field-error').detach();
-          validate($(e.target).parents('tr'));
+          validate($(e.target).parents('tr'), param['emi'] );
         });
         if(param && param['size']){
           $size.val(param['size']);
@@ -1069,7 +1077,7 @@
           var size = asText($($cells[3]).find('input').val()); 
           var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
 
-          if(!validate($selectedRow))
+          if(!validate($selectedRow, param['emi']))
             return false;
           usedMappings.push(mapping);
           usedVolumes.push(volume);
@@ -1126,13 +1134,17 @@
       $section.find('#launch-wizard-image-emi').change(function(e){
         var isEbsBacked = false;
         var snapshotId= null;
-        var emi = $(e.target).val();
-        if(emi){
-          emi = describe('image', emi);
+        var emiId = $(e.target).val();
+        var snapshotSize = '-1';
+        var emi = null;
+        if(emiId){
+          emi = describe('image', emiId);
           if (emi && emi['root_device_type'] === 'ebs'){
             isEbsBacked = true;
-            if(emi['block_device_mapping']&&emi['block_device_mapping']['/dev/sda1'])
+            if(emi['block_device_mapping']&&emi['block_device_mapping']['/dev/sda1']){
               snapshotId = emi['block_device_mapping']['/dev/sda1']['snapshot_id'];
+              snapshotSize = emi['block_device_mapping']['/dev/sda1']['size'];
+            }
           }
         }
         if(isEbsBacked && snapshotId){
@@ -1154,15 +1166,12 @@
             ), $('<tbody>'))));
           var $tbody = $storage.find('table tbody');
           var $tr = null;
-          var snapshot = describe('snapshot', snapshotId);
-          var size = '-1';
-          if(snapshot && snapshot['volume_size'])
-            size = snapshot['volume_size'].toString();
           $tr = addNewRow({
+            'emi' : emiId,
             'volume' : ['root', 'Root'],
             'mapping' : 'sda1',
             'snapshot' : [snapshotId, snapshotId],
-            'size' : size, 
+            'size' : snapshotSize, 
             'delOnTerm' : true,
             'add' : true,
             'remove' : false
@@ -1269,7 +1278,7 @@
 
       $section.find('#launch-wizard-buttons-advanced').find('button').click(function(e){// launch button
         var $selectedRow = $section.find('#launch-wizard-advanced-storage').find('table tbody tr').last(); 
-        if(!validate($selectedRow))
+        if(!validate($selectedRow, thisObj.launchParam['emi']))
           return false;
 
         var $summary = summarize(); 
@@ -1333,7 +1342,6 @@
     },
 
     launch : function(){
-      // validate
       var thisObj = this;
       var param = thisObj.launchParam;
 
