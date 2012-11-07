@@ -134,7 +134,7 @@ public class QueryTimestampHandler extends MessageStackHandler {
       
       if ( now.after( expires ) ) {
         expires.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
-        String expiryTime = String.format( "%4d-%02d-%02d'T'%02d:%02d:%02d",
+        String expiryTime = String.format( "%4d-%02d-%02dT%02d:%02d:%02d",
                                            expires.get( Calendar.YEAR ),
                                            expires.get( Calendar.MONTH ) + 1,
                                            expires.get( Calendar.DAY_OF_MONTH ) + 1,
