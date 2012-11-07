@@ -1040,8 +1040,10 @@
         });
         if(param && param['size']){
           $size.val(param['size']);
+          if(param['size'] <= 0){
+            $size.attr('disabled','disabled');
+          }
         }
-        
     
         var $delOnTerm= $('<input>').attr('class','launch-wizard-advanced-storage-delOnTerm').attr('type','checkbox');
         if(param && param['delOnTerm'] !== undefined){
@@ -1371,7 +1373,8 @@
         $.each(param['device_map'], function(idx, mapping){
           if(mapping['volume'] === 'ebs'){
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.DeviceName', value: mapping['dev']});
-           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize', value: mapping['size']});
+           if(mapping['size'] && mapping['size'] > 0)
+             reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize', value: mapping['size']});
            if(mapping['snapshot'])
              reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.SnapshotId', value: mapping['snapshot']});
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination', value: mapping['delOnTerm']});
