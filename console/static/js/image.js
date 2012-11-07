@@ -92,6 +92,23 @@
               "bVisible" : false,
               "mDataProp" : "location",
             },
+            {
+              "bVisible": false,
+              "fnRender" : function(oObj){
+                var results = describe('sgroup');
+                var group = null;
+                for(i in results){
+                  if(results[i].name === 'default'){
+                    group = results[i];
+                    break;
+                  }
+                } 
+                if(group && group.owner_id === oObj.aData.ownerId)
+                  return 'self'; // equivalent of 'describe-images -self'
+                else
+                  return 'all'; 
+              }
+            }
           ],
         },
         text : {
@@ -109,16 +126,11 @@
         legend : ['pending','available','failed'],
         show_only : [{filter_value: 'machine', filter_col: 8},{filter_value: 'available', filter_col: 7}],
         filters : [
-          {name:"img_ownership", options: ['all','me'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], callback : function(selected){ 
-               var url = '../ec2?Action=DescribeImages';
-               if(selected === 'me')
-                 url = '../ec2?Action=DescribeImages&Owner=self';
-               thisObj.tableWrapper.eucatable('changeAjaxUrl', url);
-          }}, 
+          {name:"img_ownership", options: ['all','self'], text: [launch_instance_image_table_owner_all, launch_instance_image_table_owner_me], filter_col:12}, 
           {name:"img_platform", options: ['all', 'linux', 'windows'], text: [launch_instance_image_table_platform_all,
 launch_instance_image_table_platform_linux, launch_instance_image_table_platform_windows], filter_col:10},
-          {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:4},
-          {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:6},
+          {name:"img_architect", options: ['all', 'i386','x86_64'], text: ['32 and 64 bit', '32 bit', '64 bit'], filter_col:3},
+          {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:5},
           ],
       });
       this.tableWrapper.appendTo(this.element);
@@ -230,10 +242,6 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 //      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
     },
 /**** End of Public Methods ****/
   });

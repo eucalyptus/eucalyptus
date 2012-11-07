@@ -60,6 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -2860,6 +2863,11 @@ int doCreateImage(ncMetadata *ccMeta, char *instanceId, char *volumeId, char *re
 
 int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
 {
+  int rc = initialize(meta);
+  if (rc || ccIsEnabled()) {
+    return 1;
+  }
+  
   logprintfl(EUCAINFO, "invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
   int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
   if (err != 0)
@@ -3564,7 +3572,15 @@ int init_log(void)
         configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
 	if (log_prefix && strlen(log_prefix)>0) {
 	  safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
+	}
 	  free (log_prefix);
+
+	char * log_facility = configFileValue ("LOGFACILITY");
+	if (log_facility) {
+	  if (strlen(log_facility)>0) {
+	    safe_strncpy (config->log_facility, log_facility, sizeof (config->log_facility));
+	  }
+	  free (log_facility);
 	}
 
         // set the log file path (levels and size limits are set below)
@@ -3577,6 +3593,7 @@ int init_log(void)
     // by monitoring_thread will get picked up by other processes, too
     log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
     log_prefix_set (config->log_prefix);
+    log_facility_set (config->log_facility, "cc");
 
     return 0;
 }
@@ -3684,13 +3701,22 @@ int update_config(void) {
       char * log_prefix;
       configReadLogParams (&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
       if (log_prefix && strlen(log_prefix)>0) {
-	safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
-	free (log_prefix);
+          safe_strncpy (config->log_prefix, log_prefix, sizeof (config->log_prefix));
       }
+      free (log_prefix);
 
+      char * log_facility = configFileValue ("LOGFACILITY");
+      if (log_facility) {
+	if (strlen(log_facility)>0) {
+	  safe_strncpy (config->log_facility, log_facility, sizeof (config->log_facility));
+	}
+	free (log_facility);
+      }
+      
       // reconfigure the logging subsystem to use the new values, if any
       log_params_set (config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
       log_prefix_set (config->log_prefix);
+      log_facility_set (config->log_facility, "cc");
 
       // NODES
       logprintfl(EUCAINFO, "refreshing node list.\n");

@@ -35,6 +35,9 @@ import com.eucalyptus.reporting.ReportGenerationFacade;
 import com.eucalyptus.reporting.export.Export;
 import com.eucalyptus.reporting.export.Import;
 import com.eucalyptus.reporting.export.ReportingExport;
+import com.eucalyptus.reporting.units.SizeUnit;
+import com.eucalyptus.reporting.units.TimeUnit;
+import com.eucalyptus.reporting.units.Units;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Objects;
@@ -142,6 +145,7 @@ public class ReportingService {
       reportData = ReportGenerationFacade.generateReport(
           Objects.firstNonNull( request.getType(), "instance" ),
           Objects.firstNonNull( request.getFormat(), "html" ),
+          units(request),
           startTime,
           endTime );
     } catch ( final ReportGenerationArgumentException e ) {
@@ -156,7 +160,25 @@ public class ReportingService {
     return reply;
   }
 
-  private long parseDate( final String date ) throws ReportingException {
+  private static Units units( final GenerateReportType request ) throws ReportGenerationArgumentException {
+    return new Units(
+      TimeUnit.fromString( request.getTimeUnit(), TimeUnit.DAYS ),
+      SizeUnit.fromString( request.getSizeUnit(), SizeUnit.GB ),
+      TimeUnit.fromString( firstNonNullOrNull( request.getSizeTimeTimeUnit(), request.getTimeUnit() ), TimeUnit.DAYS ),
+      SizeUnit.fromString( firstNonNullOrNull( request.getSizeTimeSizeUnit(), request.getSizeUnit() ), SizeUnit.GB )
+    );
+  }
+
+  private static <T> T firstNonNullOrNull( final T... items ) {
+    T value = null;
+    for ( final T item : items ) if ( item != null ) {
+      value = item;
+      break;
+    }
+    return value;
+  }
+
+  private static long parseDate( final String date ) throws ReportingException {
     try {
       return getDateFormat( date.endsWith("Z") ).parse( date ).getTime();
     } catch (ParseException e) {
@@ -164,7 +186,7 @@ public class ReportingService {
     }
   }
 
-  private DateFormat getDateFormat( final boolean utc ) {
+  private static DateFormat getDateFormat( final boolean utc ) {
     final String format = "yyyy-MM-dd'T'HH:mm:ss";
     final SimpleDateFormat dateFormat = new SimpleDateFormat( format + ( utc ? "'Z'" : "")  );
     if (utc) {

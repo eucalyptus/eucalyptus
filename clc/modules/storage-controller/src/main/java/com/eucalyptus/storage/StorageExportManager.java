@@ -63,7 +63,6 @@
 package com.eucalyptus.storage;
 
 import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionException;
 
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 
@@ -76,7 +75,9 @@ public interface StorageExportManager {
 
 	public void configure();
 	
-	public void allocateTarget(LVMVolumeInfo volumeInfo);
+	public void allocateTarget(LVMVolumeInfo volumeInfo) throws EucalyptusCloudException;
 
 	public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException;
+	
+	public void stop();
 }

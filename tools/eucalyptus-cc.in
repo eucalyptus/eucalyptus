@@ -82,6 +82,8 @@
 # This allows Eucalyptus to use correct localization settings
 [ -f /etc/init.d/functions ] && . /etc/init.d/functions
 
+LOCKFILE=/var/lock/subsys/eucalyptus-cc
+
 # if we have lsb functions let's source them
 WE_HAVE_LSB="N"
 if [ -e /lib/lsb/init-functions ]; then
@@ -151,6 +153,15 @@ create_httpd_config() {
 
 # crude way to start the axis2c services
 do_start() {
+        # check if NTPD is running and throw a fault if it is not
+        if [ ! `pgrep -n ntp` ]; then
+	    # write fault to stdout
+	    echo
+	    $EUCALYPTUS/usr/sbin/euca-generate-fault       1008 daemon ntp
+	    # and to NC's fault log
+	    $EUCALYPTUS/usr/sbin/euca-generate-fault -c cc 1008 daemon ntp
+        fi
+
 	# fixes #469984 (was against NC but CC may have similar issue)
 	IPTABLES="`which iptables 2> /dev/null`"
 	if [ -n "$IPTABLES" ]; then
@@ -207,6 +218,8 @@ do_start() {
 		echo "Failed to start the CC!"
 		exit 1
 	fi
+
+	touch $LOCKFILE
 }
 
 do_status() {
@@ -317,6 +330,8 @@ do_stop() {
         if [ $dopkill -gt 0 ]; then
             pkill -9 -s $sids >/dev/null 2>&1
         fi
+
+        rm -f $LOCKFILE
 }
 
 # Read configuration variable file if it is present

@@ -1,18 +1,148 @@
+*Wed Aug 28 2012 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 3.1.1
+    * Resolves the following issues:
+        EUCA-280  CLC assigns a public IP to VMs after elastic IP association/disassociation while using --addressing=private
+        EUCA-304  Ability to customize "eucalyptus" string in DNS population
+        EUCA-1473 DescribeInstancesResponse timestamps have the wrong format
+        EUCA-1492 Delete on terminate false is always reported as true
+        EUCA-1636 DescribeSnapshotsResponse timestamps have the wrong format
+        EUCA-1792 CLC accepts RunInstances requests with MinCount > MaxCount
+        EUCA-2002 Allocating and assigning addresses doesn't work
+        EUCA-2024 Special character in Filename and inconsistent behavior of Walrus
+        EUCA-2046 Policy using "numlteq" is rejected (short form of NumericLessThanEquals)
+        EUCA-2204 euca-disassociate-address ends up giving new public ip address to instance
+        EUCA-2260 postgresql-binaries.properties.in should not be in eucalyptus-postgresql.jar
+        EUCA-2311 Databases are created with LATIN1 encoding
+        EUCA-2327 Duplicate address assignments to the same instance
+        EUCA-2333 EIAM Extension Quota Policy Issue => ec2:quota-vminstancenumber
+        EUCA-2340 VMware Broker: XML config option "vswitch" not honored
+        EUCA-2345 cloud.vmstate.instance_subdomain is not honored by CLC
+        EUCA-2413 NC Crashes when bridge device isn't configured
+        EUCA-2417 issues upgrading to Eucalyptus 3.1.0 on the server running CLC, Walrus, CC, SC
+        EUCA-2418 upgrade from 3.0.2 to 3.1 fails complains quota policy has got NumericLessThanEquals
+        EUCA-2430 invalid error message when run instance exceed quota
+        EUCA-2445 First Time Login via WebUI - No Check Old Password/New Password
+        EUCA-2547 HMAC signature verification fails for empty or absent parameter value
+        EUCA-3066 Upgrade fails if Netapp snapshot directory exists
+        EUCA-3270 CentOS 6: Cleanstop on CC not executing cleanup procedure
+        EUCA-3313 Ability to customize "eucalyptus" string in DNS population
+        EUCA-3314 Special character in Filename and inconsistent behavior of Walrus
+        EUCA-3315 Allocating and assigning addresses doesn't work
+
+*Wed Jul 7 2012 Eucalyptus Systems (support@eucalyptus.com)
+    * Version 3.1.0
+    * New Features:
+        - New packaged platform support (Added support for CentOS 6.x
+          and Ubuntu 12.04 LTS)
+        - vSphere 5 support (plugin only).
+    * Resolves the following issues:
+        EUCA-587  Exclude .snapshot directories during upgrade process
+        EUCA-808  clc: add back support for '--addressing private'
+        EUCA-1070 Walrus: Overwritting object causes object to become inaccessible
+        EUCA-1383 Issue when reconfiguring cc vnet ip range and mask
+        EUCA-1487 eee: euca-describe-property occasionally exits with an OOM
+        EUCA-1497 cc: centos kernel oops if too many vlan interfaces left enabled
+        EUCA-1500 deleteOnTerminate=true doesn't delete a volume
+        EUCA-1513 use of wildcard chars in params to services/Eucalyptus URL allows to detect valid AWSAccessKeyId
+        EUCA-1514 MySQL connections are refused in some cases
+        EUCA-1515 initial db sync retry logic can hang
+        EUCA-1528 review all uses of db queries with LIKE condition
+        EUCA-1546 CC <-> NC comm fails when number of volume records on an instance exceeds 64
+        EUCA-1554 IAM: Account admin can not see the policies of users and groups within account
+        EUCA-1563 euare: uploading new policy with the same name does not overwrite old policy
+        EUCA-1596 Upgrade needs to migrate images after all users have been migrated
+        EUCA-1621 StartInstance fails for SYSTEM/STATIC mode
+        EUCA-1629 if instances are terminated quickly after being launched and then new instances are launched right away, new instances do not get public IPs
+        EUCA-1647 Upgrade: After upgrade on RHEL5, euca-describe-instances shows public key instead of keypair name
+        EUCA-1689 CC: metadata redirect is not re-applied in non HA mode if CC is DISABLED/ENABLED and pubinterface == privinterface
+        EUCA-1693 EUARE: a salt should be used when hashing and storing user passwords
+        EUCA-1694 NC: under load, NC fails to respond to Describe* requests promptly
+        EUCA-1700 eustore-install-image should not download an image into a predictable filename in /tmp
+        EUCA-1701 eustore-install-image should not untar and bundle images using predictable dir and filenames in /tmp
+        EUCA-1710 cluster-pk.pem should not be on NC host
+        EUCA-1713 SSL/TLS services should support cipher configuration and disable weak ciphers by default
+        EUCA-1714 Secret key generation can have insufficient random data
+        EUCA-1717 Walrus: anyone can access objects on Walrus by submitting correctly signed requests
+        EUCA-1723 VMWareBroker: anyone can send SOAP messages to VMWareBroker
+        EUCA-1735 CLC Reports incorrect root-device-type
+        EUCA-1738 Walrus: DeleteWalrusSnapshot is missing an authorization check
+        EUCA-1749 Non-SOAP requests can be replayed by changing the Signature "format"
+        EUCA-1759 Let eucalyptus build when given the jars that it needs, not a file called cloud-lib.tar.gz
+        EUCA-1766 HA CC upgrade: Disabled CC continues to have NAT rules for an instance
+        EUCA-1767 Replace --db-home option with a way to supply paths to binaries
+        EUCA-1768 Configure database binary locations somewhere other than CLOUD_OPTS
+        EUCA-1778 CC: empty security group iptables chains and rules for disabled security groups may remain in iptables after instances are terminated
+        EUCA-1781 db: connection timeout does not trigger when remote host is down
+        EUCA-1786 When changing ADDR_PER_NET, old security groups are no longer usable
+        EUCA-1787 EBS: snapshot is not protected by permission checking in CreateVolume
+        EUCA-1788 IAM: user name needs to allow back slash and underscore for AD sync
+        EUCA-1807 Dashboard: Images page - "EuStore documentation" links to page not found
+        EUCA-1960 RE: 3.0.1 Released - upgrade failed - netapp .snapshot directory
+        EUCA-1969 metadata IP address is not added to the private interface when rebooting a single-host frontend
+        EUCA-1980 HA not working as expected when MySQL process is killed on ENABLED machine
+        EUCA-1983 Manifest File Larger Than 100K Causes Failed Instance Launch
+        EUCA-1985 BFEBS Instances Not Reported Correctly => DescribeInstance
+        EUCA-1990 Stale Rules Left in iptables
+        EUCA-2001 Instance Fails to Launch Even When There is Enough Disk Space
+        EUCA-2021 DB init fails when euca.db.home doesn't end with '/'
+        EUCA-2025 CC: on precise, iptables no longer supports negation with '-d ! <net>' but instead only supports '! -d <net>'
+        EUCA-2044 CC: on precise, icmp type must now be specified to iptables for icmp rules to apply
+        EUCA-2045 JMX management is enabled on port 1099
+        EUCA-2165 NC crash on startup when configured for MANAGED-NOVLAN
+        EUCA-2173 Boto 2.4 causes CLC to return XML with euca: namespaces if no api_version is specified
+        EUCA-2175 Reporting: Storage report shows null where account name should be
+        EUCA-2176 Reporting: Exception thrown when generating report grouped by account
+        EUCA-2187 QA failures, file2str needs to handle 0 as a valid fd
+        EUCA-2189 Add/remove *.LICENSE files for current JARs
+        EUCA-2201 NC: race condition exists between instance cache copy and operations that update global instance list
+        EUCA-2209 Cannot "euca_conf --initialize" on Ubuntu Lucid
+        EUCA-2222 euca-clone-volume fails to bind host / component fields
+        EUCA-2224 latest eucalytpus-cloud produced error when starting. Causes faststart to fail out.
+        EUCA-2226 Upgrade to 3.1.0 fails when accounts or users have been deleted from a cloud
+        EUCA-2228 Failing to create snapshots using netapp
+        EUCA-2232 Loop device warning message when starting NC on Lucid
+        EUCA-2237 Outbound request contextual information is not always cleaned up
+        EUCA-2245 euca-get-credentials result in index out of range error
+        EUCA-2247 NC: artifact provisioning deadlocks (technically, blocks on a super-long timeout)
+        EUCA-2249 Standalone walrus /vmware failing during QA runs
+        EUCA-2257 apparmor needs to be disabled and remove on NCs in order for instances to launch
+        EUCA-2270 Upgrade: Failure to upgrade image tables
+        EUCA-2287 NPE during report generation
+        EUCA-2288 IllegalArgumentException running S3
+        EUCA-2294 nc: precise: getstats.pl isn't gathering block data when virtio is enabled
+        EUCA-2301 Full set of S3 canned-acls should be supported by Walrus
+        EUCA-2308 Registering VMware broker on a second cluster in a cloud will kill all clusters' SCs if broker libs not installed
+        EUCA-2310 euca-describe-* admin tools can generate invalid format strings
+        EUCA-2314 Upgrade: Unable to attach volume created before upgrade
+        EUCA-2318 Upgrade does not handle vmware broker component
+        EUCA-2319 sc: reporting: cannot generate 'storage' reports
+        EUCA-2326 Upgrade: Unable to upgrade due to ConstraintViolationException
+        EUCA-2328 Can not use pre-existing sec groups post 3.0.2 to 3.1 upgrade
+    * Bug tracker: https://eucalyptus.atlassian.net
+    * Downloads: http://www.eucalyptus.com/download/eucalyptus
+
 *Wed Oct 20 2010 Eucalyptus Systems (support@eucalyptus.com)
     * Version 2.0.1
     * Bug fix minor release.
-    * Fixes launchpad bugs: 
-      
-      #661565 #644482 #658023 #658022 #595421 #637659 #632263 
-      #622818 #628328 #664002 #639639
-      
-      which include fixes to the following sub-systems:
+    * Fixes launchpad bugs:
+        595421 Eucalyptus doesn't start with latest stable version of "Groovy"
+        622818 unexpected errors after a sequence of tests
+        628328 euca_conf --register-cluster is not idempotent
+        632263 ProductCode has ambigious import, can cause build failure on some systems
+        637659 metadata service returns 500 error
+        639639 euca-* commands stopped responding
+        644482 Walrus signature verification in image decryption bug
+        658022 heartbeat service leaks connection context
+        658023 registration token computed incorrectly
+        661565 With versioning turned on, PUT object does not return version id in the header
+        664002 euca_conf --list-nodes returns nothing even when nodes are registered
 
-        o External dashboard registration
-        o Meta-data service access
-        o S3 Versioning
-        o Walrus image decryption
-        o Component registration
+        ...which include fixes to the following sub-systems:
+          * External dashboard registration
+          * Meta-data service access
+          * S3 Versioning
+          * Walrus image decryption
+          * Component registration
 
 *Tue Aug 24 2010 Eucalyptus Systems (support@eucalyptus.com)
     * Version 2.0.0
@@ -24,9 +154,13 @@
     * Storage Controller scalability improvements.
     * Updated packages for current versions of supported distributions.
     * Closes many bugs, including:
-
-      #477776 #461156 #477776 #498379 #498379 
-      #517769 #518601 #513842 #453416 #328146
+        453416 metadata service does not provide sub-directory lists for root and api level
+        461156 User data is not parsed correctly by Eucalyptus in some cases
+        477776 Query string authentication does not work in some cases
+        498379 ModifyImageAttribute does not correctly remove group perms
+        513842 block-device-mapping in metadata has 'ephemeral' not 'ephemeral0'
+        517769 "Server internal error" when acl is set on a bucket using a cannel acl and no access control list (xml) in the request
+        518601 Provide a way to disable tunneling in eucalyptus.conf
 
 *Fri Feb 12 2010 Eucalyptus Systems (support@eucalyptus.com)
     * Version 1.6.2

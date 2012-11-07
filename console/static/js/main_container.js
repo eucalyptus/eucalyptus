@@ -61,9 +61,11 @@
              $scrollable.stop();
              $scrollable.css('overflow-y', 'scroll');
            });
+           return true;
          },
          beforeHelpFlipped : function() {
            thisObj._aboutDialog.eucadialog('setDialogOption','position', 'top');
+           return true;
          },
          help: { content: $dialog_help },
          help_icon_class : 'help-euca',
@@ -176,7 +178,7 @@
     },
 
     getSelected : function () {
-      return this.element.data(this._curSelected);
+      return this._curSelected;
     }
   });
 })(jQuery,

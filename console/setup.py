@@ -8,10 +8,10 @@ DATA_DIR='/usr/share/eucalyptus-console'
 def getDataFiles(path):
     return [ (os.path.join(DATA_DIR, root),
         [ os.path.join(root, f) for f in files ])
-            for root, _, files in os.walk(path) if files ]
+            for root, _, files in os.walk(path, followlinks=True) if files ]
 
 data_files = getDataFiles("static")
-data_files.append(('/etc/eucalyptus-console', ['server/console.ini']))
+data_files.append(('/etc/eucalyptus-console', ['eucaconsole/console.ini']))
 
 setup (name="Eucalyptus Management Console",
     version = "0",
@@ -21,8 +21,8 @@ setup (name="Eucalyptus Management Console",
     author_email = "community@eucalyptus.com",
     license = "GPL v3",
     url = "http://www.eucalytpus.com",
-    packages = ['server', 'esapi', 'esapi/codecs'],
-    package_data={'server': ['server/console.ini']},
+    packages = ['eucaconsole', 'esapi', 'esapi/codecs'],
+    package_data={'eucaconsole': ['eucaconsole/console.ini']},
     scripts = ['euca-console-server'],
     data_files = data_files
 )

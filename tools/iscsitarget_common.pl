@@ -74,6 +74,7 @@ $DELIMITER = ",";
 
 $ERROR_CAUSE = "iscsiadm";
 $ERROR_MESSAGE = "iSCSI driver not found";
+$UDEVADM = "udevadm";
 
 sub parse_devstring {
   my ($dev_string) = @_;
@@ -115,12 +116,12 @@ sub check_and_log_fault {
 }
 
 sub do_exit {
-  $e = shift;
+  my $e = shift;
   exit($e);
 }
 
 sub untaint {
-  $str = shift;
+  my $str = shift;
   if ($str =~ /^([ &:#-\@\w.]+)$/) {
     $str = $1; #data is now untainted
   } else {
@@ -180,6 +181,8 @@ sub match_iscsi_session {
 
 sub get_iscsi_device {
   my ($netdev, $ip, $store, $lun) = @_;
+  #Trigger udev explicitly
+  run_cmd(0,0,"$UDEVADM trigger");
   for $session (lookup_session()) {
     if (match_iscsi_session($session, $netdev, $ip, $store)) {
       if ($lun > -1) {
@@ -202,7 +205,7 @@ sub get_first_lun {
 sub get_mpath_device {
   %mpaths = lookup_mpath();
   foreach (@_) {
-    $mpathdev = $mpaths{$_};
+    my $mpathdev = $mpaths{$_};
     return $mpathdev if !is_null_or_empty($mpathdev);
   }
 }
@@ -223,7 +226,7 @@ sub get_conf_iface_map {
     chomp;
     if (/^$CONF_IFACES_KEY\s*=\s*\"(.*)\"/) {
       foreach my $pair (split(",", $1)) {
-        ($iface, $netdev) = split("=", $pair);
+        my ($iface, $netdev) = split("=", $pair);
         $iface_map{$iface} = $netdev;
       }
       last;
@@ -248,7 +251,7 @@ sub get_netdev_by_conf {
 
 sub get_iface {
   my ($netdev) = @_;
-  %ifaces = lookup_iface();
+  my %ifaces = lookup_iface();
   return $ifaces{$netdev};
 }
 
@@ -275,6 +278,7 @@ sub lookup_session {
     } elsif (/.*\s+Lun:\s+(\d+)/) {
       $lun = $1;
     } elsif (/^\s+Attached scsi disk\s+(\S+).*/) {
+    	print STDERR "Disk: $1 -- $_";
       $session->{"$SK_LUN-$lun"} = $1;
     } elsif (/^\s+SID:\s+(\d+)/) {
       $session->{$SK_SID} = $1;

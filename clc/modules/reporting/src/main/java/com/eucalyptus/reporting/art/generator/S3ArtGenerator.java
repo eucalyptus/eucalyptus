@@ -181,7 +181,7 @@ public class S3ArtGenerator
 					for ( final S3ObjectData data : objectUsages ) {
 						size += data.size;
 						KBSecs += (data.durationMs/1000) *
-								UnitUtil.convertSize( data.size, SizeUnit.BYTES, SizeUnit.KB );
+								UnitUtil.convertSize( data.size, SizeUnit.B, SizeUnit.KB );
 					}
 
 					long gBSecs =

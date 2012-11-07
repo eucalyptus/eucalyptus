@@ -374,7 +374,7 @@ public abstract class AbstractSystemAddressManager {
           } catch ( final Exception e1 ) {
             LOG.debug( e1, e1 );
           }
-        } else if ( !addr.isAssigned( ) ) {
+        } else if ( !addr.isAssigned( ) && !addr.isPending() ) {
           try {
             addr.assign( vm ).clearPending( );
           } catch ( final Exception e1 ) {

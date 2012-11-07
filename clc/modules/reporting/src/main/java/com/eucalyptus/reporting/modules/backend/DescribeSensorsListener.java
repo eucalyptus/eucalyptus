@@ -57,38 +57,43 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   @Override
   public void fireEvent( Hertz event ) {
    
+      if (DEFAULT_POLL_INTERVAL_MINS >= 1) {
+	  COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
+		  .toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
+      } else {
+	  COLLECTION_INTERVAL_TIME_MS = 0; 
+      }
 
-	COLLECTION_INTERVAL_TIME_MS = ((int) TimeUnit.MINUTES
-		.toMillis(DEFAULT_POLL_INTERVAL_MINS) / 2);
+      if (COLLECTION_INTERVAL_TIME_MS == 0 ) {	
+	  LOG.debug("The instance usage report is disabled");
+      } else if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
 
-	if (COLLECTION_INTERVAL_TIME_MS <= MAX_WRITE_INTERVAL_MS) {
+	  try {
 
-	    try {
+	      if (event.isAsserted(TimeUnit.MINUTES
+		      .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
+		  if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
 
-		if (event.isAsserted(TimeUnit.MINUTES
-			.toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
-		    if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
+		      for (final ServiceConfiguration ccConfig : Topology
+			      .enabledServices(ClusterController.class)) {
 
-			for (final ServiceConfiguration ccConfig : Topology
-				.enabledServices(ClusterController.class)) {
+			  AsyncRequests.newRequest(
+				  new DescribeSensorCallback(HISTORY_SIZE,
+					  COLLECTION_INTERVAL_TIME_MS))
+					  .dispatch(ccConfig);
+			  LOG.debug("DecribeSensorCallback has been successfully executed");
+		      }
+		  }
+	      }
+	  } catch (Exception ex) {
+	      LOG.error("Unable to listen for describe sensors events", ex);
+	  }
 
-			    AsyncRequests.newRequest(
-				    new DescribeSensorCallback(HISTORY_SIZE,
-					    COLLECTION_INTERVAL_TIME_MS))
-				    .dispatch(ccConfig);
-			    LOG.debug("DecribeSensorCallback has been successfully executed");
-			}
-		    }
-		}
-	    } catch (Exception ex) {
-		LOG.error("Unable to listen for describe sensors events", ex);
-	    }
+      } else {
+	  LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
+		  + DEFAULT_POLL_INTERVAL_MINS
+		  + " must be less than 1440 minutes");
+      }
 
-	} else {
-	    LOG.error("DEFAULT_POLL_INTERVAL_MINS : "
-		    + DEFAULT_POLL_INTERVAL_MINS
-		    + " must be less than 1440 minutes");
-	}
-
-    }
+  }
 }

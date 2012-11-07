@@ -44,7 +44,6 @@ public class AddressEvent implements Event {
 
   public enum AddressAction { ALLOCATE, RELEASE, ASSOCIATE, DISASSOCIATE }
 
-  private final String uuid;
   private final String address;
   private final String userId;
   private final String userName;
@@ -70,13 +69,11 @@ public class AddressEvent implements Event {
     return new InstanceEventActionInfo<AddressAction>( AddressAction.DISASSOCIATE, instanceUuid, instanceId );
   }
 
-  public static AddressEvent with( final String uuid,
-                                   final String address,
+  public static AddressEvent with( final String address,
                                    final OwnerFullName owner,
                                    final String accountName,
                                    final EventActionInfo<AddressAction> action ) {
     return new AddressEvent(
-        uuid,
         address,
         owner.getUserId(),
         owner.getUserName(),
@@ -86,32 +83,25 @@ public class AddressEvent implements Event {
     );
   }
 
-  private AddressEvent( final String uuid,
-                        final String address,
+  private AddressEvent( final String address,
                         final String userId,
                         final String userName,
                         final String accountId,
                         final String accountName,
                         final EventActionInfo<AddressAction> actionInfo) {
-    checkParam( uuid, not( isEmptyOrNullString() ) );
-    checkParam( address, not( isEmptyOrNullString() ) );
-    checkParam( userId, not( isEmptyOrNullString() ) );
-    checkParam( userName, not( isEmptyOrNullString() ) );
-    checkParam( accountId, not( isEmptyOrNullString() ) );
-    checkParam( accountName, not( isEmptyOrNullString() ) );
+    checkParam( address, not(isEmptyOrNullString()) );
+    checkParam( userId, not(isEmptyOrNullString()) );
+    checkParam( userName, not(isEmptyOrNullString()) );
+    checkParam( accountId, not(isEmptyOrNullString()) );
+    checkParam( accountName, not(isEmptyOrNullString()) );
     checkParam( actionInfo, notNullValue() );
 
-    this.uuid = uuid;
     this.address = address;
     this.userId = userId;
     this.userName = userName;
     this.accountId = accountId;
     this.accountName = accountName;
     this.actionInfo = actionInfo;
-  }
-
-  public String getUuid() {
-    return uuid;
   }
 
   public String getAddress() {

@@ -79,7 +79,6 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
-import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.WalrusDataMessage;
 
 
@@ -141,26 +140,38 @@ public class HttpReader extends HttpTransfer {
 		FileOutputStream fileOutputStream = null;
 		BufferedOutputStream bufferedOut = null;
 		try {
-			File outFile;
+			File outFile = null;
 			File outFileUncompressed = null;
 			if(compressed) {
-				String outFileNameUncompressed = tempPath + File.separator + file.getName() + Hashes.getRandom(16);
+				String outFileNameUncompressed = tempPath + File.pathSeparator + file.getName() + Hashes.getRandom(16);
 				outFileUncompressed = new File(outFileNameUncompressed);
 				outFile = new File(outFileNameUncompressed + ".gz");		
 			} else {
 				outFile = file;
 			}
+
 			httpClient.executeMethod(method);
-			InputStream httpIn;
-			httpIn = method.getResponseBodyAsStream();
+
+			// GZIPInputStream has a bug thats corrupting snapshot file system. Mounting the block device failed with unknown file system error
+			/*InputStream httpIn = null;
+			if(compressed) {
+				httpIn = new GZIPInputStream(method.getResponseBodyAsStream());
+			}
+			else {
+				httpIn = method.getResponseBodyAsStream();				
+			}*/
+
+			InputStream httpIn =  method.getResponseBodyAsStream();
 			int bytesRead;
 			fileOutputStream = new FileOutputStream(outFile);
+			// fileOutputStream = new FileOutputStream(file);
 			bufferedOut = new BufferedOutputStream(fileOutputStream);
 			while((bytesRead = httpIn.read(bytes)) > 0) {
 				bufferedOut.write(bytes, 0, bytesRead);
 			}
 			bufferedOut.close();
-			if(compressed) {
+
+			if (compressed) {
 				try
 				{
 					Runtime rt = Runtime.getRuntime();
@@ -174,8 +185,8 @@ public class HttpReader extends HttpTransfer {
 				} catch (Exception t) {
 					LOG.error(t);
 				}
-                                if ((outFileUncompressed != null) && (!outFileUncompressed.renameTo(file))) {
-                                        LOG.error("Unable to uncompress: " + outFile.getAbsolutePath());
+				if ((outFileUncompressed != null) && (!outFileUncompressed.renameTo(file))) {
+					LOG.error("Unable to uncompress: " + outFile.getAbsolutePath());
 					return;
 				}
 			}

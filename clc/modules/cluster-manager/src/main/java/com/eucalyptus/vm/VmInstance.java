@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.cloud.ImageMetadata.Platform;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -71,6 +72,8 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -102,6 +105,8 @@ import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ComponentIds;
@@ -138,6 +143,7 @@ import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -510,26 +516,45 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return launchIndex;
     }
 
-    private static BootableSet restoreBootSet( final VmInfo input, final String imageId, final String kernelId, final String ramdiskId ) {
-      BootableSet bootSet = null;
-      if ( imageId != null ) {
-        try {
-          bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
-        } catch ( final Exception ex ) {
-          LOG.error( "Failed to recreate bootset with imageId " + imageId
-                     + ", kernelId "
-                     + kernelId
-                     + " ramdiskId "
-                     + ramdiskId
-                     + " for: "
-                     + input.getInstanceId( )
-                     + " because of: "
-                     + ex.getMessage( ) );
-          Logs.extreme( ).error( ex, ex );
-        }
-      } else {
-        //TODO:GRZE: handle the case where an instance is running and it's root emi has been deregistered.
+    @Nonnull
+    private static BootableSet restoreBootSet( @Nonnull  final VmInfo input,
+                                               @Nullable final String imageId,
+                                               @Nullable final String kernelId,
+                                               @Nullable final String ramdiskId ) throws MetadataException {
+      if ( imageId == null ) {
+        throw new MetadataException( "Missing image id for boot set restoration" );
       }
+
+      BootableSet bootSet;
+      try {
+        bootSet = Emis.recreateBootableSet( imageId, kernelId, ramdiskId );
+      } catch ( final NoSuchMetadataException e ) {
+        LOG.error( "Using transient bootset in place of imageId " + imageId
+            + ", kernelId " + kernelId
+            + ", ramdiskId " + ramdiskId
+            + " for " + input.getInstanceId( )
+            + " because of: " + e.getMessage( ) );
+        Platform platform;
+        try {
+          platform = Platform.valueOf( Strings.nullToEmpty(input.getPlatform()) );
+        } catch ( final IllegalArgumentException e2 ) {
+          platform = Platform.linux;
+        }
+        bootSet = Emis.unavailableBootableSet( platform );
+      }  catch ( final Exception ex ) {
+        LOG.error( "Failed to recreate bootset with imageId " + imageId
+                   + ", kernelId " + kernelId
+                   + ", ramdiskId " + ramdiskId
+                   + " for " + input.getInstanceId( )
+                   + " because of: " + ex.getMessage( ) );
+        Logs.extreme( ).error( ex, ex );
+        if ( ex instanceof MetadataException ) {
+          throw (MetadataException) ex;
+        } else {
+          throw Exceptions.toUndeclared( ex );
+        }
+      }
+
       return bootSet;
     }
     
@@ -1028,7 +1053,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
     final Map<String, String> m = new HashMap<String, String>( );
     m.put( "ami-id", this.getImageId( ) );
-    if ( !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
+    if ( this.bootRecord.getMachine( ) != null && !this.bootRecord.getMachine( ).getProductCodes( ).isEmpty( ) ) {
       m.put( "product-codes", this.bootRecord.getMachine( ).getProductCodes( ).toString( ).replaceAll( "[\\Q[]\\E]", "" ).replaceAll( ", ", "\n" ) );
     }
     m.put( "ami-launch-index", "" + this.launchRecord.getLaunchIndex( ) );
@@ -1106,7 +1131,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getImageId( ) {
-    return this.bootRecord.getMachine( ).getDisplayName( );
+    return this.bootRecord.getMachine( ) == null ? "-" : this.bootRecord.getMachine( ).getDisplayName( );
   }
   
   public String getRamdiskId( ) {
@@ -1651,9 +1676,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
           //ASAP:FIXME:GRZE: restore.
           runningInstance.setProductCodes( new ArrayList<String>( ) );
-          runningInstance.setImageId( input.getBootRecord( ).getMachine( ).getDisplayName( ) );
+          runningInstance.setImageId( input.getImageId() );
           if ( input.getBootRecord( ).getKernel( ) != null ) {
-            runningInstance.setKernel( input.getBootRecord( ).getKernel( ).getDisplayName( ) );
+            runningInstance.setKernel( input.getKernelId() );
           }
           if ( input.getBootRecord( ).getRamdisk( ) != null ) {
             runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );

@@ -199,22 +199,22 @@ class ElasticIpArtGeneratorTest {
 
   @SuppressWarnings("GroovyAccessibility")
   private ReportingElasticIpCreateEvent ipCreate( String ip, String userId, String timestamp ) {
-    new ReportingElasticIpCreateEvent( uuid(ip), millis(timestamp), ip, userId )
+    new ReportingElasticIpCreateEvent( millis(timestamp), ip, userId )
   }
 
   @SuppressWarnings("GroovyAccessibility")
   private ReportingElasticIpDeleteEvent ipDelete( String ip, String timestamp ) {
-    new ReportingElasticIpDeleteEvent( uuid(ip), millis(timestamp) )
+    new ReportingElasticIpDeleteEvent( ip, millis(timestamp) )
   }
 
   @SuppressWarnings("GroovyAccessibility")
   private ReportingElasticIpAttachEvent ipAttach( String ip, String instanceId, String timestamp ) {
-    new ReportingElasticIpAttachEvent( uuid(ip), uuid(instanceId), millis(timestamp) )
+    new ReportingElasticIpAttachEvent( ip, uuid(instanceId), millis(timestamp) )
   }
 
   @SuppressWarnings("GroovyAccessibility")
   private ReportingElasticIpDetachEvent ipDetach( String ip, String instanceId, String timestamp ) {
-    new ReportingElasticIpDetachEvent( uuid(ip), uuid(instanceId), millis(timestamp) )
+    new ReportingElasticIpDetachEvent( ip, uuid(instanceId), millis(timestamp) )
   }
 
   @SuppressWarnings("GroovyAccessibility")

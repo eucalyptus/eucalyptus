@@ -164,9 +164,8 @@ public class VerifyMetadata {
       } else if ( Partitions.exists( zoneName ) ) {
         Partition partition = Partitions.lookupByName( zoneName );
         allocInfo.setPartition( partition );
-      } else if ( "default".equals( zoneName ) ) {
-        String defaultZone = Clusters.getInstance( ).listValues( ).get( 0 ).getPartition( );
-        Partition partition = Partitions.lookupByName( defaultZone );
+      } else if ( Partition.DEFAULT_NAME.equals( zoneName ) ) {
+        Partition partition = Partition.DEFAULT;
         allocInfo.setPartition( partition );
       } else {
         throw new VerificationException( "Not enough resources: no cluster controller is currently available to run instances." );

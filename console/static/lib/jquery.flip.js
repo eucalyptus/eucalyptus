@@ -2,6 +2,7 @@
  * Flip! jQuery Plugin (http://lab.smashup.it/flip/)
  * @author Luca Manno (luca@smashup.it) [http://i.smashup.it]
  *              [Original idea by Nicola Rizzo (thanks!)]
+ * @license: Dual licensed under the MIT or GPL 
  *
  * @version 0.9.9 [Nov. 2009]
  *

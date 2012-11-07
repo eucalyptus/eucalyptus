@@ -34,7 +34,7 @@ import com.eucalyptus.reporting.units.Units;
 /**
  *
  */
-public class ComputeCapacityRenderer implements Renderer {
+class ComputeCapacityRenderer implements Renderer {
   private final Document doc;
 
   public ComputeCapacityRenderer( final Document doc ) {
@@ -44,6 +44,7 @@ public class ComputeCapacityRenderer implements Renderer {
   @Override
   public void render( final ReportArtEntity report, final OutputStream os, final Units units ) throws IOException {
     doc.setWriter(new OutputStreamWriter(os));
+    doc.setUnlabeledRowIndent(2);
 
     doc.open();
     doc.textLine("Capacity Report", 1);
@@ -53,17 +54,17 @@ public class ComputeCapacityRenderer implements Renderer {
     doc.tableOpen();
 
     doc.newRow().addValCol("Resource").addValCol("Available").addValCol("Total");
-    doc.newRow().addLabelCol(1, "Cloud");
+    doc.newRow().addLabelCol(0, "Cloud");
 
     final ComputeCapacityArtEntity entity = report.getUsageTotals().getComputeCapacityArtEntity();
     doc.addValCol( "S3 Storage" ).addValCol( entity.getSizeS3ObjectAvailableGB() ).addValCol( entity.getSizeS3ObjectTotalGB() ).newRow();
-    doc.addValCol( "Elastic IP" ).addValCol( entity.getNumPublicIpsAvailable().longValue() ).addValCol( entity.getNumPublicIpsTotal().longValue() ).newRow();
+    doc.addValCol( "Elastic IP" ).addValCol( entity.getNumPublicIpsAvailable() ).addValCol( entity.getNumPublicIpsTotal() ).newRow();
 
     outputZoneCapacities( entity );
 
     for ( final Map.Entry<String,AvailabilityZoneArtEntity> azEntry : report.getZones().entrySet() ) {
       final ComputeCapacityArtEntity zoneEntity = azEntry.getValue().getUsageTotals().getComputeCapacityArtEntity();
-      doc.addLabelCol(1, "Availability Zone: " + azEntry.getKey() );
+      doc.addLabelCol(0, "Availability Zone: " + azEntry.getKey() );
       outputZoneCapacities( zoneEntity );
     }
 
@@ -73,15 +74,15 @@ public class ComputeCapacityRenderer implements Renderer {
 
   private void outputZoneCapacities( final ComputeCapacityArtEntity entity ) throws IOException {
     doc.addValCol( "EBS Storage" ).addValCol( entity.getSizeEbsAvailableGB() ).addValCol( entity.getSizeEbsTotalGB() ).newRow();
-    doc.addValCol( "EC2 Compute" ).addValCol( entity.getEc2ComputeUnitsAvailable().longValue() ).addValCol( entity.getEc2ComputeUnitsTotal().longValue() ).newRow();
-    doc.addValCol( "EC2 Disk" ).addValCol( entity.getEc2DiskUnitsAvailable().longValue() ).addValCol( entity.getEc2DiskUnitsTotal().longValue() ).newRow();
-    doc.addValCol( "EC2 Memory" ).addValCol( entity.getEc2MemoryUnitsAvailable().longValue() ).addValCol( entity.getEc2MemoryUnitsTotal().longValue() ).newRow();
+    doc.addValCol( "EC2 Compute" ).addValCol( entity.getEc2ComputeUnitsAvailable() ).addValCol( entity.getEc2ComputeUnitsTotal() ).newRow();
+    doc.addValCol( "EC2 Disk" ).addValCol( entity.getEc2DiskUnitsAvailable() ).addValCol( entity.getEc2DiskUnitsTotal() ).newRow();
+    doc.addValCol( "EC2 Memory" ).addValCol( entity.getEc2MemoryUnitsAvailable() ).addValCol( entity.getEc2MemoryUnitsTotal() ).newRow();
 
     final Set<String> vmTypes = entity.getVmTypes();
     if ( !vmTypes.isEmpty() ) {
-      doc.addLabelCol(2, "VM Types" );
+      doc.addLabelCol(1, "VM Types" );
       for ( final String vmType : vmTypes ) {
-        doc.addValCol( vmType ).addValCol( entity.getInstancesAvailableForType(vmType).longValue() ).addValCol( entity.getInstancesTotalForType(vmType).longValue() ).newRow();
+        doc.addValCol( vmType ).addValCol( entity.getInstancesAvailableForType(vmType) ).addValCol( entity.getInstancesTotalForType(vmType) ).newRow();
       }
     }
   }

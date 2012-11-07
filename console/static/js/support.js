@@ -38,11 +38,11 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    hidden:'.euca-hidden-container',
                   };
 
-var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
-var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,256}$');
+var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
+var KEY_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
 var VOL_ID_PATTERN = new RegExp('^vol-[A-Za-z0-9]{8}$');
 var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
-
+var MAX_DESCRIPTION_LEN = 255;
 var KEEP_VIEW = 'keep_view';
 
 function isValidIPv4Address(ipaddr) {
@@ -103,6 +103,16 @@ if( !Array.prototype.indexOf ) {
     }
     return -1;
   };
+}
+
+function addEllipsis(input, maxLen){
+  if (input == undefined || input.length < maxLen)
+    return input;
+  input = input.substring(0, maxLen);
+  i = input.lastIndexOf(" ");
+  if ( i > 0)
+    input = input.substring(0, i);
+  return input + '...';
 }
 
 function S4() {
@@ -449,12 +459,15 @@ function errorAndLogout(errorCode){
   $('html body').eucadata('disable');
   $('html body').find(DOM_BINDING['hidden']).login();
   var errorMsg = null;
+  var bError = false;
   if (errorCode === 401 || errorCode === 403)
     errorMsg = $.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>');
-  else
+  else{
     errorMsg = $.i18n.prop('connection_failure', '<a href="#">'+cloud_admin+'</a>');
+    bError = true;
+  }
 
-  $('html body').find(DOM_BINDING['hidden']).login('popupError', errorMsg, function(){
+  $('html body').find(DOM_BINDING['hidden']).login('popupDialog', bError, errorMsg, function(){
     logout();
   });
 }

@@ -29,7 +29,6 @@ class AddressUsageEventListenerTest {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
@@ -38,7 +37,6 @@ class AddressUsageEventListenerTest {
 
     assertTrue( "Persisted event is ReportingElasticIpCreateEvent", persisted instanceof ReportingElasticIpCreateEvent )
     ReportingElasticIpCreateEvent event = persisted
-    assertEquals( "Event address uuid", uuid("test"), event.getUuid() )
     assertEquals( "Event user id", "eucalyptus", event.getUserId() )
     assertEquals( "Event ip", "127.0.0.1", event.getIp() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
@@ -49,7 +47,6 @@ class AddressUsageEventListenerTest {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
@@ -58,7 +55,7 @@ class AddressUsageEventListenerTest {
 
     assertTrue( "Persisted event is ReportingElasticIpDeleteEvent", persisted instanceof ReportingElasticIpDeleteEvent )
     ReportingElasticIpDeleteEvent event = persisted
-    assertEquals( "Event address uuid", uuid("test"), event.getUuid() )
+    assertEquals( "Event address uuid", "127.0.0.1", event.getIp() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
   }
 
@@ -67,7 +64,6 @@ class AddressUsageEventListenerTest {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
@@ -76,7 +72,7 @@ class AddressUsageEventListenerTest {
 
     assertTrue( "Persisted event is ReportingElasticIpAttachEvent", persisted instanceof ReportingElasticIpAttachEvent )
     ReportingElasticIpAttachEvent event = persisted
-    assertEquals( "Event address uuid", uuid("test"), event.getIpUuid() )
+    assertEquals( "Event address uuid", "127.0.0.1", event.getIp() )
     assertEquals( "Event instance uuid", uuid("instance"), event.getInstanceUuid() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
   }
@@ -86,7 +82,6 @@ class AddressUsageEventListenerTest {
     long timestamp = System.currentTimeMillis() - 100000
 
     Object persisted = testEvent( AddressEvent.with(
-        uuid("test"),
         "127.0.0.1",
         Principals.systemFullName(),
         "testaccount",
@@ -95,7 +90,7 @@ class AddressUsageEventListenerTest {
 
     assertTrue( "Persisted event is ReportingElasticIpDetachEvent", persisted instanceof ReportingElasticIpDetachEvent )
     ReportingElasticIpDetachEvent event = persisted
-    assertEquals( "Event address uuid", uuid("test"), event.getIpUuid() )
+    assertEquals( "Event address ip", "127.0.0.1", event.getIp() )
     assertEquals( "Event instance uuid", uuid("instance2"), event.getInstanceUuid() )
     assertEquals( "Event timestamp", timestamp, event.getTimestampMs() )
   }

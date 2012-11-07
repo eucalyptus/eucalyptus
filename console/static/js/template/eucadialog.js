@@ -192,7 +192,10 @@
         }else{
           thisObj.element.data('dialog').option('closeOnEscape', true);
           $helpPane.fadeOut(function(){
-            $contentPane.fadeIn();
+            $contentPane.fadeIn('fast', function(){
+              if ($contentPane.css('opacity') == 0)
+                $contentPane.css('opacity', 1);
+            });
             thisObj.help_flipped = false;
             $titleBar.find('.help-popout').detach();
             $titleBar.find('.help-return').removeClass().addClass(thisObj.options.help_icon_class);
@@ -277,7 +280,7 @@
     },
 
     /// 
-    /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]] 
+    /// resources ={title:[ , ], contents:[[val0_0, val0_1, .. ], [val1_0, val1_2, ..]], hideColumn: 1, limit:50
     setSelectedResources : function (resources) {
       var thisObj = this;
       var $div = this.element.find('.selected-resources');
@@ -286,8 +289,8 @@
       $div.append($('<table>').append($('<thead>'), $('<tbody>')));
       var $head = $div.find('thead');
       var $body = $div.find('tbody');
-
       var $tr = $('<tr>');
+      var maxLimit = resources.limit ? resources.limit : 50;
       $.each(resources.title, function(idx, val){
         $tr.append($('<th>').text(val.toUpperCase())); 
       }); 
@@ -295,7 +298,13 @@
       $.each(resources.contents, function(i, row){
         $tr = $('<tr>');
         $.each(row, function(j, val){
-          $tr.append($('<td>').text(val)); 
+          $td = $('<td>');
+          if (resources.hideColumn == j){
+            $td.css('display', 'none');
+            $td.append(val);
+          } else
+            $td.append($('<span>').attr('title', val).html(addEllipsis(val,maxLimit)));
+          $tr.append($td);
         });
         $body.append($tr);
       });

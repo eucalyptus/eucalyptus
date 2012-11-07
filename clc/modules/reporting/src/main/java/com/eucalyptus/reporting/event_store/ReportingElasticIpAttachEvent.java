@@ -34,15 +34,15 @@ public class ReportingElasticIpAttachEvent
 {
   private static final long serialVersionUID = 1L;
 
-  @Column(name="ip_uuid", nullable=false)
-	private String ipUuid;
+  @Column(name="ip", nullable=false)
+	private String ip;
 	@Column(name="instance_uuid", nullable=false)
 	private String instanceUuid;
 
-	protected ReportingElasticIpAttachEvent(String ipUuid, String instanceUuid,
+	protected ReportingElasticIpAttachEvent(String ip, String instanceUuid,
 			Long timestampMs)
 	{
-		this.ipUuid = ipUuid;
+		this.ip = ip;
 		this.instanceUuid = instanceUuid;
 		this.timestampMs = timestampMs;
 	}
@@ -51,9 +51,9 @@ public class ReportingElasticIpAttachEvent
 	{
 	}
 
-	public String getIpUuid()
+	public String getIp()
 	{
-		return ipUuid;
+		return ip;
 	}
 	
 	public String getInstanceUuid()
@@ -64,7 +64,7 @@ public class ReportingElasticIpAttachEvent
   @Override
 	public Set<EventDependency> getDependencies() {
 		return withDependencies()
-				.relation(ReportingElasticIpCreateEvent.class, "uuid", ipUuid)
+				.relation(ReportingElasticIpCreateEvent.class, "ip", ip)
 				.set();
 	}
 
@@ -74,7 +74,7 @@ public class ReportingElasticIpAttachEvent
 		int result = 1;
 		result = prime * result
 				+ ((instanceUuid == null) ? 0 : instanceUuid.hashCode());
-		result = prime * result + ((ipUuid == null) ? 0 : ipUuid.hashCode());
+		result = prime * result + ((ip == null) ? 0 : ip.hashCode());
 		result = prime * result
 				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
 		return result;
@@ -94,10 +94,10 @@ public class ReportingElasticIpAttachEvent
 				return false;
 		} else if (!instanceUuid.equals(other.instanceUuid))
 			return false;
-		if (ipUuid == null) {
-			if (other.ipUuid != null)
+		if (ip == null) {
+			if (other.ip != null)
 				return false;
-		} else if (!ipUuid.equals(other.ipUuid))
+		} else if (!ip.equals(other.ip))
 			return false;
 		if (timestampMs == null) {
 			if (other.timestampMs != null)

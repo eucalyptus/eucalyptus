@@ -73,8 +73,11 @@
             },
             { "mDataProp": "volume_size" },
             { "mDataProp": "volume_id" },
-            { "mDataProp": "description" },
-            { 
+            {
+              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.description, 50)+"</span>" },
+              "iDataSort": 9,
+            },
+            {
               "fnRender": function(oObj) { return formatDateTime(oObj.aData.start_time); },
               "iDataSort": 8,
             },
@@ -86,7 +89,11 @@
               "bVisible": false,
               "mDataProp": "start_time",
               "sType": "date"
-            }
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "description"
+            },
           ],
         },
         text : {
@@ -167,7 +174,7 @@
         return VOL_ID_PATTERN.test(asText($vol_selector.val()));
       });
       this.createDialog.eucadialog('validateOnType', '#snapshot-create-description', function(description) {
-        if (description && description.length>255)
+        if (description && description.length>MAX_DESCRIPTION_LEN)
           return long_description;
         else
           return null;
@@ -437,9 +444,6 @@
        // this.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
     },
 
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
-    },
 /**** End of Public Methods ****/
   });
 })

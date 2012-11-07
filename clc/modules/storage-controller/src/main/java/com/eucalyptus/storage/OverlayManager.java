@@ -101,7 +101,6 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
-import edu.ucsb.eucalyptus.util.WalrusMonitor;
 
 @StorageManagerProperty("overlay")
 public class OverlayManager implements LogicalStorageManager {
@@ -546,12 +545,13 @@ public class OverlayManager implements LogicalStorageManager {
 					File snapshotFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + PATH_SEPARATOR + snapId);
 					assert(snapshotFile.exists());
 					long absoluteSize;
-					if(size > 0) {
-						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;	
-					} else {
+					if (size <= 0 || size == foundSnapshotInfo.getSize()) {
 						size = (int)(snapshotFile.length() / StorageProperties.GB);
-						absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
+					 	absoluteSize = snapshotFile.length() + LVM_HEADER_LENGTH;
+					} else {
+						absoluteSize = size * StorageProperties.GB + LVM_HEADER_LENGTH;
 					}
+					
 					String loDevName = createLoopback(rawFileName, absoluteSize);
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(loDevName, vgName, lvName);
@@ -648,7 +648,7 @@ public class OverlayManager implements LogicalStorageManager {
 			VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 			LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo();
 			lvmVolumeInfo.setVolumeId(snapshotId);
-			lvmVolumeInfo.setLoFileName(snapshotRawFileName);
+			lvmVolumeInfo.setLoFileName(snapshotRawFileName);			
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize((int)(snapshotFile.length() / StorageProperties.GB));
 			volumeManager.add(lvmVolumeInfo);
@@ -788,7 +788,7 @@ public class OverlayManager implements LogicalStorageManager {
 						LOG.info("Snapshot complete. Detaching loop device" + volLoDevName);
 						disableLogicalVolume(absoluteVolLVName);
 						removeLoopback(volLoDevName);
-					}
+					}		
 					returnValues.add(snapRawFileName);
 					returnValues.add(String.valueOf(size * WalrusProperties.G));
 					volumeManager = new VolumeEntityWrapperManager();
@@ -1306,13 +1306,33 @@ public class OverlayManager implements LogicalStorageManager {
 
 	@Override
 	public void finishVolume(String snapshotId) throws EucalyptusCloudException{
-		//Nothing to do here
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
+		if (null != foundSnapshotInfo) {		
+			foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
+		}
+		volumeManager.finish();
 	}
 
 	@Override
-	public String prepareSnapshot(String snapshotId, int sizeExpected)
+	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB)
 	throws EucalyptusCloudException {
-		return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
+		String deviceName = null;
+		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
+		LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
+		if (null  == foundSnapshotInfo) {
+			LVMVolumeInfo snapshotInfo = volumeManager.getVolumeInfo();
+			snapshotInfo.setStatus(StorageProperties.Status.pending.toString());
+			snapshotInfo.setVolumeId(snapshotId);
+			snapshotInfo.setSize(sizeExpected);
+			snapshotInfo.setLoFileName(DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId);
+			deviceName = snapshotInfo.getLoFileName();
+			volumeManager.add(snapshotInfo);
+		}
+		volumeManager.finish();
+		return deviceName;
+		
+		// return DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + snapshotId;
 	}
 
 	@Override
@@ -1439,7 +1459,7 @@ public class OverlayManager implements LogicalStorageManager {
 		LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		if(lvmVolumeInfo != null) {
 			//create file and attach to loopback device
-			long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
+			//long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
 			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
 			try {
 				VolumeOpMonitor monitor = getMonitor(volumeId);
@@ -1502,8 +1522,7 @@ public class OverlayManager implements LogicalStorageManager {
 
 	@Override
 	public void stop() throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-
+		exportManager.stop();
 	}
 
 	@Override
@@ -1518,7 +1537,7 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	@Override
-	public boolean getFromBackend(String snapshotId)
+	public boolean getFromBackend(String snapshotId, int size)
 	throws EucalyptusCloudException {
 		return false;
 	}
@@ -1570,8 +1589,12 @@ public class OverlayManager implements LogicalStorageManager {
 							LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
 							try {
 								exportManager.cleanup(volInfo);
+								volumeManager.finish();
+								volumeManager = new VolumeEntityWrapperManager();
+								volInfo = volumeManager.getVolumeInfo(volumeId);
 							} catch(EucalyptusCloudException ee) {
 								LOG.error(ee, ee);
+								volumeManager.abort();
 								continue;
 							}
 							String loDevName = foundLVMVolumeInfo.getLoDevName();
@@ -1586,15 +1609,17 @@ public class OverlayManager implements LogicalStorageManager {
 											LOG.info("Detaching loop device: " + loDevName);
 											removeLoopback(loDevName);
 											volInfo.setLoDevName(null);
+											LOG.info("Done cleaning up: " + volumeId);
+											volInfo.setCleanup(false);
+											volumeManager.finish();
 										} catch (EucalyptusCloudException e) {
 											LOG.error(e, e);
+											volumeManager.abort();
 										}
 									} else {
 										LOG.info("Snapshot in progress. Not detaching loop device.");
+										volumeManager.abort();
 									}
-									LOG.info("Done cleaning up: " + volumeId);
-									volInfo.setCleanup(false);
-									volumeManager.finish();
 								}
 							} else {
 								volumeManager.abort();

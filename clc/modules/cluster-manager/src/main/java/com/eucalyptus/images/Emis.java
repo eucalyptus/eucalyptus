@@ -66,7 +66,6 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
@@ -75,15 +74,11 @@ import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
-import com.eucalyptus.cloud.util.VerificationException;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -366,6 +361,10 @@ public class Emis {
       throw new InvalidMetadataException( "Failed to construct bootset for image id: " + imageId + " because of: " + ex.getMessage( ), ex );
     }
   }
+
+  public static BootableSet unavailableBootableSet( final Platform platform ) {
+    return new BootableSet( new UnavailableImageInfo( platform ) );
+  }
   
   public static BootableSet newBootableSet( final String imageId ) throws MetadataException {
     try {
@@ -420,22 +419,25 @@ public class Emis {
     
     public BootableSet start( ) throws MetadataException {
       final Function<String, BootableSet> create = new Function<String, BootableSet>( ) {
-        
         @Override
         public BootableSet apply( final String input ) {
           final BootableSet b = BootsetFromId.INSTANCE.apply( BootsetBuilder.this.imageId );
-          final KernelImageInfo kernel = ( BootsetBuilder.this.kernelId == null
-                                                                         ? null
-                                                                         : LookupKernel.INSTANCE.apply( BootsetBuilder.this.kernelId ) );
-          final RamdiskImageInfo ramdisk = ( BootsetBuilder.this.ramdiskId == null
-                                                                            ? null
-                                                                            : LookupRamdisk.INSTANCE.apply( BootsetBuilder.this.ramdiskId ) );
-          if ( ( kernel != null ) && ( ramdisk != null ) ) {
-            return new TrifectaBootableSet( b.getMachine( ), kernel, ramdisk );
-          } else if ( kernel != null ) {
-            return new NoRamdiskBootableSet( b.getMachine( ), kernel );
-          } else {
-            return b;
+          try {
+            final KernelImageInfo kernel = ( BootsetBuilder.this.kernelId == null
+                                                                           ? null
+                                                                           : LookupKernel.INSTANCE.apply( BootsetBuilder.this.kernelId ) );
+            final RamdiskImageInfo ramdisk = ( BootsetBuilder.this.ramdiskId == null
+                                                                              ? null
+                                                                              : LookupRamdisk.INSTANCE.apply( BootsetBuilder.this.ramdiskId ) );
+            if ( ( kernel != null ) && ( ramdisk != null ) ) {
+              return new TrifectaBootableSet( b.getMachine( ), kernel, ramdisk );
+            } else if ( kernel != null ) {
+              return new NoRamdiskBootableSet( b.getMachine( ), kernel );
+            } else {
+              return b;
+            }
+          } catch ( NoSuchElementException e ) {
+            throw Exceptions.toUndeclared( new NoSuchMetadataException( e.getMessage(), e ) );
           }
         }
       };
@@ -618,5 +620,5 @@ public class Emis {
       Logs.extreme( ).error( ex, ex );
     }
   }
-  
+
 }

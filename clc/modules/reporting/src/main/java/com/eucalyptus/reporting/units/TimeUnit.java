@@ -62,31 +62,57 @@
 
 package com.eucalyptus.reporting.units;
 
+import java.util.List;
+import com.google.common.collect.ImmutableList;
+
 public enum TimeUnit
 {
-	MS(1, "ms"),
-	SECS(1000, "secs"),
-	MINS(60*1000, "mins"),
-	HOURS(60*60*1000, "hrs"),
-	DAYS(24*60*60*1000, "days"),
-	YEARS(365*24*60*60*1000, "years");
-	
-	private final long factor;
-	private final String str;
-	private TimeUnit(long factor, String str)
-	{
-		this.factor = factor;
-		this.str = str;
-	}
-	
-	public long getFactor()
-	{
-		return this.factor;
-	}
-	
-	@Override
-	public String toString()
-	{
-		return this.str;
-	}
+  MS(1, "ms", "MILLIS", "MILLISECONDS"),
+  SECS(MS.factor * 1000L, "secs", "S", "SECONDS"),
+  MINS(SECS.factor * 60L, "mins", "M", "MINUTES"),
+  HOURS(MINS.factor * 60L, "hrs", "H", "HRS", "HOURS"),
+  DAYS(HOURS.factor * 24L, "days", "D"),
+  YEARS(DAYS.factor * 365L, "years", "Y");
+
+  private final long factor;
+  private final String str;
+  private final List<String> aliases;
+
+  private TimeUnit(long factor, String str, String... alias)
+  {
+    this.factor = factor;
+    this.str = str;
+    this.aliases = ImmutableList.copyOf( alias );
+  }
+
+  public long getFactor()
+  {
+    return this.factor;
+  }
+
+  @Override
+  public String toString()
+  {
+    return this.str;
+  }
+
+  public static TimeUnit fromString( final String value,
+                                     final TimeUnit fallback )
+  {
+    TimeUnit timeUnit = fallback;
+    if ( value != null ) {
+      final String upperValue = value.toUpperCase();
+      try {
+        timeUnit = TimeUnit.valueOf( upperValue );
+      } catch ( IllegalArgumentException e ) {
+        for ( TimeUnit unit : TimeUnit.values() ) {
+          if ( unit.aliases.contains( upperValue ) ) {
+            timeUnit = unit;
+            break;
+          }
+        }
+      }
+    }
+    return timeUnit;
+  }
 }

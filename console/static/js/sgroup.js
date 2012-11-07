@@ -55,12 +55,18 @@
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
-            { 
-              "fnRender" : function(oObj) { 
-                 return $('<div>').append($('<a>').attr('href','#').addClass('twist').text(oObj.aData.name)).html();
-              }
+            {
+              "fnRender" : function(oObj) {
+                 shortName = addEllipsis(oObj.aData.name, 75);
+                 $a = $('<a>').attr('href','#').attr('title', oObj.aData.name).addClass('twist').text(shortName);
+                 return $('<div>').append($a).html();
+              },
+              "iDataSort": 7,
             },
-            { "mDataProp": "description" },
+            { 
+              "fnRender": function(oObj) { return oObj.aData.description == null ? "" : "<span title='"+oObj.aData.description+"'>"+addEllipsis(oObj.aData.description, 50)+"</span>" },
+              "iDataSort": 6,
+            },
             { // protocol to appear in search result
               "bVisible": false,
               "fnRender" : function(oObj){
@@ -143,6 +149,8 @@
                  return src;
                }
             },
+            { "mDataProp": "description", "bVisible": false },
+            { "mDataProp": "name", "bVisible": false },
           ],
         },
         text : {
@@ -196,7 +204,11 @@
          id: 'sgroups-delete',
          title: sgroup_dialog_del_title,
          buttons: {
-           'delete': {text: sgroup_dialog_del_btn, click: function() { thisObj._deleteSelectedSecurityGroups(); $del_dialog.eucadialog("close");}},
+           'delete': {text: sgroup_dialog_del_btn, click: function() {
+             var groupsToDelete = thisObj.delDialog.eucadialog('getSelectedResources',1);
+             $del_dialog.eucadialog("close");
+             thisObj._deleteSelectedSecurityGroups(groupsToDelete);
+           }},
            'cancel': {text: dialog_cancel_btn, focus:true, click: function() { $del_dialog.eucadialog("close");}} 
          },
          help: { content: $del_help, url: help_sgroup.dialog_delete_content_url },
@@ -216,7 +228,7 @@
               var name = $add_dialog.eucadialog("get_validate_value", "sgroup-name",
                                                 SGROUP_NAME_PATTERN, alphanum_warning);
               if (name == null) return;
-              var desc = $add_dialog.eucadialog("getValue", "#sgroup-description");
+              var desc = toBase64($add_dialog.eucadialog("getValue", "#sgroup-description"));
               if (desc == null) return;
 
               thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
@@ -261,21 +273,17 @@
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
                               thisObj._getTableWrapper().eucatable('refreshTable');
-//                              $add_dialog.eucadialog("close");
                           }
                           else {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
-//                              $add_dialog.eucadialog("close");
                           }
                       } else {
-//                          $add_dialog.eucadialog("close");
                           notifyError($.i18n.prop('sgroup_add_rule_error', name), getErrorMessage(jqXHR));
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-//                    $add_dialog.eucadialog("close");
                     notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
                   }
               });
@@ -288,18 +296,7 @@
                     thisObj._refreshRulesList(thisObj.addDialog);
         },
       });
-      var group_ids = [];
-      var results = describe('sgroup');
-      if ( results ) {
-        for( res in results) {
-          var group = results[res];
-          if (group.name == "default") {
-            this.user_id = group.owner_id;
-          }
-          group_ids.push(group.name);
-        }
-      }
-      this._setupDialogFeatures(this.addDialog, group_ids, createButtonId);
+      this._setupDialogFeatures(this.addDialog, createButtonId);
 
       var $tmpl = $('html body').find('.templates #sgroupEditDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_sgroup)));
@@ -393,31 +390,22 @@
                     thisObj._refreshRulesList(thisObj.editDialog);
         },
       });
-      this._setupDialogFeatures(this.editDialog, group_ids, createButtonId);
+      this._setupDialogFeatures(this.editDialog, createButtonId);
     },
 
     _destroy : function() {
     },
 
-    _setupDialogFeatures : function(dialog, group_ids, createButtonId) {
+    _setupDialogFeatures : function(dialog, createButtonId) {
       var thisDialog = dialog;
       var thisObj = this;
       var groupSelector = dialog.find('#allow-group');
-      var sorted = sortArray(group_ids);
-      groupSelector.autocomplete({
-        source: sorted,
-        select: function() {
-        }
-      });
       groupSelector.watermark(sgroup_group_name);
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-name'), createButtonId, function () {
          thisObj._validateFormAdd(createButtonId, thisDialog);
       });
-      dialog.eucadialog('validateOnType', '#sgroup-description', function(description) {
-        if (description && description.length>255)
-          return long_description;
-        else
-          return null;
+      dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-description'), createButtonId, function() {
+         thisObj._validateFormAdd(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
@@ -504,7 +492,7 @@
       var name = dialog.eucadialog("get_validate_value", "sgroup-name",
                                         SGROUP_NAME_PATTERN, alphanum_warning);
       var desc = dialog.eucadialog("getValue", "#sgroup-description");
-      if (desc && desc.length>255)
+      if (desc && desc.length>MAX_DESCRIPTION_LEN)
           dialog.eucadialog("showFieldError", "#sgroup-description", long_description);
       var $button = dialog.parent().find('#' + createButtonId);
       if ( name == null || desc == null || name.length == 0 || desc.length == 0 )     
@@ -552,18 +540,18 @@
       }
 
       if (template != 'none') {
-          if (dialog.find("input[@name='allow-group']:checked").val() == 'ip') {
+          if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
             if (allow_ip == "") {
               enable = false;
             }
-            else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([1-9]|[1-3][0-9])$/.test(allow_ip))
+            else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
               dialog.find('#allow-ip-error').html("");
             else {
               dialog.find('#allow-ip-error').html(sgroup_error_address_range);
               enable = false;
             }
           }
-          else if (dialog.find("input[@name='allow-group']:checked").val() == 'group') {
+          else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
             if (allow_group == '')
               enable = false;
           }
@@ -623,10 +611,10 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-ip') {
+        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
-        else if (dialog.find("input[@name=allow-group]:checked").attr('id') == 'sgroup-allow-group') {
+        else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
             rule.group = asText(dialog.find('#allow-group').val());
             var user_group = rule.group.split('/');
             if (user_group.length > 1) {
@@ -670,11 +658,16 @@
             msg += "</ul>";
             dialog.find('#sgroup-rules-list').html(msg);
             i=0;
+            j=0;
             for (rule in this.rulesList) {
-                if (this.rulesList[rule].deletethis == true) continue;
-                dialog.find('#sgroup-rule-number-'+i).on('click', {index: i, source: dialog}, function(event) {
+                if (this.rulesList[rule].deletethis == true) {
+                    i += 1;
+                    continue;
+                }
+                dialog.find('#sgroup-rule-number-'+j).on('click', {index: i, source: dialog}, function(event) {
                       event.data.source.dialog('option', 'user_val')(event.data.index);
                 });
+                j += 1;
                 i += 1;
             }
         }
@@ -707,22 +700,17 @@
     },
 
 
-    _deleteSelectedSecurityGroups : function () {
+    _deleteSelectedSecurityGroups : function (groupsToDelete) {
       var thisObj = this;
-      var toDelete = thisObj._getTableWrapper().eucatable('getSelectedRows', 1);
-      var rowsToDelete = []; 
-      $.each(toDelete, function(idx, item){
-        rowsToDelete.push($(item).val());
-      });     
       var done = 0;
-      var all = rowsToDelete.length;
+      var all = groupsToDelete.length;
       var error = [];
-      doMultiAjax(rowsToDelete, function(item, dfd){
+      doMultiAjax(groupsToDelete, function(item, dfd){
         var sgroupName = item;
         $.ajax({
           type:"POST",
           url:"/ec2?Action=DeleteSecurityGroup",
-          data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+sgroupName,
+          data:"_xsrf="+$.cookie('_xsrf')+"&GroupName="+encodeURIComponent(sgroupName),
           dataType:"json",
           async:"true",
           success: (function(sgroupName, refresh_table) {
@@ -761,7 +749,7 @@
 
     _addIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
       var thisObj = this;
-      var req_params = "&GroupName=" + groupName;
+      var req_params = "&GroupName=" + encodeURIComponent(groupName);
       for (i=0; i<fromPort.length; i++) {
           req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
           req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
@@ -783,13 +771,13 @@
         async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', addEllipsis(sgroupName, 75)));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_add_rule_error', sgroupName), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('sgroup_add_rule_error', addEllipsis(sgroupName, 75)), getErrorMessage(jqXHR));
             }
         })(sgroupName),
       });
@@ -797,7 +785,7 @@
 
     _removeIngressRule : function(dialog, groupName, fromPort, toPort, protocol, cidr, fromGroup, fromUser) {
       var thisObj = this;
-      var req_params = "&GroupName=" + groupName;
+      var req_params = "&GroupName=" + encodeURIComponent(groupName);
       for (i=0; i<fromPort.length; i++) {
           req_params += "&IpPermissions."+(i+1)+".IpProtocol=" + protocol[i];
           req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
@@ -808,7 +796,7 @@
           }
           if (fromGroup[i]) {
               var tmp = $("<div/>").html(fromGroup[i]).text();
-              req_params += "&IpPermissions."+(i+1)+".Groups.1.Groupname=" + tmp
+              req_params += "&IpPermissions."+(i+1)+".Groups.1.GroupName=" + tmp
           }
           if (fromUser[i]) {
               var tmp = $("<div/>").html(fromUser[i]).text();
@@ -824,13 +812,13 @@
         async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', sgroupName));
+                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', addEllipsis(sgroupName, 75)));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_revoke_rule_error', sgroupName), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('sgroup_revoke_rule_error', addEllipsis(sgroupName, 75)), getErrorMessage(jqXHR));
             }
         })(sgroupName),
       });
@@ -843,15 +831,14 @@
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 1);
+      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 7);
       var matrix = [];
       $.each(rowsToDelete,function(idx, group){
-        group = $(group).html();
-        matrix.push([group]);
+        matrix.push([group, group]);
       });
 
       if ( rowsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_del_resource_title], contents: matrix});
+        thisObj.delDialog.eucadialog('setSelectedResources', {title:[sgroup_dialog_del_resource_title], contents: matrix, limit:60, hideColumn: 1});
         thisObj.delDialog.dialog('open');
       }
     },
@@ -871,6 +858,25 @@
       thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
       thisObj.addDialog.find("#sgroup-name-error").html("");
       thisObj.addDialog.find("#sgroup-description-error").html("");
+
+      group_ids = [];
+      var results = describe('sgroup');
+      if ( results ) {
+        for( res in results) {
+          var group = results[res];
+          if (group.name == "default") {
+            this.user_id = group.owner_id;
+          }
+          group_ids.push(group.name);
+        }
+      }
+      var groupSelector = thisObj.addDialog.find('#allow-group');
+      var sorted = sortArray(group_ids);
+      groupSelector.autocomplete({
+        source: sorted,
+        select: function() {
+        }
+      });
     },
 
     _editAction : function() {
@@ -880,20 +886,42 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-      thisObj.editDialog.find('#sgroups-edit-group-name').html(firstRow.name+" "+sgroup_dialog_edit_description);
+      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').attr('title', firstRow.name).text(addEllipsis(firstRow.name, 70)));
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').html(firstRow.description);
+      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').attr('title', firstRow.description).html(addEllipsis(firstRow.description, 70)));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
       thisObj.editDialog.find('#sgroup-more-rules').css('display','none')
       thisObj._refreshRulesList(thisObj.editDialog);
+      // set autocomplete based on list containing groups other than current group
+      group_ids = [];
+      var results = describe('sgroup');
+      if ( results ) {
+        for( res in results) {
+          var group = results[res];
+          if (group.name == "default") {
+            this.user_id = group.owner_id;
+          }
+          if (group.name != firstRow.name) {
+            group_ids.push(group.name);
+          }
+        }
+      }
+      var groupSelector = thisObj.editDialog.find('#allow-group');
+      var sorted = sortArray(group_ids);
+      var idx = sorted.indexOf(firstRow.name);
+      groupSelector.autocomplete({
+        source: sorted,
+        select: function() {
+        }
+      });
     },
 
-    _expandCallback : function(row){ 
+    _expandCallback : function(row){
       var thisObj = this;
-      var groupName = $(row[1]).html();
+      var groupName = row[7];
       var results = describe('sgroup');
       var group = null;
       for(i in results){
@@ -970,10 +998,6 @@
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});
       thisObj.addDialog.eucadialog('open')
-    },
-
-    keyAction : function(e) {
-      this.tableWrapper.eucatable('keyAction', e);
     },
 /**** End of Public Methods ****/
   });

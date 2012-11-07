@@ -32,8 +32,6 @@ public class ReportingElasticIpCreateEvent
 {
 	private static final long serialVersionUID = 1L;
 
-	@Column(name="uuid", nullable=false)
-	private String uuid;
 	@Column(name="ip", nullable=false)
 	private String ip;
 	@Column(name="user_id", nullable=false)
@@ -50,19 +48,13 @@ public class ReportingElasticIpCreateEvent
 	/**
  	 * <p>Do not instantiate this class directly; use the ReportingElasticIpCrud class.
  	 */
-	ReportingElasticIpCreateEvent(String uuid, Long timestampMs, String ip, String userId)
+	ReportingElasticIpCreateEvent(Long timestampMs, String ip, String userId)
 	{
-		this.uuid = uuid;
 		this.timestampMs = timestampMs;
 		this.ip = ip;
 		this.userId = userId;
 	}
 
-	public String getUuid()
-	{
-		return this.uuid;
-	}
-	
 	public String getIp()
 	{
 		return this.ip;
@@ -75,7 +67,7 @@ public class ReportingElasticIpCreateEvent
 
 	@Override
 	public EventDependency asDependency() {
-		return asDependency( "uuid", uuid );
+		return asDependency( "ip", ip );
 	}
 
   @Override
@@ -88,7 +80,7 @@ public class ReportingElasticIpCreateEvent
 	@Override
 	public String toString()
 	{
-		return "[uuid:" + this.uuid + " timestampMs: " + this.timestampMs + " ip:" + this.ip + " userId:" + this.userId + "]";
+		return "[timestampMs: " + this.timestampMs + " ip:" + this.ip + " userId:" + this.userId + "]";
 	}
 
 	@Override
@@ -99,7 +91,6 @@ public class ReportingElasticIpCreateEvent
 		result = prime * result
 				+ ((timestampMs == null) ? 0 : timestampMs.hashCode());
 		result = prime * result + ((userId == null) ? 0 : userId.hashCode());
-		result = prime * result + ((uuid == null) ? 0 : uuid.hashCode());
 		return result;
 	}
 
@@ -126,11 +117,6 @@ public class ReportingElasticIpCreateEvent
 			if (other.userId != null)
 				return false;
 		} else if (!userId.equals(other.userId))
-			return false;
-		if (uuid == null) {
-			if (other.uuid != null)
-				return false;
-		} else if (!uuid.equals(other.uuid))
 			return false;
 		return true;
 	}
