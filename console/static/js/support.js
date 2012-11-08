@@ -371,13 +371,17 @@ function getErrorMessage(jqXHR) {
 function isRootVolume(instanceId, volumeId) {
   var instance = describe('instance', instanceId);
   if ( instance && instance.root_device_type && instance.root_device_type.toLowerCase() == 'ebs' ) {
-    var rootDeviceName = instance.root_device_name ? instance.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
+    var rootDeviceName = getRootDeviceName(instance);
     var rootVolume = instance.block_device_mapping[rootDeviceName];
     if ( rootVolume && rootVolume.volume_id === volumeId ) {
       return true;
     }
   }
   return false;
+}
+
+function getRootDeviceName(resource){
+  return resource.root_device_name ? resource.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
 }
 
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
