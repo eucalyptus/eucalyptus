@@ -511,10 +511,18 @@ public class BlockStorage {
 		//in GB
 		String size = request.getSize();
 		int sizeAsInt = 0;
-		if(StorageProperties.shouldEnforceUsageLimits && StorageProperties.trackUsageStatistics) {
+		if(StorageProperties.shouldEnforceUsageLimits) {
 			if(size != null) {
+				int totalVolumeSize = 0;
+               		        VolumeInfo volInfo = new VolumeInfo();
+               	         	volInfo.setStatus(StorageProperties.Status.available.toString());
+                		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
+                       		List<VolumeInfo> volInfos = db.query(volInfo);
+                        	for (VolumeInfo vInfo : volInfos) {
+                       	         	totalVolumeSize += vInfo.getSize();
+				}
+				db.rollback();
 				sizeAsInt = Integer.parseInt(size);
-				int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
 				if(((totalVolumeSize + sizeAsInt) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb())) {
 					throw new VolumeSizeExceededException(volumeId, "Total Volume Size Limit Exceeded");
 				}
@@ -1234,9 +1242,14 @@ public class BlockStorage {
 				if(foundVolumeInfo != null) {
 					if(success) {
 						//Check resource constraints, if thresholds are exceeded, fail the operation
-						if(StorageProperties.shouldEnforceUsageLimits && StorageProperties.trackUsageStatistics) {
-							//TODO: should convert this to use DB lookup instead.
-							int totalVolumeSize = (int)(blockStorageStatistics.getTotalSpaceUsed() / StorageProperties.GB);
+						if(StorageProperties.shouldEnforceUsageLimits) {
+                                			int totalVolumeSize = 0;
+                   			                VolumeInfo volInfo = new VolumeInfo();
+			                                volInfo.setStatus(StorageProperties.Status.available.toString());
+                     			                List<VolumeInfo> volInfos = db.query(volInfo);
+			                                for (VolumeInfo vInfo : volInfos) {
+                     			                   totalVolumeSize += vInfo.getSize();
+                               				}
 							if((totalVolumeSize + size) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb() ||
 									(size > StorageInfo.getStorageInfo().getMaxVolumeSizeInGB())) {
 								LOG.error("Max Total Volume size limit exceeded creating " + volumeId + ". Removing volume and cancelling operation");

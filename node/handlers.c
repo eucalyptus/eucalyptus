@@ -1,6 +1,3 @@
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
-
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -62,6 +59,9 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 #define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
 #include <stdio.h>
@@ -127,6 +127,7 @@ sem *inst_sem;	/* guarding access to global instance structs */
 sem *inst_copy_sem;	/* guarding access to global instance structs */
 sem *addkey_sem;	/* guarding access to global instance structs */
 sem *loop_sem; // created in diskutils.c for serializing 'losetup' invocations
+sem *log_sem;  // used by log.c
 
 bunchOfInstances *global_instances = NULL;
 bunchOfInstances *global_instances_copy = NULL;
@@ -1234,6 +1235,7 @@ static int init (void)
     // set up default signal handler for this child process (for SIGALRM)
     {
         struct sigaction newsigact;
+        memset(&newsigact, 0, sizeof(struct sigaction));
         newsigact.sa_handler = SIG_IGN;
         newsigact.sa_flags = 0;
         sigemptyset(&newsigact.sa_mask);
@@ -1405,7 +1407,7 @@ static int init (void)
 	inst_sem = sem_alloc (1, "mutex");
 	inst_copy_sem = sem_alloc (1, "mutex");
 	addkey_sem = sem_alloc (1, "mutex");
-    sem * log_sem = sem_alloc (1, "mutex");
+    log_sem = sem_alloc (1, "mutex");
 	if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem) {
 		logprintfl (EUCAFATAL, "failed to create and initialize semaphores\n");
 		return ERROR_FATAL;
@@ -1478,9 +1480,15 @@ static int init (void)
 
         // create work and cache sub-directories so that stat_backing_store() below succeeds
         char cache_path [MAX_PATH]; snprintf (cache_path, sizeof (cache_path), "%s/cache", instances_path);
-        if (ensure_directories_exist (cache_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) return ERROR;
+        if (ensure_directories_exist (cache_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) {
+            free (instances_path);
+        	return ERROR;
+        }
         char work_path [MAX_PATH];  snprintf (work_path,  sizeof (work_path),  "%s/work", instances_path);
-        if (ensure_directories_exist (work_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) return ERROR;
+        if (ensure_directories_exist (work_path, 0, NULL, NULL, BACKING_DIRECTORY_PERM) == -1) {
+            free (instances_path);
+        	return ERROR;
+        }
 
         // determine how much is used/available in work and cache areas on the backing store
         blobstore_meta work_meta, cache_meta;

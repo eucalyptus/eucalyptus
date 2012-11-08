@@ -56,67 +56,6 @@
                                                                       $container.maincontainer("changeSelected",evt, ui);
                                                                    }});
       $('html body').find(DOM_BINDING['footer']).footer();
-
-      $('html body').keypress(function(e){
-        if (!(e.ctrlKey && e.shiftKey))
-          return true;
-        if($(e.target).is('input'))
-          return true;
-        if($(e.target).is('select'))
-          return true;
-        if($(e.target).is('textarea'))
-          return true;
-
-        var key = e.which;
-          /*dashboard: D, d (68, 100)
-          images: I, i (73, 105)
-          instances: N, n (78, 110)
-          volumes: V, v (86, 118)
-          snapshots: S, s (83, 115)
-          security groups: G, g (71, 103)
-          key pairs: K, k (75, 107)
-          address: A, a (65, 97)          
-          launch new instance: L, l (76, 108) */
-        $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
-        switch(key){
-          case 68:
-          case 100:
-            $container.maincontainer("changeSelected", e, {selected:'dashboard'});
-          break;
-          case 73:
-          case 105:
-            $container.maincontainer("changeSelected", e, {selected:'image'});
-          break;
-          case 78:
-          case 110:
-            $container.maincontainer("changeSelected", e, {selected:'instance'});
-          break;
-          case 86:
-          case 118:
-            $container.maincontainer("changeSelected", e, {selected:'volume'});
-          break;
-          case 83:
-          case 115:
-            $container.maincontainer("changeSelected", e, {selected:'snapshot'});
-          break;
-          case 71:
-          case 103:
-            $container.maincontainer("changeSelected", e, {selected:'sgroup'});
-          break;
-          case 75:
-          case 107:
-            $container.maincontainer("changeSelected", e, {selected:'keypair'});
-          break;
-          case 65:
-          case 97:
-            $container.maincontainer("changeSelected", e, {selected:'eip'});
-          break;
-          case 76:
-          case 108:
-            $container.maincontainer("changeSelected", e, {selected:'launcher'});
-          break;
-        }
-      });
     }).fail(function(){
         //TODO: what's the appropriate error message and the popup?
         errorAndLogout();

@@ -163,8 +163,11 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
           ramdisk = results[i];
       }
       var snapshot = '';
-      if(image.block_device_mapping && image.block_device_mapping['snapshot_id'])
-        snapshot = image.block_device_mapping['snapshot_id'];
+      if(image.block_device_mapping){
+        vol = image.block_device_mapping[getRootDeviceName(image)];
+        if (vol)
+          snapshot = vol['snapshot_id'];
+      }
  
       var $wrapper = $('<div>');
       var $imgInfo = $('<div>').addClass('image-table-expanded-machine').addClass('clearfix').append(
