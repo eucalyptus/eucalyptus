@@ -259,7 +259,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:eipId, reason: undefined_reason});
+                error.push({id:eipId, reason: undefined_error});
               }
            }
           })(eipId),
@@ -309,7 +309,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:eipId, reason: undefined_reason});
+                error.push({id:eipId, reason: undefined_error});
               }
            }
           })(eipId),
@@ -362,7 +362,7 @@
                 ip = data.results.public_ip;
                 allocatedIps.push(ip);
               } else {
-                error.push({id:'unknown', reason: undefined_reason});
+                error.push({id:'unknown', reason: undefined_error});
               }
           },
           error: function(jqXHR, textStatus, errorThrown){

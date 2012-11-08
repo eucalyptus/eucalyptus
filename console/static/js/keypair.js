@@ -260,7 +260,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:keyName, reason: undefined_reason});
+                error.push({id:keyName, reason: undefined_error});
               }
            }
           })(keyName),
