@@ -84,7 +84,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
             user_data = user_data_file
         else:
             user_data = self.get_argument('UserData', None)
-            user_data = base64.b64decode(user_data)
+            if user_data:
+              user_data = base64.b64decode(user_data)
         addr_type = self.get_argument('AddressingType', None)
         vm_type = self.get_argument('InstanceType', None)
         placement = self.get_argument('Placement.AvailabilityZone', None)
