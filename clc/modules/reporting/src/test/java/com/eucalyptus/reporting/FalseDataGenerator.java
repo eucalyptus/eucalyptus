@@ -63,6 +63,7 @@ public class FalseDataGenerator
 	private static final long VOLUME_SIZE   = 2;
 	private static final long SNAPSHOT_SIZE = 2;
 	private static final long OBJECT_SIZE   = 2;
+	private static final double ONE_MB = 1024d*1024d;
 
 	private static final long INSTANCE_CUMULATIVE_DISK_USAGE_PER_PERIOD                 = 2;
 	private static final long INSTANCE_CUMULATIVE_NET_INCOMING_BETWEEN_USAGE_PER_PERIOD = 3;
@@ -223,27 +224,25 @@ public class FalseDataGenerator
 
 
 
-							/* Generate instance usage in this period for every instance running from before */
-							double oneMB = 1024d*11024d;
 							for (long i=INSTANCE_UUID_START; i<instanceUuidNum-2; i++) {
 								String uuid = String.format(UUID_FORMAT, uniqueUserId, i);
 								log.debug(String.format("  Generating instance usage uuid %s\n", uuid));
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0L, "total", oneMB*periodNum);
+										timeMs, "NetworkIn", 0L, "total", ONE_MB*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkIn", 0L, "external", oneMB*2*periodNum);
+										timeMs, "NetworkIn", 0L, "external", ONE_MB*2*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0L, "total", oneMB*3*periodNum);
+										timeMs, "NetworkOut", 0L, "total", ONE_MB*3*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "NetworkOut", 0L, "external", oneMB*4*periodNum);
+										timeMs, "NetworkOut", 0L, "external", ONE_MB*4*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskReadBytes", 0L, "root", oneMB*5*periodNum);
+										timeMs, "DiskReadBytes", 0L, "root", ONE_MB*5*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskWriteBytes", 0L, "root", oneMB*6*periodNum);
+										timeMs, "DiskWriteBytes", 0L, "root", ONE_MB*6*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskReadBytes", 0L, "ephemeral0", oneMB*7*periodNum);
+										timeMs, "DiskReadBytes", 0L, "ephemeral0", ONE_MB*7*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
-										timeMs, "DiskWriteBytes", 0L, "ephemeral0", oneMB*8*periodNum);
+										timeMs, "DiskWriteBytes", 0L, "ephemeral0", ONE_MB*8*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
 										timeMs, "VolumeTotalReadTime", 0L, "vda", 100000d*periodNum);
 								ReportingInstanceEventStore.getInstance().insertUsageEvent(uuid,
@@ -542,7 +541,7 @@ public class FalseDataGenerator
 		}
 		/* TODO: verify zone totals */
 		InstanceUsageArtEntity zoneUsage = zone.getUsageTotals().getInstanceTotals();
-		checkDiskInMetric("Zone Totals", zoneUsage, 1700d*NUM_USER_TEST); // Each user has 1700d (1000d+700d for instance a+b)	
+		checkDiskInMetric("Zone Totals", zoneUsage, ONE_MB*1700d*NUM_USER_TEST); // Each user has 1700d (1000d+700d for instance a+b)	
 		
 		AccountArtEntity account = zone.getAccounts().get("account0");
 		if (account==null) {
@@ -558,14 +557,14 @@ public class FalseDataGenerator
 
 			/* Verify user totals */
 			InstanceUsageArtEntity userUsage = user.getUsageTotals().getInstanceTotals();
-			checkDiskInMetric("User Totals", userUsage, 1700d);	// Each user has 1700d (1000d+700d for instance a+b)
+			checkDiskInMetric("User Totals", userUsage, ONE_MB*1700d);	// Each user has 1700d (1000d+700d for instance a+b)
 			
 			for (String uuid: user.getInstances().keySet()) {
 				InstanceUsageArtEntity usage = user.getInstances().get(uuid).getUsage();
 				if (uuid.startsWith("a")) {
-					checkDiskInMetric("Instance A", usage, 700d);  // See comment in geneation method for 700d
+					checkDiskInMetric("Instance A", usage, ONE_MB*700d);  // See comment in geneation method for 700d
 				} else if (uuid.startsWith("b")) {
-					checkDiskInMetric("Instance B", usage, 1000d); // See comment in generation method for 1000d
+					checkDiskInMetric("Instance B", usage, ONE_MB*1000d); // See comment in generation method for 1000d
 				} else if (uuid.startsWith("c") || uuid.startsWith("d")) {
 					throw new IllegalStateException("Instance included without any usage in report boundaries");
 				}
@@ -575,7 +574,7 @@ public class FalseDataGenerator
 	
 	private static boolean checkDiskInMetric(String testName, InstanceUsageArtEntity usage, double foundVal)
 	{
-		long got = new Double(usage.getDiskReadMegs()).longValue();
+		long got = new Double(usage.getDiskReadBytes()).longValue();
 		long expected = new Double(foundVal).longValue();
 		log.debug(String.format("test:%s expected:%d got:%d", testName, expected, got));
 		return (expected==got);
