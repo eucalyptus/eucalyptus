@@ -121,7 +121,7 @@ public class TransientZone extends Zone {
   }
 
   public static Name getExternalName( ) throws TextParseException {
-    String externalNameString = /*"eucalyptus." +*/SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
+    String externalNameString = SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
     Name externalName = Name.fromString( externalNameString );
     return externalName;
   }
@@ -155,7 +155,7 @@ public class TransientZone extends Zone {
         if( internalName != null ) {
           return internalName;
         } else {
-          String internalNameString = "eucalyptus.internal.";
+          String internalNameString = SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".internal.";
           internalName = Name.fromString( internalNameString );
           return internalName;
         }
