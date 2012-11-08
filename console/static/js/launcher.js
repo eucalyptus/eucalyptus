@@ -652,19 +652,22 @@
           return;
         $kp_selector.children().detach();
         var keyNameArr = [];
-        for( res in results) {
+        for( res in results ) {
           var kpName = results[res].name;
           keyNameArr.push(kpName);
         }
         var sortedArr = sortArray(keyNameArr);
+        var selectedKeyPair = '';
         $.each(sortedArr, function(idx, kpName){
           var $option = $('<option>').attr('value', kpName).attr('title', kpName).text(addEllipsis(kpName, 70));
           if(oldKeypairs && $.inArray(kpName, oldKeypairs) < 0){
-            $option.attr('selected', 'selected'); 
+            $option.attr('selected', 'selected');
+            selectedKeyPair = kpName;
           }
           $kp_selector.append($option);
         });
 
+        thisObj._setSummary('security', summarize(selectedKeyPair, undefined));
         $kp_selector.append($('<option>').attr('value', 'none').text(launch_instance_security_keypair_none));
         $kp_selector.change(function(e){
           var $summary = summarize(); 
@@ -731,7 +734,7 @@
               $rule.append($wrapper);
             });
           } 
-          var $summary = summarize(null, groupName); 
+          var $summary = summarize(undefined, groupName);
           thisObj._setSummary('security', $summary.clone());
         } //end of onSelectorChange
 
