@@ -226,6 +226,18 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		return sigString.split(":");
 	}
 
+	private String combineMultilineHeader(String header) {
+		String value =  header.trim();
+		String[] parts = value.split("\n");
+		value = "";
+		for(String part: parts) {
+			part = part.trim();
+			value += part + " ";
+		}
+		value = value.trim();
+
+	}
+
 	private String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
 		String result = "";
 		Set<String> headerNames = httpRequest.getHeaderNames();
@@ -233,23 +245,18 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		TreeMap amzHeaders = new TreeMap<String, String>();
 		for(String headerName : headerNames) {
 			String headerNameString = headerName.toLowerCase().trim();
-			if(headerNameString.startsWith("x-amz-")) {
-				String value =  httpRequest.getHeader(headerName).trim();
-				String[] parts = value.split("\n");
-				value = "";
-				for(String part: parts) {
-					part = part.trim();
-					value += part + " ";
-				}
-				value = value.trim();
-				if(amzHeaders.containsKey(headerNameString)) {
-					String oldValue = (String) amzHeaders.remove(headerNameString);
-					oldValue += "," + value;
-					amzHeaders.put(headerNameString, oldValue);
-				} else {
-					amzHeaders.put(headerNameString, value);
-				}
+			if (!headerNameString.startsWith("x-amz-"))
+				continue;
+
+			StringBuilder values = new StringBuilder();
+			for (String headerValue: httpRequest.getHeaders(headerName)) {
+				values.append(combineMultilineHeader(headerValue));
+				values.append(",");
 			}
+			// Remove the last comma
+			values.deleteCharAt(values.length() -1);
+
+			amzHeaders.put(headerNameString, values.toString());
 		}
 
 		Iterator<String> iterator = amzHeaders.keySet().iterator();
