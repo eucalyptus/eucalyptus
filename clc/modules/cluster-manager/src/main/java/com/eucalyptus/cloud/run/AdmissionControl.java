@@ -370,7 +370,7 @@ public class AdmissionControl {
       
     private List<Cluster> doPrivilegedLookup( String partitionName, String vmTypeName ) throws NotEnoughResourcesException {
       if ( Partition.DEFAULT_NAME.equals( partitionName ) ) {
-        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivileged( ) );
+        Iterable<Cluster> authorizedClusters = Iterables.filter( Clusters.getInstance( ).listValues( ), RestrictedTypes.filterPrivilegedWithoutOwner( ) );
         Multimap<VmTypeAvailability, Cluster> sorted = TreeMultimap.create( );
         for ( Cluster c : authorizedClusters ) {
           sorted.put( c.getNodeState( ).getAvailability( vmTypeName ), c );
