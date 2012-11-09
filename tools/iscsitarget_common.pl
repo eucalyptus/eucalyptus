@@ -278,7 +278,6 @@ sub lookup_session {
     } elsif (/.*\s+Lun:\s+(\d+)/) {
       $lun = $1;
     } elsif (/^\s+Attached scsi disk\s+(\S+).*/) {
-    	print STDERR "Disk: $1 -- $_";
       $session->{"$SK_LUN-$lun"} = $1;
     } elsif (/^\s+SID:\s+(\d+)/) {
       $session->{$SK_SID} = $1;

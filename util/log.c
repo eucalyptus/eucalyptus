@@ -341,7 +341,7 @@ int log_sem_set (sem * s)
 
 int logfile(char *file, int log_level_in, int log_roll_number_in) // TODO: legacy function, to be removed when no longer in use
 {
-    log_params_set (log_level_in, log_roll_number_in, 0);
+    log_params_set (log_level_in, log_roll_number_in, MAXLOGFILESIZE);
     return log_file_set (file);
 }
 

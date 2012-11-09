@@ -19,7 +19,7 @@ public class MemoryCheckRatioListener implements PropertyChangeListener {
 		} else if (!(newValue instanceof String)) {
 			throw new ConfigurablePropertyException("Invalid value " + newValue);
 		} else { 
-			String ratioStr = ((String) newValue).substring(0, ((String) newValue).length() - 1);
+			String ratioStr = (String) newValue;
 			double ratio = -1.0;
 			try {
 				ratio = Double.parseDouble(ratioStr);

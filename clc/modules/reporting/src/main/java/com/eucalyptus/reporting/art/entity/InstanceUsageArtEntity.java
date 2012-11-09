@@ -71,28 +71,28 @@ public class InstanceUsageArtEntity
 	private int  instanceCnt          = 0;
 
 	private Long cpuUtilizationMs;
-	private Long diskReadMegs;
-	private Long diskWriteMegs;
+	private Long diskReadBytes;
+	private Long diskWriteBytes;
 	private Long diskReadOps;
 	private Long diskWriteOps;
-	private Long netTotalInMegs;
-	private Long netTotalOutMegs;
-	private Long netExternalInMegs;
-	private Long netExternalOutMegs;
+	private Long netTotalInBytes;
+	private Long netTotalOutBytes;
+	private Long netExternalInBytes;
+	private Long netExternalOutBytes;
 	private Long diskReadTime;
 	private Long diskWriteTime;
 
 	public boolean isEmpty() {
 		return
 				cpuUtilizationMs == null &&
-				diskReadMegs == null &&
-				diskWriteMegs == null &&
+				diskReadBytes == null &&
+				diskWriteBytes == null &&
 				diskReadOps == null &&
 				diskWriteOps == null &&
-				netTotalInMegs == null &&
-				netTotalOutMegs == null &&
-				netExternalInMegs == null &&
-				netExternalOutMegs == null &&
+				netTotalInBytes == null &&
+				netTotalOutBytes == null &&
+				netExternalInBytes == null &&
+				netExternalOutBytes == null &&
 				diskReadTime == null &&
 				diskWriteTime == null;
 	}
@@ -132,24 +132,24 @@ public class InstanceUsageArtEntity
 		this.cpuUtilizationMs = plus(this.cpuUtilizationMs, cpuUtilizationMs);
 	}
 
-	public Long getDiskReadMegs()
+	public Long getDiskReadBytes()
 	{
-		return diskReadMegs;
+		return diskReadBytes;
 	}
 
-	public void addDiskReadMegs( Long diskReadMegs )
+	public void addDiskReadBytes( Long diskReadBytes )
 	{
-		this.diskReadMegs = plus(this.diskReadMegs, diskReadMegs);
+		this.diskReadBytes = plus(this.diskReadBytes, diskReadBytes);
 	}
 
-	public Long getDiskWriteMegs()
+	public Long getDiskWriteBytes()
 	{
-		return diskWriteMegs;
+		return diskWriteBytes;
 	}
 
-	public void addDiskWriteMegs( Long diskWriteMegs )
+	public void addDiskWriteBytes( Long diskWriteBytes )
 	{
-		this.diskWriteMegs = plus(this.diskWriteMegs, diskWriteMegs);
+		this.diskWriteBytes = plus(this.diskWriteBytes, diskWriteBytes);
 	}
 
 	public Long getDiskReadOps() {
@@ -188,60 +188,60 @@ public class InstanceUsageArtEntity
 		this.diskWriteTime = plus(this.diskWriteTime, diskWriteTime);
 	}
 
-	public Long getNetTotalInMegs()
+	public Long getNetTotalInBytes()
 	{
-		return netTotalInMegs;
+		return netTotalInBytes;
 	}
 
-	public void addNetTotalInMegs(Long netTotalInMegs)
+	public void addNetTotalInBytes(Long netTotalInBytes)
 	{
-		this.netTotalInMegs = plus(this.netTotalInMegs, netTotalInMegs);
+		this.netTotalInBytes = plus(this.netTotalInBytes, netTotalInBytes);
 	}
 
-	public Long getNetTotalOutMegs()
+	public Long getNetTotalOutBytes()
 	{
-		return netTotalOutMegs;
+		return netTotalOutBytes;
 	}
 
-	public void addNetTotalOutMegs(Long netTotalOutMegs)
+	public void addNetTotalOutBytes(Long netTotalOutBytes)
 	{
-		this.netTotalOutMegs = plus(this.netTotalOutMegs, netTotalOutMegs);
+		this.netTotalOutBytes = plus(this.netTotalOutBytes, netTotalOutBytes);
 	}
 
-	public Long getNetExternalInMegs()
+	public Long getNetExternalInBytes()
 	{
-		return netExternalInMegs;
+		return netExternalInBytes;
 	}
 
-	public void addNetExternalInMegs(Long netExternalInMegs)
+	public void addNetExternalInBytes(Long netExternalInBytes)
 	{
-		this.netExternalInMegs = plus(this.netExternalInMegs, netExternalInMegs);
+		this.netExternalInBytes = plus(this.netExternalInBytes, netExternalInBytes);
 	}
 
-	public Long getNetExternalOutMegs()
+	public Long getNetExternalOutBytes()
 	{
-		return netExternalOutMegs;
+		return netExternalOutBytes;
 	}
 
-	public void addNetExternalOutMegs(Long netExternalOutMegs)
+	public void addNetExternalOutBytes(Long netExternalOutBytes)
 	{
-		this.netExternalOutMegs = plus(this.netExternalOutMegs, netExternalOutMegs);
+		this.netExternalOutBytes = plus(this.netExternalOutBytes, netExternalOutBytes);
 	}
 
     public void addUsage( final InstanceUsageArtEntity usage )
     {
         addDurationMs( usage.getDurationMs() );
         addCpuUtilizationMs( usage.getCpuUtilizationMs() );
-        addDiskReadMegs( usage.getDiskReadMegs() );
-        addDiskWriteMegs( usage.getDiskWriteMegs() );
+        addDiskReadBytes( usage.getDiskReadBytes() );
+        addDiskWriteBytes( usage.getDiskWriteBytes() );
         addDiskReadOps( usage.getDiskReadOps() );
         addDiskWriteOps( usage.getDiskWriteOps() );
         addDiskReadTime( usage.getDiskReadTime() );
         addDiskWriteTime( usage.getDiskWriteTime() );
-        addNetTotalInMegs( usage.getNetTotalInMegs() );
-        addNetTotalOutMegs( usage.getNetTotalOutMegs() );
-        addNetExternalInMegs( usage.getNetExternalInMegs() );
-        addNetExternalOutMegs( usage.getNetExternalOutMegs() );
+        addNetTotalInBytes( usage.getNetTotalInBytes() );
+        addNetTotalOutBytes( usage.getNetTotalOutBytes() );
+        addNetExternalInBytes( usage.getNetExternalInBytes() );
+        addNetExternalOutBytes( usage.getNetExternalOutBytes() );
         addInstanceCnt( 1 );
     }
 	
