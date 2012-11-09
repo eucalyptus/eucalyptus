@@ -420,35 +420,10 @@ class ComputeHandler(eucaconsole.BaseHandler):
             elif action == 'GetPassword':
                 self.handleGetPassword(self.user_session.clc, self.callback)
 
-#            ret = Response(ret) # wrap all responses in an object for security purposes
-#            data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-#            try:
-#                if(eucaconsole.config.get('test','apidelay')):
-#                    time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
-#            except ConfigParser.NoOptionError:
-#                pass
-#            self.set_header("Content-Type", "application/json;charset=UTF-8")
-#            self.write(data)
-#        except EC2ResponseError as err:
-#            print err
-#            ret = ClcError(err.status, err.reason, err.errors[0][1])
-#            self.set_status(err.status);
-#            self.set_header("Content-Type", "application/json;charset=UTF-8")
-#            self.write(json.dumps(ret, cls=BotoJsonEncoder))
         except Exception as ex:
-#            if isinstance(ex, socket.timeout):
-#                ret = ClcError(504, 'Timed out', None)
-#                self.set_status(504);
-#                self.set_header("Content-Type", "application/json;charset=UTF-8")
-#                self.write(json.dumps(ret, cls=BotoJsonEncoder))
-#            else:
             logging.error("Could not fullfil request, exception to follow")
             logging.error("Since we got here, client likelly not notified either!")
             logging.exception(ex)
-#                ret = ClcError(500, ex.message, None)
-#                self.set_status(500);
-#                self.set_header("Content-Type", "application/json;charset=UTF-8")
-#                self.write(json.dumps(ret, cls=BotoJsonEncoder))
 
     def keycache_callback(self, response, name):
         # respond to the client
