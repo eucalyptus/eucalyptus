@@ -227,15 +227,18 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	}
 
 	private String combineMultilineHeader(String header) {
-		String value =  header.trim();
-		String[] parts = value.split("\n");
-		value = "";
-		for(String part: parts) {
-			part = part.trim();
-			value += part + " ";
-		}
-		value = value.trim();
+		StringBuilder result = new StringBuilder();
+		String[] parts = header.trim().split("\n");
 
+		for(String part: parts) {
+			result.append(part.trim());
+			result.append(" ");
+		}
+		// Delete the final space
+		if (values.length() > 0)
+			result.deleteCharAt(values.length() -1);
+
+		return result.toString();
 	}
 
 	private String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
