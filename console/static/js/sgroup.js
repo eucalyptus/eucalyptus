@@ -718,7 +718,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:sgroupName, reason: undefined_reason});
+                error.push({id:sgroupName, reason: undefined_error});
               }
             }
           })(sgroupName),

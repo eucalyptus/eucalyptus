@@ -309,7 +309,7 @@
               if ( data.results && data.results == true ) {
                 ;
               } else {
-                error.push({id:snapshotId, reason: undefined_reason});
+                error.push({id:snapshotId, reason: undefined_error});
               }
            }
           })(snapshotId),

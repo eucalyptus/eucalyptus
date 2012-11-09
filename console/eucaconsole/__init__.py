@@ -1,4 +1,5 @@
 import base64
+import binascii
 import ConfigParser
 import io
 import json
@@ -10,6 +11,7 @@ import tornado.web
 import traceback
 import socket
 import logging
+import uuid
 from datetime import datetime
 from datetime import timedelta
 
@@ -175,6 +177,21 @@ class BaseHandler(tornado.web.RequestHandler):
             return False
         self.user_session = sessions[sid]
         return True
+
+    # this method is overriden from RequestHandler to set a secure cookie with https
+    @property
+    def xsrf_token(self):
+        if not hasattr(self, "_xsrf_token"):
+            token = self.get_cookie("_xsrf")
+            if not token:
+                token = binascii.b2a_hex(uuid.uuid4().bytes)
+                expires_days = 30 if self.current_user else None
+                if using_ssl:
+                    self.set_cookie("_xsrf", token, expires_days=expires_days, secure='yes')
+                else:
+                    self.set_cookie("_xsrf", token, expires_days=expires_days)
+            self._xsrf_token = token
+        return self._xsrf_token
 
 class RootHandler(BaseHandler):
     def get(self, path):

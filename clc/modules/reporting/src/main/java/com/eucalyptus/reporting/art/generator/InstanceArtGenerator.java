@@ -281,19 +281,18 @@ public class InstanceArtGenerator extends AbstractArtGenerator {
 
   private static void addMetricValueToUsageEntity( InstanceUsageArtEntity usage, String metric, String dim, double val ) {
     final long value = new Double( val ).longValue();
-    final long valueMB = value >> 20;
     if ( metric.equals( METRIC_NET_IN_BYTES ) && dim.equals( DIM_TOTAL ) ) {
-      usage.addNetTotalInMegs( valueMB );
+      usage.addNetTotalInBytes( value );
     } else if ( metric.equals( METRIC_NET_OUT_BYTES ) && dim.equals( DIM_TOTAL ) ) {
-      usage.addNetTotalOutMegs( valueMB );
+      usage.addNetTotalOutBytes( value );
     } else if ( metric.equals( METRIC_NET_IN_BYTES ) && dim.equals( DIM_EXTERNAL ) ) {
-      usage.addNetExternalInMegs( valueMB );
+      usage.addNetExternalInBytes( value );
     } else if ( metric.equals( METRIC_NET_OUT_BYTES ) && dim.equals( DIM_EXTERNAL ) ) {
-      usage.addNetExternalOutMegs( valueMB );
+      usage.addNetExternalOutBytes( value );
     } else if ( metric.equals( METRIC_DISK_IN_BYTES ) ) {
-      usage.addDiskReadMegs( valueMB );
+      usage.addDiskReadBytes( value );
     } else if ( metric.equals( METRIC_DISK_OUT_BYTES ) ) {
-      usage.addDiskWriteMegs( valueMB );
+      usage.addDiskWriteBytes( value );
     } else if ( metric.equals( METRIC_DISK_READ_OPS ) ) {
       usage.addDiskReadOps( value );
     } else if ( metric.equals( METRIC_DISK_WRITE_OPS ) ) {
