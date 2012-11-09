@@ -384,7 +384,7 @@ class CachingClcInterface(ClcInterface):
 
     def __create_key_pair_cb__(self, kwargs, callback):
         try:
-            ret = self.clc.create_key_pairs(kwargs['key_name'])
+            ret = self.clc.create_key_pair(kwargs['key_name'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -527,7 +527,7 @@ class CachingClcInterface(ClcInterface):
     # returns volume info
     def create_volume(self, size, availability_zone, snapshot_id, callback):
         self.volumes.expireCache()
-        Threads.instance().runThread(self.__get_all_volumes_cb__,
+        Threads.instance().runThread(self.__create_volume_cb__,
                             ({'size':size, 'availability_zone':availability_zone, 'snapshot_id':snapshot_id}, callback))
 
     def __create_volume_cb__(self, kwargs, callback):

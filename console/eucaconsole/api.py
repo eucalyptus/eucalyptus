@@ -1,5 +1,6 @@
 import base64
 import ConfigParser
+import functools
 import logging
 import json
 import tornado.web
@@ -217,9 +218,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             return clc.get_all_key_pairs(callback)
         elif action == 'CreateKeyPair':
             name = self.get_argument('KeyName')
-            ret = clc.create_key_pair(name, callback)
-            # TODO: keypair material caching broken till this is fixed
-            self.user_session.keypair_cache[name] = ret.material
+            ret = clc.create_key_pair(name, functools.partial(self.keycache_callback, name=name))
             return ret
         elif action == 'DeleteKeyPair':
             name = self.get_argument('KeyName')
@@ -317,11 +316,12 @@ class ComputeHandler(eucaconsole.BaseHandler):
         elif action == 'CreateSnapshot':
             volumeid = self.get_argument('VolumeId')
             description = self.get_argument('Description', None)
-            description = base64.b64decode(description)
+            if description:
+                description = base64.b64decode(description)
             return clc.create_snapshot(volumeid, description, callback)
         elif action == 'DeleteSnapshot':
             snapshotid = self.get_argument('SnapshotId')
-            return clc.delete_snapshot(snapshotid)
+            return clc.delete_snapshot(snapshotid, callback)
         elif action == 'DescribeSnapshotAttribute':
             snapshotid = self.get_argument('SnapshotId')
             attribute = self.get_argument('Attribute')
@@ -353,93 +353,11 @@ class ComputeHandler(eucaconsole.BaseHandler):
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
+
     ##
     # This is the main entry point for API calls for EC2 from the browser
     # other calls are delegated to handler methods based on resource type
     #
-    @tornado.web.asynchronous
-    def get(self):
-        if not self.authorized():
-            raise tornado.web.HTTPError(401, "not authorized")
-
-        if not(self.user_session.clc):
-            if self.should_use_mock():
-                self.user_session.clc = MockClcInterface()
-            else:
-                self.user_session.clc = BotoClcInterface(eucaconsole.config.get('server', 'clchost'),
-                                                         self.user_session.access_key,
-                                                         self.user_session.secret_key,
-                                                         self.user_session.session_token)
-            # could make this conditional, but add caching always for now
-            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config)
-
-        self.user_session.session_lifetime_requests += 1
-
-        logging.warn(">>>> get being called in api.py. Fix this now! <<<<");
-
-        ret = []
-        try:
-            action = self.get_argument("Action")
-            # bump session counter if this was a user-initiated action
-            if action.find('Describe') == -1:
-                self.user_session.session_last_used = time.time()
-                self.check_xsrf_cookie()
-            if action == 'DescribeAvailabilityZones':
-                ret = self.user_session.clc.get_all_zones(self.callback)
-                if ret == None:
-                    return
-            elif action.find('Image') > -1:
-                ret = self.handleImages(action, self.user_session.clc, self.callback)
-                if ret == None:
-                    return
-            elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
-                ret = self.handleInstances(action, self.user_session.clc, self.callback)
-                if ret == None:
-                    return
-            elif action.find('Address') > -1:
-                ret = self.handleAddresses(action, self.user_session.clc, self.callback)
-                if ret == None:
-                    return
-            elif action.find('KeyPair') > -1:
-                ret = self.handleKeypairs(action, self.user_session.clc, self.callback)
-                if ret == None:
-                    return
-            elif action.find('SecurityGroup') > -1:
-                ret = self.handleGroups(action, self.user_session.clc, self.callback)
-                if ret == None:
-                    return
-            elif action.find('Volume') > -1:
-                ret = self.handleVolumes(action, self.user_session.clc)
-            elif action.find('Snapshot') > -1:
-                ret = self.handleSnapshots(action, self.user_session.clc)
-            ret = Response(ret) # wrap all responses in an object for security purposes
-            data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-            try:
-                if(eucaconsole.config.get('test','apidelay')):
-                    time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
-            except ConfigParser.NoOptionError:
-                pass
-            self.set_header("Content-Type", "application/json;charset=UTF-8")
-            self.write(data)
-        except EC2ResponseError as err:
-            ret = ClcError(err.status, err.reason, err.errors[0][1])
-            self.set_status(err.status);
-            self.set_header("Content-Type", "application/json;charset=UTF-8")
-            self.write(json.dumps(ret, cls=BotoJsonEncoder))
-        except Exception as ex:
-            if isinstance(ex, socket.timeout):
-                ret = ClcError(504, 'Timed out', '')
-                self.set_status(504);
-                self.set_header("Content-Type", "application/json;charset=UTF-8")
-                self.write(json.dumps(ret, cls=BotoJsonEncoder))
-            else:
-                logging.error("Could not fullfil request, exception to follow")
-                logging.exception(ex)
-                ret = ClcError(500, ex.message, '')
-                self.set_status(500);
-                self.set_header("Content-Type", "application/json;charset=UTF-8")
-                self.write(json.dumps(ret, cls=BotoJsonEncoder))
-
     @tornado.web.asynchronous
     def post(self):
         if not self.authorized():
@@ -532,6 +450,13 @@ class ComputeHandler(eucaconsole.BaseHandler):
 #                self.set_header("Content-Type", "application/json;charset=UTF-8")
 #                self.write(json.dumps(ret, cls=BotoJsonEncoder))
 
+    def keycache_callback(self, response, name):
+        # respond to the client
+        self.callback(response)
+        # now, cache the response
+        if not(response.error):
+            self.user_session.keypair_cache[name] = response.data.material
+
     # async calls end up back here so we can check error status and reply appropriately
     def callback(self, response):
         if response.error:
@@ -550,8 +475,14 @@ class ComputeHandler(eucaconsole.BaseHandler):
             self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.write(json.dumps(ret, cls=BotoJsonEncoder))
             self.finish()
+            logging.exception(err)
         else:
             try:
+                try:
+                    if(eucaconsole.config.get('test','apidelay')):
+                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
+                except ConfigParser.NoOptionError:
+                    pass
                 ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
