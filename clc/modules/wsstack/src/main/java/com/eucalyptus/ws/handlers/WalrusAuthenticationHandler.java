@@ -244,8 +244,8 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 
 		TreeMap amzHeaders = new TreeMap<String, String>();
 		for(String headerName : headerNames) {
-			String headerNameString = headerName.toLowerCase().trim();
-			if (!headerNameString.startsWith("x-amz-"))
+			String headerNameLcase = headerName.toLowerCase().trim();
+			if (!headerNameLcase.startsWith("x-amz-"))
 				continue;
 
 			StringBuilder values = new StringBuilder();
@@ -256,7 +256,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			// Remove the last comma
 			values.deleteCharAt(values.length() -1);
 
-			amzHeaders.put(headerNameString, values.toString());
+			amzHeaders.put(headerNameLcase, values.toString());
 		}
 
 		Iterator<String> iterator = amzHeaders.keySet().iterator();
