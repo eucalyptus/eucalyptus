@@ -239,7 +239,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	}
 
 	private String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
-		String result = "";
 		Set<String> headerNames = httpRequest.getHeaderNames();
 
 		TreeMap amzHeaders = new TreeMap<String, String>();
@@ -254,18 +253,21 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				values.append(",");
 			}
 			// Remove the last comma
-			values.deleteCharAt(values.length() -1);
+			if (values.length() > 0)
+				values.deleteCharAt(values.length() -1);
 
 			amzHeaders.put(headerNameLcase, values.toString());
 		}
 
+		StringBuilder result = new StringBuilder();
 		Iterator<String> iterator = amzHeaders.keySet().iterator();
 		while(iterator.hasNext()) {
 			String key = iterator.next();
 			String value = (String) amzHeaders.get(key);
-			result += key + ":" + value + "\n";
+			result.append(key).append(":");
+			result.append(value).append("\n");
 		}
-		return result;
+		return result.toString();
 	}
 
 	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
