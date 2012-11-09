@@ -35,7 +35,7 @@ var DOM_BINDING = {header:'.euca-container .euca-header-container .inner-contain
                    notification:'.euca-container .euca-notification-container .inner-container #euca-notification',
                    explorer:'.euca-explorer-container .inner-container',
                    footer:'.euca-container .euca-footer-container .inner-container',
-                   hidden:'.euca-hidden-container',
+                   hidden:'.euca-hidden-container'
                   };
 
 var SGROUP_NAME_PATTERN = new RegExp('^[ A-Za-z0-9_\-]{1,242}$');
@@ -93,7 +93,7 @@ function isFunction(obj) {
   return obj && {}.toString.call(obj) == '[object Function]';
 }
 
-/** Add Array.indexOf to IE **/
+/** Add Array.indexOf to IE  **/
 if( !Array.prototype.indexOf ) {
   Array.prototype.indexOf = function(needle) {
     for(var i = 0; i < this.length; i++) {
@@ -206,31 +206,31 @@ var unescape_vector = {
   instance: {
     root_device_name: true,
     reason: true,
-    launch_time: true,
+    launch_time: true
   },
   image: {
     root_device_name: true,
-    location: true, //can we?
+    location: true //can we?
   },
   volume: {
-    create_time: true, 
+    create_time: true
   },
   snapshot: {
     start_time: true,
-    progress: true,
+    progress: true
   },
   sgroup: {
     rules: { 
       grants: {
         cidr_ip: true 
-      },
-    },
+      }
+    }
   },
   keypair: {
-    fingerprint: true,
+    fingerprint: true
   },
   zone: {
-    state: true,
+    state: true
   }
 }
 
@@ -325,7 +325,7 @@ function logout(){
       data:"action=logout&_xsrf="+$.cookie('_xsrf'),
       dataType:"json",
       async:"false", // async option deprecated as of jQuery 1.8
-      timeout: 10000, // shorter timeout for log-out
+      timeout: 10000 // shorter timeout for log-out
     })).always(function(out){
       var hostname = null;
       /*if (location.href && location.href.indexOf('hostname=') >= 0){
@@ -386,19 +386,6 @@ function getRootDeviceName(resource){
 
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
 
-function isValidIp(s) {
-  var arr = s.split('.');
-  if(!arr || arr.length!==4)
-    return false;
-  for(i in arr){
-    var n = parseInt(arr[i]);
-    if (!(n >=0 && n<=255)){
-      return false;
-    }
-  }
-  return true;
-}
-
 function inferImage(manifest, desc, platform) {
   if(!platform)
     platform='linux';
@@ -420,7 +407,7 @@ function inferImage(manifest, desc, platform) {
      'suse' : new RegExp('suse', 'ig'),
      'gentoo' : new RegExp('gentoo', 'ig'),
      'linux' : new RegExp('linux','ig'),
-     'windows' :new RegExp('windows','ig'),
+     'windows' :new RegExp('windows','ig')
     };
   for (key in inferMap){
     var reg = inferMap[key];
@@ -451,7 +438,7 @@ function getImageName(imgKey){
     'suse' : 'Suse Linux',
     'gentoo' : 'Gentoo',
     'linux' : 'Linux',
-    'windows' : 'Windows' ,
+    'windows' : 'Windows'
   };
   return nameMap[imgKey];
 }
@@ -506,7 +493,7 @@ var PROXY_TIMEOUT = 120000;
 function setupAjax(){
  $.ajaxSetup({
    type: "POST",
-   timeout: 30000,
+   timeout: 30000
  });
 }
 
