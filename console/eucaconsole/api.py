@@ -94,7 +94,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 block_dev_type.size = \
                         self.get_argument('%s.Ebs.VolumeSize' % pre, None)
                 block_dev_type.delete_on_termination = \
-                        (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
+                        (self.get_argument('%s.Ebs.DeleteOnTermination' % pre, '') == 'true')
             bdm[dev_name] = block_dev_type
             idx += 1
             mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
@@ -179,7 +179,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
                     block_dev_type.size = \
                             self.get_argument('%s.Ebs.VolumeSize' % pre, None)
                     block_dev_type.delete_on_termination = \
-                            (self.get_argument('%s.DeleteOnTermination' % pre, '') == 'true')
+                            (self.get_argument('%s.Ebs.DeleteOnTermination' % pre, '') == 'true')
                 bdm[dev_name] = block_dev_type
                 idx += 1
                 mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
