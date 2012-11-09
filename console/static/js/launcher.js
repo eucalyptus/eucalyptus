@@ -637,10 +637,10 @@
         return $('<div>').addClass('summary').append(
           $('<div>').attr('id','summary-security-keypair').append(
             $('<div>').text(launch_instance_summary_keypair),
-            $('<span>').text(selectedKp)),
+            $('<span>').attr('title', selectedKp).text(addEllipsis(selectedKp, 15))),
           $('<div>').attr('id','summary-security-sg').append(
             $('<div>').text(launch_instance_summary_sg),
-            $('<span>').text(selectedSg)));
+            $('<span>').attr('title', selectedSg).text(addEllipsis(selectedSg, 15))));
       }
       var populateKeypair = function(oldKeypairs){ // select the new keypair if not found in the list of old ones
         var $kp_selector = $keypair.find('select');
