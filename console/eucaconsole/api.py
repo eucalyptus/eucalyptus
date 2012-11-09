@@ -218,7 +218,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             return clc.get_all_key_pairs(callback)
         elif action == 'CreateKeyPair':
             name = self.get_argument('KeyName')
-            ret = clc.create_key_pair(name, functools.partial(self.keycache_callback, name=name))
+            ret = clc.create_key_pair(name, functools.partial(self.keycache_callback, name=name, callback=callback))
             return ret
         elif action == 'DeleteKeyPair':
             name = self.get_argument('KeyName')
@@ -366,7 +366,12 @@ class ComputeHandler(eucaconsole.BaseHandler):
             if self.should_use_mock():
                 self.user_session.clc = MockClcInterface()
             else:
-                self.user_session.clc = BotoClcInterface(eucaconsole.config.get('server', 'clchost'),
+                host = eucaconsole.config.get('server', 'clchost')
+                try:
+                    host = eucaconsole.config.get('test', 'ec2.endpoint')
+                except ConfigParser.Error:
+                    pass
+                self.user_session.clc = BotoClcInterface(host,
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
@@ -388,6 +393,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.set_header("Content-Type", "application/x-pem-file;charset=ISO-8859-1")
                 self.set_header("Content-Disposition", "attachment; filename=\"" + name + '.pem"')
                 self.write(result)
+                self.finish()
                 del self.user_session.keypair_cache[name]
                 return
 
@@ -425,9 +431,9 @@ class ComputeHandler(eucaconsole.BaseHandler):
             logging.error("Since we got here, client likelly not notified either!")
             logging.exception(ex)
 
-    def keycache_callback(self, response, name):
+    def keycache_callback(self, response, name, callback):
         # respond to the client
-        self.callback(response)
+        callback(response)
         # now, cache the response
         if not(response.error):
             self.user_session.keypair_cache[name] = response.data.material
