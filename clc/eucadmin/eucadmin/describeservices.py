@@ -24,11 +24,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest
+from . import EucadminRequest
 from boto.roboto.param import Param
 import eucadmin
 import os
 
-class DescribeServices(AWSQueryRequest):
+class DescribeServices(EucadminRequest):
 
     ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin

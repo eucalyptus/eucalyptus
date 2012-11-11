@@ -416,7 +416,7 @@
               if ( data.results && data.results == true ) {
                   ;
               } else {
-                error.push({id:volumeId, reason: undefined_reason});
+                error.push({id:volumeId, reason: undefined_error});
               }
            }
           })(volumeId),
@@ -516,7 +516,7 @@
               if ( data.results && data.results == 'detaching' ) {
                 ;
               } else {
-                error.push({id:volumeId, reason: undefined_reason});
+                error.push({id:volumeId, reason: undefined_error});
               }
            }
           })(volumeId),

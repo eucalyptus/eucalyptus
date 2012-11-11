@@ -21,7 +21,7 @@
 (function($, eucalyptus) {
   $.widget('eucalyptus.login', { 
     options : {
-      support_url : '',
+      support_url : ''
     },
     errorDialog : null,
     _init : function() {
@@ -41,7 +41,7 @@
         buttons: {
           'Close': {text: dialog_close_btn, focus:true, click: function() { $err_dialog.eucadialog("close");}}
         },
-        help: {content: $err_help},
+        help: {content: $err_help}
       });
 
       var $form = $login.find('form');

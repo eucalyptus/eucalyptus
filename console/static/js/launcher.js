@@ -637,10 +637,10 @@
         return $('<div>').addClass('summary').append(
           $('<div>').attr('id','summary-security-keypair').append(
             $('<div>').text(launch_instance_summary_keypair),
-            $('<span>').text(selectedKp)),
+            $('<span>').attr('title', selectedKp).text(addEllipsis(selectedKp, 15))),
           $('<div>').attr('id','summary-security-sg').append(
             $('<div>').text(launch_instance_summary_sg),
-            $('<span>').text(selectedSg)));
+            $('<span>').attr('title', selectedSg).text(addEllipsis(selectedSg, 15))));
       }
       var populateKeypair = function(oldKeypairs){ // select the new keypair if not found in the list of old ones
         var $kp_selector = $keypair.find('select');
@@ -652,19 +652,22 @@
           return;
         $kp_selector.children().detach();
         var keyNameArr = [];
-        for( res in results) {
+        for( res in results ) {
           var kpName = results[res].name;
           keyNameArr.push(kpName);
         }
         var sortedArr = sortArray(keyNameArr);
+        var selectedKeyPair = '';
         $.each(sortedArr, function(idx, kpName){
           var $option = $('<option>').attr('value', kpName).attr('title', kpName).text(addEllipsis(kpName, 70));
           if(oldKeypairs && $.inArray(kpName, oldKeypairs) < 0){
-            $option.attr('selected', 'selected'); 
+            $option.attr('selected', 'selected');
+            selectedKeyPair = kpName;
           }
           $kp_selector.append($option);
         });
 
+        thisObj._setSummary('security', summarize(selectedKeyPair, undefined));
         $kp_selector.append($('<option>').attr('value', 'none').text(launch_instance_security_keypair_none));
         $kp_selector.change(function(e){
           var $summary = summarize(); 
@@ -731,7 +734,7 @@
               $rule.append($wrapper);
             });
           } 
-          var $summary = summarize(null, groupName); 
+          var $summary = summarize(undefined, groupName);
           thisObj._setSummary('security', $summary.clone());
         } //end of onSelectorChange
 
@@ -916,7 +919,7 @@
       var usedVolumes = [];
       var usedMappings = [];
 
-      var validate = function($selectedRow){
+      var validate = function($selectedRow, emi){
         if(! $selectedRow || $selectedRow.length <= 0)
           return true;
 
@@ -946,18 +949,26 @@
           return false;
         }
         if(volume === 'ebs' || volume === 'root'){
+          var snapshotSize = -1;
+          if(volume==='ebs'){
           //find the size of the chosen snapshot;
-          var result = describe('snapshot');
-          for (i in result){
-            var s = result[i]; 
-            if(s.id === snapshot){
-              if(s.volume_size > size){
-                thisObj.element.find('.field-error').remove();
-                $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size));
-                return false;
-              }else
-                break; 
+            var result = describe('snapshot');
+            for (i in result){
+              var s = result[i]; 
+              if(s.id === snapshot){
+                snapshotSize = s.volume_size;
+                break;
+              }
             }
+          }else if (emi){ //root volume
+            var image = describe('image', emi);
+            if(image['block_device_mapping'] && image['block_device_mapping']['/dev/sda1']) 
+             snapshotSize = parseInt(image['block_device_mapping']['/dev/sda1']['size']);
+          }
+          if(snapshotSize > size){
+            thisObj.element.find('.field-error').remove();
+            $($cells[3]).append($('<div>').addClass('field-error').html(launch_instance_advanced_error_dev_size));
+            return false;
           }
         } 
         thisObj.element.find('.field-error').remove();
@@ -1036,12 +1047,14 @@
         var $size = $('<input>').attr('title', launch_wizard_advanced_storage_size_input_tip).attr('class','launch-wizard-advanced-storage-size-input').attr('type','text');
         $size.change(function(e){  
           $(e.target).parent().find('.field-error').detach();
-          validate($(e.target).parents('tr'));
+          validate($(e.target).parents('tr'), param['emi'] );
         });
         if(param && param['size']){
           $size.val(param['size']);
+          if(param['size'] <= 0){
+            $size.attr('disabled','disabled');
+          }
         }
-        
     
         var $delOnTerm= $('<input>').attr('class','launch-wizard-advanced-storage-delOnTerm').attr('type','checkbox');
         if(param && param['delOnTerm'] !== undefined){
@@ -1067,7 +1080,7 @@
           var size = asText($($cells[3]).find('input').val()); 
           var delOnTerm = $($cells[4]).find('input').is(':checked') ? true : false;
 
-          if(!validate($selectedRow))
+          if(!validate($selectedRow, param['emi']))
             return false;
           usedMappings.push(mapping);
           usedVolumes.push(volume);
@@ -1124,13 +1137,17 @@
       $section.find('#launch-wizard-image-emi').change(function(e){
         var isEbsBacked = false;
         var snapshotId= null;
-        var emi = $(e.target).val();
-        if(emi){
-          emi = describe('image', emi);
+        var emiId = $(e.target).val();
+        var snapshotSize = '-1';
+        var emi = null;
+        if(emiId){
+          emi = describe('image', emiId);
           if (emi && emi['root_device_type'] === 'ebs'){
             isEbsBacked = true;
-            if(emi['block_device_mapping']&&emi['block_device_mapping']['/dev/sda1'])
+            if(emi['block_device_mapping']&&emi['block_device_mapping']['/dev/sda1']){
               snapshotId = emi['block_device_mapping']['/dev/sda1']['snapshot_id'];
+              snapshotSize = emi['block_device_mapping']['/dev/sda1']['size'];
+            }
           }
         }
         if(isEbsBacked && snapshotId){
@@ -1152,15 +1169,12 @@
             ), $('<tbody>'))));
           var $tbody = $storage.find('table tbody');
           var $tr = null;
-          var snapshot = describe('snapshot', snapshotId);
-          var size = '-1';
-          if(snapshot && snapshot['volume_size'])
-            size = snapshot['volume_size'].toString();
           $tr = addNewRow({
+            'emi' : emiId,
             'volume' : ['root', 'Root'],
             'mapping' : 'sda1',
             'snapshot' : [snapshotId, snapshotId],
-            'size' : size, 
+            'size' : snapshotSize, 
             'delOnTerm' : true,
             'add' : true,
             'remove' : false
@@ -1267,7 +1281,7 @@
 
       $section.find('#launch-wizard-buttons-advanced').find('button').click(function(e){// launch button
         var $selectedRow = $section.find('#launch-wizard-advanced-storage').find('table tbody tr').last(); 
-        if(!validate($selectedRow))
+        if(!validate($selectedRow, thisObj.launchParam['emi']))
           return false;
 
         var $summary = summarize(); 
@@ -1331,7 +1345,6 @@
     },
 
     launch : function(){
-      // validate
       var thisObj = this;
       var param = thisObj.launchParam;
 
@@ -1371,10 +1384,11 @@
         $.each(param['device_map'], function(idx, mapping){
           if(mapping['volume'] === 'ebs'){
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.DeviceName', value: mapping['dev']});
-           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize', value: mapping['size']});
+           if(mapping['size'] && mapping['size'] > 0)
+             reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize', value: mapping['size']});
            if(mapping['snapshot'])
              reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.SnapshotId', value: mapping['snapshot']});
-           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination', value: mapping['delOnTerm']});
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination', value: mapping['delOnTerm'] ? 'true' : 'false'});
           }else if(mapping['volume'].indexOf('ephemeral')>=0){
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.DeviceName', value: mapping['dev']});
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.VirtualName', value: mapping['volume']});

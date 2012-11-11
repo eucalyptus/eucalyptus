@@ -1,4 +1,5 @@
 import base64
+import binascii
 import ConfigParser
 import io
 import json
@@ -10,6 +11,7 @@ import tornado.web
 import traceback
 import socket
 import logging
+import uuid
 from datetime import datetime
 from datetime import timedelta
 
@@ -176,6 +178,21 @@ class BaseHandler(tornado.web.RequestHandler):
         self.user_session = sessions[sid]
         return True
 
+    # this method is overriden from RequestHandler to set a secure cookie with https
+    @property
+    def xsrf_token(self):
+        if not hasattr(self, "_xsrf_token"):
+            token = self.get_cookie("_xsrf")
+            if not token:
+                token = binascii.b2a_hex(uuid.uuid4().bytes)
+                expires_days = 30 if self.current_user else None
+                if using_ssl:
+                    self.set_cookie("_xsrf", token, expires_days=expires_days, secure='yes')
+                else:
+                    self.set_cookie("_xsrf", token, expires_days=expires_days)
+            self._xsrf_token = token
+        return self._xsrf_token
+
 class RootHandler(BaseHandler):
     def get(self, path):
         try:
@@ -284,18 +301,28 @@ class LoginProcessor(ProxyProcessor):
         account, user, passwd = auth_decoded.split(':', 2)
         remember = web_req.get_argument("remember")
 
-        if config.getboolean('test', 'usemock') == False:
-            auth = TokenAuthenticator(config.get('server', 'clchost'),
-                            config.getint('server', 'session.abs.timeout')+60)
-            creds = auth.authenticate(account, user, passwd)
-            session_token = creds.session_token
-            access_id = creds.access_key
-            secret_key = creds.secret_key
-        else:
-            # assign bogus values so we never mistake them for the real thing (who knows?)
-            session_token = "Larry"
-            access_id = "Moe"
-            secret_key = "Curly"
+        ec2_endpoint = None
+        try:
+            ec2_endpoint = config.get('test', 'ec2.endpoint')
+            access_id = config.get('test', 'ec2.accessid')
+            secret_key = config.get('test', 'ec2.secretkey')
+            session_token = None
+            #print "ec2: %s, $s, %s" %(ec2_endpoint, access_id, secret_key)
+        except ConfigParser.Error:
+            pass
+        if ec2_endpoint == None:
+            if config.getboolean('test', 'usemock') == False:
+                auth = TokenAuthenticator(config.get('server', 'clchost'),
+                                config.getint('server', 'session.abs.timeout')+60)
+                creds = auth.authenticate(account, user, passwd)
+                session_token = creds.session_token
+                access_id = creds.access_key
+                secret_key = creds.secret_key
+            else:
+                # assign bogus values so we never mistake them for the real thing (who knows?)
+                session_token = "Larry"
+                access_id = "Moe"
+                secret_key = "Curly"
 
         # create session and store info there, set session id in cookie
         while True:

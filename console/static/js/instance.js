@@ -627,8 +627,8 @@
                 });
               },
               fail : function (e, data) {
-                thisObj.connectDialog.find('a').last().html('<span class="on-error">'+instance_dialog_password_error+'</span>');
-                thisObj.connectDialog.find('a').unbind('click');
+                var parent = thisObj.connectDialog.find('a#password-link').parent();
+                parent.html('<span class="on-error">'+instance_dialog_password_error+'</span>');
               },
             });
             thisObj.connectDialog.find('a').click( function(e) {
@@ -768,7 +768,7 @@
               if ( data.results && data.results == 'detaching' ) {
                 ;
               }else{
-                error.push({id:volumeId, reason: undefined_reason});
+                error.push({id:volumeId, reason: undefined_error});
               }
             }
            })(volumeId),

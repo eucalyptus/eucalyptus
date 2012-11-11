@@ -22,9 +22,8 @@ class UIProxyClient(object):
         self.host = host
         self.port = port
         req = urllib2.Request("http://%s:%s/"%(host, port))
-        data = "action=login&remember=no"
         encoded_auth = base64.encodestring("%s:%s:%s" % (account, username, password))[:-1]
-        req.add_header('Authorization', "Basic %s" % encoded_auth)
+        data = "action=login&remember=no&Authorization="+encoded_auth
         response = urllib2.urlopen(req, data)
         self.session_cookie = response.headers.get('Set-Cookie')
         print self.session_cookie
@@ -47,15 +46,17 @@ class UIProxyClient(object):
             params["%s.%d" % (name, idx + 1)] = val
 
     def __make_request__(self, action, params):
+        url = 'http://%s:%s/ec2?'%(self.host, self.port)
         for param in params.keys():
             if params[param]==None:
                 del params[param]
         params['Action'] = action
-        url = 'http://%s:%s/ec2?'%(self.host, self.port) + urllib.urlencode(params)
+        params['_xsrf'] = self.xsrf
+        data = urllib.urlencode(params)
         try:
             req = urllib2.Request(url)
             self.__check_logged_in__(req)
-            response = urllib2.urlopen(req)
+            response = urllib2.urlopen(req, data)
             return json.loads(response.read())
         except urllib2.URLError, err:
             print "Error! "+str(err.code)
@@ -112,21 +113,9 @@ class UIProxyClient(object):
         if key_name:
             params['KeyName'] = key_name
         if security_group_ids:
-            l = []
-            for group in security_group_ids:
-                if isinstance(group, SecurityGroup):
-                    l.append(group.id)
-                else:
-                    l.append(group)
-            self.build_list_params(params, l, 'SecurityGroupId')
+            self.__add_param_list__(params, 'SecurityGroupId', security_group_ids);
         if security_groups:
-            l = []
-            for group in security_groups:
-                if isinstance(group, SecurityGroup):
-                    l.append(group.name)
-                else:
-                    l.append(group)
-            self.build_list_params(params, l, 'SecurityGroup')
+            self.__add_param_list__(params, 'SecurityGroup', security_groups);
         if user_data:
             params['UserData'] = base64.b64encode(user_data)
         if addressing_type:
@@ -224,7 +213,7 @@ class UIProxyClient(object):
 
     # returns True if successful
     def create_security_group(self, name, description):
-        return self.__make_request__('CreateSecurityGroup', {'GroupName': name, 'GroupDescription': description})
+        return self.__make_request__('CreateSecurityGroup', {'GroupName': name, 'GroupDescription': base64.encodestring(description)})
 
     # returns True if successful
     def delete_security_group(self, name=None, group_id=None):
@@ -324,7 +313,7 @@ class UIProxyClient(object):
     def create_snapshot(self, volume_id, description=None):
         params = {'VolumeId': volume_id}
         if description:
-            params['Description'] = description
+            params['Description'] = base64.b64encode(description)
         return self.__make_request__('CreateSnapshot', params)
 
     def delete_snapshot(self, snapshot_id):
