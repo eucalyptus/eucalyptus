@@ -1388,7 +1388,7 @@
              reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.VolumeSize', value: mapping['size']});
            if(mapping['snapshot'])
              reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.SnapshotId', value: mapping['snapshot']});
-           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination', value: mapping['delOnTerm']});
+           reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.Ebs.DeleteOnTermination', value: mapping['delOnTerm'] ? 'true' : 'false'});
           }else if(mapping['volume'].indexOf('ephemeral')>=0){
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.DeviceName', value: mapping['dev']});
            reqParam.push({name: 'BlockDeviceMapping.'+(idx+1)+'.VirtualName', value: mapping['volume']});

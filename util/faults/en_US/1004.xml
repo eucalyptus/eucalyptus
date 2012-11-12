@@ -21,24 +21,33 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1004"
-    message="Running very low on memory in java.">
+    message="Java is running very low on heap space memory.">
 
     <condition
-      message="Running very low on memory in java."/>
+      message="Running very low on heap space memory in java."/>
 
     <cause
-      message="Not enough memory in java."/>
+      message="Garbage collection is not able to reclaim enough memory in java."/>
 
     <initiator
       message="${component}"/>
 
     <location
-      message="Memory"/>
+      message="Cloud"/>
 
     <resolution>
       <message>
-        1) Set -Xmx startup options.
-        2) Buy more memory.
+        1) In eucalyptus.conf, locate the CLOUD_OPTS variable.  
+        2) Check to see if -Xmx=[value] is included in the CLOUD_OPTS value.
+        3) If -Xmx value is not set, set it to a relatively large value.  
+           Default values are either 1GB or 1/4 of the physical memory, 
+           whichever is smaller.  Set it to at least that value.  (Value can
+           be in bytes, or can be something like '64M' or '1G'.
+        4) If -Xmx is already set, make the value larger.
+        5) Restart the cloud application.
+        6) If after setting -Xmx to the maximum allowable value, this condition
+           continues, it may be necessary to add more physical memory to the
+           machine.
       </message>
     </resolution>
   </fault>
