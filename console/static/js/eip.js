@@ -150,7 +150,7 @@
        });
       var $ip_count_edit = $eip_allocate_dialog.find('#eip-allocate-count');
       $eip_allocate_dialog.eucadialog('buttonOnKeyup', $ip_count_edit,  allocateButtonId, function(){
-        var count = parseInt($ip_count_edit.val())
+        var count = parseInt($ip_count_edit.val());
         return $ip_count_edit.val() == count && count > 0;
       });
       // allocate eip dialog end
