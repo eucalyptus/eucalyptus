@@ -73,7 +73,7 @@ class CachingClcInterface(ClcInterface):
     def __normalize_instances__(self, instances):
         ret = []
         if not(instances):
-            return None
+            return []
         for res in instances:
             if issubclass(res.__class__, EC2Object):
                 for inst in res.instances:
