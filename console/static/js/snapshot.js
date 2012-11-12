@@ -426,7 +426,7 @@
       });
       // if there is no need to show 'Registered as image?' column it should be hided.
       if ( snapshotsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources',{title:deregisterImages?[snapshot_label,snapshot_delete_registere_text]:[snapshot_label], contents: matrix, hideColumn: deregisterImages ? undefined : 1 });
+        thisObj.delDialog.eucadialog('setSelectedResources',{title:deregisterImages?[snapshot_label,snapshot_delete_registered_text]:[snapshot_label], contents: matrix, hideColumn: deregisterImages ? undefined : 1 });
         if (deregisterImages)
           thisObj.delDialog.find('#snapshot-delete-dialog-text').html(snapshot_delete_dialog_with_dereg_text);
         else
