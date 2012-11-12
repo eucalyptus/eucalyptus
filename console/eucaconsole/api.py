@@ -152,11 +152,15 @@ class ComputeHandler(eucaconsole.BaseHandler):
             imageid = self.get_argument('ImageId')
             attribute = self.get_argument('Attribute')
             return clc.reset_image_attribute(imageid, attribute, callback)
+        elif action == 'DeregisterImage':
+            image_id = self.get_argument('ImageId')
+            return clc.deregister_image(image_id, callback)
         elif action == 'RegisterImage':
             image_location = self.get_argument('ImageLocation', None)
             name = self.get_argument('Name')
             description = self.get_argument('Description', None)
-            description = base64.b64decode(description);
+            if description != None:
+              description = base64.b64decode(description);
             architecture = self.get_argument('Architecture', None)
             kernel_id = self.get_argument('KernelId', None)
             ramdisk_id = self.get_argument('RamdiskId', None)

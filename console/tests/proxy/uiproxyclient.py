@@ -332,3 +332,11 @@ class UIProxyClient(object):
 
     def reset_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission'):
         return self.__make_request__('ResetSnapshotAttribute', {'SnapshotId': snapshot_id, 'Attribute': attribute})
+
+    ##
+    # Register/deregister image
+    ##
+    def register_snapshot_as_image(self, snapshot_id, name):
+        return self.__make_request__('RegisterImage', {'SnapshotId': snapshot_id, 'Name': name})
+    def deregister_image(self, image_id):
+        return self.__make_request__('DeregisterImage', {'ImageId': image_id})

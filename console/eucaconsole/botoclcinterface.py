@@ -242,6 +242,10 @@ class BotoClcInterface(ClcInterface):
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         return self.conn.reset_snapshot_attribute(snapshot_id, attribute)
 
+    # returs True if successful
+    def deregister_image(self, image_id):
+        return self.conn.deregister_image(image_id)
+
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
 #        if is_windows:
 #            kernel_id = 'windows'

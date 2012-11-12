@@ -655,6 +655,19 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns True if successful
+    def deregister_image(self, image_id, callback):
+        self.images.expireCache()
+        Threads.instance().runThread(self.__deregister_image_cb__,
+                    ({'image_id':image_id}, callback))
+
+    def __deregister_image_cb__(self, kwargs, callback):
+        try:
+            ret = self.clc.deregister_image(kwargs['image_id'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # returns True if successful
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None, callback=None):
         self.images.expireCache()
         Threads.instance().runThread(self.__register_image_cb__,
