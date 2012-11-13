@@ -362,5 +362,8 @@ class MockClcInterface(ClcInterface):
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         pass
     
+    def deregister_image(self, image_id):
+        pass
+
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
         pass

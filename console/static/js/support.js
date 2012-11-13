@@ -384,6 +384,25 @@ function getRootDeviceName(resource){
   return resource.root_device_name ? resource.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
 }
 
+function generateSnapshotToImageMap(){
+  var images = describe('image');
+  var snapToImageMap = {}
+  $.each(images, function(idx, image){
+    if(image.block_device_mapping){
+      vol = image.block_device_mapping[getRootDeviceName(image)];
+      if (vol) {
+        snapshot = vol['snapshot_id'];
+        if (snapToImageMap[snapshot])
+          snapToImageMap[snapshot].push(image['id']);
+        else {
+          snapToImageMap[snapshot] = [image['id']];
+        }
+      }
+    }
+  });
+  return snapToImageMap;
+}
+
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
 
 function inferImage(manifest, desc, platform) {

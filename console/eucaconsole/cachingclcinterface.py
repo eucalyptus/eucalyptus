@@ -72,7 +72,7 @@ class CachingClcInterface(ClcInterface):
     def __normalize_instances__(self, instances):
         ret = []
         if not(instances):
-            return None
+            return []
         for res in instances:
             if issubclass(res.__class__, EC2Object):
                 for inst in res.instances:
@@ -642,6 +642,19 @@ class CachingClcInterface(ClcInterface):
     def __reset_snapshot_attribute_cb__(self, kwargs, callback):
         try:
             ret = self.clc.reset_snapshot_attribute(kwargs['snapshot_id'], kwargs['attribute'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # returns True if successful
+    def deregister_image(self, image_id, callback):
+        self.images.expireCache()
+        Threads.instance().runThread(self.__deregister_image_cb__,
+                    ({'image_id':image_id}, callback))
+
+    def __deregister_image_cb__(self, kwargs, callback):
+        try:
+            ret = self.clc.deregister_image(kwargs['image_id'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
