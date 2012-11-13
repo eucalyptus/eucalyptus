@@ -208,7 +208,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             return clc.terminate_instances(instance_ids, callback)
         elif action == 'StopInstances':
             instance_ids = self.get_argument_list('InstanceId')
-            return clc.stop_instances(instance_ids, callback)
+            return clc.stop_instances(instance_ids, False, callback)
         elif action == 'StartInstances':
             instance_ids = self.get_argument_list('InstanceId')
             return clc.start_instances(instance_ids, callback)
