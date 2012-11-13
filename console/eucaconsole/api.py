@@ -6,12 +6,14 @@ import json
 import tornado.web
 import eucaconsole
 import socket
+import sys
+import traceback
 import time
-from threading import Thread
 from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
+from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
 from .botojsonencoder import BotoJsonEncoder
@@ -340,19 +342,21 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleGetPassword(self, clc, callback):
         instanceid = self.get_argument('InstanceId')
-        Threads.instance().runThread(self.__get__password_cb__, ({'instance_ids':instance_ids}, callback))
+        Threads.instance().runThread(self.__get_password_cb__, ({'instanceid':instanceid}, callback))
 
     def __get_password_cb__(self, kwargs, callback):
         try:
             passwd_data = self.user_session.clc.get_password_data(kwargs['instanceid'])
+            print "got password data"+passwd_data
             priv_key_file = self.request.files['priv_key']
             user_priv_key = RSA.load_key_string(priv_key_file[0].body)
             string_to_decrypt = base64.b64decode(passwd_data)
             ret = user_priv_key.private_decrypt(string_to_decrypt, RSA.pkcs1_padding)
-            ret = {'instance':instanceid, 'password': ret}
-            Threads.instance().invokeCallback(callback, Response(data=ret))
+            ret = {'instance':kwargs['instanceid'], 'password': ret}
+            Threads.instance().invokeCallback(callback, eucaconsole.cachingclcinterface.Response(data=ret))
         except Exception as ex:
-            Threads.instance().invokeCallback(callback, Response(error=ex))
+            traceback.print_exc(file=sys.stdout)
+            Threads.instance().invokeCallback(callback, eucaconsole.cachingclcinterface.Response(error=ex))
 
     ##
     # This is the main entry point for API calls for EC2 from the browser
