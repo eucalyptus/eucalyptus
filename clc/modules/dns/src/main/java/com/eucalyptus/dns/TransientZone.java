@@ -93,7 +93,6 @@ public class TransientZone extends Zone {
   private static int ttl               = 604800;
   private static Zone INSTANCE_EXTERNAL = null;
   private static Zone INSTANCE_INTERNAL = null;
-  private static Name internalName;
   
   public TransientZone( Name name, Record[] records ) throws IOException {
     super(name,records);
@@ -121,7 +120,7 @@ public class TransientZone extends Zone {
   }
 
   public static Name getExternalName( ) throws TextParseException {
-    String externalNameString = /*"eucalyptus." +*/SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
+    String externalNameString = SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
     Name externalName = Name.fromString( externalNameString );
     return externalName;
   }
@@ -148,19 +147,10 @@ public class TransientZone extends Zone {
   }
 
   public static Name getInternalName( ) throws TextParseException {
-    if( internalName != null ) {
+      String internalNameString = VmInstances.INSTANCE_SUBDOMAIN + ".internal.";
+      internalNameString = internalNameString.startsWith(".") ? internalNameString.replaceFirst("\\.", "") : internalNameString;
+      Name internalName = Name.fromString( internalNameString );
       return internalName;
-    } else {
-      synchronized ( TransientZone.class ) {
-        if( internalName != null ) {
-          return internalName;
-        } else {
-          String internalNameString = "eucalyptus.internal.";
-          internalName = Name.fromString( internalNameString );
-          return internalName;
-        }
-      }
-    }
   }
 
   /* (non-Javadoc)
