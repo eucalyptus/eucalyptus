@@ -321,21 +321,28 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
     // get operation-specific fields from input
     int historySize = adb_describeSensorsType_get_historySize(input, env);
     long long collectionIntervalTimeMs = adb_describeSensorsType_get_collectionIntervalTimeMs(input, env);
+
     int instIdsLen = adb_describeSensorsType_sizeof_instanceIds(input, env);
-    char ** instIds = malloc (sizeof(char *) * instIdsLen);
-    if (instIds == NULL) {
+    char ** instIds = NULL;
+    if (instIdsLen > 0) {
+      instIds = malloc (sizeof(char *) * instIdsLen);
+      if (instIds == NULL) {
         logprintfl (EUCAERROR, "out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
         goto reply;
+      }
     }
     for (int i=0; i<instIdsLen; i++) {
         instIds[i] = adb_describeSensorsType_get_instanceIds_at(input, env, i);
     }
 
     int sensorIdsLen = adb_describeSensorsType_sizeof_sensorIds(input, env);
-    char ** sensorIds = malloc (sizeof(char *) * sensorIdsLen);
-    if (sensorIds == NULL) {
+    char ** sensorIds = NULL;
+    if (sensorIdsLen > 0) {
+      sensorIds = malloc (sizeof(char *) * sensorIdsLen);
+      if (sensorIds == NULL) {
         logprintfl (EUCAERROR, "out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
         goto reply;
+      }
     }
     for (int i=0; i<sensorIdsLen; i++) {
         sensorIds[i] = adb_describeSensorsType_get_sensorIds_at(input, env, i);
@@ -379,13 +386,11 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
         }
     }
 
-    if (sensorIds)
-        free (sensorIds);
+    free (sensorIds);
 
  reply:
 
-    if (instIds)
-        free (instIds);
+    free (instIds);
 
    if (result == ERROR) {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
@@ -396,9 +401,6 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t *des
     // set response to output
     adb_DescribeSensorsResponse_t * response   = adb_DescribeSensorsResponse_create(env);
     adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
-
-    free (instIds);
-    free (sensorIds);
 
     return response;
 }
