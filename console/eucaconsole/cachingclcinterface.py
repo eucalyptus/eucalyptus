@@ -1,5 +1,4 @@
 from cache import Cache
-from threading import Thread
 import ConfigParser
 
 from boto.ec2.ec2object import EC2Object
@@ -292,15 +291,8 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns password data
-    def get_password_data(self, instance_id, callback):
-        Threads.instance().runThread(self.__get_password_data_cb__, ({'instance_id':instance_id}, callback))
-
-    def __get_password_data_cb__(self, kwargs, callback):
-        try:
-            ret = self.clc.get_password_data(kwargs['instance_id'])
-            Threads.instance().invokeCallback(callback, Response(data=ret))
-        except Exception as ex:
-            Threads.instance().invokeCallback(callback, Response(error=ex))
+    def get_password_data(self, instance_id):
+        return self.clc.get_password_data(instance_id)
 
     def get_all_addresses(self, callback):
         if self.addresses.isCacheStale():
