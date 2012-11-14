@@ -402,24 +402,33 @@
       var groupSelector = dialog.find('#allow-group');
       groupSelector.watermark(sgroup_group_name);
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-name'), createButtonId, function () {
-         thisObj._validateFormAdd(createButtonId, thisDialog);
+         thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.eucadialog('buttonOnKeyup', dialog.find('#sgroup-description'), createButtonId, function() {
-         thisObj._validateFormAdd(createButtonId, thisDialog);
+         thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-ports').keyup(function () {
+         thisObj._validateFormNoWarn(createButtonId, thisDialog);
+      });
+      dialog.find('#sgroup-ports').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-type').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#allow-ip').keyup(function () {
-         thisObj._validateForm(createButtonId, thisDialog);
+         thisObj._validateFormNoWarn(createButtonId, thisDialog);
       });
       dialog.find('#allow-group').keyup(function () {
+         thisObj._validateFormNoWarn(createButtonId, thisDialog);
+      });
+      dialog.find('#allow-ip').change(function () {
+         thisObj._validateForm(createButtonId, thisDialog);
+      });
+      dialog.find('#allow-group').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
@@ -488,73 +497,84 @@
       });
     },
 
-    _validateFormAdd : function(createButtonId, dialog) {
-      var name = dialog.eucadialog("get_validate_value", "sgroup-name",
-                                        SGROUP_NAME_PATTERN, alphanum_warning);
-      var desc = dialog.eucadialog("getValue", "#sgroup-description");
-      if (desc && desc.length>MAX_DESCRIPTION_LEN)
-          dialog.eucadialog("showFieldError", "#sgroup-description", long_description);
-      var $button = dialog.parent().find('#' + createButtonId);
-      if ( name == null || desc == null || name.length == 0 || desc.length == 0 )     
-        $button.prop("disabled", false).addClass("ui-state-disabled");
-      else {
-        $button.prop("disabled", false).removeClass("ui-state-disabled");
-        this._validateForm(createButtonId, dialog);
-      }
+    _validateForm : function(createButtonId, dialog) {
+        this._validateFormInt(createButtonId, dialog, false);
     },
 
-    _validateForm : function(createButtonId, dialog) {
-      var enable = true;
-      var $button = dialog.parent().find('#' + createButtonId);
+    _validateFormNoWarn : function(createButtonId, dialog) {
+        this._validateFormInt(createButtonId, dialog, true);
+    },
 
-      var template = asText(dialog.find('#sgroup-template').val());
-      var ports = asText(dialog.find('#sgroup-ports').val());
-      var type = asText(dialog.find('#sgroup-type').val());
-      var allow_ip = asText(dialog.find('#allow-ip').val());
-      var allow_group = asText(dialog.find('#allow-group').val());
-      dialog.find('#sgroup-ports-error').html("");
-      if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
-        if (ports == '') {
+    _validateFormInt : function(createButtonId, dialog, noWarn) {
+      var enable = true;
+      if (dialog == this.addDialog) {
+        var name = dialog.eucadialog("get_validate_value", "sgroup-name",
+                                          SGROUP_NAME_PATTERN, alphanum_warning);
+        var desc = dialog.eucadialog("getValue", "#sgroup-description");
+        if (desc && desc.length>MAX_DESCRIPTION_LEN)
+            dialog.eucadialog("showFieldError", "#sgroup-description", long_description);
+        var $button = dialog.parent().find('#' + createButtonId);
+        if ( name == null || desc == null || name.length == 0 || desc.length == 0 ) {
           enable = false;
         }
-        else {
-          var port_list = ports.split('-');
-          if (/^\d{1,5}$/.test(port_list[0]) == false) {
-            dialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
+      }
+      if (enable == true) {
+        var $button = dialog.parent().find('#' + createButtonId);
+        var template = asText(dialog.find('#sgroup-template').val());
+        var ports = asText(dialog.find('#sgroup-ports').val());
+        var type = asText(dialog.find('#sgroup-type').val());
+        var allow_ip = asText(dialog.find('#allow-ip').val());
+        var allow_group = asText(dialog.find('#allow-group').val());
+        dialog.find('#sgroup-ports-error').html("");
+        if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
+          if (ports == '') {
             enable = false;
           }
-          else if (ports.indexOf('-') > -1) {  // we should have 2 numbers
-            if (ports.length == 1 || /^\d{1,5}$/.test(port_list[1]) == false) {
-              dialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
+          else {
+            var port_list = ports.split('-');
+            if (/^\d{1,5}$/.test(port_list[0]) == false) {
+              if (noWarn == false) {
+                dialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
+              }
               enable = false;
+            }
+            else if (ports.indexOf('-') > -1) {  // we should have 2 numbers
+              if (ports.length == 1 || /^\d{1,5}$/.test(port_list[1]) == false) {
+                if (noWarn == false) {
+                  dialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
+                }
+                enable = false;
+              }
             }
           }
         }
-      }
-      else if (template.indexOf('ICMP') > -1) {
-        if (type == '')
-          enable = false;
-        else if (type != parseInt(type)) {
-          enable = false;
+        else if (template.indexOf('ICMP') > -1) {
+          if (type == '')
+            enable = false;
+          else if (type != parseInt(type)) {
+            enable = false;
+          }
         }
-      }
 
-      if (template != 'none') {
-          if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
-            if (allow_ip == "") {
-              enable = false;
+        if (template != 'none') {
+            if (dialog.find("input[name='allow-radio']:checked").val() == 'ip') {
+              if (allow_ip == "") {
+                enable = false;
+              }
+              else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
+                dialog.find('#allow-ip-error').html("");
+              else {
+                if (noWarn == false) {
+                  dialog.find('#allow-ip-error').html(sgroup_error_address_range);
+                }
+                enable = false;
+              }
             }
-            else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
-              dialog.find('#allow-ip-error').html("");
-            else {
-              dialog.find('#allow-ip-error').html(sgroup_error_address_range);
-              enable = false;
+            else if (dialog.find("input[name='allow-radio']:checked").val() == 'group') {
+              if (allow_group == '')
+                enable = false;
             }
-          }
-          else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
-            if (allow_group == '')
-              enable = false;
-          }
+        }
       }
 
       if (enable == true) {
@@ -611,10 +631,10 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
+        if (dialog.find("input[name='allow-radio']:checked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
-        else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
+        else if (dialog.find("input[name='allow-radio']:checked").val() == 'group') {
             rule.group = asText(dialog.find('#allow-group').val());
             var user_group = rule.group.split('/');
             if (user_group.length > 1) {

@@ -336,6 +336,7 @@ check_hypervisor_conn()
 
     if (call_hooks (NC_EVENT_PRE_HYP_CHECK, nc_state.home)) {
         logprintfl (EUCAFATAL, "hooks prevented check on the hypervisor\n");
+	sem_v (hyp_sem);
         return NULL;
     }
 

@@ -622,13 +622,13 @@
                   var parent = thisObj.connectDialog.find('a#password-link').parent();
                   parent.find('a').remove();
                   parent.html(result.password);
-                  //thisObj.connectDialog.find('a').last().html(result.password);
-                  //thisObj.connectDialog.find('a').unbind('click');
+                  thisObj.connectDialog.find('a').unbind('click');
                 });
               },
               fail : function (e, data) {
                 var parent = thisObj.connectDialog.find('a#password-link').parent();
                 parent.html('<span class="on-error">'+instance_dialog_password_error+'</span>');
+                thisObj.connectDialog.find('a').unbind('click');
               },
             });
             thisObj.connectDialog.find('a').click( function(e) {
@@ -638,8 +638,7 @@
             var parent = thisObj.connectDialog.find('a#password-link').parent();
             parent.find('a').remove();
             parent.html(thisObj.instPassword[instance]);
-            //thisObj.connectDialog.find('a').last().html(
-            //thisObj.connectDialog.find('a').unbind('click');
+            thisObj.connectDialog.find('a').unbind('click');
           }
         }
         else{
