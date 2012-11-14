@@ -31,7 +31,7 @@
 #define MAX_SENSOR_VALUES      15 // by default 10 on CLC
 #define MAX_SENSOR_DIMENSIONS  (5 + EUCA_MAX_VOLUMES) // root, ephemeral[0-1], vol-XYZ
 #define MAX_SENSOR_COUNTERS    2  // we only have two types of counters (summation|average) for now
-#define MAX_SENSOR_METRICS     10 // currently 9 are implemented
+#define MAX_SENSOR_METRICS     12 // currently 11 are implemented
 #else
 #define MAX_SENSOR_NAME_LEN    64
 #define MAX_SENSOR_VALUES      5  // smaller sizes, for easier testing of limits
@@ -88,23 +88,12 @@ typedef struct {
     int metricsLen;                            // size of the array
 } sensorResource;
 
-typedef struct getstat_t { // an internal struct for temporary storage of stats
-    char instanceId [100];
-    long long timestamp;
-    char metricName [100];
-    int counterType;
-    char dimensionName [100];
-    double value;
-    struct getstat_t * next;
-} getstat;
-
 typedef struct {
     long long collection_interval_time_ms;
     int history_size;
     boolean initialized;
     int max_resources;
     int used_resources;
-    getstat ** stats;
     sensorResource resources[1]; // if struct should be allocated with extra space after it for additional cache elements
 } sensorResourceCache;
 
