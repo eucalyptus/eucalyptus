@@ -435,14 +435,14 @@ ol li {
 .notification-box {
   display: none;
   position: absolute;
-  width: 960px;
+  width: 995px;
   min-height: 15px;
   margin-top: 5px;
   padding: 15px 0;
   font-family: 'PlayRegular', Arial, sans-serif;
   text-align: center;
   border: 2px solid #aaabab;
-  background-color: #fff;
+  background-color: #EAF2F5;
 
   border-radius: 2px;
 
@@ -470,11 +470,14 @@ ol li {
   display: none;
   position: relative;
   width: 700px;
-  left: 130px; 
+  left: 147px;
+  background-color: #fff;
+  border: 1px solid #9EB1C3;
+  margin-bottom: 10px; 
 }
 
 #euca-notification-desc .multiop-summary-success {
-  margin-top: 10px;
+  
 }
 
 #euca-notification-desc .multiop-summary-failure {
@@ -762,13 +765,17 @@ ul.ui-autocomplete {
   background-image: linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
 }
 
-/* copy from jquery ui 1.9.1 light theme */
-.ui-progressbar { 
-  background: #ffffff;
-  border: 1px solid #e2e0e0;
+.ui-progressbar .ui-progressbar-value {
+  background-color: #999;
+  background: #dddddd url(gray-gradient.svg) no-repeat right 0;
+
+  background-image:  -webkit-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image:  -moz-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image:  -o-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image:  -ms-linear-gradient(top, #ededed, #c0c0c0 49%, #ededed 100%);
+  background-image:  linear-gradient(to bottom, #ededed, #c0c0c0 49%, #ededed 100%);
 }
 
-.ui-progressbar-value { border: 1px solid #e78f08; background: #eaf2f5; color: #ffffff; font-weight: bold; }
 
 /* Corner radius */
 .ui-corner-all, .ui-corner-top, .ui-corner-left, .ui-corner-tl { -moz-border-radius-topleft: 4px; -webkit-border-top-left-radius: 4px; -khtml-border-top-left-radius: 4px; border-top-left-radius: 4px; }
@@ -2382,6 +2389,12 @@ span.on-error {
   width: 220px;
   text-align: left;
   font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+#launch-wizard-security-keypair-selector, 
+#launch-wizard-security-sg-selector {
+  min-width: 285px;
+  max-width: 380px;
 }
 
 #launch-wizard-security-sg-detail {
