@@ -410,16 +410,16 @@
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
-      dialog.find('#sgroup-ports').keyup(function () {
+      dialog.find('#sgroup-ports').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-type').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
-      dialog.find('#allow-ip').keyup(function () {
+      dialog.find('#allow-ip').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
-      dialog.find('#allow-group').keyup(function () {
+      dialog.find('#allow-group').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
