@@ -410,11 +410,20 @@
       dialog.find('#sgroup-template').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
+      dialog.find('#sgroup-ports').keyup(function () {
+         thisObj._validateFormNoWarn(createButtonId, thisDialog);
+      });
       dialog.find('#sgroup-ports').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
       });
       dialog.find('#sgroup-type').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
+      });
+      dialog.find('#allow-ip').keyup(function () {
+         thisObj._validateFormNoWarn(createButtonId, thisDialog);
+      });
+      dialog.find('#allow-group').keyup(function () {
+         thisObj._validateFormNoWarn(createButtonId, thisDialog);
       });
       dialog.find('#allow-ip').change(function () {
          thisObj._validateForm(createButtonId, thisDialog);
@@ -489,6 +498,14 @@
     },
 
     _validateForm : function(createButtonId, dialog) {
+        this._validateFormInt(createButtonId, dialog, false);
+    },
+
+    _validateFormNoWarn : function(createButtonId, dialog) {
+        this._validateFormInt(createButtonId, dialog, true);
+    },
+
+    _validateFormInt : function(createButtonId, dialog, noWarn) {
       var enable = true;
       if (dialog == this.addDialog) {
         var name = dialog.eucadialog("get_validate_value", "sgroup-name",
@@ -516,12 +533,16 @@
           else {
             var port_list = ports.split('-');
             if (/^\d{1,5}$/.test(port_list[0]) == false) {
-              dialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
+              if (noWarn == false) {
+                dialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
+              }
               enable = false;
             }
             else if (ports.indexOf('-') > -1) {  // we should have 2 numbers
               if (ports.length == 1 || /^\d{1,5}$/.test(port_list[1]) == false) {
-                dialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
+                if (noWarn == false) {
+                  dialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
+                }
                 enable = false;
               }
             }
@@ -543,7 +564,9 @@
               else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
                 dialog.find('#allow-ip-error').html("");
               else {
-                dialog.find('#allow-ip-error').html(sgroup_error_address_range);
+                if (noWarn == false) {
+                  dialog.find('#allow-ip-error').html(sgroup_error_address_range);
+                }
                 enable = false;
               }
             }
