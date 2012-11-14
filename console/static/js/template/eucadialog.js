@@ -235,7 +235,9 @@
       this.element.dialog('close');
       // this method should clean-up things
       this.element.find('input').each(function () { 
-        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+        if ($(this).attr('type') != 'radio') {
+            $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+        }
       });
       this.element.find('textarea').each(function () { 
         $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?

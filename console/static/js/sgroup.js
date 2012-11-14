@@ -536,7 +536,7 @@
         }
 
         if (template != 'none') {
-            if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
+            if (dialog.find("input[name='allow-radio']:checked").val() == 'ip') {
               if (allow_ip == "") {
                 enable = false;
               }
@@ -547,7 +547,7 @@
                 enable = false;
               }
             }
-            else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
+            else if (dialog.find("input[name='allow-radio']:checked").val() == 'group') {
               if (allow_group == '')
                 enable = false;
             }
@@ -608,10 +608,10 @@
             rule.from_port = ports[0];
             rule.to_port = ports[ports.length-1];
         }
-        if (dialog.find("input[name='allow-group']:checked").val() == 'ip') {
+        if (dialog.find("input[name='allow-radio']:checked").val() == 'ip') {
             rule.ipaddr = asText(dialog.find('#allow-ip').val());
         }
-        else if (dialog.find("input[name='allow-group']:checked").val() == 'group') {
+        else if (dialog.find("input[name='allow-radio']:checked").val() == 'group') {
             rule.group = asText(dialog.find('#allow-group').val());
             var user_group = rule.group.split('/');
             if (user_group.length > 1) {
