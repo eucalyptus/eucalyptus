@@ -89,173 +89,176 @@ static sem * hyp_sem = NULL;
 static long long sn = 0L;
 static int (*sensor_update_euca_config) (void) = NULL;
 
-static void getstat_free (void)
+typedef struct getstat_t { // an internal struct for temporary storage of stats
+    char instanceId [100];
+    long long timestamp;
+    char metricName [100];
+    int counterType;
+    char dimensionName [100];
+    double value;
+    struct getstat_t * next;
+} getstat;
+
+static void getstat_free (getstat ** stats)
 {
-    sem_p (state_sem);
-    if (sensor_state->stats) {
-        getstat * gs;
-        for (int i = 0; (gs = sensor_state->stats[i]) != NULL; i++) {
-            getstat * gs_next;
-            for ( ; gs != NULL ; gs = gs_next) {
-                gs_next = gs->next;
-                free (gs);
-            }
-        }
-        free (sensor_state->stats);
-        sensor_state->stats = NULL;
+  if (stats==NULL)
+    return;
+  
+  getstat * gs;
+  for (int i = 0; (gs = stats[i]) != NULL; i++) {
+    getstat * gs_next;
+    for ( ; gs != NULL ; gs = gs_next) {
+      gs_next = gs->next;
+      free (gs);
     }
-    sem_v (state_sem);
+  }
+  free (stats);
 }
 
-static getstat * getstat_find (const char * instanceId)
+static getstat * getstat_find (getstat ** stats, const char * instanceId)
 {
-    getstat * gs = NULL;
+  getstat * gs = NULL;
 
-    sem_p (state_sem);
-    if (sensor_state->stats) {
-        for (int i = 0; (gs = sensor_state->stats[i]) != NULL; i++) {
-            if (instanceId==NULL) // special case, for testing, return first thing in the list
-                break;
-            if (strncmp (gs->instanceId, instanceId, sizeof (gs->instanceId)) == 0)
-                break;
-        }
+  if (stats) {
+    for (int i = 0; (gs = stats[i]) != NULL; i++) {
+      if (instanceId==NULL) // special case, for testing, return first thing in the list
+	break;
+      if (strcmp (gs->instanceId, instanceId) == 0)
+	break;
     }
-    sem_v (state_sem);
-
-    return gs;
+  }
+  
+  return gs;
 }
 
-static int getstat_ninstances (void)
+static int getstat_ninstances (getstat ** stats)
 {
-    int ninstances = 0;
-
-    sem_p (state_sem);
-    if (sensor_state->stats) {
-        for (int i = 0; sensor_state->stats[i] != NULL; i++) {
-            ninstances++;
-        }
+  int ninstances = 0;
+  
+  if (stats) {
+    for (int i = 0; stats[i] != NULL; i++) {
+      ninstances++;
     }
-    sem_v (state_sem);
-
-    return ninstances;
+  }
+  
+  return ninstances;
 }
 
 // obtain stats from the getstats script
-static int getstat_refresh (void)
+static int getstat_generate (getstat ***pstats)
 {
-    assert(sensor_state!=NULL && state_sem!=NULL);
-
-    getstat_free(); // free the old stats, regardless of whether we succeed or not
-
-    errno = 0;
-    if (hyp_sem) sem_p (hyp_sem);
-    char * output = NULL;
-    if (!strcmp (euca_this_component_name, "cc")) {
-        char getstats_cmd[MAX_PATH];
-        char *instroot = getenv (EUCALYPTUS_ENV_VAR_NAME);
-
-        if (!instroot) {
-            snprintf (getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
-        } else {
-            snprintf (getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
-        }
-        output = system_output (getstats_cmd); // invoke th Perl script
-        logprintfl (EUCATRACE, "getstats_net.pl output:\n%s\n", output);
+  assert(sensor_state!=NULL && state_sem!=NULL);
+  
+  errno = 0;
+  if (hyp_sem) sem_p (hyp_sem);
+  char * output = NULL;
+  if (!strcmp (euca_this_component_name, "cc")) {
+    char getstats_cmd[MAX_PATH];
+    char *instroot = getenv (EUCALYPTUS_ENV_VAR_NAME);
+    
+    if (!instroot) {
+      snprintf (getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
     } else {
-        // Right now !CC means the NC.
-        output = system_output ("euca_rootwrap getstats.pl"); // invoke th Perl script
-        logprintfl (EUCATRACE, "getstats.pl output:\n%s\n", output);
+      snprintf (getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
     }
-    if (hyp_sem) sem_v (hyp_sem);
-    int ret = ERROR;
+    output = system_output (getstats_cmd); // invoke th Perl script
+    logprintfl (EUCATRACE, "getstats_net.pl output:\n%s\n", output);
+  } else if (!strcmp (euca_this_component_name, "nc")) {
+    // Right now !CC means the NC.
+    output = system_output ("euca_rootwrap getstats.pl"); // invoke th Perl script
+    logprintfl (EUCATRACE, "getstats.pl output:\n%s\n", output);
+  } else {
+    // output will be NULL, so we'll return with an error
+    errno = EBADSLT; // using an obscure errno to mean internal error
+  }
+  if (hyp_sem) sem_v (hyp_sem);
 
-    if (output) { // output is a string with one line per measurement, with tab-delimited fields
-        char * token, * subtoken;
-        char * saveptr1, * saveptr2;
-        char * str1 = output;
-        getstat ** gss = NULL;
-        int ninst = 0;
-
-        for (int i = 1; ; i++, str1 = NULL) { // iterate over lines in output
-            token = strtok_r(str1, "\n", &saveptr1); // token points to a whole line
-            if (token == NULL)
-                break;
-            getstat * gs = calloc (1, sizeof (getstat)); // new lines means new data record
-            if (gs == NULL)
-                goto bail;
-
-            char * str2 = token;
-            for (int j = 1; ; j++, str2 = NULL) { // iterate over tab-separated entries in the line
-                subtoken = strtok_r(str2, "\t", &saveptr2);
-                if (subtoken == NULL)
-                    break;
-
-                // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
-                switch (j) {
-                case 1: { // first entry is instance ID
-                    getstat * gsp = getstat_find (subtoken);
-                    if (gsp == NULL) { // first record for this instance => expand pointer array
-                        ninst++;
-                        gss = realloc (gss, (ninst + 1) * sizeof (getstat *));
-                        gss [ninst-1] = gs;
-                        gss [ninst] = NULL; // NULL-terminate the array
-                        sem_p (state_sem);
-                        sensor_state->stats = gss;
-                        sem_v (state_sem);
-                    } else { // not first record
-                        for ( ; gsp->next != NULL; gsp = gsp->next); // walk the linked list to the end
-                        gsp->next = gs; // add the new record
-                    }
-                    strncpy (gs->instanceId, subtoken, sizeof (gs->instanceId));
-                    break;
-                }
-                case 2: {
-                    char * endptr;
-                    errno = 0;
-                    gs->timestamp = strtoll (subtoken, &endptr, 10);
-                    if (errno != 0 && *endptr != '\0') {
-                        logprintfl (EUCAERROR, "unexpected input from getstats.pl (could not convert timestamp with strtoll())\n");
-                        goto bail;
-                    }
-                    break;
-                }
-                case 3:
-                    strncpy (gs->metricName, subtoken, sizeof (gs->metricName));
-                    break;
-                case 4:
-                    gs->counterType = sensor_str2type (subtoken);
-                    break;
-                case 5:
-                    strncpy (gs->dimensionName, subtoken, sizeof (gs->dimensionName));
-                    break;
-                case 6: {
-                    char * endptr;
-                    errno = 0;
-                    gs->value = strtod (subtoken, &endptr);
-                    if (errno != 0 && *endptr != '\0') {
-                        logprintfl (EUCAERROR, "unexpected input from getstats.pl (could not convert value with strtod())\n");
-                        goto bail;
-                    }
-                    break;
-                }
-                default:
-                    logprintfl (EUCAERROR, "unexpected input from getstats.pl (too many fields)\n");
-                    goto bail;
-                }
-            }
-        }
-        ret = 0;
-        goto done;
-
-    bail:
-        getstat_free();
-    done:
-        free (output);
-    } else {
-        logprintfl (EUCAWARN, "failed to invoke getstats for sensor data (%s)\n", strerror (errno));
+  int ret = ERROR;
+  if (output) { // output is a string with one line per measurement, with tab-delimited fields
+    char * token, * subtoken;
+    char * saveptr1, * saveptr2;
+    char * str1 = output;
+    getstat ** gss = NULL;
+    int ninst = 0;
+    
+    for (int i = 1; ; i++, str1 = NULL) { // iterate over lines in output
+      token = strtok_r(str1, "\n", &saveptr1); // token points to a whole line
+      if (token == NULL)
+	break;
+      getstat * gs = calloc (1, sizeof (getstat)); // new lines means new data record
+      if (gs == NULL)
+	goto bail;
+      
+      char * str2 = token;
+      for (int j = 1; ; j++, str2 = NULL) { // iterate over tab-separated entries in the line
+	subtoken = strtok_r(str2, "\t", &saveptr2);
+	if (subtoken == NULL)
+	  break;
+	
+	// e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
+	switch (j) {
+	case 1: { // first entry is instance ID
+	  getstat * gsp = getstat_find (*pstats, subtoken);
+	  if (gsp == NULL) { // first record for this instance => expand pointer array
+	    ninst++;
+	    gss = realloc (gss, (ninst + 1) * sizeof (getstat *));
+	    gss [ninst-1] = gs;
+	    gss [ninst] = NULL; // NULL-terminate the array
+	    *pstats = gss;
+	  } else { // not first record
+	    for ( ; gsp->next != NULL; gsp = gsp->next); // walk the linked list to the end
+	    gsp->next = gs; // add the new record
+	  }
+	  strncpy (gs->instanceId, subtoken, sizeof (gs->instanceId));
+	  break;
+	}
+	case 2: {
+	  char * endptr;
+	  errno = 0;
+	  gs->timestamp = strtoll (subtoken, &endptr, 10);
+	  if (errno != 0 && *endptr != '\0') {
+	    logprintfl (EUCAERROR, "unexpected input from getstats.pl (could not convert timestamp with strtoll())\n");
+	    goto bail;
+	  }
+	  break;
+	}
+	case 3:
+	  strncpy (gs->metricName, subtoken, sizeof (gs->metricName));
+	  break;
+	case 4:
+	  gs->counterType = sensor_str2type (subtoken);
+	  break;
+	case 5:
+	  strncpy (gs->dimensionName, subtoken, sizeof (gs->dimensionName));
+	  break;
+	case 6: {
+	  char * endptr;
+	  errno = 0;
+	  gs->value = strtod (subtoken, &endptr);
+	  if (errno != 0 && *endptr != '\0') {
+	    logprintfl (EUCAERROR, "unexpected input from getstats.pl (could not convert value with strtod())\n");
+	    goto bail;
+	  }
+	  break;
+	}
+	default:
+	  logprintfl (EUCAERROR, "unexpected input from getstats.pl (too many fields)\n");
+	  goto bail;
+	}
+      }
     }
-
-    return ret;
+    ret = OK;
+    goto done;
+    
+  bail:
+    getstat_free(*pstats);
+  done:
+    free (output);
+  } else {
+    logprintfl (EUCAWARN, "failed to invoke getstats for sensor data (%s)\n", strerror (errno));
+  }
+  
+  return ret;
 }
 
 // Never-returning function that performs polling of sensors and updates
@@ -858,8 +861,10 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
                             // this can happen when sensor resets; if, additionally,
                             // network outage prevented delivery for a while, there
                             // may also be a gap in numbers, rather than a reset to 0
-                            logprintfl (EUCAINFO, "reset in sensor values detected [%lld < %lld], clearing history for %s:%s:%s:%s\n",
-                                        snv, sov, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                            logprintfl (EUCAINFO, "reset in sensor values detected, clearing history for %s:%s:%s:%s\n",
+                                        sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+			    logprintfl (EUCADEBUG, "cached valuesLen=%d seq=%lld+%d vs new valuesLen=%d seq=%lld+%d\n",
+					cache_sd->valuesLen, cache_sc->sequenceNum, iov, sd->valuesLen, sc->sequenceNum, inv);
                             inv_start = 0;                           // copy all new values
                             iov_start = 0;                           // overwrite what is in cache
                             cache_sc->sequenceNum = sc->sequenceNum; // reset the seq number to the new value
@@ -999,7 +1004,10 @@ int sensor_add_value (const char * instanceId,
     sv->available = available;
 
     sensorResource * srs [1] = { &sr };
-
+    
+    logprintfl (EUCADEBUG, "adding %s:%s:%s:%s %05lld %014lld %s %f\n", 
+		sr.resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName,
+		sequenceNum, sv->timestampMs, sv->available?"YES":" NO", sv->available?sv->value:-1);
     return sensor_merge_records (srs, 1, TRUE);
 }
 
@@ -1125,8 +1133,7 @@ int sensor_set_resource_alias (const char * resourceName, const char * resourceA
                 logprintfl (EUCADEBUG, "set alias for sensor resource %s to %s\n", resourceName, resourceAlias);
             }
         } else {
-            logprintfl (EUCATRACE, "Clearing alias for resource '%s'\n",
-                        resourceName);
+            logprintfl (EUCATRACE, "clearing alias for resource '%s'\n", resourceName);
             sr->resourceAlias [0] = '\0'; // clears the alias
         }
         ret = 0;
@@ -1227,40 +1234,87 @@ int sensor_set_volume (const char * instanceId, const char * volumeId, const cha
 // apart)
 int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], const char resourceAliases [][MAX_SENSOR_NAME_LEN], int size)
 {
-    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
-
-    if (getstat_refresh() != OK) {
-        logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
-        return 1;
-    } else {
-        logprintfl (EUCADEBUG, "polled statistics for %d instance(s)\n", getstat_ninstances());
+  if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+  
+  getstat ** stats = NULL;
+  if (getstat_generate (&stats) != OK) {
+    logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
+    return 1;
+  } else {
+    logprintfl (EUCADEBUG, "polled statistics for %d instance(s)\n", getstat_ninstances(stats));
+  }
+  
+  boolean found_values = FALSE;
+  for (int i=0; i<size; i++) {
+    char * name = (char *)resourceNames [i];
+    char * alias = (char *)resourceAliases [i];
+    if (name [0] == '\0')
+      continue;
+    getstat * head = getstat_find (stats, name);
+    if (head == NULL && alias [0] != '\0') {
+      // Check for aliased resource.
+      head = getstat_find (stats, alias);
     }
-
-    boolean found_values = FALSE;
-    for (int i=0; i<size; i++) {
-        char * name = (char *)resourceNames [i];
-        char * alias = (char *)resourceAliases [i];
-        if (name [0] == '\0')
-            continue;
-        getstat * head = getstat_find (name);
-        if (head == NULL && alias [0] != '\0') {
-            // Check for aliased resource.
-            head = getstat_find (alias);
-        }
-        for (getstat * s = head; s != NULL; s = s->next) {
-            sensor_add_value (name, s->metricName, s->counterType, s->dimensionName, sn, s->timestamp, TRUE, s->value);
-            found_values = TRUE;
-        }
-        if (head == NULL) {
-            // OK, can't find this thing anywhere.
-            logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated)\n", name);
-            // TODO3.2: decide what to do when some metrics for an instance aren't available
-        }
+    for (getstat * s = head; s != NULL; s = s->next) {
+      sensor_add_value (name, s->metricName, s->counterType, s->dimensionName, sn, s->timestamp, TRUE, s->value);
+      found_values = TRUE;
     }
+    if (head == NULL) {
+      // OK, can't find this thing anywhere.
+      logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated)\n", name);
+      // TODO3.2: decide what to do when some metrics for an instance aren't available
+    }
+  }
+  getstat_free (stats);
+  if (found_values)
+    sn++;
+  
+  return(0);
+}
 
-    if (found_values)
-        sn++;
-    return(0);
+int sensor_validate_resources (sensorResource ** srs, int srsLen)
+{
+  for (int i=0; i<srsLen; i++) {
+    sensorResource * sr = srs [i];
+    if (sr == NULL) {
+      logprintfl (EUCAERROR, "invalid resource array: empty slot in position %d\n", i);
+      return 1;
+    }
+    if (sr->metricsLen<0 || sr->metricsLen>MAX_SENSOR_METRICS) {
+      logprintfl (EUCAERROR, "invalid resource array: metricsLen out of bounds (metricsLen=%d for %s)\n",
+		  sr->metricsLen, sr->resourceName);
+      return 1;
+    }
+    for (int m=0; m<sr->metricsLen; m++) {
+      const sensorMetric * sm = sr->metrics + m;
+      if (sm->countersLen<0 || sm->countersLen>MAX_SENSOR_COUNTERS) {
+	logprintfl (EUCAERROR, "invalid resource array: counterLen out of bounds (countersLen=%d for %s:%s)\n",
+		    sm->countersLen, sr->resourceName, sm->metricName);
+	return 1;
+      }
+      for (int c=0; c<sm->countersLen; c++) {
+	const sensorCounter * sc = sm->counters + c;
+	if (sc->dimensionsLen<0 || sc->dimensionsLen>MAX_SENSOR_DIMENSIONS) {
+	  logprintfl (EUCAERROR, "invalid resource array: sensorCounter out of bounds (dimensionsLen=%d for %s:%s:%s)\n",
+		      sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+	  return 1;
+	}
+	for (int d=0; d<sc->dimensionsLen; d++) {
+	  const sensorDimension * sd = sc->dimensions + d;
+	  if (sd->valuesLen<0 || sd->valuesLen>MAX_SENSOR_VALUES) {
+	    logprintfl (EUCAERROR, "invalid resource array: valuesLen out of bounds (valuesLen=%d for %s:%s:%s:%s)\n",
+			sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+	    return 1;
+	  }
+	  for (int v=0; v<sd->valuesLen; v++) {
+	    // TODO: anything to verify in values?
+	  }
+	}
+      }
+    }
+  }
+
+  return 0;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
@@ -1286,16 +1340,21 @@ static void clear_srs (sensorResource ** srs, int srsLen)
 
 const char * euca_this_component_name   = "ignore";
 const char * euca_client_component_name = "ignore";
+static long long ts = 0;
+static void * competitor_function_writer (void * ptr);
+static void * competitor_function_reader (void * ptr);
 
 int main (int argc, char ** argv)
 {
     int errors = 0;
 
+    ts = time_usec() / 1000;
     logfile (NULL, EUCATRACE, 4);
-    logprintfl (EUCADEBUG, "testing sensor.c with MAX_SENSOR_VALUES=%d\n", MAX_SENSOR_VALUES);
+    log_prefix_set ("%T %L %t9 %m-24 %F-33 |");
+    logprintfl (EUCADEBUG, "testing sensor.c with cache of size 2 and MAX_SENSOR_VALUES=%d\n", MAX_SENSOR_VALUES);
 
     long long intervalMs = 50000;
-    assert (sensor_init (NULL, NULL, 2, FALSE) == 0);
+    assert (sensor_init (NULL, NULL, 2, FALSE, NULL) == 0);
     assert (sensor_state->max_resources > 0);
     assert (sensor_state->used_resources == 0);
     assert (0 != sensor_config (-1, 5000));
@@ -1308,34 +1367,38 @@ int main (int argc, char ** argv)
 
 #define GETSTAT_ITERS 10
     // test the getstat function
+    getstat ** stats = NULL;
     for (int i=1; i<=GETSTAT_ITERS; i++) {
         if (i%2) {
             euca_this_component_name = "nc";
         } else {
             euca_this_component_name = "cc";
         }
-        assert (getstat_refresh () == OK);
-        getstat * gs = getstat_find (NULL);
+        assert (getstat_generate(&stats)==OK);
+        getstat * gs = getstat_find (stats, NULL);
         if (gs != NULL) {
-            char * id = gs->instanceId;
-            assert (sensor_refresh_resources (id, "", 1) == OK);
+	  char id [MAX_SENSOR_NAME_LEN];
+	  strncpy (id, gs->instanceId, sizeof (id));
+	  assert (sensor_refresh_resources (id, "", 1) == OK);
         }
-        if (i%101 == 0) {
-            logprintfl (EUCADEBUG, "getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances());
+        if (i%101 == 0 || i%102 == 0) {
+	  logprintfl (EUCADEBUG, "getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances(stats));
         }
     }
     char * anInstanceId = NULL;
-    sem_p (state_sem);
-    if (sensor_state->stats) {
-        anInstanceId = sensor_state->stats[0]->instanceId;
+    if (stats) {
+      anInstanceId = stats[0]->instanceId;
     }
-    sem_v (state_sem);
     if (anInstanceId != NULL)
-        assert (getstat_find (anInstanceId) != NULL);
+      assert (getstat_find (stats, anInstanceId) != NULL);
+
+    euca_this_component_name = "ignore"; // set component name so that getstats won't get involved and won't put real sensor readings into sensor state
+    getstat_free (stats);
+    init_state(2); // clear out sensor state after previous experiments
+    assert (0 == sensor_config (3, intervalMs));
 
     // test sensor_add_value and sensor_get_value
     double val = 11.0;
-    long long ts = time_usec() / 1000;
     for (int j=0; j<50; j++) {
         long long sn = -1L;
         int valLen = 0;
@@ -1361,7 +1424,9 @@ int main (int argc, char ** argv)
                                                &last_sn, &last_ts, &last_available, &last_val, &last_intervalMs, &last_valLen));
                 assert (last_sn == sn);
                 assert (last_ts == ts);
-                assert (last_intervalMs == intervalMs);
+                if (! (last_intervalMs == intervalMs)) {
+		  logprintfl (EUCAERROR, "bad\n");
+		}
                 assert (last_available == (sn%2)?TRUE:FALSE);
                 assert (last_val == val);
                 assert (last_valLen == valLen);
@@ -1435,6 +1500,100 @@ int main (int argc, char ** argv)
     }
     free (srs);
 
+    dump_sensor_cache();
+    logprintfl (EUCADEBUG, "********************************\n");
+    logprintfl (EUCADEBUG, "testing with competitive threads\n");
+    logprintfl (EUCADEBUG, "********************************\n");
+#define COMPETITIVE_PARTICIPANTS 5
+#define COMPETITIVE_ITERATIONS 66666
+    logprintfl (EUCAINFO, "spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
+    pthread_t threads [COMPETITIVE_PARTICIPANTS];
+    long long thread_par [COMPETITIVE_PARTICIPANTS];
+    int thread_par_sum = 0;
+    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+      thread_par [j] = 0; // pass param to thread, if any
+      pthread_create (&threads[j], 
+		      NULL, 
+		      (j%2==0) ? competitor_function_writer : competitor_function_reader, 
+		      (void *)&thread_par[j]);
+    }
+    for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
+      pthread_join (threads[j], NULL);
+      thread_par_sum += (int)thread_par [j];
+    }
+    logprintfl (EUCAINFO, "waited for all competing threads (returned sum=%d)\n", thread_par_sum);
+    dump_sensor_cache();
+    assert (thread_par_sum == 0);
+
     return 0;
+}
+
+static void * competitor_function_reader (void * ptr)
+{
+    long long param = * (long long *) ptr;
+    int errors = 0;
+
+    logprintfl (EUCADEBUG, "competitor reader running with param=%lld\n", param);
+
+    sensorResource ** srs = calloc (sensor_state->max_resources, sizeof (sensorResource *));
+    int srsLen = sensor_state->max_resources;
+    assert (srs);
+    for (int i=0; i<sensor_state->max_resources; i++) {
+        srs [i] = calloc (1, sizeof (sensorResource));
+        assert (srs [i]);
+    }
+
+    for (int j=0; j<COMPETITIVE_ITERATIONS; j++) {
+      assert (0 == sensor_get_instance_data (NULL, NULL, 0, srs, srsLen));
+      // verify the output
+      assert (0 == sensor_validate_resources (srs, srsLen));
+    }
+
+    for (int i=0; i<sensor_state->max_resources; i++) {
+        free (srs [i]);
+    }
+    free (srs);
+
+    * (long long *) ptr = errors;
+    return NULL;
+}
+
+static long long _sn = -1;
+static double val = 0.0;
+
+static void * competitor_function_writer (void * ptr)
+{
+    long long param = * (long long *) ptr;
+    int errors = 0;
+
+    logprintfl (EUCADEBUG, "competitor writer running with param=%lld\n", param);
+
+    // add the "dummy" struct as a second resource                                                                                                                               
+    sensorResource ** srs = calloc (sensor_state->max_resources, sizeof (sensorResource *));
+    assert (srs);
+    for (int i=0; i<sensor_state->max_resources; i++) {
+      srs [i] = calloc (1, sizeof (sensorResource));
+      assert (srs [i]);
+    }
+
+    for (int j=0; j<COMPETITIVE_ITERATIONS; j++) {
+      _sn+=1;
+      ts+=500;
+      val+=1;
+      char * r = (j%2==0) ? "i-555" : "i-666";
+      int err = 0;
+      if (j%3==0) {
+	//	err = (0==sensor_add_value ("i-777", "CPUUtilization", SENSOR_AVERAGE, "default", _sn, ts, TRUE, val));
+      } else {
+	err = sensor_add_value (r, "CPUUtilization", SENSOR_AVERAGE, "default", _sn, ts, TRUE, val);
+      }
+      if (err) {
+	logprintfl (EUCAERROR, "sensor_add_value failed err=%d\n", err);
+	errors++;
+      }
+    }
+
+    * (long long *) ptr = errors;
+    return NULL;
 }
 #endif

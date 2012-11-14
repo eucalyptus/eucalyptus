@@ -62,6 +62,7 @@
 
 include ../Makedefs
 
+EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
 CC += -g
 all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap euca-generate-fault
@@ -90,7 +91,7 @@ euca-generate-fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.
 	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
 test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
 
 ../storage/diskutil.o:
 	make -C ../storage
