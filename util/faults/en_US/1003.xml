@@ -39,7 +39,7 @@
       <message>
         1) Delete un-needed files on partition that hosts ${file}.
         2) Allocate more disk space on the partition that hosts ${file}
-        3) Buy more storage and allocate it to the partition that hosts ${file} 
+        3) Install more storage and allocate it to the partition that hosts ${file} 
       </message>
     </resolution>
   </fault>
