@@ -396,8 +396,9 @@ class CachingClcInterface(ClcInterface):
     # returns keypair info and key
     def import_key_pair(self, key_name, public_key_material, callback):
         self.keypairs.expireCache()
-        Threads.instance().runThread(self.__delete_key_pair_cb__,
+        Threads.instance().runThread(self.__import_key_pair_cb__,
                             ({'key_name':key_name, 'public_key_material':public_key_material}, callback))
+
     def __import_key_pair_cb__(self, kwargs, callback):
         try:
             ret = self.clc.import_key_pair(kwargs['key_name'], kwargs['public_key_material'])

@@ -257,9 +257,9 @@ public class Databases {
     
     @Override
     public boolean load( ) throws Exception {
-	
-      if( SubDirectory.DB.getChildFile("data", "disabled.lock" ).exists() ) {
-	  Faults.forComponent(Eucalyptus.class).havingId(1010).withVar("DISABLED_CLC", "disable.lock" ).log();
+	  File dbLockFile = SubDirectory.DB.getChildFile("data", "disabled.lock" );
+      if( dbLockFile.exists() ) {
+	  Faults.forComponent(Eucalyptus.class).havingId(1010).withVar("DB_LOCK_FILE", dbLockFile.getAbsolutePath()).log();
 	  LOG.error("WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE disabled.lock FILE TO PROCEED WITH RISK");
 	  System.exit(1);
       }
