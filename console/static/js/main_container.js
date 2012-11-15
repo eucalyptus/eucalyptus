@@ -160,8 +160,6 @@
         case 'aboutcloud':
           this._aboutDialog.eucadialog("open");
           break;
-        default:
-          $('html body').find(DOM_BINDING['notification']).notification('error', 'internal error', selected+' not yet implemented', 1);
       }
       if (options !== KEEP_VIEW) {
         this._curSelected = selected;
