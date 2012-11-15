@@ -257,14 +257,14 @@ public class Databases {
     
     @Override
     public boolean load( ) throws Exception {
-	  File dbLockFile = SubDirectory.DB.getChildFile("data", "disabled.lock" );
-      if( dbLockFile.exists() ) {
+      Hosts.awaitDatabases( );
+      File dbLockFile = SubDirectory.DB.getChildFile("data", "disabled.lock" );
+      if( dbLockFile.exists() && Hosts.isCoordinator( ) ) {
 	  Faults.forComponent(Eucalyptus.class).havingId(1010).withVar("DB_LOCK_FILE", dbLockFile.getAbsolutePath()).log();
 	  LOG.error("WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE disabled.lock FILE TO PROCEED WITH RISK");
 	  System.exit(1);
       }
 	
-      Hosts.awaitDatabases( );
       Groovyness.run( "setup_dbpool.groovy" );
       OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
         
