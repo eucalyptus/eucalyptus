@@ -906,6 +906,7 @@ int doAttachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
   done=0;
   for (i=start; i<stop && !done; i++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    timeout = maxint(timeout, ATTACH_VOL_TIMEOUT_SECONDS);
     rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncAttachVolume", instanceId, volumeId, remoteDev, localDev);
     if (rc) {
       ret = 1;
@@ -962,6 +963,7 @@ int doDetachVolume(ncMetadata *ccMeta, char *volumeId, char *instanceId, char *r
 
   for (i=start; i<stop; i++) {
     timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop-start, i);
+    timeout = maxint(timeout, DETACH_VOL_TIMEOUT_SECONDS);
     rc = ncClientCall(ccMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncDetachVolume", instanceId, volumeId, remoteDev, localDev, force);
     if (rc) {
       ret = 1;
