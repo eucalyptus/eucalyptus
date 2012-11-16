@@ -21,21 +21,13 @@
 		<value name="collectionIntervalTimeMs" field="collectionIntervalTimeMs"
 			type="java.lang.Integer" />
 		<structure usage="optional">
-			<collection name="instanceIds"
-				factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds"
-				item-type="java.lang.String">
-				<structure name="item">
-					<value name="instanceId" />
-				</structure>
+			<collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds">
+			<value name="instanceIds" type="java.lang.String" />
 			</collection>
 		</structure>
 		<structure usage="optional">
-			<collection name="sensorIds"
-				factory="org.jibx.runtime.Utility.arrayListFactory" field="sensorIds"
-				item-type="java.lang.String">
-				<structure name="item">
-					<value name="sensorId" />
-				</structure>
+			<collection factory="org.jibx.runtime.Utility.arrayListFactory" field="sensorIds">
+			<value name="sensorIds" type="java.lang.String" />
 			</collection>
 		</structure>
 	</mapping>

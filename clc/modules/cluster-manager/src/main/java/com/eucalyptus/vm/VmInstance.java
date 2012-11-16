@@ -128,6 +128,7 @@ import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
@@ -141,6 +142,7 @@ import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -148,6 +150,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
@@ -325,6 +328,37 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
+  private enum ValidateVmInfo implements Predicate<VmInfo> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( VmInfo arg0 ) {
+      if ( arg0.getGroupNames( ).isEmpty( ) ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no groups: " + arg0.getGroupNames( ) );
+      }
+      if ( arg0.getInstanceType( ).getName( ) == null ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no instance type: " + arg0.getInstanceType( ) );
+      }
+      if ( arg0.getInstanceType( ).getVirtualBootRecord( ).isEmpty( ) ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no vbr entries: " + arg0.getInstanceType( ).getVirtualBootRecord( ) );
+        return false;
+      }
+      try {
+        VirtualBootRecord vbr = arg0.getInstanceType( ).lookupRoot( );
+      } catch ( NoSuchElementException ex ) {
+        LOG.warn( "Instance " + arg0.getInstanceId( ) + " reported no root vbr entry: " + arg0.getInstanceType( ).getVirtualBootRecord( ) );
+        return false;
+      }
+      try {
+        Topology.lookup( ClusterController.class, Clusters.getInstance( ).lookup( arg0.getPlacement( ) ).lookupPartition( ) );
+      } catch ( NoSuchElementException ex ) {
+        return false;//GRZE:ARG: skip restoring while cluster is enabling since Builder.placement() depends on a running cluster...
+      }
+      return true;
+    }
+    
+  }
+  
   public enum RestoreAllocation implements Predicate<VmInfo> {
     INSTANCE;
     
@@ -363,9 +397,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       final VmState inputState = VmState.Mapper.get( input.getStateName( ) );
       if ( !VmStateSet.RUN.contains( inputState ) ) {
         return false;
+      } else if ( !ValidateVmInfo.INSTANCE.apply( input ) ) {
+        return false;
       } else {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-        
         final EntityTransaction db = Entities.get( VmInstance.class );
         boolean building = false;
         try {
@@ -444,9 +479,43 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     private static List<NetworkGroup> restoreNetworks( final VmInfo input, final UserFullName userFullName ) {
-      final List<NetworkGroup> networks = Lists.newArrayList( );
-      networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
-      return networks;
+	final List<NetworkGroup> networks = Lists.newArrayList( );
+	networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
+	Iterables.removeIf(networks, Predicates.isNull());
+
+	if ( networks.isEmpty() ) {
+	    final EntityTransaction restore = Entities.get( NetworkGroup.class );
+	    int index = input.getGroupNames().get(0).lastIndexOf("-");
+	    String truncatedSecGroup = (String) input.getGroupNames().get(0).subSequence(0, index);
+	    String orphanedSecGrp =  truncatedSecGroup.concat("-orphaned");
+
+	    try {
+		NetworkGroup found = NetworkGroups.lookup(userFullName,
+			orphanedSecGrp);
+		networks.add(found);
+		restore.commit();
+	    } catch (NoSuchMetadataException ex) {
+
+		try {
+		    NetworkGroup restoredGroup = NetworkGroups.create(userFullName,
+			    orphanedSecGrp,
+			    orphanedSecGrp);
+		    networks.add(restoredGroup);    
+		} catch (Exception e) {
+		    LOG.debug("Failed to restored security group : " + orphanedSecGrp);
+		    restore.rollback();
+		} 
+
+	    } catch (Exception e) {
+		LOG.debug("Failed to restore security group : " + orphanedSecGrp);
+		restore.rollback();
+	    } finally {
+	      if ( restore.isActive( ) ) {
+	        restore.rollback( );
+	      }
+	    }
+	}
+	return networks;
     }
     
     private static void restoreAddress( final VmInfo input, final VmInstance vmInst ) {
@@ -465,11 +534,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       } catch ( NoSuchElementException e ) { // Address disabled
         try {
-          final Address addr = Addresses.getInstance( ).lookupDisabled( input.getNetParams( ).getIgnoredPublicIp( ) );
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-          addr.pendingAssignment().assign( vmInst ).clearPending();
+            final Address addr = Addresses.getInstance( ).lookupDisabled( input.getNetParams( ).getIgnoredPublicIp( ) );
+            vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+            addr.pendingAssignment().assign( vmInst ).clearPending();
+
         } catch ( final Exception ex2 ) {
-          LOG.error( "Failed to restore address state (from disabled) " + input.getNetParams( )
+            LOG.error( "Failed to restore address state (from disabled) " + input.getNetParams( )
               + " for instance "
               + input.getInstanceId( )
               + " because of: "
@@ -1131,7 +1201,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getImageId( ) {
-    return this.bootRecord.getMachine( ) == null ? "-" : this.bootRecord.getMachine( ).getDisplayName( );
+    return this.bootRecord.getMachine( ) == null ? "emi-00000000" : this.bootRecord.getMachine( ).getDisplayName( );
   }
   
   public String getRamdiskId( ) {

@@ -269,9 +269,10 @@ public class DescribeSensorsType extends CloudClusterMessage {
 
     DescribeSensorsType(){}
     
-    DescribeSensorsType (Integer historySize, Integer collectionIntervalTimeMs ) {
+    DescribeSensorsType (Integer historySize, Integer collectionIntervalTimeMs, ArrayList<String> instanceIds ) {
       this.historySize = historySize;
       this.collectionIntervalTimeMs = collectionIntervalTimeMs;
+      this.instanceIds = instanceIds;
     }
 }
 

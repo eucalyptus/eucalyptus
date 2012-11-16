@@ -834,10 +834,9 @@ public class ServiceTransitions {
       @Override
       public void fire( final ServiceConfiguration config ) {
         if ( Bootstrap.isFinished( ) ) {
-          for ( Entry<String, ConfigurableProperty> entry : Iterables.filter( PropertyDirectory.getPendingPropertyEntries( ),
+          for ( ConfigurableProperty prop : Iterables.filter( PropertyDirectory.getPendingPropertyValues( ),
                                                                               Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
             try {
-              ConfigurableProperty prop = entry.getValue( );
               PropertyDirectory.addProperty( prop );
               try {
                 prop.getValue( );
