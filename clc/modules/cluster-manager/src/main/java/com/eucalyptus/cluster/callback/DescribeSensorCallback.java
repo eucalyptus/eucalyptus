@@ -20,6 +20,7 @@
 
 package com.eucalyptus.cluster.callback;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -60,15 +61,17 @@ public class DescribeSensorCallback extends
   private static final String RESOURCE_TYPE_INSTANCE = "instance";
   private final int historySize;
   private final int collectionIntervalTimeMs;
+  private final ArrayList<String> instanceIds;
   private final ListenerRegistry listener = ListenerRegistry.getInstance();
 
   public DescribeSensorCallback( final int historySize,
-                                 final int collectionIntervalTimeMS ) {
+                                 final int collectionIntervalTimeMS, final ArrayList<String> instanceIds) {
     this.historySize = historySize;
     this.collectionIntervalTimeMs = collectionIntervalTimeMS;
-
+    this.instanceIds = instanceIds;
+    
     final DescribeSensorsType msg =
-        new DescribeSensorsType( this.historySize, this.collectionIntervalTimeMs );
+        new DescribeSensorsType( this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
 
     try {
       msg.setUser( Accounts.lookupSystemAdmin() );
@@ -85,7 +88,7 @@ public class DescribeSensorCallback extends
 
   @Override
   public BroadcastCallback<DescribeSensorsType, DescribeSensorsResponse> newInstance() {
-    return new DescribeSensorCallback( this.historySize, this.collectionIntervalTimeMs );
+    return new DescribeSensorCallback( this.historySize, this.collectionIntervalTimeMs, this.instanceIds);
   }
 
   @Override

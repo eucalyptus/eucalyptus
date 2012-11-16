@@ -2870,38 +2870,63 @@ int doDescribeSensors(ncMetadata *meta, int historySize, long long collectionInt
     return 1;
   }
   
-  logprintfl(EUCAINFO, "invoked historySize=%d collectionIntervalTimeMs=%lld\n", historySize, collectionIntervalTimeMs);
+  logprintfl(EUCADEBUG, "invoked historySize=%d collectionIntervalTimeMs=%lld instIdsLen=%d i[0]='%s' sensorIdsLen=%d s[0]='%s'\n", 
+	     historySize, collectionIntervalTimeMs, 
+	     instIdsLen, instIdsLen>0 ? instIds[0] : "*",
+	     sensorIdsLen, sensorIdsLen>0 ? sensorIds[0] : "*");
   int err = sensor_config (historySize, collectionIntervalTimeMs); // update the config parameters if they are different
   if (err != 0)
-    logprintfl (EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
+    logprintfl (EUCAWARN, "failed to update sensor configuration (err=%d)\n", err);
 
   int num_resources = sensor_get_num_resources();
   if (num_resources < 0) {
-    logprintfl (EUCAERROR, "failed to determine number of available sensors\n");
+    logprintfl (EUCAERROR, "failed to determine number of available sensor resources\n");
     return 1;
   }
+
+  // oddly, an empty set of instanceIds or sensorIds in XML is presented
+  // by Axis as an array of size 1 with an empty string as the only element
+  int num_instances = instIdsLen;
+  if (instIdsLen == 1 && strlen(instIds[0]) == 0)
+    num_instances = 0; // which is to say all instances
 
   * outResources = NULL;
   * outResourcesLen = 0;
 
   if (num_resources > 0) {
 
-    * outResources = malloc (num_resources * sizeof (sensorResource *));
+    int num_slots = num_resources; // report on all instances
+    if (num_instances > 0)
+      num_slots = num_instances; // report on specific instances
+
+    * outResources = malloc (num_slots * sizeof (sensorResource *));
     if ((*outResources) == NULL) {
       return OUT_OF_MEMORY;
     }
-    for (int i = 0; i < num_resources; i++) {
+    for (int i = 0; i < num_slots; i++) {
       (* outResources) [i] = calloc (1, sizeof (sensorResource));
       if (((* outResources) [i]) == NULL) {
 	return OUT_OF_MEMORY;
       }
     }
 
-    // if number of resources has changed since the call to sensor_get_num_resources(),
-    // then either we won't report on everything (ok, since we'll get it next time)
-    // or we'll have fewer records in outResrouces[] (ok, since empty ones will be ignored)
-    sensor_get_instance_data (NULL, NULL, 0, * outResources, num_resources);
-    * outResourcesLen = num_resources;
+    int num_results = 0;
+    if (num_instances == 0) { // report on all instances
+      // if number of resources has changed since the call to sensor_get_num_resources(),
+      // then we may not report on everything (ok, since we'll get it next time)
+      // or we may have fewer records in outResrouces[] (ok, since empty ones will be ignored)
+      if (sensor_get_instance_data (NULL, NULL, 0, * outResources, num_slots) == 0)
+	num_results = num_slots; // actually num_results <= num_slots, but that's OK
+
+    } else { // report on specific instances
+      // if some instances requested by ID were not found on this CC, 
+      // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
+      for (int i=0; i < num_instances; i++) {
+	if (sensor_get_instance_data (instIds[i], NULL, 0, (* outResources + num_results), 1) == 0)
+	  num_results++;
+      }
+    }    
+    * outResourcesLen = num_results;
   }
 
   return 0;

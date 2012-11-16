@@ -63,8 +63,8 @@
 use Time::HiRes 'gettimeofday';
 use Getopt::Std;
 
-%chains = ( 'NetworkIn' => 'EUCA_COUNTERS_IN',
-	    'NetworkOut' => 'EUCA_COUNTERS_OUT');
+%chains = ( 'NetworkInExternal' => 'EUCA_COUNTERS_IN',
+	    'NetworkOutExternal' => 'EUCA_COUNTERS_OUT');
 
 # Two utility functions cribbed from getstats.pl
 sub get_ts {
@@ -169,14 +169,14 @@ foreach my $counter (keys %chains) {
       # List stats using mapped instances if run with -m. Requires
       # succesful run of euca-describe-instances.
       if ($instance_addr{$block}) {
-	print_stat ($instance_addr{$block}, $time{$counter}, "external", $counter, ${$counter}{$block});
+	print_stat ($instance_addr{$block}, $time{$counter}, "default", $counter, ${$counter}{$block});
       } else {
 	# Fallback for missing instance mapping is to output stats by IP
 	# address.
-	print_stat ($block, $time{$counter}, "external", $counter, ${$counter}{$block});
+	print_stat ($block, $time{$counter}, "default", $counter, ${$counter}{$block});
       }
     } else {
-      print_stat ($block, $time{$counter}, "external", $counter, ${$counter}{$block});
+      print_stat ($block, $time{$counter}, "default", $counter, ${$counter}{$block});
     }
   }
 }
