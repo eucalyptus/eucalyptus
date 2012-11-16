@@ -306,4 +306,11 @@ static char * createImage_progress_names[] = {
   "cancelled"
 };
 
+#ifndef EUCA_FREE
+#define EUCA_FREE(_x)  \
+{                      \
+	free((_x));        \
+	(_x) = NULL;       \
+}
+#endif /* ! EUCA_FREE */
 #endif

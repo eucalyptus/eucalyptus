@@ -1586,8 +1586,12 @@ static blockblob ** walk_bs (blobstore * bs, const char * dir_path, blockblob **
                 }
             }
         }
-        if (array)
-            free (array);
+
+        if (array) {
+            for (int i=0; i<array_size; i++)
+            	EUCA_FREE(array[i]);
+            EUCA_FREE(array);
+        }
     }
 
  free:
