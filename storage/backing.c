@@ -600,8 +600,8 @@ int destroy_instance_backing (ncInstance * instance, int do_destroy_files)
                if( entry !=NULL && strncmp(entry->d_name, ".",1)!=0 && strncmp(entry->d_name, "..", 2)!=0){
                     snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
                     unlink(toDelete);
-                    free(entry);
                }
+               free(entry);
             }
             free(files);
         }
