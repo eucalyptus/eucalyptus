@@ -82,20 +82,21 @@ class BotoClcInterface(ClcInterface):
                       security_group_ids=None,
                       additional_info=None, instance_profile_name=None,
                       instance_profile_arn=None, tenancy=None):
-        return self.conn.run_instances(image_id, min_count, max_count,
-                      key_name, security_groups,
-                      user_data, addressing_type,
-                      instance_type, placement,
-                      kernel_id, ramdisk_id,
-                      monitoring_enabled, subnet_id,
-                      block_device_map,
-                      disable_api_termination,
-                      instance_initiated_shutdown_behavior,
-                      private_ip_address,
-                      placement_group, client_token,
-                      security_group_ids,
-                      additional_info, instance_profile_name,
-                      instance_profile_arn, tenancy)
+        return self.conn.run_instances(image_id=image_id, min_count=min_count, max_count=max_count,
+                      key_name=key_name, security_groups=security_groups,
+                      user_data=user_data, addressing_type=addressing_type,
+                      instance_type=instance_type, placement=placement,
+                      kernel_id=kernel_id, ramdisk_id=ramdisk_id,
+                      monitoring_enabled=monitoring_enabled, subnet_id=subnet_id,
+                      block_device_map=block_device_map,
+                      disable_api_termination=disable_api_termination,
+                      instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
+                      private_ip_address=private_ip_address,
+                      placement_group=placement_group, client_token=client_token,
+                      security_group_ids=security_group_ids)
+                      # we're not using these, so leave them out so we're compatible with boto 2.2.2
+                      #additional_info, instance_profile_name,
+                      #instance_profile_arn, tenancy)
 
     # returns instance list
     def terminate_instances(self, instance_ids):
