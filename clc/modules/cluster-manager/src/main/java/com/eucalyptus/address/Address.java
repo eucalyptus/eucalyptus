@@ -462,11 +462,34 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   public boolean isSystemOwned( ) {
     return Principals.systemFullName( ).equals( ( UserFullName ) this.getOwner( ) );
   }
-  
+
+  /**
+   * Is the instance assigned or with an impending assignment.
+   *
+   * <P>WARNING! in this state the instance ID may not be a valid instance
+   * identifier.</P>
+   *
+   * @return True if assigned or assignment impending.
+   * @see #getInstanceId()
+   * @see #getInstanceUuid()
+   */
   public boolean isAssigned( ) {
     return this.atomicState.getReference( ).ordinal( ) > State.allocated.ordinal( );
   }
-  
+
+  /**
+   * Is it really assigned? Really?
+   *
+   * <P>In this state the instance ID and UUID are expected to be valid.</P>
+   *
+   * @return True if assigned to an instance.
+   * @see #getInstanceId()
+   * @see #getInstanceUuid()
+   */
+  public boolean isReallyAssigned( ) {
+    return this.atomicState.getReference( ).ordinal( ) > State.impending.ordinal( );
+  }
+
   public boolean isPending( ) {
     return this.atomicState.isMarked( );
   }
@@ -497,10 +520,29 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     }
   }
 
+  /**
+   * Get the instance ID for the instance using this address.
+   *
+   * <P>The instance ID is only a valid identifier when the address is
+   * assigned. In other states the value describes the state of the address
+   * (e.g. "available" or "pending") </P>
+   *
+   * @return The instance ID
+   * @see #isReallyAssigned()
+   */
   public String getInstanceId( ) {
     return this.instanceId;
   }
 
+  /**
+   * Get the instance UUID for the instance using this address.
+   *
+   * <P>The instance ID is only a valid identifier when the address is
+   * assigned.</P>
+   *
+   * @return The instance UUID
+   * @see #isReallyAssigned()
+   */
   public String getInstanceUuid( ) {
     return this.instanceUuid;
   }
