@@ -63,8 +63,8 @@
 package com.eucalyptus.util;
 
 import java.io.Serializable;
+import java.util.Map;
 import javax.persistence.Column;
-import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -76,43 +76,38 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.UniqueIds.PersistedCounter.Transaction;
 import com.google.common.base.Function;
+import com.google.common.collect.MapMaker;
 
 public class UniqueIds implements Serializable {
   private static final long serialVersionUID = 1L;
   private static Logger     LOG              = Logger.getLogger( UniqueIds.class );
   private static final Long BLOCK_SIZE       = 1000L;
   
-  public interface UniqueIdProducer {
-    public String nextId( );
-    
-    public Long nextIndex( Long extent );
-    
-    public Long nextIndex( );
-  }
-  
   @Entity
   @javax.persistence.Entity
   @PersistenceContext( name = "eucalyptus_config" )
   @Table( name = "config_unique_ids" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  public static class PersistedCounter extends AbstractPersistent implements UniqueIdProducer {
-    enum Transaction implements Function<PersistedCounter, Long> {
-      NEXT_ID {
+  public static class PersistedCounter extends AbstractPersistent {
+    enum Transaction implements Function<Long, String> {
+      NEXT_INDEX {
         
         @Override
-        public Long apply( PersistedCounter input ) {
-          final PersistedCounter entity = Entities.merge( input );
-          return entity.nextBlock( 1L );
+        public String apply( Long arg0 ) {
+          return Crypto.getDigestBase64( Long.toString( arg0 ), Digest.SHA512 ).replaceAll( "\\.", "" );
         }
-      };
+        
+      }
+      
     }
     
     @Transient
     private static final long serialVersionUID = 1L;
     @Column( name = "config_unique_ids_current_base" )
     private Long              currentBase;
-    @Column( name = "config_unique_ids_name" )
+    @Column( name = "config_unique_ids_set_name", unique = true )
     private String            idSetName;
     
     private PersistedCounter( ) {
@@ -125,8 +120,9 @@ public class UniqueIds implements Serializable {
     }
     
     private Long nextBlock( Long size ) {
-      this.setCurrentBase( this.currentBase + size );
-      return this.getCurrentBase( );
+      Long oldBase = this.getCurrentBase( ) + 1;
+      this.setCurrentBase( oldBase + size );
+      return oldBase;
     }
     
     private Long getCurrentBase( ) {
@@ -145,63 +141,54 @@ public class UniqueIds implements Serializable {
       this.idSetName = idSetName;
     }
     
-    @Override
-    public String nextId( ) {
-      return Crypto.getDigestBase64( Long.toString( this.nextIndex( ) ), Digest.SHA512 ).replaceAll( "\\.", "" );
-    }
-    
-    @Override
-    public Long nextIndex( ) {
-      return Entities.asTransaction( PersistedCounter.class, Transaction.NEXT_ID ).apply( this );
-    }
-    
-    @Override
-    public Long nextIndex( final Long extent ) {
-      Long ret = nextIndex( );
-      Entities.asTransaction( PersistedCounter.class, new Function<PersistedCounter, Long>( ) {
-        
-        @Override
-        public Long apply( PersistedCounter input ) {
-          final PersistedCounter entity = Entities.merge( input );
-          return entity.nextBlock( extent );
-        }
-      } ).apply( this );
-      return ret;
-    }
-    
   }
   
   public static Long nextIndex( Class c, long extent ) {
-    return named( c.toString( ) ).nextIndex( extent );
+    return nextIndex( c.toString( ), extent );
   }
   
   public static String nextId( Class c ) {
-    return named( c.toString( ) ).nextId( );
+    return nextId( c.toString( ) );
   }
   
   public static String nextId( ) {
-    return named( "SYSTEM" ).nextId( );
+    return nextId( "SYSTEM" );
   }
   
-  private static UniqueIdProducer named( final String counterName ) {
-    final EntityTransaction db = Entities.get( PersistedCounter.class );
-    try {
-      final PersistedCounter entity = Entities.uniqueResult( new PersistedCounter( null, counterName ) );
-      db.commit( );
-      return entity;
-    } catch ( final Exception ex ) {
-      db.rollback( );
-      final EntityTransaction saveDb = Entities.get( PersistedCounter.class );
-      try {
-        final PersistedCounter entity = Entities.persist( new PersistedCounter( 0L, counterName ) );
-        saveDb.commit( );
-        return entity;
-      } catch ( final Exception ex1 ) {
-        saveDb.rollback( );
-        LOG.error( ex1, ex1 );
-        throw Exceptions.toUndeclared( "Failed to initialize counter for: " + counterName + " because of: " + ex.getMessage( ), ex );
-      }
-    }
+  private static String nextId( final String counterName ) {
+    return Transaction.NEXT_INDEX.apply( nextIndex( counterName, 1 ) );
+  }
+  
+  private static final Map<String,Function<Long, Long>> counterMap = new MapMaker( ).makeComputingMap( new Function<String,Function<Long, Long>>(){
+
+    @Override
+    public Function<Long, Long> apply( final String counterName ) {
+      return new Function<Long, Long>( ) {
+        
+        @Override
+        public Long apply( Long arg0 ) {
+          Long ret = 0l;
+          try {
+            final PersistedCounter entity = Entities.uniqueResult( new PersistedCounter( null, counterName ) );
+            ret = entity.nextBlock( arg0 );
+            return ret;
+          } catch ( final Exception ex ) {
+            try {
+              final PersistedCounter entity = Entities.persist( new PersistedCounter( 0L, counterName ) );
+              ret = entity.nextBlock( arg0 );
+              return ret;
+            } catch ( final Exception ex1 ) {
+              LOG.error( ex1, ex1 );
+              throw Exceptions.toUndeclared( "Failed to initialize counter for: " + counterName + " because of: " + ex.getMessage( ), ex );
+            }
+          }
+        }
+      };
+    }} );
+  
+  private static Long nextIndex( final String counterName, long extent ) {
+    return Entities.asTransaction( PersistedCounter.class, counterMap.get( counterName ), 1000 ).apply( extent );
+    
   }
   
 }

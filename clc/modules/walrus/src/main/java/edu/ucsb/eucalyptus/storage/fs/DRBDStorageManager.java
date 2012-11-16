@@ -384,7 +384,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 				}
 			}
 			if (Component.State.ENABLED.equals(Components.lookup(Walrus.class).getState())) {
-				if(!isPrimary()) {
+				if(!isPrimary()  || !isMounted()) {
 					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Please make me primary. Aborting!");
 				}
 			} else {

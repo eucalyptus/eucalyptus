@@ -231,7 +231,9 @@
               var desc = toBase64($add_dialog.eucadialog("getValue", "#sgroup-description"));
               if (desc == null) return;
 
-              thisObj._storeRule(thisObj.addDialog);    // flush rule from form into array
+              if (thisObj._storeRule(thisObj.addDialog) == false) {    // flush rule from form into array
+                return;
+              }
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
@@ -307,7 +309,9 @@
         title: sgroup_dialog_edit_title,
         buttons: { 
         'save': { domid: createButtonId, text: sgroup_dialog_save_btn, click: function() {
-              thisObj._storeRule(thisObj.editDialog);    // flush rule from form into array
+              if (thisObj._storeRule(thisObj.editDialog) == false) {    // flush rule from form into array
+                return;
+              }
               // need to remove rules flagged for deletion, then add new ones to avoid conflicts
               $edit_dialog.eucadialog("close");
               var name = thisObj.editDialog.find('#sgroups-hidden-name').html();
@@ -487,7 +491,9 @@
         });
       });
       dialog.find('#sgroup-add-rule').click(function () {
-        thisObj._storeRule(thisDialog);
+        if (thisObj._storeRule(thisDialog) == false) {
+          return;
+        }
         // now reset form
         thisDialog.find('#sgroup-template').val('none');
         thisDialog.find('#sgroup-ports').val('');
@@ -498,15 +504,16 @@
     },
 
     _validateForm : function(createButtonId, dialog) {
-        this._validateFormInt(createButtonId, dialog, false);
+        return this._validateFormInt(createButtonId, dialog, false);
     },
 
     _validateFormNoWarn : function(createButtonId, dialog) {
-        this._validateFormInt(createButtonId, dialog, true);
+        return this._validateFormInt(createButtonId, dialog, true);
     },
 
     _validateFormInt : function(createButtonId, dialog, noWarn) {
       var enable = true;
+      var valid = true;
       if (dialog == this.addDialog) {
         var name = dialog.eucadialog("get_validate_value", "sgroup-name",
                                           SGROUP_NAME_PATTERN, alphanum_warning);
@@ -516,6 +523,7 @@
         var $button = dialog.parent().find('#' + createButtonId);
         if ( name == null || desc == null || name.length == 0 || desc.length == 0 ) {
           enable = false;
+          valid = false;
         }
       }
       if (enable == true) {
@@ -529,6 +537,7 @@
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
             enable = false;
+            valid = false;
           }
           else {
             var port_list = ports.split('-');
@@ -536,23 +545,25 @@
               if (noWarn == false) {
                 dialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
               }
-              enable = false;
+              valid = false;
             }
             else if (ports.indexOf('-') > -1) {  // we should have 2 numbers
               if (ports.length == 1 || /^\d{1,5}$/.test(port_list[1]) == false) {
                 if (noWarn == false) {
                   dialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
                 }
-                enable = false;
+                valid = false;
               }
             }
           }
         }
         else if (template.indexOf('ICMP') > -1) {
-          if (type == '')
+          if (type == '') {
             enable = false;
+            valid = false;
+          }
           else if (type != parseInt(type)) {
-            enable = false;
+            valid = false;
           }
         }
 
@@ -560,6 +571,7 @@
             if (dialog.find("input[name='allow-radio']:checked").val() == 'ip') {
               if (allow_ip == "") {
                 enable = false;
+                valid = false;
               }
               else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
                 dialog.find('#allow-ip-error').html("");
@@ -567,12 +579,12 @@
                 if (noWarn == false) {
                   dialog.find('#allow-ip-error').html(sgroup_error_address_range);
                 }
-                enable = false;
+                valid = false;
               }
             }
             else if (dialog.find("input[name='allow-radio']:checked").val() == 'group') {
               if (allow_group == '')
-                enable = false;
+                valid = false;
             }
         }
       }
@@ -585,6 +597,7 @@
         $button.prop("disabled", true).addClass("ui-state-disabled");
         dialog.find("#sgroup-add-rule").prop("disabled", true).addClass("ui-state-disabled");
       }
+      return valid
     },
 
     _setPortOption : function(dialog) {
@@ -599,6 +612,10 @@
 
     // this function is used to take an ingress rule from the form and move it to the rulesList
     _storeRule : function(dialog) {
+        if (this._validateForm('sgroup-add-btn', dialog) == false) {
+            return false;
+        }
+
         if (this.rulesList == null) {
             this.rulesList = new Array();
         }
@@ -647,6 +664,7 @@
         }
         rule.isnew = true;
         this.rulesList.push(rule);
+        return true;
     },
 
     // this function populates the div where rules are listed based on the rulesList

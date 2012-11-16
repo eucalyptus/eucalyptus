@@ -26,8 +26,14 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmInstance.VmState;
 
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -37,6 +43,10 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
 public class DescribeSensorsListener implements EventListener<Hertz> {
@@ -47,7 +57,8 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
   private Integer COLLECTION_INTERVAL_TIME_MS;
   private Integer HISTORY_SIZE = 5;
   private Integer MAX_WRITE_INTERVAL_MS = 86400000;
- 
+  private Integer SENSOR_QUERY_BATCH_SIZE = 10;
+
   private static final Logger LOG = Logger.getLogger(DescribeSensorsListener.class);
 
   public static void register() {
@@ -74,14 +85,29 @@ public class DescribeSensorsListener implements EventListener<Hertz> {
 		      .toSeconds(DEFAULT_POLL_INTERVAL_MINS))) {
 		  if (Bootstrap.isFinished() && Hosts.isCoordinator()) {
 
+		      List<VmInstance> instList = VmInstances.list( VmState.RUNNING );
+		      
+		      List<String> instIdList = Lists.newArrayList();
+		      
+		      for (final VmInstance inst : instList) {
+		        instIdList.add(inst.getInstanceId());
+		      }
+		      Iterable<List<String>> processInts = Iterables.paddedPartition(instIdList, SENSOR_QUERY_BATCH_SIZE);
+		      
+
 		      for (final ServiceConfiguration ccConfig : Topology
 			      .enabledServices(ClusterController.class)) {
+			  for(List<String> instIds : processInts) {
 
+			  ArrayList<String> instanceIds = Lists.newArrayList(instIds);
+			  Iterables.removeIf(instanceIds, Predicates.isNull());
+			  
 			  AsyncRequests.newRequest(
 				  new DescribeSensorCallback(HISTORY_SIZE,
-					  COLLECTION_INTERVAL_TIME_MS))
+					  COLLECTION_INTERVAL_TIME_MS, instanceIds))
 					  .dispatch(ccConfig);
 			  LOG.debug("DecribeSensorCallback has been successfully executed");
+			  }
 		      }
 		  }
 	      }

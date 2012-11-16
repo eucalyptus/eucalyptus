@@ -215,6 +215,15 @@ public class PropertyDirectory {
     }
   }
 
+  public static Collection<ConfigurableProperty> getPendingPropertyValues( ) {
+    fqLock.readLock().lock();
+    try {
+      return fqPendingPrefixMap.values();
+    } finally {
+      fqLock.readLock().unlock();
+	}
+   }
+
   public static List<ConfigurableProperty> getPendingPropertyEntrySet( String prefix ) {
     fqLock.readLock().lock();
     try {
@@ -276,4 +285,5 @@ public class PropertyDirectory {
     }
     return componentProps;
   }
+
 }
