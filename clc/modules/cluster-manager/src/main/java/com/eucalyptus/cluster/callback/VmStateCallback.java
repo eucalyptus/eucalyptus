@@ -278,6 +278,7 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
         Logs.extreme( ).error( ex, ex );
       }
       try {
+        LOG.debug( "Instance " + runVm.getInstanceId( ) + " " + runVm );
         return VmInstance.RestoreAllocation.INSTANCE.apply( runVm );
       } catch ( Throwable ex ) {
         LOG.error( ex );
