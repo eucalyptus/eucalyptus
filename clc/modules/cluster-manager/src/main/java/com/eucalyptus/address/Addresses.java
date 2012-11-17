@@ -65,6 +65,7 @@ package com.eucalyptus.address;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Address;
 import java.util.List;
 import java.util.NoSuchElementException;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
@@ -75,6 +76,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
@@ -97,6 +99,7 @@ import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
@@ -239,21 +242,23 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
           if ( VmStateSet.RUN.apply( vm ) ) {
-            AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( new UnconditionalCallback( ) {
-              @Override
-              public void fire( ) {
-                try {
-                  Addresses.system( vm );
-                } catch ( final NoSuchElementException ex ) {
-                } finally {
-                  try {
-                    addr.release();
-                  } catch ( Exception e ) {
-                    LOG.error( "Error releasing address after unassign", e );
+            AsyncRequests.dispatchSafely(
+              AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( 
+                new UnconditionalCallback( ) {
+                  @Override
+                  public void fire( ) {
+                    try {
+                      Addresses.system( vm );
+                    } finally {
+                      try {
+                        addr.release();
+                      } catch ( Exception e ) {
+                        LOG.error( "Error releasing address after unassign", e );
+                      }
+                    }
                   }
-                }
-              }
-            } ).dispatch( vm.getPartition( ) );
+              } ), 
+              vm.getPartition( ) );
           }
         } catch ( TerminatedInstanceException ex ) {
         } catch ( NoSuchElementException ex ) {
@@ -271,6 +276,45 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
     if ( event instanceof SystemConfigurationEvent ) {
       Addresses.systemAddressManager = Addresses.getProvider( );
     }
+  }
+
+  public static void updatePublicIpByInstanceId( final String instanceId,
+                                                 final String publicIp ) {
+    Entities.asTransaction( VmInstance.class, new Predicate<String>() {
+      @Override
+      public boolean apply( final String publicAddress ) {
+        final VmInstance vm = VmInstances.lookup( instanceId );
+        vm.updatePublicAddress( publicAddress );
+        return true;
+      }
+    } ).apply( publicIp );
+  }
+  
+  public static void updatePublicIP( final String privateIp,
+                                     final String publicIp ) {
+    updatePublicIPOnMatch( privateIp, null, Functions.constant( publicIp ) );
+  }
+
+  public static void updatePublicIPOnMatch( final String privateIp,
+                                            @Nullable final String expectedPublicIp,
+                                            final Function<? super VmInstance, String> publicIpSupplier
+  ) {
+    Entities.asTransaction( VmInstance.class, new Predicate<Void>() {
+      @Override
+      public boolean apply( @Nullable final Void nothing ) {
+        try {
+          final VmInstance vm = VmInstances.lookupByPrivateIp( privateIp );
+          if ( expectedPublicIp == null || expectedPublicIp.equals( vm.getPublicAddress() ) ) {
+            vm.updatePublicAddress( publicIpSupplier.apply( vm ) );
+          }
+        } catch ( NoSuchElementException e ) {
+          LOG.debug( "Instance not found for private IP " + privateIp );
+        } catch ( Exception t ) {
+          LOG.error( t, t );
+        }
+        return true;
+      }
+    } ).apply( null );
   }
 
   public static class AddressAvailabilityEventListener implements EventListener<ClockTick> {

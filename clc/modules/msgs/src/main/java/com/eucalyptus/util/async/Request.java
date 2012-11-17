@@ -68,25 +68,26 @@ import com.eucalyptus.util.Callback;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public interface Request<Q extends BaseMessage, R extends BaseMessage> {
-  public abstract CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
+
+  CheckedListenableFuture<R> dispatch( ServiceConfiguration serviceEndpoint );
   
-  public abstract R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
+  R sendSync( ServiceConfiguration endpoint ) throws ExecutionException, InterruptedException;
   
-  public abstract Request<Q, R> then( UnconditionalCallback callback );
+  Request<Q, R> then( UnconditionalCallback<? super R> callback );
   
-  public abstract Request<Q, R> then( Callback.Completion callback );
+  Request<Q, R> then( Callback.Completion<? super R> callback );
   
-  public abstract Request<Q, R> then( Callback.Failure<R> callback );
+  Request<Q, R> then( Callback.Failure<? super R> callback );
   
-  public abstract Request<Q, R> then( Callback.Success<R> callback );
+  Request<Q, R> then( Callback.Success<? super R> callback );
   
-  public abstract Callback.TwiceChecked<Q, R> getCallback( );
+  Callback.TwiceChecked<Q, R> getCallback( );
   
-  public abstract CheckedListenableFuture<R> getResponse( );
+  CheckedListenableFuture<R> getResponse( );
   
-  public abstract Q getRequest( );
+  Q getRequest( );
   
   @Deprecated
-  public abstract CheckedListenableFuture<R> dispatch( String cluster );
+  CheckedListenableFuture<R> dispatch( String cluster );
   
 }

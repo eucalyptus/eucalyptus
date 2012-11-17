@@ -394,14 +394,14 @@ public class VmInstances {
             } else {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "USER_ADDRESS", address.toString( ) ).debug( );
             }
-            AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+            AsyncRequests.dispatchSafely( AsyncRequests.newRequest( address.unassign( ).getCallback( ) ), vm.getPartition( ) );
           }
         } catch ( final NoSuchElementException e ) {
           //PENDING->SHUTTINGDOWN might happen before address info reported in describe instances by CC, need to try finding address
           if ( VmState.PENDING.equals( vmLastState ) ) {
             for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
               if ( addr.getInstanceId( ).equals( vm.getInstanceId( ) ) ) {
-                AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+                AsyncRequests.dispatchSafely( AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ), vm.getPartition( ) );
                 break;
               }
             }
