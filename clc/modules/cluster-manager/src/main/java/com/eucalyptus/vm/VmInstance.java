@@ -918,7 +918,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private PrivateNetworkIndex networkIndex;
     private Boolean             usePrivateAddressing;
     private OwnerFullName       owner;
-    private Date                expiration;
+    private Date                expiration = new Date( 32503708800000l ); // 3000
     
     public Builder owner( final OwnerFullName owner ) {
       this.owner = owner;
@@ -926,7 +926,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
 
     public Builder expiresOn( final Date expirationTime ) {
-      this.expiration = expirationTime;
+      if ( expirationTime != null ) {
+        this.expiration = expirationTime;
+      }
       return this;
     }
     
