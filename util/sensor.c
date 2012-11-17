@@ -355,15 +355,19 @@ static int sensor_expire_cache_entries (void)
 
     for (int r = 0; r < sensor_state->max_resources; r++) {
 	sensorResource *sr = sensor_state->resources + r;
+
 	if (is_empty_sr(sr))
 	    continue;
+
 	if (! sr->timestamp) {
 	    logprintfl(EUCATRACE, "resource %s does not yet have an update timestamp, skipping...\n", sr->resourceName);
 	    continue;
 	}
 	time_t timestamp_age = t - sr->timestamp;
 	time_t cache_timeout = sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;
+
 	logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %ds), age %ds\n", sr->resourceName, sr->timestamp, sensor_state->interval_polled, CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL, timestamp_age);
+
 	if (timestamp_age > cache_timeout) {
 	    logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %d seconds, timeout is %d seconds\n", sr->resourceName, timestamp_age, cache_timeout);
 	    sr->resourceName[0] = '\0'; // marks the slot as empty
@@ -1344,7 +1348,27 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
     if (head == NULL) {
       // OK, can't find this thing anywhere.
       logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated)\n", name);
-      // TODO3.2: decide what to do when some metrics for an instance aren't available
+      // TODO3.2: decide what to do when some metrics for an instance
+      // aren't available
+      //
+      // On possibility is that the CLC isn't actively polling us, which
+      // means we've not cleaned up the sensor cache recently...and
+      // stale/terminated resources have accumulated in it. So force a
+      // cache-expiration run.
+      sem_p(state_sem); // Must set semaphore for sensor_expire_cache_entries() call.
+      time_t t = time(NULL);
+      time_t this_interval = t - sensor_state->last_polled;
+      if (this_interval > 5) {
+	  // Only do this if at least the minimum interval has
+	  // passed--prevents trying to expire the cache several times
+	  // in one polling cycle when we get clumped requests.
+	  int num_expired = sensor_expire_cache_entries ();
+	  if (num_expired) {
+	      logprintfl(EUCAINFO, "%d resource entries expired from sensor cache\n", num_expired);
+	  }
+      }
+      sem_v(state_sem);
+
     }
   }
   getstat_free (stats);
