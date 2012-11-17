@@ -260,7 +260,7 @@ public class AddressManager {
     } else {
       try {
         final VmInstance vm = VmInstances.lookup( vmId );
-        final UnconditionalCallback<?> systemAddressAssignmentCallback = new UnconditionalCallback( ) {
+        final UnconditionalCallback<BaseMessage> systemAddressAssignmentCallback = new UnconditionalCallback<BaseMessage>( ) {
           @Override
           public void fire( ) {
             try {
