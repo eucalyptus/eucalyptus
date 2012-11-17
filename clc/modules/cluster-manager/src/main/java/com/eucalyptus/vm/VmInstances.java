@@ -248,6 +248,12 @@ public class VmInstances {
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
                       initial = "30" )
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
+  @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
+                      initial = "40" )
+  public static Integer   VM_STATE_SETTLE_TIME          = 40;
+  @ConfigurableField( description = "Amount of time (in seconds) since completion of the creating run instance operation that the new instance is treated as unreported if not... reported.",
+                      initial = "300" )
+  public static Integer   VM_INITIAL_REPORT_TIMEOUT     = 300;
   
   public static class SubdomainListener implements PropertyChangeListener {
     @Override
@@ -803,5 +809,6 @@ public class VmInstances {
       }
     }
   }
+
 
 }
