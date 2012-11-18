@@ -1347,7 +1347,7 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
     }
     if (head == NULL) {
       // OK, can't find this thing anywhere.
-      logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated)\n", name);
+      logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated--the instance should soon expire from the cache)\n", name);
       // TODO3.2: decide what to do when some metrics for an instance
       // aren't available
       //

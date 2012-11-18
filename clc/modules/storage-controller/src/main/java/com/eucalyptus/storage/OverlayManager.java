@@ -1486,7 +1486,8 @@ public class OverlayManager implements LogicalStorageManager {
 			} catch(EucalyptusCloudException ex) {
 				String error = "Unable to run command: " + ex.getMessage();
 				volumeManager.abort();
-				LOG.error(error);
+				LOG.debug(error);
+				LOG.error(ex, ex);
 				throw new EucalyptusCloudException(error);
 			}
 		}
