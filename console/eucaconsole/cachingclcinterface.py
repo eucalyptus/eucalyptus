@@ -334,7 +334,7 @@ class CachingClcInterface(ClcInterface):
     # returns True if successful
     def associate_address(self, publicip, instanceid, callback):
         self.addresses.expireCache()
-        Threads.instance().runThread(self.__release_address_cb__,
+        Threads.instance().runThread(self.__associate_address_cb__,
                             ({'publicip':publicip, 'instanceid':instanceid}, callback))
 
     def __associate_address_cb__(self, kwargs, callback):
