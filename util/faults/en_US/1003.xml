@@ -21,7 +21,7 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1003"
-    message="Runniing very low on disk space.">
+    message="Running very low on disk space.">
 
     <condition
       message="Running very low on disk space."/>
@@ -37,7 +37,7 @@
 
     <resolution>
       <message>
-        1) Delete un-needed files on partition that hosts ${file}.
+        1) Delete unnecessary files on partition that hosts ${file}
         2) Allocate more disk space on the partition that hosts ${file}
         3) Install more storage and allocate it to the partition that hosts ${file} 
       </message>
