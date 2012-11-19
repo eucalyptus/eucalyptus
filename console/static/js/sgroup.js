@@ -896,6 +896,8 @@
       thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
       thisObj.addDialog.find("#sgroup-name-error").html("");
       thisObj.addDialog.find("#sgroup-description-error").html("");
+      thisObj.addDialog.find('#sgroup-ports-error').html("");
+      thisObj.addDialog.find('#allow-ip-error').html("");
 
       group_ids = [];
       var results = describe('sgroup');
@@ -932,6 +934,8 @@
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
       thisObj.editDialog.find('#sgroup-more-rules').css('display','none')
+      thisObj.editDialog.find('#sgroup-ports-error').html("");
+      thisObj.editDialog.find('#allow-ip-error').html("");
       thisObj._refreshRulesList(thisObj.editDialog);
       // set autocomplete based on list containing groups other than current group
       group_ids = [];
