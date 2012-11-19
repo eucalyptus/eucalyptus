@@ -24,7 +24,7 @@
     message="Mismatched cryptographical keys.">
 
     <condition
-      message="Key that an incoming message was signed with differs from key on disk."/>
+      message="An incoming message was signed with a key that differs from key on disk."/>
 
     <cause
       message="Keys are not synchronized between communicating components."/>

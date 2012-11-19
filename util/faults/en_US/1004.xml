@@ -24,10 +24,10 @@
     message="Java is running very low on heap space memory.">
 
     <condition
-      message="Running very low on heap space memory in java."/>
+      message="Running very low on heap space memory in Java."/>
 
     <cause
-      message="Garbage collection is not able to reclaim enough memory in java."/>
+      message="Java garbage collection is not able to reclaim enough memory."/>
 
     <initiator
       message="${component}"/>
@@ -37,17 +37,13 @@
 
     <resolution>
       <message>
-        1) In eucalyptus.conf, locate the CLOUD_OPTS variable.  
-        2) Check to see if -Xmx=[value] is included in the CLOUD_OPTS value.
-        3) If -Xmx value is not set, set it to a relatively large value.  
-           Default values are either 1GB or 1/4 of the physical memory, 
-           whichever is smaller.  Set it to at least that value.  (Value can
-           be in bytes, or can be something like '64M' or '1G'.
-        4) If -Xmx is already set, make the value larger.
-        5) Restart the cloud application.
-        6) If after setting -Xmx to the maximum allowable value, this condition
-           continues, it may be necessary to add more physical memory to the
-           machine.
+        1) Ensure that the CLOUD_OPTS variable set in eucalyptus.conf includes 
+           a value for -Xmx. Set or increase this value as necessary: by 
+           default, it should be at least 1GB or 1/4 of the physical memory, 
+           whichever is smaller. This value can be expressed in bytes, or as '1G'.
+        2) Restart the cloud application.
+        3) If this condition continues despite a high value for -Xmx, it may be 
+           necessary to add more physical memory to the machine.
       </message>
     </resolution>
   </fault>
