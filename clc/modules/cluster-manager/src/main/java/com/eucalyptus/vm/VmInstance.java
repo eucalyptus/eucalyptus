@@ -256,7 +256,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     TERM( VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     NOT_RUNNING( VmState.STOPPING, VmState.STOPPED, VmState.SHUTTING_DOWN, VmState.TERMINATED ),
     DONE( VmState.TERMINATED, VmState.BURIED );
-    
+
     private Set<VmState> states;
     
     VmStateSet( final VmState... states ) {
@@ -528,9 +528,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
           vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
+          if ( addr.isPending() ) try {
+            addr.clearPending();
+          } catch ( Exception e ) {
+          }
           addr.assign( vmInst ).clearPending();
-        } else {
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress( ) );
+        } else { // the public address used by the instance is not available
+          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress() );
         }
       } catch ( NoSuchElementException e ) { // Address disabled
         try {
@@ -555,7 +559,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         Logs.extreme( ).error( ex2, ex2 );
       }
     }
-    
+
     private static byte[] restoreUserData( final VmInfo input ) {
       byte[] userData;
       try {
