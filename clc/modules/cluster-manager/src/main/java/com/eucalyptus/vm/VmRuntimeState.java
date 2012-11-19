@@ -193,7 +193,9 @@ public class VmRuntimeState {
     if ( VmStateSet.RUN.contains( oldState )
          && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
-      action = this.cleanUpRunnable( );
+      action = VmState.SHUTTING_DOWN.equals( newState ) ?
+          this.tryCleanUpRunnable() : // try cleanup now, will try again when moving to final state
+          this.cleanUpRunnable( );
     } else if ( VmState.PENDING.equals( oldState )
                 && VmState.RUNNING.equals( newState ) ) {
       this.getVmInstance( ).setState( newState );
@@ -296,18 +298,39 @@ public class VmRuntimeState {
       }
     }
   }
-  
+
+  private Callable<Boolean> tryCleanUpRunnable( ) {
+    return this.cleanUpRunnable( null, new Predicate<VmInstance>(){
+      @Override
+      public boolean apply( final VmInstance vmInstance ) {
+        VmInstances.tryCleanUp( vmInstance );
+        return true;
+      }
+    } );
+  }
+
   private Callable<Boolean> cleanUpRunnable( ) {
     return this.cleanUpRunnable( null );
   }
-  
-  private Callable<Boolean> cleanUpRunnable( final String reason ) {
+
+  private Callable<Boolean> cleanUpRunnable( @Nullable final String reason ) {
+    return this.cleanUpRunnable( reason, new Predicate<VmInstance>(){
+      @Override
+      public boolean apply( final VmInstance vmInstance ) {
+        VmInstances.cleanUp( vmInstance );
+        return true;
+      }
+    } );
+  }
+
+  private Callable<Boolean> cleanUpRunnable( @Nullable final String reason,
+                                             final Predicate<VmInstance> cleaner ) {
     Logs.extreme( ).info( "Preparing to clean-up instance: " + this.getVmInstance( ).getInstanceId( ),
       Exceptions.filterStackTrace( new RuntimeException( ) ) );
     return new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {
-        VmInstances.cleanUp( VmRuntimeState.this.getVmInstance( ) );
+        cleaner.apply( VmRuntimeState.this.getVmInstance( ) );
         if ( ( reason != null ) && !VmRuntimeState.this.reasonDetails.contains( reason ) ) {
           VmRuntimeState.this.addReasonDetail( reason );
         }
