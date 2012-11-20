@@ -31,7 +31,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
 
     parser = OptionParser(usage='Usage: %prog -t target_language [-t target ..]')
-    parser.add_option('-t', '--target', help='Target language', action='append', default=[], dest='target')
+    parser.add_option('-t', '--target', help='Target language (e.g., ko_KR)', action='append', default=[], dest='target')
 
     (options, args) = parser.parse_args()
     if not options.target or len(options.target) <= 0:
