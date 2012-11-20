@@ -37,6 +37,7 @@
       this.baseTable = $sgroupTable;
       this.tableWrapper = $sgroupTable.eucatable({
         id : 'sgroups', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeSecurityGroups",
           "fnServerData": function (sSource, aoData, fnCallback) {

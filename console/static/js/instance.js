@@ -43,6 +43,7 @@
       var $instHelp = $wrapper.children().last();
       thisObj.tableWrapper = $instTable.eucatable({
         id : 'instances', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeInstances",
           "fnServerData": function (sSource, aoData, fnCallback) {

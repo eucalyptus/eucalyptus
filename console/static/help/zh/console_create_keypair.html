@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create a Key Pair"/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="create_keypairs_ui_help"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create a Key Pair</title>
+</head>
+<body id="create_keypairs_ui_help" class="help-page-body">
+
+
+	<h1 class="title topictitle1">创建密钥对</h1>
+
+	<div class="body taskbody">
+		<div class="section context" id="create_keypairs_ui_help__create_keypairs_ui_help_context">
+			<p class="p">Eucalyptus 使用 cryptographic 密钥对来验证对虚拟机的访问. 在创建发布虚拟机实例之前,
+				你必须要创建一个密钥对.创建密钥对的时候会生成两种钥:公钥 (保存在Eucalyptus系统) 和 对应的密钥 (以字符串的形式输出给用户). 
+				如同下面的例子,你需要把它保存到文件并设置合适的访问权限(使用chmod命令).</p>
+
+			<p class="p">在创建一个虚拟机实例的时候, 公钥会被注入到虚拟机实例. 之后,当用户用ssh尝试访问虚拟机实例的时候，
+				公钥会被使用来验证你的密钥.当公钥被删除后,密钥也会失效. </p>
+
+		</div>
+
+	</div>
+
+	<div class="topic task nested1" id="create_keypairs_ui_help_steps">
+		<h2 class="title topictitle2">在控制台创建密钥对</h2>
+
+		
+		<div class="body taskbody"><p class="shortdesc"/>
+
+			<div class="section context"/>
+
+			<ol class="ol steps" id="create_keypairs_ui_help_steps__d13e33"><li class="li step">
+					<span class="ph cmd">从主仪表盘界面, 在 <span class="ph uicontrol">网络和安全</span> 部分，点击 <span class="ph uicontrol">密钥对</span>
+						连接, 或者从顶层管理菜单导航到网络和安全子菜单，在下拉菜单中会显示<span class="ph uicontrol">管理密钥对</span> .</span>
+				</li>
+<li class="li step">
+					<span class="ph cmd">在 <span class="ph uicontrol">管理密钥对</span> 界面, 点击
+							<span class="ph uicontrol">创建新密钥对</span> 连接. 会弹出 <span class="ph uicontrol">创建新密钥对</span> 对话框.</span>
+				</li>
+<li class="li step">
+					<span class="ph cmd">在 <span class="ph uicontrol">名字</span> 文本框中输入密钥对的名字.</span>
+				</li>
+<li class="li step">
+					<span class="ph cmd"> 点击 <span class="ph uicontrol">创建和下载</span> 按钮. 密钥对的密钥部分会自动下载并保存到
+						你的浏览器的缺省下载目录. </span>
+					 
+						<div class="note note"><span class="notetitle">提示:</span> 保存你的密钥对文件到安全的地方,如果你丢失密钥对文件，你将服务访问你创建的虚拟机实例.</div>
+
+					
+				</li>
+<li class="li step">
+					<span class="ph cmd">在本地目录，改变密钥文件的访问权限. 例如，在linux或者Mac OS X系统:</span>
+					 
+						<pre class="pre codeblock">chmod 0600 &lt;keypair_name&gt;.private</pre>
+
+					
+				</li>
+</ol>
+
+		</div>
+
+	</div>
+
+
+</body>
+</html>

@@ -69,7 +69,7 @@ use Getopt::Std;
 # Two utility functions cribbed from getstats.pl
 sub get_ts {
   my ($s, $usec) = gettimeofday();
-  return ($s * 1000) + $usec;
+  return ($s * 1000) + int ($usec / 1000);
 }
 
 sub print_stat {
