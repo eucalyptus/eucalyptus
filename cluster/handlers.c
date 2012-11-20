@@ -2560,7 +2560,11 @@ int doRunInstances(ncMetadata *ccMeta, char *amiId, char *kernelId, char *ramdis
   logprintfl(EUCADEBUG,"done.\n");
 
   shawn();
-
+  
+  if (runCount < 1) {
+    error++;
+    logprintfl(EUCAERROR, "unable to run input instance\n");
+  }
   if (error) {
     return(1);
   }
