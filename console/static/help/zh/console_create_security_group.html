@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create a Security Group"/>
+<meta name="abstract" content="Eucalyptus enables you to control access to your cloud using security groups. A security group contains a group of rules that control inbound traffic to instances in the group for the specified protocols and ports."/>
+<meta name="description" content="Eucalyptus enables you to control access to your cloud using security groups. A security group contains a group of rules that control inbound traffic to instances in the group for the specified protocols and ports."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="create_sgroup_ui_help_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create a Security Group</title>
+</head>
+<body id="create_sgroup_ui_help_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">创建安全组</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Eucalyptus 使用安全组来控制对云的网络访问.一个安全组包含一组规则，在指定的网络协议和端口，控制进入虚拟机的网络数据包.</p>
+</div>
+
+    <div class="topic task nested1" id="create_sgroup_ui_help_steps">
+        <h2 class="title topictitle2">在控制台创建安全组</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> 在<span class="ph uicontrol">名字</span> 文本框输入安全组的名字. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在 <span class="ph uicontrol">描述</span> 文本框输入安全组的描述信息.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">你可以选择性的创建一条或者多条规则, 每条规则授权对一个或者一组端口和协议的入栈访问.</span>
+                    <ol type="a" class="ol substeps">
+                        <li class="li substep">
+                            <span class="ph cmd"> 在 <span class="ph uicontrol">协议</span> 下拉列表中选择协议. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 在 <span class="ph uicontrol">端口范围</span> 文本框输入端口段. </span>
+                        </li>
+
+                        <li class="li substep">
+
+                            <span class="ph cmd"> 选择进入流量控制类型: </span>
+                             
+                                <p class="p">如果想通过源IP地址设置控制, 选择
+                                     <span class="ph uicontrol">IP 地址</span> 单选按钮,在文本框输入CIDR段.</p>
+
+                                <div class="note note"><span class="notetitle">提示:</span> 有关 CIDR 的解释, 请参考 <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR
+                                        notation Wikipedia 文章</a>.</div>
+
+                                <p class="p">如果想通过安全组设置控制, 选择 <span class="ph uicontrol">其它安全组</span> 单选按钮，在文本框输入安全组名字.</p>
+
+                                <div class="note note"><span class="notetitle">提示:</span> 
+                                    使用"userid/groupname"格式，可以指定其它用户的安全组.
+                                </div>
+
+                                
+                            
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd">点击 <span class="ph uicontrol">创建其它规则</span> 按钮建立更多规则.</span>
+                        </li>
+
+                    </ol>
+
+                </li>
+<li class="li step">
+                    <span class="ph cmd">点击 <span class="ph uicontrol">创建安全组</span> 按钮.</span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

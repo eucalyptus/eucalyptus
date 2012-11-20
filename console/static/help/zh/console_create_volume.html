@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create a Volume"/>
+<meta name="abstract" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive."/>
+<meta name="description" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="create_volume_ui_help_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create a Volume</title>
+</head>
+<body id="create_volume_ui_help_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">创建存储卷</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Eucalyptus 提供持久块存储，你可以为正在运行的虚拟机添加持久设备.
+        Eucalyptus 块存储(EBS)卷的持久性不依赖于虚拟机的生存周期. 当你把块存储卷分配给一个虚拟机实例后,你可以像其它物理块存储设备一样使用它. </p>
+</div>
+
+    <div class="topic task nested1" id="create_volume_ui_help_steps">
+        <h2 class="title topictitle2">在控制台创建存储卷</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">在<span class="ph uicontrol">管理存储卷</span> 页面的顶部,点击 <span class="ph uicontrol">创建存储卷</span> 连接
+                            .<span class="ph uicontrol">创建存储卷</span> 对话框会弹出.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">如果你想从现有的快照创建存储卷, 从<span class="ph uicontrol">从快照创建?</span> 下拉列表中选择一个快照. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在 <span class="ph uicontrol">存储卷大小
+                            (GB)</span> 文本框输入大小. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 如果你是从现有的快照创建存储卷, 你不能输入数字不能小于快照的大小.</div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在 <span class="ph uicontrol">可用区域</span>下拉列表中选择一个区域. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 你只能分配一个和虚拟机实例在同一个可用区域的存储卷给虚拟机实例.</div>
+                            
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd">点击 <span class="ph uicontrol">创建存储卷</span> 按钮.</span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>
