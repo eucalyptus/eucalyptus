@@ -46,6 +46,10 @@
     refreshCallback : null,
     _init : function() {
       var thisObj = this; // 
+      if(thisObj.options['hidden']){
+        return;
+      }
+
       // add draw call back
       $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 

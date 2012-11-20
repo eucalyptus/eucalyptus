@@ -253,6 +253,18 @@
       });
       thisObj._note_divs = [];
       this.element.find('.dialog-error').children().detach();
+
+      if($('html body').find(DOM_BINDING['hidden']).children() && $('html body').find(DOM_BINDING['hidden']).children().length > 0){
+        $('html body').find(DOM_BINDING['hidden']).children().detach();/* if the page A references page B's function, we should detach them from hidden DOM */
+/*        var hash = location.hash;
+        if (hash)
+          hash = hash.replace(/^#/, '');
+        if (hash !== ''){
+          var $container = $('html body').find(DOM_BINDING['main']);
+          $container.maincontainer("clearSelected");
+          $container.maincontainer("changeSelected", null, {selected:hash});
+        }*/
+      }
     },
 
     hideButton : function(buttonDomId, buttonId) {

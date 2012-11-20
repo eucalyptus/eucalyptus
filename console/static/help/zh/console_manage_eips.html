@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Manage Elastic IP Addresses"/>
+<meta name="abstract" content="Your Eucalyptus cloud can offer elastic IP addresses that you can associate with your running instances. This screen allows you to view a list of your available elastic IP addresses, allocate new elastic IP addresses, associate and disassociate elastic IP addresses with running instances, and release elastic IP addresses. You can page through the list of elastic IP addresses by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="description" content="Your Eucalyptus cloud can offer elastic IP addresses that you can associate with your running instances. This screen allows you to view a list of your available elastic IP addresses, allocate new elastic IP addresses, associate and disassociate elastic IP addresses with running instances, and release elastic IP addresses. You can page through the list of elastic IP addresses by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="manage_eip_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Manage Elastic IP Addresses</title>
+</head>
+<body id="manage_eip_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">管理弹性IP地址</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Eucalyptus 云平台提供弹性IP,你可以为一个正在运行的虚拟机实例分配弹性IP地址. 
+    	  在本页面你可以查询你的可用弹性IP列表,申请新的弹性IP,为运行的虚拟机实例分配和释放弹性IP，取消你申请的弹性IP. </p>
+</div>
+
+    <div class="topic task nested1" id="manage_eip_ui_sorting_steps">
+        <h2 class="title topictitle2">IP 地址列表排序</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">选择一列，通过点击列头你可以对IP地址列表按升序或者降序进行排列.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_searching_steps">
+        <h2 class="title topictitle2">搜索IP地址</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">在 <span class="ph uicontrol">搜索</span> 文本框输入搜索内容,你可以对IP地址列表进行过滤 </span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_allocate_steps">
+        <h2 class="title topictitle2">申请IP地址</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">点击 <span class="ph uicontrol">申请IP地址</span> 按钮. <span class="ph uicontrol">申请IP地址对话框</span> 会弹出.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_attach_steps">
+        <h2 class="title topictitle2">为虚拟机实例分配IP</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">
+                       在 <span class="ph uicontrol">管理IP地址</span> 窗口选中一个IP地址.
+                    </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 
+                        点击页面顶部的 <span class="ph uicontrol">更多操作</span> 连接, 在菜单中选择 <span class="ph uicontrol">分配给虚拟机</span> .
+                    </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 
+                            你可以右击没分配的IP,在弹出菜档选择 <span class="ph uicontrol">分配给虚拟机</span>.
+                        </div>
+
+                    
+                     
+                        <span class="ph uicontrol">分配IP地址</span> 对话框会弹出.
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_eip_ui_detach_steps">
+        <h2 class="title topictitle2">从虚拟机实例释放IP地址</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">你可以右击已经分配的IP地址.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在菜单中选择 <span class="ph uicontrol">从虚拟机实例释放IP</span>
+                        <span class="ph uicontrol">虚拟机实例释放IP地址</span>
+                        对话框会弹出. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 你可以选中已经分配的IP地址
+                        	点击<span class="ph uicontrol">更多操作</span>菜单, 在下列菜单中选择<span class="ph uicontrol">从虚拟机实例释放IP</span> 
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    
+    <div class="topic task nested1" id="manage_eip_ui_release_steps">
+        <h2 class="title topictitle2">取消申请的IP</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">从IP列表中选择一个或者多个已经申请的IP.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 右击并在弹出菜单中选择<span class="ph uicontrol">退回给云</span>
+                         <span class="ph uicontrol">退回给云</span> 对话框会弹出. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 你也可以选中IP地址,在<span class="ph uicontrol">更多操作</span>菜单, 在下列菜单中选择<span class="ph uicontrol">退回给云</span> 
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

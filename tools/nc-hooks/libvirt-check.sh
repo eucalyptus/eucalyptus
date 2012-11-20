@@ -1,11 +1,29 @@
 #!/bin/bash
-# 
+#
 # This hook is executed every time NC is about to perform a
 # request to libvirtd.
 #
 # The hook checks if libvirtd process is running and starts it
-# if it is not. This hook should only be installed on systems 
+# if it is not. This hook should only be installed on systems
 # where libvirtd daemon is not monitored via some other means.
+
+# Copyright 2009-2012 Eucalyptus Systems, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+# Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+# additional information or have any questions.
 
 event=$1
 euca_home=$2

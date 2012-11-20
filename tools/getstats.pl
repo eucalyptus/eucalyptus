@@ -141,7 +141,7 @@ foreach my $dom (@domains) {
 
 sub get_ts {
     my ($s, $usec) = gettimeofday();
-    return ($s * 1000) + $usec;
+    return ($s * 1000) + int ($usec / 1000);
 }
 
 sub print_stat {

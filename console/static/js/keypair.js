@@ -36,6 +36,7 @@
       this.baseTable = $keyTable;
       this.tableWrapper = $keyTable.eucatable({
         id : 'keys', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeKeyPairs",
           "fnServerData": function (sSource, aoData, fnCallback) {
