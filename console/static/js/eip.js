@@ -40,6 +40,7 @@
       this.baseTable = $eipTable;
       this.tableWrapper = $eipTable.eucatable({
         id : 'eips', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeAddresses",

@@ -69,23 +69,15 @@ import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
 import com.eucalyptus.address.Address.Transition;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
-import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
-import edu.ucsb.eucalyptus.msgs.AssignAddressType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -198,9 +190,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   }
   
   /**
-   * @see com.eucalyptus.util.Expendable#duplicateOf(com.eucalyptus.cluster.callback.UnassignAddressCallback)
-   * @param that
-   * @return
+   * @see com.eucalyptus.util.Expendable#duplicateOf
    */
   @Override
   public boolean duplicateOf( UnassignAddressCallback that ) {

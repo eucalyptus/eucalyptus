@@ -268,49 +268,49 @@ function refresh(resource){
 
 function addKeypair(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).keypair();
+  $('html body').find(DOM_BINDING['hidden']).keypair({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair',callback);
 }
 
 function addGroup(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).sgroup();
+  $('html body').find(DOM_BINDING['hidden']).sgroup({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup',callback);
 }
 
 function addSnapshot(volume){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).snapshot();
+  $('html body').find(DOM_BINDING['hidden']).snapshot({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).snapshot('dialogAddSnapshot', volume);
 }
 
 function addVolume(snapshot){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAddVolume', snapshot);
 }
 
 function attachVolume(volume, instance){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAttachVolume', volume, instance);
 }
 
 function associateIp(instance) {
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogAssociateIp', null, instance);
 }
 
 function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
 }
 
 function allocateIP() {
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip();
+  $('html body').find(DOM_BINDING['hidden']).eip({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('createAction');
 }
 

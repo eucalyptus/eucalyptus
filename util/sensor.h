@@ -45,6 +45,10 @@
 #define MAX_COLLECTION_INTERVAL_MS 86400000L // above 24 hours is too infrequent
 #define MAX_SENSOR_RESOURCES_HARD  10000000L // 10 mil resources max, for sanity checking
 
+// Sensor resources that have not been updated in this multiple of the
+// upstream polling interval will be expired from the cache.
+#define CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL 3
+
 typedef struct {
     long long timestampMs; // in milliseconds
     double value;          // measurement
@@ -86,6 +90,7 @@ typedef struct {
     char resourceUuid [64];                    // e.g. "550e8400-e29b-41d4-a716-446655443210"
     sensorMetric metrics [MAX_SENSOR_METRICS]; // array of values (not pointers, to simplify shared-memory region use)
     int metricsLen;                            // size of the array
+    int timestamp;                             // timestamp for last receipt of metrics
 } sensorResource;
 
 typedef struct {
@@ -94,6 +99,8 @@ typedef struct {
     boolean initialized;
     int max_resources;
     int used_resources;
+    time_t last_polled;
+    time_t interval_polled;
     sensorResource resources[1]; // if struct should be allocated with extra space after it for additional cache elements
 } sensorResourceCache;
 

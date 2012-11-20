@@ -84,6 +84,10 @@ public class ISCSIVolumeInfo extends LVMVolumeInfo {
     @Type(type="org.hibernate.type.StringClobType")
     private String encryptedPassword;
 
+	  public String toString() {
+	    return storeName + "," + tid + "," + lun + "," + storeUser + "," + super.toString();
+	  }
+	  
     public ISCSIVolumeInfo() {}
 
     public ISCSIVolumeInfo(String volumeId) {

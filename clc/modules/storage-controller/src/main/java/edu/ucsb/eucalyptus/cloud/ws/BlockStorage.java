@@ -746,6 +746,7 @@ public class BlockStorage {
 			String deviceName = blockManager.attachVolume(volumeId, nodeIqns);
 			reply.setRemoteDeviceString(deviceName);
 		} catch (EucalyptusCloudException ex) {
+		  LOG.error(ex, ex);
 			throw ex;
 		}
 		return reply;

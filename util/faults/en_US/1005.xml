@@ -24,10 +24,10 @@
     message="Java is running very low on perm-gen memory.">
 
     <condition
-      message="Running very low on perm-gen memory in java."/>
+      message="Running very low on perm-gen memory in Java."/>
 
     <cause
-      message="Too much perm-gen memory (possibly too many class/objects defined) Not enough memory in perm-gen memory."/>
+      message="Too much perm-gen memory in use: too many class/objects may be defined. Not enough memory available in perm-gen memory."/>
 
     <initiator
       message="${component}"/>
@@ -37,15 +37,12 @@
 
     <resolution>
       <message>
-        1) In eucalyptus.conf, locate the CLOUD_OPTS variable.
-        2) Check to see if --XX:MaxPermSize=[value] is included in the CLOUD_OPTS value.
-        3) If --XX:MaxPermSize value is not set, set it to a relatively large value.
-           Default value is 64MB. (Value can be in bytes, or can be something like '64M' or '1G'.
-        4) If --XX:MaxPermSize is already set, make the value larger.
-        5) Restart the cloud application.
-        6) If after setting --XX:MaxPermSize to the maximum allowable value, this condition
-           continues, it may be necessary to add more physical memory to the
-           machine.
+        1) Ensure that the CLOUD_OPTS variable set in eucalyptus.conf includes a value for 
+           --XX:MaxPermSize. Set or increase this value as necessary: by default, it should be at 
+           least 64MB. This value can be expressed in bytes, or as '64M', '1G' etc.
+        2) Restart the cloud application.
+        3) If this condition continues despite a high value for --XX:MaxPermSize, it may be 
+           necessary to add more physical memory to the machine.
       </message>
     </resolution>
   </fault>

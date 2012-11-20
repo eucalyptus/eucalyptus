@@ -103,7 +103,7 @@ static void getstat_free (getstat ** stats)
 {
   if (stats==NULL)
     return;
-  
+
   getstat * gs;
   for (int i = 0; (gs = stats[i]) != NULL; i++) {
     getstat * gs_next;
@@ -127,20 +127,20 @@ static getstat * getstat_find (getstat ** stats, const char * instanceId)
 	break;
     }
   }
-  
+
   return gs;
 }
 
 static int getstat_ninstances (getstat ** stats)
 {
   int ninstances = 0;
-  
+
   if (stats) {
     for (int i = 0; stats[i] != NULL; i++) {
       ninstances++;
     }
   }
-  
+
   return ninstances;
 }
 
@@ -148,14 +148,14 @@ static int getstat_ninstances (getstat ** stats)
 static int getstat_generate (getstat ***pstats)
 {
   assert(sensor_state!=NULL && state_sem!=NULL);
-  
+
   errno = 0;
   if (hyp_sem) sem_p (hyp_sem);
   char * output = NULL;
   if (!strcmp (euca_this_component_name, "cc")) {
     char getstats_cmd[MAX_PATH];
     char *instroot = getenv (EUCALYPTUS_ENV_VAR_NAME);
-    
+
     if (!instroot) {
       snprintf (getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
     } else {
@@ -180,7 +180,7 @@ static int getstat_generate (getstat ***pstats)
     char * str1 = output;
     getstat ** gss = NULL;
     int ninst = 0;
-    
+
     for (int i = 1; ; i++, str1 = NULL) { // iterate over lines in output
       token = strtok_r(str1, "\n", &saveptr1); // token points to a whole line
       if (token == NULL)
@@ -188,13 +188,13 @@ static int getstat_generate (getstat ***pstats)
       getstat * gs = calloc (1, sizeof (getstat)); // new lines means new data record
       if (gs == NULL)
 	goto bail;
-      
+
       char * str2 = token;
       for (int j = 1; ; j++, str2 = NULL) { // iterate over tab-separated entries in the line
 	subtoken = strtok_r(str2, "\t", &saveptr2);
 	if (subtoken == NULL)
 	  break;
-	
+
 	// e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
 	switch (j) {
 	case 1: { // first entry is instance ID
@@ -249,7 +249,7 @@ static int getstat_generate (getstat ***pstats)
     }
     ret = OK;
     goto done;
-    
+
   bail:
     getstat_free(*pstats);
   done:
@@ -257,7 +257,7 @@ static int getstat_generate (getstat ***pstats)
   } else {
     logprintfl (EUCAWARN, "failed to invoke getstats for sensor data (%s)\n", strerror (errno));
   }
-  
+
   return ret;
 }
 
@@ -327,12 +327,54 @@ static void init_state (int resources_size)
     sensor_state->max_resources = resources_size;
     sensor_state->collection_interval_time_ms = 0;
     sensor_state->history_size = 0;
+    sensor_state->last_polled = 0;
+    sensor_state->interval_polled = 0;
     for (int i=0; i<resources_size; i++) {
         sensorResource * sr = sensor_state->resources + i;
         bzero (sr, sizeof (sensorResource));
     }
     sensor_state->initialized = TRUE; // inter-process init done
     logprintfl (EUCADEBUG, "initialized sensor shared memory\n");
+}
+
+__inline__ static boolean is_empty_sr (const sensorResource * sr)
+{
+    return (sr == NULL || sr->resourceName[0] == '\0');
+}
+
+// This must be called from within a state_sem lock--it doesn't do its
+// own locking.
+static int sensor_expire_cache_entries (void)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
+
+    logprintfl(EUCADEBUG, "invoked\n");
+
+    int ret = 0; // returns the number of cache entries expired.
+    time_t t = time(NULL);
+
+    for (int r = 0; r < sensor_state->max_resources; r++) {
+	sensorResource *sr = sensor_state->resources + r;
+
+	if (is_empty_sr(sr))
+	    continue;
+
+	if (! sr->timestamp) {
+	    logprintfl(EUCATRACE, "resource %s does not yet have an update timestamp, skipping...\n", sr->resourceName);
+	    continue;
+	}
+	time_t timestamp_age = t - sr->timestamp;
+	time_t cache_timeout = sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;
+
+	logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %ds), age %ds\n", sr->resourceName, sr->timestamp, sensor_state->interval_polled, CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL, timestamp_age);
+
+	if (timestamp_age > cache_timeout) {
+	    logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %d seconds, timeout is %d seconds\n", sr->resourceName, timestamp_age, cache_timeout);
+	    sr->resourceName[0] = '\0'; // marks the slot as empty
+	    ret++;
+	}
+    }
+    return ret;
 }
 
 // Sensor subsystem initialization routine, which must be called before
@@ -485,11 +527,6 @@ const char * sensor_type2str (int type)
         return sensorCounterTypeName[type];
     else
         return "[invalid]";
-}
-
-__inline__ static boolean is_empty_sr (const sensorResource * sr)
-{
-    return (sr == NULL || sr->resourceName[0] == '\0');
 }
 
 int sensor_res2str (char * buf, int bufLen, sensorResource **srs, int srsLen)
@@ -782,6 +819,8 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
 
     // log_sensor_resources ("sensor_merge_records", srs, srsLen);
 
+    logprintfl(EUCADEBUG, "invoked\n");
+
     int ret = 1;
     sem_p (state_sem);
     for (int r=0; r<srsLen; r++) {
@@ -946,6 +985,8 @@ int sensor_merge_records (const sensorResource * srs[], int srsLen, boolean fail
                 }
             }
         }
+        cache_sr->timestamp = time(NULL);
+        logprintfl(EUCATRACE, "updated %s cache timestamp to %d\n", cache_sr->resourceName, cache_sr->timestamp);
     }
     ret = 0;
 
@@ -1004,8 +1045,8 @@ int sensor_add_value (const char * instanceId,
     sv->available = available;
 
     sensorResource * srs [1] = { &sr };
-    
-    logprintfl (EUCADEBUG, "adding %s:%s:%s:%s %05lld %014lld %s %f\n", 
+
+    logprintfl (EUCADEBUG, "adding %s:%s:%s:%s %05lld %014lld %s %f\n",
 		sr.resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName,
 		sequenceNum, sv->timestampMs, sv->available?"YES":" NO", sv->available?sv->value:-1);
     return sensor_merge_records (srs, 1, TRUE);
@@ -1072,7 +1113,12 @@ int sensor_get_instance_data (const char * instanceId, const char ** sensorIds, 
     int ret = 1;
     if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
 
+    logprintfl (EUCATRACE,
+		"sensor_get_instance_data() called for instance %s\n",
+		instanceId == NULL ? "NULL" : instanceId);
+
     sem_p (state_sem);
+    time_t this_interval = 0; // For determining polling interval.
     int sri = 0; // index into output array sr_out[]
     for (int r=0; r<sensor_state->max_resources; r++) {
         sensorResource * sr = sensor_state->resources + r;
@@ -1088,7 +1134,7 @@ int sensor_get_instance_data (const char * instanceId, const char ** sensorIds, 
             goto bail;
 
         if (sri>=srLen) // out of room in output
-            goto bail;
+            goto bail;  // FIXME: Log something here?
 
         memcpy (sr_out[sri], sr, sizeof (sensorResource)); // TODO: run through the data, do not just copy
         sri++;
@@ -1100,6 +1146,46 @@ int sensor_get_instance_data (const char * instanceId, const char ** sensorIds, 
         ret = 0;
 
  bail:
+
+    if (sensor_state->last_polled) { // Ensure this isn't the first one.
+	time_t t = time(NULL);
+	this_interval = t - sensor_state->last_polled;
+	// The interval since the last poll must exceed a minimum
+	// threshold to be updated. If it does not exceed this
+	// threshold, the most likely reason is that it was one of a
+	// series of "clumped" queries in a single polling cycle.  The
+	// threshold has been set, somewhat arbitrarily (FIXME?), to 5
+	// seconds, or 1 below the current minimum NC_POLLING_FREQUENCY
+	// value (which is a period rather than a frequency).
+	if (this_interval <= 5) {
+	    logprintfl(EUCATRACE, "NOT adjusting measured upstream polling interval from %d to %d (which is below threshold)\n", sensor_state->interval_polled, this_interval);
+	    sensor_state->last_polled = t;
+	} else {
+	    if (this_interval == sensor_state->interval_polled) {
+		logprintfl(EUCATRACE, "maintaining measured upstream polling interval of %d\n", sensor_state->interval_polled);
+	    } else {
+		if (sensor_state->interval_polled) {
+		    logprintfl(EUCATRACE, "adjusting measured upstream polling interval from %d to %d\n", sensor_state->interval_polled, this_interval);
+		} else {
+		    logprintfl(EUCATRACE, "setting measured upstream polling interval to %d\n", this_interval);
+		}
+		sensor_state->interval_polled = this_interval;
+	    }
+	    sensor_state->last_polled = t;
+	}
+    } else {
+	logprintfl(EUCATRACE, "first poll--setting baseline for measuring upstream polling interval\n");
+	sensor_state->last_polled = time(NULL);
+    }
+    if (this_interval > 5) {
+	// Only do this if at least the minimum interval has
+	// passed--prevents trying to expire the cache several times in
+	// one polling cycle when we get clumped requests.
+	int num_expired = sensor_expire_cache_entries ();
+	if (num_expired) {
+	    logprintfl(EUCAINFO, "%d resource entries expired from sensor cache\n", num_expired);
+	}
+    }
 
     sem_v (state_sem);
     return ret;
@@ -1235,7 +1321,7 @@ int sensor_set_volume (const char * instanceId, const char * volumeId, const cha
 int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], const char resourceAliases [][MAX_SENSOR_NAME_LEN], int size)
 {
   if (sensor_state == NULL || sensor_state->initialized == FALSE) return 1;
-  
+
   getstat ** stats = NULL;
   if (getstat_generate (&stats) != OK) {
     logprintfl (EUCAWARN, "failed to invoke getstats for sensor data\n");
@@ -1243,7 +1329,7 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
   } else {
     logprintfl (EUCADEBUG, "polled statistics for %d instance(s)\n", getstat_ninstances(stats));
   }
-  
+
   boolean found_values = FALSE;
   for (int i=0; i<size; i++) {
     char * name = (char *)resourceNames [i];
@@ -1261,14 +1347,34 @@ int sensor_refresh_resources (const char resourceNames [][MAX_SENSOR_NAME_LEN], 
     }
     if (head == NULL) {
       // OK, can't find this thing anywhere.
-      logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated)\n", name);
-      // TODO3.2: decide what to do when some metrics for an instance aren't available
+      logprintfl (EUCADEBUG, "unable to get metrics for instance %s (which is OK if it was terminated--the instance should soon expire from the cache)\n", name);
+      // TODO3.2: decide what to do when some metrics for an instance
+      // aren't available
+      //
+      // On possibility is that the CLC isn't actively polling us, which
+      // means we've not cleaned up the sensor cache recently...and
+      // stale/terminated resources have accumulated in it. So force a
+      // cache-expiration run.
+      sem_p(state_sem); // Must set semaphore for sensor_expire_cache_entries() call.
+      time_t t = time(NULL);
+      time_t this_interval = t - sensor_state->last_polled;
+      if (this_interval > 5) {
+	  // Only do this if at least the minimum interval has
+	  // passed--prevents trying to expire the cache several times
+	  // in one polling cycle when we get clumped requests.
+	  int num_expired = sensor_expire_cache_entries ();
+	  if (num_expired) {
+	      logprintfl(EUCAINFO, "%d resource entries expired from sensor cache\n", num_expired);
+	  }
+      }
+      sem_v(state_sem);
+
     }
   }
   getstat_free (stats);
   if (found_values)
     sn++;
-  
+
   return(0);
 }
 
@@ -1512,9 +1618,9 @@ int main (int argc, char ** argv)
     int thread_par_sum = 0;
     for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
       thread_par [j] = 0; // pass param to thread, if any
-      pthread_create (&threads[j], 
-		      NULL, 
-		      (j%2==0) ? competitor_function_writer : competitor_function_reader, 
+      pthread_create (&threads[j],
+		      NULL,
+		      (j%2==0) ? competitor_function_writer : competitor_function_reader,
 		      (void *)&thread_par[j]);
     }
     for (int j=0; j<COMPETITIVE_PARTICIPANTS; j++) {
@@ -1568,7 +1674,7 @@ static void * competitor_function_writer (void * ptr)
 
     logprintfl (EUCADEBUG, "competitor writer running with param=%lld\n", param);
 
-    // add the "dummy" struct as a second resource                                                                                                                               
+    // add the "dummy" struct as a second resource
     sensorResource ** srs = calloc (sensor_state->max_resources, sizeof (sensorResource *));
     assert (srs);
     for (int i=0; i<sensor_state->max_resources; i++) {

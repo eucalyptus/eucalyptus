@@ -69,12 +69,12 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  * An asynchronous callback which involves remote communication (read: possibly long lasting). Implementors of this interface are guaranteed that:
  * 
  * <ul>
- * <li>{@#initialize(BaseMessage)} will be invoked before communication begins.</li>
- * <li>Should the invokation of {@#initialize(BaseMessage)} terminate prematurely the callback will be disposed of -- preconditions
+ * <li>{@link #initialize(BaseMessage)} will be invoked before communication begins.</li>
+ * <li>Should the invokation of {@link #initialize(BaseMessage)} terminate prematurely the callback will be disposed of -- preconditions
  * caused a failure.</li>
- * <li>Otherwise, either {@#fire(BaseMessage)} <b>OR</b> {@#fireException(Throwable)} will be called exactly
+ * <li>Otherwise, either {@link #fire(BaseMessage)} <b>OR</b> {@link #fireException(Throwable)} will be called exactly
  * one time.</li>
- * <li>The argument to {@#fire(BaseMessage)}/{@#fireException(Throwable)} will be the outcome of the remote
+ * <li>The argument to {@link #fire(BaseMessage)}/{@link #fireException(Throwable)} will be the outcome of the remote
  * operation.</li>
  * </ul>
  * @see Callback
@@ -87,34 +87,27 @@ public interface RemoteCallback<Q extends BaseMessage, R extends BaseMessage> ex
   
   /**
    * Get the request being made by this callback.
-   * 
-   * @return
    */
-  public abstract Q getRequest( );
+  Q getRequest( );
   
   /**
    * Initialize (e.g., check preconditions) before proceeding with the
    * connection and sending of <tt>request</tt>. Guaranteed to be called only
    * once per corresponding dispatch.
-   * 
-   * @param request
-   * @throws Exception
    */
-  public abstract void initialize( Q request ) throws Exception;
+  @Override
+  void initialize( Q request ) throws Exception;
   
   /**
    * The operation completed with a response: <tt>msg</tt>.
-   * 
-   * @param msg
-   * @throws Exception
    */
-  public abstract void fire( R msg );
+  @Override
+  void fire( R msg );
   
   /**
    * The operation completed with an exception.
-   * 
-   * @param t
    */
-  public abstract void fireException( Throwable t );
+  @Override
+  void fireException( Throwable t );
   
 }
