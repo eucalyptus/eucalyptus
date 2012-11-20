@@ -405,7 +405,13 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 del self.user_session.keypair_cache[name]
                 return
 
-            if action == 'RunInstances':
+            if action == 'GetCacheSummary':
+                ret = ""
+                if isinstance(self.user_session.clc, CachingClcInterface):
+                    ret = self.user_session.clc.get_cache_summary()
+                print ret
+                self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
+            elif action == 'RunInstances':
                 user_data_file = []
                 try:
                     user_data_file = self.request.files['user_data_file']
