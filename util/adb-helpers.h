@@ -137,7 +137,7 @@ static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *
 {
     time_t tsu, ts, tsdelta, tsdelta_min;
     struct tm *tmu;
-    
+
     if (!dt || !env) {
       return(0);
     }
@@ -147,7 +147,7 @@ static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *
     tsu = mktime(tmu);
     tsdelta = (tsu - ts) / 3600;
     tsdelta_min = ((tsu - ts) - (tsdelta * 3600)) / 60;
-    
+
     struct tm t = {
         axutil_date_time_get_second(dt, env),
         axutil_date_time_get_minute(dt, env) - tsdelta_min,
@@ -159,7 +159,7 @@ static inline int datetime_to_unix (axutil_date_time_t *dt, const axutil_env_t *
         0,
         0
     };
-    
+
     return (int) mktime(&t);
 }
 
@@ -173,8 +173,11 @@ static inline axutil_date_time_t * unixms_to_datetime (const axutil_env_t * env,
 {
     int msec = (int)(timestampMs % 1000);
     time_t sec = (time_t)(timestampMs / 1000);
-    
+
     struct tm t;
+
+    tzset();
+    sec += timezone;            // seconds west of UTC to account for TZ
     localtime_r (&sec, &t);
     axutil_date_time_t * dt = axutil_date_time_create(env);
     axutil_date_time_set_date_time(dt,
@@ -254,7 +257,7 @@ static inline adb_serviceInfoType_t * copy_service_info_type_to_adb(const axutil
   for (i=0; i<input->urisLen; i++) {
     adb_serviceInfoType_add_uris(sit, env, input->uris[i]);
   }
-  
+
   return (sit);
 }
 
@@ -334,7 +337,7 @@ static inline int copy_sensor_metric_from_adb (sensorMetric * sm, adb_metricsRes
         if (copy_sensor_counter_from_adb (sm->counters + i, counter, env) != 0)
             return 1;
     }
-    
+
     safe_strncpy (sm->metricName, (char *)adb_metricsResourceType_get_metricName(metric, env), sizeof (sm->metricName));
 
     return 0;
@@ -358,17 +361,17 @@ static inline sensorResource * copy_sensor_resource_from_adb (adb_sensorsResourc
             return NULL;
         }
     }
-    
+
     safe_strncpy (sr->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof (sr->resourceName));
     safe_strncpy (sr->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof (sr->resourceType));
     safe_strncpy (sr->resourceUuid, (char *)adb_sensorsResourceType_get_resourceUuid(resource, env), sizeof (sr->resourceUuid));
-    
+
     return sr;
 }
 
 static inline adb_sensorsResourceType_t * copy_sensor_resource_to_adb (const axutil_env_t * env, const sensorResource * sr)
 {
-    adb_sensorsResourceType_t * resource = adb_sensorsResourceType_create(env);    
+    adb_sensorsResourceType_t * resource = adb_sensorsResourceType_create(env);
     adb_sensorsResourceType_set_resourceName (resource, env, sr->resourceName);
     adb_sensorsResourceType_set_resourceType (resource, env, sr->resourceType);
     adb_sensorsResourceType_set_resourceUuid (resource, env, sr->resourceUuid);
