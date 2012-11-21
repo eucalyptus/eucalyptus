@@ -319,7 +319,7 @@ check_eucafault_suppression (const char *fault_id, const char *fault_file)
     if (fault_file == NULL) {
         // Degenerate case.
         return is_suppressed_eucafault (fault_id);
-    } else {
+    } else if (fault_id != NULL){
         if (is_suppressed_eucafault (fault_id)) {
             logprintfl (EUCATRACE, "Detected already-suppressed fault id %s\n", fault_id);
             return TRUE;
@@ -354,8 +354,7 @@ check_eucafault_suppression (const char *fault_id, const char *fault_file)
             return FALSE;
         }
     }
-    logprintfl (EUCATRACE, "returning FALSE for %s, %s\n",
-             fault_id, fault_file);
+    logprintfl (EUCATRACE, "returning FALSE for %s, %s\n", SP(fault_id), SP(fault_file));
     return FALSE;
 }
 
