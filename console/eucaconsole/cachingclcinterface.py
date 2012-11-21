@@ -94,6 +94,17 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.snapshots = Cache(freq)
 
+    def get_cache_summary(self):
+        summary = {'zone':self.zones.isCacheFresh(),
+                   'image':self.images.isCacheFresh(),
+                   'instance':self.instances.isCacheFresh(),
+                   'keypair':self.keypairs.isCacheFresh(),
+                   'sgroup':self.groups.isCacheFresh(),
+                   'volume':self.volumes.isCacheFresh(),
+                   'snapshot':self.snapshots.isCacheFresh(),
+                   'eip':self.addresses.isCacheFresh()}
+        return summary
+
     def __normalize_instances__(self, instances):
         ret = []
         if not(instances):
