@@ -1335,7 +1335,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         a2 = art_alloc (art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
             if (sshkey)
-                safe_strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
+                safe_strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey) );
 
             if (art_add_dep (a2, a) == OK) {
                 a = a2;
