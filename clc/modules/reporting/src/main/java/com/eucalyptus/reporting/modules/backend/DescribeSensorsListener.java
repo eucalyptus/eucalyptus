@@ -27,7 +27,6 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import com.eucalyptus.util.async.AsyncRequests;
@@ -45,7 +44,6 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "reporting", description = "Parameters controlling reporting")
