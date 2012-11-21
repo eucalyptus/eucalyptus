@@ -77,6 +77,8 @@ public class InstanceArtGenerator extends AbstractArtGenerator {
   /* Metric names */
   public static final String METRIC_NET_IN_BYTES   = "NetworkIn";
   public static final String METRIC_NET_OUT_BYTES  = "NetworkOut";
+  public static final String METRIC_NET_EXT_IN_BYTES = "NetworkInExternal";
+  public static final String METRIC_NET_EXT_OUT_BYTES = "NetworkOutExternal";
   public static final String METRIC_DISK_IN_BYTES  = "DiskReadBytes";
   public static final String METRIC_DISK_OUT_BYTES = "DiskWriteBytes";
   public static final String METRIC_DISK_READ_OPS  = "DiskReadOps";
@@ -285,11 +287,11 @@ public class InstanceArtGenerator extends AbstractArtGenerator {
       usage.addNetTotalInBytes( value );
     } else if ( metric.equals( METRIC_NET_OUT_BYTES ) && dim.equals( DIM_TOTAL ) ) {
       usage.addNetTotalOutBytes( value );
-    } else if ( metric.equals( METRIC_NET_IN_BYTES ) && dim.equals( DIM_EXTERNAL ) ) {
+    } else if ( metric.equals( METRIC_NET_EXT_IN_BYTES ) && dim.equals( DIM_DEFAULT ) ) {
       usage.addNetExternalInBytes( value );
-    } else if ( metric.equals( METRIC_NET_OUT_BYTES ) && dim.equals( DIM_EXTERNAL ) ) {
+    } else if ( metric.equals( METRIC_NET_EXT_OUT_BYTES ) && dim.equals( DIM_DEFAULT ) ) {
       usage.addNetExternalOutBytes( value );
-    } else if ( metric.equals( METRIC_DISK_IN_BYTES ) ) {
+    } else if ( metric.equals( METRIC_DISK_IN_BYTES ) ) {  
       usage.addDiskReadBytes( value );
     } else if ( metric.equals( METRIC_DISK_OUT_BYTES ) ) {
       usage.addDiskWriteBytes( value );

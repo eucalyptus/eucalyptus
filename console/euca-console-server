@@ -174,6 +174,11 @@ if __name__ == "__main__":
         eucaconsole.config = ConfigLoader().getParser()
 
     if daemon:
+        # write log using pid in filename. Write new file so in case there is a pid collision over time,
+        # we don't have confusing logs containing 2 different processes output
+        handler = logging.handlers.SysLogHandler(address = '/dev/log')
+        
+        logging.getLogger().addHandler(handler)
         daemonize(start_console)
     else:
         try:

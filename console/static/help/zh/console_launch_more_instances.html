@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Launch More Instances Like This"/>
+<meta name="abstract" content="This dialog box allows you create one or more new instances that have the same characteristics as an instance you've already created."/>
+<meta name="description" content="This dialog box allows you create one or more new instances that have the same characteristics as an instance you've already created."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="launch_instances_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Launch More Instances Like This</title>
+</head>
+<body id="launch_instances_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">发布更多的虚拟机实例</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> 在本对话框,你可以以现有的虚拟机实例为蓝本,创建一个或者多个具有相同特征的新虚拟机实例.</p>
+</div>
+
+    <div class="topic task nested1" id="launch_instances_ui_image_steps">
+        <h2 class="title topictitle2">指定虚拟机实例数目</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">在本版面输入要创建的虚拟机实例数目.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> 在 <span class="ph uicontrol">虚拟机实例数</span> 文本框输入虚拟机实例数目. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 要设置高级选项,点击
+                        <span class="ph uicontrol">选择高级选项</span> 连接. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">发布虚拟机实例</span> 按钮,创建新的虚拟机实例. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    
+    
+    <div class="topic task nested1" id="launch_instances_ui_advanced_steps">
+        <h2 class="title topictitle2">指定高级选项</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">在版面你可以为虚拟机实例指定一些高级选项. 你可以添加用户数据,
+        	  指定内核ID和内存盘ID, 指定私有网络, 和附加磁盘.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> 要定制用户数据,你可以在 <span class="ph uicontrol">用户数据
+                            </span> 文本框输入数据或者在通过
+                            <span class="ph uicontrol">上传文件</span> 连接上传文件.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 要为虚拟机映像指定内核,请在
+                            <span class="ph uicontrol">内核ID</span> 下拉列表中选择. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 要为虚拟机映像指定内存盘,请在
+                            <span class="ph uicontrol">内存盘ID</span> 下拉列表中选择. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 点击 <span class="ph uicontrol">网络</span> 选项框, 你可以为虚拟机实例指定私有IP.
+                    	   私有地址不能直接连到Internet，要连接到Internet,需要通过NAT或者为虚拟机设置弹性IP. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">你可以为虚拟机添加一个或者多个扩展存储设备:</span>
+                    <ol type="a" class="ol substeps" id="launch_instances_ui_advanced_steps__launch_instances_ui_advanced_storage_steps">
+                        <li class="li substep">
+                            <span class="ph cmd"> 在
+                                    <span class="ph uicontrol">存储卷</span> 下拉列表中指定存储设备类型(EBS或者ephemeral). </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> Type the desired device mapping into the
+                                    <span class="ph uicontrol">Map</span> text box (for example, sdc for /dev/sdc). </span><span class="ph cmd"> 在
+                                    <span class="ph uicontrol">映射</span> 文本框输入设备映射名(例如, sdc 对应 /dev/sdc). </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 如果你想从存储快照建立一个存储卷，可以在
+                                the snapshot using the <span class="ph uicontrol">从快照建立</span>
+                                下拉列表中选择一个快照来创建 </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 在
+                                    <span class="ph uicontrol">大小 (GB) </span>文本框，输入存储设备的大小.单位为G </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 选择 <span class="ph uicontrol">在终止后删除</span> 选项
+                                如果你想删除这个存储设备当虚拟机被终止后. </span>
+                        </li>
+
+                        <li class="li substep">
+                            <span class="ph cmd"> 点击 <span class="ph uicontrol">继续添加</span> 按钮 继续为虚拟机添加存储设备 </span>
+                        </li>
+
+                    </ol>
+
+                </li>
+<li class="li step">
+                     <span class="ph cmd"> 点击 <span class="ph uicontrol">发布虚拟机实例</span> 按钮，发布虚拟实例. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

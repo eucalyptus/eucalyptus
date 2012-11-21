@@ -37,7 +37,7 @@
 
     <resolution>
       <message>
-       Start the previously enabled cloud controller (clc) or post a question on https://engage.eucalyptus.com/
+       Start the previously enabled cloud controller (CLC) or post a question on https://engage.eucalyptus.com/
       </message>
     </resolution>
   </fault>

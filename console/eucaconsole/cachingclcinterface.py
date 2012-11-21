@@ -1,5 +1,29 @@
+# Copyright 2012 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 from cache import Cache
-from threading import Thread
 import ConfigParser
 
 from boto.ec2.ec2object import EC2Object
@@ -70,10 +94,21 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.snapshots = Cache(freq)
 
+    def get_cache_summary(self):
+        summary = {'zone':self.zones.isCacheFresh(),
+                   'image':self.images.isCacheFresh(),
+                   'instance':self.instances.isCacheFresh(),
+                   'keypair':self.keypairs.isCacheFresh(),
+                   'sgroup':self.groups.isCacheFresh(),
+                   'volume':self.volumes.isCacheFresh(),
+                   'snapshot':self.snapshots.isCacheFresh(),
+                   'eip':self.addresses.isCacheFresh()}
+        return summary
+
     def __normalize_instances__(self, instances):
         ret = []
         if not(instances):
-            return None
+            return []
         for res in instances:
             if issubclass(res.__class__, EC2Object):
                 for inst in res.instances:
@@ -292,15 +327,8 @@ class CachingClcInterface(ClcInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     # returns password data
-    def get_password_data(self, instance_id, callback):
-        Threads.instance().runThread(self.__get_password_data_cb__, ({'instance_id':instance_id}, callback))
-
-    def __get_password_data_cb__(self, kwargs, callback):
-        try:
-            ret = self.clc.get_password_data(kwargs['instance_id'])
-            Threads.instance().invokeCallback(callback, Response(data=ret))
-        except Exception as ex:
-            Threads.instance().invokeCallback(callback, Response(error=ex))
+    def get_password_data(self, instance_id):
+        return self.clc.get_password_data(instance_id)
 
     def get_all_addresses(self, callback):
         if self.addresses.isCacheStale():
@@ -342,7 +370,7 @@ class CachingClcInterface(ClcInterface):
     # returns True if successful
     def associate_address(self, publicip, instanceid, callback):
         self.addresses.expireCache()
-        Threads.instance().runThread(self.__release_address_cb__,
+        Threads.instance().runThread(self.__associate_address_cb__,
                             ({'publicip':publicip, 'instanceid':instanceid}, callback))
 
     def __associate_address_cb__(self, kwargs, callback):
@@ -404,8 +432,9 @@ class CachingClcInterface(ClcInterface):
     # returns keypair info and key
     def import_key_pair(self, key_name, public_key_material, callback):
         self.keypairs.expireCache()
-        Threads.instance().runThread(self.__delete_key_pair_cb__,
+        Threads.instance().runThread(self.__import_key_pair_cb__,
                             ({'key_name':key_name, 'public_key_material':public_key_material}, callback))
+
     def __import_key_pair_cb__(self, kwargs, callback):
         try:
             ret = self.clc.import_key_pair(kwargs['key_name'], kwargs['public_key_material'])
@@ -650,6 +679,19 @@ class CachingClcInterface(ClcInterface):
     def __reset_snapshot_attribute_cb__(self, kwargs, callback):
         try:
             ret = self.clc.reset_snapshot_attribute(kwargs['snapshot_id'], kwargs['attribute'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # returns True if successful
+    def deregister_image(self, image_id, callback):
+        self.images.expireCache()
+        Threads.instance().runThread(self.__deregister_image_cb__,
+                    ({'image_id':image_id}, callback))
+
+    def __deregister_image_cb__(self, kwargs, callback):
+        try:
+            ret = self.clc.deregister_image(kwargs['image_id'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))

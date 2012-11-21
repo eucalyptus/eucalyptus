@@ -261,7 +261,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      return Entities.persist( ExtantNetwork.create( this, i ) );
+      ExtantNetwork exNet = Entities.persist( ExtantNetwork.create( this, i ) );
+      this.setExtantNetwork( exNet );
+      return this.getExtantNetwork( );
     }
   }
   

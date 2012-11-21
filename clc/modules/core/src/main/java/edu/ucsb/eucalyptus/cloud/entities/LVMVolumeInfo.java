@@ -106,6 +106,10 @@ public class LVMVolumeInfo extends AbstractPersistent {
 	@Column(name = "cleanup")
 	private Boolean cleanup;
 
+	public String toString() {
+	  return volumeId + "," + scName + "," + loDevName + "," + loFileName + "," + pvName + "," + vgName + "," + lvName + "," + size + "," + status + "," + snapshotOf + "," + cleanup;
+	}
+	
 	public LVMVolumeInfo() {
 		super();
 		this.scName = StorageProperties.NAME;

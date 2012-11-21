@@ -478,13 +478,13 @@
                     </div>  
                   
                     <div class="form-row sg-inline-options">
-                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}" value="ip"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-radio" id="sgroup-allow-ip" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}" value="ip"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
                       <a href="#" id='sgroup-ip-check' class="sg-my-ip">{{!>sgroup_dialog_use_my_ip}}</a>
                       <div id="allow-ip-error" class="sg-error-msg"></div>
                     </div>
   
                     <div class="form-row sg-options-row">
-                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}" value="group"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                      <input type="radio" name="allow-radio" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}" value="group"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                     </div>
                   
                     <div class="section-button-bar">
@@ -611,13 +611,13 @@
                     </div>
   
                     <div class="form-row sg-inline-options">
-                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-group" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}" value="ip"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
+                      <span>{{!>sgroup_dialog_add_allow}}</span><input type="radio" name="allow-radio" id="sgroup-allow-ip" checked="yes" title="{{!: sgroup_dialog_add_allow_ip_radio_tip }}" value="ip"/><span>{{!>sgroup_dialog_add_allow_ip}}</span><input type="text" id="allow-ip" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_ip_tip }}"/>
                       <a href="#" id='sgroup-ip-check' class="sg-my-ip">{{!>sgroup_dialog_use_my_ip}}</a>
                       <div id="allow-ip-error" class="sg-error-msg"></div>
                     </div>
   
                     <div class="form-row sg-options-row"> 
-                      <input type="radio" name="allow-group" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}" value="group"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
+                      <input type="radio" name="allow-radio" id="sgroup-allow-group" title="{{!: sgroup_dialog_add_allow_group_radio_tip }}" value="group"/><span>{{!>sgroup_dialog_add_allow_group}}</span><input type="text" id="allow-group" class="medium-textinput" title="{{!: sgroup_dialog_add_allow_group_tip }}"/>
                     </div>
 
                     <div class="section-button-bar">
@@ -924,7 +924,7 @@
           
           <div id="snapshot-delete-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
-              {{!: snapshot_delete_dialog_text }}
+              <div id="snapshot-delete-dialog-text"></div>
               <div class="selected-resources"></div>
             </div>
           </div>
@@ -1012,7 +1012,7 @@
               {{!: eip_allocate_dialog_text }}
               <div class="form-row">
                 <label for="eip-allocate-count" class="required-label mega-long-label">{{!: eip_allocate_dialog_count_label }}</label>
-                <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="3" title="{{!: eip_allocate_dialog_count_tip }}"/>
+                <input type="text" id="eip-allocate-count" class="required short-textinput" maxlength="2" title="{{!: eip_allocate_dialog_count_tip }}"/>
               </div>
               <p class="required-hint">{{!: required_fields }}</p>
             </div>

@@ -1,3 +1,28 @@
+# Copyright 2012 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import boto
 import ConfigParser
 import json
@@ -7,7 +32,6 @@ from boto.ec2.regioninfo import RegionInfo
 import eucaconsole
 from .botojsonencoder import BotoJsonEncoder
 from .clcinterface import ClcInterface
-
 
 # This class provides an implmentation of the clcinterface using boto
 class BotoClcInterface(ClcInterface):
@@ -29,7 +53,7 @@ class BotoClcInterface(ClcInterface):
             pass
         self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2012-03-01'
         self.conn.http_connection_kwargs['timeout'] = 30
 
@@ -82,20 +106,21 @@ class BotoClcInterface(ClcInterface):
                       security_group_ids=None,
                       additional_info=None, instance_profile_name=None,
                       instance_profile_arn=None, tenancy=None):
-        return self.conn.run_instances(image_id, min_count, max_count,
-                      key_name, security_groups,
-                      user_data, addressing_type,
-                      instance_type, placement,
-                      kernel_id, ramdisk_id,
-                      monitoring_enabled, subnet_id,
-                      block_device_map,
-                      disable_api_termination,
-                      instance_initiated_shutdown_behavior,
-                      private_ip_address,
-                      placement_group, client_token,
-                      security_group_ids,
-                      additional_info, instance_profile_name,
-                      instance_profile_arn, tenancy)
+        return self.conn.run_instances(image_id=image_id, min_count=min_count, max_count=max_count,
+                      key_name=key_name, security_groups=security_groups,
+                      user_data=user_data, addressing_type=addressing_type,
+                      instance_type=instance_type, placement=placement,
+                      kernel_id=kernel_id, ramdisk_id=ramdisk_id,
+                      monitoring_enabled=monitoring_enabled, subnet_id=subnet_id,
+                      block_device_map=block_device_map,
+                      disable_api_termination=disable_api_termination,
+                      instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
+                      private_ip_address=private_ip_address,
+                      placement_group=placement_group, client_token=client_token,
+                      security_group_ids=security_group_ids)
+                      # we're not using these, so leave them out so we're compatible with boto 2.2.2
+                      #additional_info, instance_profile_name,
+                      #instance_profile_arn, tenancy)
 
     # returns instance list
     def terminate_instances(self, instance_ids):
@@ -253,6 +278,10 @@ class BotoClcInterface(ClcInterface):
     # returns True if successful
     def reset_snapshot_attribute(self, snapshot_id, attribute):
         return self.conn.reset_snapshot_attribute(snapshot_id, attribute)
+
+    # returs True if successful
+    def deregister_image(self, image_id):
+        return self.conn.deregister_image(image_id)
 
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
 #        if is_windows:

@@ -1,3 +1,28 @@
+# Copyright 2012 Eucalyptus Systems, Inc.
+#
+# Redistribution and use of this software in source and binary forms,
+# with or without modification, are permitted provided that the following
+# conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice,
+#   this list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import base64
 import ConfigParser
 import functools
@@ -6,12 +31,14 @@ import json
 import tornado.web
 import eucaconsole
 import socket
+import sys
+import traceback
 import time
-from threading import Thread
 from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
+from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
 from .botojsonencoder import BotoJsonEncoder
@@ -152,11 +179,15 @@ class ComputeHandler(eucaconsole.BaseHandler):
             imageid = self.get_argument('ImageId')
             attribute = self.get_argument('Attribute')
             return clc.reset_image_attribute(imageid, attribute, callback)
+        elif action == 'DeregisterImage':
+            image_id = self.get_argument('ImageId')
+            return clc.deregister_image(image_id, callback)
         elif action == 'RegisterImage':
             image_location = self.get_argument('ImageLocation', None)
             name = self.get_argument('Name')
             description = self.get_argument('Description', None)
-            description = base64.b64decode(description);
+            if description != None:
+              description = base64.b64decode(description);
             architecture = self.get_argument('Architecture', None)
             kernel_id = self.get_argument('KernelId', None)
             ramdisk_id = self.get_argument('RamdiskId', None)
@@ -202,7 +233,7 @@ class ComputeHandler(eucaconsole.BaseHandler):
             return clc.terminate_instances(instance_ids, callback)
         elif action == 'StopInstances':
             instance_ids = self.get_argument_list('InstanceId')
-            return clc.stop_instances(instance_ids, callback)
+            return clc.stop_instances(instance_ids, False, callback)
         elif action == 'StartInstances':
             instance_ids = self.get_argument_list('InstanceId')
             return clc.start_instances(instance_ids, callback)
@@ -340,19 +371,21 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleGetPassword(self, clc, callback):
         instanceid = self.get_argument('InstanceId')
-        Threads.instance().runThread(self.__get__password_cb__, ({'instance_ids':instance_ids}, callback))
+        Threads.instance().runThread(self.__get_password_cb__, ({'instanceid':instanceid}, callback))
 
     def __get_password_cb__(self, kwargs, callback):
         try:
             passwd_data = self.user_session.clc.get_password_data(kwargs['instanceid'])
+            print "got password data"+passwd_data
             priv_key_file = self.request.files['priv_key']
             user_priv_key = RSA.load_key_string(priv_key_file[0].body)
             string_to_decrypt = base64.b64decode(passwd_data)
             ret = user_priv_key.private_decrypt(string_to_decrypt, RSA.pkcs1_padding)
-            ret = {'instance':instanceid, 'password': ret}
-            Threads.instance().invokeCallback(callback, Response(data=ret))
+            ret = {'instance':kwargs['instanceid'], 'password': ret}
+            Threads.instance().invokeCallback(callback, eucaconsole.cachingclcinterface.Response(data=ret))
         except Exception as ex:
-            Threads.instance().invokeCallback(callback, Response(error=ex))
+            traceback.print_exc(file=sys.stdout)
+            Threads.instance().invokeCallback(callback, eucaconsole.cachingclcinterface.Response(error=ex))
 
     ##
     # This is the main entry point for API calls for EC2 from the browser
@@ -397,7 +430,13 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 del self.user_session.keypair_cache[name]
                 return
 
-            if action == 'RunInstances':
+            if action == 'GetCacheSummary':
+                ret = ""
+                if isinstance(self.user_session.clc, CachingClcInterface):
+                    ret = self.user_session.clc.get_cache_summary()
+                print ret
+                self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
+            elif action == 'RunInstances':
                 user_data_file = []
                 try:
                     user_data_file = self.request.files['user_data_file']

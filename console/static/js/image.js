@@ -32,6 +32,7 @@
       this.baseTable = $imgTable;
       this.tableWrapper = $imgTable.eucatable({
         id : 'images', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": "../ec2?Action=DescribeImages",
           "fnServerData": function (sSource, aoData, fnCallback) {

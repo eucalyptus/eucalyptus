@@ -66,6 +66,7 @@
        percent = Math.max(0, percent);
        thisObj.element.find('#euca-notification-progress').progressbar({value: percent});
        thisObj.element.find('#euca-notification-progress').show();
+       thisObj.element.find('#euca-notification-title').html('');
        if(desc)
          thisObj.element.find('#euca-notification-desc').html(desc);
 

@@ -235,7 +235,9 @@
       this.element.dialog('close');
       // this method should clean-up things
       this.element.find('input').each(function () { 
-        $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+        if ($(this).attr('type') != 'radio') {
+            $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
+        }
       });
       this.element.find('textarea').each(function () { 
         $(this).val(''); // clear all input fields TODO: what if some fields have initialized data?
@@ -251,6 +253,18 @@
       });
       thisObj._note_divs = [];
       this.element.find('.dialog-error').children().detach();
+
+      if($('html body').find(DOM_BINDING['hidden']).children() && $('html body').find(DOM_BINDING['hidden']).children().length > 0){
+        $('html body').find(DOM_BINDING['hidden']).children().detach();/* if the page A references page B's function, we should detach them from hidden DOM */
+/*        var hash = location.hash;
+        if (hash)
+          hash = hash.replace(/^#/, '');
+        if (hash !== ''){
+          var $container = $('html body').find(DOM_BINDING['main']);
+          $container.maincontainer("clearSelected");
+          $container.maincontainer("changeSelected", null, {selected:hash});
+        }*/
+      }
     },
 
     hideButton : function(buttonDomId, buttonId) {

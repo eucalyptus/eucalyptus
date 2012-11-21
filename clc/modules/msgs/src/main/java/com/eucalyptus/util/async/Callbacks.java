@@ -108,10 +108,19 @@ public class Callbacks {
   public static <T> Callback<T> noop( ) {
     return new NoopCallback<T>( );
   }
+
+  public static <R> Callback.Failure<R> noopFailure() {
+    return new NoopFailure<R>();
+  }
   
   private static final class NoopCallback<T> implements Callback<T> {
     @Override
     public final void fire( final T t ) {}
+  }
+
+  private static final class NoopFailure<R> extends Callback.Failure<R> {
+    @Override
+    public void fireException( final Throwable t ) {}
   }
   
   static class BasicCallbackProcessor<R extends BaseMessage> implements Runnable {

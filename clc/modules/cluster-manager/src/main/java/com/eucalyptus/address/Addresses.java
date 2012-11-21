@@ -235,7 +235,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   public static void release( final Address addr ) {
     try {
       final String instanceId = addr.getInstanceId( );
-      if ( addr.isAssigned( ) ) {
+      if ( addr.isReallyAssigned() ) {
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
           if ( VmStateSet.RUN.apply( vm ) ) {

@@ -21,10 +21,10 @@
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
     id="1002"
-    message="ESX(i) host ${hostIp} is not accessible any more">
+    message="ESX(i) host ${hostIp} is no longer accessible">
 
     <condition
-      message="can't issue requests for host ${hostIp}"/>
+      message="Can't issue requests for host ${hostIp}"/>
 
     <cause/> <!-- since 'message' is not set, default value, $unknown, will be used -->
 
@@ -32,14 +32,14 @@
       message="eucalyptus"/>
 
     <location
-      message="requests from ${brokerIp} to endpoint ${endpointIp}"/>
+      message="Requests from ${brokerIp} to endpoint ${endpointIp}"/>
 
     <resolution>
       <message>
         Ensure that:
         - host ${hostIp} is powered on
         - host is accessible from ${brokerIp} on port 443
-        - host credentials match those in Broker's configuration
+        - host credentials match the credentials in Broker's configuration
       </message>
     </resolution>
   </fault>

@@ -62,6 +62,7 @@
 
 include ../Makedefs
 
+EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
 CC += -g
 all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap euca-generate-fault
@@ -90,13 +91,17 @@ euca-generate-fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.
 	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
 test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
 
 ../storage/diskutil.o:
 	make -C ../storage
 
 %.o: %.c %.h
 	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
+
+indent:
+	@indent *.[ch] -nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i4 -ut -ip0 -l200 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -ss -ts4 -il0 -nip
+	@\rm *.*~
 
 clean:
 	rm -rf *~ *.o test test_fault euca-generate-fault test_misc test_wc euca_rootwrap euca_mountwrap test_sensor

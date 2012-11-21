@@ -268,49 +268,49 @@ function refresh(resource){
 
 function addKeypair(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).keypair();
+  $('html body').find(DOM_BINDING['hidden']).keypair({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).keypair('dialogAddKeypair',callback);
 }
 
 function addGroup(callback){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).sgroup();
+  $('html body').find(DOM_BINDING['hidden']).sgroup({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).sgroup('dialogAddGroup',callback);
 }
 
 function addSnapshot(volume){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).snapshot();
+  $('html body').find(DOM_BINDING['hidden']).snapshot({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).snapshot('dialogAddSnapshot', volume);
 }
 
 function addVolume(snapshot){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAddVolume', snapshot);
 }
 
 function attachVolume(volume, instance){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).volume();
+  $('html body').find(DOM_BINDING['hidden']).volume({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).volume('dialogAttachVolume', volume, instance);
 }
 
 function associateIp(instance) {
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogAssociateIp', null, instance);
 }
 
 function disassociateIp(address){
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip({'from_instance' : true});
+  $('html body').find(DOM_BINDING['hidden']).eip({from_instance: true, hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('dialogDisassociateIp', [address]);
 }
 
 function allocateIP() {
   $('html body').find(DOM_BINDING['hidden']).children().detach();
-  $('html body').find(DOM_BINDING['hidden']).eip();
+  $('html body').find(DOM_BINDING['hidden']).eip({hidden:true});
   $('html body').find(DOM_BINDING['hidden']).eip('createAction');
 }
 
@@ -382,6 +382,25 @@ function isRootVolume(instanceId, volumeId) {
 
 function getRootDeviceName(resource){
   return resource.root_device_name ? resource.root_device_name.replace('&#x2f;','/').replace('&#x2f;','/') : '/dev/sda1';
+}
+
+function generateSnapshotToImageMap(){
+  var images = describe('image');
+  var snapToImageMap = {}
+  $.each(images, function(idx, image){
+    if(image.block_device_mapping){
+      vol = image.block_device_mapping[getRootDeviceName(image)];
+      if (vol) {
+        snapshot = vol['snapshot_id'];
+        if (snapToImageMap[snapshot])
+          snapToImageMap[snapshot].push(image['id']);
+        else {
+          snapToImageMap[snapshot] = [image['id']];
+        }
+      }
+    }
+  });
+  return snapToImageMap;
 }
 
 var tableRefreshCallback = null; // hacky..but callback name inside the table breaks with flippy help
@@ -555,4 +574,11 @@ function sortArray(array, comperator){
   if(! array || array.length <= 1)
     return array;
   return mergeSort(array, 0, array.length-1);
+}
+
+function trim (str) {
+    if(str)
+      return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+    else
+      return str;
 }

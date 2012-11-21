@@ -258,9 +258,10 @@ do_start() {
 	ulimit -n 4096
 	$EUCALYPTUS/usr/sbin/eucalyptus-cloud $CLOUD_OPTS -h $EUCALYPTUS -u $EUCA_USER --pidfile ${pidfile} -f \
 		-L console-log -o $initlog -e $initlog
-	return $?
 
 	touch $LOCKFILE
+
+	return $?
 }
 
 do_status() {

@@ -37,6 +37,7 @@
       this.baseTable = $snapshotTable;
       this.tableWrapper = $snapshotTable.eucatable({
         id : 'snapshots', // user of this widget should customize these options,
+        hidden: thisObj.options['hidden'],
         dt_arg : {
           "bProcessing": true,
           "sAjaxSource": "../ec2?Action=DescribeSnapshots",
@@ -293,9 +294,58 @@
     _deleteListedSnapshots : function (snapshotsToDelete) {
       var thisObj = this;
       var done = 0;
-      var all = snapshotsToDelete.length;
       var error = [];
-
+      var snapToImageMap = generateSnapshotToImageMap();
+      var imagesToDeregister = [];
+      // first de-register images
+      $.each(snapshotsToDelete,function(idx, key){
+        if (snapToImageMap[key] != undefined) {
+          $.each(snapToImageMap[key],function(idx, imageId){
+            imagesToDeregister.push(imageId);
+          });
+        }
+      });
+      var numberToDelete = imagesToDeregister.length;
+      doMultiAjax(imagesToDeregister, function(item, dfd){
+        var imageId = item;
+        $.ajax({
+          type:"POST",
+          url:"/ec2?Action=DeregisterImage",
+          data:"_xsrf="+$.cookie('_xsrf')+"&ImageId="+imageId,
+          dataType:"json",
+          async:true,
+          success: (function(imageId) {
+            return function(data, textStatus, jqXHR){
+              if ( data.results && data.results == true ) {
+                ;
+              } else {
+                error.push({id:imageId, reason: undefined_error});
+              }
+           }
+          })(imageId),
+          error: (function(imageId) {
+            return function(jqXHR, textStatus, errorThrown){
+              error.push({id:imageId, reason: getErrorMessage(jqXHR)});
+            }
+          })(imageId),
+          complete: (function(imageId) {
+            return function(jqXHR, textStatus){
+              done++;
+              if(done < numberToDelete)
+                notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_image_progress', numberToDelete));
+              else {
+                var $msg = $('<div>').addClass('multiop-summary').append(
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_image_done', (numberToDelete-error.length), numberToDelete)));
+                if (error.length > 0)
+                  $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('snapshot_delete_image_fail', error.length)));
+                notifyMulti(100, $msg.html(), error);
+              }
+              dfd.resolve();
+            }
+          })(imageId),
+        });
+      });
+      numberToDelete = snapshotsToDelete.length;
       doMultiAjax(snapshotsToDelete, function(item, dfd){
         var snapshotId = item;
         $.ajax({
@@ -321,11 +371,11 @@
           complete: (function(snapshotId) {
             return function(jqXHR, textStatus){
               done++;
-              if(done < all)
-                notifyMulti(100*(done/all), $.i18n.prop('snapshot_delete_progress', all));
+              if(done < numberToDelete)
+                notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_progress', numberToDelete));
               else {
                 var $msg = $('<div>').addClass('multiop-summary').append(
-                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_done', (all-error.length), all)));
+                  $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('snapshot_delete_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
@@ -368,11 +418,20 @@
       var thisObj = this;
       snapshotsToDelete = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
       var matrix = [];
+      var snapToImageMap = generateSnapshotToImageMap();
+      deregisterImages = false;
       $.each(snapshotsToDelete,function(idx, key){
-        matrix.push([key]);
+        matrix.push([key, snapToImageMap[key] != undefined ? 'Yes' : 'No']);
+        if (snapToImageMap[key] != undefined)
+          deregisterImages = true;
       });
+      // if there is no need to show 'Registered as image?' column it should be hided.
       if ( snapshotsToDelete.length > 0 ) {
-        thisObj.delDialog.eucadialog('setSelectedResources',{title:[snapshot_label], contents: matrix});
+        thisObj.delDialog.eucadialog('setSelectedResources',{title:deregisterImages?[snapshot_label,snapshot_delete_registered_text]:[snapshot_label], contents: matrix, hideColumn: deregisterImages ? undefined : 1 });
+        if (deregisterImages)
+          thisObj.delDialog.find('#snapshot-delete-dialog-text').html(snapshot_delete_dialog_with_dereg_text);
+        else
+          thisObj.delDialog.find('#snapshot-delete-dialog-text').html(snapshot_delete_dialog_text);
         thisObj.delDialog.eucadialog('open');
       }
     },

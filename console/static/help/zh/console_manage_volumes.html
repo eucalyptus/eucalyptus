@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Manage Volumes"/>
+<meta name="abstract" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive. This screen allows you to view a list of your volumes, create new volumes, attach and detach volumes to a running instance, and delete volumes. You can page through the list of volumes by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="description" content="Eucalyptus offers persistent storage that you can attach to a running instance. These Eucalyptus block storage (EBS) volumes persist autonomously from the running life of an instance. After you attach a block volume to an instance, you can use it like any other physical hard drive. This screen allows you to view a list of your volumes, create new volumes, attach and detach volumes to a running instance, and delete volumes. You can page through the list of volumes by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.2"/>
+<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="manage_volume_ui_context"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Manage Volumes</title>
+</head>
+<body id="manage_volume_ui_context" class="help-page-body">
+
+
+    <h1 class="title topictitle1">管理存储卷</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> 
+    	Eucalyptus 提供持久块存储，你可以为正在运行的虚拟机添加持久设备.
+        Eucalyptus 块存储(EBS)卷的持久性不依赖于虚拟机的生存周期. 当你把块存储卷分配给一个虚拟机实例后,你可以像其它物理块存储设备一样使用它. 
+        在本页面,你可以查看你的存储卷列表.创建和删除存储卷. 卸载或者装载磁盘卷到一个运行的虚拟机实例. </p>
+</div>
+
+  <div class="topic task nested1" id="manage_security_group_ui_sorting_steps">
+        <h2 class="title topictitle2">安全组列表排序</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">选中某列,点击列头就可以对安全组列表进行升序或者降序排列.</span>
+                </div>
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_security_group_ui_searching_steps">
+        <h2 class="title topictitle2">搜索安全组列表</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                            <span class="ph cmd">在 <span class="ph uicontrol">搜索</span> 文本框输入搜索内容
+                        可以对列表进行过滤. </span>
+                </div>
+
+        </div>
+
+    </div>
+    <div class="topic task nested1" id="manage_volume_ui_create_steps">
+        <h2 class="title topictitle2">创建存储卷</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                       <span class="ph cmd">点击 <span class="ph uicontrol">创建存储卷</span> 按钮. <span class="ph uicontrol">创建存储卷
+                        </span> 对话框会弹出.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_attach_steps">
+        <h2 class="title topictitle2">装载存储卷</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">右击你想要装载到虚拟机实例的存储卷.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在弹出菜单选择 <span class="ph uicontrol">装载到虚拟机</span> .
+                        The <span class="ph uicontrol">装载存储卷到虚拟机</span> 对话框会弹出. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 你可以选中存储卷 并却点击列表顶部的 <span class="ph uicontrol">更多操作</span> 连接.</div>
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_detach_steps">
+        <h2 class="title topictitle2">从虚拟机卸载存储卷</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">右击你想要卸载的存储卷.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在弹出菜单选择 <span class="ph uicontrol">从虚拟机卸载</span>.
+                        <span class="ph uicontrol">卸载存储卷</span> 对话框会弹出. </span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 你可以选中存储卷 并却点击列表顶部的 <span class="ph uicontrol">更多操作</span> 连接.</div>
+
+                    
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_snapshot_steps">
+        <h2 class="title topictitle2">创建存储卷快照</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">右击你想要创建快照的存储卷.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 在弹出菜单选择 <span class="ph uicontrol">创建存储卷快照</span> 
+                    	 <span class="ph uicontrol">创建存储卷快照</span> 对话框会弹出. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_volume_ui_delete_steps">
+        <h2 class="title topictitle2">删除存储卷</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">
+        </p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">选中存储卷旁边的选项框.</span>
+                     
+                        <div class="note note"><span class="notetitle">提示:</span> 你不能删除一个正在被虚拟机使用的存储卷.</div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> 右击存储卷列表在弹出菜单中选择 <span class="ph uicontrol">删除</span>
+                       <span class="ph uicontrol">删除存储卷</span> 对话框会弹出. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>
