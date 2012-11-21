@@ -254,7 +254,7 @@ parse_rec ( // parses the VBR as supplied by a client or user, checks values, an
             logprintfl (EUCAWARN, "Warning: trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
             char buf [10];
             safe_strncpy (buf, vbr->guestDeviceName + 5, sizeof (buf));
-            strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
+            safe_strncpy (vbr->guestDeviceName, buf, sizeof (vbr->guestDeviceName));
         }
         
         if (strlen (vbr->guestDeviceName)<3 ||
@@ -466,31 +466,31 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
             { // create root partition VBR
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
                 safe_strncpy (vbr->resourceLocation, imageURL, sizeof (vbr->resourceLocation));
-                strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
+                safe_strncpy (vbr->guestDeviceName, "sda1", sizeof (vbr->guestDeviceName));
                 safe_strncpy (vbr->id, imageId, sizeof (vbr->id));
-                strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
+                safe_strncpy (vbr->typeName, "machine", sizeof (vbr->typeName));
                 vbr->size = -1;
-                strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+                safe_strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
                 params->virtualBootRecordLen++;
             }
             { // create ephemeral partition VBR
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
-                strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
-                strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
-                strncpy (vbr->id, "none", sizeof (vbr->id));
-                strncpy (vbr->typeName, "ephemeral0", sizeof (vbr->typeName));
+                safe_strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
+                safe_strncpy (vbr->guestDeviceName, "sda2", sizeof (vbr->guestDeviceName));
+                safe_strncpy (vbr->id, "none", sizeof (vbr->id));
+                safe_strncpy (vbr->typeName, "ephemeral0", sizeof (vbr->typeName));
                 vbr->size = 524288; // we cannot compute it here, so pick something
-                strncpy (vbr->formatName, "ext2", sizeof (vbr->formatName));
+                safe_strncpy (vbr->formatName, "ext2", sizeof (vbr->formatName));
                 params->virtualBootRecordLen++;
             }
             { // create swap partition VBR
                 virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
-                strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
-                strncpy (vbr->guestDeviceName, "sda3", sizeof (vbr->guestDeviceName));
-                strncpy (vbr->id, "none", sizeof (vbr->id));
-                strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
+                safe_strncpy (vbr->resourceLocation, "none", sizeof (vbr->resourceLocation));
+                safe_strncpy (vbr->guestDeviceName, "sda3", sizeof (vbr->guestDeviceName));
+                safe_strncpy (vbr->id, "none", sizeof (vbr->id));
+                safe_strncpy (vbr->typeName, "swap", sizeof (vbr->typeName));
                 vbr->size = 524288;
-                strncpy (vbr->formatName, "swap", sizeof (vbr->formatName));
+                safe_strncpy (vbr->formatName, "swap", sizeof (vbr->formatName));
                 params->virtualBootRecordLen++;
             }
         }
@@ -507,12 +507,12 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
                 return ERROR;
             }
             virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
-            strncpy (vbr->resourceLocation, kernelURL, sizeof (vbr->resourceLocation));
-            strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
-            strncpy (vbr->id, kernelId, sizeof (vbr->id));
-            strncpy (vbr->typeName, "kernel", sizeof (vbr->typeName));
+            safe_strncpy (vbr->resourceLocation, kernelURL, sizeof (vbr->resourceLocation));
+            safe_strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
+            safe_strncpy (vbr->id, kernelId, sizeof (vbr->id));
+            safe_strncpy (vbr->typeName, "kernel", sizeof (vbr->typeName));
             vbr->size = -1;
-            strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+            safe_strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
             params->virtualBootRecordLen++;
         }
     }
@@ -528,12 +528,12 @@ vbr_legacy ( // constructs VBRs for {image|kernel|ramdisk}x{Id|URL} entries (DEP
                 return ERROR;
             }
             virtualBootRecord * vbr = &(params->virtualBootRecord[i++]);
-            strncpy (vbr->resourceLocation, ramdiskURL, sizeof (vbr->resourceLocation));
-            strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
-            strncpy (vbr->id, ramdiskId, sizeof (vbr->id));
-            strncpy (vbr->typeName, "ramdisk", sizeof (vbr->typeName));
+            safe_strncpy (vbr->resourceLocation, ramdiskURL, sizeof (vbr->resourceLocation));
+            safe_strncpy (vbr->guestDeviceName, "none", sizeof (vbr->guestDeviceName));
+            safe_strncpy (vbr->id, ramdiskId, sizeof (vbr->id));
+            safe_strncpy (vbr->typeName, "ramdisk", sizeof (vbr->typeName));
             vbr->size = -1;
-            strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
+            safe_strncpy (vbr->formatName, "none", sizeof (vbr->formatName));
             params->virtualBootRecordLen++;
         }
     }
@@ -1335,7 +1335,7 @@ static artifact * art_alloc_vbr (virtualBootRecord * vbr, boolean do_make_work_c
         a2 = art_alloc (art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
             if (sshkey)
-                strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
+                safe_strncpy (a2->sshkey, sshkey, sizeof (a2->sshkey)-1 );
 
             if (art_add_dep (a2, a) == OK) {
                 a = a2;
