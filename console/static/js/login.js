@@ -57,11 +57,12 @@
           $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
 
         var param = {
-          account:$form.find('input[id=account]').val(),
-          username:$form.find('input[id=username]').val(),
-          password:$form.find('input[id=password]').val(),
+          account:trim($form.find('input[id=account]').val()),
+          username:trim($form.find('input[id=username]').val()),
+          password:trim($form.find('input[id=password]').val()),
           remember:$form.find('input[id=remember]').attr('checked') 
         };
+       
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
             $login.remove();

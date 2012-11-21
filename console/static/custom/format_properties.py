@@ -55,18 +55,18 @@ if __name__ == "__main__":
     from optparse import OptionParser
     from argparse import ArgumentParser
 
-    parser = OptionParser(usage='Usage: %prog -t target_language [-t target ..]')
-    parser.add_option('-t', '--target', help='Target language (e.g., ko_KR)', action='append', default=[], dest='target')
+    parser = OptionParser(usage='Usage: %prog -l language [-l language ..]')
+    parser.add_option('-l', '--lang', help='Language (e.g., ko_KR)', action='append', default=[], dest='language')
 
     (options, args) = parser.parse_args()
-    if not options.target or len(options.target) <= 0:
+    if not options.language or len(options.language) <= 0:
         parser.print_help()
         exit(-1)
     source_arr = []
     source_map= build_map('./Messages_en_US.properties', source_arr);
     
     # open en_US properties file and build a map
-    for lang in options.target:
+    for lang in options.language:
         print "Processing lanugage: %s" % lang
         dest_path = 'Messages_%s.properties' % lang
         dest_map = build_map(dest_path);
