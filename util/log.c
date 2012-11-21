@@ -270,7 +270,7 @@ int log_file_set(const char * file)
     if (strcmp (log_file_path, file) == 0) // hasn't changed
         return 0;
 
-    strncpy (log_file_path, file, EUCA_MAX_PATH);
+    safe_strncpy (log_file_path, file, EUCA_MAX_PATH);
     if (get_file (TRUE) == NULL) {
         return 1;
     }
@@ -281,9 +281,9 @@ int log_file_set(const char * file)
 int log_prefix_set (const char * log_spec)
 {
     if (log_spec==NULL || strlen (log_spec)==0) // TODO: eventually, enable empty prefix
-        strncpy (log_custom_prefix, USE_STANDARD_PREFIX, sizeof (log_custom_prefix));
+        safe_strncpy (log_custom_prefix, USE_STANDARD_PREFIX, sizeof (log_custom_prefix));
     else
-        strncpy (log_custom_prefix, log_spec, sizeof (log_custom_prefix));
+        safe_strncpy (log_custom_prefix, log_spec, sizeof (log_custom_prefix));
     return 0;
 }
 
