@@ -87,8 +87,8 @@
             },
             { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, // TODO: placement==zone?
-            { "mDataProp": "ip_address" },
-            { "mDataProp": "private_ip_address" },
+            { "mDataProp": "public_dns_name" },
+            { "mDataProp": "private_dns_name" },
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
             { 
