@@ -66,92 +66,112 @@
 
 #include <server-marshal.h>
 
-adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t *getLogs, const axutil_env_t *env) {
-  adb_GetLogsResponse_t *ret=NULL;
-  adb_getLogsResponseType_t *response=NULL;
-  
-  adb_getLogsType_t *request=NULL;
+adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_t * env)
+{
+	adb_GetLogsResponse_t *ret = NULL;
+	adb_getLogsResponseType_t *response = NULL;
 
-  int rc;
-  axis2_bool_t status;
-  char *userId, *correlationId, *service, statusMessage[256];
-  char *outCCLog, *outNCLog, *outHTTPDLog, *outAxis2Log;
+	adb_getLogsType_t *request = NULL;
 
-  request = adb_GetLogs_get_GetLogs(getLogs, env);
-  
-  userId = adb_getLogsType_get_userId(request, env);
-  correlationId = adb_getLogsType_get_correlationId(request, env);
-  service = adb_getLogsType_get_serviceTag(request, env);
-  
-  response = adb_getLogsResponseType_create(env);
+	int rc;
+	axis2_bool_t status;
+	char *userId, *correlationId, *service, statusMessage[256];
+	char *outCCLog, *outNCLog, *outHTTPDLog, *outAxis2Log;
 
-  status = AXIS2_TRUE;
-  rc = doGetLogs(service, &outCCLog, &outNCLog, &outHTTPDLog, &outAxis2Log);
-  if (rc) {
-    status = AXIS2_FALSE;
-    snprintf(statusMessage, 255, "ERROR");
-  } else {
-    
-    if (outCCLog) {adb_getLogsResponseType_set_CCLog(response, env, outCCLog);free(outCCLog);}
-    if (outNCLog) {adb_getLogsResponseType_set_NCLog(response, env, outNCLog);free(outNCLog);}
-    if (outHTTPDLog) {adb_getLogsResponseType_set_httpdLog(response, env, outHTTPDLog);free(outHTTPDLog);}
-    if (outAxis2Log) {adb_getLogsResponseType_set_axis2Log(response, env, outAxis2Log);free(outAxis2Log);}
-  }
-  adb_getLogsResponseType_set_serviceTag(response, env, service);
+	request = adb_GetLogs_get_GetLogs(getLogs, env);
 
-  adb_getLogsResponseType_set_userId(response, env, userId);
-  adb_getLogsResponseType_set_correlationId(response, env, correlationId);
-  adb_getLogsResponseType_set_return(response, env, status);
-  if (status == AXIS2_FALSE) {
-    adb_getLogsResponseType_set_statusMessage(response, env, statusMessage);
-  }
+	userId = adb_getLogsType_get_userId(request, env);
+	correlationId = adb_getLogsType_get_correlationId(request, env);
+	service = adb_getLogsType_get_serviceTag(request, env);
 
-  ret = adb_GetLogsResponse_create(env);
-  adb_GetLogsResponse_set_GetLogsResponse(ret, env, response);
+	response = adb_getLogsResponseType_create(env);
 
-  return(ret);
+	status = AXIS2_TRUE;
+	rc = doGetLogs(service, &outCCLog, &outNCLog, &outHTTPDLog, &outAxis2Log);
+	if (rc) {
+		status = AXIS2_FALSE;
+		snprintf(statusMessage, 255, "ERROR");
+	} else {
+
+		if (outCCLog) {
+			adb_getLogsResponseType_set_CCLog(response, env, outCCLog);
+			free(outCCLog);
+		}
+		if (outNCLog) {
+			adb_getLogsResponseType_set_NCLog(response, env, outNCLog);
+			free(outNCLog);
+		}
+		if (outHTTPDLog) {
+			adb_getLogsResponseType_set_httpdLog(response, env, outHTTPDLog);
+			free(outHTTPDLog);
+		}
+		if (outAxis2Log) {
+			adb_getLogsResponseType_set_axis2Log(response, env, outAxis2Log);
+			free(outAxis2Log);
+		}
+	}
+	adb_getLogsResponseType_set_serviceTag(response, env, service);
+
+	adb_getLogsResponseType_set_userId(response, env, userId);
+	adb_getLogsResponseType_set_correlationId(response, env, correlationId);
+	adb_getLogsResponseType_set_return(response, env, status);
+	if (status == AXIS2_FALSE) {
+		adb_getLogsResponseType_set_statusMessage(response, env, statusMessage);
+	}
+
+	ret = adb_GetLogsResponse_create(env);
+	adb_GetLogsResponse_set_GetLogsResponse(ret, env, response);
+
+	return (ret);
 }
 
-adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t *getKeys, const axutil_env_t *env) {
-  adb_GetKeysResponse_t *ret=NULL;
-  adb_getKeysResponseType_t *response=NULL;
-  
-  adb_getKeysType_t *request=NULL;
+adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_t * env)
+{
+	adb_GetKeysResponse_t *ret = NULL;
+	adb_getKeysResponseType_t *response = NULL;
 
-  int rc;
-  axis2_bool_t status;
-  char *userId, *correlationId, *service, statusMessage[256];
-  char *outCCCert, *outNCCert;
-  
-  request = adb_GetKeys_get_GetKeys(getKeys, env);
-  
-  userId = adb_getKeysType_get_userId(request, env);
-  correlationId = adb_getKeysType_get_correlationId(request, env);
-  service = adb_getKeysType_get_serviceTag(request, env);
-  
-  response = adb_getKeysResponseType_create(env);
+	adb_getKeysType_t *request = NULL;
 
-  status = AXIS2_TRUE;
-  rc = doGetKeys(service, &outCCCert, &outNCCert);
-  if (rc) {
-    status = AXIS2_FALSE;
-    snprintf(statusMessage, 255, "ERROR");
-  } else {
-    if (outCCCert) {adb_getKeysResponseType_set_CCcert(response, env, outCCCert);free(outCCCert);}
-    if (outNCCert) {adb_getKeysResponseType_set_NCcert(response, env, outNCCert);free(outNCCert);}
-  }
-  
-  adb_getKeysResponseType_set_userId(response, env, userId);
-  adb_getKeysResponseType_set_correlationId(response, env, correlationId);
-  adb_getKeysResponseType_set_return(response, env, status);
-  adb_getKeysResponseType_set_serviceTag(response, env, service);
+	int rc;
+	axis2_bool_t status;
+	char *userId, *correlationId, *service, statusMessage[256];
+	char *outCCCert, *outNCCert;
 
-  if (status == AXIS2_FALSE) {
-    adb_getKeysResponseType_set_statusMessage(response, env, statusMessage);
-  }
-  
-  ret = adb_GetKeysResponse_create(env);
-  adb_GetKeysResponse_set_GetKeysResponse(ret, env, response);
-  
-  return(ret);
+	request = adb_GetKeys_get_GetKeys(getKeys, env);
+
+	userId = adb_getKeysType_get_userId(request, env);
+	correlationId = adb_getKeysType_get_correlationId(request, env);
+	service = adb_getKeysType_get_serviceTag(request, env);
+
+	response = adb_getKeysResponseType_create(env);
+
+	status = AXIS2_TRUE;
+	rc = doGetKeys(service, &outCCCert, &outNCCert);
+	if (rc) {
+		status = AXIS2_FALSE;
+		snprintf(statusMessage, 255, "ERROR");
+	} else {
+		if (outCCCert) {
+			adb_getKeysResponseType_set_CCcert(response, env, outCCCert);
+			free(outCCCert);
+		}
+		if (outNCCert) {
+			adb_getKeysResponseType_set_NCcert(response, env, outNCCert);
+			free(outNCCert);
+		}
+	}
+
+	adb_getKeysResponseType_set_userId(response, env, userId);
+	adb_getKeysResponseType_set_correlationId(response, env, correlationId);
+	adb_getKeysResponseType_set_return(response, env, status);
+	adb_getKeysResponseType_set_serviceTag(response, env, service);
+
+	if (status == AXIS2_FALSE) {
+		adb_getKeysResponseType_set_statusMessage(response, env, statusMessage);
+	}
+
+	ret = adb_GetKeysResponse_create(env);
+	adb_GetKeysResponse_set_GetKeysResponse(ret, env, response);
+
+	return (ret);
 }
