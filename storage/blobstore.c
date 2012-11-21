@@ -492,7 +492,11 @@ static int open_and_lock (const char * path,
                 return -1;
             }
         }
-        path_lock->refs++; // increase the reference count while still under lock
+        pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex
+        {
+        	path_lock->refs++; // increase the reference count while still under lock
+        }
+        pthread_mutex_unlock (&(path_lock->mutex)); // release path-specific mutex
         pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
     } // end of critical section
 
