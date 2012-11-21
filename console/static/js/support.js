@@ -575,3 +575,10 @@ function sortArray(array, comperator){
     return array;
   return mergeSort(array, 0, array.length-1);
 }
+
+function trim (str) {
+    if(str)
+      return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+    else
+      return str;
+}
