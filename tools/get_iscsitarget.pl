@@ -146,6 +146,8 @@ if (is_null_or_empty($localdev)) {
 if ($multipath == 0) {
   $localdev = "/dev/$localdev";
 } else {
+  # TODO(wenye): temporary measure to allow safe volume detaching due to "queue_if_no_path"
+  run_cmd(1, 0, "$DMSETUP message $localdev 0 'fail_if_no_path'");
   $localdev = "/dev/mapper/$localdev";
 }
 print "$localdev";
