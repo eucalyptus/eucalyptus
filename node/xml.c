@@ -127,7 +127,7 @@ static void init (struct nc_state_t * nc_state)
             config_use_virtio_root = nc_state->config_use_virtio_root;
             config_use_virtio_disk = nc_state->config_use_virtio_disk;
             config_use_virtio_net =  nc_state->config_use_virtio_net;
-            strncpy (xslt_path, nc_state->libvirt_xslt_path, sizeof (xslt_path));
+            safe_strncpy (xslt_path, nc_state->libvirt_xslt_path, sizeof (xslt_path));
         }
         initialized = 1;
     }
@@ -608,7 +608,7 @@ int main (int argc, char ** argv)
                 logprintfl (EUCAERROR, "required parameters are <XSLT stylesheet path>\n");
                 return 1;
         }
-        strncpy (xslt_path, argv[1], sizeof (xslt_path));
+        safe_strncpy (xslt_path, argv[1], sizeof (xslt_path));
         char * in_path = tempnam (NULL, "xml-");
         char * out_path = tempnam (NULL, "xml-");
 

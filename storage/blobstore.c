@@ -492,7 +492,11 @@ static int open_and_lock (const char * path,
                 return -1;
             }
         }
-        path_lock->refs++; // increase the reference count while still under lock
+        pthread_mutex_lock (&(path_lock->mutex)); // grab path-specific mutex
+        {
+        	path_lock->refs++; // increase the reference count while still under lock
+        }
+        pthread_mutex_unlock (&(path_lock->mutex)); // release path-specific mutex
         pthread_mutex_unlock (&_blobstore_mutex); // release global mutex
     } // end of critical section
 
@@ -726,8 +730,8 @@ static int buf_to_fd (int fd, const char * buf, int size_buf)
 
 static int read_store_metadata (blobstore * bs)
 {
-    char buf [1024];
-    int size = fd_to_buf (bs->fd, buf, sizeof (buf));
+    char buf [1024] = { 0 };
+    int size = fd_to_buf (bs->fd, buf, (sizeof (buf) - 1));
 
     if (size == -1)
         return -1;

@@ -2187,8 +2187,9 @@ int vnetApplyArpTableRules(vnetConfig *vnetconfig) {
 	if (vnetconfig->publicips[k].allocated && vnetconfig->publicips[k].dstip) {
 	  char *ip=NULL;
 	  ip = hex2dot(vnetconfig->publicips[k].dstip);
-	  if (ip && gw) {
-	    fprintf(FH, "IP=%s,%s\n", ip,gw);
+	  if (ip) {
+		  if(gw)
+			fprintf(FH, "IP=%s,%s\n", ip,gw);
 	    free(ip);
 	  }
 	}
