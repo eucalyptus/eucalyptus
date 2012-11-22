@@ -208,15 +208,21 @@ static void * rebooting_thread (void *arg)
             free (remoteDevStr);
 
         if (!rc) {
-            int err;
-            sem_p (hyp_sem);
-            err = virDomainAttachDevice (dom, xml);
-            sem_v (hyp_sem);      
-            if (err) {
-                logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instance->instanceId, err, xml);
-            } else {
-                logprintfl (EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
-            }
+        	// protect libvirt calls because we've seen problems during concurrent libvirt invocations
+        	// zhill - wrap with retry in case libvirt is dumb.
+        	int err = 0;
+        	for(int i = 1 ; i < 3 ; i++) {
+        		sem_p (hyp_sem);
+        		err = virDomainAttachDevice (dom, xml);
+        		sem_v (hyp_sem);
+        		if(err) {
+                    logprintfl (EUCAERROR, "[%s] virDomainAttachDevice() failed on attempt %d of 3 (err=%d) XML='%s'\n", instance->instanceId, i, err, xml);
+        			sleep(3); //sleep a bit and retry.
+        		} else {
+        			logprintfl (EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
+        			break;
+        		}
+        	}
         }
         
         if (xml)
