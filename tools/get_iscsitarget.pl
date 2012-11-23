@@ -81,6 +81,7 @@ $DEFAULT = "default";
 
 $ISCSIADM = untaint(`which iscsiadm`);
 $MULTIPATH = untaint(`which multipath`);
+$DMSETUP = untaint(`which dmsetup`);
 
 $CONF_IFACES_KEY = "STORAGE_INTERFACES";
 
@@ -148,6 +149,7 @@ if ($multipath == 0) {
 } else {
   # TODO(wenye): temporary measure to allow safe volume detaching due to "queue_if_no_path"
   run_cmd(1, 0, "$DMSETUP message $localdev 0 'fail_if_no_path'");
+  sleep(2);
   $localdev = "/dev/mapper/$localdev";
 }
 print "$localdev";
