@@ -120,7 +120,9 @@ build-test: deps extras
 	@ANT_OPTS="-Xmx1g -XX:MaxPermSize=512m" $(ANT) jar
 	@make -C eucadmin
 
-
+indent:
+	$(ANT) indent
+	
 clean: deps
 	$(ANT) clean
 	make -C eucadmin clean
