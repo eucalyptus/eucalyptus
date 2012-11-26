@@ -72,7 +72,7 @@ uninstall:
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
-indent:
+indent: Makedefs
 	@for subdir in $(INDENTDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
