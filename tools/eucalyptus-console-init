@@ -107,6 +107,10 @@ EOF
     fi
 
     rm -f $csr
+
+    chmod 600 $cert
+    chmod 600 $key
+
     success $"Generating certificate"
     echo
 }
