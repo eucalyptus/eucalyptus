@@ -69,10 +69,10 @@
 #define MAXBUNDLES MAXINSTANCES_PER_NC
 
 typedef struct bundleTask_t {
-  char instanceId[CHAR_BUFFER_SIZE];
-  char state[CHAR_BUFFER_SIZE];
+    char instanceId[CHAR_BUFFER_SIZE];
+    char state[CHAR_BUFFER_SIZE];
 } bundleTask;
 
-int allocate_bundleTask(bundleTask *out, char *instanceId, char *state);
+int allocate_bundleTask(bundleTask * out, char *instanceId, char *state);
 
 #endif

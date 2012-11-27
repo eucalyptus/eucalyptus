@@ -245,6 +245,10 @@
 		</copy>
 		<antcall target="install-module" />
 	</target>
+	<!--================================== indent target ==================================-->
+	<target name="indent">
+		<antcall target="indent-module" />
+	</target>
 	<!--================================== clean target ==================================-->
 	<target name="clean">
 		<antcall target="clean-module" />

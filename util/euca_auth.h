@@ -66,13 +66,13 @@
 /* 
  * functions for Walrus clients
  */
-int euca_init_cert (void);
+int euca_init_cert(void);
 /* options for _get_cert: */
-#define TRIM_CERT        0x01 /* remove the last newline */
-#define CONCATENATE_CERT 0x02 /* remove all newlines */
-#define INDENT_CERT      0x04 /* indent lines 2-N */
-char * euca_get_cert (unsigned char options);
-char * euca_sign_url (const char * verb, const char * date, const char * url);
-char * base64_enc (unsigned char * in, int size);
-char * base64_dec(unsigned char *in, int size);
+#define TRIM_CERT        0x01   /* remove the last newline */
+#define CONCATENATE_CERT 0x02   /* remove all newlines */
+#define INDENT_CERT      0x04   /* indent lines 2-N */
+char *euca_get_cert(unsigned char options);
+char *euca_sign_url(const char *verb, const char *date, const char *url);
+char *base64_enc(unsigned char *in, int size);
+char *base64_dec(unsigned char *in, int size);
 #endif

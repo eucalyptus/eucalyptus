@@ -121,6 +121,12 @@ deploy:
 # no ws
 	$(INSTALL) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 
+indent:
+	@for idfile in *.[ch]; do \
+		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+	done
+
 clean:
 	rm -f $(SERVICE_SO) *.o $(CLIENT) *~* *#*  
 

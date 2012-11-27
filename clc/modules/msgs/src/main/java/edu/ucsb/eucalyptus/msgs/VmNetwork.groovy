@@ -156,12 +156,12 @@ public class AddressMappingInfoType extends EucalyptusData {
 
 public class NetworkInfoType extends EucalyptusData {
   String uuid;
-  Integer vlan;
+  Integer tag;
   String networkName;
-  String userId;
-  ArrayList<String> allocatedAddresses = new ArrayList<String>();
+  String accountNumber;
+  ArrayList<String> allocatedIndexes = new ArrayList<String>();
   public String toString( ) {
-    return "NetworkInfoType ${userId} ${networkName} ${vlan} ${allocatedAddresses}";
+    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}";
   }
 }
 

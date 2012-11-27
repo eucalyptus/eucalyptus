@@ -82,6 +82,11 @@ $(LIBDIR)/$(DAS_SO):
 	mkdir -p $(LIBDIR)
 	gcc -shared $(CFLAGS) -o $(LIBDIR)/$(DAS_SO) com_eucalyptus_storage_DASManager.c
 
+indent:
+	@for idfile in *.[ch]; do \
+		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+	done
 
 clean:
 	rm -rf $(LIBDIR)

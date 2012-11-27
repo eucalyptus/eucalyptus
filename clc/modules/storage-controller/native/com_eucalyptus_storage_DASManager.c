@@ -75,9 +75,10 @@
 
 void sigchld(int signal)
 {
-	while (0 < waitpid(-1, NULL, WNOHANG));
+    while (0 < waitpid(-1, NULL, WNOHANG)) ;
 }
 
-JNIEXPORT void JNICALL Java_com_eucalyptus_storage_DASManager_registerSignals(JNIEnv *env, jobject obj) {
-	signal(SIGCHLD, sigchld);
+JNIEXPORT void JNICALL Java_com_eucalyptus_storage_DASManager_registerSignals(JNIEnv * env, jobject obj)
+{
+    signal(SIGCHLD, sigchld);
 }

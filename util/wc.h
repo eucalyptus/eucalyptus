@@ -28,21 +28,21 @@
 #include <wchar.h>
 
 typedef struct wchar_map_struct {
-    wchar_t * key;
-    wchar_t * val;
+    wchar_t *key;
+    wchar_t *val;
 } wchar_map;
 
 typedef struct char_map_struct {
-    char * key;
-    char * val;
+    char *key;
+    char *val;
 } char_map;
 
-extern wchar_t *varsub (const wchar_t *, const wchar_map **);
-extern wchar_map **varmap_alloc (wchar_map **, const wchar_t *, const wchar_t*);
-extern void varmap_free (wchar_map **);
+extern wchar_t *varsub(const wchar_t *, const wchar_map **);
+extern wchar_map **varmap_alloc(wchar_map **, const wchar_t *, const wchar_t *);
+extern void varmap_free(wchar_map **);
 
-extern char *c_varsub (const char *, const char_map **);
-extern char_map **c_varmap_alloc (char_map **, const char *, const char *);
-extern void c_varmap_free (char_map **);
+extern char *c_varsub(const char *, const char_map **);
+extern char_map **c_varmap_alloc(char_map **, const char *, const char *);
+extern void c_varmap_free(char_map **);
 
 #endif // INCLUDE_WC_H

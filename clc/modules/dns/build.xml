@@ -61,5 +61,7 @@
   -->
 
 <project name="eucalyptus-dns" basedir="." >
-    <import file="../module-inc.xml"/>
+	<import file="../module-inc.xml"/>
+	<target name="indent-module">
+	</target>
 </project>

@@ -48,6 +48,8 @@ WSDL2C		= @WSDL2C@
 JAVA_HOME       = @JAVA_HOME@
 RM		= @RM@
 PYTHON		= @PYTHON@
+INDENTTOOLS = indent
+INDENTFLAGS	= -nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -cli0 -d0 -di1 -nfc1 -i4 -nut -ip0 -l150 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -ss -ts4 -il0 -nip
 
 # compile time configurations
 euca_theme	= @INTERFACE_THEME@

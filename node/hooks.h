@@ -66,7 +66,7 @@
 #ifndef EUCA_HOOKS_H
 #define EUCA_HOOKS_H
 
-int init_hooks (const char * euca_dir, const char * hooks_dir);
-int call_hooks (const char * event_name, const char * param1);
+int init_hooks(const char *euca_dir, const char *hooks_dir);
+int call_hooks(const char *event_name, const char *param1);
 
 #endif

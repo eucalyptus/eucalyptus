@@ -90,13 +90,13 @@
 
 typedef struct eucalyptus_opts euca_opts;
 typedef struct {
-	char *name;
-	char *libjvm_path;
+    char *name;
+    char *libjvm_path;
 } jvm_info_t;
 typedef struct {
-	char *path;
-	jvm_info_t **jvms;
-	int jnum;
+    char *path;
+    jvm_info_t **jvms;
+    int jnum;
 } java_home_t;
 #define GETARG(a,x) (a->x##_arg)
 static int debug = 0;
@@ -157,10 +157,10 @@ static int debug = 0;
 void euca_load_bootstrapper(void);
 
 typedef struct {
-	char* method_name;
-	char* method_signature;
+    char *method_name;
+    char *method_signature;
 } java_method_t;
-static java_method_t euca_get_instance = { "getInstance", "()Lcom/eucalyptus/bootstrap/SystemBootstrapper;"};
+static java_method_t euca_get_instance = { "getInstance", "()Lcom/eucalyptus/bootstrap/SystemBootstrapper;" };
 static java_method_t euca_load = { "load", "()Z" };
 static java_method_t euca_init = { "init", "()Z" };
 static java_method_t euca_start = { "start", "()Z" };
@@ -170,19 +170,19 @@ static java_method_t euca_destroy = { "destroy", "()Z" };
 static java_method_t euca_version = { "getVersion", "()Ljava/lang/String;" };
 
 typedef struct {
-	jclass clazz;
-	jstring class_name;
-	jobject class_ref;
-	jobject instance;
-	jmethodID constructor;
-	jmethodID get_instance;
-	jmethodID init;
-	jmethodID load;
-	jmethodID start;
-	jmethodID stop;
-	jmethodID check;
-	jmethodID destroy;
-	jmethodID version;
+    jclass clazz;
+    jstring class_name;
+    jobject class_ref;
+    jobject instance;
+    jmethodID constructor;
+    jmethodID get_instance;
+    jmethodID init;
+    jmethodID load;
+    jmethodID start;
+    jmethodID stop;
+    jmethodID check;
+    jmethodID destroy;
+    jmethodID version;
 } bootstrapper_t;
 
 #define JVM_ARG(jvm_opt,arg,...) do { \
@@ -191,54 +191,56 @@ typedef struct {
     jvm_opt.optionString=strdup(temp); \
 } while(0)
 static char *jvm_default_opts[] = {
-	    "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
-	    "-Xmx1024m",
-	    "-XX:MaxPermSize=256m",
-	    "-XX:+UseConcMarkSweepGC",
-	    "-Djava.net.preferIPv4Stack=true",
-	    "-Djava.security.policy=" EUCALYPTUS_ETC_DIR "/security.policy",
-	    "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
-	    "-Djava.awt.headless=true",
-	    "-Dsun.java.command=Eucalyptus",
-	    "-Deuca.home=%1$s",
-            "-Deuca.db.home=",
-            "-Deuca.extra_version=",
-	    "-Deuca.var.dir=" EUCALYPTUS_STATE_DIR,
-	    "-Deuca.state.dir=" EUCALYPTUS_STATE_DIR,
-	    "-Deuca.run.dir=" EUCALYPTUS_RUN_DIR,
-	    "-Deuca.lib.dir=" EUCALYPTUS_JAVA_LIB_DIR,
-	    "-Deuca.libexec.dir=" EUCALYPTUS_LIBEXEC_DIR,
-	    "-Deuca.conf.dir=" EUCALYPTUS_CONF_DIR "/cloud.d",
-	    "-Deuca.log.dir=" EUCALYPTUS_LOG_DIR,
-	    "-Deuca.jni.dir=" EUCALYPTUS_LIB_DIR,
-	    "-Djava.util.prefs.PreferencesFactory=com.eucalyptus.util.NoopPreferencesFactory",
-	    NULL,
+    "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
+    "-Xmx1024m",
+    "-XX:MaxPermSize=256m",
+    "-XX:+UseConcMarkSweepGC",
+    "-Djava.net.preferIPv4Stack=true",
+    "-Djava.security.policy=" EUCALYPTUS_ETC_DIR "/security.policy",
+    "-Djava.library.path=" EUCALYPTUS_LIB_DIR,
+    "-Djava.awt.headless=true",
+    "-Dsun.java.command=Eucalyptus",
+    "-Deuca.home=%1$s",
+    "-Deuca.db.home=",
+    "-Deuca.extra_version=",
+    "-Deuca.var.dir=" EUCALYPTUS_STATE_DIR,
+    "-Deuca.state.dir=" EUCALYPTUS_STATE_DIR,
+    "-Deuca.run.dir=" EUCALYPTUS_RUN_DIR,
+    "-Deuca.lib.dir=" EUCALYPTUS_JAVA_LIB_DIR,
+    "-Deuca.libexec.dir=" EUCALYPTUS_LIBEXEC_DIR,
+    "-Deuca.conf.dir=" EUCALYPTUS_CONF_DIR "/cloud.d",
+    "-Deuca.log.dir=" EUCALYPTUS_LOG_DIR,
+    "-Deuca.jni.dir=" EUCALYPTUS_LIB_DIR,
+    "-Djava.util.prefs.PreferencesFactory=com.eucalyptus.util.NoopPreferencesFactory",
+    NULL,
 };
-static char *libjvm_paths[ ] = {
-	"%1$s/jre/lib/amd64/server/libjvm.so",
-	"%1$s/lib/amd64/server/libjvm.so",
-	"%1$s/jre/lib/i386/server/libjvm.so",
-	"%1$s/lib/i386/server/libjvm.so",
-	NULL,
+
+static char *libjvm_paths[] = {
+    "%1$s/jre/lib/amd64/server/libjvm.so",
+    "%1$s/lib/amd64/server/libjvm.so",
+    "%1$s/jre/lib/i386/server/libjvm.so",
+    "%1$s/lib/i386/server/libjvm.so",
+    NULL,
 };
+
 static struct stat home;
 static int stopping = 0;
 static int doreload = 0;
 typedef void (*sig_handler_t) (int);
 typedef struct {
-	sig_handler_t *_int;
-	sig_handler_t *_hup;
-	sig_handler_t *_term;
+    sig_handler_t *_int;
+    sig_handler_t *_hup;
+    sig_handler_t *_term;
 } signal_handlers_t;
 static signal_handlers_t handle;
-static JavaVM *jvm=NULL;
-static JNIEnv *env=NULL;
+static JavaVM *jvm = NULL;
+static JNIEnv *env = NULL;
 static bootstrapper_t bootstrap;
 #define CHECK_ISDIR(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISDIR(home.st_mode) )
 #define CHECK_ISREG(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISREG(home.st_mode) )
 #define CHECK_ISLNK(path) (( path == NULL || ( stat( path, &home ) != 0 ) ) ? 0 : S_ISLNK(home.st_mode) )
-int main( int argc, char *argv[ ] );
-void main_reload( void );
-void main_shutdown( void );
+int main(int argc, char *argv[]);
+void main_reload(void);
+void main_shutdown(void);
 
 #endif /* ifndef __EUCALYPTUS_BOOTSTRAP_H__ */

@@ -66,81 +66,91 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU
-#include <string.h> 
+#include <string.h>
 #include <assert.h>
 #include "data.h"
 
-int allocate_virtualMachine(virtualMachine *out, const virtualMachine *in)
+int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
 {
-  if (out != NULL) {
-    out->mem = in->mem;
-    out->disk = in->disk;
-    out->cores = in->cores;
-    snprintf(out->name, 64, "%s", in->name);
+    if (out != NULL) {
+        out->mem = in->mem;
+        out->disk = in->disk;
+        out->cores = in->cores;
+        snprintf(out->name, 64, "%s", in->name);
 
-    int i;
-    for (i=0; i<EUCA_MAX_VBRS && i<in->virtualBootRecordLen; i++) { // TODO: dan ask dmitrii
-            virtualBootRecord * out_r = out->virtualBootRecord + i;
-            const virtualBootRecord * in_r = in->virtualBootRecord + i;
-            strncpy (out_r->resourceLocation, in_r->resourceLocation, sizeof (out_r->resourceLocation));
-            strncpy (out_r->guestDeviceName, in_r->guestDeviceName, sizeof (out_r->guestDeviceName));
-            strncpy (out_r->id, in_r->id, sizeof (out_r->id));
-            strncpy (out_r->typeName, in_r->typeName, sizeof (out_r->typeName));
+        int i;
+        for (i = 0; i < EUCA_MAX_VBRS && i < in->virtualBootRecordLen; i++) {   // TODO: dan ask dmitrii
+            virtualBootRecord *out_r = out->virtualBootRecord + i;
+            const virtualBootRecord *in_r = in->virtualBootRecord + i;
+            strncpy(out_r->resourceLocation, in_r->resourceLocation, sizeof(out_r->resourceLocation));
+            strncpy(out_r->guestDeviceName, in_r->guestDeviceName, sizeof(out_r->guestDeviceName));
+            strncpy(out_r->id, in_r->id, sizeof(out_r->id));
+            strncpy(out_r->typeName, in_r->typeName, sizeof(out_r->typeName));
             out_r->size = in_r->size;
-            strncpy (out_r->formatName, in_r->formatName, sizeof (out_r->formatName));
+            strncpy(out_r->formatName, in_r->formatName, sizeof(out_r->formatName));
+        }
     }
-  }
-  return(0);
+    return (0);
 }
 
-int allocate_netConfig(netConfig *out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex) {
-  if (out != NULL) {
-    if (pvMac) safe_strncpy(out->privateMac,pvMac,24);
-    if (pvIp) safe_strncpy(out->privateIp,pvIp,24);
-    if (pbIp) safe_strncpy(out->publicIp,pbIp,24);
-    out->networkIndex = networkIndex;
-    out->vlan = vlan;
-  }
-  return(0);
+int allocate_netConfig(netConfig * out, char *pvMac, char *pvIp, char *pbIp, int vlan, int networkIndex)
+{
+    if (out != NULL) {
+        if (pvMac)
+            safe_strncpy(out->privateMac, pvMac, 24);
+        if (pvIp)
+            safe_strncpy(out->privateIp, pvIp, 24);
+        if (pbIp)
+            safe_strncpy(out->publicIp, pbIp, 24);
+        out->networkIndex = networkIndex;
+        out->vlan = vlan;
+    }
+    return (0);
 }
 
 /* metadata is present in every type of nc request */
-ncMetadata * allocate_metadata (char *correlationId, char *userId)
+ncMetadata *allocate_metadata(char *correlationId, char *userId)
 {
-    ncMetadata * meta;
+    ncMetadata *meta;
 
-    if (!(meta = malloc(sizeof(ncMetadata)))) return NULL;
-    if (correlationId) meta->correlationId = strdup(correlationId);
-    if (userId)        meta->userId        = strdup(userId);
+    if (!(meta = malloc(sizeof(ncMetadata))))
+        return NULL;
+    if (correlationId)
+        meta->correlationId = strdup(correlationId);
+    if (userId)
+        meta->userId = strdup(userId);
 
     return meta;
 }
 
-void free_metadata (ncMetadata ** metap)
+void free_metadata(ncMetadata ** metap)
 {
-    ncMetadata * meta = * metap;
-    if (meta->correlationId) free(meta->correlationId);
-    if (meta->userId)        free(meta->userId);
-    * metap = NULL;
+    ncMetadata *meta = *metap;
+    if (meta->correlationId)
+        free(meta->correlationId);
+    if (meta->userId)
+        free(meta->userId);
+    *metap = NULL;
 }
 
 /* instances are present in instance-related requests */
-ncInstance * allocate_instance (char *uuid,
-                                char *instanceId, char *reservationId, 
-                                virtualMachine *params, 
-                                char *stateName, int stateCode, char *userId, char *ownerId, char *accountId,
-                                netConfig *ncnet, char *keyName,
-                                char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize)
+ncInstance *allocate_instance(char *uuid,
+                              char *instanceId, char *reservationId,
+                              virtualMachine * params,
+                              char *stateName, int stateCode, char *userId, char *ownerId, char *accountId,
+                              netConfig * ncnet, char *keyName, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                              int groupNamesSize)
 {
-    ncInstance * inst;
+    ncInstance *inst;
 
     /* zeroed out for cleaner-looking checkpoints and
      * strings that are empty unless set */
     inst = calloc(1, sizeof(ncInstance));
-    if (!inst) return(NULL);
+    if (!inst)
+        return (NULL);
 
     if (userData) {
-        safe_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE*32);
+        safe_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE * 32);
     }
 
     if (launchIndex) {
@@ -154,36 +164,36 @@ ncInstance * allocate_instance (char *uuid,
     inst->groupNamesSize = groupNamesSize;
     if (groupNames && groupNamesSize) {
         int i;
-        for (i=0; i<groupNamesSize && groupNames[i]; i++) {
+        for (i = 0; i < groupNamesSize && groupNames[i]; i++) {
             safe_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
         }
     }
-    
+
     if (ncnet != NULL) {
-      memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
+        memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
     }
-    
+
     if (uuid) {
-      safe_strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
     }
 
     if (instanceId) {
-      safe_strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
     }
 
     if (keyName) {
-      safe_strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE*4);
+        safe_strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE * 4);
     }
 
     if (reservationId) {
-      safe_strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
     }
 
     if (stateName) {
-      safe_strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
     }
     if (userId) {
-      safe_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
+        safe_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
     }
     if (ownerId) {
         safe_strncpy(inst->ownerId, ownerId, CHAR_BUFFER_SIZE);
@@ -193,45 +203,46 @@ ncInstance * allocate_instance (char *uuid,
     }
 
     if (params) {
-      memcpy(&(inst->params), params, sizeof(virtualMachine));
+        memcpy(&(inst->params), params, sizeof(virtualMachine));
     }
     inst->stateCode = stateCode;
-    safe_strncpy (inst->bundleTaskStateName, bundling_progress_names [NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    safe_strncpy(inst->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
     inst->expiryTime = expiryTime;
     return inst;
 }
 
-void free_instance (ncInstance ** instp) 
+void free_instance(ncInstance ** instp)
 {
-    ncInstance * inst;
+    ncInstance *inst;
 
-    if (!instp) return;
-    inst = * instp;
-    * instp = NULL;
-    if (!inst) return;
+    if (!instp)
+        return;
+    inst = *instp;
+    *instp = NULL;
+    if (!inst)
+        return;
 
-    free (inst);
+    free(inst);
 }
 
 /* resource is used to return information about resources */
-ncResource * allocate_resource (char *nodeStatus,
-                                char *iqn,
-                                int memorySizeMax, int memorySizeAvailable, 
-                                int diskSizeMax, int diskSizeAvailable,
-                                int numberOfCoresMax, int numberOfCoresAvailable,
-                                char *publicSubnets)
+ncResource *allocate_resource(char *nodeStatus,
+                              char *iqn, int memorySizeMax, int memorySizeAvailable, int diskSizeMax, int diskSizeAvailable, int numberOfCoresMax,
+                              int numberOfCoresAvailable, char *publicSubnets)
 {
-    ncResource * res;
-    
-    if (!nodeStatus) return NULL;
-    if (!(res = malloc(sizeof(ncResource)))) return NULL;
+    ncResource *res;
+
+    if (!nodeStatus)
+        return NULL;
+    if (!(res = malloc(sizeof(ncResource))))
+        return NULL;
     bzero(res, sizeof(ncResource));
     safe_strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
     if (iqn) {
-      safe_strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+        safe_strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
     }
     if (publicSubnets) {
-      safe_strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
+        safe_strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
     }
     res->memorySizeMax = memorySizeMax;
     res->memorySizeAvailable = memorySizeAvailable;
@@ -239,66 +250,69 @@ ncResource * allocate_resource (char *nodeStatus,
     res->diskSizeAvailable = diskSizeAvailable;
     res->numberOfCoresMax = numberOfCoresMax;
     res->numberOfCoresAvailable = numberOfCoresAvailable;
-    
+
     return res;
 }
 
-void free_resource (ncResource ** resp)
+void free_resource(ncResource ** resp)
 {
-    ncResource * res;
+    ncResource *res;
 
-    if (!resp) return;
-    res = * resp;
-    * resp = NULL;
-    if (!res) return;
+    if (!resp)
+        return;
+    res = *resp;
+    *resp = NULL;
+    if (!res)
+        return;
 
-    free (res);
+    free(res);
 }
 
-instance_error_codes add_instance (bunchOfInstances ** headp, ncInstance * instance)
+instance_error_codes add_instance(bunchOfInstances ** headp, ncInstance * instance)
 {
-    bunchOfInstances * new = malloc (sizeof(bunchOfInstances));
+    bunchOfInstances *new = malloc(sizeof(bunchOfInstances));
 
-    if ( new == NULL ) return OUT_OF_MEMORY;
+    if (new == NULL)
+        return OUT_OF_MEMORY;
     new->instance = instance;
     new->next = NULL;
 
-    if ( * headp == NULL) {
-        * headp = new;
-        (* headp)->count = 1;
+    if (*headp == NULL) {
+        *headp = new;
+        (*headp)->count = 1;
 
     } else {
-        bunchOfInstances * last = * headp;
+        bunchOfInstances *last = *headp;
         do {
-            if ( !strcmp(last->instance->instanceId, instance->instanceId) ) {
-                free (new);
+            if (!strcmp(last->instance->instanceId, instance->instanceId)) {
+                free(new);
                 return DUPLICATE;
             }
-        } while ( last->next && (last = last->next) );
+        } while (last->next && (last = last->next));
         last->next = new;
-        (* headp)->count++;
-    }        
+        (*headp)->count++;
+    }
 
     return OK;
 }
 
-instance_error_codes remove_instance (bunchOfInstances ** headp, ncInstance * instance)
+instance_error_codes remove_instance(bunchOfInstances ** headp, ncInstance * instance)
 {
-    bunchOfInstances * head, * prev = NULL;
+    bunchOfInstances *head, *prev = NULL;
 
-    for ( head = * headp; head; ) {
-        int count = (* headp)->count;
+    for (head = *headp; head;) {
+        int count = (*headp)->count;
 
-        if ( !strcmp(head->instance->instanceId, instance->instanceId) ) {
-            if ( prev ) {
+        if (!strcmp(head->instance->instanceId, instance->instanceId)) {
+            if (prev) {
                 prev->next = head->next;
             } else {
-                * headp = head->next;
+                *headp = head->next;
             }
-            if (* headp) {
-                (* headp)->count = count - 1;
+            if (*headp) {
+                (*headp)->count = count - 1;
             }
-            free (head);
+            free(head);
             return OK;
         }
         prev = head;
@@ -307,47 +321,53 @@ instance_error_codes remove_instance (bunchOfInstances ** headp, ncInstance * in
     return NOT_FOUND;
 }
 
-instance_error_codes for_each_instance (bunchOfInstances ** headp, void (* function)(bunchOfInstances **, ncInstance *, void *), void *param) 
+instance_error_codes for_each_instance(bunchOfInstances ** headp, void (*function) (bunchOfInstances **, ncInstance *, void *), void *param)
 {
-    bunchOfInstances * head;
-    
-    for ( head = * headp; head; head = head->next ) {
-        function ( headp, head->instance, param );
+    bunchOfInstances *head;
+
+    for (head = *headp; head; head = head->next) {
+        function(headp, head->instance, param);
     }
-    
+
     return OK;
 }
 
-ncInstance * find_instance (bunchOfInstances **headp, char * instanceId)
+ncInstance *find_instance(bunchOfInstances ** headp, char *instanceId)
 {
-    bunchOfInstances * head;
-    
-    for ( head = * headp; head; head = head->next ) {
+    bunchOfInstances *head;
+
+    for (head = *headp; head; head = head->next) {
         if (!strcmp(head->instance->instanceId, instanceId)) {
             return head->instance;
         }
     }
-    
+
     return NULL;
 }
 
-ncInstance * get_instance (bunchOfInstances **headp)
+ncInstance *get_instance(bunchOfInstances ** headp)
 {
-    static bunchOfInstances * current = NULL;
-    
+    static bunchOfInstances *current = NULL;
+
     /* advance static variable, wrapping to head if at the end */
-    if ( current == NULL ) current = * headp;
-    else current = current->next;
-    
+    if (current == NULL)
+        current = *headp;
+    else
+        current = current->next;
+
     /* return the new value, if any */
-    if ( current == NULL ) return NULL;
-    else return current->instance;
+    if (current == NULL)
+        return NULL;
+    else
+        return current->instance;
 }
 
-int total_instances (bunchOfInstances **headp)
+int total_instances(bunchOfInstances ** headp)
 {
-    if ( * headp ) return (* headp)->count;
-    else return 0;
+    if (*headp)
+        return (*headp)->count;
+    else
+        return 0;
 }
 
 /* 
@@ -355,90 +375,92 @@ int total_instances (bunchOfInstances **headp)
  * OR returns a pointer to the next empty/avail volume slot 
  * OR if full, returns NULL
  */
-static ncVolume * find_volume (ncInstance * instance, const char *volumeId) 
+static ncVolume *find_volume(ncInstance * instance, const char *volumeId)
 {
-    ncVolume * v = instance->volumes;
-    ncVolume * match = NULL;
-    ncVolume * avail = NULL;
-    ncVolume * empty = NULL;
+    ncVolume *v = instance->volumes;
+    ncVolume *match = NULL;
+    ncVolume *avail = NULL;
+    ncVolume *empty = NULL;
 
-    for (int i=0; i<EUCA_MAX_VOLUMES; i++,v++) {
+    for (int i = 0; i < EUCA_MAX_VOLUMES; i++, v++) {
         // look for matches
-        if (! strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE)) {
-            assert (match==NULL);
+        if (!strncmp(v->volumeId, volumeId, CHAR_BUFFER_SIZE)) {
+            assert(match == NULL);
             match = v;
         }
-        
         // look for the first empty and available slot
-        if (! strnlen (v->volumeId, CHAR_BUFFER_SIZE)) {
-            if (empty==NULL)
+        if (!strnlen(v->volumeId, CHAR_BUFFER_SIZE)) {
+            if (empty == NULL)
                 empty = v;
-        } else if (! is_volume_used (v)) {
-            if (avail==NULL)
+        } else if (!is_volume_used(v)) {
+            if (avail == NULL)
                 avail = v;
         }
     }
 
-    if (match) return match;
-    if (empty) return empty;
+    if (match)
+        return match;
+    if (empty)
+        return empty;
     return avail;
 }
 
 // returns 0 if volume slot is not in use and non-zero if it is
-int is_volume_used (const ncVolume * v)
+int is_volume_used(const ncVolume * v)
 {
-    if (strlen (v->stateName) == 0) 
+    if (strlen(v->stateName) == 0)
         return 0;
     else
-        return strcmp (v->stateName, VOL_STATE_ATTACHING_FAILED)
-            && strcmp (v->stateName, VOL_STATE_DETACHED);
+        return strcmp(v->stateName, VOL_STATE_ATTACHING_FAILED)
+            && strcmp(v->stateName, VOL_STATE_DETACHED);
 }
 
 // records volume's information in the instance struct, updating
 // the non-NULL values if the record already exists 
-ncVolume * save_volume (ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName)
+ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal,
+                      const char *stateName)
 {
-    assert (instance!=NULL);
-    assert (volumeId!=NULL);
-    ncVolume * v = find_volume (instance, volumeId);
+    assert(instance != NULL);
+    assert(volumeId != NULL);
+    ncVolume *v = find_volume(instance, volumeId);
 
-    if ( v != NULL) {
-        safe_strncpy (v->volumeId, volumeId, CHAR_BUFFER_SIZE);
+    if (v != NULL) {
+        safe_strncpy(v->volumeId, volumeId, CHAR_BUFFER_SIZE);
         if (remoteDev)
-            safe_strncpy (v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
+            safe_strncpy(v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
         if (localDev)
-            safe_strncpy (v->localDev, localDev, CHAR_BUFFER_SIZE);
+            safe_strncpy(v->localDev, localDev, CHAR_BUFFER_SIZE);
         if (localDevReal)
-            safe_strncpy (v->localDevReal, localDevReal, CHAR_BUFFER_SIZE);
+            safe_strncpy(v->localDevReal, localDevReal, CHAR_BUFFER_SIZE);
         if (stateName)
-            safe_strncpy (v->stateName, stateName, CHAR_BUFFER_SIZE);
+            safe_strncpy(v->stateName, stateName, CHAR_BUFFER_SIZE);
     }
-    
+
     return v;
 }
 
 // zeroes out the volume's slot in the instance struct (no longer used)
-ncVolume * free_volume (ncInstance * instance, const char *volumeId)
+ncVolume *free_volume(ncInstance * instance, const char *volumeId)
 {
-    ncVolume * v = find_volume (instance, volumeId);
-    
-    if ( v == NULL) {
-        return NULL; /* not there (and out of room) */
+    ncVolume *v = find_volume(instance, volumeId);
+
+    if (v == NULL) {
+        return NULL;            /* not there (and out of room) */
     }
 
-    if ( strncmp (v->volumeId, volumeId, CHAR_BUFFER_SIZE) ) {
-        return NULL; /* not there */
-	
+    if (strncmp(v->volumeId, volumeId, CHAR_BUFFER_SIZE)) {
+        return NULL;            /* not there */
+
     } else {
-        ncVolume * last_v = instance->volumes+(EUCA_MAX_VOLUMES-1);
+        ncVolume *last_v = instance->volumes + (EUCA_MAX_VOLUMES - 1);
         int slots_left = last_v - v;
         /* shift the remaining entries up, empty or not */
         if (slots_left)
-            memmove (v, v+1, slots_left*sizeof(ncVolume));
-        
+            memmove(v, v + 1, slots_left * sizeof(ncVolume));
+
         /* empty the last one */
-        bzero (last_v, sizeof(ncVolume));
+        bzero(last_v, sizeof(ncVolume));
     }
-    
+
     return v;
 }

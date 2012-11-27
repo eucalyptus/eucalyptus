@@ -125,6 +125,10 @@
 	</target>
 
 	<!--================================== clean targets ==================================-->
+	<target name="indent">
+		<call-module-target target="indent"/>
+	</target>
+	<!--================================== clean targets ==================================-->
 	<target name="clean">
 		<call-module-target target="clean"/>
 		<delete file="${project.basedir}/modules/msgs/src/main/resources/msgs-binding.xml"/>

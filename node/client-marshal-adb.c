@@ -80,105 +80,107 @@
 //#define CORRELATION_ID meta->correlationId
 #define CORRELATION_ID NULL
 
-ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
+ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 {
-    axutil_env_t * env = NULL;
-    axis2_char_t * client_home;
-    axis2_stub_t * stub;
-    ncStub * st = NULL;
+    axutil_env_t *env = NULL;
+    axis2_char_t *client_home;
+    axis2_stub_t *stub;
+    ncStub *st = NULL;
 
-    if ( logfile ) {
-      env =  axutil_env_create_all (logfile, AXIS2_LOG_LEVEL_TRACE);
+    if (logfile) {
+        env = axutil_env_create_all(logfile, AXIS2_LOG_LEVEL_TRACE);
     } else {
-      env =  axutil_env_create_all (NULL, 0);
+        env = axutil_env_create_all(NULL, 0);
     }
-    if ( homedir ) {
-        client_home = (axis2_char_t *)homedir;
+    if (homedir) {
+        client_home = (axis2_char_t *) homedir;
     } else {
         client_home = AXIS2_GETENV("AXIS2C_HOME");
     }
 
     if (client_home == NULL) {
-        logprintfl (EUCAERROR, "cannot get AXIS2C_HOME");
-	return NULL;
+        logprintfl(EUCAERROR, "cannot get AXIS2C_HOME");
+        return NULL;
     }
     if (endpoint_uri == NULL) {
-        logprintfl (EUCAERROR, "empty endpoint_url");
-	return NULL;
+        logprintfl(EUCAERROR, "empty endpoint_url");
+        return NULL;
     }
 
-    char * uri = endpoint_uri;
+    char *uri = endpoint_uri;
 
     // extract node name from the endpoint
-    char * p = strstr (uri, "://"); // find "http[s]://..."
-    if (p==NULL) {
-      logprintfl (EUCAERROR, "received invalid URI %s\n", uri);
-      return NULL;
+    char *p = strstr(uri, "://");   // find "http[s]://..."
+    if (p == NULL) {
+        logprintfl(EUCAERROR, "received invalid URI %s\n", uri);
+        return NULL;
     }
-    char * node_name = strdup (p+3); // copy without the protocol prefix
-    if (node_name==NULL) {
-      logprintfl (EUCAERROR, "is out of memory\n");
-      return NULL;
+    char *node_name = strdup(p + 3);    // copy without the protocol prefix
+    if (node_name == NULL) {
+        logprintfl(EUCAERROR, "is out of memory\n");
+        return NULL;
     }
-    if ((p = strchr (node_name, ':')) != NULL) *p = '\0'; // cut off the port
-    if ((p = strchr (node_name, '/')) != NULL) *p = '\0'; // if there is no port
+    if ((p = strchr(node_name, ':')) != NULL)
+        *p = '\0';              // cut off the port
+    if ((p = strchr(node_name, '/')) != NULL)
+        *p = '\0';              // if there is no port
 
-    logprintfl (EUCADEBUG, "requested URI %s\n", uri);
+    logprintfl(EUCADEBUG, "requested URI %s\n", uri);
 
     // see if we should redirect to a local broker
-    if (strstr (uri, "EucalyptusBroker")) {
+    if (strstr(uri, "EucalyptusBroker")) {
         uri = "http://localhost:8773/services/EucalyptusBroker";
-        logprintfl (EUCADEBUG, "redirecting request to %s\n", uri);
+        logprintfl(EUCADEBUG, "redirecting request to %s\n", uri);
     }
-
     // TODO: what if endpoint_uri, home, or env are NULL?
-    stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *)uri);
-    
+    stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *) uri);
+
     if (stub) {
-        st = malloc (sizeof(ncStub));
+        st = malloc(sizeof(ncStub));
         if (st) {
-            st->env=env;
-            st->client_home=strdup((char *)client_home);
-            st->endpoint_uri=(axis2_char_t *)strdup(endpoint_uri);
-            st->node_name=(axis2_char_t *)strdup(node_name);
-            st->stub=stub;
+            st->env = env;
+            st->client_home = strdup((char *)client_home);
+            st->endpoint_uri = (axis2_char_t *) strdup(endpoint_uri);
+            st->node_name = (axis2_char_t *) strdup(node_name);
+            st->stub = stub;
             if (st->client_home == NULL || st->endpoint_uri == NULL || st->node_name == NULL) {
-                logprintfl (EUCAWARN, "out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)",
-                            __FILE__, __FUNCTION__, __LINE__, st->client_home, st->endpoint_uri, st->node_name);
+                logprintfl(EUCAWARN, "out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)", __FILE__, __FUNCTION__, __LINE__,
+                           st->client_home, st->endpoint_uri, st->node_name);
             }
         } else {
-            logprintfl (EUCAWARN, "out of memory for 'st' (%s:%s:%d)\n",
-                        __FILE__, __FUNCTION__, __LINE__);
+            logprintfl(EUCAWARN, "out of memory for 'st' (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
         }
     } else {
-        logprintfl (EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%u env=%u client_home=%s)\n", 
-                    stub, env, client_home);
-    } 
-    
-    free (node_name);
+        logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%u env=%u client_home=%s)\n", stub, env, client_home);
+    }
+
+    free(node_name);
     return st;
 }
 
-int ncStubDestroy (ncStub * st)
+int ncStubDestroy(ncStub * st)
 {
-    if (st->client_home) free(st->client_home);
-    if (st->endpoint_uri) free(st->endpoint_uri);
-    if (st->node_name) free(st->node_name);
-    free (st);
+    if (st->client_home)
+        free(st->client_home);
+    if (st->endpoint_uri)
+        free(st->endpoint_uri);
+    if (st->node_name)
+        free(st->node_name);
+    free(st);
     return 0;
 }
 
 /************************** stubs **************************/
 
-static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axutil_env_t * env)
+static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_env_t * env)
 {
     int i;
-    adb_virtualMachineType_t * vm_type = adb_instanceType_get_instanceType(instance, env);
+    adb_virtualMachineType_t *vm_type = adb_instanceType_get_instanceType(instance, env);
     virtualMachine params;
-    copy_vm_type_from_adb (&params, vm_type, env);
+    copy_vm_type_from_adb(&params, vm_type, env);
     netConfig ncnet;
     bzero(&ncnet, sizeof(netConfig));
-    adb_netConfigType_t * netconf = adb_instanceType_get_netParams(instance, env);
+    adb_netConfigType_t *netconf = adb_instanceType_get_netParams(instance, env);
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
         ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
@@ -187,71 +189,73 @@ static ncInstance * copy_instance_from_adb (adb_instanceType_t * instance, axuti
         safe_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
     }
 
-    int groupNamesSize = adb_instanceType_sizeof_groupNames (instance, env);
-    char * groupNames [EUCA_MAX_GROUPS];
-    for (i = 0; i<EUCA_MAX_GROUPS && i<groupNamesSize; i++) {
-        groupNames[i] = adb_instanceType_get_groupNames_at (instance, env, i);
+    int groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);
+    char *groupNames[EUCA_MAX_GROUPS];
+    for (i = 0; i < EUCA_MAX_GROUPS && i < groupNamesSize; i++) {
+        groupNames[i] = adb_instanceType_get_groupNames_at(instance, env, i);
     }
-    int expiryTime=0;
+    int expiryTime = 0;
     axutil_date_time_t *dt = adb_instanceType_get_expiryTime(instance, env);
     expiryTime = datetime_to_unix(dt, env);
 
-    ncInstance * outInst = allocate_instance(
-        (char *)adb_instanceType_get_uuid(instance, env),
-        (char *)adb_instanceType_get_instanceId(instance, env),
-        (char *)adb_instanceType_get_reservationId(instance, env),
-        &params,
-        (char *)adb_instanceType_get_stateName(instance, env),
-        0,
-        (char *)adb_instanceType_get_userId(instance, env), 
-        (char *)adb_instanceType_get_ownerId(instance, env), 
-        (char *)adb_instanceType_get_accountId(instance, env), 
-        &ncnet, 
-        (char *)adb_instanceType_get_keyName(instance, env),
-        (char *)adb_instanceType_get_userData(instance, env),
-        (char *)adb_instanceType_get_launchIndex(instance, env),
-        (char *)adb_instanceType_get_platform(instance, env),
-        expiryTime,
-        groupNames, groupNamesSize
-        );
+    ncInstance *outInst = allocate_instance((char *)adb_instanceType_get_uuid(instance, env),
+                                            (char *)adb_instanceType_get_instanceId(instance, env),
+                                            (char *)adb_instanceType_get_reservationId(instance, env),
+                                            &params,
+                                            (char *)adb_instanceType_get_stateName(instance, env),
+                                            0,
+                                            (char *)adb_instanceType_get_userId(instance, env),
+                                            (char *)adb_instanceType_get_ownerId(instance, env),
+                                            (char *)adb_instanceType_get_accountId(instance, env),
+                                            &ncnet,
+                                            (char *)adb_instanceType_get_keyName(instance, env),
+                                            (char *)adb_instanceType_get_userData(instance, env),
+                                            (char *)adb_instanceType_get_launchIndex(instance, env),
+                                            (char *)adb_instanceType_get_platform(instance, env),
+                                            expiryTime,
+                                            groupNames, groupNamesSize);
 
     safe_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
 
     dt = adb_instanceType_get_launchTime(instance, env);
-    if (dt!=NULL) {
-        outInst->launchTime = datetime_to_unix (dt, env);
+    if (dt != NULL) {
+        outInst->launchTime = datetime_to_unix(dt, env);
         axutil_date_time_free(dt, env);
     }
 
-    bzero (outInst->volumes, sizeof (ncVolume) * EUCA_MAX_VOLUMES);
-    for (i=0; i<EUCA_MAX_VOLUMES && i<adb_instanceType_sizeof_volumes (instance, env); i++) {
-        adb_volumeType_t * volume = adb_instanceType_get_volumes_at (instance, env, i);
-        safe_strncpy (outInst->volumes[i].volumeId, adb_volumeType_get_volumeId (volume, env), CHAR_BUFFER_SIZE);
-        safe_strncpy (outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev (volume, env), CHAR_BUFFER_SIZE);
-        safe_strncpy (outInst->volumes[i].localDev, adb_volumeType_get_localDev (volume, env), CHAR_BUFFER_SIZE);
-        safe_strncpy (outInst->volumes[i].stateName, adb_volumeType_get_state (volume, env), CHAR_BUFFER_SIZE);
+    bzero(outInst->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
+    for (i = 0; i < EUCA_MAX_VOLUMES && i < adb_instanceType_sizeof_volumes(instance, env); i++) {
+        adb_volumeType_t *volume = adb_instanceType_get_volumes_at(instance, env, i);
+        safe_strncpy(outInst->volumes[i].volumeId, adb_volumeType_get_volumeId(volume, env), CHAR_BUFFER_SIZE);
+        safe_strncpy(outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
+        safe_strncpy(outInst->volumes[i].localDev, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
+        safe_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
     }
-    
+
     return outInst;
 }
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+                      char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
+                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                      int groupNamesSize, ncInstance ** outInstPtr)
 {
     int i;
-    axutil_env_t * env = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncRunInstance_t     * input   = adb_ncRunInstance_create(env); 
-    adb_ncRunInstanceType_t * request = adb_ncRunInstanceType_create(env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncRunInstance_t *input = adb_ncRunInstance_create(env);
+    adb_ncRunInstanceType_t *request = adb_ncRunInstanceType_create(env);
+
     // set standard input fields
     adb_ncRunInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        if (meta->correlationId) { meta->correlationId = NULL; }
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
         EUCA_MESSAGE_MARSHAL(ncRunInstanceType, request, meta);
     }
-
     // set op-specific input fields
     adb_ncRunInstanceType_set_uuid(request, env, uuid);
     adb_ncRunInstanceType_set_instanceId(request, env, instanceId);
@@ -284,108 +288,113 @@ int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceI
     axutil_date_time_t *dt = axutil_date_time_create_with_offset(env, expiryTime);
     adb_ncRunInstanceType_set_expiryTime(request, env, dt);
 
-    for (i=0; i<groupNamesSize; i++) {
+    for (i = 0; i < groupNamesSize; i++) {
         adb_ncRunInstanceType_add_groupNames(request, env, groupNames[i]);
     }
-    
+
     adb_ncRunInstance_set_ncRunInstance(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncRunInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncRunInstance(stub, env, input);
-        
+    {                           // do it
+        adb_ncRunInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncRunInstance(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
-            
+
         } else {
-            adb_ncRunInstanceResponseType_t * response = adb_ncRunInstanceResponse_get_ncRunInstanceResponse(output, env);
-            if ( adb_ncRunInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+            adb_ncRunInstanceResponseType_t *response = adb_ncRunInstanceResponse_get_ncRunInstanceResponse(output, env);
+            if (adb_ncRunInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
 
-            adb_instanceType_t * instance = adb_ncRunInstanceResponseType_get_instance(response, env);
-            * outInstPtr = copy_instance_from_adb (instance, env);
+            adb_instanceType_t *instance = adb_ncRunInstanceResponseType_get_instance(response, env);
+            *outInstPtr = copy_instance_from_adb(instance, env);
         }
     }
-    
+
     return status;
 }
 
-int ncGetConsoleOutputStub (ncStub *st, ncMetadata *meta, char *instanceId, char **consoleOutput) 
+int ncGetConsoleOutputStub(ncStub * st, ncMetadata * meta, char *instanceId, char **consoleOutput)
 {
-    axutil_env_t * env = st->env;
-    axis2_stub_t * stub = st->stub;
-    
-    if(!consoleOutput) return -1;
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
 
-    adb_ncGetConsoleOutput_t     * input   = adb_ncGetConsoleOutput_create(env); 
-    adb_ncGetConsoleOutputType_t * request = adb_ncGetConsoleOutputType_create(env);
-    
+    if (!consoleOutput)
+        return -1;
+
+    adb_ncGetConsoleOutput_t *input = adb_ncGetConsoleOutput_create(env);
+    adb_ncGetConsoleOutputType_t *request = adb_ncGetConsoleOutputType_create(env);
+
     /* set input fields */
     adb_ncGetConsoleOutputType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncGetConsoleOutputType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncGetConsoleOutputType, request, meta);
     }
-    
+
     adb_ncGetConsoleOutputType_set_instanceId(request, env, instanceId);
     adb_ncGetConsoleOutput_set_ncGetConsoleOutput(input, env, request);
-    
+
     /* do it */
     int status = 0;
     {
-        adb_ncGetConsoleOutputResponse_t * output = axis2_stub_op_EucalyptusNC_ncGetConsoleOutput(stub, env, input);
+        adb_ncGetConsoleOutputResponse_t *output = axis2_stub_op_EucalyptusNC_ncGetConsoleOutput(stub, env, input);
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
-            * consoleOutput = NULL;
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
+            *consoleOutput = NULL;
             status = -1;
-            
+
         } else {
-            adb_ncGetConsoleOutputResponseType_t * response = adb_ncGetConsoleOutputResponse_get_ncGetConsoleOutputResponse(output, env);
-            if ( adb_ncGetConsoleOutputResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+            adb_ncGetConsoleOutputResponseType_t *response = adb_ncGetConsoleOutputResponse_get_ncGetConsoleOutputResponse(output, env);
+            if (adb_ncGetConsoleOutputResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
 
-            * consoleOutput = adb_ncGetConsoleOutputResponseType_get_consoleOutput(response, env);
+            *consoleOutput = adb_ncGetConsoleOutputResponseType_get_consoleOutput(response, env);
         }
     }
-    
+
     return status;
 }
 
-int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId) 
+int ncRebootInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId)
 {
-    axutil_env_t * env = st->env;
-    axis2_stub_t * stub = st->stub;
-    
-    adb_ncRebootInstance_t     * input   = adb_ncRebootInstance_create(env); 
-    adb_ncRebootInstanceType_t * request = adb_ncRebootInstanceType_create(env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+
+    adb_ncRebootInstance_t *input = adb_ncRebootInstance_create(env);
+    adb_ncRebootInstanceType_t *request = adb_ncRebootInstanceType_create(env);
+
     /* set input fields */
     adb_ncRebootInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        if (meta->correlationId) { meta->correlationId = NULL; }
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
         EUCA_MESSAGE_MARSHAL(ncRebootInstanceType, request, meta);
     }
-    
+
     adb_ncRebootInstanceType_set_instanceId(request, env, instanceId);
     adb_ncRebootInstance_set_ncRebootInstance(input, env, request);
-    
+
     int status = 0;
     {
-        adb_ncRebootInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncRebootInstance(stub, env, input);
-        
+        adb_ncRebootInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncRebootInstance(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
-            
+
         } else {
-            adb_ncRebootInstanceResponseType_t * response = adb_ncRebootInstanceResponse_get_ncRebootInstanceResponse(output, env);
-            if ( adb_ncRebootInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+            adb_ncRebootInstanceResponseType_t *response = adb_ncRebootInstanceResponse_get_ncRebootInstanceResponse(output, env);
+            if (adb_ncRebootInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
 
@@ -395,121 +404,127 @@ int ncRebootInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId)
     return status;
 }
 
-int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instId, int force, int *shutdownState, int *previousState)
+int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instId, int force, int *shutdownState, int *previousState)
 {
-    axutil_env_t * env = st->env;
-    axis2_stub_t * stub = st->stub;
-    
-    adb_ncTerminateInstance_t     * input   = adb_ncTerminateInstance_create(env); 
-    adb_ncTerminateInstanceType_t * request = adb_ncTerminateInstanceType_create(env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+
+    adb_ncTerminateInstance_t *input = adb_ncTerminateInstance_create(env);
+    adb_ncTerminateInstanceType_t *request = adb_ncTerminateInstanceType_create(env);
+
     /* set input fields */
     adb_ncTerminateInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, meta);
     }
     adb_ncTerminateInstanceType_set_instanceId(request, env, instId);
     if (force) {
-      adb_ncTerminateInstanceType_set_force(request, env, AXIS2_TRUE);
+        adb_ncTerminateInstanceType_set_force(request, env, AXIS2_TRUE);
     } else {
-      adb_ncTerminateInstanceType_set_force(request, env, AXIS2_FALSE);
+        adb_ncTerminateInstanceType_set_force(request, env, AXIS2_FALSE);
     }
     adb_ncTerminateInstance_set_ncTerminateInstance(input, env, request);
-    
+
     int status = 0;
-    { // do it
-        adb_ncTerminateInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncTerminateInstance(stub, env, input);
-        
+    {                           // do it
+        adb_ncTerminateInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncTerminateInstance(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
-            
+
         } else {
-            adb_ncTerminateInstanceResponseType_t * response;
-            
+            adb_ncTerminateInstanceResponseType_t *response;
+
             response = adb_ncTerminateInstanceResponse_get_ncTerminateInstanceResponse(output, env);
-            if ( adb_ncTerminateInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+            if (adb_ncTerminateInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
                 // suppress error message because we conservatively call Terminate on all nodes
                 //logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
             /* TODO: fix the state char->int conversion */
-            * shutdownState = 0; //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
-            * previousState = 0; //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
+            *shutdownState = 0; //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
+            *previousState = 0; //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
         }
     }
-    
+
     return status;
 }
 
-int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
+int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
 {
-    axutil_env_t * env = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncDescribeInstances_t     * input   = adb_ncDescribeInstances_create(env); 
-    adb_ncDescribeInstancesType_t * request = adb_ncDescribeInstancesType_create(env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncDescribeInstances_t *input = adb_ncDescribeInstances_create(env);
+    adb_ncDescribeInstancesType_t *request = adb_ncDescribeInstancesType_create(env);
+
     /* set input fields */
     adb_ncDescribeInstancesType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncDescribeInstancesType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncDescribeInstancesType, request, meta);
     }
     int i;
-    for (i=0; i<instIdsLen; i++) {
+    for (i = 0; i < instIdsLen; i++) {
         adb_ncDescribeInstancesType_add_instanceIds(request, env, instIds[i]);
     }
     adb_ncDescribeInstances_set_ncDescribeInstances(input, env, request);
-    
+
     int status = 0;
     {
-        adb_ncDescribeInstancesResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeInstances(stub, env, input);
-        
+        adb_ncDescribeInstancesResponse_t *output = axis2_stub_op_EucalyptusNC_ncDescribeInstances(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncDescribeInstancesResponseType_t * response = adb_ncDescribeInstancesResponse_get_ncDescribeInstancesResponse(output, env);
-            if ( adb_ncDescribeInstancesResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "returned an error\n");
+            adb_ncDescribeInstancesResponseType_t *response = adb_ncDescribeInstancesResponse_get_ncDescribeInstancesResponse(output, env);
+            if (adb_ncDescribeInstancesResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "returned an error\n");
                 status = 1;
             }
-            
-            * outInstsLen = adb_ncDescribeInstancesResponseType_sizeof_instances(response, env);
-            if (* outInstsLen) {
-                * outInsts = malloc (sizeof(ncInstance *) * *outInstsLen);
-                if ( * outInsts == NULL ) { 
-                    logprintfl (EUCAERROR, "out of memory\n");
-                    * outInstsLen = 0;
+
+            *outInstsLen = adb_ncDescribeInstancesResponseType_sizeof_instances(response, env);
+            if (*outInstsLen) {
+                *outInsts = malloc(sizeof(ncInstance *) * *outInstsLen);
+                if (*outInsts == NULL) {
+                    logprintfl(EUCAERROR, "out of memory\n");
+                    *outInstsLen = 0;
                     status = 2;
                 } else {
-                    for (i=0; i<*outInstsLen; i++) {
-                        adb_instanceType_t * instance = adb_ncDescribeInstancesResponseType_get_instances_at(response, env, i);
-                        (* outInsts)[i] = copy_instance_from_adb (instance, env);
+                    for (i = 0; i < *outInstsLen; i++) {
+                        adb_instanceType_t *instance = adb_ncDescribeInstancesResponseType_get_instances_at(response, env, i);
+                        (*outInsts)[i] = copy_instance_from_adb(instance, env);
                     }
                 }
             }
         }
     }
-    
+
     return status;
 }
 
-int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, ncResource **outRes)
+int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, ncResource ** outRes)
 {
-    axutil_env_t * env = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncDescribeResource_t     * input   = adb_ncDescribeResource_create(env); 
-    adb_ncDescribeResourceType_t * request = adb_ncDescribeResourceType_create(env);
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncDescribeResource_t *input = adb_ncDescribeResource_create(env);
+    adb_ncDescribeResourceType_t *request = adb_ncDescribeResourceType_create(env);
 
     /* set input fields */
     adb_ncDescribeResourceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncDescribeResourceType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncDescribeResourceType, request, meta);
     }
     if (resourceType) {
         adb_ncDescribeResourceType_set_resourceType(request, env, resourceType);
@@ -518,177 +533,181 @@ int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, nc
 
     int status = 0;
     {
-        adb_ncDescribeResourceResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input);
-        
+        adb_ncDescribeResourceResponse_t *output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncDescribeResourceResponseType_t * response = adb_ncDescribeResourceResponse_get_ncDescribeResourceResponse(output, env);
-            if ( adb_ncDescribeResourceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "returned an error\n");
+            adb_ncDescribeResourceResponseType_t *response = adb_ncDescribeResourceResponse_get_ncDescribeResourceResponse(output, env);
+            if (adb_ncDescribeResourceResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
-            ncResource * res = allocate_resource(
-                (char *)adb_ncDescribeResourceResponseType_get_nodeStatus(response, env),
-		(char *)adb_ncDescribeResourceResponseType_get_iqn(response, env),		
-                (int)adb_ncDescribeResourceResponseType_get_memorySizeMax(response, env),
-                (int)adb_ncDescribeResourceResponseType_get_memorySizeAvailable(response, env),
-                (int)adb_ncDescribeResourceResponseType_get_diskSizeMax(response, env),
-                (int)adb_ncDescribeResourceResponseType_get_diskSizeAvailable(response, env),
-                (int)adb_ncDescribeResourceResponseType_get_numberOfCoresMax(response, env),
-                (int)adb_ncDescribeResourceResponseType_get_numberOfCoresAvailable(response, env),
-                (char *)adb_ncDescribeResourceResponseType_get_publicSubnets(response, env));
+            ncResource *res = allocate_resource((char *)adb_ncDescribeResourceResponseType_get_nodeStatus(response, env),
+                                                (char *)adb_ncDescribeResourceResponseType_get_iqn(response, env),
+                                                (int)adb_ncDescribeResourceResponseType_get_memorySizeMax(response, env),
+                                                (int)adb_ncDescribeResourceResponseType_get_memorySizeAvailable(response, env),
+                                                (int)adb_ncDescribeResourceResponseType_get_diskSizeMax(response, env),
+                                                (int)adb_ncDescribeResourceResponseType_get_diskSizeAvailable(response, env),
+                                                (int)adb_ncDescribeResourceResponseType_get_numberOfCoresMax(response, env),
+                                                (int)adb_ncDescribeResourceResponseType_get_numberOfCoresAvailable(response, env),
+                                                (char *)adb_ncDescribeResourceResponseType_get_publicSubnets(response, env));
 
             if (!res) {
-                logprintfl (EUCAERROR, "out of memory\n");
+                logprintfl(EUCAERROR, "out of memory\n");
                 status = 2;
             }
-            * outRes = res;
+            *outRes = res;
         }
     }
 
     return status;
 }
 
-int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp) {
-  axutil_env_t * env  = st->env;
-  axis2_stub_t * stub = st->stub;
-  adb_ncAssignAddress_t     * input   = adb_ncAssignAddress_create (env);
-  adb_ncAssignAddressType_t * request = adb_ncAssignAddressType_create (env);
-  
-  // set standard input fields
-  adb_ncAssignAddressType_set_nodeName(request, env, st->node_name);
-  if (meta) {
-    if (meta->correlationId) { meta->correlationId = NULL; }
-    EUCA_MESSAGE_MARSHAL(ncAssignAddressType, request, meta);
-  }
-  
-  // set op-specific input fields
-  adb_ncAssignAddressType_set_instanceId(request, env, instanceId);
-  adb_ncAssignAddressType_set_publicIp(request, env, publicIp);
-
-  adb_ncAssignAddress_set_ncAssignAddress(input, env, request);
-  
-  int status = 0;
-  { // do it
-    adb_ncAssignAddressResponse_t * output = axis2_stub_op_EucalyptusNC_ncAssignAddress (stub, env, input);
-    
-    if (!output) {
-      logprintfl (EUCAERROR, NULL_ERROR_MSG);
-      status = -1;
-    } else {
-      adb_ncAssignAddressResponseType_t * response = adb_ncAssignAddressResponse_get_ncAssignAddressResponse (output, env);
-      if ( adb_ncAssignAddressResponseType_get_return(response, env) == AXIS2_FALSE ) {
-        logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
-	    status = 1;
-      }
-    }
-  }
-  
-  return status;
-}
-
-int ncPowerDownStub  (ncStub *st, ncMetadata *meta) {
-  axutil_env_t * env  = st->env;
-  axis2_stub_t * stub = st->stub;
-  adb_ncPowerDown_t     * input   = adb_ncPowerDown_create (env); 
-  adb_ncPowerDownType_t * request = adb_ncPowerDownType_create (env);
-  
-  // set standard input fields
-  adb_ncPowerDownType_set_nodeName(request, env, st->node_name);
-  if (meta) {
-    if (meta->correlationId) { meta->correlationId = NULL; }
-    EUCA_MESSAGE_MARSHAL(ncPowerDownType, request, meta);
-  }
-  
-  // set op-specific input fields
-  adb_ncPowerDown_set_ncPowerDown(input, env, request);
-  
-  int status = 0;
-  { // do it
-    adb_ncPowerDownResponse_t * output = axis2_stub_op_EucalyptusNC_ncPowerDown (stub, env, input);
-    
-    if (!output) {
-      logprintfl (EUCAERROR, NULL_ERROR_MSG);
-      status = -1;
-    } else {
-      adb_ncPowerDownResponseType_t * response = adb_ncPowerDownResponse_get_ncPowerDownResponse (output, env);
-      if ( adb_ncPowerDownResponseType_get_return(response, env) == AXIS2_FALSE ) {
-    	logprintfl (EUCAERROR, "returned an error\n");
-    	status = 1;
-      }
-    }
-  }
-  
-  return status;
-}
-
-int ncStartNetworkStub  (ncStub *st, ncMetadata *meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus) 
+int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *publicIp)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncStartNetwork_t     * input   = adb_ncStartNetwork_create (env); 
-    adb_ncStartNetworkType_t * request = adb_ncStartNetworkType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncAssignAddress_t *input = adb_ncAssignAddress_create(env);
+    adb_ncAssignAddressType_t *request = adb_ncAssignAddressType_create(env);
+
+    // set standard input fields
+    adb_ncAssignAddressType_set_nodeName(request, env, st->node_name);
+    if (meta) {
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncAssignAddressType, request, meta);
+    }
+    // set op-specific input fields
+    adb_ncAssignAddressType_set_instanceId(request, env, instanceId);
+    adb_ncAssignAddressType_set_publicIp(request, env, publicIp);
+
+    adb_ncAssignAddress_set_ncAssignAddress(input, env, request);
+
+    int status = 0;
+    {                           // do it
+        adb_ncAssignAddressResponse_t *output = axis2_stub_op_EucalyptusNC_ncAssignAddress(stub, env, input);
+
+        if (!output) {
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
+            status = -1;
+        } else {
+            adb_ncAssignAddressResponseType_t *response = adb_ncAssignAddressResponse_get_ncAssignAddressResponse(output, env);
+            if (adb_ncAssignAddressResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
+                status = 1;
+            }
+        }
+    }
+
+    return status;
+}
+
+int ncPowerDownStub(ncStub * st, ncMetadata * meta)
+{
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncPowerDown_t *input = adb_ncPowerDown_create(env);
+    adb_ncPowerDownType_t *request = adb_ncPowerDownType_create(env);
+
+    // set standard input fields
+    adb_ncPowerDownType_set_nodeName(request, env, st->node_name);
+    if (meta) {
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncPowerDownType, request, meta);
+    }
+    // set op-specific input fields
+    adb_ncPowerDown_set_ncPowerDown(input, env, request);
+
+    int status = 0;
+    {                           // do it
+        adb_ncPowerDownResponse_t *output = axis2_stub_op_EucalyptusNC_ncPowerDown(stub, env, input);
+
+        if (!output) {
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
+            status = -1;
+        } else {
+            adb_ncPowerDownResponseType_t *response = adb_ncPowerDownResponse_get_ncPowerDownResponse(output, env);
+            if (adb_ncPowerDownResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "returned an error\n");
+                status = 1;
+            }
+        }
+    }
+
+    return status;
+}
+
+int ncStartNetworkStub(ncStub * st, ncMetadata * meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus)
+{
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncStartNetwork_t *input = adb_ncStartNetwork_create(env);
+    adb_ncStartNetworkType_t *request = adb_ncStartNetworkType_create(env);
+
     // set standard input fields
     adb_ncStartNetworkType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncStartNetworkType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncStartNetworkType, request, meta);
     }
-    
     // set op-specific input fields
     adb_ncStartNetworkType_set_uuid(request, env, uuid);
     adb_ncStartNetworkType_set_vlan(request, env, vlan);
     adb_ncStartNetworkType_set_remoteHostPort(request, env, port);
     int i;
-    for (i=0; i<peersLen; i++) {
+    for (i = 0; i < peersLen; i++) {
         adb_ncStartNetworkType_add_remoteHosts(request, env, peers[i]);
     }
     adb_ncStartNetwork_set_ncStartNetwork(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncStartNetworkResponse_t * output = axis2_stub_op_EucalyptusNC_ncStartNetwork (stub, env, input);
-        
+    {                           // do it
+        adb_ncStartNetworkResponse_t *output = axis2_stub_op_EucalyptusNC_ncStartNetwork(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncStartNetworkResponseType_t * response = adb_ncStartNetworkResponse_get_ncStartNetworkResponse (output, env);
-            if ( adb_ncStartNetworkResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "returned an error\n");
+            adb_ncStartNetworkResponseType_t *response = adb_ncStartNetworkResponse_get_ncStartNetworkResponse(output, env);
+            if (adb_ncStartNetworkResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "returned an error\n");
                 status = 1;
             }
-
             // extract the fields from reponse
             if (outStatus != NULL) {
-                * outStatus = strdup(adb_ncStartNetworkResponseType_get_networkStatus(response, env));
+                *outStatus = strdup(adb_ncStartNetworkResponseType_get_networkStatus(response, env));
             }
         }
     }
-    
+
     return status;
 }
 
-int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev) 
+int ncAttachVolumeStub(ncStub * st, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncAttachVolume_t     * input   = adb_ncAttachVolume_create (env); 
-    adb_ncAttachVolumeType_t * request = adb_ncAttachVolumeType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncAttachVolume_t *input = adb_ncAttachVolume_create(env);
+    adb_ncAttachVolumeType_t *request = adb_ncAttachVolumeType_create(env);
+
     // set standard input fields
     adb_ncAttachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncAttachVolumeType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncAttachVolumeType, request, meta);
     }
-    
     // set op-specific input fields
     adb_ncAttachVolumeType_set_instanceId(request, env, instanceId);
     adb_ncAttachVolumeType_set_volumeId(request, env, volumeId);
@@ -697,85 +716,88 @@ int ncAttachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vo
     adb_ncAttachVolume_set_ncAttachVolume(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncAttachVolumeResponse_t * output = axis2_stub_op_EucalyptusNC_ncAttachVolume (stub, env, input);
-        
+    {                           // do it
+        adb_ncAttachVolumeResponse_t *output = axis2_stub_op_EucalyptusNC_ncAttachVolume(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncAttachVolumeResponseType_t * response = adb_ncAttachVolumeResponse_get_ncAttachVolumeResponse (output, env);
-            if ( adb_ncAttachVolumeResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s][%s] returned an error\n", instanceId, volumeId);
+            adb_ncAttachVolumeResponseType_t *response = adb_ncAttachVolumeResponse_get_ncAttachVolumeResponse(output, env);
+            if (adb_ncAttachVolumeResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s][%s] returned an error\n", instanceId, volumeId);
                 status = 1;
             }
         }
     }
-    
+
     return status;
 }
 
-int ncDetachVolumeStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+int ncDetachVolumeStub(ncStub * st, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncDetachVolume_t     * input   = adb_ncDetachVolume_create (env); 
-    adb_ncDetachVolumeType_t * request = adb_ncDetachVolumeType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncDetachVolume_t *input = adb_ncDetachVolume_create(env);
+    adb_ncDetachVolumeType_t *request = adb_ncDetachVolumeType_create(env);
+
     // set standard input fields
     adb_ncDetachVolumeType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncDetachVolumeType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncDetachVolumeType, request, meta);
     }
-    
     // set op-specific input fields
     adb_ncDetachVolumeType_set_instanceId(request, env, instanceId);
     adb_ncDetachVolumeType_set_volumeId(request, env, volumeId);
     adb_ncDetachVolumeType_set_remoteDev(request, env, remoteDev);
     adb_ncDetachVolumeType_set_localDev(request, env, localDev);
     if (force) {
-      adb_ncDetachVolumeType_set_force(request, env, AXIS2_TRUE);
+        adb_ncDetachVolumeType_set_force(request, env, AXIS2_TRUE);
     } else {
-      adb_ncDetachVolumeType_set_force(request, env, AXIS2_FALSE);
+        adb_ncDetachVolumeType_set_force(request, env, AXIS2_FALSE);
     }
     adb_ncDetachVolume_set_ncDetachVolume(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncDetachVolumeResponse_t * output = axis2_stub_op_EucalyptusNC_ncDetachVolume (stub, env, input);
-        
+    {                           // do it
+        adb_ncDetachVolumeResponse_t *output = axis2_stub_op_EucalyptusNC_ncDetachVolume(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncDetachVolumeResponseType_t * response = adb_ncDetachVolumeResponse_get_ncDetachVolumeResponse (output, env);
-            if ( adb_ncDetachVolumeResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s][%s] returned an error\n", instanceId, volumeId);
+            adb_ncDetachVolumeResponseType_t *response = adb_ncDetachVolumeResponse_get_ncDetachVolumeResponse(output, env);
+            if (adb_ncDetachVolumeResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s][%s] returned an error\n", instanceId, volumeId);
                 status = 1;
             }
         }
     }
-    
+
     return status;
 }
 
-int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
+int ncBundleInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey,
+                         char *S3Policy, char *S3PolicySig)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncBundleInstance_t     * input   = adb_ncBundleInstance_create (env); 
-    adb_ncBundleInstanceType_t * request = adb_ncBundleInstanceType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncBundleInstance_t *input = adb_ncBundleInstance_create(env);
+    adb_ncBundleInstanceType_t *request = adb_ncBundleInstanceType_create(env);
+
     // set standard input fields
     adb_ncBundleInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        if (meta->correlationId) { meta->correlationId = NULL; }
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
         EUCA_MESSAGE_MARSHAL(ncBundleInstanceType, request, meta);
     }
-
     // set op-specific input fields
     adb_ncBundleInstanceType_set_instanceId(request, env, instanceId);
     adb_ncBundleInstanceType_set_bucketName(request, env, bucketName);
@@ -787,164 +809,165 @@ int ncBundleInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, char *
     adb_ncBundleInstance_set_ncBundleInstance(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncBundleInstanceResponse_t * output = axis2_stub_op_EucalyptusNC_ncBundleInstance (stub, env, input);
-        
+    {                           // do it
+        adb_ncBundleInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncBundleInstance(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncBundleInstanceResponseType_t * response = adb_ncBundleInstanceResponse_get_ncBundleInstanceResponse (output, env);
-            if ( adb_ncBundleInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+            adb_ncBundleInstanceResponseType_t *response = adb_ncBundleInstanceResponse_get_ncBundleInstanceResponse(output, env);
+            if (adb_ncBundleInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
     }
-    
+
     return status;
 }
 
-int ncBundleRestartInstanceStub(ncStub *st, ncMetadata *meta, char *instanceId)
+int ncBundleRestartInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId)
 {
-    axutil_env_t                      *env     = st->env;
-    axis2_stub_t                      *stub    = st->stub;
-    adb_ncBundleRestartInstance_t     *input   = adb_ncBundleRestartInstance_create(env);
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncBundleRestartInstance_t *input = adb_ncBundleRestartInstance_create(env);
     adb_ncBundleRestartInstanceType_t *request = adb_ncBundleRestartInstanceType_create(env);
 
     // set standard input fields
     adb_ncBundleRestartInstanceType_set_nodeName(request, env, st->node_name);
     if (meta) {
         if (meta->correlationId)
-        	meta->correlationId = NULL;
+            meta->correlationId = NULL;
         EUCA_MESSAGE_MARSHAL(ncBundleRestartInstanceType, request, meta);
     }
-
     // set op-specific input fields
     adb_ncBundleRestartInstanceType_set_instanceId(request, env, instanceId);
     adb_ncBundleRestartInstance_set_ncBundleRestartInstance(input, env, request);
 
     int status = 0;
-    { // do it
+    {                           // do it
         adb_ncBundleRestartInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncBundleRestartInstance(stub, env, input);
 
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
-        }
-        else {
-            adb_ncBundleRestartInstanceResponseType_t *response = adb_ncBundleRestartInstanceResponse_get_ncBundleRestartInstanceResponse(output, env);
+        } else {
+            adb_ncBundleRestartInstanceResponseType_t *response =
+                adb_ncBundleRestartInstanceResponse_get_ncBundleRestartInstanceResponse(output, env);
             if (adb_ncBundleRestartInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
     }
 
-    return(status);
+    return (status);
 }
 
-int ncCancelBundleTaskStub (ncStub *st, ncMetadata *meta, char *instanceId)
+int ncCancelBundleTaskStub(ncStub * st, ncMetadata * meta, char *instanceId)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncCancelBundleTask_t     * input   = adb_ncCancelBundleTask_create (env); 
-    adb_ncCancelBundleTaskType_t * request = adb_ncCancelBundleTaskType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncCancelBundleTask_t *input = adb_ncCancelBundleTask_create(env);
+    adb_ncCancelBundleTaskType_t *request = adb_ncCancelBundleTaskType_create(env);
+
     // set standard input fields
     adb_ncCancelBundleTaskType_set_nodeName(request, env, st->node_name);
     if (meta) {
-        if (meta->correlationId) { meta->correlationId = NULL; }
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
         EUCA_MESSAGE_MARSHAL(ncCancelBundleTaskType, request, meta);
     }
-    
     // set op-specific input fields
     adb_ncCancelBundleTaskType_set_instanceId(request, env, instanceId);
     adb_ncCancelBundleTask_set_ncCancelBundleTask(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncCancelBundleTaskResponse_t * output = axis2_stub_op_EucalyptusNC_ncCancelBundleTask (stub, env, input);
-        
+    {                           // do it
+        adb_ncCancelBundleTaskResponse_t *output = axis2_stub_op_EucalyptusNC_ncCancelBundleTask(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncCancelBundleTaskResponseType_t * response = adb_ncCancelBundleTaskResponse_get_ncCancelBundleTaskResponse (output, env);
-            if ( adb_ncCancelBundleTaskResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+            adb_ncCancelBundleTaskResponseType_t *response = adb_ncCancelBundleTaskResponse_get_ncCancelBundleTaskResponse(output, env);
+            if (adb_ncCancelBundleTaskResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
     }
-    
+
     return status;
 }
 
-int ncDescribeBundleTasksStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen) {
+int ncDescribeBundleTasksStub(ncStub * st, ncMetadata * meta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+{
     int i;
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncDescribeBundleTasks_t     * input   = adb_ncDescribeBundleTasks_create (env); 
-    adb_ncDescribeBundleTasksType_t * request = adb_ncDescribeBundleTasksType_create (env);
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncDescribeBundleTasks_t *input = adb_ncDescribeBundleTasks_create(env);
+    adb_ncDescribeBundleTasksType_t *request = adb_ncDescribeBundleTasksType_create(env);
     // set standard input fields
     if (meta) {
-        adb_ncDescribeBundleTasksType_set_correlationId (request, env, meta->correlationId);
-	adb_ncDescribeBundleTasksType_set_userId (request, env, meta->userId);
+        adb_ncDescribeBundleTasksType_set_correlationId(request, env, meta->correlationId);
+        adb_ncDescribeBundleTasksType_set_userId(request, env, meta->userId);
     }
-    
     // set op-specific input fields
-    for (i=0; i<instIdsLen; i++) {
-      adb_ncDescribeBundleTasksType_add_instanceIds(request, env, instIds[i]);
+    for (i = 0; i < instIdsLen; i++) {
+        adb_ncDescribeBundleTasksType_add_instanceIds(request, env, instIds[i]);
     }
 
     adb_ncDescribeBundleTasks_set_ncDescribeBundleTasks(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncDescribeBundleTasksResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeBundleTasks (stub, env, input);
+    {                           // do it
+        adb_ncDescribeBundleTasksResponse_t *output = axis2_stub_op_EucalyptusNC_ncDescribeBundleTasks(stub, env, input);
 
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncDescribeBundleTasksResponseType_t * response = adb_ncDescribeBundleTasksResponse_get_ncDescribeBundleTasksResponse (output, env);
-            if ( adb_ncDescribeBundleTasksResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "returned an error\n");
+            adb_ncDescribeBundleTasksResponseType_t *response = adb_ncDescribeBundleTasksResponse_get_ncDescribeBundleTasksResponse(output, env);
+            if (adb_ncDescribeBundleTasksResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "returned an error\n");
                 status = 1;
-	    }		
-	    *outBundleTasksLen = adb_ncDescribeBundleTasksResponseType_sizeof_bundleTasks(response, env);
-	    *outBundleTasks = malloc(sizeof(bundleTask *) * *outBundleTasksLen);
-	    for (i=0; i<*outBundleTasksLen; i++) {
-	      adb_bundleTaskType_t *bundle;
-	      bundle = adb_ncDescribeBundleTasksResponseType_get_bundleTasks_at(response, env, i);
-	      (*outBundleTasks)[i] = malloc(sizeof(bundleTask));
-	      snprintf( (*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
-	      snprintf( (*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
-	    }
+            }
+            *outBundleTasksLen = adb_ncDescribeBundleTasksResponseType_sizeof_bundleTasks(response, env);
+            *outBundleTasks = malloc(sizeof(bundleTask *) * *outBundleTasksLen);
+            for (i = 0; i < *outBundleTasksLen; i++) {
+                adb_bundleTaskType_t *bundle;
+                bundle = adb_ncDescribeBundleTasksResponseType_get_bundleTasks_at(response, env, i);
+                (*outBundleTasks)[i] = malloc(sizeof(bundleTask));
+                snprintf((*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
+                snprintf((*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
+            }
         }
     }
-    
+
     return status;
 }
 
-int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev) 
+int ncCreateImageStub(ncStub * st, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncCreateImage_t     * input   = adb_ncCreateImage_create (env); 
-    adb_ncCreateImageType_t * request = adb_ncCreateImageType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncCreateImage_t *input = adb_ncCreateImage_create(env);
+    adb_ncCreateImageType_t *request = adb_ncCreateImageType_create(env);
+
     // set standard input fields
     adb_ncCreateImageType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncCreateImageType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncCreateImageType, request, meta);
     }
-    
     // set op-specific input fields
     adb_ncCreateImageType_set_instanceId(request, env, instanceId);
     adb_ncCreateImageType_set_volumeId(request, env, volumeId);
@@ -952,82 +975,84 @@ int ncCreateImageStub (ncStub *st, ncMetadata *meta, char *instanceId, char *vol
     adb_ncCreateImage_set_ncCreateImage(input, env, request);
 
     int status = 0;
-    { // do it
-        adb_ncCreateImageResponse_t * output = axis2_stub_op_EucalyptusNC_ncCreateImage (stub, env, input);
-        
+    {                           // do it
+        adb_ncCreateImageResponse_t *output = axis2_stub_op_EucalyptusNC_ncCreateImage(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncCreateImageResponseType_t * response = adb_ncCreateImageResponse_get_ncCreateImageResponse (output, env);
-            if ( adb_ncCreateImageResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "[%s] returned an error\n", instanceId);
+            adb_ncCreateImageResponseType_t *response = adb_ncCreateImageResponse_get_ncCreateImageResponse(output, env);
+            if (adb_ncCreateImageResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "[%s] returned an error\n", instanceId);
                 status = 1;
             }
         }
     }
-    
+
     return status;
 }
 
-int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+                          char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
-    adb_ncDescribeSensors_t     * input   = adb_ncDescribeSensors_create (env); 
-    adb_ncDescribeSensorsType_t * request = adb_ncDescribeSensorsType_create (env);
-    
+    axutil_env_t *env = st->env;
+    axis2_stub_t *stub = st->stub;
+    adb_ncDescribeSensors_t *input = adb_ncDescribeSensors_create(env);
+    adb_ncDescribeSensorsType_t *request = adb_ncDescribeSensorsType_create(env);
+
     // set standard input fields
     adb_ncDescribeSensorsType_set_nodeName(request, env, st->node_name);
     if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncDescribeSensorsType, request, meta);
+        if (meta->correlationId) {
+            meta->correlationId = NULL;
+        }
+        EUCA_MESSAGE_MARSHAL(ncDescribeSensorsType, request, meta);
     }
-    
     // set custom input fields
     adb_ncDescribeSensorsType_set_historySize(request, env, historySize);
     adb_ncDescribeSensorsType_set_collectionIntervalTimeMs(request, env, collectionIntervalTimeMs);
-    for (int i=0; i<instIdsLen; i++) {
+    for (int i = 0; i < instIdsLen; i++) {
         adb_ncDescribeSensorsType_add_instanceIds(request, env, instIds[i]);
     }
-    for (int i=0; i<sensorIdsLen; i++) {
+    for (int i = 0; i < sensorIdsLen; i++) {
         adb_ncDescribeSensorsType_add_sensorIds(request, env, sensorIds[i]);
     }
     adb_ncDescribeSensors_set_ncDescribeSensors(input, env, request);
-    
+
     int status = 0;
-    { // do it
-        adb_ncDescribeSensorsResponse_t * output = axis2_stub_op_EucalyptusNC_ncDescribeSensors (stub, env, input);
-        
+    {                           // do it
+        adb_ncDescribeSensorsResponse_t *output = axis2_stub_op_EucalyptusNC_ncDescribeSensors(stub, env, input);
+
         if (!output) {
-            logprintfl (EUCAERROR, NULL_ERROR_MSG);
+            logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
 
         } else {
-            adb_ncDescribeSensorsResponseType_t * response = adb_ncDescribeSensorsResponse_get_ncDescribeSensorsResponse (output, env);
-            if ( adb_ncDescribeSensorsResponseType_get_return(response, env) == AXIS2_FALSE ) {
-                logprintfl (EUCAERROR, "returned an error\n");
+            adb_ncDescribeSensorsResponseType_t *response = adb_ncDescribeSensorsResponse_get_ncDescribeSensorsResponse(output, env);
+            if (adb_ncDescribeSensorsResponseType_get_return(response, env) == AXIS2_FALSE) {
+                logprintfl(EUCAERROR, "returned an error\n");
                 status = 1;
             }
 
-            * outResourcesLen = adb_ncDescribeSensorsResponseType_sizeof_sensorsResources(response, env);
-            if (* outResourcesLen) {
-                * outResources = malloc (sizeof(sensorResource *) * *outResourcesLen);
-                if ( * outResources == NULL ) { 
-                    logprintfl (EUCAERROR, "out of memory\n");
-                    * outResourcesLen = 0;
+            *outResourcesLen = adb_ncDescribeSensorsResponseType_sizeof_sensorsResources(response, env);
+            if (*outResourcesLen) {
+                *outResources = malloc(sizeof(sensorResource *) * *outResourcesLen);
+                if (*outResources == NULL) {
+                    logprintfl(EUCAERROR, "out of memory\n");
+                    *outResourcesLen = 0;
                     status = 2;
                 } else {
-                    for (int i=0; i<*outResourcesLen; i++) {
-                        adb_sensorsResourceType_t * resource = adb_ncDescribeSensorsResponseType_get_sensorsResources_at(response, env, i);
-                        (* outResources)[i] = copy_sensor_resource_from_adb (resource, env);
+                    for (int i = 0; i < *outResourcesLen; i++) {
+                        adb_sensorsResourceType_t *resource = adb_ncDescribeSensorsResponseType_get_sensorsResources_at(response, env, i);
+                        (*outResources)[i] = copy_sensor_resource_from_adb(resource, env);
                     }
                 }
             }
         }
     }
-    
+
     return status;
 }
 

@@ -63,42 +63,48 @@
 #ifndef CLIENT_MARSHAL_H
 #define CLIENT_MARSHAL_H
 
-#include "axis2_stub_EucalyptusNC.h" /* for axis2_ and axutil_ defs */
-#include "data.h" /* for eucalyptus defs */
-#include "sensor.h" // sensorResource
+#include "axis2_stub_EucalyptusNC.h"    /* for axis2_ and axutil_ defs */
+#include "data.h"               /* for eucalyptus defs */
+#include "sensor.h"             // sensorResource
 
 #include <windows-bundle.h>
 
 typedef struct ncStub_t {
-  axutil_env_t * env;
-  axis2_char_t * client_home;
-  axis2_char_t * endpoint_uri;
-  axis2_char_t * node_name;
-  axis2_stub_t * stub;
+    axutil_env_t *env;
+    axis2_char_t *client_home;
+    axis2_char_t *endpoint_uri;
+    axis2_char_t *node_name;
+    axis2_stub_t *stub;
 } ncStub;
 
-ncStub * ncStubCreate  (char *endpoint, char *logfile, char *homedir);
-int      ncStubDestroy (ncStub * stub);
+ncStub *ncStubCreate(char *endpoint, char *logfile, char *homedir);
+int ncStubDestroy(ncStub * stub);
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr);
-int ncGetConsoleOutputStub (ncStub *stub, ncMetadata *meta, char *instanceId, char **consoleOutput);
-int ncRebootInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
-int ncTerminateInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState);
-int ncDescribeInstancesStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen);
-int ncDescribeResourceStub  (ncStub *stub, ncMetadata *meta, char *resourceType, ncResource **outRes);
-int ncStartNetworkStub  (ncStub *stub, ncMetadata *meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
-int ncAssignAddressStub  (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp);
-int ncPowerDownStub  (ncStub *st, ncMetadata *meta);
-int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
-int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
+int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+                      char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
+                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                      int groupNamesSize, ncInstance ** outInstPtr);
+int ncGetConsoleOutputStub(ncStub * stub, ncMetadata * meta, char *instanceId, char **consoleOutput);
+int ncRebootInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId);
+int ncTerminateInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId, int force, int *shutdownState, int *previousState);
+int ncDescribeInstancesStub(ncStub * stub, ncMetadata * meta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
+int ncDescribeResourceStub(ncStub * stub, ncMetadata * meta, char *resourceType, ncResource ** outRes);
+int ncStartNetworkStub(ncStub * stub, ncMetadata * meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
+int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *publicIp);
+int ncPowerDownStub(ncStub * st, ncMetadata * meta);
+int ncAttachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
+int ncDetachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncCreateImageStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev);
 
-int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
-int ncBundleRestartInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId);
-int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId);
-int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen);
+int ncBundleInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey,
+                         char *S3Policy, char *S3PolicySig);
+int ncBundleRestartInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId);
+int ncCancelBundleTaskStub(ncStub * stub, ncMetadata * meta, char *instanceId);
+int ncDescribeBundleTasksStub(ncStub * stub, ncMetadata * meta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen);
 
-int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev);
-int ncDescribeSensorsStub (ncStub *st, ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen);
+int ncCreateImageStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev);
+int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+                          char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 
 #endif

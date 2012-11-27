@@ -14,6 +14,14 @@ SUBDIRS			=	tools \
 				cluster \
 			        clc
 
+INDENTDIRS =	cluster \
+				util \
+				net \
+				storage	 \
+				gatherlog \
+				node  \
+				clc
+
 .PHONY: all clean distclean build 
 
 all: build
@@ -61,6 +69,10 @@ install: deploy
 uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus-version
 	@for subdir in $(SUBDIRS); do \
+		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
+
+indent: Makedefs
+	@for subdir in $(INDENTDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
 clean:

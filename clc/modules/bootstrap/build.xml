@@ -65,6 +65,9 @@
 
     <import file="../module-inc.xml"/>
 	<!--================================== BUILD TARGETS ==================================-->
+	<target name="indent-module">
+		<native-make dir="src/main/native" target="indent" />
+	</target>
 	<target name="build-module">
 		<mkdir dir="build"/>
 		<native-make dir="src/main/native" target="all" />

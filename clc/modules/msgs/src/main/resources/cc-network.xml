@@ -72,11 +72,11 @@
   </mapping>
   <mapping class="edu.ucsb.eucalyptus.msgs.NetworkInfoType" abstract="true">
     <value name="uuid" field="uuid" usage="required" />
-    <value name="vlan" field="vlan" />
+    <value name="vlan" field="tag" />
     <value name="netName" field="networkName" />
-    <value name="userName" field="userId" />
+    <value name="userName" field="accountNumber" />
     <structure usage="optional">
-      <collection field="allocatedAddresses" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <collection field="allocatedIndexes" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="activeAddrs" type="java.lang.String" />
       </collection>
     </structure>
