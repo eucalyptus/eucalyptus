@@ -34,7 +34,7 @@
  *   ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *   OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ************************************************************************/
-#include <arpa/inet.h>		/* for htonl() */
+#include <arpa/inet.h>			/* for htonl() */
 #include <sys/types.h>
 
 #include <wchar.h>
@@ -53,8 +53,7 @@
 static int __wchar_forbitten(wchar_t sym);
 static int __utf8_forbitten(u_char octet);
 
-static int
-__wchar_forbitten(wchar_t sym)
+static int __wchar_forbitten(wchar_t sym)
 {
 
 	/* Surrogate pairs */
@@ -64,8 +63,7 @@ __wchar_forbitten(wchar_t sym)
 	return (0);
 }
 
-static int
-__utf8_forbitten(u_char octet)
+static int __utf8_forbitten(u_char octet)
 {
 
 	switch (octet) {
@@ -105,9 +103,7 @@ __utf8_forbitten(u_char octet)
  *	   not prepare buffer in advance (\0 terminate) but after calling this
  *	   function.
  */
-size_t
-utf8_to_wchar(const char *in, size_t insize, wchar_t *out, size_t outsize,
-    int flags)
+size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsize, int flags)
 {
 	u_char *p, *lim;
 	wchar_t *wlim, high;
@@ -117,36 +113,35 @@ utf8_to_wchar(const char *in, size_t insize, wchar_t *out, size_t outsize,
 		return (0);
 
 	total = 0;
-	p = (u_char *)in;
+	p = (u_char *) in;
 	lim = p + insize;
 	wlim = out + outsize;
 
 	for (; p < lim; p += n) {
-		if (__utf8_forbitten(*p) != 0 &&
-		    (flags & UTF8_IGNORE_ERROR) == 0)
+		if (__utf8_forbitten(*p) != 0 && (flags & UTF8_IGNORE_ERROR) == 0)
 			return (0);
 
 		/*
 		 * Get number of bytes for one wide character.
 		 */
-		n = 1;	/* default: 1 byte. Used when skipping bytes. */
+		n = 1;					/* default: 1 byte. Used when skipping bytes. */
 		if ((*p & 0x80) == 0)
-			high = (wchar_t)*p;
+			high = (wchar_t) * p;
 		else if ((*p & 0xe0) == _SEQ2) {
 			n = 2;
-			high = (wchar_t)(*p & 0x1f);
+			high = (wchar_t) (*p & 0x1f);
 		} else if ((*p & 0xf0) == _SEQ3) {
 			n = 3;
-			high = (wchar_t)(*p & 0x0f);
+			high = (wchar_t) (*p & 0x0f);
 		} else if ((*p & 0xf8) == _SEQ4) {
 			n = 4;
-			high = (wchar_t)(*p & 0x07);
+			high = (wchar_t) (*p & 0x07);
 		} else if ((*p & 0xfc) == _SEQ5) {
 			n = 5;
-			high = (wchar_t)(*p & 0x03);
+			high = (wchar_t) (*p & 0x03);
 		} else if ((*p & 0xfe) == _SEQ6) {
 			n = 6;
-			high = (wchar_t)(*p & 0x01);
+			high = (wchar_t) (*p & 0x01);
 		} else {
 			if ((flags & UTF8_IGNORE_ERROR) == 0)
 				return (0);
@@ -158,7 +153,7 @@ utf8_to_wchar(const char *in, size_t insize, wchar_t *out, size_t outsize,
 			if ((flags & UTF8_IGNORE_ERROR) == 0)
 				return (0);
 			n = 1;
-			continue;	/* skip */
+			continue;			/* skip */
 		}
 
 		/*
@@ -174,7 +169,7 @@ utf8_to_wchar(const char *in, size_t insize, wchar_t *out, size_t outsize,
 				if ((flags & UTF8_IGNORE_ERROR) == 0)
 					return (0);
 				n = 1;
-				continue;	/* skip */
+				continue;		/* skip */
 			}
 		}
 
@@ -184,19 +179,19 @@ utf8_to_wchar(const char *in, size_t insize, wchar_t *out, size_t outsize,
 			continue;
 
 		if (out >= wlim)
-			return (0);		/* no space left */
+			return (0);			/* no space left */
 
 		*out = 0;
 		n_bits = 0;
 		for (i = 1; i < n; i++) {
-			*out |= (wchar_t)(p[n - i] & 0x3f) << n_bits;
+			*out |= (wchar_t) (p[n - i] & 0x3f) << n_bits;
 			n_bits += 6;		/* 6 low bits in every byte */
 		}
 		*out |= high << n_bits;
 
 		if (__wchar_forbitten(*out) != 0) {
 			if ((flags & UTF8_IGNORE_ERROR) == 0)
-				return (0);	/* forbitten character */
+				return (0);		/* forbitten character */
 			else {
 				total--;
 				out--;
@@ -232,9 +227,7 @@ utf8_to_wchar(const char *in, size_t insize, wchar_t *out, size_t outsize,
  *	If UCS-4 string contains zero symbols, they will be translated
  *	as regular symbols.
  */
-size_t
-wchar_to_utf8(const wchar_t *in, size_t insize, char *out, size_t outsize,
-    int flags)
+size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsize, int flags)
 {
 	wchar_t *w, *wlim, ch;
 	u_char *p, *lim, *oc;
@@ -243,9 +236,9 @@ wchar_to_utf8(const wchar_t *in, size_t insize, char *out, size_t outsize,
 	if (in == NULL || insize == 0 || (outsize == 0 && out != NULL))
 		return (0);
 
-	w = (wchar_t *)in;
+	w = (wchar_t *) in;
 	wlim = w + insize;
-	p = (u_char *)out;
+	p = (u_char *) out;
 	lim = p + outsize;
 	total = 0;
 	for (; w < wlim; w++) {
@@ -273,7 +266,7 @@ wchar_to_utf8(const wchar_t *in, size_t insize, char *out, size_t outsize,
 			n = 4;
 		else if (*w <= 0x03ffffff)
 			n = 5;
-		else /* if (*w <= 0x7fffffff) */
+		else					/* if (*w <= 0x7fffffff) */
 			n = 6;
 
 		total += n;
@@ -282,46 +275,44 @@ wchar_to_utf8(const wchar_t *in, size_t insize, char *out, size_t outsize,
 			continue;
 
 		if (lim - p <= n - 1)
-			return (0);		/* no space left */
+			return (0);			/* no space left */
 
 		/* make it work under different endians */
 		ch = htonl(*w);
-		oc = (u_char *)&ch;
+		oc = (u_char *) & ch;
 		switch (n) {
 		case 1:
 			*p = oc[3];
 			break;
 
 		case 2:
-		        p[1] = _NXT | (oc[3] & 0x3f);
+			p[1] = _NXT | (oc[3] & 0x3f);
 			p[0] = _SEQ2 | (oc[3] >> 6) | ((oc[2] & 0x07) << 2);
 			break;
 
 		case 3:
-		        p[2] = _NXT | (oc[3] & 0x3f);
+			p[2] = _NXT | (oc[3] & 0x3f);
 			p[1] = _NXT | (oc[3] >> 6) | ((oc[2] & 0x0f) << 2);
 			p[0] = _SEQ3 | ((oc[2] & 0xf0) >> 4);
 			break;
 
 		case 4:
-		        p[3] = _NXT | (oc[3] & 0x3f);
+			p[3] = _NXT | (oc[3] & 0x3f);
 			p[2] = _NXT | (oc[3] >> 6) | ((oc[2] & 0x0f) << 2);
-			p[1] = _NXT | ((oc[2] & 0xf0) >> 4) |
-			    ((oc[1] & 0x03) << 4);
+			p[1] = _NXT | ((oc[2] & 0xf0) >> 4) | ((oc[1] & 0x03) << 4);
 			p[0] = _SEQ4 | ((oc[1] & 0x1f) >> 2);
 			break;
 
 		case 5:
-		        p[4] = _NXT | (oc[3] & 0x3f);
+			p[4] = _NXT | (oc[3] & 0x3f);
 			p[3] = _NXT | (oc[3] >> 6) | ((oc[2] & 0x0f) << 2);
-			p[2] = _NXT | ((oc[2] & 0xf0) >> 4) |
-			    ((oc[1] & 0x03) << 4);
+			p[2] = _NXT | ((oc[2] & 0xf0) >> 4) | ((oc[1] & 0x03) << 4);
 			p[1] = _NXT | (oc[1] >> 2);
 			p[0] = _SEQ5 | (oc[0] & 0x03);
 			break;
 
 		case 6:
-		        p[5] = _NXT | (oc[3] & 0x3f);
+			p[5] = _NXT | (oc[3] & 0x3f);
 			p[4] = _NXT | (oc[3] >> 6) | ((oc[2] & 0x0f) << 2);
 			p[3] = _NXT | (oc[2] >> 4) | ((oc[1] & 0x03) << 4);
 			p[2] = _NXT | (oc[1] >> 2);

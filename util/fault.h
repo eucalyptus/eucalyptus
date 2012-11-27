@@ -48,7 +48,7 @@
  * the registry was previously loaded, returns the number of previously
  * loaded faults as a negative number.
  */
-extern int init_eucafaults (char *);
+extern int init_eucafaults(char *);
 
 /*
  * Usage: log_eucafault_map (FAULT_ID, parameter_map)
@@ -62,7 +62,7 @@ extern int init_eucafaults (char *);
  *
  * Returns TRUE if fault successfully logged, FALSE otherwise.
  */
-extern boolean log_eucafault_map (const char *, const char_map **);
+extern boolean log_eucafault_map(const char *, const char_map **);
 
 /*
  * Usage: log_eucafault (FAULT_ID, param1, param1text, param2, param2text,
@@ -81,6 +81,6 @@ extern boolean log_eucafault_map (const char *, const char_map **);
  * returning it as a negative number if the underlying
  * log_eucafault_map() call returned FALSE.
  */
-extern int log_eucafault (const char *, ...);
+extern int log_eucafault(const char *, ...);
 
 #endif // INCLUDE_FAULT_H

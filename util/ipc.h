@@ -69,24 +69,24 @@
 #include <pthread.h>
 
 typedef struct sem_struct {
-    int sysv;
-    sem_t * posix;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    int usemutex, mutwaiters, mutcount;
-    char * name;
-    int flags;
+	int sysv;
+	sem_t *posix;
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+	int usemutex, mutwaiters, mutcount;
+	char *name;
+	int flags;
 } sem;
 
-#include "misc.h" // boolean
+#include "misc.h"				// boolean
 
-sem * sem_realloc (const int val, const char * name, const int flags);
-sem * sem_alloc (const int val, const char * name);
-sem * sem_alloc_posix (sem_t * external_lock);
-int   sem_prolaag (sem * s, boolean do_log);
-int   sem_p (sem * s);
-int   sem_verhogen (sem * s, boolean do_log);
-int   sem_v (sem * s);
-void  sem_free (sem * s);
+sem *sem_realloc(const int val, const char *name, const int flags);
+sem *sem_alloc(const int val, const char *name);
+sem *sem_alloc_posix(sem_t * external_lock);
+int sem_prolaag(sem * s, boolean do_log);
+int sem_p(sem * s);
+int sem_verhogen(sem * s, boolean do_log);
+int sem_v(sem * s);
+void sem_free(sem * s);
 
 #endif /* IPC_H */

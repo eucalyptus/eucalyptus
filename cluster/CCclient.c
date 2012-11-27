@@ -75,17 +75,18 @@
 #endif
 
 #ifndef NO_COMP
-const char * euca_this_component_name   = "cc";
-const char * euca_client_component_name = "clc";
+const char *euca_this_component_name = "cc";
+const char *euca_client_component_name = "clc";
 #endif
 
 ncMetadata mymeta;
 
-int main(int argc, char **argv) {
-	axutil_env_t * env = NULL;
-	axis2_char_t * client_home = NULL;
+int main(int argc, char **argv)
+{
+	axutil_env_t *env = NULL;
+	axis2_char_t *client_home = NULL;
 	axis2_char_t endpoint_uri[256], *tmpstr;
-	axis2_stub_t * stub = NULL;
+	axis2_stub_t *stub = NULL;
 	int rc, i, port, use_wssec;
 	char *euca_home, configFile[1024], policyFile[1024];
 
@@ -121,7 +122,7 @@ int main(int argc, char **argv) {
 	rc = get_conf_var(configFile, "CC_PORT", &tmpstr);
 	if (rc != 1) {
 		// error
-		logprintf("ERROR: parsing config file (%s) for CC_PORT\n",configFile);
+		logprintf("ERROR: parsing config file (%s) for CC_PORT\n", configFile);
 		exit(1);
 	} else {
 		port = atoi(tmpstr);
@@ -140,12 +141,12 @@ int main(int argc, char **argv) {
 	}
 
 	if (MODE == 0) {
-		snprintf(endpoint_uri, 256,"http://localhost:%d/axis2/services/EucalyptusCC", port);
+		snprintf(endpoint_uri, 256, "http://localhost:%d/axis2/services/EucalyptusCC", port);
 	} else {
-		snprintf(endpoint_uri, 256,"http://%s/axis2/services/EucalyptusCC", argv[1]);
+		snprintf(endpoint_uri, 256, "http://%s/axis2/services/EucalyptusCC", argv[1]);
 	}
 	//env =  axutil_env_create_all(NULL, 0);
-	env =  axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
+	env = axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
 
 	client_home = AXIS2_GETENV("AXIS2C_HOME");
 	if (!client_home) {
@@ -157,7 +158,7 @@ int main(int argc, char **argv) {
 	if (use_wssec) {
 		rc = InitWSSEC(env, stub, policyFile);
 		if (rc) {
-			printf("cannot initialize WS-SEC policy (%s)\n",policyFile);
+			printf("cannot initialize WS-SEC policy (%s)\n", policyFile);
 			exit(1);
 		}
 	}
@@ -170,22 +171,28 @@ int main(int argc, char **argv) {
 		}
 	} else {
 		/*
-		if (!strcmp(argv[2], "registerImage")) {
-			rc = cc_registerImage(argv[3], env, stub);
-			if (rc != 0) {
-				printf("cc_registerImage() failed: in:%s out:%d\n", argv[3], rc);
-				exit(1);
-			}
-		}
-		*/
+		   if (!strcmp(argv[2], "registerImage")) {
+		   rc = cc_registerImage(argv[3], env, stub);
+		   if (rc != 0) {
+		   printf("cc_registerImage() failed: in:%s out:%d\n", argv[3], rc);
+		   exit(1);
+		   }
+		   }
+		 */
 		if (!strcmp(argv[2], "runInstances")) {
-			char *amiId=NULL, *amiURL=NULL, *kernelId=NULL, *kernelURL=NULL, *ramdiskId=NULL, *ramdiskURL=NULL;
-			if (argv[3]) amiId = argv[3];
-			if (argv[4]) amiURL = argv[4];
-			if (argv[5]) kernelId = argv[5];
-			if (argv[6]) kernelURL = argv[6];
-			if (argv[10]) ramdiskId = argv[10];
-			if (argv[11]) ramdiskURL = argv[11];
+			char *amiId = NULL, *amiURL = NULL, *kernelId = NULL, *kernelURL = NULL, *ramdiskId = NULL, *ramdiskURL = NULL;
+			if (argv[3])
+				amiId = argv[3];
+			if (argv[4])
+				amiURL = argv[4];
+			if (argv[5])
+				kernelId = argv[5];
+			if (argv[6])
+				kernelURL = argv[6];
+			if (argv[10])
+				ramdiskId = argv[10];
+			if (argv[11])
+				ramdiskURL = argv[11];
 
 			virtualMachine params = { 64, 1, 64, "m1.small" };
 
@@ -254,13 +261,13 @@ int main(int argc, char **argv) {
 			}
 		} else if (!strcmp(argv[2], "terminateInstances")) {
 			char *instIds[256];
-			i=3;
+			i = 3;
 			while (argv[i] != NULL) {
-				instIds[i-3] = strdup(argv[i]);
+				instIds[i - 3] = strdup(argv[i]);
 				i++;
 			}
-			if ( (i-3) > 0) {
-				rc = cc_terminateInstances(instIds, i-3, env, stub);
+			if ((i - 3) > 0) {
+				rc = cc_terminateInstances(instIds, i - 3, env, stub);
 				if (rc != 0) {
 					printf("cc_terminateInstances() failed\n");
 					exit(1);
@@ -274,14 +281,14 @@ int main(int argc, char **argv) {
 			}
 		} else if (!strcmp(argv[2], "startNetwork")) {
 			char **ccs;
-			int ccsLen=0, i;
+			int ccsLen = 0, i;
 			ccs = malloc(sizeof(char *) * 32);
-			for (i=0; i<32; i++) {
-				if (argv[i+5]) {
-					ccs[i] = strdup(argv[i+5]);
+			for (i = 0; i < 32; i++) {
+				if (argv[i + 5]) {
+					ccs[i] = strdup(argv[i + 5]);
 					ccsLen++;
 				} else {
-					i=33;
+					i = 33;
 				}
 			}
 			rc = cc_startNetwork(atoi(argv[3]), argv[4], ccs, ccsLen, env, stub);
@@ -291,14 +298,14 @@ int main(int argc, char **argv) {
 			}
 		} else if (!strcmp(argv[2], "describeNetworks")) {
 			char **ccs, *nameserver;
-			int ccsLen=0, i;
+			int ccsLen = 0, i;
 			ccs = malloc(sizeof(char *) * 32);
-			for (i=0; i<32; i++) {
-				if (argv[i+3]) {
-					ccs[i] = strdup(argv[i+3]);
+			for (i = 0; i < 32; i++) {
+				if (argv[i + 3]) {
+					ccs[i] = strdup(argv[i + 3]);
 					ccsLen++;
 				} else {
-					i=33;
+					i = 33;
 				}
 			}
 			nameserver = strdup("1.2.3.4");
@@ -375,7 +382,7 @@ int main(int argc, char **argv) {
 				exit(1);
 			}
 		} else if (!strcmp(argv[2], "describeSensors")) {
-			sensorResource ** res;
+			sensorResource **res;
 			int resSize;
 
 			rc = cc_describeSensors(10, 5000, NULL, 0, NULL, 0, &res, &resSize, env, stub);
@@ -383,9 +390,9 @@ int main(int argc, char **argv) {
 				printf("cc_describeSensors() failed: error=%d\n", rc);
 				exit(1);
 			}
-			char buf [40960];
-			sensor_res2str (buf, sizeof(buf), res, resSize);
-			printf ("resources: %d\n%s\n", resSize, buf);
+			char buf[40960];
+			sensor_res2str(buf, sizeof(buf), res, resSize);
+			printf("resources: %d\n%s\n", resSize, buf);
 		} else {
 			printf("unrecognized operation '%s'\n", argv[2]);
 			exit(1);

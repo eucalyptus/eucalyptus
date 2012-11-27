@@ -65,20 +65,20 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h> // ssize_t
-#include <sys/types.h> // mode_t
+#include <unistd.h>				// ssize_t
+#include <sys/types.h>			// mode_t
 #include <linux/limits.h>
-#include <stdint.h> // uint32_t
+#include <stdint.h>				// uint32_t
 
 // these must be defined by each euca component
-extern const char * euca_client_component_name;
-extern const char * euca_this_component_name;
+extern const char *euca_client_component_name;
+extern const char *euca_this_component_name;
 
 typedef unsigned char boolean;
 #define TRUE 1
 #define FALSE 0
 
-#include "log.h" // so everyone picks up the logging functions
+#include "log.h"				// so everyone picks up the logging functions
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096
@@ -102,10 +102,10 @@ typedef unsigned char boolean;
 #define SP(a) a ? a : "UNSET"
 #define RANDALPHANUM rand()%2 ? rand()%26+97 : rand()%2 ? rand()%26+65 : rand()%10+48
 
-char * replace_string (char ** stringp, char * source, char * destination );
-int sscanf_lines (char * lines, char * format, void * varp);
-char * fp2str (FILE * fp);
-char * system_output (char * shell_command );
+char *replace_string(char **stringp, char *source, char *destination);
+int sscanf_lines(char *lines, char *format, void *varp);
+char *fp2str(FILE * fp);
+char *system_output(char *shell_command);
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
 
 /**
@@ -122,10 +122,7 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
  *      TEST = prova
  * TEST=prova
  */
-int
-get_conf_var(	const char *path,
-		const char *name,
-		char **value);
+int get_conf_var(const char *path, const char *name, char **value);
 
 /**
  * The next 2 functions deal with turning a variable values (that is a
@@ -144,70 +141,68 @@ get_conf_var(	const char *path,
  * (the variable contains only spaces) you'll get back an array with only
  * one element and the element is NULL.
  */
-void
-free_char_list(char **value);
+void free_char_list(char **value);
 
-char **
-from_var_to_char_list(const char *var);
+char **from_var_to_char_list(const char *var);
 
 // dan's functions
 int check_process(pid_t pid, char *search);
 int check_directory(const char *dir);
-int check_file (const char *file);
-int check_block (const char *file);
-int check_path (const char *path);
-int statfs_path (const char * path, unsigned long long * fs_bytes_size, unsigned long long * fs_bytes_available, int * fs_id);
+int check_file(const char *file);
+int check_block(const char *file);
+int check_path(const char *path);
+int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
 int check_file_newer_than(char *file, time_t mtime);
 
 // safe version of common fuctions
 char *safe_mkdtemp(char *);
 int safe_mkstemp(char *);
-char* safe_strncpy(char *s1, const char *s2, size_t len);
+char *safe_strncpy(char *s1, const char *s2, size_t len);
 
-int get_blkid (const char * dev_path, char * uuid, unsigned int uuid_size);
-char parse_boolean (const char * s);
+int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
+char parse_boolean(const char *s);
 
 // argument checker
 int param_check(char *func, ...);
 // end of dan't functions
 
-int hash_code (const char * s);
-int hash_code_bin (const char * buf, int buf_size);
-char * get_string_stats (const char * s);
+int hash_code(const char *s);
+int hash_code_bin(const char *buf, int buf_size);
+char *get_string_stats(const char *s);
 int daemonrun(char *cmd, char *pidfile);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
-int run (const char * arg1, ...);
-int vrun (const char * fmt, ...);
-int cat (const char * file_name);
-int touch (const char * path);
-int diff (const char * path1, const char * path2);
-long long dir_size (const char * path);
-char * file2strn (const char * path, const ssize_t limit);
-char * file2str (const char * path); /* read file 'path' into a new string */
-char *file2str_seek(char *file, size_t size, int mode); /* read file into new string, length 'size', either from beginning (0) or end (1) of the file */
+int run(const char *arg1, ...);
+int vrun(const char *fmt, ...);
+int cat(const char *file_name);
+int touch(const char *path);
+int diff(const char *path1, const char *path2);
+long long dir_size(const char *path);
+char *file2strn(const char *path, const ssize_t limit);
+char *file2str(const char *path);	/* read file 'path' into a new string */
+char *file2str_seek(char *file, size_t size, int mode);	/* read file into new string, length 'size', either from beginning (0) or end (1) of the file */
 int write2file(const char *path, char *str);
-char * str2str (const char * str, const char * begin, const char * end);
-long long str2longlong (const char * str, const char * begin, const char * end); /* extract integer from str bound by 'begin' and 'end' */
+char *str2str(const char *str, const char *begin, const char *end);
+long long str2longlong(const char *str, const char *begin, const char *end);	/* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int uint32compar(const void *ina, const void *inb);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
-int add_euca_to_path (const char * euca_home_supplied);
+int add_euca_to_path(const char *euca_home_supplied);
 int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
 int maxint(int a, int b);
 int minint(int a, int b);
-int copy_file (const char * src, const char * dst);
-long long file_size (const char * file_path);
-char * strduplc (const char * s);
-char * xpath_content (const char * xml, const char * xpath);
+int copy_file(const char *src, const char *dst);
+long long file_size(const char *file_path);
+char *strduplc(const char *s);
+char *xpath_content(const char *xml, const char *xpath);
 int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
-char * strdupcat (char * original, char * new);
-int ensure_directories_exist (const char * path, int is_file_path, const char *user, const char *group, mode_t mode);
-long long time_usec (void);
-long long time_ms (void);
-int drop_privs (void);
+char *strdupcat(char *original, char *new);
+int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
+long long time_usec(void);
+long long time_ms(void);
+int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 
 #endif

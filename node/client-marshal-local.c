@@ -68,82 +68,95 @@
 #include "handlers.h"
 #include "client-marshal.h"
 
-ncStub * ncStubCreate (char *endpoint_uri, char *logfile, char *homedir) 
+ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 {
-    ncStub * st;
-    
-    if ((st = malloc (sizeof(ncStub))) != NULL) {
-        /* nothing to do */
-    } 
-    
-    return (st);
+	ncStub *st;
+
+	if ((st = malloc(sizeof(ncStub))) != NULL) {
+		/* nothing to do */
+	}
+
+	return (st);
 }
 
-int ncStubDestroy (ncStub * st)
+int ncStubDestroy(ncStub * st)
 {
-    free (st);
-    return (0);
+	free(st);
+	return (0);
 }
 
 /************************** stubs **************************/
 
-int ncRunInstanceStub (ncStub *st, ncMetadata *meta, char *uuid, char *instanceId, char *reservationId, virtualMachine *params, char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig *netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance **outInstPtr)
+int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL, char *kernelId, char *kernelURL,
+					  char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime,
+					  char **groupNames, int groupNamesSize, ncInstance ** outInstPtr)
 {
-  return doRunInstance (meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
+	return doRunInstance(meta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex,
+						 platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
 }
 
-int ncTerminateInstanceStub (ncStub *st, ncMetadata *meta, char *instanceId, int force, int *shutdownState, int *previousState)
+int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
-  return doTerminateInstance (meta, instanceId, force, shutdownState, previousState);
+	return doTerminateInstance(meta, instanceId, force, shutdownState, previousState);
 }
-int ncAssignAddressStub (ncStub *st, ncMetadata *meta, char *instanceId, char *publicIp){
-  return(0);
-}
-int ncPowerDownStub (ncStub *st, ncMetadata *meta){
-  return(0);
-}
-int ncDescribeInstancesStub (ncStub *st, ncMetadata *meta, char **instIds, int instIdsLen, ncInstance ***outInsts, int *outInstsLen)
+
+int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *publicIp)
 {
-    return doDescribeInstances (meta, instIds, instIdsLen, outInsts, outInstsLen);
+	return (0);
 }
 
-int ncBundleInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig) {
-  return(0);
-}
-
-int ncBundleRestartInstanceStub (ncStub *stub, ncMetadata *meta, char *instanceId) {
-  return(0);
-}
-
-int ncCancelBundleTaskStub (ncStub *stub, ncMetadata *meta, char *instanceId) {
-  return(0);
-}
-
-int ncDescribeBundleTasksStub (ncStub *stub, ncMetadata *meta, char **instIds, int instIdsLen, bundleTask ***outBundleTasks, int *outBundleTasksLen) {
-  return(0);
-}
-
-int ncDescribeResourceStub (ncStub *st, ncMetadata *meta, char *resourceType, ncResource **outRes)
+int ncPowerDownStub(ncStub * st, ncMetadata * meta)
 {
-    return doDescribeResource (meta, resourceType, outRes);
+	return (0);
 }
 
-int ncAttachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
 {
-    return doAttachVolume (meta, instanceId, volumeId, remoteDev, localDev);
+	return doDescribeInstances(meta, instIds, instIdsLen, outInsts, outInstsLen);
 }
 
-int ncDetachVolumeStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+int ncBundleInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
-    return doDetachVolume (meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+	return (0);
 }
 
-int ncCreateImageStub (ncStub *stub, ncMetadata *meta, char *instanceId, char *volumeId, char *remoteDev)
+int ncBundleRestartInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId)
 {
-    return doCreateImage (meta, instanceId, volumeId, remoteDev);
+	return (0);
 }
 
-int ncDescribeSensorsStub (ncStub *stub, ncMetadata *meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource ***outResources, int *outResourcesLen)
+int ncCancelBundleTaskStub(ncStub * stub, ncMetadata * meta, char *instanceId)
 {
-  return doDescribeSensors (meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
+	return (0);
+}
+
+int ncDescribeBundleTasksStub(ncStub * stub, ncMetadata * meta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+{
+	return (0);
+}
+
+int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, ncResource ** outRes)
+{
+	return doDescribeResource(meta, resourceType, outRes);
+}
+
+int ncAttachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+{
+	return doAttachVolume(meta, instanceId, volumeId, remoteDev, localDev);
+}
+
+int ncDetachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+{
+	return doDetachVolume(meta, instanceId, volumeId, remoteDev, localDev, force, 1);
+}
+
+int ncCreateImageStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev)
+{
+	return doCreateImage(meta, instanceId, volumeId, remoteDev);
+}
+
+int ncDescribeSensorsStub(ncStub * stub, ncMetadata * meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds, int sensorIdsLen,
+						  sensorResource *** outResources, int *outResourcesLen)
+{
+	return doDescribeSensors(meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
 }

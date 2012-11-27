@@ -72,9 +72,10 @@
 
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
-static const char* blockSize = "1M";
+static const char *blockSize = "1M";
 
-int run_command_and_get_pid(char *cmd, char **args) {
+int run_command_and_get_pid(char *cmd, char **args)
+{
 	int pid = -1;
 	int fds_to_close[1024];
 	int curr_fd = 0;
@@ -92,14 +93,14 @@ int run_command_and_get_pid(char *cmd, char **args) {
 		int my_pid = getpid();
 
 		umask(0);
-    	int sid = setsid();
-		if(sid < 0)
+		int sid = setsid();
+		if (sid < 0)
 			exit(-1);
-		char* home = getenv (EUCALYPTUS_ENV_VAR_NAME);
+		char *home = getenv(EUCALYPTUS_ENV_VAR_NAME);
 		if (!home) {
-			home = strdup (""); /* root by default */
+			home = strdup("");	/* root by default */
 		} else {
-			home = strdup (home);
+			home = strdup(home);
 		}
 		fprintf(stderr, "command: %s\n", cmd);
 		chdir(home);
@@ -111,23 +112,23 @@ int run_command_and_get_pid(char *cmd, char **args) {
 			curr_fd = 0;
 			while ((fd_dir = readdir(proc_fd_dir)) != NULL) {
 				if (isdigit(fd_dir->d_name[0])) {
-					fds_to_close[curr_fd++] =  atoi(fd_dir->d_name);
+					fds_to_close[curr_fd++] = atoi(fd_dir->d_name);
 				}
 			}
 			int i = 0;
-			for(i=0 ; i < curr_fd; ++i) {
+			for (i = 0; i < curr_fd; ++i) {
 				close(fds_to_close[i]);
 			}
 		} else {
 			int i = 0;
-			for(i=0 ; i < 1024; ++i) {
+			for (i = 0; i < 1024; ++i) {
 				close(i);
 			}
 		}
 
-		freopen( "/dev/null", "r", stdin);
-		freopen( "/dev/null", "w", stdout);
-		freopen( "/dev/null", "w", stderr);
+		freopen("/dev/null", "r", stdin);
+		freopen("/dev/null", "w", stdout);
+		freopen("/dev/null", "w", stderr);
 
 		exit(execvp(cmd, args));
 	}
@@ -136,10 +137,9 @@ int run_command_and_get_pid(char *cmd, char **args) {
 
 void sigchld(int signal)
 {
-	while (0 < waitpid(-1, NULL, WNOHANG));
+	while (0 < waitpid(-1, NULL, WNOHANG)) ;
 }
 
-JNIEXPORT void JNICALL Java_com_eucalyptus_storage_OverlayManager_registerSignals
-(JNIEnv *env, jobject obj) {
+JNIEXPORT void JNICALL Java_com_eucalyptus_storage_OverlayManager_registerSignals(JNIEnv * env, jobject obj) {
 	signal(SIGCHLD, sigchld);
 }
