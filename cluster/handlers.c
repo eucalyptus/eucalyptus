@@ -1891,10 +1891,9 @@ int refresh_sensors(ncMetadata * ccMeta, int timeout, int dolock)
 
                 sensorResource **srs;
                 int srsLen;
-                int rc =
-                    ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
-                                 "ncDescribeSensors", history_size, collection_interval_time_ms,
-                                 NULL, 0, NULL, 0, &srs, &srsLen);
+                int rc = ncClientCall(ccMeta, nctimeout, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
+                                      "ncDescribeSensors", history_size, collection_interval_time_ms,
+                                      NULL, 0, NULL, 0, &srs, &srsLen);
 
                 if (!rc) {
                     // update our cache
@@ -4187,10 +4186,9 @@ int init_config(void)
 
         sem_mywait(VNET);
 
-        int ret =
-            vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask,
-                     pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon,
-                     dhcpuser, NULL, localIp, macPrefix);
+        int ret = vnetInit(vnetconfig, pubmode, eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask,
+                           pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, daemon,
+                           dhcpuser, NULL, localIp, macPrefix);
         if (pubSubnet)
             free(pubSubnet);
         if (pubSubnetMask)

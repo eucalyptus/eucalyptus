@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -59,9 +62,6 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -730,6 +730,9 @@ static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * s
     // sanity check
     if (sr->metricsLen < 0 || sr->metricsLen > MAX_SENSOR_METRICS) {
         logprintfl(EUCAERROR, "inconsistency in sensor database (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
+        char trace[8172] = "";  // print stack trace to see which invocation led to this erroneous condition
+        log_dump_trace(trace, sizeof(trace));
+        logprintfl(EUCADEBUG, "%s", trace);
         return NULL;
     }
 
@@ -830,6 +833,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
     sem_p(state_sem);
     for (int r = 0; r < srsLen; r++) {
         const sensorResource *sr = srs[r];
+        logprintfl(EUCATRACE, "merging results for resource %s [%d]\n", sr->resourceName, r);
         if (is_empty_sr(sr))
             continue;
         sensorResource *cache_sr = find_or_alloc_sr(TRUE, sr->resourceName, sr->resourceType, sr->resourceUuid);
@@ -1245,6 +1249,11 @@ int sensor_set_dimension_alias(const char *resourceName, const char *metricName,
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return 1;
 
+    if (resourceName == NULL || strlen(resourceName) < 1 || strlen(resourceName) > MAX_SENSOR_NAME_LEN) {
+        logprintfl(EUCADEBUG, "invoked with invalid resourceName (%s)\n", resourceName);
+        return 1;
+    }
+
     sem_p(state_sem);
 
     // do not allocate resource structure here
@@ -1374,36 +1383,44 @@ int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], co
 
 int sensor_validate_resources(sensorResource ** srs, int srsLen)
 {
+    int errors = 0;
+
     for (int i = 0; i < srsLen; i++) {
         sensorResource *sr = srs[i];
         if (sr == NULL) {
-            logprintfl(EUCAERROR, "invalid resource array: empty slot in position %d\n", i);
-            return 1;
+            logprintfl(EUCAERROR, "invalid resource arrfay: [%d] empty slot\n", i);
+            errors++;
+            continue;
         }
         if (sr->metricsLen < 0 || sr->metricsLen > MAX_SENSOR_METRICS) {
-            logprintfl(EUCAERROR, "invalid resource array: metricsLen out of bounds (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
-            return 1;
+            logprintfl(EUCAERROR, "invalid resource array: [%d] metricsLen out of bounds (metricsLen=%d for %s)\n", i,
+                       sr->metricsLen, sr->resourceName);
+            errors++;
+            continue;
         }
         for (int m = 0; m < sr->metricsLen; m++) {
             const sensorMetric *sm = sr->metrics + m;
             if (sm->countersLen < 0 || sm->countersLen > MAX_SENSOR_COUNTERS) {
-                logprintfl(EUCAERROR, "invalid resource array: counterLen out of bounds (countersLen=%d for %s:%s)\n", sm->countersLen,
-                           sr->resourceName, sm->metricName);
-                return 1;
+                logprintfl(EUCAERROR, "invalid resource array: [%d:%d] counterLen out of bounds (countersLen=%d for %s:%s)\n", i, m,
+                           sm->countersLen, sr->resourceName, sm->metricName);
+                errors++;
+                goto next_resource;
             }
             for (int c = 0; c < sm->countersLen; c++) {
                 const sensorCounter *sc = sm->counters + c;
                 if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
-                    logprintfl(EUCAERROR, "invalid resource array: sensorCounter out of bounds (dimensionsLen=%d for %s:%s:%s)\n",
+                    logprintfl(EUCAERROR, "invalid resource array: [%d:%d:%d] sensorCounter out of bounds (dimensionsLen=%d for %s:%s:%s)\n", i, m, c,
                                sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
-                    return 1;
+                    errors++;
+                    goto next_resource;
                 }
                 for (int d = 0; d < sc->dimensionsLen; d++) {
                     const sensorDimension *sd = sc->dimensions + d;
                     if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {
-                        logprintfl(EUCAERROR, "invalid resource array: valuesLen out of bounds (valuesLen=%d for %s:%s:%s:%s)\n",
-                                   sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
-                        return 1;
+                        logprintfl(EUCAERROR, "invalid resource array: [%d:%d:%d:%d] valuesLen out of bounds (valuesLen=%d for %s:%s:%s:%s)\n", i, m,
+                                   c, d, sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                        errors++;
+                        goto next_resource;
                     }
                     for (int v = 0; v < sd->valuesLen; v++) {
                         // TODO: anything to verify in values?
@@ -1411,9 +1428,10 @@ int sensor_validate_resources(sensorResource ** srs, int srsLen)
                 }
             }
         }
+next_resource:continue;        // label so we can bail out of loops, continue to keep gcc happy
     }
 
-    return 0;
+    return errors;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////

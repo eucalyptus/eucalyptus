@@ -361,9 +361,8 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         sensorResource **outResources;
         int outResourcesLen;
 
-        int error =
-            doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
-                              &outResourcesLen);
+        int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
+                                      &outResourcesLen);
 
         if (error) {
             logprintfl(EUCAERROR, "doDescribeSensors() failed error=%d\n", error);

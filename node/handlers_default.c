@@ -1590,8 +1590,12 @@ doDescribeSensors(struct nc_state_t *nc,
 
         assert(k < total);
         rss[k] = malloc(sizeof(sensorResource));
-        sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1);
-        k++;
+        if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != OK) {
+            logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
+            free (rss[k]);
+        } else {
+            k++;
+        }
     }
 
     *outResourcesLen = k;

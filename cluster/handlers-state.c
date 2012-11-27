@@ -424,10 +424,9 @@ int instIpSync(ccInstance * inst, void *in)
         logprintfl(EUCADEBUG, "CC publicIp is empty, NC publicIp is set\n");
         snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
         ret++;
-    } else
-        if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
-             && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
-            && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
+    } else if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
+                && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
+               && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
         // case 4
         logprintfl(EUCADEBUG, "CC publicIp and NC publicIp differ\n");
         snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
