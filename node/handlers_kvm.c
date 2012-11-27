@@ -65,16 +65,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU				/* strnlen */
-#include <string.h>				/* strlen, strcpy */
+#define __USE_GNU               /* strnlen */
+#include <string.h>             /* strlen, strcpy */
 #include <time.h>
-#include <sys/types.h>			/* fork */
-#include <sys/wait.h>			/* waitpid */
+#include <sys/types.h>          /* fork */
+#include <sys/wait.h>           /* waitpid */
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
-#include <signal.h>				/* SIGINT */
+#include <signal.h>             /* SIGINT */
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -98,15 +98,15 @@ extern struct nc_state_t nc_state;
 
 static int doInitialize(struct nc_state_t *nc)
 {
-	char *s = NULL;
+    char *s = NULL;
 
-	// set up paths of Eucalyptus commands NC relies on
-	snprintf(nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO, nc->home, nc->home);
-	strcpy(nc->uri, HYPERVISOR_URI);
-	nc->convert_to_disk = 1;
-	nc->capability = HYPERVISOR_HARDWARE;	// TODO: indicate virtio support?
+    // set up paths of Eucalyptus commands NC relies on
+    snprintf(nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO, nc->home, nc->home);
+    strcpy(nc->uri, HYPERVISOR_URI);
+    nc->convert_to_disk = 1;
+    nc->capability = HYPERVISOR_HARDWARE;   // TODO: indicate virtio support?
 
-	s = system_output(nc->get_info_cmd_path);
+    s = system_output(nc->get_info_cmd_path);
 #define GET_VALUE(name,var) \
 	if (get_value (s, name, &var)) { \
 		logprintfl (EUCAFATAL, "did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
@@ -114,275 +114,276 @@ static int doInitialize(struct nc_state_t *nc)
 		return ERROR_FATAL; \
 	}
 
-	GET_VALUE("nr_cores", nc->cores_max);
-	GET_VALUE("total_memory", nc->mem_max);
-	if (s)
-		free(s);
+    GET_VALUE("nr_cores", nc->cores_max);
+    GET_VALUE("total_memory", nc->mem_max);
+    if (s)
+        free(s);
 
-	// we leave 256M to the host
-	nc->mem_max -= 256;
+    // we leave 256M to the host
+    nc->mem_max -= 256;
 
-	return OK;
+    return OK;
 }
 
 /* thread that does the actual reboot */
 static void *rebooting_thread(void *arg)
 {
-	virConnectPtr *conn;
-	ncInstance *instance = (ncInstance *) arg;
-	struct stat statbuf;
-	int rc = 0;
+    virConnectPtr *conn;
+    ncInstance *instance = (ncInstance *) arg;
+    struct stat statbuf;
+    int rc = 0;
 
-	logprintfl(EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
-	char *xml = file2str(instance->libvirtFilePath);
-	if (xml == NULL) {
-		logprintfl(EUCAERROR, "[%s] cannot obtain XML file %s\n", instance->instanceId, instance->libvirtFilePath);
-		return NULL;
-	}
+    logprintfl(EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
+    char *xml = file2str(instance->libvirtFilePath);
+    if (xml == NULL) {
+        logprintfl(EUCAERROR, "[%s] cannot obtain XML file %s\n", instance->instanceId, instance->libvirtFilePath);
+        return NULL;
+    }
 
-	conn = check_hypervisor_conn();
-	if (!conn) {
-		logprintfl(EUCAERROR, "[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
-		change_state(instance, SHUTOFF);
-		free(xml);
-		return NULL;
-	}
+    conn = check_hypervisor_conn();
+    if (!conn) {
+        logprintfl(EUCAERROR, "[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
+        change_state(instance, SHUTOFF);
+        free(xml);
+        return NULL;
+    }
 
-	sem_p(hyp_sem);
-	virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
-	sem_v(hyp_sem);
-	if (dom == NULL) {
-		free(xml);
-		return NULL;
-	}
+    sem_p(hyp_sem);
+    virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
+    sem_v(hyp_sem);
+    if (dom == NULL) {
+        free(xml);
+        return NULL;
+    }
 
-	sem_p(hyp_sem);
-	// for KVM, must stop and restart the instance
-	logprintfl(EUCADEBUG, "[%s] destroying domain\n", instance->instanceId);
-	int error = virDomainDestroy(dom);	// TODO: change to Shutdown?  TODO: is this synchronous?
-	virDomainFree(dom);
-	sem_v(hyp_sem);
+    sem_p(hyp_sem);
+    // for KVM, must stop and restart the instance
+    logprintfl(EUCADEBUG, "[%s] destroying domain\n", instance->instanceId);
+    int error = virDomainDestroy(dom);  // TODO: change to Shutdown?  TODO: is this synchronous?
+    virDomainFree(dom);
+    sem_v(hyp_sem);
 
-	if (error) {
-		free(xml);
-		return NULL;
-	}
-	// domain is now shut down, create a new one with the same XML
-	sem_p(hyp_sem);
-	logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
-	dom = virDomainCreateLinux(*conn, xml, 0);
-	sem_v(hyp_sem);
-	free(xml);
+    if (error) {
+        free(xml);
+        return NULL;
+    }
+    // domain is now shut down, create a new one with the same XML
+    sem_p(hyp_sem);
+    logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
+    dom = virDomainCreateLinux(*conn, xml, 0);
+    sem_v(hyp_sem);
+    free(xml);
 
-	char *remoteDevStr = NULL;
-	// re-attach each volume previously attached
-	for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-		ncVolume *volume = &instance->volumes[i];
-		if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-			continue;			// skip the entry unless attached or attaching
+    char *remoteDevStr = NULL;
+    // re-attach each volume previously attached
+    for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
+        ncVolume *volume = &instance->volumes[i];
+        if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
+            continue;           // skip the entry unless attached or attaching
 
-		logprintfl(EUCADEBUG, "[%s] volumes [%d] = '%'s'\n", instance->instanceId, i, volume->stateName);
-		char *xml = NULL;
-		int rc = 0;
-		// get credentials, decrypt them
-		remoteDevStr = get_iscsi_target(volume->remoteDev);
-		if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-			logprintfl(EUCAERROR, "[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
-			rc = 1;
-		} else {
-			// set the path
-			char path[MAX_PATH];
-			char lpath[MAX_PATH];
-			snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);	// vol-XXX.xml
-			snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);	// vol-XXX-libvirt.xml
+        logprintfl(EUCADEBUG, "[%s] volumes [%d] = '%'s'\n", instance->instanceId, i, volume->stateName);
+        char *xml = NULL;
+        int rc = 0;
+        // get credentials, decrypt them
+        remoteDevStr = get_iscsi_target(volume->remoteDev);
+        if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+            logprintfl(EUCAERROR, "[%s] failed to get local name of host iscsi device when re-attaching\n", instance->instanceId);
+            rc = 1;
+        } else {
+            // set the path
+            char path[MAX_PATH];
+            char lpath[MAX_PATH];
+            snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
+            snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
 
-			// read in libvirt XML, which may have been modified by the hook above
-			xml = file2str(lpath);
-			if (xml == NULL) {
-				logprintfl(EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
-				rc = 1;
-			}
-		}
-		if (remoteDevStr)
-			free(remoteDevStr);
+            // read in libvirt XML, which may have been modified by the hook above
+            xml = file2str(lpath);
+            if (xml == NULL) {
+                logprintfl(EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
+                rc = 1;
+            }
+        }
+        if (remoteDevStr)
+            free(remoteDevStr);
 
-		if (!rc) {
-			// protect libvirt calls because we've seen problems during concurrent libvirt invocations
-			// zhill - wrap with retry in case libvirt is dumb.
-			int err = 0;
-			for (int i = 1; i < 3; i++) {
-				sem_p(hyp_sem);
-				err = virDomainAttachDevice(dom, xml);
-				sem_v(hyp_sem);
-				if (err) {
-					logprintfl(EUCAERROR, "[%s] virDomainAttachDevice() failed on attempt %d of 3 (err=%d) XML='%s'\n", instance->instanceId, i, err, xml);
-					sleep(3);	//sleep a bit and retry.
-				} else {
-					logprintfl(EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
-					break;
-				}
-			}
-		}
+        if (!rc) {
+            // protect libvirt calls because we've seen problems during concurrent libvirt invocations
+            // zhill - wrap with retry in case libvirt is dumb.
+            int err = 0;
+            for (int i = 1; i < 3; i++) {
+                sem_p(hyp_sem);
+                err = virDomainAttachDevice(dom, xml);
+                sem_v(hyp_sem);
+                if (err) {
+                    logprintfl(EUCAERROR, "[%s] virDomainAttachDevice() failed on attempt %d of 3 (err=%d) XML='%s'\n", instance->instanceId, i, err,
+                               xml);
+                    sleep(3);   //sleep a bit and retry.
+                } else {
+                    logprintfl(EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
+                    break;
+                }
+            }
+        }
 
-		if (xml)
-			free(xml);
-	}
-	if (dom == NULL) {
-		logprintfl(EUCAERROR, "[%s] failed to restart instance\n", instance->instanceId);
-		change_state(instance, SHUTOFF);
-		return NULL;
-	}
+        if (xml)
+            free(xml);
+    }
+    if (dom == NULL) {
+        logprintfl(EUCAERROR, "[%s] failed to restart instance\n", instance->instanceId);
+        change_state(instance, SHUTOFF);
+        return NULL;
+    }
 
-	sem_p(hyp_sem);
-	virDomainFree(dom);
-	sem_v(hyp_sem);
-	return NULL;
+    sem_p(hyp_sem);
+    virDomainFree(dom);
+    sem_v(hyp_sem);
+    return NULL;
 }
 
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *instanceId)
 {
-	sem_p(inst_sem);
-	ncInstance *instance = find_instance(&global_instances, instanceId);
-	sem_v(inst_sem);
-	if (instance == NULL) {
-		logprintfl(EUCAERROR, "[%s] cannot find instance\n", instanceId);
-		return ERROR;
-	}
+    sem_p(inst_sem);
+    ncInstance *instance = find_instance(&global_instances, instanceId);
+    sem_v(inst_sem);
+    if (instance == NULL) {
+        logprintfl(EUCAERROR, "[%s] cannot find instance\n", instanceId);
+        return ERROR;
+    }
 
-	pthread_t tcb;
-	// since shutdown/restart may take a while, we do them in a thread
-	if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
-		logprintfl(EUCAERROR, "[%s] failed to spawn a reboot thread\n", instanceId);
-		return ERROR_FATAL;
-	}
-	if (pthread_detach(tcb)) {
-		logprintfl(EUCAERROR, "[%s] failed to detach the rebooting thread\n", instanceId);
-		return ERROR_FATAL;
-	}
+    pthread_t tcb;
+    // since shutdown/restart may take a while, we do them in a thread
+    if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
+        logprintfl(EUCAERROR, "[%s] failed to spawn a reboot thread\n", instanceId);
+        return ERROR_FATAL;
+    }
+    if (pthread_detach(tcb)) {
+        logprintfl(EUCAERROR, "[%s] failed to detach the rebooting thread\n", instanceId);
+        return ERROR_FATAL;
+    }
 
-	return OK;
+    return OK;
 }
 
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *instanceId, char **consoleOutput)
 {
 
-	char *console_output = NULL, *console_append = NULL, *console_main = NULL;
-	char console_file[MAX_PATH], userId[48];
-	int rc, fd, ret, readsize;
-	struct stat statbuf;
-	ncInstance *instance = NULL;
+    char *console_output = NULL, *console_append = NULL, *console_main = NULL;
+    char console_file[MAX_PATH], userId[48];
+    int rc, fd, ret, readsize;
+    struct stat statbuf;
+    ncInstance *instance = NULL;
 
-	*consoleOutput = NULL;
-	readsize = 64 * 1024;
+    *consoleOutput = NULL;
+    readsize = 64 * 1024;
 
-	// find the instance record
-	sem_p(inst_sem);
-	instance = find_instance(&global_instances, instanceId);
-	if (instance) {
-		snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
-		snprintf(userId, 48, "%s", instance->userId);
-	}
-	sem_v(inst_sem);
+    // find the instance record
+    sem_p(inst_sem);
+    instance = find_instance(&global_instances, instanceId);
+    if (instance) {
+        snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
+        snprintf(userId, 48, "%s", instance->userId);
+    }
+    sem_v(inst_sem);
 
-	if (!instance) {
-		logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
-		return (1);
-	}
-	// read from console.append.log if it exists into dynamically allocated 4K console_append buffer
-	rc = stat(console_file, &statbuf);
-	if (rc >= 0) {
-		if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
-			logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
-			return (1);
-		}
-		fd = open(console_file, O_RDONLY);
-		if (fd >= 0) {
-			console_append = malloc(4096);
-			if (console_append) {
-				bzero(console_append, 4096);
-				rc = read(fd, console_append, (4096) - 1);
-				close(fd);
-			}
-		}
-	}
+    if (!instance) {
+        logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
+        return (1);
+    }
+    // read from console.append.log if it exists into dynamically allocated 4K console_append buffer
+    rc = stat(console_file, &statbuf);
+    if (rc >= 0) {
+        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+            logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
+            return (1);
+        }
+        fd = open(console_file, O_RDONLY);
+        if (fd >= 0) {
+            console_append = malloc(4096);
+            if (console_append) {
+                bzero(console_append, 4096);
+                rc = read(fd, console_append, (4096) - 1);
+                close(fd);
+            }
+        }
+    }
 
-	sem_p(inst_sem);
-	snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
-	sem_v(inst_sem);
+    sem_p(inst_sem);
+    snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
+    sem_v(inst_sem);
 
-	// read the last 64K from console.log or the whole file, if smaller, into dynamically allocated 64K console_main buffer
-	rc = stat(console_file, &statbuf);
-	if (rc >= 0) {
-		if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
-			logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
-			if (console_append)
-				free(console_append);
-			return (1);
-		}
-		fd = open(console_file, O_RDONLY);
-		if (fd >= 0) {
-			rc = lseek(fd, (off_t) (-1 * readsize), SEEK_END);
-			if (rc < 0) {
-				rc = lseek(fd, (off_t) 0, SEEK_SET);
-				if (rc < 0) {
-					logprintfl(EUCAERROR, "[%s] cannot seek to beginning of file\n", instanceId);
-					if (console_append)
-						free(console_append);
-					close(fd);
-					return (1);
-				}
-			}
-			console_main = malloc(readsize);
-			if (console_main) {
-				bzero(console_main, readsize);
-				rc = read(fd, console_main, (readsize) - 1);
-				close(fd);
-			}
-		} else {
-			logprintfl(EUCAERROR, "[%s] cannot open '%s' read-only\n", instanceId, console_file);
-		}
-	} else {
-		logprintfl(EUCAERROR, "[%s] cannot stat console_output file '%s'\n", instanceId, console_file);
-	}
+    // read the last 64K from console.log or the whole file, if smaller, into dynamically allocated 64K console_main buffer
+    rc = stat(console_file, &statbuf);
+    if (rc >= 0) {
+        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+            logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
+            if (console_append)
+                free(console_append);
+            return (1);
+        }
+        fd = open(console_file, O_RDONLY);
+        if (fd >= 0) {
+            rc = lseek(fd, (off_t) (-1 * readsize), SEEK_END);
+            if (rc < 0) {
+                rc = lseek(fd, (off_t) 0, SEEK_SET);
+                if (rc < 0) {
+                    logprintfl(EUCAERROR, "[%s] cannot seek to beginning of file\n", instanceId);
+                    if (console_append)
+                        free(console_append);
+                    close(fd);
+                    return (1);
+                }
+            }
+            console_main = malloc(readsize);
+            if (console_main) {
+                bzero(console_main, readsize);
+                rc = read(fd, console_main, (readsize) - 1);
+                close(fd);
+            }
+        } else {
+            logprintfl(EUCAERROR, "[%s] cannot open '%s' read-only\n", instanceId, console_file);
+        }
+    } else {
+        logprintfl(EUCAERROR, "[%s] cannot stat console_output file '%s'\n", instanceId, console_file);
+    }
 
-	// concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
-	ret = 1;
-	console_output = malloc((readsize) + 4096);
-	if (console_output) {
-		bzero(console_output, (readsize) + 4096);
-		if (console_append) {
-			strncat(console_output, console_append, 4096);
-		}
-		if (console_main) {
-			strncat(console_output, console_main, readsize);
-		}
-		*consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
-		ret = 0;
-	}
+    // concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
+    ret = 1;
+    console_output = malloc((readsize) + 4096);
+    if (console_output) {
+        bzero(console_output, (readsize) + 4096);
+        if (console_append) {
+            strncat(console_output, console_append, 4096);
+        }
+        if (console_main) {
+            strncat(console_output, console_main, readsize);
+        }
+        *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
+        ret = 0;
+    }
 
-	if (console_append)
-		free(console_append);
-	if (console_main)
-		free(console_main);
-	if (console_output)
-		free(console_output);
+    if (console_append)
+        free(console_append);
+    if (console_main)
+        free(console_main);
+    if (console_output)
+        free(console_output);
 
-	return (ret);
+    return (ret);
 }
 
 struct handlers kvm_libvirt_handlers = {
-	.name = "kvm",
-	.doInitialize = doInitialize,
-	.doDescribeInstances = NULL,
-	.doRunInstance = NULL,
-	.doTerminateInstance = NULL,
-	.doRebootInstance = doRebootInstance,
-	.doGetConsoleOutput = doGetConsoleOutput,
-	.doDescribeResource = NULL,
-	.doStartNetwork = NULL,
-	.doAssignAddress = NULL,
-	.doPowerDown = NULL,
-	.doAttachVolume = NULL,
-	.doDetachVolume = NULL,
-	.doDescribeSensors = NULL
+    .name = "kvm",
+    .doInitialize = doInitialize,
+    .doDescribeInstances = NULL,
+    .doRunInstance = NULL,
+    .doTerminateInstance = NULL,
+    .doRebootInstance = doRebootInstance,
+    .doGetConsoleOutput = doGetConsoleOutput,
+    .doDescribeResource = NULL,
+    .doStartNetwork = NULL,
+    .doAssignAddress = NULL,
+    .doPowerDown = NULL,
+    .doAttachVolume = NULL,
+    .doDetachVolume = NULL,
+    .doDescribeSensors = NULL
 };

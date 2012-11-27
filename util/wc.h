@@ -28,13 +28,13 @@
 #include <wchar.h>
 
 typedef struct wchar_map_struct {
-	wchar_t *key;
-	wchar_t *val;
+    wchar_t *key;
+    wchar_t *val;
 } wchar_map;
 
 typedef struct char_map_struct {
-	char *key;
-	char *val;
+    char *key;
+    char *val;
 } char_map;
 
 extern wchar_t *varsub(const wchar_t *, const wchar_map **);

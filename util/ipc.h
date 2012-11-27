@@ -69,16 +69,16 @@
 #include <pthread.h>
 
 typedef struct sem_struct {
-	int sysv;
-	sem_t *posix;
-	pthread_mutex_t mutex;
-	pthread_cond_t cond;
-	int usemutex, mutwaiters, mutcount;
-	char *name;
-	int flags;
+    int sysv;
+    sem_t *posix;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    int usemutex, mutwaiters, mutcount;
+    char *name;
+    int flags;
 } sem;
 
-#include "misc.h"				// boolean
+#include "misc.h"               // boolean
 
 sem *sem_realloc(const int val, const char *name, const int flags);
 sem *sem_alloc(const int val, const char *name);

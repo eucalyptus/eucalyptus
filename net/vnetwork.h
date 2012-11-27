@@ -80,72 +80,73 @@
 #define MAX_ETH_DEV_PATH 16
 
 typedef struct netEntry_t {
-	unsigned char mac[6];
-	char active;
-	uint32_t ip;
+    unsigned char mac[6];
+    char active;
+    uint32_t ip;
 } netEntry;
 
 typedef struct userEntry_t {
-	char netName[64];
-	char userName[48];
-	char uuid[48];
+    char netName[64];
+    char userName[48];
+    char uuid[48];
 } userEntry;
 
 typedef struct networkEntry_t {
-	int numhosts;
-	char active;
-	uint32_t nw, nm, bc, dns, router;
-	netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
+    int numhosts;
+    char active;
+    uint32_t nw, nm, bc, dns, router;
+    netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
 } networkEntry;
 
 typedef struct publicip_t {
-	uint32_t ip;
-	uint32_t dstip;
-	int allocated;
-	char uuid[48];
+    uint32_t ip;
+    uint32_t dstip;
+    int allocated;
+    char uuid[48];
 } publicip;
 
 typedef struct tunnelData_t {
-	int localIpId;
-	int localIpIdLast;
-	uint32_t ccs[NUMBER_OF_CCS];
-	time_t ccsTunnelStart[NUMBER_OF_CCS];
-	time_t tunpassMtime;
-	int tunneling;
+    int localIpId;
+    int localIpIdLast;
+    uint32_t ccs[NUMBER_OF_CCS];
+    time_t ccsTunnelStart[NUMBER_OF_CCS];
+    time_t tunpassMtime;
+    int tunneling;
 } tunnelData;
 
 typedef struct vnetConfig_t {
-	char eucahome[MAX_PATH];
-	char path[MAX_PATH];
-	char dhcpdaemon[MAX_PATH];
-	char dhcpuser[32];
-	char pubInterface[32];
-	char privInterface[32];
-	char bridgedev[32];
-	char mode[32];
-	char macPrefix[6];
-	//  char localIp[32];
-	uint32_t localIps[32];
-	uint32_t nw, nm, euca_ns, cloudIp;
-	char euca_domainname[256];
-	int role;
-	int enabled;
-	int initialized;
-	int numaddrs;
-	int addrIndexMin;
-	int addrIndexMax;
-	int max_vlan;
-	tunnelData tunnels;
-	char etherdevs[NUMBER_OF_VLANS][MAX_ETH_DEV_PATH];
-	userEntry users[NUMBER_OF_VLANS];
-	networkEntry networks[NUMBER_OF_VLANS];
-	publicip publicips[NUMBER_OF_PUBLIC_IPS];
-	char iptables[4194304];
+    char eucahome[MAX_PATH];
+    char path[MAX_PATH];
+    char dhcpdaemon[MAX_PATH];
+    char dhcpuser[32];
+    char pubInterface[32];
+    char privInterface[32];
+    char bridgedev[32];
+    char mode[32];
+    char macPrefix[6];
+    //  char localIp[32];
+    uint32_t localIps[32];
+    uint32_t nw, nm, euca_ns, cloudIp;
+    char euca_domainname[256];
+    int role;
+    int enabled;
+    int initialized;
+    int numaddrs;
+    int addrIndexMin;
+    int addrIndexMax;
+    int max_vlan;
+    tunnelData tunnels;
+    char etherdevs[NUMBER_OF_VLANS][MAX_ETH_DEV_PATH];
+    userEntry users[NUMBER_OF_VLANS];
+    networkEntry networks[NUMBER_OF_VLANS];
+    publicip publicips[NUMBER_OF_PUBLIC_IPS];
+    char iptables[4194304];
 } vnetConfig;
 
 enum { NC, CC, CLC };
-int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs, char *network, char *netmask, char *broadcast,
-			 char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev, char *localIp, char *macPrefix);
+int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs,
+             char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev,
+             char *localIp, char *macPrefix);
 
 int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
 int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
@@ -185,7 +186,8 @@ int vnetTeardownTunnelsVTUN(vnetConfig * vnetconfig);
 int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
 int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
 
-int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName, char *protocol, int minPort, int maxPort);
+int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
+                  char *protocol, int minPort, int maxPort);
 int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig);

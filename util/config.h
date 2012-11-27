@@ -27,8 +27,8 @@
 #include "misc.h"
 
 typedef struct configEntry_t {
-	char *key;
-	char *defaultValue;
+    char *key;
+    char *defaultValue;
 } configEntry;
 
 void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);

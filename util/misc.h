@@ -65,10 +65,10 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h>				// ssize_t
-#include <sys/types.h>			// mode_t
+#include <unistd.h>             // ssize_t
+#include <sys/types.h>          // mode_t
 #include <linux/limits.h>
-#include <stdint.h>				// uint32_t
+#include <stdint.h>             // uint32_t
 
 // these must be defined by each euca component
 extern const char *euca_client_component_name;
@@ -78,7 +78,7 @@ typedef unsigned char boolean;
 #define TRUE 1
 #define FALSE 0
 
-#include "log.h"				// so everyone picks up the logging functions
+#include "log.h"                // so everyone picks up the logging functions
 
 #ifndef MAX_PATH
 #define MAX_PATH 4096
@@ -178,11 +178,11 @@ int touch(const char *path);
 int diff(const char *path1, const char *path2);
 long long dir_size(const char *path);
 char *file2strn(const char *path, const ssize_t limit);
-char *file2str(const char *path);	/* read file 'path' into a new string */
-char *file2str_seek(char *file, size_t size, int mode);	/* read file into new string, length 'size', either from beginning (0) or end (1) of the file */
+char *file2str(const char *path);   /* read file 'path' into a new string */
+char *file2str_seek(char *file, size_t size, int mode); /* read file into new string, length 'size', either from beginning (0) or end (1) of the file */
 int write2file(const char *path, char *str);
 char *str2str(const char *str, const char *begin, const char *end);
-long long str2longlong(const char *str, const char *begin, const char *end);	/* extract integer from str bound by 'begin' and 'end' */
+long long str2longlong(const char *str, const char *begin, const char *end);    /* extract integer from str bound by 'begin' and 'end' */
 pid_t timewait(pid_t pid, int *status, int timeout);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int uint32compar(const void *ina, const void *inb);

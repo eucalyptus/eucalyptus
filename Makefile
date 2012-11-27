@@ -20,7 +20,6 @@ INDENTDIRS =	cluster \
 				storage	 \
 				gatherlog \
 				node  \
-				cluster \
 				clc
 
 .PHONY: all clean distclean build 

@@ -67,21 +67,21 @@
 
 int main(int argc, char **argv)
 {
-	char **newargv;
-	int i;
+    char **newargv;
+    int i;
 
-	if (argc <= 1) {
-		exit(1);
-	}
-	newargv = argv + 1;
+    if (argc <= 1) {
+        exit(1);
+    }
+    newargv = argv + 1;
 
-	if (setresuid((uid_t) 0, (uid_t) 0, (uid_t) 0)) {
-		perror("setresuid");
-	}
+    if (setresuid((uid_t) 0, (uid_t) 0, (uid_t) 0)) {
+        perror("setresuid");
+    }
 
-	if (setresgid((gid_t) 0, (gid_t) 0, (gid_t) 0)) {
-		perror("setresgid");
-	}
+    if (setresgid((gid_t) 0, (gid_t) 0, (gid_t) 0)) {
+        perror("setresgid");
+    }
 
-	exit(execvp(newargv[0], newargv));
+    exit(execvp(newargv[0], newargv));
 }

@@ -66,10 +66,10 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
-#include "misc.h"				// bolean
-#include "ipc.h"				// sem
+#include "misc.h"               // bolean
+#include "ipc.h"                // sem
 
-#define MBR_BLOCKS 63			// the size of "DOS-compatibility region" partially used by 'grub'
+#define MBR_BLOCKS 63           // the size of "DOS-compatibility region" partially used by 'grub'
 #define SECTOR_SIZE 512
 
 int diskutil_init(int require_grub);

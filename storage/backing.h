@@ -63,8 +63,8 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#include "data.h"				// ncInstance
-#include "blobstore.h"			// blobstore_meta
+#include "data.h"               // ncInstance
+#include "blobstore.h"          // blobstore_meta
 
 #define BACKING_FILE_PERM 0660
 #define BACKING_DIRECTORY_PERM 0771

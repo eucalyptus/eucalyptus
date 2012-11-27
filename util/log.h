@@ -66,7 +66,7 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include "ipc.h"				// sem
+#include "ipc.h"                // sem
 
 extern __thread const char *_log_curr_method;
 extern __thread const char *_log_curr_file;
@@ -87,15 +87,15 @@ extern __thread int _log_curr_line;
 #define EUCAOFF     8
 
 static char *log_level_names[] = {
-	"ALL",
-	"EXTREME",
-	"TRACE",
-	"DEBUG",
-	"INFO",
-	"WARN",
-	"ERROR",
-	"FATAL",
-	"OFF"
+    "ALL",
+    "EXTREME",
+    "TRACE",
+    "DEBUG",
+    "INFO",
+    "WARN",
+    "ERROR",
+    "FATAL",
+    "OFF"
 };
 
 /////////////////////// prefix format
@@ -112,15 +112,15 @@ static char *log_level_names[] = {
 //         and NNN is max field size
 /////////////////////////////////////
 static char *log_level_prefix[] = {
-	"",
-	"%T %L %t9 %m-24 %F-33 |",	// EXTREME
-	"%T %L %t9 %m-24 |",		// TRACE
-	"%T %L %t9 %m-24 |",		// DEBUG
-	"%T %L |",					// INFO
-	"%T %L |",					// WARN
-	"%T %L |",					// ERROR
-	"%T %L |",					// FATAL
-	""
+    "",
+    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
+    "%T %L %t9 %m-24 |",        // TRACE
+    "%T %L %t9 %m-24 |",        // DEBUG
+    "%T %L |",                  // INFO
+    "%T %L |",                  // WARN
+    "%T %L |",                  // ERROR
+    "%T %L |",                  // FATAL
+    ""
 };
 
 #ifdef DEBUG
