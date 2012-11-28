@@ -349,7 +349,7 @@ unsigned long long blockblob_get_size_bytes(blockblob * bb);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              STATIC PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -372,5 +372,11 @@ unsigned long long blockblob_get_size_bytes(blockblob * bb);
 	blockblob_close((_pBlock));  \
 	(_pBlock) = NULL;            \
 }
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #endif /* ! _INCLUDE_BLOBSTORE_H_ */
