@@ -71,7 +71,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
-import edu.emory.mathcs.backport.java.util.Collections;
+import java.util.Collections;
 
 /**
  * Purpose: Show version information about the tree used to build the running software.
