@@ -224,7 +224,7 @@ static void sensor_bottom_half(void);
 static void *sensor_thread(void *arg);
 static void init_state(int resources_size);
 static __inline__ boolean is_empty_sr(const sensorResource * sr);
-static int sensor_expire_cache_entries(void)
+static int sensor_expire_cache_entries(void);
 static void log_sensor_resources(const char *name, const sensorResource ** srs, int srsLen);
 static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *resourceName, const char *resourceType, const char *resourceUuid);
 static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * sr, const char *metricName);
