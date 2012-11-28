@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file util/hash.c
+//! Implements MD5 and Jenkins hash functionality
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,75 +104,189 @@
 #include "euca_auth.h"          // base64_enc
 #include "vnetwork.h"           // OK / ERROR
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int hash_b64enc_string(const char *in, char **out);
+int str2md5str(char *buf, unsigned int buf_size, const char *str);
+
+char *file2md5str(const char *path);
+uint32_t jenkins(const char *key, size_t len);
+int hexjenkins(char *buf, unsigned int buf_size, const char *str);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Computes the MD5 hash of a given string and encodes it
+//!
+//! @param[in]  in  the string to encode
+//! @param[out] out the result of the encoding operation
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+//! @pre Both in and out parameters must not be NULL.
+//!
+//! @post On success the out parameter will contain the encoded hash
+//!
 int hash_b64enc_string(const char *in, char **out)
 {
     unsigned char *md5ret = NULL;
-    unsigned char hash[17];
+    unsigned char hash[17] = { 0 };
 
     if (!in || !out) {
-        return (1);
+        return (EUCA_ERROR);
     }
-    *out = NULL;
+
     logprintfl(EUCADEBUG, "in=%s\n", in);
+
+    *out = NULL;
     bzero(hash, 17);
-    md5ret = MD5((const unsigned char *)in, strlen(in), hash);
+    md5ret = MD5(((const unsigned char *) in), strlen(in), hash);
     if (md5ret) {
-        *out = base64_enc(hash, 16);
-        if (*out == NULL) {
-            return (1);
+        if ((*out = base64_enc(hash, 16)) == NULL) {
+            return (EUCA_ERROR);
         }
     }
 
-    return (0);
+    return (EUCA_OK);
 }
 
-// calculates an md5 hash of 'str' and places it into 'buf' in hex
+//!
+//! Calculates the md5 hash of 'str' and places it into 'buf' in hex
+//!
+//! @param[in,out] buf      the string buffer that contains the result
+//! @param[in]     buf_size the size of our string buffer
+//! @param[in]     str      the string to compute MD5 hash from
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int str2md5str(char *buf, unsigned int buf_size, const char *str)
 {
+    int i = 0;
+    char *p = NULL;
+    unsigned char md5digest[MD5_DIGEST_LENGTH] = { 0 };
+
     if (buf_size < (MD5_DIGEST_LENGTH * 2 + 1))
-        return ERROR;
+        return (EUCA_ERROR);
 
-    unsigned char md5digest[MD5_DIGEST_LENGTH];
-    if (MD5((const unsigned char *)str, strlen(str), md5digest) == NULL)
-        return ERROR;
+    if (MD5(((const unsigned char *) str), strlen(str), md5digest) == NULL)
+        return (EUCA_ERROR);
 
-    char *p = buf;
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    for (i = 0, p = buf; i < MD5_DIGEST_LENGTH; i++) {
         sprintf(p, "%02x", md5digest[i]);
         p += 2;
     }
 
-    return OK;
+    return (EUCA_OK);
 }
 
-// returns a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
-// or NULL if there was an error; the string must be freed by the caller
+//!
+//! Retrieves a new string with a hex value of an MD5 hash of a file (same as `md5sum`)
+//! or NULL if there was an error.
+//!
+//! @param[in] path the path to the file to compute the MD5 hash
+//!
+//! @return a new string with a hex value of an MD5 hash of a file or NULL if error
+//!
+//! @pre The path parameter must not be NULL and must be a valid path to an existing file
+//!
+//! @post On success, an allocated string with the MD5 value is returned
+//!
+//! @note The caller is responsible for freeing the allocated memory for the returned value
+//!
 char *file2md5str(const char *path)
 {
+    int i = 0;
+    int fd = -1;
+    char *p = NULL;
+    char *buf = NULL;
     char *md5string = NULL;
+    struct stat mystat = { 0 };
+    unsigned char md5digest[MD5_DIGEST_LENGTH] = { 0 };
 
-    int fd = open(path, O_RDONLY);
-    if (fd < 0)
-        return NULL;
+    if(path == NULL)
+        return (NULL);
 
-    struct stat mystat;
+    if ((fd = open(path, O_RDONLY)) < 0)
+        return (NULL);
+
     if (fstat(fd, &mystat) < 0)
         goto cleanup;
 
-    char *buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    if (buf == MAP_FAILED)
+    if ((buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
         goto cleanup;
 
-    unsigned char md5digest[MD5_DIGEST_LENGTH];
-    if (MD5((unsigned char *)buf, mystat.st_size, md5digest) == NULL)
+    if (MD5(((unsigned char *) buf), mystat.st_size, md5digest) == NULL)
         goto cleanup;
 
-    md5string = calloc(MD5_DIGEST_LENGTH * 2 + 1, sizeof(char));
+    md5string = EUCA_ZALLOC(((MD5_DIGEST_LENGTH * 2) + 1), sizeof(char));
     if (md5string == NULL)
         goto cleanup;
 
-    char *p = md5string;
-    for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    for (i = 0, p = md5string; i < MD5_DIGEST_LENGTH; i++) {
         sprintf(p, "%02x", md5digest[i]);
         p += 2;
     }
@@ -169,28 +294,61 @@ char *file2md5str(const char *path)
 cleanup:
 
     close(fd);
-    return md5string;
+    return (md5string);
 }
 
-// Jenkins hash function (from http://en.wikipedia.org/wiki/Jenkins_hash_function)
+//!
+//! Jenkins hash function (from http://en.wikipedia.org/wiki/Jenkins_hash_function)
+//!
+//! @param[in] key the key string to compute the hash from
+//! @param[in] len the length of the key string
+//!
+//! @return the Jenkins hash value of a key
+//!
+//! @pre The key parameter must not be NULL
+//!
+//! @post On success, the function will return the hash of the key
+//!
 uint32_t jenkins(const char *key, size_t len)
 {
-    uint32_t hash, i;
-    for (hash = i = 0; i < len; ++i) {
-        hash += key[i];
-        hash += (hash << 10);
-        hash ^= (hash >> 6);
-    }
-    hash += (hash << 3);
-    hash ^= (hash >> 11);
-    hash += (hash << 15);
+    uint32_t i = 0;
+    uint32_t hash = 0;
 
-    return hash;
+    if (key) {
+        for (hash = 0, i = 0; i < len; ++i) {
+            hash += key[i];
+            hash += (hash << 10);
+            hash ^= (hash >> 6);
+        }
+
+        hash += (hash << 3);
+        hash ^= (hash >> 11);
+        hash += (hash << 15);
+    }
+    return (hash);
 }
 
-// calculates a Jenkins hash of 'str' and places it into 'buf' in hex
+//!
+//! Calculates a Jenkins hash of 'str' and places it into 'buf' in hex
+//!
+//! @param[in,out] buf      the string buffer that contains the result
+//! @param[in]     buf_size the size of our string buffer
+//! @param[in]     str      the string to compute Jenkins hash from
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_INVALID_ERROR: If any parameter does not meet the preconditions
+//!
+//! @pre \li Both buf and str parameters must not be NULL.
+//!      \li The buf_size parameter must be greater than 0 and should contain at least 8 characters.
+//!
+//! @post On success, the buf parameter will contain the hexadecimal string representation
+//!       of the Jenkins hash.
+//!
 int hexjenkins(char *buf, unsigned int buf_size, const char *str)
 {
-    snprintf(buf, buf_size, "%08x", jenkins(str, strlen(str)));
-    return OK;
+    if((buf != NULL) && (buf_size > 0) && (str != NULL)) {
+        snprintf(buf, buf_size, "%08x", jenkins(str, strlen(str)));
+        return (EUCA_OK);
+    }
+    return (EUCA_INVALID_ERROR);
 }

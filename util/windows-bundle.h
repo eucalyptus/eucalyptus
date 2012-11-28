@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,19 +63,79 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_WINDOWS_BUNDLE_H
-#define INCLUDE_WINDOWS_BUNDLE_H
+#ifndef _INCLUDE_WINDOWS_BUNDLE_H_
+#define _INCLUDE_WINDOWS_BUNDLE_H_
+
+//!
+//! @file util/windows-bundle.h
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <eucalyptus.h>
 #include <data.h>
 
-#define MAXBUNDLES MAXINSTANCES_PER_NC
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+#define MAXBUNDLES                               MAXINSTANCES_PER_NC
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! Bundle task structure
 typedef struct bundleTask_t {
-    char instanceId[CHAR_BUFFER_SIZE];
-    char state[CHAR_BUFFER_SIZE];
+    char instanceId[CHAR_BUFFER_SIZE];  //!< the instance indentifier for this bundle task
+    char state[CHAR_BUFFER_SIZE];   //!< the state of the bundling task
 } bundleTask;
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 int allocate_bundleTask(bundleTask * out, char *instanceId, char *state);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_WINDOWS_BUNDLE_H_ */

@@ -63,18 +63,27 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef LOG_H
-#define LOG_H
+#ifndef _INCLUDE_LOG_H_
+#define _INCLUDE_LOG_H_
+
+//!
+//! @file util/log.h
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include "ipc.h"                // sem
 
-extern __thread const char *_log_curr_method;
-extern __thread const char *_log_curr_file;
-extern __thread int _log_curr_line;
-
-#define _EUCA_CONTEXT_SETTER (_log_curr_method=__FUNCTION__,\
-                              _log_curr_file=__FILE__,\
-                              _log_curr_line=__LINE__)
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #define EUCAALL     0
 #define EUCAEXTREME (_EUCA_CONTEXT_SETTER, 1)
@@ -86,74 +95,103 @@ extern __thread int _log_curr_line;
 #define EUCAFATAL   (_EUCA_CONTEXT_SETTER, 7)
 #define EUCAOFF     8
 
-static char *log_level_names[] = {
-    "ALL",
-    "EXTREME",
-    "TRACE",
-    "DEBUG",
-    "INFO",
-    "WARN",
-    "ERROR",
-    "FATAL",
-    "OFF"
-};
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-/////////////////////// prefix format
-// %T = timestamp
-// %L = loglevel
-// %p = PID
-// %t = thread id (same as PID in CC)
-// %m = method
-// %F = file:line_no
-// %s = max rss size, in MB
-//
-// p,t,m,F may be followed by (-)NNN,
-//         '-' means left-justified
-//         and NNN is max field size
-/////////////////////////////////////
-static char *log_level_prefix[] = {
-    "",
-    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
-    "%T %L %t9 %m-24 |",        // TRACE
-    "%T %L %t9 %m-24 |",        // DEBUG
-    "%T %L |",                  // INFO
-    "%T %L |",                  // WARN
-    "%T %L |",                  // ERROR
-    "%T %L |",                  // FATAL
-    ""
-};
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#ifdef DEBUG
-#define PRINTF(a) logprintf a
-#else
-#define PRINTF(a)
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#ifdef DEBUG1
-#define PRINTF1(a) logprintf a
-#else
-#define PRINTF1(a)
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#ifdef DEBUGXML
-#define PRINTF_XML(a) logprintf a
-#else
-#define PRINTF_XML(a)
-#endif
+extern __thread const char *_log_curr_method;
+extern __thread const char *_log_curr_file;
+extern __thread int _log_curr_line;
+
+extern const char *log_level_names[];
+
+//!
+//! prefix format
+//! %T = timestamp
+//! %L = loglevel
+//! %p = PID
+//! %t = thread id (same as PID in CC)
+//! %m = method
+//! %F = file:line_no
+//! %s = max rss size, in MB
+//!
+//! p,t,m,F may be followed by (-)NNN,
+//!         '-' means left-justified
+//!         and NNN is max field size
+//!
+const extern char *log_level_prefix[];
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 int log_level_int(const char *level);
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char *file);
 int log_prefix_set(const char *log_spec);
-int log_facility_set(const char *log_facility, const char *component_name);
+int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
-int logfile(char *file, int in_loglevel, int in_logrollnumber);
+int logfile(const char *file, int log_level_in, int log_roll_number_in);
 int logprintf(const char *format, ...);
 int logprintfl(int level, const char *format, ...);
-int logcat(int debug_level, const char *file_name);
+int logcat(int debug_level, const char *file_path);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 void log_dump_trace(char *buf, int buf_size);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define _EUCA_CONTEXT_SETTER                     (_log_curr_method=__FUNCTION__, _log_curr_file=__FILE__, _log_curr_line=__LINE__)
+
+#ifdef DEBUG
+#define PRINTF(a)                                logprintf a
+#else /* DEBUG */
+#define PRINTF(a)
+#endif /* DEBUG */
+
+#ifdef DEBUG1
+#define PRINTF1(a)                               logprintf a
+#else /* DEBUG1 */
+#define PRINTF1(a)
+#endif /* DEBUG1 */
+
+#ifdef DEBUGXML
+#define PRINTF_XML(a)                             logprintf a
+#else /* DEBUGXML */
+#define PRINTF_XML(a)
+#endif /* DEBUGXML */
+
+#endif /* ! _INCLUDE_LOG_H_ */
