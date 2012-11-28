@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,12 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef EUCALYPTUS_CONFIG_H
-#define EUCALYPTUS_CONFIG_H
+#ifndef _INCLUDE_EUCALYPTUS_CONFIG_H_
+#define _INCLUDE_EUCALYPTUS_CONFIG_H_
 
 #ifdef __cplusplus
 {
 #endif
+
+//!
+//! @file util/eucalyptus-config.h
+//! Eucalytpus configuration parameters used by configure.
+//!
 
 /* Current version */
 #undef EUCA_VERSION
@@ -138,5 +146,4 @@
 }
 #endif
 
-
-#endif /* CONFIG_H */
+#endif /* ! _INCLUDE_EUCALYPTUS_CONFIG_H_ */
