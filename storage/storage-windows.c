@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file storage/storage-windows.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,64 +104,168 @@
 
 #include <eucalyptus.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out);
+int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize);
+int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in]  encpass
+//! @param[in]  encsize
+//! @param[in]  pkfile
+//! @param[out] out
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_IO_ERROR and EUCA_MEMORY_ERROR.
+//!
 int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out)
 {
-    FILE *PKFP;
+    FILE *PKFP = NULL;
     RSA *pr = NULL;
-    char *dec64;
-    int rc;
+    char *dec64 = NULL;
+    int rc = -1;
 
-    if (!encpass || encsize <= 0 || !*pkfile || !out) {
-        return (1);
+    // Make sure we have valid parameters
+    if ((encpass == NULL) || (encsize <= 0) || (pkfile == NULL) || (*pkfile == '\0') || (out == NULL)) {
+        return (EUCA_ERROR);
     }
-
-    PKFP = fopen(pkfile, "r");
-    if (!PKFP) {
-        return (1);
+    // Open the private key file in read mode
+    if ((PKFP = fopen(pkfile, "r")) == NULL) {
+        return (EUCA_IO_ERROR);
     }
+    // Give is to SSL
     if (PEM_read_RSAPrivateKey(PKFP, &pr, NULL, NULL) == NULL) {
-        return (1);
+        fclose(PKFP);
+        PKFP = NULL;
+        return (EUCA_ERROR);
+    }
+    // No longer need the file handler
+    fclose(PKFP);
+    PKFP = NULL;
+
+    if ((dec64 = base64_dec(((unsigned char *)encpass), strlen(encpass))) == NULL) {
+        return (EUCA_ERROR);
     }
 
-    dec64 = base64_dec((unsigned char *)encpass, strlen(encpass));
-    if (!dec64) {
-        return (1);
+    if ((*out = EUCA_ZALLOC(512, sizeof(char))) == NULL) {
+        EUCA_FREE(dec64);
+        return (EUCA_MEMORY_ERROR);
     }
 
-    *out = malloc(512);
-    if (!*out) {
-        if (dec64)
-            free(dec64);
-        return (1);
-    }
-    bzero(*out, 512);
-    rc = RSA_private_decrypt(encsize, (unsigned char *)dec64, (unsigned char *)*out, pr, RSA_PKCS1_PADDING);
-    if (dec64)
-        free(dec64);
+    rc = RSA_private_decrypt(encsize, ((unsigned char *)dec64), ((unsigned char *)*out), pr, RSA_PKCS1_PADDING);
+    EUCA_FREE(dec64);
+
     if (rc) {
-        return (1);
+        EUCA_FREE(*out);
+        return (EUCA_ERROR);
     }
-    return (0);
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in]  pass
+//! @param[in]  key
+//! @param[out] out
+//! @param[out] outsize
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         and EUCA_MEMORY_ERROR
+//!
 int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
 {
-    char *sshkey_dec, *modbuf, *exponentbuf;
-    char *ptr, *tmp, hexstr[4], *enc64;
-    char *dec64, encpassword[512];
-
-    uint32_t len, exponent;
-    int size, ilen, i, encsize = 0, rc;
+    char *sshkey_dec = NULL;
+    char *modbuf = NULL;
+    char *exponentbuf = NULL;
+    char *ptr = NULL;
+    char *tmp = NULL;
+    char hexstr[4] = { 0 };
+    char encpassword[512] = { 0 };
+    uint32_t len = 0;
+    uint32_t exponent = 0;
+    int size = 0;
+    int ilen = 0;
+    int i = 0;
+    int encsize = 0;
     RSA *r = NULL;
 
     if (!pass || !key || !out || !outsize) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     size = strlen(key);
-    sshkey_dec = base64_dec((unsigned char *)key, size);
-    if (!sshkey_dec) {
-        return (1);
+    if ((sshkey_dec = base64_dec(((unsigned char *)key), size)) == NULL) {
+        return (EUCA_ERROR);
     }
 
     ptr = sshkey_dec;
@@ -160,12 +278,11 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
     ptr += 4;
 
     // read public exponent
-    exponentbuf = malloc(32768);
-    if (!exponentbuf) {
-        if (sshkey_dec)
-            free(sshkey_dec);
-        return (1);
+    if ((exponentbuf = EUCA_ZALLOC(32768, sizeof(char))) == NULL) {
+        EUCA_FREE(sshkey_dec);
+        return (EUCA_MEMORY_ERROR);
     }
+
     exponent = 0;
     memcpy(&exponent, ptr, len);
     exponent = htonl(exponent);
@@ -178,105 +295,111 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
     ptr += 4;
 
     // read modulus material
-    modbuf = malloc(32768);
-    if (!modbuf) {
-        if (sshkey_dec)
-            free(sshkey_dec);
-        if (exponentbuf)
-            free(exponentbuf);
-        return (1);
+    if ((modbuf = EUCA_ZALLOC(32768, sizeof(char))) == NULL) {
+        EUCA_FREE(sshkey_dec);
+        EUCA_FREE(exponentbuf);
+        return (EUCA_MEMORY_ERROR);
     }
-    bzero(modbuf, 32768);
-    ilen = (int)len;
+
+    ilen = ((int)len);
     for (i = 0; i < ilen; i++) {
-        tmp = strndup(ptr, 1);
-        if (tmp) {
+        if ((tmp = strndup(ptr, 1)) != NULL) {
             len = *tmp;
             bzero(hexstr, sizeof(char) * 4);
             snprintf(hexstr, 3, "%02X", (len << 24) >> 24);
             strcat(modbuf, hexstr);
             ptr += 1;
-            free(tmp);
+            EUCA_FREE(tmp);
         }
     }
     //printf("MOD: |%s|\n", modbuf);
     //printf("EXPONENT: |%s|\n", exponentbuf);
 
-    r = RSA_new();
-    if (!r) {
-        if (sshkey_dec)
-            free(sshkey_dec);
-        if (exponentbuf)
-            free(exponentbuf);
-        if (modbuf)
-            free(modbuf);
-        return (1);
+    if ((r = RSA_new()) == NULL) {
+        EUCA_FREE(sshkey_dec);
+        EUCA_FREE(exponentbuf);
+        EUCA_FREE(modbuf);
+        return (EUCA_MEMORY_ERROR);
     }
+
     if (!BN_hex2bn(&(r->e), exponentbuf) || !BN_hex2bn(&(r->n), modbuf)) {
-        if (sshkey_dec)
-            free(sshkey_dec);
-        if (exponentbuf)
-            free(exponentbuf);
-        if (modbuf)
-            free(modbuf);
-        return (1);
+        EUCA_FREE(sshkey_dec);
+        EUCA_FREE(exponentbuf);
+        EUCA_FREE(modbuf);
+        return (EUCA_ERROR);
     }
 
     bzero(encpassword, 512);
-    encsize = RSA_public_encrypt(strlen(pass), (unsigned char *)pass, (unsigned char *)encpassword, r, RSA_PKCS1_PADDING);
-    if (encsize <= 0) {
-        if (sshkey_dec)
-            free(sshkey_dec);
-        if (exponentbuf)
-            free(exponentbuf);
-        if (modbuf)
-            free(modbuf);
-        return (1);
+    if ((encsize = RSA_public_encrypt(strlen(pass), (unsigned char *)pass, (unsigned char *)encpassword, r, RSA_PKCS1_PADDING)) <= 0) {
+        EUCA_FREE(sshkey_dec);
+        EUCA_FREE(exponentbuf);
+        EUCA_FREE(modbuf);
+        return (EUCA_ERROR);
     }
 
     *out = base64_enc((unsigned char *)encpassword, encsize);
     *outsize = encsize;
     if (!*out || *outsize <= 0) {
-        if (sshkey_dec)
-            free(sshkey_dec);
-        if (exponentbuf)
-            free(exponentbuf);
-        if (modbuf)
-            free(modbuf);
-        return (1);
+        EUCA_FREE(sshkey_dec);
+        EUCA_FREE(exponentbuf);
+        EUCA_FREE(modbuf);
+        return (EUCA_ERROR);
     }
-    if (sshkey_dec)
-        free(sshkey_dec);
-    if (exponentbuf)
-        free(exponentbuf);
-    if (modbuf)
-        free(modbuf);
-    return (0);
+
+    EUCA_FREE(sshkey_dec);
+    EUCA_FREE(exponentbuf);
+    EUCA_FREE(modbuf);
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in] euca_home
+//! @param[in] rundir_path
+//! @param[in] keyName
+//! @param[in] instName
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_IO_ERROR and EUCA_MEMORY_ERROR.
+//!
 int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName)
 {
-    int fd, rc, rbytes, count, encsize, i;
-    char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024], password[16];
-    char *encpassword;
-    char *newInstName;
-    FILE *FH;
+    int fd = 0;
+    int rc = 0;
+    int rbytes = 0;
+    int count = 0;
+    int encsize = 0;
+    int i = 0;
+    char *buf = NULL;
+    char *ptr = NULL;
+    char *tmp = NULL;
+    char *newpass = NULL;
+    char dest_path[1024] = { 0 };
+    char source_path[1024] = { 0 };
+    char password[16] = { 0 };
+    char *encpassword = NULL;
+    char *newInstName = NULL;
+    char c[4] = { 0 };
+    char cmd[MAX_PATH] = { 0 };
+    char enckey[2048] = { 0 };
+    char keyNameHolder1[512] = { 0 };
+    char keyNameHolder2[512] = { 0 };
+    FILE *FH = NULL;
 
     if (!euca_home || !rundir_path || !strlen(euca_home) || !strlen(rundir_path)) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     snprintf(source_path, 1024, EUCALYPTUS_HELPER_DIR "/floppy", euca_home);
     snprintf(dest_path, 1024, "%s/floppy", rundir_path);
     if (!keyName || !strlen(keyName) || !strlen(instName)) {
-        char cmd[MAX_PATH];
         snprintf(cmd, MAX_PATH, "cp -a %s %s", source_path, dest_path);
         return (system(cmd));
     }
 
     bzero(password, sizeof(char) * 16);
     for (i = 0; i < 8; i++) {
-        char c[4];
         c[0] = '0';
         while (c[0] == '0' || c[0] == 'O')
             snprintf(c, 2, "%c", RANDALPHANUM());
@@ -285,46 +408,35 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     //  snprintf(source_path, 1024, "%s/usr/share/eucalyptus/floppy", euca_home);
     //  snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
-    buf = malloc(1024 * 2048);
-    if (!buf) {
-        return (1);
+    if ((buf = EUCA_ALLOC(1024 * 2048, sizeof(char))) == NULL) {
+        return (EUCA_MEMORY_ERROR);
     }
 
-    fd = open(source_path, O_RDONLY);
-    if (fd < 0) {
-        if (buf)
-            free(buf);
-        return (1);
+    if ((fd = open(source_path, O_RDONLY)) < 0) {
+        EUCA_FREE(buf);
+        return (EUCA_IO_ERROR);
     }
 
     rbytes = read(fd, buf, 1024 * 2048);
     close(fd);
     if (rbytes < 0) {
-        if (buf)
-            free(buf);
-        return (1);
+        EUCA_FREE(buf);
+        return (EUCA_IO_ERROR);
     }
 
     ptr = buf;
     count = 0;
-    tmp = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER") + 1);
-    newpass = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER") + 1);
-    newInstName = malloc(sizeof(char) * strlen("MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER") + 1);
+    tmp = EUCA_ZALLOC(strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER") + 1, sizeof(char));
+    newpass = EUCA_ZALLOC(strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER") + 1, sizeof(char));
+    newInstName = EUCA_ZALLOC(strlen("MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER") + 1, sizeof(char));
 
     if (!tmp || !newpass || !newInstName) {
-        if (tmp)
-            free(tmp);
-        if (newpass)
-            free(newpass);
-        if (newInstName)
-            free(newInstName);
-        if (buf)
-            free(buf);
-        return (1);
+        EUCA_FREE(tmp);
+        EUCA_FREE(newpass);
+        EUCA_FREE(newInstName);
+        EUCA_FREE(buf);
+        return (EUCA_MEMORY_ERROR);
     }
-    bzero(tmp, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER") + 1);
-    bzero(newpass, strlen("MAGICEUCALYPTUSPASSWORDPLACEHOLDER") + 1);
-    bzero(newInstName, strlen("MAGICEUCALYPTUSHOSTNAMEPLACEHOLDER") + 1);
 
     snprintf(newpass, strlen(password) + 1, "%s", password);
     snprintf(newInstName, strlen(instName) + 1, "%s", instName);
@@ -343,73 +455,51 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
         count++;
     }
 
-    fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700);
-    if (fd < 0) {
-        if (buf)
-            free(buf);
-        if (tmp)
-            free(tmp);
-        if (newpass)
-            free(newpass);
-        if (newInstName)
-            free(newInstName);
-        return (1);
+    if ((fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700)) < 0) {
+        EUCA_FREE(buf);
+        EUCA_FREE(tmp);
+        EUCA_FREE(newpass);
+        EUCA_FREE(newInstName);
+        return (EUCA_IO_ERROR);
     }
+
     rc = write(fd, buf, rbytes);
-    if (rc != rbytes) {
-        if (buf)
-            free(buf);
-        if (tmp)
-            free(tmp);
-        if (newpass)
-            free(newpass);
-        if (newInstName)
-            free(newInstName);
-        close(fd);
-        return (1);
-    }
     close(fd);
-    if (buf)
-        free(buf);
+
+    if (rc != rbytes) {
+        EUCA_FREE(buf);
+        EUCA_FREE(tmp);
+        EUCA_FREE(newpass);
+        EUCA_FREE(newInstName);
+        return (EUCA_IO_ERROR);
+    }
+
+    EUCA_FREE(buf);
 
     // encrypt password and write to console log for later retrieval
-    char tmpstr[512], enckey[2048];
-    char keyNameHolder1[512], keyNameHolder2[512];
     sscanf(keyName, "%s %s %s", keyNameHolder1, enckey, keyNameHolder2);
     rc = encryptWindowsPassword(password, enckey, &encpassword, &encsize);
     if (rc) {
-        if (tmp)
-            free(tmp);
-        if (newpass)
-            free(newpass);
-        if (newInstName)
-            free(newInstName);
-        return (1);
+        EUCA_FREE(tmp);
+        EUCA_FREE(newpass);
+        EUCA_FREE(newInstName);
+        return (EUCA_ERROR);
     }
 
     snprintf(dest_path, 1024, "%s/console.append.log", rundir_path);
-    FH = fopen(dest_path, "w");
-    if (FH) {
+    if ((FH = fopen(dest_path, "w")) != NULL) {
         fprintf(FH, "<Password>\r\n%s\r\n</Password>\r\n", encpassword);
         fclose(FH);
-    } else {
-        if (encpassword)
-            free(encpassword);
-        if (tmp)
-            free(tmp);
-        if (newpass)
-            free(newpass);
-        if (newInstName)
-            free(newInstName);
-        return (1);
+        EUCA_FREE(encpassword);
+        EUCA_FREE(tmp);
+        EUCA_FREE(newpass);
+        EUCA_FREE(newInstName);
+        return (EUCA_OK);
     }
-    if (encpassword)
-        free(encpassword);
-    if (tmp)
-        free(tmp);
-    if (newpass)
-        free(newpass);
-    if (newInstName)
-        free(newInstName);
-    return (0);
+
+    EUCA_FREE(encpassword);
+    EUCA_FREE(tmp);
+    EUCA_FREE(newpass);
+    EUCA_FREE(newInstName);
+    return (EUCA_ERROR);
 }

@@ -1,8 +1,6 @@
 // -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
-/* blobstore.c */
-
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -65,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file storage/blobstore.c
+//! Implements blobstore storage
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,38 +97,151 @@
 #include "eucalyptus.h"         // euca user
 #include "ipc.h"
 
-#define BLOBSTORE_METADATA_FILE ".blobstore"
-#define BLOBSTORE_METADATA_TIMEOUT_USEC 1000000LL * 60 * 2  // it may take dozens of seconds to open blobstore when others are LRU-purging it
-#define BLOBSTORE_LOCK_TIMEOUT_USEC 500000LL
-#define BLOBSTORE_FIND_TIMEOUT_USEC 50000LL
-#define BLOBSTORE_DELETE_TIMEOUT_USEC 50000LL
-#define BLOBSTORE_SLEEP_INTERVAL_USEC 99999LL
-#define BLOBSTORE_DMSETUP_TIMEOUT_SEC 60
-#define BLOBSTORE_MAX_CONCURRENT 99
-#define BLOBSTORE_NO_TIMEOUT -1L
-#define BLOBSTORE_SIG_MAX 262144
-#define DM_PATH "/dev/mapper/"
-#define DM_FORMAT DM_PATH "%s"  // TODO: do not hardcode?
-#define MIN_BLOCKS_SNAPSHOT 32  // otherwise dmsetup fails with
-                               // device-mapper: reload ioctl failed: Cannot allocate memory OR
-                               // device-mapper: reload ioctl failed: Input/output error
-#define EUCA_ZERO "euca-zero"
-#define EUCA_ZERO_SIZE "2199023255552"  // is one petabyte enough?
+#ifdef _EUCA_BLOBS
+#include "map.h"
+#endif /* _EUCA_BLOBS */
 
-typedef enum {                  // paths to files containing... 
-    BLOCKBLOB_PATH_NONE = 0,    // sentinel for identifying files that are not blockblob related
-    BLOCKBLOB_PATH_BLOCKS,      // ...blocks, either in flat format or as a snapshot backing
-    BLOCKBLOB_PATH_LOCK,        // ...nothing, but needed for safe locking of access to the blob
-    BLOCKBLOB_PATH_DM,          // ...device mapper devices created for this clone, if any
-    BLOCKBLOB_PATH_DEPS,        // ...names of blockblobs that this blockblob depends on, if any
-    BLOCKBLOB_PATH_LOOPBACK,    // ...name of the loopback device for this blob, when attached
-    BLOCKBLOB_PATH_SIG,         // ...signature of the blob, if provided from outside
-    BLOCKBLOB_PATH_REFS,        // ...names of blockblobs that depend on this blockblob, if any
-    BLOCKBLOB_PATH_HOLLOW,      // ...nothing, but the file acts as a marker of 'hollow' blobs
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define BLOBSTORE_METADATA_FILE                  ".blobstore"
+#define BLOBSTORE_METADATA_TIMEOUT_USEC          (1000000LL * 60 * 2)   //!< it may take dozens of seconds to open blobstore when others are LRU-purging it
+#define BLOBSTORE_LOCK_TIMEOUT_USEC               500000LL
+#define BLOBSTORE_FIND_TIMEOUT_USEC                50000LL
+#define BLOBSTORE_DELETE_TIMEOUT_USEC              50000LL
+#define BLOBSTORE_SLEEP_INTERVAL_USEC              99999LL
+#define BLOBSTORE_DMSETUP_TIMEOUT_SEC                 60
+#define BLOBSTORE_MAX_CONCURRENT                      99
+#define BLOBSTORE_NO_TIMEOUT                          -1L
+#define BLOBSTORE_SIG_MAX                         262144
+#define DM_PATH                                  "/dev/mapper/"
+#define DM_FORMAT                                DM_PATH "%s"   //!< @TODO do not hardcode?
+#define MIN_BLOCKS_SNAPSHOT                      32 //!< otherwise dmsetup fails with device-mapper: reload ioctl failed: Cannot allocate memory OR device-mapper: reload ioctl failed: Input/output error
+#define EUCA_ZERO                                "euca-zero"
+#define EUCA_ZERO_SIZE                           "2199023255552"    //!< is one petabyte enough?
+
+#define __INLINE__                               __inline__
+
+#ifdef _UNIT_TEST
+#define F1                                       "/tmp/blobstore_test_1"
+#define F2                                       "/tmp/blobstore_test_2"
+#define F3                                       "/tmp/blobstore_test_3"
+
+#define _R                                       BLOBSTORE_FLAG_RDONLY
+#define _W                                       BLOBSTORE_FLAG_RDWR
+#define _C                                      (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL | BLOBSTORE_FLAG_RDWR)
+#define _CBB                                    (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL)
+
+#define B1                                       "BLOCKBLOB-01"
+#define B2                                       "BLOCKBLOB-02"
+#define B3                                       "BLOCKBLOB-03"
+#define B4                                       "BLOCKBLOB-04"
+#define B5                                       "BLOCKBLOB-05"
+#define B6                                       "BLOCKBLOB-06"
+
+#define BS_SIZE                                      30
+#define BB_SIZE                                      10
+#define CBB_SIZE                                     32
+#define STRESS_BS_SIZE                           100000
+#define STRESS_MIN_BB                                64
+#define STRESS_BLOBS                                 10
+
+#define LOCK_CYCLES                                    3
+#define COMPETITIVE_PARTICIPANTS                       3
+#define COMPETITIVE_ITERATIONS                        30
+#define COMPETITIVE_PAUSE_USEC                         5
+#define COMPETITIVE_TIMEOUT_USEC                 3000000L
+#endif /* _UNIT_TEST */
+
+#ifdef _EUCA_BLOBS
+#define USAGE                                    "Usage: euca-blobs [cache=... work=...] command [param1] [param2]...\n"
+#define HELP                                     "\n"                                         \
+                                                 "\thelp\t\t- print this help message\n"      \
+                                                 "\tlist\t\t- list blobs in work and cache\n" \
+                                                 "\tdelete [id]\t- delete blob with\n"
+#define MAX_ARGS                                 5
+#endif /* _EUCA_BLOBS */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+// if changing, change the array below and set_blockblob_metadata_path()
+typedef enum {                  //!< paths to files containing...
+    BLOCKBLOB_PATH_NONE = 0,    //!< sentinel for identifying files that are not blockblob related
+    BLOCKBLOB_PATH_BLOCKS,      //!< ...blocks, either in flat format or as a snapshot backing
+    BLOCKBLOB_PATH_LOCK,        //!< ...nothing, but needed for safe locking of access to the blob
+    BLOCKBLOB_PATH_DM,          //!< ...device mapper devices created for this clone, if any
+    BLOCKBLOB_PATH_DEPS,        //!< ...names of blockblobs that this blockblob depends on, if any
+    BLOCKBLOB_PATH_LOOPBACK,    //!< ...name of the loopback device for this blob, when attached
+    BLOCKBLOB_PATH_SIG,         //!< ...signature of the blob, if provided from outside
+    BLOCKBLOB_PATH_REFS,        //!< ...names of blockblobs that depend on this blockblob, if any
+    BLOCKBLOB_PATH_HOLLOW,      //!< ...nothing, but the file acts as a marker of 'hollow' blobs
     BLOCKBLOB_PATH_TOTAL,
-} blockblob_path_t;             // if changing, change the array below and set_blockblob_metadata_path()
+} blockblob_path_t;
 
-static const char *blobstore_metadata_suffixes[] = {    // entries must match the ones in enum above
+enum {
+    DMSETUP,
+    ROOTWRAP,
+    LASTHELPER
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+typedef struct _blobstore_filelock {
+    char path[PATH_MAX];        //!< path that the file was open with @TODO canonicalize?
+    int refs;                   //!< number of open file descriptors (some holding the lock, some waiting) for this path in this process
+    int next_fd;                //!< next available file descriptor in the table below:
+    int fd[BLOBSTORE_MAX_CONCURRENT];
+    int fd_status[BLOBSTORE_MAX_CONCURRENT];    //!< 0 = unused, 1 = open
+#ifdef _TEST_FILELOCK
+    unsigned int thread_id[BLOBSTORE_MAX_CONCURRENT];
+#endif                          /* _TEST_FILELOCK */
+    pthread_rwlock_t lock;      //!< reader/writer lock for controlling intra-process access
+    pthread_mutex_t mutex;      //!< for locking this specific struct during manipulations
+    sem *sem;                   //!< semaphore for debugging
+    struct _blobstore_filelock *next;   //!< pointer for constructing a LL
+} blobstore_filelock;
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+__thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK;   //!< thread-local errno
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+// entries must match the ones in enum above
+static const char *blobstore_metadata_suffixes[] = {
     "none",                     // sentinel entry so that all actual entries have indeces > 0
     "blocks",                   // MUST be second so loop in check_metadata_name() works
     "lock",
@@ -131,29 +253,15 @@ static const char *blobstore_metadata_suffixes[] = {    // entries must match th
     "hollow"
 };
 
-typedef struct _blobstore_filelock {
-    char path[PATH_MAX];        // path that the file was open with (TODO: canonicalize?)
-    int refs;                   // number of open file descriptors (some holding the lock, some waiting) for this path in this process
-    int next_fd;                // next available file descriptor in the table below:
-    int fd[BLOBSTORE_MAX_CONCURRENT];
-    int fd_status[BLOBSTORE_MAX_CONCURRENT];    // 0 = unused, 1 = open
-#ifdef _TEST_FILELOCK
-    unsigned int thread_id[BLOBSTORE_MAX_CONCURRENT];
-#endif
-    pthread_rwlock_t lock;      // reader/writer lock for controlling intra-process access
-    pthread_mutex_t mutex;      // for locking this specific struct during manipulations
-    sem *sem;                   /// semaphore for debugging
-    struct _blobstore_filelock *next;   // pointer for constructing a LL
-} blobstore_filelock;
-
-__thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK;   // thread-local errno
 static void (*err_fn) (const char *msg) = NULL;
 static unsigned char _do_print_errors = 1;
 static unsigned char _do_print_trace = 1;
-static pthread_mutex_t _blobstore_mutex = PTHREAD_MUTEX_INITIALIZER;    // process-global mutex
-static blobstore_filelock *locks_list = NULL;   // process-global LL head (TODO: replace this with a hash table)
+static pthread_mutex_t _blobstore_mutex = PTHREAD_MUTEX_INITIALIZER;    //!< process-global mutex
+static blobstore_filelock *locks_list = NULL;   //!< process-global LL head @TODO replace this with a hash table
 
-// debugging counters (TODO: remove these)
+//! @{
+//! @name debugging counters
+//! @TODO remove these
 static long _locks_list_add_ctr = 0L;
 static long _locks_list_rem_ctr = 0L;
 static long _open_success_ctr = 0L;
@@ -162,7 +270,323 @@ static long _open_error_ctr = 0L;
 static long _open_timeout_ctr = 0L;
 static long _close_error_ctr = 0L;
 static char zero_buf[1] = "\0";
+//! @}
 
+static __thread char _blobstore_last_msg[512] = "";
+static __thread char _blobstore_last_trace[8172] = "";
+
+static char *helpers[LASTHELPER] = {
+    "dmsetup",
+    "euca_rootwrap",
+};
+
+static char *helpers_path[LASTHELPER];
+static int initialized = 0;
+
+#ifdef _UNIT_TEST
+static char *_farray[] = { F1, F2, F3 };
+#endif /* _UNIT_TEST */
+
+#ifdef _EUCA_BLOBS
+static char show_debug = FALSE;
+static char show_extras = FALSE;
+static char show_children = FALSE;
+static char show_parents = FALSE;
+static char *euca_home = NULL;
+static char *work_path = NULL;
+static char *cache_path = NULL;
+static blobstore *work_bs = NULL;
+static blobstore *cache_bs = NULL;
+static map *blob_map;
+#endif /* _EUCA_BLOBS */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! @{
+//! @name blobstore operations
+const char *blobstore_get_error_str(blobstore_error_t error);
+const char *blobstore_get_last_msg(void);
+const char *blobstore_get_last_trace(void);
+void blobstore_set_error_function(void (*fn) (const char *msg));
+struct flock *flock_whole_file(struct flock *l, short type);
+int blobstore_init(void);
+int blobstore_cleanup(void);
+blobstore *blobstore_open(const char *path, unsigned long long limit_blocks, unsigned int flags, blobstore_format_t format,
+                          blobstore_revocation_t revocation_policy, blobstore_snapshot_t snapshot_policy);
+int blobstore_close(blobstore * bs);
+int blobstore_lock(blobstore * bs, long long timeout_usec);
+int blobstore_unlock(blobstore * bs);
+int blobstore_delete(blobstore * bs);
+int blobstore_get_error(void);
+ssize_t get_line_desc(char **ppLine, size_t * n, int fd);
+int blobstore_stat(blobstore * bs, blobstore_meta * meta);
+int blobstore_fsck(blobstore * bs, int (*examiner) (const blockblob * bb));
+int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** results);
+int blobstore_delete_regex(blobstore * bs, const char *regex);
+//! @}
+
+//! @{
+//! @name blockblob operations
+blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long size_bytes, unsigned int flags, const char *sig,
+                          unsigned long long timeout_usec);
+int blockblob_close(blockblob * bb);
+int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force);
+int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, blockblob * dst_bb, unsigned long long dst_offset_bytes, unsigned long long len_bytes); //
+int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size);
+const char *blockblob_get_dev(blockblob * bb);
+const char *blockblob_get_file(blockblob * bb);
+unsigned long long blockblob_get_size_blocks(blockblob * bb);
+unsigned long long blockblob_get_size_bytes(blockblob * bb);
+//! @}
+
+#ifdef _UNIT_TEST
+int do_file_lock_test(void);
+int main(int argc, char **argv);
+#endif /* _UNIT_TEST */
+
+#ifdef _EUCA_BLOBS
+int main(int argc, char *argv[]);
+#endif /* _EUCA_BLOBS */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static void myprintf(int loglevel, const char *format, ...);
+static __INLINE__ void _err_on(void);
+static __INLINE__ void _err_off(void);
+static void err(blobstore_error_t error, const char *custom_msg, const int src_line_no, const char *src_file_name);
+static __INLINE__ void propagate_system_errno(blobstore_error_t default_errno, const int src_line_no, const char *src_file_name);
+static void gen_id(char *str, unsigned int size);
+static void close_filelock(blobstore_filelock * l);
+static void free_filelock(blobstore_filelock * l);
+static int close_and_unlock(int fd);
+#ifdef _TEST_LOCKS
+static char *path_to_sem_name(const char *path, char *name, int name_size);
+#endif /* _TEST_LOCKS */
+static int open_and_lock(const char *path, int flags, long long timeout_usec, mode_t mode);
+static char *get_val(const char *buf, const char *key);
+static int fd_to_buf(int fd, char *buf, int size_buf);
+static int buf_to_fd(int fd, const char *buf, int size_buf);
+static int read_store_metadata(blobstore * bs);
+static int write_store_metadata(blobstore * bs);
+static int set_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char *path, size_t path_size);
+static int write_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, const char *str);
+static int read_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char *str, int str_size);
+static int write_array_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char **array, int array_size);
+static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char ***array, int *array_size);
+static int update_entry_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, const char *entry, int removing);
+static int typeof_blockblob_metadata_path(const blobstore * bs, const char *path, char *bb_id, unsigned int bb_id_size);
+static int delete_blockblob_files(const blobstore * bs, const char *bb_id);
+static int ensure_blockblob_metadata_path(const blobstore * bs, const char *bb_id);
+static void free_bbs(blockblob * bbs);
+static unsigned int check_in_use(blobstore * bs, const char *bb_id, long long timeout_usec);
+static void set_device_path(blockblob * bb);
+static blockblob **walk_bs(blobstore * bs, const char *dir_path, blockblob ** tail_bb, const blockblob * bb_to_avoid);
+static blockblob *scan_blobstore(blobstore * bs, const blockblob * bb_to_avoid);
+static int compare_bbs(const void *bb1, const void *bb2);
+static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long long need_blocks);
+static int get_stale_refs(const blockblob * bb, char ***refs);
+static int loop_remove(blobstore * bs, const char *bb_id);
+#ifdef _UNIT_TEST
+static int dm_suspend_resume(const char *dev_name);
+#endif /* _UNIT_TEST */
+static int dm_check_device(const char *dev_name);
+static int dm_delete_device(const char *dev_name);
+static int dm_delete_devices(char *dev_names[], int size);
+static int dm_create_devices(char *dev_names[], char *dm_tables[], int size);
+static char *dm_get_zero(void);
+static int blockblob_check(const blockblob * bb);
+static int delete_blob_state(blockblob * bb, long long timeout_usec, char do_force);
+static int verify_bb(const blockblob * bb, unsigned long long min_size_bytes);
+
+#ifdef _UNIT_TEST
+static void _fill_blob(blockblob * bb, char c, int use_file);
+static blobstore *create_teststore(int size_blocks, const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
+                                   blobstore_snapshot_t snapshot);
+static int write_byte(blockblob * bb, int seek, char c);
+static char read_byte(blockblob * bb, int seek);
+static int do_clone_stresstest(const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
+                               blobstore_snapshot_t snapshot);
+static int check_destination(blockblob * bb4, char *op);
+static int do_copy_test(const char *base, const char *name);
+static int do_clone_test(const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
+                         blobstore_snapshot_t snapshot, int copy_or_snapshot);
+static int do_metadata_test(const char *base, const char *name);
+static int do_blobstore_test(const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation);
+static void *competitor_function(void *ptr);
+static void *thread_function(void *ptr);
+static void dummy_err_fn(const char *msg);
+#endif /* _UNIT_TEST */
+
+#ifdef _EUCA_BLOBS
+static void bs_errors(const char *msg);
+static int open_blobstore(const char *path, blobstore ** bs, const char *name);
+static int open_blobstores();
+static void close_blobstores();
+static int do_list_bs(blobstore * bs, const char *regex);
+static void print_tree(const char *prefix, blockblob_meta * bm, blockblob_path_t type);
+static int do_list(const char *regex);
+static int do_delete(const char *id);
+static void usage(const char *msg);
+static void set_global_parameter(char *key, char *val);
+#endif /* _EUCA_BLOBS */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define ERR(_ERRNO,_MSG)               err(_ERRNO, _MSG, __LINE__, __FILE__)
+
+#define PROPAGATE_ERR(_ERRNO)          propagate_system_errno(_ERRNO, __LINE__, __FILE__)
+
+#ifdef _UNIT_TEST
+#define _UNEXPECTED()                  printf ("======================> UNEXPECTED RESULT (errors=%d)!!!\n", ++errors);
+
+#define _CHKMETA(_ST, _RE)                                                               \
+{                                                                                        \
+	snprintf(entry_path, sizeof(entry_path), "%s/%s", bs->path, _ST);                    \
+	if (_RE != typeof_blockblob_metadata_path(bs, entry_path, blob_id, sizeof(blob_id))) \
+		_UNEXPECTED();                                                                   \
+}
+
+#define _OPEN(_FD, _FI, _FL, _TI, _RE)                                                                \
+{                                                                                                     \
+	_blobstore_errno = 0;                                                                             \
+	printf("%d: open (" _FI " flags=%d timeout=%d)", getpid(), _FL, _TI);                             \
+	_FD = open_and_lock(_FI, _FL, _TI, BLOBSTORE_FILE_PERM);                                          \
+	printf("=%d errno=%d '%s'\n", _FD, _blobstore_errno, blobstore_get_error_str(_blobstore_errno));  \
+	if ((_FD == -1) && (_blobstore_errno == 0))                                                       \
+		printf("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors);            \
+	else if (((_RE == -1) && (_FD != -1)) || ((_RE == 0) && (_FD < 0)))                               \
+		_UNEXPECTED();                                                                                \
+}
+
+#define _CLOS(_FD, _FI)                                        \
+{                                                              \
+	ret = close_and_unlock(_FD);                               \
+    printf("%d: close (%d " _FI ")=%d\n", getpid(), _FD, ret); \
+}
+
+#define _PARENT_WAITS()                                                   \
+{                                                                         \
+	int status = 0;                                                       \
+	int ret = 0;                                                          \
+	printf("waiting for child pid=%d\n", pid);                            \
+	ret = wait(&status);                                                  \
+	printf("waited for child pid=%d ret=%d\n", ret, WEXITSTATUS(status)); \
+	errors += WEXITSTATUS(status);                                        \
+}
+
+#define _OPENBB(_BB, _ID, _SI, _SG, _FL, _TI, _RE)                                                                                   \
+{                                                                                                                                    \
+	_blobstore_errno = 0;                                                                                                            \
+	printf("%d: bb_open (%s size=%d flags=%d timeout=%d)", getpid(), SP(_ID), _SI, _FL, _TI);                                        \
+	_BB = blockblob_open(bs, _ID, (_SI) * 512, _FL, _SG, _TI);                                                                       \
+	printf("=%s errno=%d '%s'\n", ((_BB == NULL) ? ("NULL") : ("OK")), _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+	if ((_BB == NULL) && (_blobstore_errno == 0))                                                                                    \
+		printf("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors);                                           \
+	else if (((_RE == -1) && (_BB != NULL)) || ((_RE == 0) && (_BB == NULL)))                                                        \
+		_UNEXPECTED();                                                                                                               \
+}
+
+// same as _OPENBB but accepts bytes rather than blocks
+#define _OPENBBb(_BB, _ID, _SI, _SG, _FL, _TI, _RE)                                                                                  \
+{                                                                                                                                    \
+	_blobstore_errno = 0;                                                                                                            \
+	printf("%d: bb_open (%s size=%d flags=%d timeout=%d)", getpid(), SP(_ID), _SI, _FL, _TI);                                        \
+	_BB = blockblob_open(bs, _ID, _SI, _FL, _SG, _TI);                                                                               \
+	printf("=%s errno=%d '%s'\n", ((_BB == NULL) ? ("NULL") : ("OK")), _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+	if ((_BB == NULL) && (_blobstore_errno == 0))                                                                                    \
+		printf("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors);                                           \
+	else if (((_RE == -1) && (_BB != NULL)) || ((_RE == 0) && (_BB == NULL)))                                                        \
+		_UNEXPECTED();                                                                                                               \
+}
+
+#define _SEARCH(_PATTERN, _RE)                                                                                               \
+{                                                                                                                            \
+	results = NULL;                                                                                                          \
+	printf("%d: bs_search (pattern=%s)", getpid(), _PATTERN);                                                                \
+	nresults = blobstore_search (bs, _PATTERN, &results);                                                                    \
+	printf("=%d (expected %d) errno=%d '%s'\n", nresults, _RE, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+	if ((nresults < 0) && (_blobstore_errno == 0))                                                                           \
+		printf("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors);                                   \
+	else if (_RE != nresults)                                                                                                \
+		_UNEXPECTED();                                                                                                       \
+	for (blockblob_meta * bm = results; bm;) {                                                                               \
+		blockblob_meta * next = bm->next;                                                                                    \
+		EUCA_FREE(bm);                                                                                                       \
+		bm = next;                                                                                                           \
+	}                                                                                                                        \
+}
+
+#define _CLOSBB(_BB, _ID)                                                    \
+{                                                                            \
+	ret = blockblob_close(_BB);                                              \
+	printf("%d: bb_close (%lu %s)=%d errno=%d '%s'\n",                       \
+			getpid(), ((unsigned long) _BB), SP(_ID), ret, _blobstore_errno, \
+			blobstore_get_error_str(_blobstore_errno));                      \
+}
+
+#define _DELEBB(_BB, _ID, _RE)                                               \
+{                                                                            \
+	ret = blockblob_delete(_BB, 3000, 0);                                    \
+	printf("%d: bb_delete (%lu %s)=%d errno=%d '%s'\n",                      \
+			getpid(), ((unsigned long) _BB), SP(_ID), ret, _blobstore_errno, \
+			blobstore_get_error_str(_blobstore_errno));                      \
+	if (ret != _RE)                                                          \
+		_UNEXPECTED();                                                       \
+}
+
+#define _CLONBB(_BB, _ID, _MP, _RE)                                                                  \
+{                                                                                                    \
+	_blobstore_errno = 0;                                                                            \
+	printf("%d: bb_clone (%s map=%lu)", getpid(), SP(_ID), ((unsigned long) _MP));                   \
+	ret = blockblob_clone(_BB, _MP, (sizeof(_MP) / sizeof(blockmap)));                               \
+	printf("=%d errno=%d '%s'\n", ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+	if ((ret == -1) && (_blobstore_errno == 0))                                                      \
+		printf("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors);           \
+	else if (_RE != ret)                                                                             \
+		_UNEXPECTED();                                                                               \
+}
+
+#define _COPYBB(_SBB, _SO, _DBB, _DO, _LEN, _RE)                                                     \
+{                                                                                                    \
+	_blobstore_errno = 0;                                                                            \
+	printf("%d: bb_copy (%s to %s)", getpid(), (_SBB)->id, (_DBB)->id);                              \
+	ret = blockblob_copy(_SBB, _SO, _DBB, _DO, _LEN);                                                \
+	printf("=%d errno=%d '%s'\n", ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
+	if ((ret == -1) && (_blobstore_errno == 0))                                                      \
+		printf("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors);           \
+	else if (_RE != ret)                                                                             \
+		_UNEXPECTED();                                                                               \
+}
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in] loglevel
+//! @param[in] format
+//!
+//! @pre
+//!
+//! @note
+//!
 static void myprintf(int loglevel, const char *format, ...)
 {
     char buf[1024];
@@ -178,37 +602,82 @@ static void myprintf(int loglevel, const char *format, ...)
         puts(buf);
 }
 
+//!
+//!
+//!
+//! @param[in] error
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 const char *blobstore_get_error_str(blobstore_error_t error)
 {
     return _blobstore_error_strings[error];
 }
 
-static __thread char _blobstore_last_msg[512] = "";
-const char *blobstore_get_last_msg()
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+const char *blobstore_get_last_msg(void)
 {
     return _blobstore_last_msg;
 }
 
-static __thread char _blobstore_last_trace[8172] = "";
-const char *blobstore_get_last_trace()
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+const char *blobstore_get_last_trace(void)
 {
     return _blobstore_last_trace;
 }
 
-#define __INLINE__ __inline__
-
-__INLINE__ static void _err_on(void)
+//!
+//!
+//!
+//! @note
+//!
+static __INLINE__ void _err_on(void)
 {
     _do_print_errors = 1;
 }
 
-__INLINE__ static void _err_off(void)
+//!
+//!
+//!
+//! @note
+//!
+static __INLINE__ void _err_off(void)
 {
     _do_print_errors = 0;
 }
 
-#define ERR(_ERRNO,_MSG) err(_ERRNO,_MSG,__LINE__,__FILE__)
-
+//!
+//!
+//!
+//! @param[in] error
+//! @param[in] custom_msg
+//! @param[in] src_line_no
+//! @param[in] src_file_name
+//!
+//! @pre
+//!
+//! @note
+//!
 static void err(blobstore_error_t error, const char *custom_msg, const int src_line_no, const char *src_file_name)
 {
     const char *msg = custom_msg;
@@ -226,9 +695,18 @@ static void err(blobstore_error_t error, const char *custom_msg, const int src_l
     _blobstore_errno = error;
 }
 
-#define PROPAGATE_ERR(_ERRNO) propagate_system_errno(_ERRNO,__LINE__,__FILE__)
-
-__INLINE__ static void propagate_system_errno(blobstore_error_t default_errno, const int src_line_no, const char *src_file_name)
+//!
+//!
+//!
+//! @param[in] default_errno
+//! @param[in] src_line_no
+//! @param[in] src_file_name
+//!
+//! @pre
+//!
+//! @note
+//!
+static __INLINE__ void propagate_system_errno(blobstore_error_t default_errno, const int src_line_no, const char *src_file_name)
 {
     switch (errno) {
     case ENOENT:
@@ -259,11 +737,30 @@ __INLINE__ static void propagate_system_errno(blobstore_error_t default_errno, c
     err(_blobstore_errno, NULL, src_line_no, src_file_name);
 }
 
+//!
+//!
+//!
+//! @param[in] fn
+//!
+//! @pre
+//!
+//! @note
+//!
 void blobstore_set_error_function(void (*fn) (const char *msg))
 {
     err_fn = fn;
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//! @param[in] size
+//!
+//! @pre
+//!
+//! @note
+//!
 static void gen_id(char *str, unsigned int size)
 {
     struct timeval tv;
@@ -272,6 +769,18 @@ static void gen_id(char *str, unsigned int size)
     snprintf(str, size, "%08lx%08lx%08lx", (unsigned long)random(), (unsigned long)random(), (unsigned long)random());
 }
 
+//!
+//!
+//!
+//! @param[in] l
+//! @param[in] type
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 struct flock *flock_whole_file(struct flock *l, short type)
 {
     l->l_type = type;
@@ -285,7 +794,16 @@ struct flock *flock_whole_file(struct flock *l, short type)
     return l;
 }
 
-// MUST be called with _blobstore_mutex held
+//!
+//!
+//!
+//! @param[in] l
+//!
+//! @pre \li MUST be called with _blobstore_mutex held.
+//!      \li The l parameter must not be NULL
+//!
+//! @note
+//!
 static void close_filelock(blobstore_filelock * l)
 {
     // close all file descriptors at once (we do this because 
@@ -300,21 +818,38 @@ static void close_filelock(blobstore_filelock * l)
     l->next_fd = 0;             // knock the open fd counter back to 0
 }
 
-// MUST be called with _blobstore_mutex held
+//!
+//!
+//!
+//! @param[in] l
+//!
+//! @pre \li MUST be called with _blobstore_mutex held
+//!      \li The l parameter must not be NULL.
+//!
+//! @note
+//!
 static void free_filelock(blobstore_filelock * l)
 {
     pthread_rwlock_destroy(&(l->lock));
     pthread_mutex_destroy(&(l->mutex));
-    free(l);
+    EUCA_FREE(l);
 }
 
-// This function must be used to close files opened with open_and_lock().
-// (Simply doing close() will leave the file locked via pthreads
-// and future open_and_lock() requests from the same process may
-// fail.)  Also, closing the file descriptor releases the OS file lock
-// for the process, so any other read-only descriptors held by the
-// process are no longer guarded since other processes may open the
-// file for writing.
+//!
+//! This function must be used to close files opened with open_and_lock(). (Simply doing close() will
+//! leave the file locked via pthreads and future open_and_lock() requests from the same process may
+//! fail.)  Also, closing the file descriptor releases the OS file lock for the process, so any other
+//! read-only descriptors held by the process are no longer guarded since other processes may open the
+//! file for writing.
+//!
+//! @param[in] fd
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int close_and_unlock(int fd)
 {
     if (fd < 0) {
@@ -328,7 +863,6 @@ static int close_and_unlock(int fd)
 
         blobstore_filelock *path_lock = NULL;   // lock struct to which this fd belongs
         int index = -1;         // index of this fd entry in the lock struct
-        int open_fds = 0;       // count of other open file descriptors for this lock
 
         // traverse all locks, looking for one with fd,
         // when found, compute index and open_fds
@@ -417,6 +951,19 @@ static int close_and_unlock(int fd)
 }
 
 #ifdef _TEST_LOCKS
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] name
+//! @param[in] name_size
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static char *path_to_sem_name(const char *path, char *name, int name_size)
 {
     snprintf(name, name_size, "euca%s", path);
@@ -425,27 +972,36 @@ static char *path_to_sem_name(const char *path, char *name, int name_size)
             name[i] = '-';
     return name;
 }
-#endif // _TEST_LOCKS
+#endif /* _TEST_LOCKS */
 
-// This function creates or opens a file and locks it; the lock is 
-// - exclusive if the file is being created or written to, or a
-// - non-exclusive readers' lock if the file was opened RDONLY.
-// The lock works both across threads and processes.
-// File descriptors obtained from this function should be
-// released with close_and_unlock(). All locks held by a process 
-// are released upon termination, whether normal or abnormal.
-// 
-// flags: BLOBSTORE_FLAG_RDONLY - open with O_RDONLY, reader lock
-//        BLOBSTORE_FLAG_RDWR - open with O_RDWR, writer lock
-//        BLOBSTORE_FLAG_CREAT - open with O_RDWR | O_CREAT, writer lock
-//        BLOBSTORE_FLAG_EXCL - can be added to _CREAT, as with open()
-//
-// timeout_usec: timeout in microseconds for waiting on a lock
-//               BLOBSTORE_NO_TIMEOUT / -1 - wait forever
-//               BLOBSTORE_NO_WAIT / 0 - do not wait at all
-//
-// mode: gets passed to open() directly
-
+//!
+//! This function creates or opens a file and locks it. The lock is:
+//!
+//! \li exclusive if the file is being created or written to, or a
+//! \li non-exclusive readers' lock if the file was opened RDONLY.
+//!
+//! The lock works both across threads and processes.  File descriptors obtained from
+//! this function should be released with close_and_unlock(). All locks held by a process
+//! are released upon termination, whether normal or abnormal.
+//!
+//! @param[in] path
+//! @param[in] flags \li BLOBSTORE_FLAG_RDONLY - open with O_RDONLY, reader lock
+//!                  \li BLOBSTORE_FLAG_RDWR - open with O_RDWR, writer lock
+//!                  \li BLOBSTORE_FLAG_CREAT - open with O_RDWR | O_CREAT, writer lock
+//!                  \li BLOBSTORE_FLAG_EXCL - can be added to _CREAT, as with open()
+//! @param[in] timeout_usec \li timeout in microseconds for waiting on a lock
+//!                         \li BLOBSTORE_NO_TIMEOUT / -1 - wait forever
+//!                         \li BLOBSTORE_NO_WAIT / 0 - do not wait at all
+//! @param[in] mode gets passed to open() directly
+//!
+//! @return
+//!
+//! @see close_and_unlock()
+//!
+//! @pre
+//!
+//! @note
+//!
 static int open_and_lock(const char *path, int flags, long long timeout_usec, mode_t mode)
 {
     short l_type;
@@ -494,7 +1050,7 @@ static int open_and_lock(const char *path, int flags, long long timeout_usec, mo
         // to the last non-matching element's next pointer
 
         if (path_lock == NULL) {    // this path is not locked by any thread
-            path_lock = calloc(1, sizeof(blobstore_filelock));
+            path_lock = EUCA_ZALLOC(1, sizeof(blobstore_filelock));
             if (path_lock == NULL) {
                 pthread_mutex_unlock(&_blobstore_mutex);
                 ERR(BLOBSTORE_ERROR_NOMEM, NULL);
@@ -692,6 +1248,18 @@ error:
     return -1;
 }
 
+//!
+//!
+//!
+//! @param[in] buf
+//! @param[in] key
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static char *get_val(const char *buf, const char *key)
 {
     char *val = NULL;
@@ -703,7 +1271,7 @@ static char *get_val(const char *buf, const char *key)
         char *val_end = val_begin;
         while (*val_end != '\n' && *val_end != '\0')
             val_end++;
-        val = calloc(val_end - val_begin + 1, sizeof(char));    // +1 for the \0
+        val = EUCA_ZALLOC(val_end - val_begin + 1, sizeof(char));   // +1 for the \0
         if (val == NULL) {
             ERR(BLOBSTORE_ERROR_NOMEM, NULL);
             return NULL;
@@ -714,8 +1282,19 @@ static char *get_val(const char *buf, const char *key)
     return val;
 }
 
-// helper for reading a file into a buffer
-// returns number of bytes read or -1 if error
+//!
+//! Helper for reading a file into a buffer
+//!
+//! @param[in] fd
+//! @param[in] buf
+//! @param[in] size_buf
+//!
+//! @return The number of bytes read or -1 if error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int fd_to_buf(int fd, char *buf, int size_buf)
 {
     if (lseek(fd, 0, SEEK_SET) == -1) {
@@ -729,7 +1308,7 @@ static int fd_to_buf(int fd, char *buf, int size_buf)
         return -1;
     }
 
-    if (read(fd, buf, size_buf) != sb.st_size)  // TODO: do this in a loop?
+    if (read(fd, buf, size_buf) != sb.st_size)  //! @TODO do this in a loop?
     {
         ERR(BLOBSTORE_ERROR_NOENT, "failed to read metadata file");
         return -1;
@@ -738,8 +1317,19 @@ static int fd_to_buf(int fd, char *buf, int size_buf)
     return sb.st_size;
 }
 
-// helper for write buffer into a file at descriptor
-// returns number of bytes written or -1 if error
+//!
+//! Helper for write buffer into a file at descriptor
+//!
+//! @param[in] fd
+//! @param[in] buf
+//! @param[in] size_buf
+//!
+//! @return The number of bytes written or -1 if error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int buf_to_fd(int fd, const char *buf, int size_buf)
 {
     if (lseek(fd, 0, SEEK_SET) == -1) {
@@ -747,7 +1337,7 @@ static int buf_to_fd(int fd, const char *buf, int size_buf)
         return -1;
     }
 
-    ssize_t size_wrote = write(fd, buf, size_buf);  // TODO: do this in a loop?
+    ssize_t size_wrote = write(fd, buf, size_buf);  //! @TODO do this in a loop?
     if (size_wrote < size_buf) {
         ERR(BLOBSTORE_ERROR_NOENT, "failed to write metadata file");
         return -1;
@@ -767,6 +1357,17 @@ static int buf_to_fd(int fd, const char *buf, int size_buf)
     return sb.st_size;
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int read_store_metadata(blobstore * bs)
 {
     char buf[1024] = { 0 };
@@ -783,13 +1384,13 @@ static int read_store_metadata(blobstore * bs)
     if ((val = get_val(buf, "id")) == NULL)
         return -1;
     safe_strncpy(bs->id, val, sizeof(bs->id));
-    free(val);
+    EUCA_FREE(val);
 
     if ((val = get_val(buf, "limit")) == NULL)
         return -1;
     errno = 0;
     bs->limit_blocks = strtoll(val, NULL, 10);
-    free(val);
+    EUCA_FREE(val);
     if (errno != 0) {
         ERR(BLOBSTORE_ERROR_NOENT, "invalid metadata file (limit is missing)");
         return -1;
@@ -799,7 +1400,7 @@ static int read_store_metadata(blobstore * bs)
         return -1;
     errno = 0;
     bs->revocation_policy = strtoll(val, NULL, 10);
-    free(val);
+    EUCA_FREE(val);
     if (errno != 0) {
         ERR(BLOBSTORE_ERROR_NOENT, "invalid metadata file (revocation is missing)");
         return -1;
@@ -809,7 +1410,7 @@ static int read_store_metadata(blobstore * bs)
         return -1;
     errno = 0;
     bs->snapshot_policy = strtoll(val, NULL, 10);
-    free(val);
+    EUCA_FREE(val);
     if (errno != 0) {
         ERR(BLOBSTORE_ERROR_NOENT, "invalid metadata file (snapshot is missing)");
         return -1;
@@ -819,7 +1420,7 @@ static int read_store_metadata(blobstore * bs)
         return -1;
     errno = 0;
     bs->format = strtoll(val, NULL, 10);
-    free(val);
+    EUCA_FREE(val);
     if (errno != 0) {
         ERR(BLOBSTORE_ERROR_NOENT, "invalid metadata file (format is missing)");
         return -1;
@@ -827,6 +1428,17 @@ static int read_store_metadata(blobstore * bs)
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int write_store_metadata(blobstore * bs)
 {
     if (ftruncate(bs->fd, 0) == -1) {
@@ -850,20 +1462,15 @@ static int write_store_metadata(blobstore * bs)
     return 0;
 }
 
-enum {
-    DMSETUP,
-    ROOTWRAP,
-    LASTHELPER
-};
-
-static char *helpers[LASTHELPER] = {
-    "dmsetup",
-    "euca_rootwrap",
-};
-
-static char *helpers_path[LASTHELPER];
-static int initialized = 0;
-
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_init(void)
 {
     int ret = 0;
@@ -889,12 +1496,37 @@ int blobstore_init(void)
     return ret;
 }
 
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_cleanup(void)
 {
     diskutil_cleanup();
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] limit_blocks
+//! @param[in] flags
+//! @param[in] format
+//! @param[in] revocation_policy
+//! @param[in] snapshot_policy
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 blobstore *blobstore_open(const char *path, unsigned long long limit_blocks, unsigned int flags,    // BLOBSTORE_FLAG_CREAT - same semantcs as for open() flags
                           blobstore_format_t format, blobstore_revocation_t revocation_policy, blobstore_snapshot_t snapshot_policy)
 {
@@ -903,12 +1535,12 @@ blobstore *blobstore_open(const char *path, unsigned long long limit_blocks, uns
     if (blobstore_init())
         return NULL;
 
-    blobstore *bs = calloc(1, sizeof(blobstore));
+    blobstore *bs = EUCA_ZALLOC(1, sizeof(blobstore));
     if (bs == NULL) {
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
         goto out;
     }
-    safe_strncpy(bs->path, path, sizeof(bs->path)); // TODO: canonicalize path
+    safe_strncpy(bs->path, path, sizeof(bs->path)); //! @TODO canonicalize path
     char meta_path[PATH_MAX];
     snprintf(meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
 
@@ -931,7 +1563,7 @@ write_metadata:
                 gen_id(bs->id, sizeof(bs->id));
                 bs->limit_blocks = limit_blocks;
                 bs->revocation_policy = (revocation_policy == BLOBSTORE_REVOCATION_ANY) ? BLOBSTORE_REVOCATION_NONE : revocation_policy;
-                bs->snapshot_policy = (snapshot_policy == BLOBSTORE_SNAPSHOT_ANY) ? BLOBSTORE_SNAPSHOT_DM : snapshot_policy;    // TODO: verify that DM is available?
+                bs->snapshot_policy = (snapshot_policy == BLOBSTORE_SNAPSHOT_ANY) ? BLOBSTORE_SNAPSHOT_DM : snapshot_policy;    //! @TODO verify that DM is available?
                 bs->format = (format == BLOBSTORE_FORMAT_ANY) ? BLOBSTORE_FORMAT_FILES : format;
 
                 // write metadata to disk
@@ -986,7 +1618,7 @@ write_metadata:
     }
     if (revocation_policy != BLOBSTORE_REVOCATION_ANY && revocation_policy != bs->revocation_policy) {
         if (flags & BLOBSTORE_FLAG_STRICT) {
-            ERR(BLOBSTORE_ERROR_INVAL, "'revocation_policy' does not match existing blobstore");    // TODO: maybe make revocation_policy changeable after creation
+            ERR(BLOBSTORE_ERROR_INVAL, "'revocation_policy' does not match existing blobstore");    //! @TODO maybe make revocation_policy changeable after creation
             goto free;
         } else {
             write_flags = BLOBSTORE_FLAG_RDWR;
@@ -1002,26 +1634,42 @@ write_metadata:
 free:
     saved_errno = _blobstore_errno;
     close_and_unlock(bs->fd);
-    if (bs) {
-        free(bs);
-        bs = NULL;
-    }
+    EUCA_FREE(bs);
     _blobstore_errno = saved_errno;
 
 out:
     return bs;
 }
 
-// frees the blobstore handle
+//!
+//! Frees the blobstore handle
+//!
+//! @param[in] bs
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_close(blobstore * bs)
 {
-    free(bs);
+    EUCA_FREE(bs);
     return 0;
 }
 
-static pthread_mutex_t _blobstore_lock_mutex = PTHREAD_MUTEX_INITIALIZER;   // process-global mutex
-
-// locks the blobstore 
+//!
+//! Locks the blobstore
+//!
+//! @param[in] bs
+//! @param[in] timeout_usec
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_lock(blobstore * bs, long long timeout_usec)
 {
     char meta_path[PATH_MAX];
@@ -1034,7 +1682,17 @@ int blobstore_lock(blobstore * bs, long long timeout_usec)
     return fd;
 }
 
-// unlocks the blobstore
+//!
+//! Unlocks the blobstore
+//!
+//! @param[in] bs
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_unlock(blobstore * bs)
 {
     int fd = bs->fd;
@@ -1043,35 +1701,65 @@ int blobstore_unlock(blobstore * bs)
     return close_and_unlock(fd);
 }
 
-// if no outside references to store or blobs exist, and 
-// no blobs are protected, deletes the blobs, the store metadata, 
-// and frees the blobstore handle 
+//!
+//! If no outside references to store or blobs exist, and
+//! no blobs are protected, deletes the blobs, the store metadata,
+//! and frees the blobstore handle
+//!
+//! @param[in] bs
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_delete(blobstore * bs)
 {
     char meta_path[PATH_MAX];
     snprintf(meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
     unlink(meta_path);
-    free(bs);
+    EUCA_FREE(bs);
 
-    return -1;                  // TODO: implement blobstore_delete properly
+    return -1;                  //! @TODO implement blobstore_delete properly
 }
 
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_get_error(void)
 {
     return _blobstore_errno;
 }
 
-// helper for setting paths, depending on blockblob_path_t
-//
-//  given BLOCKBLOB_PATH_X: x = tolower(X)
-//  
-//  for BLOBSTORE_FORMAT_FILES:     BS/BB.x
-//  for BLOBSTORE_FORMAT_DIRECTORY: BS/BB/x
-//
-//  where BS is blobstore path and BB is a blockblob id.
-//  BB may have '/' in it, thus placing all blob-related
-//  files in a deeper dir hierarchy
-
+//!
+//! Helper for setting paths, depending on blockblob_path_t given BLOCKBLOB_PATH_X: x = tolower(X)
+//!
+//!  for BLOBSTORE_FORMAT_FILES:     BS/BB.x
+//!  for BLOBSTORE_FORMAT_DIRECTORY: BS/BB/x
+//!
+//!  where BS is blobstore path and BB is a blockblob id.
+//!  BB may have '/' in it, thus placing all blob-related
+//!  files in a deeper dir hierarchy
+//!
+//! @param[in]  path_t
+//! @param[in]  bs
+//! @param[in]  bb_id
+//! @param[out] path
+//! @param[in]  path_size
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int set_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char *path, size_t path_size)
 {
     char base[PATH_MAX];
@@ -1123,8 +1811,20 @@ static int set_blockblob_metadata_path(blockblob_path_t path_t, const blobstore 
     return 0;
 }
 
-// write string 'str' into a specific metadata file (based on 'path_t') of blob 'bb_id'
-// returns 0 for success or -1 for error
+//!
+//! Write string 'str' into a specific metadata file (based on 'path_t') of blob 'bb_id'
+//!
+//! @param[in] path_t
+//! @param[in] bs
+//! @param[in] bb_id
+//! @param[in] str
+//!
+//! @return 0 for success or -1 for error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int write_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, const char *str)
 {
     int ret = 0;
@@ -1150,8 +1850,21 @@ static int write_blockblob_metadata_path(blockblob_path_t path_t, const blobstor
     return ret;
 }
 
-// reads contents of a specific metadata file (based on 'path_t') of blob 'bb_id' into string 'str' up to 'str_size'
-// returns number of bytes read or -1 in case of error
+//!
+//! Reads contents of a specific metadata file (based on 'path_t') of blob 'bb_id' into string 'str' up to 'str_size'
+//!
+//! @param[in]  path_t
+//! @param[in]  bs
+//! @param[in]  bb_id
+//! @param[out] str
+//! @param[in]  str_size
+//!
+//! @return The number of bytes read or -1 in case of error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int read_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char *str, int str_size)
 {
     char path[PATH_MAX];
@@ -1176,9 +1889,22 @@ static int read_blockblob_metadata_path(blockblob_path_t path_t, const blobstore
     return size;
 }
 
-// writes strings from 'array' of size 'array_size' (which can be 0) line-by-line
-// into a specific metadata file (based on 'path_t') of blob 'bb_id'
-// returns 0 for success and -1 for error
+//!
+//! Writes strings from 'array' of size 'array_size' (which can be 0) line-by-line
+//! into a specific metadata file (based on 'path_t') of blob 'bb_id'
+//!
+//! @param[in]  path_t
+//! @param[in]  bs
+//! @param[in]  bb_id
+//! @param[out] array
+//! @param[out] array_size
+//!
+//! @return 0 for success and -1 for error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int write_array_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char **array, int array_size)
 {
     int i = 0;
@@ -1217,19 +1943,22 @@ static int write_array_blockblob_metadata_path(blockblob_path_t path_t, const bl
     return (ret);
 }
 
-// Purpose:
-//   The equivalent of getline for file descriptor.
-//
-// Arguments:
-//      ppLine - pointer to the character array to read into
-//      n      - amount of memory currently allocated for (*ppLine), if any
-//      fd     - file descriptor to read from
-//
-// Returns:
-//    On success, number of characters read excluding the '\n' character is returned. A
-//    value or 0 indicates we reached the end of the file. A returned value of -1 indicates
-//    an error and the errno is set appropriately. On error, the original allocated memory
-//    is left untouched.
+//!
+//! The equivalent of getline for file descriptor.
+//!
+//! @param[in,out] ppLine pointer to the character array to read into
+//! @param[in,out] n amount of memory currently allocated for (*ppLine), if any
+//! @param[in]     fd file descriptor to read from
+//!
+//! @return On success, number of characters read excluding the '\n' character is returned. A
+//!         value or 0 indicates we reached the end of the file. A returned value of -1 indicates
+//!         an error and the errno is set appropriately. On error, the original allocated memory
+//!         is left untouched.
+//!
+//! @pre
+//!
+//! @note
+//!
 ssize_t get_line_desc(char **ppLine, size_t * n, int fd)
 {
     char c = '\0';
@@ -1248,7 +1977,7 @@ ssize_t get_line_desc(char **ppLine, size_t * n, int fd)
         if ((length + 1) >= newSize) {
             newSize += 64;
 
-            if ((pNewBlock = realloc(pLine, newSize)) == NULL) {
+            if ((pNewBlock = EUCA_REALLOC(pLine, newSize, sizeof(char))) == NULL) {
                 error = -1;
                 break;
             }
@@ -1263,8 +1992,7 @@ ssize_t get_line_desc(char **ppLine, size_t * n, int fd)
     if (error < 0) {
         // If (*n) was originally 0 we should free pLine since we allocated that memory.
         if (((*n) == 0) && (pLine != NULL)) {
-            free(pLine);
-            pLine = NULL;
+            EUCA_FREE(pLine);
         }
         return (-1);
     }
@@ -1284,11 +2012,23 @@ ssize_t get_line_desc(char **ppLine, size_t * n, int fd)
     return (length);
 }
 
-// reads lines from a specific metadata file (based on 'path_t') of blob 'bb_id',
-// places each line into a newly allocated string, arranges pointers to these
-// strings into a newly allocated array of pointers, and places the size into 'array_size'
-// caller must deallocate the array and the strings pointed to by the array
-// returns 0 for success and -1 for error
+//!
+//! Reads lines from a specific metadata file (based on 'path_t') of blob 'bb_id',
+//! places each line into a newly allocated string, arranges pointers to these
+//! strings into a newly allocated array of pointers, and places the size into 'array_size'
+//!
+//! @param[in]  path_t
+//! @param[in]  bs
+//! @param[in]  bb_id
+//! @param[out] array
+//! @param[out] array_size
+//!
+//! @return 0 for success and -1 for error
+//!
+//! @pre
+//!
+//! @note Caller must deallocate the array and the strings pointed to by the array
+//!
 static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, char ***array, int *array_size)
 {
     int fd = -1;
@@ -1318,11 +2058,7 @@ static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blo
 
         // Read the file. 0 means EOF, < 0 means error...
         if ((rdLen = get_line_desc(&line, &n, fd)) < 0) {
-            if (line != NULL) {
-                free(line);
-                line = NULL;
-            }
-
+            EUCA_FREE(line);
             PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
             ret = -1;
             break;
@@ -1334,10 +2070,9 @@ static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blo
         logprintfl(EUCAEXTREME, "%s => [%d] READ LINE %s rdLen %d, n %d\n", __func__, fd, line, rdLen, n);
 
         // Add one more entry to our metadata array
-        if ((bigger_lines = realloc(lines, ((i + 1) * sizeof(char *)))) == NULL) {
+        if ((bigger_lines = EUCA_REALLOC(lines, (i + 1), sizeof(char *))) == NULL) {
             ERR(BLOBSTORE_ERROR_NOMEM, NULL);
-            free(line);
-            line = NULL;
+            EUCA_FREE(line);
             ret = -1;
             break;
         }
@@ -1355,8 +2090,8 @@ static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blo
     if (ret == -1) {
         if (lines != NULL) {
             for (j = 0; j < i; j++)
-                free(lines[j]);
-            free(lines);
+                EUCA_FREE(lines[j]);
+            EUCA_FREE(lines);
         }
         return (ret);
     }
@@ -1366,6 +2101,21 @@ static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blo
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] path_t
+//! @param[in] bs
+//! @param[in] bb_id
+//! @param[in] entry
+//! @param[in] removing
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int update_entry_blockblob_metadata_path(blockblob_path_t path_t, const blobstore * bs, const char *bb_id, const char *entry, int removing)
 {
     int ret = 0;
@@ -1387,7 +2137,7 @@ static int update_entry_blockblob_metadata_path(blockblob_path_t path_t, const b
 
     if (found == -1 && !removing) { // not in the file and adding
         entries_size++;
-        char **bigger_entries = calloc(entries_size, sizeof(char *));
+        char **bigger_entries = EUCA_ZALLOC(entries_size, sizeof(char *));
         if (bigger_entries == NULL) {
             ret = -1;
             goto cleanup;
@@ -1395,13 +2145,12 @@ static int update_entry_blockblob_metadata_path(blockblob_path_t path_t, const b
         for (int i = 0; i < entries_size - 1; i++) {    // we do not trust realloc
             bigger_entries[i] = entries[i];
         }
-        if (entries)
-            free(entries);
+        EUCA_FREE(entries);
         entries = bigger_entries;
         entries[entries_size - 1] = strdup(entry);
 
     } else if (found != -1 && removing) {   // in the file and deleting
-        free(entries[found]);
+        EUCA_FREE(entries[found]);
         entries_size--;
         if (entries_size && found != entries_size) {    // still entries left and not deleting last one
             entries[found] = entries[entries_size]; // move the last one over the one we're deleting
@@ -1419,17 +2168,28 @@ static int update_entry_blockblob_metadata_path(blockblob_path_t path_t, const b
 cleanup:
     if (entries != NULL) {
         for (int j = 0; j < entries_size; j++) {
-            free(entries[j]);
+            EUCA_FREE(entries[j]);
         }
-        free(entries);
+        EUCA_FREE(entries);
     }
     return ret;
 }
 
-// if 'path' looks like a blockblob metadata file (based on the suffix), 
-// return the type of the file and set bb_id appropriately, else
-// return 0 if it is an unrecognized file, else
-// return -1 for error
+//!
+//! Retrieves the type of the blockblob metadata path we have.
+//!
+//! @param[in] bs
+//! @param[in] path
+//! @param[in] bb_id
+//! @param[in] bb_id_size
+//!
+//! @return If 'path' looks like a blockblob metadata file (based on the suffix), return the type of the file and
+//!         set bb_id appropriately, else return 0 if it is an unrecognized file, else return -1 for error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int typeof_blockblob_metadata_path(const blobstore * bs, const char *path, char *bb_id, unsigned int bb_id_size)
 {
     assert(path);
@@ -1469,8 +2229,19 @@ static int typeof_blockblob_metadata_path(const blobstore * bs, const char *path
     return 0;
 }
 
-// returns the number of files and directories deleted as part of
-// removing the blob (thus, 0 means there was nothing to delete)
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] bb_id
+//!
+//! @return the number of files and directories deleted as part of removing the
+//!         blob (thus, 0 means there was nothing to delete)
+//!
+//! @pre
+//!
+//! @note
+//!
 static int delete_blockblob_files(const blobstore * bs, const char *bb_id)
 {
     int count = 0;
@@ -1499,8 +2270,18 @@ static int delete_blockblob_files(const blobstore * bs, const char *bb_id)
     return count;
 }
 
-// helper for ensuring a directory required by blob exists
-// returns: 0 = already existed, 1 = created OK, -1 = error
+//!
+//! Helper for ensuring a directory required by blob exists
+//!
+//! @param[in] bs
+//! @param[in] bb_id
+//!
+//! @return 0 = already existed, 1 = created OK, -1 = error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int ensure_blockblob_metadata_path(const blobstore * bs, const char *bb_id)
 {
     char base[PATH_MAX];
@@ -1508,15 +2289,37 @@ static int ensure_blockblob_metadata_path(const blobstore * bs, const char *bb_i
     return ensure_directories_exist(base, !(bs->format == BLOBSTORE_FORMAT_DIRECTORY), NULL, NULL, BLOBSTORE_DIRECTORY_PERM);
 }
 
+//!
+//!
+//!
+//! @param[in] bbs
+//!
+//! @pre
+//!
+//! @note
+//!
 static void free_bbs(blockblob * bbs)
 {
     while (bbs) {
         blockblob *next_bb = bbs->next;
-        free(bbs);
+        EUCA_FREE(bbs);
         bbs = next_bb;
     }
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] bb_id
+//! @param[in] timeout_usec
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static unsigned int check_in_use(blobstore * bs, const char *bb_id, long long timeout_usec)
 {
     unsigned int in_use = 0;
@@ -1536,7 +2339,7 @@ static unsigned int check_in_use(blobstore * bs, const char *bb_id, long long ti
         }
         close_and_unlock(fd);
     } else {
-        in_use |= BLOCKBLOB_STATUS_OPENED;  // TODO: check if open failed for other reason?
+        in_use |= BLOCKBLOB_STATUS_OPENED;  //! @TODO check if open failed for other reason?
     }
 
     if (read_blockblob_metadata_path(BLOCKBLOB_PATH_REFS, bs, bb_id, path, sizeof(path)) > 0) {
@@ -1551,6 +2354,15 @@ static unsigned int check_in_use(blobstore * bs, const char *bb_id, long long ti
     return in_use;
 }
 
+//!
+//!
+//!
+//! @param[in] bb
+//!
+//! @pre
+//!
+//! @note
+//!
 static void set_device_path(blockblob * bb)
 {
     char **dm_devs = NULL;
@@ -1564,9 +2376,9 @@ static void set_device_path(blockblob * bb)
         snprintf(bb->device_path, sizeof(bb->device_path), DM_FORMAT, dm_devs[dm_devs_size - 1]);   // main device is the last one
         safe_strncpy(bb->dm_name, dm_devs[dm_devs_size - 1], sizeof(bb->dm_name));
         for (int i = 0; i < dm_devs_size; i++) {
-            free(dm_devs[i]);
+            EUCA_FREE(dm_devs[i]);
         }
-        free(dm_devs);
+        EUCA_FREE(dm_devs);
     } else {                    // .dm is not there => set device_path to loopback
         char lo_dev[PATH_MAX] = "";
         _err_off();             // do not care if loopback file does not exist
@@ -1576,6 +2388,20 @@ static void set_device_path(blockblob * bb)
     }
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] dir_path
+//! @param[in] tail_bb
+//! @param[in] bb_to_avoid
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static blockblob **walk_bs(blobstore * bs, const char *dir_path, blockblob ** tail_bb, const blockblob * bb_to_avoid)
 {
     DIR *dir;
@@ -1594,9 +2420,11 @@ static blockblob **walk_bs(blobstore * bs, const char *dir_path, blockblob ** ta
         char entry_path[BLOBSTORE_MAX_PATH];
         snprintf(entry_path, sizeof(entry_path), "%s/%s", dir_path, entry_name);
         struct stat sb;
-        if (stat(entry_path, &sb) == -1)
-            continue;           // ignore access errors in the blobstore directory (TODO: is this wise?)
-
+        if (stat(entry_path, &sb) == -1) {
+            // ignore access errors in the blobstore directory
+            //! @TODO is this wise?
+            continue;
+        }
         // recurse if this is a directory
         if (S_ISDIR(sb.st_mode)) {
             tail_bb = walk_bs(bs, entry_path, tail_bb, bb_to_avoid);
@@ -1614,7 +2442,7 @@ static blockblob **walk_bs(blobstore * bs, const char *dir_path, blockblob ** ta
         if (bb_to_avoid != NULL && strncmp(blob_id, bb_to_avoid->id, sizeof(blob_id)) == 0)
             continue;           // avoid that particular blockblob
 
-        blockblob *bb = calloc(1, sizeof(blockblob));
+        blockblob *bb = EUCA_ZALLOC(1, sizeof(blockblob));
         if (bb == NULL) {
             goto free;
         }
@@ -1643,11 +2471,17 @@ static blockblob **walk_bs(blobstore * bs, const char *dir_path, blockblob ** ta
         int array_size = 0;
         if (read_array_blockblob_metadata_path(BLOCKBLOB_PATH_DEPS, bb->store, bb->id, &array, &array_size) != -1) {
             for (int i = 0; i < array_size; i++) {
-                char *store_path = strtok(array[i], " ");
-                char *blob_id = strtok(NULL, " ");
-                char *rel_type = strtok(NULL, " ");
-                char *start_block = strtok(NULL, " ");
-                char *len_blocks = strtok(NULL, " ");
+                char *store_path = NULL;
+                char *blob_id = NULL;
+                char *rel_type = NULL;
+                char *start_block = NULL;
+                char *len_blocks = NULL;
+
+                store_path = strtok(array[i], " ");
+                blob_id = strtok(NULL, " ");
+                rel_type = strtok(NULL, " ");
+                start_block = strtok(NULL, " ");
+                len_blocks = strtok(NULL, " ");
                 if (rel_type && len_blocks && strcmp(rel_type, blobstore_relation_type_name[BLOBSTORE_MAP]) == 0) {
                     bb->size_bytes -= strtoull(len_blocks, NULL, 0) * 512LL;
                 }
@@ -1666,8 +2500,18 @@ free:
     return tail_bb;
 }
 
-// runs through the blobstore and puts all found blockblobs 
-// into a linked list, returning its head
+//!
+//! Runs through the blobstore and puts all found blockblobs into a linked list, returning its head
+//!
+//! @param[in] bs
+//! @param[in] bb_to_avoid
+//!
+//! @return A pointer to the head of a linked list containing all found blockblobs
+//!
+//! @pre
+//!
+//! @note
+//!
 static blockblob *scan_blobstore(blobstore * bs, const blockblob * bb_to_avoid)
 {
     blockblob *bbs = NULL;
@@ -1680,13 +2524,36 @@ static blockblob *scan_blobstore(blobstore * bs, const blockblob * bb_to_avoid)
     return bbs;
 }
 
+//!
+//!
+//!
+//! @param[in] bb1
+//! @param[in] bb2
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int compare_bbs(const void *bb1, const void *bb2)
 {
     return (int)((*(blockblob **) bb1)->last_modified - (*(blockblob **) bb2)->last_modified);
 }
 
-static int delete_blob_state(blockblob * bb, long long timeout_usec, char do_force);
-
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] bb_list
+//! @param[in] need_blocks
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long long need_blocks)
 {
     int list_length = 0;
@@ -1700,7 +2567,7 @@ static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long 
         blockblob *bb;
         int i;
 
-        blockblob **bb_array = (blockblob **) calloc(list_length, sizeof(blockblob *));
+        blockblob **bb_array = (blockblob **) EUCA_ZALLOC(list_length, sizeof(blockblob *));
         if (!bb_array)
             return purged;
 
@@ -1712,7 +2579,9 @@ static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long 
 
         int iteration = 0;
         int deleted;
-        do {                    // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
+        do {
+            // iterate multiple times in case there are dependencies
+            //! @TODO unify with _fsck's iteration code?
             deleted = 0;        // deleted in this round
             for (i = 0; i < list_length; i++) {
                 bb = bb_array[i];
@@ -1751,12 +2620,24 @@ static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long 
             }
             iteration++;
         } while (deleted && (purged < need_blocks));
-        free(bb_array);
+        EUCA_FREE(bb_array);
     }
 
     return purged;
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] meta
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_stat(blobstore * bs, blobstore_meta * meta)
 {
     int ret = 0;
@@ -1777,10 +2658,13 @@ int blobstore_stat(blobstore * bs, blobstore_meta * meta)
     meta->blocks_unlocked = 0;
     meta->blocks_locked = 0;
     meta->num_blobs = 0;
-    for (blockblob * abb = bbs; abb;) { // TODO: unify this with locked/unlocked calculation in open()
+    for (blockblob * abb = bbs; abb;) {
+        //! @TODO unify this with locked/unlocked calculation in open()
         long long abb_size_blocks = round_up_sec(abb->size_bytes) / 512;
         if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
-            meta->blocks_locked += abb_size_blocks; // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+            // these can't be purged if we need space
+            //! @TODO look into recursive purging of unused references?
+            meta->blocks_locked += abb_size_blocks;
         } else {
             meta->blocks_unlocked += abb_size_blocks;   // these potentially can be purged, unless they are depended on by locked ones
         }
@@ -1790,7 +2674,7 @@ int blobstore_stat(blobstore * bs, blobstore_meta * meta)
         // free this node and move the pointer
         blockblob *old_bb = abb;
         abb = abb->next;
-        free(old_bb);
+        EUCA_FREE(old_bb);
     }
 
 unlock:
@@ -1809,10 +2693,18 @@ unlock:
     return ret;
 }
 
-/*
- * read .refs file content and return any entries that point to blobs that no longer exist
- * return value is size of the array placed into *refs, which caller must free, or -1 on error
- */
+//!
+//! Read .refs file content and return any entries that point to blobs that no longer exist
+//!
+//! @param[in]  bb
+//! @param[out] refs
+//!
+//! @return size of the array placed into *refs, which caller must free, or -1 on error
+//!
+//! @pre
+//!
+//! @note
+//!
 static int get_stale_refs(const blockblob * bb, char ***refs)
 {
     blobstore *bs = bb->store;
@@ -1855,8 +2747,7 @@ static int get_stale_refs(const blockblob * bb, char ***refs)
 stale_ref:
 
             if (ref_exists) {
-                free(array[i]); // free names of refs that exist
-                array[i] = NULL;
+                EUCA_FREE(array[i]);    // free names of refs that exist
             } else {
                 strcpy(array[i], ref);  // since strtok() clobbered the original value
                 stale_refs++;
@@ -1866,7 +2757,7 @@ stale_ref:
 
     if (stale_refs > 0) {
         if (refs) {
-            *refs = calloc(stale_refs, sizeof(char *));
+            *refs = EUCA_ZALLOC(stale_refs, sizeof(char *));
             if (*refs == NULL) {
                 stale_refs = -1;    // OOM error
             }
@@ -1877,24 +2768,31 @@ stale_ref:
                     (*refs)[j++] = array[i];
                     assert(j <= stale_refs);
                 } else {
-                    free(array[i]);
+                    EUCA_FREE(array[i]);
                 }
             }
         }
     }
 
     if (array_size > 0)
-        free(array);
+        EUCA_FREE(array);
 
     return stale_refs;
 }
 
-static int blockblob_check(const blockblob * bb);
-
-// integrity check of the blobstore
-// 
-// with a non-NULL examiner(), each found blob is passed to it
-// for examination and the blob is deleted if function returns non-zero
+//!
+//! Checks the integrity check of the blobstore. With a non-NULL examiner(), each found
+//! blob is passed to it for examination and the blob is deleted if function returns non-zero
+//!
+//! @param[in] bs
+//! @param[in] examiner
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_fsck(blobstore * bs, int (*examiner) (const blockblob * bb))
 {
     int ret = 0;
@@ -1957,9 +2855,9 @@ int blobstore_fsck(blobstore * bs, int (*examiner) (const blockblob * bb))
                                     // update the .refs file to remove this entry
                                     logprintfl(EUCAINFO, "removing stale/corrupted reference in blob %s to %s\n", bb->id, stale_refs[i]);
                                     update_entry_blockblob_metadata_path(BLOCKBLOB_PATH_REFS, bb->store, bb->id, stale_refs[i], 1);
-                                    free(stale_refs[i]);
+                                    EUCA_FREE(stale_refs[i]);
                                 }
-                                free(stale_refs);
+                                EUCA_FREE(stale_refs);
                             }
                             // mapped blobs have children, thus cannot be deleted at this iteration
                             blockblob_close(bb);
@@ -1998,12 +2896,26 @@ int blobstore_fsck(blobstore * bs, int (*examiner) (const blockblob * bb))
                        blobs_undeletable, blobs_unopenable);
     }
 free:
-    if (bbs)
+    if (bbs) {
         free_bbs(bbs);
+    }
 
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in]  bs
+//! @param[in]  regex
+//! @param[out] results
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** results)
 {
     blockblob_meta *head = NULL;
@@ -2040,7 +2952,7 @@ int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** result
             continue;
         blobs_matched++;
 
-        blockblob_meta *bm = calloc(1, sizeof(blockblob_meta));
+        blockblob_meta *bm = EUCA_ZALLOC(1, sizeof(blockblob_meta));
         if (bm == NULL) {
             ERR(BLOBSTORE_ERROR_NOMEM, NULL);
             ret = -1;
@@ -2079,7 +2991,7 @@ free:
     if (ret < 0) {              // there were problems, so free the partial linked list, if any
         for (blockblob_meta * bm = head; bm;) {
             blockblob_meta *next = bm->next;
-            free(bm);
+            EUCA_FREE(bm);
             bm = next;
         }
     }
@@ -2087,13 +2999,27 @@ free:
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] regex
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blobstore_delete_regex(blobstore * bs, const char *regex)
 {
     blockblob_meta *matches = NULL;
     int found = blobstore_search(bs, regex, &matches);
     int left_to_delete = found;
     int deleted;
-    do {                        // iterate multiple times in case there are dependencies (TODO: unify with _fsck's iteration code?)
+    do {
+        // iterate multiple times in case there are dependencies
+        //! @TODO unify with _fsck's iteration code?
         deleted = 0;            // deleted in this round
         for (blockblob_meta * bm = matches; bm; bm = bm->next) {
             blockblob *bb = blockblob_open(bs, bm->id, 0, 0, NULL, BLOBSTORE_FIND_TIMEOUT_USEC);
@@ -2115,18 +3041,31 @@ int blobstore_delete_regex(blobstore * bs, const char *regex)
     // free the search results
     for (blockblob_meta * bm = matches; bm;) {
         blockblob_meta *next = bm->next;
-        free(bm);
+        EUCA_FREE(bm);
         bm = next;
     }
 
     return (left_to_delete == 0) ? (found) : (-1);
 }
 
-blockblob *blockblob_open(blobstore * bs, const char *id,   // can be NULL if creating, in which case blobstore will pick a random ID
-                          unsigned long long size_bytes,    // on create: reserve this size; on open: verify the size, unless set to 0
-                          unsigned int flags,   // BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL - same semantcs as for open() flags, BLOBSTORE_FLAG_HOLLOW - when creating
-                          const char *sig,  // if non-NULL, on create sig is recorded, on open it is verified
-                          unsigned long long timeout_usec)  // maximum wait, in microseconds
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] id can be NULL if creating, in which case blobstore will pick a random ID
+//! @param[in] size_bytes on create: reserve this size; on open: verify the size, unless set to 0
+//! @param[in] flags BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL - same semantcs as for open() flags, BLOBSTORE_FLAG_HOLLOW - when creating
+//! @param[in] sig if non-NULL, on create sig is recorded, on open it is verified
+//! @param[in] timeout_usec maximum wait, in microseconds
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long size_bytes, unsigned int flags, const char *sig,
+                          unsigned long long timeout_usec)
 {
     long long size_blocks = round_up_sec(size_bytes) / 512;
     if (flags & ~(BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL | BLOBSTORE_FLAG_HOLLOW)) {
@@ -2149,7 +3088,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id,   // can be NULL if cr
     logprintfl(EUCATRACE, "{%u} blockblob_open: opening blob id=%s flags=%d timeout=%lld\n", (unsigned int)pthread_self(), id, flags, timeout_usec);
 
     blockblob *bbs = NULL;      // a temp LL of blockblobs, used for computing free space and for purging
-    blockblob *bb = calloc(1, sizeof(blockblob));
+    blockblob *bb = EUCA_ZALLOC(1, sizeof(blockblob));
     if (bb == NULL) {
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
         goto out;
@@ -2172,7 +3111,9 @@ blockblob *blockblob_open(blobstore * bs, const char *id,   // can be NULL if cr
     } else {
         blobstore_locked = 1;
     }
-    int created_directory = ensure_blockblob_metadata_path(bs, bb->id); // TODO: maybe don't create directories needlessly if flags==0?
+
+    //! @TODO maybe don't create directories needlessly if flags==0?
+    int created_directory = ensure_blockblob_metadata_path(bs, bb->id);
     if (created_directory == -1) {
         PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
         goto unlock;
@@ -2252,7 +3193,9 @@ blockblob *blockblob_open(blobstore * bs, const char *id,   // can be NULL if cr
                 if (abb->is_hollow)
                     abb_size_blocks = 0;
                 if (abb->in_use & BLOCKBLOB_STATUS_OPENED) {
-                    blocks_locked += abb_size_blocks;   // these can't be purged if we need space (TODO: look into recursive purging of unused references?)
+                    // these can't be purged if we need space
+                    //! @TODO look into recursive purging of unused references?
+                    blocks_locked += abb_size_blocks;
                 } else {
                     blocks_unlocked += abb_size_blocks; // these potentially can be purged, unless they are depended on by locked ones
                 }
@@ -2389,11 +3332,7 @@ unlock:
     }
 
 free:
-    if (bb) {
-        free(bb);
-        bb = NULL;
-
-    }
+    EUCA_FREE(bb);
 
 out:
     logprintfl(EUCATRACE, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
@@ -2405,6 +3344,18 @@ out:
     return bb;
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] bb_id
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int loop_remove(blobstore * bs, const char *bb_id)
 {
     char path[PATH_MAX] = "";
@@ -2427,7 +3378,17 @@ static int loop_remove(blobstore * bs, const char *bb_id)
     return ret;
 }
 
-// releases the blob locks, allowing others to open() it, and frees the blockblob handle
+//!
+//! releases the blob locks, allowing others to open() it, and frees the blockblob handle
+//!
+//! @param[in] bb
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int blockblob_close(blockblob * bb)
 {
     if (bb == NULL) {
@@ -2447,11 +3408,22 @@ int blockblob_close(blockblob * bb)
     ret |= close(bb->fd_blocks);
     ftruncate(bb->fd_lock, 0);
     ret |= close_and_unlock(bb->fd_lock);
-    free(bb);                   // we free the blob regardless of whether closing succeeds or not
+    EUCA_FREE(bb);              // we free the blob regardless of whether closing succeeds or not
     return ret;
 }
 
-#ifdef _UNIT_TEST               // only used by the unit test for now
+#ifdef _UNIT_TEST
+//!
+//!
+//!
+//! @param[in] dev_name
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int dm_suspend_resume(const char *dev_name)
 {
     char cmd[1024];
@@ -2470,8 +3442,19 @@ static int dm_suspend_resume(const char *dev_name)
     }
     return 0;
 }
-#endif // _UNIT_TEST
+#endif /* _UNIT_TEST */
 
+//!
+//!
+//!
+//! @param[in] dev_name
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int dm_check_device(const char *dev_name)
 {
     // see if the device exists
@@ -2480,6 +3463,17 @@ static int dm_check_device(const char *dev_name)
     return check_path(dm_path); // we do not use check_block() because /dev/mapper/... entries can be sym links
 }
 
+//!
+//!
+//!
+//! @param[in] dev_name
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int dm_delete_device(const char *dev_name)
 {
     int retries = 1;
@@ -2509,6 +3503,18 @@ try_again:
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] dev_names
+//! @param[in] size
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int dm_delete_devices(char *dev_names[], int size)
 {
     if (size < 1)
@@ -2517,7 +3523,7 @@ static int dm_delete_devices(char *dev_names[], int size)
 
     // construct list of device names in the order that they should be removed
     int devices = 0;
-    char **dev_names_removable = calloc(size, sizeof(char *));
+    char **dev_names_removable = EUCA_ZALLOC(size, sizeof(char *));
     if (dev_names_removable == NULL) {
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
         return -1;
@@ -2560,11 +3566,24 @@ static int dm_delete_devices(char *dev_names[], int size)
         }
         ret = dm_delete_device(dev_names_removable[i]);
     }
-    free(dev_names_removable);
+    EUCA_FREE(dev_names_removable);
 
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] dev_names
+//! @param[in] dm_tables
+//! @param[in] size
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
 {
     int i;
@@ -2583,7 +3602,6 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
             snprintf(tmpfile, sizeof(tmpfile) - 1, "/tmp/dmsetup.XXXXXX");
             int fd = safe_mkstemp(tmpfile);
             if (fd >= 0) {
-                int tot = 0;
                 int rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]));
                 if (rbytes != strlen(dm_tables[i])) {   // if write error
                     logprintfl(EUCAERROR, "{%u} error: dm_create_devices: write returned number of bytes != write buffer: %d/%d\n",
@@ -2642,6 +3660,15 @@ cleanup:
     return -1;
 }
 
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static char *dm_get_zero(void)
 {
     static char dev_zero[] = DM_PATH EUCA_ZERO;
@@ -2669,6 +3696,17 @@ static char *dm_get_zero(void)
     return dev_zero;
 }
 
+//!
+//!
+//!
+//! @param[in] bb
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int blockblob_check(const blockblob * bb)
 {
     char **array = NULL;
@@ -2681,9 +3719,9 @@ static int blockblob_check(const blockblob * bb)
         for (int i = 0; i < array_size; i++) {
             if (dm_check_device(array[i]))
                 err++;
-            free(array[i]);
+            EUCA_FREE(array[i]);
         }
-        free(array);
+        EUCA_FREE(array);
     }
     // check on the loop device listed in .loopback of the blob, if any
     char lo_dev[PATH_MAX] = "";
@@ -2710,6 +3748,19 @@ static int blockblob_check(const blockblob * bb)
     return err;
 }
 
+//!
+//!
+//!
+//! @param[in] bb
+//! @param[in] timeout_usec
+//! @param[in] do_force
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int delete_blob_state(blockblob * bb, long long timeout_usec, char do_force)
 {
     blobstore *bs = bb->store;
@@ -2726,10 +3777,9 @@ static int delete_blob_state(blockblob * bb, long long timeout_usec, char do_for
         }
     }
     for (int i = 0; i < array_size; i++) {
-        free(array[i]);
+        EUCA_FREE(array[i]);
     }
-    if (array)
-        free(array);
+    EUCA_FREE(array);
     array_size = 0;
     array = NULL;
 
@@ -2748,27 +3798,28 @@ static int delete_blob_state(blockblob * bb, long long timeout_usec, char do_for
         char *store_path = strtok(array[i], " ");
         char *blob_id = strtok(NULL, " ");  // the remaining entries in array[i] are ignored
 
-        if (strlen(store_path) < 1 || strlen(blob_id) < 1)
-            continue;           // TODO: print a warning about store/blob corruption?
+        if (strlen(store_path) < 1 || strlen(blob_id) < 1) {
+            continue;           //! @TODO print a warning about store/blob corruption?
+        }
 
         blobstore *dep_bs = bs;
         if (strcmp(bs->path, store_path)) { // if deleting reference in a different blobstore
             // need to open it
             dep_bs = blobstore_open(store_path, 0, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_ANY, BLOBSTORE_REVOCATION_ANY, BLOBSTORE_SNAPSHOT_ANY);
             if (dep_bs == NULL)
-                continue;       // TODO: print a warning about store/blob corruption?
+                continue;       //! @TODO print a warning about store/blob corruption?
             if (blobstore_lock(dep_bs, timeout_usec) == -1) {   // lock this (different) blobstore, too, so .refs are updated atomically
                 blobstore_close(dep_bs);
-                continue;       // TODO: print a warning about store/blob corruption?
+                continue;       //! @TODO print a warning about store/blob corruption?
             }
         }
         // update .refs file on each of the dependencies
         if (update_entry_blockblob_metadata_path(BLOCKBLOB_PATH_REFS, dep_bs, blob_id, my_ref, 1) == -1) {
-            // TODO: print a warning about store/blob corruption?
+            //! @TODO print a warning about store/blob corruption?
         }
 
         if (!(check_in_use(dep_bs, blob_id, 0) & ~(BLOCKBLOB_STATUS_ABANDONED))) {  // in use except abandoned
-            loop_remove(dep_bs, blob_id);   // TODO: do we care about errors?
+            loop_remove(dep_bs, blob_id);   //! @TODO do we care about errors?
         }
         if (dep_bs != bs) {
             blobstore_unlock(dep_bs);
@@ -2787,20 +3838,29 @@ static int delete_blob_state(blockblob * bb, long long timeout_usec, char do_for
 
 free:
     for (int i = 0; i < array_size; i++) {
-        free(array[i]);
+        EUCA_FREE(array[i]);
     }
-    if (array)
-        free(array);
+    EUCA_FREE(array);
 
     return ret;
 }
 
-// if no outside references to the blob exist, and blob is not protected, 
-// deletes the blob and its metadata
-// 
-// returns 0 if cleanup was successful and frees the blockblob handle
-// returns -1 otherwise, and DOES NOT free the blockblob handle
-// (so that it can be closed and freed with blockblob_close) 
+//!
+//! If no outside references to the blob exist, and blob is not protected,
+//! deletes the blob and its metadata
+//!
+//! @param[in] bb
+//! @param[in] timeout_usec
+//! @param[in] do_force
+//!
+//! @return 0 if cleanup was successful and frees the blockblob handle, -1 otherwise,
+//!         and DOES NOT free the blockblob handle (so that it can be closed and freed
+//!         with blockblob_close)
+//!
+//! @pre
+//!
+//! @note
+//!
 int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
 {
     if (bb == NULL) {
@@ -2815,7 +3875,7 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
     // do not delete the blob if it is used by another one
     bb->in_use = check_in_use(bs, bb->id, 0);   // update in_use status
     // if in use other than opened (by this thread), backed, or abandoned
-    if (!do_force && bb->in_use & ~(BLOCKBLOB_STATUS_OPENED | BLOCKBLOB_STATUS_BACKED | BLOCKBLOB_STATUS_ABANDONED)) {
+    if (!do_force && (bb->in_use & ~(BLOCKBLOB_STATUS_OPENED | BLOCKBLOB_STATUS_BACKED | BLOCKBLOB_STATUS_ABANDONED))) {
         ERR(BLOBSTORE_ERROR_AGAIN, NULL);
         ret = -1;
     } else {
@@ -2826,17 +3886,17 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
         if (close_and_unlock(bb->fd_lock) == -1) {
             ret = -1;
         } else {
-            bb->fd_lock = 0;    // TODO: needed? maybe -1?
+            bb->fd_lock = 0;    //! @TODO needed? maybe -1?
         }
         if (close(bb->fd_blocks) == -1) {
             ret = -1;
         } else {
-            bb->fd_blocks = 0;  // TODO: needed? maybe -1? 
+            bb->fd_blocks = 0;  //! @TODO needed? maybe -1?
         }
 
         // free the blob struct if everything above was OK
         if (ret == 0) {
-            free(bb);
+            EUCA_FREE(bb);
         }
     }
 
@@ -2852,6 +3912,18 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] bb
+//! @param[in] min_size_bytes
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int verify_bb(const blockblob * bb, unsigned long long min_size_bytes)
 {
     if (bb->fd_lock == -1) {
@@ -2886,11 +3958,22 @@ static int verify_bb(const blockblob * bb, unsigned long long min_size_bytes)
     return 0;
 }
 
-int blockblob_copy(blockblob * src_bb,  // source blob to copy data from
-                   unsigned long long src_offset_bytes, // start offset in source
-                   blockblob * dst_bb,  // destination blob to copy data to
-                   unsigned long long dst_offset_bytes, // start offset in destination
-                   unsigned long long len_bytes)    // 0 = copy until EOF of source
+//!
+//!
+//!
+//! @param[in] src_bb pointer to source blob to copy data from
+//! @param[in] src_offset_bytes start offset in source
+//! @param[in] dst_bb pointer to destination blob to copy data to
+//! @param[in] dst_offset_bytes start offset in destination
+//! @param[in] len_bytes 0 = copy until EOF of source
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int blockblob_copy(blockblob * src_bb, unsigned long long src_offset_bytes, blockblob * dst_bb, unsigned long long dst_offset_bytes, unsigned long long len_bytes)  //
 {
     int ret = 0;
 
@@ -2932,9 +4015,20 @@ int blockblob_copy(blockblob * src_bb,  // source blob to copy data from
     return ret;
 }
 
-int blockblob_clone(blockblob * bb, // destination blob, which blocks may be used as backing
-                    const blockmap * map,   // map of blocks from other blobs/devices to be copied/mapped/snapshotted
-                    unsigned int map_size)  // size of the map []
+//!
+//!
+//!
+//! @param[in] bb pointer to destination blob, which blocks may be used as backing
+//! @param[in] map pointer to map of blocks from other blobs/devices to be copied/mapped/snapshotted
+//! @param[in] map_size size of the map[]
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
 {
     int ret = 0;
 
@@ -3024,21 +4118,20 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
     int mapped_or_snapshotted = 0;
     char buf[MAX_DM_LINE];
     char *main_dm_table = NULL;
-    char **dev_names = calloc(map_size * 4 + 1, sizeof(char *));    // for device mapper dev names we will create
+    char **dev_names = EUCA_ZALLOC(map_size * 4 + 1, sizeof(char *));   // for device mapper dev names we will create
     if (dev_names == NULL) {
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
         return -1;
     }
-    char **dm_tables = calloc(map_size * 4 + 1, sizeof(char *));    // for device mapper tables 
+    char **dm_tables = EUCA_ZALLOC(map_size * 4 + 1, sizeof(char *));   // for device mapper tables
     if (dm_tables == NULL) {
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
-        free(dev_names);
+        EUCA_FREE(dev_names);
         return -1;
     }
     // either does copies or computes the device mapper tables
     for (int i = 0; i < map_size; i++) {
         const blockmap *m = map + i;
-        const blockblob *sbb = m->source.blob;
         const char *dev;
 
         switch (m->source_type) {
@@ -3149,7 +4242,7 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
 
         // update .refs on dependencies and create .deps for this blob
         char my_ref[BLOBSTORE_MAX_PATH + MAX_DM_NAME + 1];
-        snprintf(my_ref, sizeof(my_ref), "%s %s", bb->store->path, bb->id); // TODO: use store ID to proof against moving blobstore?
+        snprintf(my_ref, sizeof(my_ref), "%s %s", bb->store->path, bb->id); //! @TODO use store ID to proof against moving blobstore?
         for (int i = 0; i < map_size; i++) {
             const blockmap *m = map + i;
             const blockblob *sbb = m->source.blob;
@@ -3163,17 +4256,17 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
             if (blobstore_lock(sbb->store, BLOBSTORE_LOCK_TIMEOUT_USEC) == -1) {    // lock the source blobstore so the .refs are updated atomically
                 logprintfl(EUCAERROR, "{%u} error: timed out on a blobstore lock while attempting to update .refs\n", (unsigned int)pthread_self());
                 ret = -1;
-                goto cleanup;   // TODO: remove .refs entries from this batch that succeeded, if any?
+                goto cleanup;   //! @TODO remove .refs entries from this batch that succeeded, if any?
             }
             // update .refs
             if (update_entry_blockblob_metadata_path(BLOCKBLOB_PATH_REFS, sbb->store, sbb->id, my_ref, 0) == -1) {
                 ret = -1;
-                goto cleanup;   // TODO: remove .refs entries from this batch that succeeded, if any?
+                goto cleanup;   //! @TODO remove .refs entries from this batch that succeeded, if any?
             }
 
             if (blobstore_unlock(sbb->store) == -1) {
                 ret = -1;
-                goto cleanup;   // TODO: remove .refs entries from this batch that succeeded, if any?
+                goto cleanup;   //! @TODO remove .refs entries from this batch that succeeded, if any?
             }
             // record the dependency in .deps (redundant entries will be filtered out)
             char dep_ref[BLOBSTORE_MAX_PATH + MAX_DM_NAME + 1];
@@ -3185,7 +4278,7 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
             }
         }
     } else {
-        free(main_dm_table);
+        EUCA_FREE(main_dm_table);
     }
 
     goto free;
@@ -3209,16 +4302,26 @@ cleanup:                       // this is failure cleanup code path
 
 free:
     for (int i = 0; i < devices; i++) {
-        free(dev_names[i]);
-        free(dm_tables[i]);
+        EUCA_FREE(dev_names[i]);
+        EUCA_FREE(dm_tables[i]);
     }
-    free(dev_names);
-    free(dm_tables);
+    EUCA_FREE(dev_names);
+    EUCA_FREE(dm_tables);
 
     return ret;
 }
 
-// returns a block device pointing to the blob
+//!
+//! Retrieces a block device pointing to the blob
+//!
+//! @param[in] bb
+//!
+//! @return a block device pointing to the blob
+//!
+//! @pre
+//!
+//! @note
+//!
 const char *blockblob_get_dev(blockblob * bb)
 {
     if (bb == NULL) {
@@ -3228,7 +4331,17 @@ const char *blockblob_get_dev(blockblob * bb)
     return bb->device_path;
 }
 
-// returns a path to the file containg the blob, but only if snapshot_type!=DM
+//!
+//! Retrieves a path to the file containg the blob, but only if snapshot_type is not DM
+//!
+//! @param[in] bb
+//!
+//! @return a path to the file containg the blob
+//!
+//! @pre
+//!
+//! @note
+//!
 const char *blockblob_get_file(blockblob * bb)
 {
     if (bb == NULL) {
@@ -3242,7 +4355,17 @@ const char *blockblob_get_file(blockblob * bb)
     return bb->blocks_path;
 }
 
-// size of blob in blocks
+//!
+//!
+//!
+//! @param[in] bb
+//!
+//! @return size of blob in blocks
+//!
+//! @pre
+//!
+//! @note
+//!
 unsigned long long blockblob_get_size_blocks(blockblob * bb)
 {
     if (bb == NULL) {
@@ -3252,7 +4375,17 @@ unsigned long long blockblob_get_size_blocks(blockblob * bb)
     return round_up_sec(bb->size_bytes) / 512;
 }
 
-// size of blob in bytes
+//!
+//!
+//!
+//! @param[in] bb
+//!
+//! @return size of blob in bytes
+//!
+//! @pre
+//!
+//! @note
+//!
 unsigned long long blockblob_get_size_bytes(blockblob * bb)
 {
     if (bb == NULL) {
@@ -3262,107 +4395,20 @@ unsigned long long blockblob_get_size_bytes(blockblob * bb)
     return bb->size_bytes;
 }
 
-/////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
-
 #ifdef _UNIT_TEST
-
-#define F1 "/tmp/blobstore_test_1"
-#define F2 "/tmp/blobstore_test_2"
-#define F3 "/tmp/blobstore_test_3"
-
-static char *_farray[] = { F1, F2, F3 };
-
-#define _UNEXPECTED printf ("======================> UNEXPECTED RESULT (errors=%d)!!!\n", ++errors);
-
-#define _CHKMETA(ST,RE) snprintf (entry_path, sizeof(entry_path), "%s/%s", bs->path, ST); \
-    if (RE!=typeof_blockblob_metadata_path (bs, entry_path, blob_id, sizeof(blob_id))) _UNEXPECTED;
-
-#define _OPEN(FD,FI,FL,TI,RE) _blobstore_errno=0;                       \
-    printf ("%d: open (" FI " flags=%d timeout=%d)", getpid(), FL, TI); \
-    FD=open_and_lock(FI,FL,TI,BLOBSTORE_FILE_PERM);                    \
-    printf ("=%d errno=%d '%s'\n", FD, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if ((FD==-1) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
-    else if ((RE==-1 && FD!=-1) || (RE==0 && FD<0)) _UNEXPECTED;
-
-#define _CLOS(FD,FI) ret=close_and_unlock(FD); \
-    printf ("%d: close (%d " FI ")=%d\n", getpid(), FD, ret);
-
-#define _PARENT_WAITS \
-            int status, ret; \
-            printf ("waiting for child pid=%d\n", pid); \
-            ret = wait (&status); \
-            printf ("waited for child pid=%d ret=%d\n", ret, WEXITSTATUS(status)); \
-            errors += WEXITSTATUS(status);
-
-#define _R BLOBSTORE_FLAG_RDONLY
-#define _W BLOBSTORE_FLAG_RDWR
-#define _C BLOBSTORE_FLAG_CREAT|BLOBSTORE_FLAG_EXCL|BLOBSTORE_FLAG_RDWR
-#define _CBB BLOBSTORE_FLAG_CREAT|BLOBSTORE_FLAG_EXCL
-
-#define B1 "BLOCKBLOB-01"
-#define B2 "BLOCKBLOB-02"
-#define B3 "BLOCKBLOB-03"
-#define B4 "BLOCKBLOB-04"
-//#define B2 "FOO/BLOCKBLOB-02"
-//#define B3 "FOO/BAR/BLOCKBLOB-03"
-//#define B4 "FOO/BAR/BAZ/BLOCKBLOB-04"
-#define B5 "BLOCKBLOB-05"
-#define B6 "BLOCKBLOB-06"
-
-#define _OPENBB(BB,ID,SI,SG,FL,TI,RE) _blobstore_errno=0;               \
-    printf ("%d: bb_open (%s size=%d flags=%d timeout=%d)", getpid(), (ID==NULL)?("null"):(ID), SI, FL, TI); \
-    BB=blockblob_open (bs, ID, (SI)*512, FL, SG, TI);                   \
-    printf ("=%s errno=%d '%s'\n", (BB==NULL)?("NULL"):("OK"), _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if ((BB==NULL) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
-    else if ((RE==-1 && BB!=NULL) || (RE==0 && BB==NULL)) _UNEXPECTED;
-// same as _OPENBB but accepts bytes rather than blocks
-#define _OPENBBb(BB,ID,SI,SG,FL,TI,RE) _blobstore_errno=0;               \
-    printf ("%d: bb_open (%s size=%d flags=%d timeout=%d)", getpid(), (ID==NULL)?("null"):(ID), SI, FL, TI); \
-    BB=blockblob_open (bs, ID, SI, FL, SG, TI); \
-    printf ("=%s errno=%d '%s'\n", (BB==NULL)?("NULL"):("OK"), _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if ((BB==NULL) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
-    else if ((RE==-1 && BB!=NULL) || (RE==0 && BB==NULL)) _UNEXPECTED;
-
-#define _SEARCH(PATTERN,RE) results = NULL;                             \
-    printf ("%d: bs_search (pattern=%s)", getpid(), PATTERN);           \
-    nresults = blobstore_search (bs, PATTERN, &results);                \
-    printf ("=%d (expected %d) errno=%d '%s'\n", nresults, RE, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if ((nresults<0) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
-    else if (RE!=nresults) _UNEXPECTED;                                 \
-    for (blockblob_meta * bm = results; bm;) {                          \
-        blockblob_meta * next = bm->next;                               \
-        free (bm);                                                      \
-        bm = next;                                                      \
-    }
-
-#define _CLOSBB(BB,ID) ret=blockblob_close(BB); \
-    printf("%d: bb_close (%lu %s)=%d errno=%d '%s'\n", getpid(), (unsigned long)BB, (ID==NULL)?("null"):(ID), ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno));
-
-#define _DELEBB(BB,ID,RE) ret=blockblob_delete(BB, 3000, 0);            \
-    printf("%d: bb_delete (%lu %s)=%d errno=%d '%s'\n", getpid(), (unsigned long)BB, (ID==NULL)?("null"):(ID), ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if (ret!=RE) _UNEXPECTED;
-
-#define _CLONBB(BB,ID,MP,RE) _blobstore_errno=0; \
-    printf ("%d: bb_clone (%s map=%lu)", getpid(), (ID==NULL)?("null"):(ID), (unsigned long)MP); \
-    ret=blockblob_clone(BB,MP,sizeof(MP)/sizeof(blockmap));    \
-    printf ("=%d errno=%d '%s'\n", ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if ((ret==-1) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
-    else if (RE!=ret) _UNEXPECTED;
-
-#define _COPYBB(SBB,SO,DBB,DO,LEN,RE) _blobstore_errno=0; \
-    printf ("%d: bb_copy (%s to %s)", getpid(), SBB->id, DBB->id); \
-    ret=blockblob_copy(SBB,SO,DBB,DO,LEN); \
-    printf ("=%d errno=%d '%s'\n", ret, _blobstore_errno, blobstore_get_error_str(_blobstore_errno)); \
-    if ((ret==-1) && (_blobstore_errno==0)) printf ("======================> UNSET errno ON ERROR (errors=%d)!!!\n", ++errors); \
-    else if (RE!=ret) _UNEXPECTED;
-
-#define BS_SIZE 30
-#define BB_SIZE 10
-#define CBB_SIZE 32
-#define STRESS_BS_SIZE 100000
-#define STRESS_MIN_BB  64
-#define STRESS_BLOBS   10
-
+//!
+//!
+//!
+//! @param[in] bb
+//! @param[in] c
+//! @param[in] use_file
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static void _fill_blob(blockblob * bb, char c, int use_file)
 {
     const char *path;
@@ -3393,6 +4439,22 @@ static void _fill_blob(blockblob * bb, char c, int use_file)
     }
 }
 
+//!
+//!
+//!
+//! @param[in] size_blocks
+//! @param[in] base
+//! @param[in] name
+//! @param[in] format
+//! @param[in] revocation
+//! @param[in] snapshot
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static blobstore *create_teststore(int size_blocks, const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
                                    blobstore_snapshot_t snapshot)
 {
@@ -3419,6 +4481,19 @@ static blobstore *create_teststore(int size_blocks, const char *base, const char
     return bs;
 }
 
+//!
+//!
+//!
+//! @param[in] bb
+//! @param[in] seek
+//! @param[in] c
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int write_byte(blockblob * bb, int seek, char c)
 {
     const char *dev = blockblob_get_dev(bb);
@@ -3443,6 +4518,18 @@ static int write_byte(blockblob * bb, int seek, char c)
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] bb
+//! @param[in] seek
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static char read_byte(blockblob * bb, int seek)
 {
     const char *dev = blockblob_get_dev(bb);
@@ -3467,10 +4554,24 @@ static char read_byte(blockblob * bb, int seek)
     return buf[0];
 }
 
+//!
+//!
+//!
+//! @param[in] base
+//! @param[in] name
+//! @param[in] format
+//! @param[in] revocation
+//! @param[in] snapshot
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_clone_stresstest(const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
                                blobstore_snapshot_t snapshot)
 {
-    int ret;
     int errors = 0;
     printf("commencing cloning stress-test...\n");
 
@@ -3616,8 +4717,8 @@ static int do_clone_stresstest(const char *base, const char *name, blobstore_for
         }
     }
 
-    // drain the stores
 drain:
+    // drain the stores
     printf("resting before draining...\n");
     sleep(1);
     for (int i = 0; i < STRESS_BLOBS; i++) {
@@ -3636,6 +4737,18 @@ done:
     return errors;
 }
 
+//!
+//!
+//!
+//! @param[in] bb4
+//! @param[in] op
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int check_destination(blockblob * bb4, char *op)
 {
     int errors = 0;
@@ -3673,6 +4786,18 @@ stop_comparing:
     return errors;
 }
 
+//!
+//!
+//!
+//! @param[in] base
+//! @param[in] name
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_copy_test(const char *base, const char *name)
 {
     int ret;
@@ -3722,6 +4847,22 @@ done:
     return errors;
 }
 
+//!
+//!
+//!
+//! @param[in] base
+//! @param[in] name
+//! @param[in] format
+//! @param[in] revocation
+//! @param[in] snapshot
+//! @param[in] copy_or_snapshot
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_clone_test(const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation,
                          blobstore_snapshot_t snapshot, int copy_or_snapshot)
 {
@@ -3735,7 +4876,7 @@ static int do_clone_test(const char *base, const char *name, blobstore_format_t 
         goto done;
     }
 
-    blockblob *bb1, *bb2, *bb3, *bb4, *bb5, *bb6;
+    blockblob *bb1, *bb2, *bb3, *bb4, *bb5;
 
     // these are to be mapped to others
     _OPENBB(bb1, B1, CBB_SIZE, NULL, _CBB, 0, 0);   // bs size: 1
@@ -3821,6 +4962,18 @@ done:
     return errors;
 }
 
+//!
+//!
+//!
+//! @param[in] base
+//! @param[in] name
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_metadata_test(const char *base, const char *name)
 {
     int ret;
@@ -3914,9 +5067,9 @@ static int do_metadata_test(const char *base, const char *name)
     if (array_size != 3)
         _BADMETACMD;
     for (int i = 0; i < array_size; i++) {
-        free(array[i]);
+        EUCA_FREE(array[i]);
     }
-    free(array);
+    EUCA_FREE(array);
     if (update_entry_blockblob_metadata_path(BLOCKBLOB_PATH_SIG, bs, bb1->id, "test", 1) != 0)
         _BADMETACMD;            // delete first line
     /* 10 */ if (update_entry_blockblob_metadata_path(BLOCKBLOB_PATH_SIG, bs, bb1->id, "one", 1) != 0)
@@ -3945,6 +5098,20 @@ done:
     return errors;
 }
 
+//!
+//!
+//!
+//! @param[in] base
+//! @param[in] name
+//! @param[in] format
+//! @param[in] revocation
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_blobstore_test(const char *base, const char *name, blobstore_format_t format, blobstore_revocation_t revocation)
 {
     int ret;
@@ -4021,12 +5188,17 @@ done:
     return errors;
 }
 
-#define LOCK_CYCLES 3
-#define COMPETITIVE_PARTICIPANTS 3
-#define COMPETITIVE_ITERATIONS 30
-#define COMPETITIVE_PAUSE_USEC 5
-#define COMPETITIVE_TIMEOUT_USEC 3000000L
-
+//!
+//!
+//!
+//! @param[in] ptr
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static void *competitor_function(void *ptr)
 {
     long long timeout_usec = *(long long *)ptr;
@@ -4036,7 +5208,7 @@ static void *competitor_function(void *ptr)
     int nfiles = (sizeof(_farray) / sizeof(char *));
 
     printf("%u/%u: competitor running with timeout=%lld\n", (unsigned int)pthread_self(), (int)getpid(), timeout_usec);
-    int *fsuccesses = calloc(nfiles, sizeof(int));
+    int *fsuccesses = EUCA_ZALLOC(nfiles, sizeof(int));
 
     for (int i = 0; i < COMPETITIVE_ITERATIONS; i++) {
         int findex = (int)(nfiles * ((double)random() / RAND_MAX)); // pick random file
@@ -4082,7 +5254,7 @@ static void *competitor_function(void *ptr)
             successes += fsuccesses[findex];
         }
     }
-    free(fsuccesses);
+    EUCA_FREE(fsuccesses);
 
     printf("%u/%u: successes=%d errors=%d timeouts=%d\n", (unsigned int)pthread_self(), (int)getpid(), successes, errors, timeouts);
 
@@ -4090,10 +5262,21 @@ static void *competitor_function(void *ptr)
     return NULL;
 }
 
+//!
+//!
+//!
+//! @param[in] ptr
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static void *thread_function(void *ptr)
 {
     printf("this is a thread\n");
-    int pid, ret, errors = 0;
+    int ret, errors = 0;
     int fd1, fd2, fd3;
 
     _OPEN(fd2, F2, _W, 0, -1);
@@ -4104,6 +5287,15 @@ static void *thread_function(void *ptr)
     return NULL;
 }
 
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int do_file_lock_test(void)
 {
     int pid, ret, errors = 0;
@@ -4140,14 +5332,14 @@ int do_file_lock_test(void)
         for (int j = 0; j < BLOBSTORE_MAX_CONCURRENT; j++) {
             fd[j] = open_and_lock(F3, _R, 0, BLOBSTORE_FILE_PERM);
             if (fd[j] == -1) {
-                _UNEXPECTED;
+                _UNEXPECTED();
                 printf("opened %d descriptors (max is %d)\n", j + 1, BLOBSTORE_MAX_CONCURRENT);
             }
         }
         _OPEN(fd3, F3, _R, 0, -1);
         for (int j = 0; j < BLOBSTORE_MAX_CONCURRENT; j++) {
             if (close_and_unlock(fd[(j + 9) % BLOBSTORE_MAX_CONCURRENT]) == -1) {   // close them in different order
-                _UNEXPECTED;
+                _UNEXPECTED();
             }
         }
         remove(F3);
@@ -4185,7 +5377,7 @@ int do_file_lock_test(void)
 
         pid = fork();
         if (pid) {
-            _PARENT_WAITS;
+            _PARENT_WAITS();
         } else {
             errors = 0;
             close_and_unlock(fd1);
@@ -4206,7 +5398,7 @@ int do_file_lock_test(void)
         fflush(stderr);
         pid = fork();
         if (pid) {
-            _PARENT_WAITS;
+            _PARENT_WAITS();
         } else {
             errors = 0;
             close_and_unlock(fd2);
@@ -4227,7 +5419,7 @@ int do_file_lock_test(void)
         fflush(stderr);
         pid = fork();
         if (pid) {
-            _PARENT_WAITS;
+            _PARENT_WAITS();
         } else {
             _OPEN(fd2, F2, _W, 0, 0);
             fflush(stdout);
@@ -4284,10 +5476,27 @@ int do_file_lock_test(void)
     return errors;
 }
 
+//!
+//!
+//!
+//! @param[in] msg
+//!
+//! @pre
+//!
+//! @note
+//!
 static void dummy_err_fn(const char *msg)
 {
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char **argv)
 {
     int errors = 0;
@@ -4376,38 +5585,37 @@ done:
     blobstore_cleanup();
     exit(errors);
 }
-#endif // _UNIT_TEST
-
-/////////////////////////////////////////////// command-line client code ///////////////////////////////////////////////////
+#endif /* _UNIT_TEST */
 
 #ifdef _EUCA_BLOBS
-
-#include "map.h"
-
-#define USAGE "Usage: euca-blobs [cache=... work=...] command [param1] [param2]...\n"
-#define HELP  "\n"\
-    "\thelp\t\t- print this help message\n"\
-    "\tlist\t\t- list blobs in work and cache\n"\
-    "\tdelete [id]\t- delete blob with\n"
-#define MAX_ARGS 5
-
-static char show_debug = FALSE;
-static char show_extras = FALSE;
-static char show_children = FALSE;
-static char show_parents = FALSE;
-static char *euca_home = NULL;
-static char *work_path = NULL;
-static char *cache_path = NULL;
-static blobstore *work_bs = NULL;
-static blobstore *cache_bs = NULL;
-static map *blob_map;
-
+//!
+//!
+//!
+//! @param[in] msg
+//!
+//! @pre
+//!
+//! @note
+//!
 static void bs_errors(const char *msg)
 {
     if (show_debug)
         fprintf(stderr, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] bs
+//! @param[in] name
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int open_blobstore(const char *path, blobstore ** bs, const char *name)
 {
     if (path != NULL) {
@@ -4425,6 +5633,15 @@ static int open_blobstore(const char *path, blobstore ** bs, const char *name)
     return 0;
 }
 
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int open_blobstores()
 {
     int opened = 0;
@@ -4433,6 +5650,11 @@ static int open_blobstores()
     return opened;
 }
 
+//!
+//!
+//!
+//! @note
+//!
 static void close_blobstores()
 {
     if (work_bs != NULL)
@@ -4441,6 +5663,18 @@ static void close_blobstores()
         blobstore_close(cache_bs);
 }
 
+//!
+//!
+//!
+//! @param[in] bs
+//! @param[in] regex
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_list_bs(blobstore * bs, const char *regex)
 {
     const char match_all_regex[] = ".*";
@@ -4462,6 +5696,19 @@ static int do_list_bs(blobstore * bs, const char *regex)
     return found;
 }
 
+//!
+//!
+//!
+//! @param[in] prefix
+//! @param[in] bm
+//! @param[in] type
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static void print_tree(const char *prefix, blockblob_meta * bm, blockblob_path_t type)
 {
     char **array = NULL;
@@ -4487,12 +5734,22 @@ static void print_tree(const char *prefix, blockblob_meta * bm, blockblob_path_t
         } else {
             print_tree(next_prefix, child_bm, type);
         }
-        free(array[i]);
+        EUCA_FREE(array[i]);
     }
-    if (array)
-        free(array);
+    EUCA_FREE(array);
 }
 
+//!
+//!
+//!
+//! @param[in] regex
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_list(const char *regex)
 {
     int total_found = 0;
@@ -4539,11 +5796,33 @@ static int do_list(const char *regex)
     return total_found;
 }
 
+//!
+//!
+//!
+//! @param[in] id
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static int do_delete(const char *id)
 {
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] msg
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static void usage(const char *msg)
 {
     if (msg != NULL)
@@ -4557,6 +5836,18 @@ static void usage(const char *msg)
     exit(1);
 }
 
+//!
+//!
+//!
+//! @param[in] key
+//! @param[in] val
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static void set_global_parameter(char *key, char *val)
 {
     if (strcmp(key, "work") == 0) {
@@ -4571,6 +5862,14 @@ static void set_global_parameter(char *key, char *val)
     }
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char *argv[])
 {
     char *command = NULL;
@@ -4653,7 +5952,7 @@ int main(int argc, char *argv[])
             snprintf(def_cache_path, sizeof(def_cache_path), "%s/cache", instance_path);
             cache_path = strdup(def_cache_path);
         }
-        free(instance_path);
+        EUCA_FREE(instance_path);
     }
 
     blob_map = map_create(100);
@@ -4706,4 +6005,4 @@ int main(int argc, char *argv[])
     exit(ret);
 }
 
-#endif // _EUCA_BLOBS
+#endif /* _EUCA_BLOBS */
