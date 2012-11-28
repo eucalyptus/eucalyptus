@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file storage/diskutil.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -77,6 +88,26 @@
 #include "ipc.h"                // sem
 #include "diskutil.h"
 #include "eucalyptus.h"
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define LOOP_RETRIES                             9
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 enum {
     CHMOD = 0,
@@ -100,6 +131,32 @@ enum {
     LASTHELPER
 };
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 static char *helpers[LASTHELPER] = {
     "chmod",
     "chown",
@@ -121,15 +178,84 @@ static char *helpers[LASTHELPER] = {
     "euca_mountwrap"
 };
 
-static char *helpers_path[LASTHELPER];
+static char *helpers_path[LASTHELPER] = { NULL };
+
 static char stage_files_dir[EUCA_MAX_PATH] = "";
-static char *pruntf(boolean log_error, char *format, ...);
 static int initialized = 0;
-static sem *loop_sem = NULL;    // semaphore held while attaching/detaching loopback devices
+static sem *loop_sem = NULL;    //!< semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
 
-// looks for file 'stage1' in dir and, if found,
-// sets stage_files_dir and returns 1, else returns 0
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int diskutil_init(boolean require_grub);
+int diskutil_cleanup(void);
+int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill);
+int diskutil_dd(const char *in, const char *out, const int bs, const long long count);
+int diskutil_dd2(const char *in, const char *out, const int bs, const long long count, const long long seek, const long long skip);
+int diskutil_mbr(const char *path, const char *type);
+int diskutil_part(const char *path, char *part_type, const char *fs_type, const long long first_sector, const long long last_sector);
+sem *diskutil_get_loop_sem(void);
+int diskutil_loop_check(const char *path, const char *lodev);
+int diskutil_loop(const char *path, const long long offset, char *lodev, int lodev_size);
+int diskutil_unloop(const char *lodev);
+int diskutil_mkswap(const char *lodev, const long long size_bytes);
+int diskutil_mkfs(const char *lodev, const long long size_bytes);
+int diskutil_tune(const char *lodev);
+int diskutil_sectors(const char *path, const int part, long long *first, long long *last);
+int diskutil_mount(const char *dev, const char *mnt_pt);
+int diskutil_umount(const char *dev);
+int diskutil_write2file(const char *file, const char *str);
+int diskutil_grub(const char *path, const char *mnt_pt, const int part, const char *kernel, const char *ramdisk);
+int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, const char *ramdisk);
+int diskutil_grub_mbr(const char *path, const int part);
+int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt);
+int diskutil_ch(const char *path, const char *user, const char *group, const int perms);
+int diskutil_mkdir(const char *path);
+int diskutil_cp(const char *from, const char *to);
+
+long long round_up_sec(long long bytes);
+long long round_down_sec(long long bytes);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static int try_stage_dir(const char *dir);
+static char *pruntf(boolean log_error, char *format, ...);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Looks for file 'stage1' in dir.
+//!
+//! @param[in] dir the path where we are looking for the stage1 file
+//!
+//! @return EUCA_OK if the file is found or the following error code:
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!         \li EUCA_NOT_FOUND_ERROR: if the 'stage1' file isn't found in the directory
+//!
+//! @pre The dir parameter must not be NULL
+//!
+//! @post If the 'stage1' file is found, the stage_file_dir variable is set.
+//!
+//! @note
+//!
 static int try_stage_dir(const char *dir)
 {
     char stage_file_path[EUCA_MAX_PATH];
@@ -140,7 +266,14 @@ static int try_stage_dir(const char *dir)
     return 1;
 }
 
-int diskutil_init(int require_grub) // 0 = not required, 1 = required
+//!
+//!
+//!
+//! @param[in] require_grub FALSE = not required, TRUE = required
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int diskutil_init(boolean require_grub)
 {
     int ret = 0;
 
@@ -193,6 +326,11 @@ int diskutil_init(int require_grub) // 0 = not required, 1 = required
     return ret;
 }
 
+//!
+//!
+//!
+//! @return EUCA_OK
+//!
 int diskutil_cleanup(void)
 {
     for (int i = 0; i < LASTHELPER; i++) {
@@ -201,6 +339,21 @@ int diskutil_cleanup(void)
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] sectors
+//! @param[in] zero_fill
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to create the disk file
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre The path parameter must not be NULL.
+//!
+//! @post On success, the disk file is created.
+//!
 int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill)
 {
     int ret = OK;
@@ -224,6 +377,22 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] in
+//! @param[in] out
+//! @param[in] bs
+//! @param[in] count
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to copy the disk file
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre Both in and out paramters must not be NULL.
+//!
+//! @post On success the data from 'in' has been copied in 'out'.
+//!
 int diskutil_dd(const char *in, const char *out, const int bs, const long long count)
 {
     int ret = OK;
@@ -242,6 +411,24 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] in
+//! @param[in] out
+//! @param[in] bs
+//! @param[in] count
+//! @param[in] seek
+//! @param[in] skip
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to copy the disk file
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre Both in and out paramters must not be NULL.
+//!
+//! @post On success the data from 'in' has been copied in 'out'.
+//!
 int diskutil_dd2(const char *in, const char *out, const int bs, const long long count, const long long seek, const long long skip)
 {
     int ret = OK;
@@ -264,6 +451,20 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
     return ret;
 }
 
+//!
+//! Creates a Master Boot Record (MBR) of the given type at the given path
+//!
+//! @param[in] path path where we need to create the MBR
+//! @param[in] type type of MBR to create
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to create the MBR
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre Both path and type parameters must not be NULL.
+//!
+//! @post On success, the MBR is created
+//!
 int diskutil_mbr(const char *path, const char *type)
 {
     int ret = OK;
@@ -280,6 +481,23 @@ int diskutil_mbr(const char *path, const char *type)
     return ret;
 }
 
+//!
+//! Creates a new partition of the given part_type at the given path.
+//!
+//! @param[in] path path where to create the partition
+//! @param[in] part_type the type of partition
+//! @param[in] fs_type the type of file system (if NULL, "" is assumed)
+//! @param[in] first_sector the first sector of the partition
+//! @param[in] last_sector the last sector of this partition
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to create the partition
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre Both path and part_type parameters must not be NULL.
+//!
+//! @post On success, the partition is created
+//!
 int diskutil_part(const char *path, char *part_type, const char *fs_type, const long long first_sector, const long long last_sector)
 {
     int ret = OK;
@@ -298,18 +516,32 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
     return ret;
 }
 
-// expose the loop semaphore so others (e.g., instance startup code) 
-// can avoid races with 'losetup' that we've seen on Xen
+//!
+//! Expose the loop semaphore so others (e.g., instance startup code)
+//! can avoid races with 'losetup' that we've seen on Xen
+//!
+//! @return a pointer to the loop semaphore
+//!
 sem *diskutil_get_loop_sem(void)
 {
     return loop_sem;
 }
 
-#define LOOP_RETRIES 9
-
-// TODO: since 'losetup' truncates paths in its output, this
-// check is not perfect. It may approve loopback devices
-// that are actually pointing at a different path.
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] lodev
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre Both path and lodev parameters must not be NULL.
+//!
+//! @todo since 'losetup' truncates paths in its output, this check is not perfect. It
+//!       may approve loopback devices that are actually pointing at a different path.
+//!
 int diskutil_loop_check(const char *path, const char *lodev)
 {
     int ret = 0;
@@ -341,6 +573,22 @@ int diskutil_loop_check(const char *path, const char *lodev)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] offset
+//! @param[in] lodev name of the loop device
+//! @param[in] lodev_size
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre Both path and lodev parameters must not be NULL.
+//!
+//! @post On success, the loop device is attached.
+//!
 int diskutil_loop(const char *path, const long long offset, char *lodev, int lodev_size)
 {
     int found = 0;
@@ -394,6 +642,19 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] lodev name of the loop device
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The lodev parameters must not be NULL.
+//!
+//! @post On success, the loop device is detached.
+//!
 int diskutil_unloop(const char *lodev)
 {
     int ret = OK;
@@ -429,6 +690,20 @@ int diskutil_unloop(const char *lodev)
     return ret;
 }
 
+//!
+//! Format a partition as a swap.
+//!
+//! @param[in] lodev
+//! @param[in] size_bytes
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The lodev parameters must not be NULL.
+//!
+//! @post On success, the partition is formatted as swap.
+//!
 int diskutil_mkswap(const char *lodev, const long long size_bytes)
 {
     int ret = OK;
@@ -445,6 +720,20 @@ int diskutil_mkswap(const char *lodev, const long long size_bytes)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] lodev
+//! @param[in] size_bytes
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The lodev parameters must not be NULL.
+//!
+//! @post On success, the loop device is attached.
+//!
 int diskutil_mkfs(const char *lodev, const long long size_bytes)
 {
     int ret = OK;
@@ -462,6 +751,19 @@ int diskutil_mkfs(const char *lodev, const long long size_bytes)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] lodev
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The lodev parameters must not be NULL.
+//!
+//! @post On success, the loop device is attached.
+//!
 int diskutil_tune(const char *lodev)
 {
     int ret = OK;
@@ -480,6 +782,22 @@ int diskutil_tune(const char *lodev)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in]  path
+//! @param[in]  part
+//! @param[out] first
+//! @param[out] last
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any issue occured.
+//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions.
+//!
+//! @pre The path, first and last parameters must not be NULL.
+//!
+//! @post On success, the partition information has been extracted and contained in first and last.
+//!
 int diskutil_sectors(const char *path, const int part, long long *first, long long *last)
 {
     int ret = ERROR;
@@ -532,6 +850,20 @@ int diskutil_sectors(const char *path, const int part, long long *first, long lo
     return ret;
 }
 
+//!
+//! Mounts a given device at a given location.
+//!
+//! @param[in] dev
+//! @param[in] mnt_pt
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any issue occured.
+//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions.
+//!
+//! @pre Both dev and mnt_pt parameters must not be NULL.
+//!
+//! @post On success, the device is successfully mounted at its mounting point.
+//!
 int diskutil_mount(const char *dev, const char *mnt_pt)
 {
     int ret = OK;
@@ -550,6 +882,20 @@ int diskutil_mount(const char *dev, const char *mnt_pt)
     return ret;
 }
 
+//!
+//! Unmount a given device
+//!
+//! @param[in] dev
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any issue occured.
+//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions.
+//!
+//! @pre \li The dev paramter must not be NULL.
+//!      \li The given device must already be mounted.
+//!
+//! @post On success, the device is unmounted from the file system.
+//!
 int diskutil_umount(const char *dev)
 {
     int ret = OK;
@@ -568,6 +914,21 @@ int diskutil_umount(const char *dev)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] file
+//! @param[in] str
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ACCESS_ERROR: if we fail to write the given data.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!         \li EUCA_PERMISSION_ERROR: if we fail to create the temp or destination files.
+//!
+//! @pre Both file and str parameters must not be NULL.
+//!
+//! @post On success, the file is created and contains the str data.
+//!
 int diskutil_write2file(const char *file, const char *str)
 {
     int ret = OK;
@@ -594,8 +955,25 @@ int diskutil_write2file(const char *file, const char *str)
     return ret;
 }
 
-// diskutil_grub combines functionalities of diskutil_grub_files and diskutil_grub_mbr,
-// performing them one after another
+//!
+//! combines functionalities of diskutil_grub_files() and diskutil_grub2_mbr(),
+//! performing them one after another
+//!
+//! @param[in] path
+//! @param[in] mnt_pt
+//! @param[in] part
+//! @param[in] kernel
+//! @param[in] ramdisk
+//!
+//! @return The result of either diskutil_grub_files() or diskutil_grub2_mbr().
+//!
+//! @see diskutil_grub2_mbr()
+//! @see diskutil_grub_files()
+//!
+//! @pre The path, mnt_pt and kernel parameters should not be NULL;
+//!
+//! @post
+//!
 int diskutil_grub(const char *path, const char *mnt_pt, const int part, const char *kernel, const char *ramdisk)
 {
     int ret = diskutil_grub_files(mnt_pt, part, kernel, ramdisk);
@@ -605,6 +983,22 @@ int diskutil_grub(const char *path, const char *mnt_pt, const int part, const ch
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] mnt_pt
+//! @param[in] part
+//! @param[in] kernel
+//! @param[in] ramdisk
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any paramter does not meet the preconditions
+//!
+//! @pre Both mnt_pt and kernel parameters must not be NULL.
+//!
+//! @post
+//!
 int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, const char *ramdisk)
 {
     int ret = OK;
@@ -682,6 +1076,18 @@ cleanup:
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] part
+//!
+//! @return EUCA_ERROR if grub_version is not 1 or the result of the diskutil_grub2_mbr() call.
+//!
+//! @pre The path parameter should not be NULL.
+//!
+//! @post
+//!
 int diskutil_grub_mbr(const char *path, const int part)
 {
     if (grub_version != 1) {
@@ -691,6 +1097,24 @@ int diskutil_grub_mbr(const char *path, const int part)
     return diskutil_grub2_mbr(path, part, NULL);
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] part
+//! @param[in] mnt_pt
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if any error occured.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!         \li EUCA_PERMISSION_ERROR: if we fail to create the temporary file.
+//!
+//! @pre \li The path parameter must not be NULL.
+//!      \li If we use GRUB version 2, then the mnt_pt parameter must not be NULL.
+//!      \li GRUB must be installed on the system/
+//!
+//! @note
+//!
 int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
 {
     char cmd[1024];
@@ -820,6 +1244,23 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         return ERROR;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] user
+//! @param[in] group
+//! @param[in] perms
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: If any issue occured
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The path parameter must not be NULL.
+//!
+//! @post On success, the user, group and permission of a given path are modified based on the
+//!       given parameters.
+//!
 int diskutil_ch(const char *path, const char *user, const char *group, const int perms)
 {
     int ret = OK;
@@ -853,6 +1294,19 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
     return OK;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to create the directory
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions.
+//!
+//! @pre The path parameter must not be NULL.
+//!
+//! @post On success, the directory is created.
+//!
 int diskutil_mkdir(const char *path)
 {
     char *output;
@@ -866,6 +1320,20 @@ int diskutil_mkdir(const char *path)
     return OK;
 }
 
+//!
+//!
+//!
+//! @param[in] from
+//! @param[in] to
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: if we fail to copy the item.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!
+//! @pre Both from and to parameters must not be NULL.
+//!
+//! @post On success the file has been copied.
+//!
 int diskutil_cp(const char *from, const char *to)
 {
     char *output;
@@ -879,6 +1347,19 @@ int diskutil_cp(const char *from, const char *to)
     return OK;
 }
 
+//!
+//!
+//!
+//! @param[in] log_error
+//! @param[in] format
+//! @param[in] ...
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 static char *pruntf(boolean log_error, char *format, ...)
 {
     va_list ap;
@@ -939,12 +1420,37 @@ static char *pruntf(boolean log_error, char *format, ...)
     return (output);
 }
 
-// round up or down to sector size
+//!
+//! Round up to sector size
+//!
+//! @param[in] bytes
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+//! @todo CHUCK turn this into MACRO?
+//!
 long long round_up_sec(long long bytes)
 {
     return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE) + 1) * SECTOR_SIZE) : bytes);
 }
 
+//!
+//! Round down to sector size
+//!
+//! @param[in] bytes
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+//! @todo CHUCK turn this into MACRO?
+//!
 long long round_down_sec(long long bytes)
 {
     return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE)) * SECTOR_SIZE) : bytes);
