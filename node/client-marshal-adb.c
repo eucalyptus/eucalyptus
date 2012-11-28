@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/client-marshal-adb.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,25 +84,132 @@
 #include "client-marshal.h"
 #include "misc.h"
 #include "adb-helpers.h"
+#include "handlers.h"
 #include "sensor.h"
 
-#define NULL_ERROR_MSG "could not be invoked (check NC host, port, and credentials)\n"
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-//#define CORRELATION_ID meta->correlationId
-#define CORRELATION_ID NULL
+#define NULL_ERROR_MSG               "could not be invoked (check NC host, port, and credentials)\n"    //!< Predefined NULL error message
 
+#define CORRELATION_ID               NULL   //!< Default Corelation ID value
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir);
+int ncStubDestroy(ncStub * pStub);
+
+int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+                      char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
+                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                      int groupNamesSize, ncInstance ** outInstPtr);
+int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
+int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, int force, int *shutdownState, int *previousState);
+int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
+int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
+int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp);
+int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta);
+int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
+int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
+int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen);
+int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
+int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+                          char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_env_t * env);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Creates and initialize an NC stub entry
+//!
+//! @param[in] endpoint_uri the endpoint URI string
+//! @param[in] logfile the log file name string
+//! @param[in] homedir the home directory path string
+//!
+//! @return a pointer to the newly created NC stub structure
+//!
 ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 {
     axutil_env_t *env = NULL;
     axis2_char_t *client_home;
     axis2_stub_t *stub;
-    ncStub *st = NULL;
+    ncStub *pStub = NULL;
 
     if (logfile) {
         env = axutil_env_create_all(logfile, AXIS2_LOG_LEVEL_TRACE);
     } else {
         env = axutil_env_create_all(NULL, 0);
     }
+
     if (homedir) {
         client_home = (axis2_char_t *) homedir;
     } else {
@@ -102,6 +220,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAERROR, "cannot get AXIS2C_HOME");
         return NULL;
     }
+
     if (endpoint_uri == NULL) {
         logprintfl(EUCAERROR, "empty endpoint_url");
         return NULL;
@@ -115,13 +234,16 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAERROR, "received invalid URI %s\n", uri);
         return NULL;
     }
+
     char *node_name = strdup(p + 3);    // copy without the protocol prefix
     if (node_name == NULL) {
         logprintfl(EUCAERROR, "is out of memory\n");
         return NULL;
     }
+
     if ((p = strchr(node_name, ':')) != NULL)
         *p = '\0';              // cut off the port
+
     if ((p = strchr(node_name, '/')) != NULL)
         *p = '\0';              // if there is no port
 
@@ -132,20 +254,20 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         uri = "http://localhost:8773/services/EucalyptusBroker";
         logprintfl(EUCADEBUG, "redirecting request to %s\n", uri);
     }
-    // TODO: what if endpoint_uri, home, or env are NULL?
+    //! @todo what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *) uri);
 
     if (stub) {
-        st = malloc(sizeof(ncStub));
-        if (st) {
-            st->env = env;
-            st->client_home = strdup((char *)client_home);
-            st->endpoint_uri = (axis2_char_t *) strdup(endpoint_uri);
-            st->node_name = (axis2_char_t *) strdup(node_name);
-            st->stub = stub;
-            if (st->client_home == NULL || st->endpoint_uri == NULL || st->node_name == NULL) {
+        pStub = EUCA_ZALLOC(1, sizeof(ncStub));
+        if (pStub) {
+            pStub->env = env;
+            pStub->client_home = strdup((char *)client_home);
+            pStub->endpoint_uri = (axis2_char_t *) strdup(endpoint_uri);
+            pStub->node_name = (axis2_char_t *) strdup(node_name);
+            pStub->stub = stub;
+            if (pStub->client_home == NULL || pStub->endpoint_uri == NULL || pStub->node_name == NULL) {
                 logprintfl(EUCAWARN, "out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)", __FILE__, __FUNCTION__, __LINE__,
-                           st->client_home, st->endpoint_uri, st->node_name);
+                           pStub->client_home, pStub->endpoint_uri, pStub->node_name);
             }
         } else {
             logprintfl(EUCAWARN, "out of memory for 'st' (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
@@ -154,24 +276,34 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%u env=%u client_home=%s)\n", stub, env, client_home);
     }
 
-    free(node_name);
-    return st;
+    EUCA_FREE(node_name);
+    return (pStub);
 }
 
-int ncStubDestroy(ncStub * st)
+//!
+//! destroy an NC stub structure
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//!
+//! @return Always returns EUCA_OK
+//!
+int ncStubDestroy(ncStub * pStub)
 {
-    if (st->client_home)
-        free(st->client_home);
-    if (st->endpoint_uri)
-        free(st->endpoint_uri);
-    if (st->node_name)
-        free(st->node_name);
-    free(st);
-    return 0;
+    EUCA_FREE(pStub->client_home);
+    EUCA_FREE(pStub->endpoint_uri);
+    EUCA_FREE(pStub->node_name);
+    EUCA_FREE(pStub);
+    return EUCA_OK;
 }
 
-/************************** stubs **************************/
-
+//!
+//! Converts an ADB instance to NC instance
+//!
+//! @param[in] instance a pointer to the ADB instance to convert to NC instance
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the instance created from the ADB instance
+//!
 static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_env_t * env)
 {
     int i;
@@ -237,24 +369,53 @@ static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_
     return outInst;
 }
 
-int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+//!
+//! Handles the Run instance request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  uuid unique user identifier string
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in]  reservationId the reservation identifier string
+//! @param[in]  params a pointer to the virtual machine parameters to use
+//! @param[in]  imageId the image identifier string
+//! @param[in]  imageURL the image URL address tring
+//! @param[in]  kernelId the kernel image identifier (eki-XXXXXXXX)
+//! @param[in]  kernelURL the kernel image URL address
+//! @param[in]  ramdiskId the ramdisk image identifier (eri-XXXXXXXX)
+//! @param[in]  ramdiskURL the ramdisk image URL address
+//! @param[in]  ownerId the owner identifier string
+//! @param[in]  accountId the account identifier string
+//! @param[in]  keyName the key name string
+//! @param[in]  netparams a pointer to the network parameters string
+//! @param[in]  userData the user data string
+//! @param[in]  launchIndex the launch index string
+//! @param[in]  platform the platform name string
+//! @param[in]  expiryTime the reservation expiration time
+//! @param[in]  groupNames a list of group name string
+//! @param[in]  groupNamesSize the number of group name in the groupNames list
+//! @param[out] outInstPtr the list of instances created by this request
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                       int groupNamesSize, ncInstance ** outInstPtr)
 {
     int i;
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncRunInstance_t *input = adb_ncRunInstance_create(env);
     adb_ncRunInstanceType_t *request = adb_ncRunInstanceType_create(env);
 
     // set standard input fields
-    adb_ncRunInstanceType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncRunInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncRunInstanceType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncRunInstanceType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncRunInstanceType_set_uuid(request, env, uuid);
@@ -317,10 +478,20 @@ int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instance
     return status;
 }
 
-int ncGetConsoleOutputStub(ncStub * st, ncMetadata * meta, char *instanceId, char **consoleOutput)
+//!
+//! Handles the get console output request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[out] consoleOutput a pointer to the console output string
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
 
     if (!consoleOutput)
         return -1;
@@ -329,12 +500,12 @@ int ncGetConsoleOutputStub(ncStub * st, ncMetadata * meta, char *instanceId, cha
     adb_ncGetConsoleOutputType_t *request = adb_ncGetConsoleOutputType_create(env);
 
     /* set input fields */
-    adb_ncGetConsoleOutputType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncGetConsoleOutputType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncGetConsoleOutputType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncGetConsoleOutputType, request, pMeta);
     }
 
     adb_ncGetConsoleOutputType_set_instanceId(request, env, instanceId);
@@ -363,21 +534,30 @@ int ncGetConsoleOutputStub(ncStub * st, ncMetadata * meta, char *instanceId, cha
     return status;
 }
 
-int ncRebootInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the reboot instance request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
 
     adb_ncRebootInstance_t *input = adb_ncRebootInstance_create(env);
     adb_ncRebootInstanceType_t *request = adb_ncRebootInstanceType_create(env);
 
     /* set input fields */
-    adb_ncRebootInstanceType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncRebootInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncRebootInstanceType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncRebootInstanceType, request, pMeta);
     }
 
     adb_ncRebootInstanceType_set_instanceId(request, env, instanceId);
@@ -404,21 +584,33 @@ int ncRebootInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId)
     return status;
 }
 
-int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instId, int force, int *shutdownState, int *previousState)
+//!
+//! Handles the Terminate instance request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in]  force if set to 1 will force the termination of the instance
+//! @param[out] shutdownState the instance state code after the call to find_and_terminate_instance() if successful
+//! @param[out] previousState the instance state code after the call to find_and_terminate_instance() if successful
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, int force, int *shutdownState, int *previousState)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
 
     adb_ncTerminateInstance_t *input = adb_ncTerminateInstance_create(env);
     adb_ncTerminateInstanceType_t *request = adb_ncTerminateInstanceType_create(env);
 
     /* set input fields */
-    adb_ncTerminateInstanceType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncTerminateInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncTerminateInstanceType, request, pMeta);
     }
     adb_ncTerminateInstanceType_set_instanceId(request, env, instId);
     if (force) {
@@ -445,8 +637,7 @@ int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instId, int fo
                 //logprintfl (EUCAERROR, "returned an error\n");
                 status = 1;
             }
-
-            /* TODO: fix the state char->int conversion */
+            //! @todo fix the state char->int conversion
             *shutdownState = 0; //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
             *previousState = 0; //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
         }
@@ -455,20 +646,32 @@ int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instId, int fo
     return status;
 }
 
-int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
+//!
+//! Handles the client describe instance request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instIds a pointer the list of instance identifiers to retrieve data for
+//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
+//! @param[out] outInsts a pointer the list of instances for which we have data
+//! @param[out] outInstsLen the number of instances in the outInsts list.
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncDescribeInstances_t *input = adb_ncDescribeInstances_create(env);
     adb_ncDescribeInstancesType_t *request = adb_ncDescribeInstancesType_create(env);
 
     /* set input fields */
-    adb_ncDescribeInstancesType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncDescribeInstancesType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncDescribeInstancesType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncDescribeInstancesType, request, pMeta);
     }
     int i;
     for (i = 0; i < instIdsLen; i++) {
@@ -493,7 +696,7 @@ int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int 
 
             *outInstsLen = adb_ncDescribeInstancesResponseType_sizeof_instances(response, env);
             if (*outInstsLen) {
-                *outInsts = malloc(sizeof(ncInstance *) * *outInstsLen);
+                *outInsts = EUCA_ZALLOC(*outInstsLen, sizeof(ncInstance *));
                 if (*outInsts == NULL) {
                     logprintfl(EUCAERROR, "out of memory\n");
                     *outInstsLen = 0;
@@ -511,20 +714,30 @@ int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int 
     return status;
 }
 
-int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, ncResource ** outRes)
+//!
+//! Handle the client describe resource request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  resourceType UNUSED
+//! @param[out] outRes a list of resources we retrieved data for
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncDescribeResource_t *input = adb_ncDescribeResource_create(env);
     adb_ncDescribeResourceType_t *request = adb_ncDescribeResourceType_create(env);
 
     /* set input fields */
-    adb_ncDescribeResourceType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncDescribeResourceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncDescribeResourceType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncDescribeResourceType, request, pMeta);
     }
     if (resourceType) {
         adb_ncDescribeResourceType_set_resourceType(request, env, resourceType);
@@ -567,20 +780,30 @@ int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, n
     return status;
 }
 
-int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *publicIp)
+//!
+//! Handles the client assign address request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] publicIp a string representation of the public IP to assign to the instance
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncAssignAddress_t *input = adb_ncAssignAddress_create(env);
     adb_ncAssignAddressType_t *request = adb_ncAssignAddressType_create(env);
 
     // set standard input fields
-    adb_ncAssignAddressType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncAssignAddressType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncAssignAddressType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncAssignAddressType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncAssignAddressType_set_instanceId(request, env, instanceId);
@@ -607,20 +830,28 @@ int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *
     return status;
 }
 
-int ncPowerDownStub(ncStub * st, ncMetadata * meta)
+//!
+//! Handles the client power down rquest
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return Always return EUCA_OK.
+//!
+int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncPowerDown_t *input = adb_ncPowerDown_create(env);
     adb_ncPowerDownType_t *request = adb_ncPowerDownType_create(env);
 
     // set standard input fields
-    adb_ncPowerDownType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncPowerDownType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncPowerDownType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncPowerDownType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncPowerDown_set_ncPowerDown(input, env, request);
@@ -644,20 +875,34 @@ int ncPowerDownStub(ncStub * st, ncMetadata * meta)
     return status;
 }
 
-int ncStartNetworkStub(ncStub * st, ncMetadata * meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus)
+//!
+//! Handles the start network request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  uuid the unique user identifier string
+//! @param[in]  peers a list of peers
+//! @param[in]  peersLen the number of peers in the peers list
+//! @param[in]  port the network port to use
+//! @param[in]  vlan the network vlan to use
+//! @param[out] outStatus a pointer to the network status
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncStartNetwork_t *input = adb_ncStartNetwork_create(env);
     adb_ncStartNetworkType_t *request = adb_ncStartNetworkType_create(env);
 
     // set standard input fields
-    adb_ncStartNetworkType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncStartNetworkType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncStartNetworkType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncStartNetworkType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncStartNetworkType_set_uuid(request, env, uuid);
@@ -693,20 +938,32 @@ int ncStartNetworkStub(ncStub * st, ncMetadata * meta, char *uuid, char **peers,
     return status;
 }
 
-int ncAttachVolumeStub(ncStub * st, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+//!
+//! Handles the client attach volume request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] remoteDev the target device name
+//! @param[in] localDev the local device name
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncAttachVolume_t *input = adb_ncAttachVolume_create(env);
     adb_ncAttachVolumeType_t *request = adb_ncAttachVolumeType_create(env);
 
     // set standard input fields
-    adb_ncAttachVolumeType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncAttachVolumeType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncAttachVolumeType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncAttachVolumeType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncAttachVolumeType_set_instanceId(request, env, instanceId);
@@ -735,20 +992,33 @@ int ncAttachVolumeStub(ncStub * st, ncMetadata * meta, char *instanceId, char *v
     return status;
 }
 
-int ncDetachVolumeStub(ncStub * st, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+//!
+//! Handles the client detach volume request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] remoteDev the target device name
+//! @param[in] localDev the local device name
+//! @param[in] force if set to 1, this will force the volume to detach
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncDetachVolume_t *input = adb_ncDetachVolume_create(env);
     adb_ncDetachVolumeType_t *request = adb_ncDetachVolumeType_create(env);
 
     // set standard input fields
-    adb_ncDetachVolumeType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncDetachVolumeType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncDetachVolumeType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncDetachVolumeType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncDetachVolumeType_set_instanceId(request, env, instanceId);
@@ -782,21 +1052,36 @@ int ncDetachVolumeStub(ncStub * st, ncMetadata * meta, char *instanceId, char *v
     return status;
 }
 
-int ncBundleInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey,
-                         char *S3Policy, char *S3PolicySig)
+//!
+//! Handles the client bundle instance request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] bucketName the bucket name string to which the bundle will be saved
+//! @param[in] filePrefix the prefix name string of the bundle
+//! @param[in] walrusURL the walrus URL address string
+//! @param[in] userPublicKey the public key string
+//! @param[in] S3Policy the S3 engine policy
+//! @param[in] S3PolicySig the S3 engine policy signature
+//!
+//! @return Always return EUCA_OK
+//!
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncBundleInstance_t *input = adb_ncBundleInstance_create(env);
     adb_ncBundleInstanceType_t *request = adb_ncBundleInstanceType_create(env);
 
     // set standard input fields
-    adb_ncBundleInstanceType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncBundleInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncBundleInstanceType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncBundleInstanceType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncBundleInstanceType_set_instanceId(request, env, instanceId);
@@ -828,19 +1113,28 @@ int ncBundleInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, char 
     return status;
 }
 
-int ncBundleRestartInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the client restart instance request once bundling has completed.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return Always return EUCA_OK
+//!
+int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncBundleRestartInstance_t *input = adb_ncBundleRestartInstance_create(env);
     adb_ncBundleRestartInstanceType_t *request = adb_ncBundleRestartInstanceType_create(env);
 
     // set standard input fields
-    adb_ncBundleRestartInstanceType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId)
-            meta->correlationId = NULL;
-        EUCA_MESSAGE_MARSHAL(ncBundleRestartInstanceType, request, meta);
+    adb_ncBundleRestartInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId)
+            pMeta->correlationId = NULL;
+        EUCA_MESSAGE_MARSHAL(ncBundleRestartInstanceType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncBundleRestartInstanceType_set_instanceId(request, env, instanceId);
@@ -866,20 +1160,29 @@ int ncBundleRestartInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId
     return (status);
 }
 
-int ncCancelBundleTaskStub(ncStub * st, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the client cancel bundle task request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return Always return EUCA_OK
+//!
+int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncCancelBundleTask_t *input = adb_ncCancelBundleTask_create(env);
     adb_ncCancelBundleTaskType_t *request = adb_ncCancelBundleTaskType_create(env);
 
     // set standard input fields
-    adb_ncCancelBundleTaskType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncCancelBundleTaskType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncCancelBundleTaskType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncCancelBundleTaskType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncCancelBundleTaskType_set_instanceId(request, env, instanceId);
@@ -905,17 +1208,30 @@ int ncCancelBundleTaskStub(ncStub * st, ncMetadata * meta, char *instanceId)
     return status;
 }
 
-int ncDescribeBundleTasksStub(ncStub * st, ncMetadata * meta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+//!
+//! Handles the client describe bundles task request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instIds a list of instance identifier string
+//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
+//! @param[out] outBundleTasks a pointer to the created bundle tasks list
+//! @param[out] outBundleTasksLen the number of bundle tasks in the outBundleTasks list
+//!
+//! @return Always return EUCA_OK
+//!
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen)
 {
     int i;
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncDescribeBundleTasks_t *input = adb_ncDescribeBundleTasks_create(env);
     adb_ncDescribeBundleTasksType_t *request = adb_ncDescribeBundleTasksType_create(env);
     // set standard input fields
-    if (meta) {
-        adb_ncDescribeBundleTasksType_set_correlationId(request, env, meta->correlationId);
-        adb_ncDescribeBundleTasksType_set_userId(request, env, meta->userId);
+    if (pMeta) {
+        adb_ncDescribeBundleTasksType_set_correlationId(request, env, pMeta->correlationId);
+        adb_ncDescribeBundleTasksType_set_userId(request, env, pMeta->userId);
     }
     // set op-specific input fields
     for (i = 0; i < instIdsLen; i++) {
@@ -939,11 +1255,11 @@ int ncDescribeBundleTasksStub(ncStub * st, ncMetadata * meta, char **instIds, in
                 status = 1;
             }
             *outBundleTasksLen = adb_ncDescribeBundleTasksResponseType_sizeof_bundleTasks(response, env);
-            *outBundleTasks = malloc(sizeof(bundleTask *) * *outBundleTasksLen);
+            *outBundleTasks = EUCA_ZALLOC(*outBundleTasksLen, sizeof(bundleTask *));
             for (i = 0; i < *outBundleTasksLen; i++) {
                 adb_bundleTaskType_t *bundle;
                 bundle = adb_ncDescribeBundleTasksResponseType_get_bundleTasks_at(response, env, i);
-                (*outBundleTasks)[i] = malloc(sizeof(bundleTask));
+                (*outBundleTasks)[i] = EUCA_ZALLOC(1, sizeof(bundleTask));
                 snprintf((*outBundleTasks)[i]->instanceId, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_instanceId(bundle, env));
                 snprintf((*outBundleTasks)[i]->state, CHAR_BUFFER_SIZE, "%s", adb_bundleTaskType_get_state(bundle, env));
             }
@@ -953,20 +1269,31 @@ int ncDescribeBundleTasksStub(ncStub * st, ncMetadata * meta, char **instIds, in
     return status;
 }
 
-int ncCreateImageStub(ncStub * st, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev)
+//!
+//! Handles the client create image request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] remoteDev the remote device name
+//!
+//! @return Always return EUCA_OK
+//!
+int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncCreateImage_t *input = adb_ncCreateImage_create(env);
     adb_ncCreateImageType_t *request = adb_ncCreateImageType_create(env);
 
     // set standard input fields
-    adb_ncCreateImageType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncCreateImageType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncCreateImageType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncCreateImageType, request, pMeta);
     }
     // set op-specific input fields
     adb_ncCreateImageType_set_instanceId(request, env, instanceId);
@@ -994,21 +1321,37 @@ int ncCreateImageStub(ncStub * st, ncMetadata * meta, char *instanceId, char *vo
     return status;
 }
 
-int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+//!
+//! Handles the client describe sensor request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  historySize teh size of the data history to retrieve
+//! @param[in]  collectionIntervalTimeMs the data collection interval in milliseconds
+//! @param[in]  instIds the list of instance identifiers string
+//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
+//! @param[in]  sensorIds a list of sensor identifiers string
+//! @param[in]  sensorIdsLen the number of sensor identifiers string in the sensorIds list
+//! @param[out] outResources a list of sensor resources created by this request
+//! @param[out] outResourcesLen the number of sensor resources contained in the outResources list
+//!
+//! @return Always return EUCA_OK
+//!
+int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
 {
-    axutil_env_t *env = st->env;
-    axis2_stub_t *stub = st->stub;
+    axutil_env_t *env = pStub->env;
+    axis2_stub_t *stub = pStub->stub;
     adb_ncDescribeSensors_t *input = adb_ncDescribeSensors_create(env);
     adb_ncDescribeSensorsType_t *request = adb_ncDescribeSensorsType_create(env);
 
     // set standard input fields
-    adb_ncDescribeSensorsType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-        if (meta->correlationId) {
-            meta->correlationId = NULL;
+    adb_ncDescribeSensorsType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        if (pMeta->correlationId) {
+            pMeta->correlationId = NULL;
         }
-        EUCA_MESSAGE_MARSHAL(ncDescribeSensorsType, request, meta);
+        EUCA_MESSAGE_MARSHAL(ncDescribeSensorsType, request, pMeta);
     }
     // set custom input fields
     adb_ncDescribeSensorsType_set_historySize(request, env, historySize);
@@ -1038,7 +1381,7 @@ int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long 
 
             *outResourcesLen = adb_ncDescribeSensorsResponseType_sizeof_sensorsResources(response, env);
             if (*outResourcesLen) {
-                *outResources = malloc(sizeof(sensorResource *) * *outResourcesLen);
+                *outResources = EUCA_ZALLOC(*outResourcesLen, sizeof(sensorResource *));
                 if (*outResources == NULL) {
                     logprintfl(EUCAERROR, "out of memory\n");
                     *outResourcesLen = 0;
@@ -1059,28 +1402,28 @@ int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long 
 /*************************
  a template for future ops
  *************************
-int ncOPERATIONStub (ncStub *st, ncMetadata *meta, ...)
+int ncOPERATIONStub (ncStub *pStub, ncMetadata *pMeta, ...)
 {
-    axutil_env_t * env  = st->env;
-    axis2_stub_t * stub = st->stub;
+    axutil_env_t * env  = pStub->env;
+    axis2_stub_t * stub = pStub->stub;
     adb_ncOPERATION_t     * input   = adb_ncOPERATION_create (env); 
     adb_ncOPERATIONType_t * request = adb_ncOPERATIONType_create (env);
-    
+
     // set standard input fields
-    adb_ncOPERATIONType_set_nodeName(request, env, st->node_name);
-    if (meta) {
-      if (meta->correlationId) { meta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncOPERATIONType, request, meta);
+    adb_ncOPERATIONType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+      if (pMeta->correlationId) { pMeta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncOPERATIONType, request, pMeta);
     }
-    
-    // TODO: set op-specific input fields
+
+    //! @todo set op-specific input fields
     // e.g. adb_ncOPERATIONType_set_Z(request, env, Z);
     adb_ncOPERATION_set_ncOPERATION(input, env, request);
 
     int status = 0;
     { // do it
         adb_ncOPERATIONResponse_t * output = axis2_stub_op_EucalyptusNC_ncOPERATION (stub, env, input);
-        
+
         if (!output) {
             logprintfl (EUCAERROR, NULL_ERROR_MSG);
             status = -1;
@@ -1092,10 +1435,10 @@ int ncOPERATIONStub (ncStub *st, ncMetadata *meta, ...)
                 status = 1;
             }
 
-            // TODO: extract the fields from reponse
+            //! @todo extract the fields from reponse
         }
     }
-    
+
     return status;
 }
-*/
+ */

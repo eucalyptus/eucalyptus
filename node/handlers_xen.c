@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/handlers_xen.c
+//! This implements the operations handlers supported by the XEN hypervisor.
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU               /* strnlen */
@@ -85,13 +96,116 @@
 #include "euca_auth.h"
 #include "backing.h"
 
-/* coming from handlers.c */
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define HYPERVISOR_URI                           "xen:///"  ///< Defines the Hypervisor URI to use with KVM
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+// coming from handlers.c
 extern sem *hyp_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
 
-#define HYPERVISOR_URI "xen:///"
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static int doInitialize(struct nc_state_t *nc);
+static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
+static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              CALLBACK STRUCTURE                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! XEN LIBVIRT operation handlers
+struct handlers xen_libvirt_handlers = {
+    .name = "xen",
+    .doInitialize = doInitialize,
+    .doDescribeInstances = NULL,
+    .doRunInstance = NULL,
+    .doTerminateInstance = NULL,
+    .doRebootInstance = doRebootInstance,
+    .doGetConsoleOutput = doGetConsoleOutput,
+    .doDescribeResource = NULL,
+    .doStartNetwork = NULL,
+    .doAssignAddress = NULL,
+    .doPowerDown = NULL,
+    .doAttachVolume = NULL,
+    .doDetachVolume = NULL,
+    .doDescribeSensors = NULL
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Initialize the NC state structure for the XEN hypervisor.
+//!
+//! @param[in] nc a pointer to the NC state structure to initialize
+//!
+//! @return EUCA_OK on success or EUCA_FATAL_ERROR on failure.
+//!
 static int doInitialize(struct nc_state_t *nc)
 {
     char *s = NULL;
@@ -105,25 +219,25 @@ static int doInitialize(struct nc_state_t *nc)
     snprintf(nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
     strcpy(nc->uri, HYPERVISOR_URI);
     nc->convert_to_disk = 0;
-    nc->capability = HYPERVISOR_XEN_AND_HARDWARE;   // TODO: set to XEN_PARAVIRTUALIZED if on older Xen kernel
+    nc->capability = HYPERVISOR_XEN_AND_HARDWARE;   //! @todo set to XEN_PARAVIRTUALIZED if on older Xen kernel
 
     // check connection is fresh
     if (!check_hypervisor_conn()) {
-        return ERROR_FATAL;
+        return EUCA_FATAL_ERROR;
     }
     // get resources
     if (virNodeGetInfo(nc->conn, &ni)) {
         logprintfl(EUCAFATAL, "failed to discover resources\n");
-        return ERROR_FATAL;
+        return EUCA_FATAL_ERROR;
     }
     // dom0-min-mem has to come from xend config file
     s = system_output(nc->get_info_cmd_path);
     if (get_value(s, "dom0-min-mem", &dom0_min_mem)) {
         logprintfl(EUCAFATAL, "did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
-        free(s);
-        return ERROR_FATAL;
+        EUCA_FREE(s);
+        return EUCA_FATAL_ERROR;
     }
-    free(s);
+    EUCA_FREE(s);
 
     // calculate the available memory
     nc->mem_max = ni.memory / 1024 - 32 - dom0_min_mem;
@@ -137,10 +251,19 @@ static int doInitialize(struct nc_state_t *nc)
     if (nc->config_max_cores)
         nc->cores_max = nc->config_max_cores;
 
-    return OK;
+    return EUCA_OK;
 }
 
-static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the reboot instance request.
+//!
+//! @param[in] nc a pointer to the initialized NC state structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or EUCA_NOT_FOUND_ERROR on failure.
+//!
+static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
     ncInstance *instance;
     virConnectPtr *conn;
@@ -149,7 +272,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *inst
     instance = find_instance(&global_instances, instanceId);
     sem_v(inst_sem);
     if (instance == NULL)
-        return NOT_FOUND;
+        return EUCA_NOT_FOUND_ERROR;
 
     /* reboot the Xen domain */
     conn = check_hypervisor_conn();
@@ -175,12 +298,22 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *inst
         }
     }
 
-    return 0;
+    return EUCA_OK;
 }
 
-static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *instanceId, char **consoleOutput)
+//!
+//! Handles the console output retrieval request.
+//!
+//! @param[in]  nc a pointer to the initialized NC state structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[out] consoleOutput a pointer to the unallocated string that will contain the output
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned
+//!         include: EUCA_ERROR, EUCA_NOT_FOUND_ERROR and EUCA_MEMORY_ERROR.
+//!
+static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-
     char *console_output = NULL, *console_append = NULL, *console_main = NULL, *tmp = NULL;
     char console_file[MAX_PATH], dest_file[MAX_PATH], cmd[MAX_PATH];
     char userId[48];
@@ -190,7 +323,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
 
     int bufsize, pid, status;
 
-    *consoleOutput = NULL;
+    EUCA_FREE(*consoleOutput);
 
     // find the instance record
     sem_p(inst_sem);
@@ -202,15 +335,14 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
     sem_v(inst_sem);
     if (!instance) {
         logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
-        return (1);
+        return (EUCA_NOT_FOUND_ERROR);
     }
     rc = stat(console_file, &statbuf);
     if (rc >= 0) {
         fd = open(console_file, O_RDONLY);
         if (fd >= 0) {
-            console_append = malloc(4096);
+            console_append = EUCA_ZALLOC(4096, sizeof(char));
             if (console_append) {
-                bzero(console_append, 4096);
                 rc = read(fd, console_append, (4096) - 1);
             }
             close(fd);
@@ -218,14 +350,12 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
     }
 
     bufsize = sizeof(char) * 1024 * 64;
-    console_main = malloc(bufsize);
+    console_main = EUCA_ZALLOC(bufsize, sizeof(char));
     if (!console_main) {
         logprintfl(EUCAERROR, "[%s] out of memory!\n", instanceId);
-        if (console_append)
-            free(console_append);
-        return (1);
+        EUCA_FREE(console_append);
+        return (EUCA_MEMORY_ERROR);
     }
-    bzero(console_main, bufsize);
 
     if (getuid() != 0) {
         snprintf(console_file, MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
@@ -240,7 +370,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
                 tmp = file2str_seek(dest_file, bufsize, 1);
                 if (tmp) {
                     snprintf(console_main, bufsize, "%s", tmp);
-                    free(tmp);
+                    EUCA_FREE(tmp);
                 } else {
                     snprintf(console_main, bufsize, "NOT SUPPORTED");
                 }
@@ -264,7 +394,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
                 dup2(fd, 2);
                 dup2(2, 1);
                 close(0);
-                // TODO: test virsh console:
+                //! @todo test virsh console:
                 // rc = execl(rootwrap_command_path, rootwrap_command_path, "virsh", "console", instanceId, NULL);
                 rc = execl("/usr/sbin/xm", "/usr/sbin/xm", "console", instanceId, NULL);
                 fprintf(stderr, "execl() failed\n");
@@ -290,7 +420,6 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
                 tv.tv_sec = 0;
                 tv.tv_usec = 500000;
                 rc = select(1, &rfds, NULL, NULL, &tv);
-                bzero(console_main, bufsize);
 
                 count = 0;
                 rc = 1;
@@ -307,10 +436,9 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
         unlink(console_file);
     }
 
-    ret = 1;
-    console_output = malloc((64 * 1024) + 4096);
+    ret = EUCA_ERROR;
+    console_output = EUCA_ZALLOC(((64 * 1024) + 4096), sizeof(char));
     if (console_output) {
-        bzero(console_output, (64 * 1024) + 4096);
         if (console_append) {
             strncat(console_output, console_append, 4096);
         }
@@ -318,32 +446,12 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
             strncat(console_output, console_main, 1024 * 64);
         }
         *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
-        ret = 0;
+        ret = EUCA_OK;
     }
 
-    if (console_append)
-        free(console_append);
-    if (console_main)
-        free(console_main);
-    if (console_output)
-        free(console_output);
+    EUCA_FREE(console_append);
+    EUCA_FREE(console_main);
+    EUCA_FREE(console_output);
 
     return (ret);
 }
-
-struct handlers xen_libvirt_handlers = {
-    .name = "xen",
-    .doInitialize = doInitialize,
-    .doDescribeInstances = NULL,
-    .doRunInstance = NULL,
-    .doTerminateInstance = NULL,
-    .doRebootInstance = doRebootInstance,
-    .doGetConsoleOutput = doGetConsoleOutput,
-    .doDescribeResource = NULL,
-    .doStartNetwork = NULL,
-    .doAssignAddress = NULL,
-    .doPowerDown = NULL,
-    .doAttachVolume = NULL,
-    .doDetachVolume = NULL,
-    .doDescribeSensors = NULL
-};
