@@ -369,7 +369,7 @@ static int sensor_expire_cache_entries(void)
         logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %ds), age %ds\n", sr->resourceName, sr->timestamp,
                    sensor_state->interval_polled, CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL, timestamp_age);
 
-        if (timestamp_age > cache_timeout) {
+        if (cache_timeout && (timestamp_age > cache_timeout)) {
             logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %d seconds, timeout is %d seconds\n", sr->resourceName,
                        timestamp_age, cache_timeout);
             sr->resourceName[0] = '\0'; // marks the slot as empty
