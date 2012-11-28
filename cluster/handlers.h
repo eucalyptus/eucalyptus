@@ -438,7 +438,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -450,7 +450,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

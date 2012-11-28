@@ -155,7 +155,7 @@ int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -167,7 +167,7 @@ int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

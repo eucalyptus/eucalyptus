@@ -121,7 +121,7 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -133,7 +133,7 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

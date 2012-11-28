@@ -118,7 +118,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -130,7 +130,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

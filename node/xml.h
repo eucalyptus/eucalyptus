@@ -124,7 +124,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -136,7 +136,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

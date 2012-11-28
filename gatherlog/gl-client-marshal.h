@@ -122,7 +122,7 @@ int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t *
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -134,7 +134,7 @@ int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t *
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

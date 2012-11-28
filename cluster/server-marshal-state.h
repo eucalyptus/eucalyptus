@@ -124,7 +124,7 @@ adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * sh
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -136,7 +136,7 @@ adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * sh
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                            INLINE IMPLEMENTATION                           |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
