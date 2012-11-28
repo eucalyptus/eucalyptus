@@ -139,7 +139,7 @@ int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              STATIC PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -156,5 +156,11 @@ int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);
 			return (NULL);                                           \
 	} while(0);                                                      \
 }
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #endif /* ! _INCLUDE_EUCA_AXIS_H_ */

@@ -115,6 +115,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 // Date / Time convertion helpers
 static inline time_t datetime_to_unix(axutil_date_time_t * dt, const axutil_env_t * env);
 static inline long long datetime_to_unixms(axutil_date_time_t * dt, const axutil_env_t * env);
@@ -131,12 +137,6 @@ static inline int copy_sensor_counter_from_adb(sensorCounter * sc, adb_metricCou
 static inline int copy_sensor_metric_from_adb(sensorMetric * sm, adb_metricsResourceType_t * metric, axutil_env_t * env);
 static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceType_t * resource, axutil_env_t * env);
 static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr);
-
-/*----------------------------------------------------------------------------*\
- |                                                                            |
- |                              STATIC PROTOTYPES                             |
- |                                                                            |
-\*----------------------------------------------------------------------------*/
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -212,7 +212,7 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                           INLINE IMPLEMENTATION                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

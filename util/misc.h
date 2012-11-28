@@ -198,7 +198,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              STATIC PROTOTYPES                             |
+ |                           STATIC INLINE PROTOTYPES                         |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -210,5 +210,11 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 
 #define SP(_a)                                   (((_a) != NULL) ? (_a) : "UNSET")
 #define RANDALPHANUM()                           ((rand() % 2) ? (rand() % 26 + 97) : ((rand() % 2) ? (rand() % 26 + 65) : (rand() % 10 + 48)))
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #endif /* ! _INCLUDE_MISC_H_ */
