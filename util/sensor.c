@@ -224,6 +224,7 @@ static void sensor_bottom_half(void);
 static void *sensor_thread(void *arg);
 static void init_state(int resources_size);
 static __inline__ boolean is_empty_sr(const sensorResource * sr);
+static int sensor_expire_cache_entries(void)
 static void log_sensor_resources(const char *name, const sensorResource ** srs, int srsLen);
 static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *resourceName, const char *resourceType, const char *resourceUuid);
 static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * sr, const char *metricName);
@@ -532,7 +533,7 @@ static void init_state(int resources_size)
 //!
 //! @return TRUE if the given sensor is not created/initialized or FALSE otherwise
 //!
-__inline__ static boolean is_empty_sr(const sensorResource * sr)
+static __inline__ boolean is_empty_sr(const sensorResource * sr)
 {
     return (sr == NULL || sr->resourceName[0] == '\0');
 }
@@ -565,7 +566,7 @@ static int sensor_expire_cache_entries(void)
         time_t cache_timeout = sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;
         logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %ds), age %ds\n", sr->resourceName, sr->timestamp,
                    sensor_state->interval_polled, CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL, timestamp_age);
-        if (timestamp_age > cache_timeout) {
+        if (cache_timeout && (timestamp_age > cache_timeout)) {
             logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %d seconds, timeout is %d seconds\n", sr->resourceName,
                        timestamp_age, cache_timeout);
             sr->resourceName[0] = '\0'; // marks the slot as empty
