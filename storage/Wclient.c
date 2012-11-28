@@ -95,8 +95,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define BUFSIZE                                  262144 /* should be big enough for CERT and the signature */
-#define STRSIZE                                    1024 /* for short strings: files, hosts, URLs */
+#define BUFSIZE                                  262144 //!< should be big enough for CERT and the signature
+#define STRSIZE                                    1024 //!< for short strings: files, hosts, URLs
+
 #define WALRUS_ENDPOINT                          "/services/Walrus"
 #define DEFAULT_HOST_PORT                        "localhost:8773"
 #define DEFAULT_COMMAND                          "GetObject"
@@ -177,10 +178,14 @@ boolean debug = FALSE;
  //! @param[in] argc the number of parameter passed on the command line
  //! @param[in] argv the list of arguments
  //!
- //! @return OK on success or ERROR on failure.
+ //! @return EUCA_OK
  //!
 int main(int argc, char *argv[])
 {
+    int ch = 0;
+    int result = 0;
+    int tmp_fd = -1;
+    char *tmp_name = NULL;
     char *command = DEFAULT_COMMAND;
     char *hostport = NULL;
     char *manifest = NULL;
@@ -188,9 +193,9 @@ int main(int argc, char *argv[])
     char *url = NULL;
     char *login = NULL;
     char *password = NULL;
-    int do_compress = 0;
-    int result = 0;
-    int ch = 0;
+    char request[STRSIZE] = { 0 };
+    boolean do_compress = FALSE;
+    boolean do_get = FALSE;
 
     while ((ch = getopt(argc, argv, "dh:m:f:zu:l:p:")) != -1) {
         switch (ch) {
@@ -216,7 +221,7 @@ int main(int argc, char *argv[])
             password = optarg;
             break;
         case 'z':
-            do_compress = 1;
+            do_compress = TRUE;
             break;
         case '?':
         default:
@@ -231,19 +236,18 @@ int main(int argc, char *argv[])
         command = argv[0];
     }
 
-    int do_get;
     if (strcmp(command, "GetDecryptedImage") == 0 || strcmp(command, "GetObject") == 0) {
         if (manifest == NULL) {
             fprintf(stderr, "Error: manifest must be specified\n");
             USAGE();
         }
-        do_get = 1;
+        do_get = TRUE;
     } else if (strcmp(command, "HttpPut") == 0) {
         if (url == NULL || file_name == NULL) {
             fprintf(stderr, "Error: URL and input file must be specified\n");
             USAGE();
         }
-        do_get = 0;
+        do_get = FALSE;
     } else {
         fprintf(stderr, "Error: unknown command [%s]\n", command);
         USAGE();
@@ -251,16 +255,14 @@ int main(int argc, char *argv[])
 
     if (do_get) {
         /* use a temporary file for network data */
-        char *tmp_name = strdup("walrus-download-XXXXXX");
-        int tmp_fd = safe_mkstemp(tmp_name);
+        tmp_name = strdup("walrus-download-XXXXXX");
+        tmp_fd = safe_mkstemp(tmp_name);
         if (tmp_fd < 0) {
             fprintf(stderr, "Error: failed to create a temporary file\n");
             USAGE();
         }
         close(tmp_fd);
 
-        int result;
-        char request[STRSIZE];
         if (hostport) {
             snprintf(request, STRSIZE, "http://%s%s/%s", hostport, WALRUS_ENDPOINT, manifest);
             if (strcmp(command, "GetObject") == 0) {
@@ -295,5 +297,5 @@ int main(int argc, char *argv[])
     } else {                    // HttpPut
         result = http_put(file_name, url, login, password);
     }
-    return 0;
+    return (EUCA_OK);
 }
