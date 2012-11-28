@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -112,7 +115,7 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED VARIABLES                             |
+ |                              GLOBAL VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -159,7 +162,7 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_
 //!
 adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_t * env)
 {
-    int rc = 0;
+    int rc = EUCA_OK;
     axis2_bool_t status = AXIS2_TRUE;
     char *userId = NULL;
     char *correlationId = NULL;
@@ -228,7 +231,7 @@ adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_
 adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_t * env)
 {
     int rc = 0;
-    axis2_bool_t status = AXIS2_FALSE;
+    axis2_bool_t status = AXIS2_TRUE;
     char *userId = NULL;
     char *correlationId = NULL;
     char *service = NULL;
@@ -245,7 +248,6 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_
     service = adb_getKeysType_get_serviceTag(request, env);
     response = adb_getKeysResponseType_create(env);
 
-    status = AXIS2_TRUE;
     if ((rc = doGetKeys(service, &outCCCert, &outNCCert)) != EUCA_OK) {
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");

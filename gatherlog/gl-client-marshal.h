@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -131,7 +134,7 @@ int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t *
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                              INLINE DEFINITION                             |
+ |                            INLINE IMPLEMENTATION                           |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 

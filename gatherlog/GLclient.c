@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -111,7 +114,7 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED VARIABLES                             |
+ |                              GLOBAL VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -188,7 +191,7 @@ int main(int argc, char **argv)
     axis2_char_t endpoint_uri[256] = { 0 };
     axis2_stub_t *stub = NULL;
 
-    if(argc < NB_ARG) {
+    if (argc < NB_ARG) {
         printf("ERROR: passed %d arguments, expected %d\n", argc, NB_ARG);
         return (EUCA_INVALID_ERROR);
     }
@@ -199,37 +202,37 @@ int main(int argc, char **argv)
     }
 
     snprintf(endpoint_uri, 256, " http://%s/axis2/services/EucalyptusGL", argv[APPNAME_ARG]);
-    if((env = axutil_env_create_all("/tmp/fooh", AXIS2_LOG_LEVEL_TRACE)) == NULL) {
-        printf("ERROR: fail to retrieve AXIS2 environment.");
+    if ((env = axutil_env_create_all("/tmp/fooh", AXIS2_LOG_LEVEL_TRACE)) == NULL) {
+        printf("ERROR: fail to retrieve AXIS2 environment.\n");
         return (EUCA_ERROR);
     }
 
-    if((stub = axis2_stub_create_EucalyptusGL(env, client_home, endpoint_uri)) == NULL) {
-        printf("ERROR: fail to retrieve AXIS2 stub.");
+    if ((stub = axis2_stub_create_EucalyptusGL(env, client_home, endpoint_uri)) == NULL) {
+        printf("ERROR: fail to retrieve AXIS2 stub.\n");
         return (EUCA_ERROR);
     }
 
     if (!strcmp(argv[REQUEST_ARG], "getLogs")) {
         if ((rc = gl_getLogs(argv[SERVICE_ARG], &clog, &nlog, &hlog, &alog, env, stub)) == EUCA_OK) {
             if (clog)
-                printf("CLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *) clog), strlen(clog)));
+                printf("CLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)clog), strlen(clog)));
             if (nlog)
-                printf("NLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *) nlog), strlen(nlog)));
+                printf("NLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)nlog), strlen(nlog)));
             if (hlog)
-                printf("HLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *) hlog), strlen(hlog)));
+                printf("HLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)hlog), strlen(hlog)));
             if (alog)
-                printf("ALOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *) alog), strlen(alog)));
+                printf("ALOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)alog), strlen(alog)));
         }
     } else if (!strcmp(argv[REQUEST_ARG], "getKeys")) {
         if ((rc = gl_getKeys(argv[SERVICE_ARG], &cccert, &nccert, env, stub)) == EUCA_OK) {
             if (cccert)
-                printf("CCCERT\n----------\n%s\n-----------\n", base64_dec(((unsigned char *) cccert), strlen(cccert)));
+                printf("CCCERT\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)cccert), strlen(cccert)));
             if (nccert)
-                printf("NCCERT\n----------\n%s\n-----------\n", base64_dec(((unsigned char *) nccert), strlen(nccert)));
+                printf("NCCERT\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)nccert), strlen(nccert)));
         }
     } else {
         printf("ERROR: Invalid argument %s\n", argv[REQUEST_ARG]);
-        return(EUCA_INVALID_ERROR);
+        return (EUCA_INVALID_ERROR);
     }
 
     return (rc);

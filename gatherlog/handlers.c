@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -122,7 +125,7 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED VARIABLES                             |
+ |                              GLOBAL VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -374,7 +377,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
     axis2_stub_t *stub = NULL;
 
     if (!service || !outCCCert || !outNCCert) {
-        printf("Invalid params: service=%s, outCCCert=%p, outNCCert=%p\n", service, outCCCert, outNCCert);
+        printf("ERROR: Invalid params: service=%s, outCCCert=%p, outNCCert=%p\n", service, outCCCert, outNCCert);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -382,7 +385,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
 
     bufsize = 1000 * 1024;
     if ((buf = EUCA_ALLOC(bufsize, sizeof(char))) == NULL) {
-        printf("Out of memory!\n");
+        printf("ERROR: Out of memory!\n");
         return (EUCA_MEMORY_ERROR);
     }
 
@@ -395,7 +398,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             home = strdup("");
 
         if (!home) {
-            printf("Out of memory!\n");
+            printf("ERROR: Out of memory!\n");
             EUCA_FREE(buf);
             return (EUCA_MEMORY_ERROR);
         }
@@ -405,7 +408,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             bzero(buf, bufsize);
             lseek(fd, -1 * bufsize, SEEK_END);
             if ((rc = read(fd, buf, bufsize)) > 0) {
-                *outCCCert = base64_enc((unsigned char *)buf, strlen(buf));
+                *outCCCert = base64_enc(((unsigned char *)buf), strlen(buf));
             }
             close(fd);
         }
@@ -416,7 +419,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             lseek(fd, -1 * bufsize, SEEK_END);
             // make sure that buf is NULL terminated
             if ((rc = read(fd, buf, bufsize - 1)) > 0) {
-                *outNCCert = base64_enc((unsigned char *)buf, strlen(buf));
+                *outNCCert = base64_enc(((unsigned char *)buf), strlen(buf));
             }
             close(fd);
         }
@@ -430,9 +433,14 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
 
             env = axutil_env_create_all(NULL, 0);
             if ((client_home = AXIS2_GETENV("AXIS2C_HOME")) == NULL) {
+                printf("ERROR: cannot retrieve AXIS2_HOME environment variable.\n");
                 exit(1);
             } else {
-                stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
+                if ((stub = axis2_stub_create_EucalyptusGL(env, client_home, service)) == NULL) {
+                    printf("ERROR: cannot retrieve AXIS2 stub.\n");
+                    exit(1);
+                }
+
                 ccert = ncert = NULL;
                 if ((rc = gl_getKeys("self", &ccert, &ncert, env, stub)) == EUCA_OK) {
                     bzero(buf, bufsize);
