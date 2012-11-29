@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,10 +63,57 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef SERVER_MARSHAL_STATE_H
-#define SERVER_MARSHAL_STATE_H
+#ifndef _INCLUDE_SERVER_MARSHAL_STATE_H_
+#define _INCLUDE_SERVER_MARSHAL_STATE_H_
+
+//!
+//! @file cluster/server-marshal-state.h
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include "axis2_skel_EucalyptusCC.h"
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t * describeServices, const axutil_env_t * env);
 adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startService, const axutil_env_t * env);
@@ -72,4 +122,22 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableSe
 adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disableService, const axutil_env_t * env);
 adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * shutdownService, const axutil_env_t * env);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_SERVER_MARSHAL_STATE_H_ */

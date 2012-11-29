@@ -1,0 +1,330 @@
+/******************************************************************************
+ *                Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ *
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ *
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ *
+ *  Software License Agreement (BSD License)
+ *
+ *         Copyright (c) 2008, Regents of the University of California
+ *
+ *  Redistribution and use of this software in source and binary forms, with
+ *  or without modification, are permitted provided that the following
+ *  conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice,
+ *  this list of conditions and the following disclaimer.
+ *
+ *  Redistributions in binary form must reproduce the above copyright
+ *  notice, this list of conditions and the following disclaimer in the
+ *  documentation and/or other materials provided with the distribution.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *  ANY SUCH LICENSES OR RIGHTS.
+ ******************************************************************************/
+
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
+//!
+//! @file doxygen/extra_pages/changelog.txt
+//! Use by doxygen to fill in for some of the documentation
+//!
+
+#ifndef _EUCALYPTUS_CHANGELOG_H_
+#define _EUCALYPTUS_CHANGELOG_H_
+
+//!
+//! @page changelog_page Change Log
+//!
+//! @section RELEASE_3_1_1 Wed Aug 28 2012 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_3_1_1 Version 3.1.1
+//!     @subsection RESOLVE_3_1_1 Resolves the following issues:
+//!     \li    EUCA-280  CLC assigns a public IP to VMs after elastic IP association/disassociation while using --addressing=private
+//!     \li    EUCA-304  Ability to customize "eucalyptus" string in DNS population
+//!     \li    EUCA-1473 DescribeInstancesResponse timestamps have the wrong format
+//!     \li    EUCA-1492 Delete on terminate false is always reported as true
+//!     \li    EUCA-1636 DescribeSnapshotsResponse timestamps have the wrong format
+//!     \li    EUCA-1792 CLC accepts RunInstances requests with MinCount > MaxCount
+//!     \li    EUCA-2002 Allocating and assigning addresses doesn't work
+//!     \li    EUCA-2024 Special character in Filename and inconsistent behavior of Walrus
+//!     \li    EUCA-2046 Policy using "numlteq" is rejected (short form of NumericLessThanEquals)
+//!     \li    EUCA-2204 euca-disassociate-address ends up giving new public ip address to instance
+//!     \li    EUCA-2260 postgresql-binaries.properties.in should not be in eucalyptus-postgresql.jar
+//!     \li    EUCA-2311 Databases are created with LATIN1 encoding
+//!     \li    EUCA-2327 Duplicate address assignments to the same instance
+//!     \li    EUCA-2333 EIAM Extension Quota Policy Issue => ec2:quota-vminstancenumber
+//!     \li    EUCA-2340 VMware Broker: XML config option "vswitch" not honored
+//!     \li    EUCA-2345 cloud.vmstate.instance_subdomain is not honored by CLC
+//!     \li    EUCA-2413 NC Crashes when bridge device isn't configured
+//!     \li    EUCA-2417 issues upgrading to Eucalyptus 3.1.0 on the server running CLC, Walrus, CC, SC
+//!     \li    EUCA-2418 upgrade from 3.0.2 to 3.1 fails complains quota policy has got NumericLessThanEquals
+//!     \li    EUCA-2430 invalid error message when run instance exceed quota
+//!     \li    EUCA-2445 First Time Login via WebUI - No Check Old Password/New Password
+//!     \li    EUCA-2547 HMAC signature verification fails for empty or absent parameter value
+//!     \li    EUCA-3066 Upgrade fails if Netapp snapshot directory exists
+//!     \li    EUCA-3270 CentOS 6: Cleanstop on CC not executing cleanup procedure
+//!     \li    EUCA-3313 Ability to customize "eucalyptus" string in DNS population
+//!     \li    EUCA-3314 Special character in Filename and inconsistent behavior of Walrus
+//!     \li    EUCA-3315 Allocating and assigning addresses doesn't work
+//!
+//! @section RELEASE_3_1_0 Wed Jul 7 2012 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_3_1_0 Version 3.1.0
+//!     @subsection NEW_3_1_0 New Features:
+//!     \li New packaged platform support (Added support for CentOS 6.x and Ubuntu 12.04 LTS)
+//!     \li vSphere 5 support (plugin only).
+//!     @subsection RESOLVE_3_1_0 Resolves the following issues:
+//!     \li    EUCA-587  Exclude .snapshot directories during upgrade process
+//!     \li    EUCA-808  clc: add back support for '--addressing private'
+//!     \li    EUCA-1070 Walrus: Overwritting object causes object to become inaccessible
+//!     \li    EUCA-1383 Issue when reconfiguring cc vnet ip range and mask
+//!     \li    EUCA-1487 eee: euca-describe-property occasionally exits with an OOM
+//!     \li    EUCA-1497 cc: centos kernel oops if too many vlan interfaces left enabled
+//!     \li    EUCA-1500 deleteOnTerminate=true doesn't delete a volume
+//!     \li    EUCA-1513 use of wildcard chars in params to services/Eucalyptus URL allows to detect valid AWSAccessKeyId
+//!     \li    EUCA-1514 MySQL connections are refused in some cases
+//!     \li    EUCA-1515 initial db sync retry logic can hang
+//!     \li    EUCA-1528 review all uses of db queries with LIKE condition
+//!     \li    EUCA-1546 CC <-> NC comm fails when number of volume records on an instance exceeds 64
+//!     \li    EUCA-1554 IAM: Account admin can not see the policies of users and groups within account
+//!     \li    EUCA-1563 euare: uploading new policy with the same name does not overwrite old policy
+//!     \li    EUCA-1596 Upgrade needs to migrate images after all users have been migrated
+//!     \li    EUCA-1621 StartInstance fails for SYSTEM/STATIC mode
+//!     \li    EUCA-1629 if instances are terminated quickly after being launched and then new instances are launched right away, new instances do not get public IPs
+//!     \li    EUCA-1647 Upgrade: After upgrade on RHEL5, euca-describe-instances shows public key instead of keypair name
+//!     \li    EUCA-1689 CC: metadata redirect is not re-applied in non HA mode if CC is DISABLED/ENABLED and pubinterface == privinterface
+//!     \li    EUCA-1693 EUARE: a salt should be used when hashing and storing user passwords
+//!     \li    EUCA-1694 NC: under load, NC fails to respond to Describe* requests promptly
+//!     \li    EUCA-1700 eustore-install-image should not download an image into a predictable filename in /tmp
+//!     \li    EUCA-1701 eustore-install-image should not untar and bundle images using predictable dir and filenames in /tmp
+//!     \li    EUCA-1710 cluster-pk.pem should not be on NC host
+//!     \li    EUCA-1713 SSL/TLS services should support cipher configuration and disable weak ciphers by default
+//!     \li    EUCA-1714 Secret key generation can have insufficient random data
+//!     \li    EUCA-1717 Walrus: anyone can access objects on Walrus by submitting correctly signed requests
+//!     \li    EUCA-1723 VMWareBroker: anyone can send SOAP messages to VMWareBroker
+//!     \li    EUCA-1735 CLC Reports incorrect root-device-type
+//!     \li    EUCA-1738 Walrus: DeleteWalrusSnapshot is missing an authorization check
+//!     \li    EUCA-1749 Non-SOAP requests can be replayed by changing the Signature "format"
+//!     \li    EUCA-1759 Let eucalyptus build when given the jars that it needs, not a file called cloud-lib.tar.gz
+//!     \li    EUCA-1766 HA CC upgrade: Disabled CC continues to have NAT rules for an instance
+//!     \li    EUCA-1767 Replace --db-home option with a way to supply paths to binaries
+//!     \li    EUCA-1768 Configure database binary locations somewhere other than CLOUD_OPTS
+//!     \li    EUCA-1778 CC: empty security group iptables chains and rules for disabled security groups may remain in iptables after instances are terminated
+//!     \li    EUCA-1781 db: connection timeout does not trigger when remote host is down
+//!     \li    EUCA-1786 When changing ADDR_PER_NET, old security groups are no longer usable
+//!     \li    EUCA-1787 EBS: snapshot is not protected by permission checking in CreateVolume
+//!     \li    EUCA-1788 IAM: user name needs to allow back slash and underscore for AD sync
+//!     \li    EUCA-1807 Dashboard: Images page - "EuStore documentation" links to page not found
+//!     \li    EUCA-1960 RE: 3.0.1 Released - upgrade failed - netapp .snapshot directory
+//!     \li    EUCA-1969 metadata IP address is not added to the private interface when rebooting a single-host frontend
+//!     \li    EUCA-1980 HA not working as expected when MySQL process is killed on ENABLED machine
+//!     \li    EUCA-1983 Manifest File Larger Than 100K Causes Failed Instance Launch
+//!     \li    EUCA-1985 BFEBS Instances Not Reported Correctly => DescribeInstance
+//!     \li    EUCA-1990 Stale Rules Left in iptables
+//!     \li    EUCA-2001 Instance Fails to Launch Even When There is Enough Disk Space
+//!     \li    EUCA-2021 DB init fails when euca.db.home doesn't end with '/'
+//!     \li    EUCA-2025 CC: on precise, iptables no longer supports negation with '-d ! \<net\>' but instead only supports '! -d \<net\>'
+//!     \li    EUCA-2044 CC: on precise, icmp type must now be specified to iptables for icmp rules to apply
+//!     \li    EUCA-2045 JMX management is enabled on port 1099
+//!     \li    EUCA-2165 NC crash on startup when configured for MANAGED-NOVLAN
+//!     \li    EUCA-2173 Boto 2.4 causes CLC to return XML with euca: namespaces if no api_version is specified
+//!     \li    EUCA-2175 Reporting: Storage report shows null where account name should be
+//!     \li    EUCA-2176 Reporting: Exception thrown when generating report grouped by account
+//!     \li    EUCA-2187 QA failures, file2str needs to handle 0 as a valid fd
+//!     \li    EUCA-2189 Add/remove *.LICENSE files for current JARs
+//!     \li    EUCA-2201 NC: race condition exists between instance cache copy and operations that update global instance list
+//!     \li    EUCA-2209 Cannot "euca_conf --initialize" on Ubuntu Lucid
+//!     \li    EUCA-2222 euca-clone-volume fails to bind host / component fields
+//!     \li    EUCA-2224 latest eucalytpus-cloud produced error when starting. Causes faststart to fail out.
+//!     \li    EUCA-2226 Upgrade to 3.1.0 fails when accounts or users have been deleted from a cloud
+//!     \li    EUCA-2228 Failing to create snapshots using netapp
+//!     \li    EUCA-2232 Loop device warning message when starting NC on Lucid
+//!     \li    EUCA-2237 Outbound request contextual information is not always cleaned up
+//!     \li    EUCA-2245 euca-get-credentials result in index out of range error
+//!     \li    EUCA-2247 NC: artifact provisioning deadlocks (technically, blocks on a super-long timeout)
+//!     \li    EUCA-2249 Standalone walrus /vmware failing during QA runs
+//!     \li    EUCA-2257 apparmor needs to be disabled and remove on NCs in order for instances to launch
+//!     \li    EUCA-2270 Upgrade: Failure to upgrade image tables
+//!     \li    EUCA-2287 NPE during report generation
+//!     \li    EUCA-2288 IllegalArgumentException running S3
+//!     \li    EUCA-2294 nc: precise: getstats.pl isn't gathering block data when virtio is enabled
+//!     \li    EUCA-2301 Full set of S3 canned-acls should be supported by Walrus
+//!     \li    EUCA-2308 Registering VMware broker on a second cluster in a cloud will kill all clusters' SCs if broker libs not installed
+//!     \li    EUCA-2310 euca-describe-* admin tools can generate invalid format strings
+//!     \li    EUCA-2314 Upgrade: Unable to attach volume created before upgrade
+//!     \li    EUCA-2318 Upgrade does not handle vmware broker component
+//!     \li    EUCA-2319 sc: reporting: cannot generate 'storage' reports
+//!     \li    EUCA-2326 Upgrade: Unable to upgrade due to ConstraintViolationException
+//!     \li    EUCA-2328 Can not use pre-existing sec groups post 3.0.2 to 3.1 upgrade
+//!
+//!     <b>Bug tracker</b>: https://eucalyptus.atlassian.net\n
+//!     <b>Downloads</b>: http://www.eucalyptus.com/download/eucalyptus
+//!
+//! @section RELEASE_2_0_1 Wed Oct 20 2010 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_2_1_0 Version 2.0.1
+//!     Bug fix minor release.
+//!     @subsection FIXES_2_1_0 Fixes launchpad bugs:
+//!     \li    595421 Eucalyptus doesn't start with latest stable version of "Groovy"
+//!     \li    622818 unexpected errors after a sequence of tests
+//!     \li    628328 euca_conf --register-cluster is not idempotent
+//!     \li    632263 ProductCode has ambigious import, can cause build failure on some systems
+//!     \li    637659 metadata service returns 500 error
+//!     \li    639639 euca-* commands stopped responding
+//!     \li    644482 Walrus signature verification in image decryption bug
+//!     \li    658022 heartbeat service leaks connection context
+//!     \li    658023 registration token computed incorrectly
+//!     \li    661565 With versioning turned on, PUT object does not return version id in the header
+//!     \li    664002 euca_conf --list-nodes returns nothing even when nodes are registered
+//!
+//!     @subsection SUB_2_0_1 which include fixes to the following sub-systems:
+//!     \li External dashboard registration
+//!     \li Meta-data service access
+//!     \li S3 Versioning
+//!     \li Walrus image decryption
+//!     \li Component registration
+//!
+//! @section RELEASE_2_0_0 Tue Aug 24 2010 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_2_0_0 Version 2.0.0
+//!     \li Stability/Performance point-release.
+//!     \li Back-end (CC/NC) scale improvements.
+//!     \li CLC fixes including backend database pooling and persistence improvements, SSL support.
+//!     \li euca_conf fixes including the ability to list nodes (and VMs).
+//!     \li Fixes to Walrus for specific use cases, bugs and stability, as well as beta support for the S3 server logging API, fixes to bittorrent support.
+//!     \li Storage Controller scalability improvements.
+//!     \li Updated packages for current versions of supported distributions.
+//!     @subsection FIXES_2_0_0 Closes many bugs, including:
+//!     \li    453416 metadata service does not provide sub-directory lists for root and api level
+//!     \li    461156 User data is not parsed correctly by Eucalyptus in some cases
+//!     \li    477776 Query string authentication does not work in some cases
+//!     \li    498379 ModifyImageAttribute does not correctly remove group perms
+//!     \li    513842 block-device-mapping in metadata has 'ephemeral' not 'ephemeral0'
+//!     \li    517769 "Server internal error" when acl is set on a bucket using a cannel acl and no access control list (xml) in the request
+//!     \li    518601 Provide a way to disable tunneling in eucalyptus.conf
+//!
+//! @section RELEASE_1_6_2 Fri Feb 12 2010 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_1_6_2 Version 1.6.2
+//!     \li Stability/Performance point-release.
+//!     \li Back-end (CC/NC) scale improvements.
+//!     \li CLC fixes including backend database pooling and persistence improvements, SSL support.
+//!     \li euca_conf fixes including the ability to list nodes (and VMs).
+//!     \li Fixes to Walrus for specific use cases, bugs and stability, as well as beta support for the S3 server logging API, fixes to bittorrent support.
+//!     \li Storage Controller scalability improvements.
+//!     \li Updated packages for current versions of supported distributions.
+//!     @subsection FIXE_1_6_2 Closes many bugs, including:
+//!
+//!      #477776, #461156, #477776, #498379, #498379, #517769, #518601, #513842, #453416, #328146
+//!
+//! @section RELEASE_1_6_1 Thu Nov 5 2009 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_1_6_1 Version 1.6.1
+//!     \li Added support for multiple clusters (availability zones)
+//!     \li Allow components (cloud, walrus, sc, cc, nc) to be hosted on different machines
+//!     \li Support for dynamic instance and bucket DNS
+//!     \li Better startup (no need for ant anymore, much faster)
+//!     \li Reworked part of the network provisioning code for multi-cluster and better handling public IP addressing
+//!     \li Hypervisor improvements
+//!      <ul>
+//!        <li> switched default kvm ethernet interface to e1000 </li>
+//!        <li> serialized calls to the xen hypervisor </li>
+//!      </ul>
+//!     \li Added helpers to integrate with nagios and/or ganglia
+//!     \li The Web UI is now theme-able (at compile time)
+//!     \li A lot of work toward long term stability: run the code thru different code/memory checker, re-engineer the java stack to be faster and more robust.
+//!     @subsection FIXE_1_6_1 Closes bugs:
+//!
+//!       #426469, #426576, #428546, #428654, #428710, #430260, #430356, #430888,
+//!       #430922, #431939, #430830, #431933, #431935, #426469, #431934, #431937,
+//!       #431931, #426467, #430830, #426389, #426389, #430944, #432604, #432823,
+//!       #436274, #436276, #436290, #436313, #436407, #436885, #436917, #437014,
+//!       #437026, #436407, #430957, #430226, #388934, #440744, #440817, #440950,
+//!       #441033, #441035, #441020, #441019, #443325, #443325, #443314, #444838,
+//!       #445206, #444908, #445206, #444908, #445997, #447585, #447555, #444838,
+//!       #449135, #438565, #449948, #430266, #398867, #449948, #401996, #449944,
+//!       #450915, #451795, #454405, #456877, #456878, #461394, #461444, #460085,
+//!       #404842, #462940, #456878, #406049
+//!
+//! @subsection RELEASE_1_5_2 Fri Jul 17 2009 Eucalyptus Systems (support@eucalyptus.com)
+//!     * Version 1.5.2
+//!     * A lot of bug fixes and improvements
+//!     * Eucalytpus now runs as user 'eucalyptus' by default
+//!     * added new UI tab 'Extras' that includes links to pre-packaged images
+//!       and client tools
+//!     * Fixed support for client tools (including fixes to the REST interface).
+//!     * Closes bugs:
+//!
+//!       #368975 #375809 #375805 #376575 #354787 #382522 #357350 #375105
+//!       #359855 #384069 #359855 #357499 #384117 #384119 #375093 #384119
+//!       #356580 #384123 #359855 #356389 #384069 #384119 #357849 #359855
+//!       #384124 #384126 #384126 #384652 #385660 #386430 #357440
+//!
+//! @section RELEASE_1_5_1 Fri May  1 2009 Eucalyptus Systems (support@eucalyptus.com)
+//!     @subsection VERSION_1_5_1 Version 1.5.1
+//!     \li Elastic Block Store (EBS) support (volumes & snapshots)
+//!     \li Walrus improvements:
+//!         <ul>
+//!           <li> Support for groups in ACLS </li>
+//!           <li> Fixed issues with meta data support </li>
+//!           <li> Web browser form-based uploads via HTTP POST </li>
+//!           <li> Object copying </li>
+//!           <li> Query string authentication </li>
+//!           <li> Support for arbitrary key names </li>
+//!           <li> Compressed image downloads and fixes to image caching </li>
+//!           <li> Reduced memory requirement </li>
+//!         </ul>
+//!     \li Network improvement: new MANAGED-NOVLAN mode
+//!     \li Node-side improvements:
+//!         <ul>
+//!           <li> Support for the KVM hypervisor </li>
+//!           <li> Compression & retries on Walrus downloads </li>
+//!           <li> Reworked caching (now with configurable limit) </li>
+//!         </ul>
+//!     \li Web UI improvements:
+//!         <ul>
+//!           <li> Cloud registration with Rightscale (from admin's 'Credentials' tab) </li>
+//!           <li> New configuration options for Walrus </li>
+//!           <li> Better screening of usernames </li>
+//!           <li> Fixed account confirmation glitches </li>
+//!         </ul>
+//!     \li Building and installation improvements
+//!         <ul>
+//!           <li> Better Java installation checking </li>
+//!           <li> New command-line administration: euca_conf -addcluster ...  -addnode ... </li>
+//!           <li> Non-root user deployment of Eucalyptus </li>
+//!           <li> Binary packages for more distributions (Ubuntu et al) </li>
+//!         </ul>
+//!
+
+#endif /* ! _EUCALYPTUS_CHANGELOG_H_ */

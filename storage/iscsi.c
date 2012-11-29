@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file storage/iscsi.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,29 +90,109 @@
 #include "misc.h"
 #include "ipc.h"
 
-#define MAX_OUTPUT 4096
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#define CONNECT_TIMEOUT 120
-#define DISCONNECT_TIMEOUT 120
-#define GET_TIMEOUT 60
+#define MAX_OUTPUT                               4096
 
-static char home[MAX_PATH] = "";
-static char connect_storage_cmd_path[MAX_PATH];
-static char disconnect_storage_cmd_path[MAX_PATH];
-static char get_storage_cmd_path[MAX_PATH];
-static sem *iscsi_sem;          // for serializing attach and detach invocations
+#define CONNECT_TIMEOUT                           120
+#define DISCONNECT_TIMEOUT                        120
+#define GET_TIMEOUT                                60
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static char home[MAX_PATH] = { 0 };
+static char connect_storage_cmd_path[MAX_PATH] = { 0 };
+static char disconnect_storage_cmd_path[MAX_PATH] = { 0 };
+static char get_storage_cmd_path[MAX_PATH] = { 0 };
+
+static sem *iscsi_sem = NULL;   //!< for serializing attach and detach invocations
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void init_iscsi(const char *euca_home);
+char *connect_iscsi_target(const char *dev_string);
+int disconnect_iscsi_target(const char *dev_string);
+char *get_iscsi_target(const char *dev_string);
+int check_iscsi(const char *dev_string);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in] euca_home
+//!
 void init_iscsi(const char *euca_home)
 {
-    const char *tmp;
+    const char *tmp = NULL;
     if (euca_home) {
         tmp = euca_home;
     } else {
-        tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
-        if (!tmp) {
+        if ((tmp = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
             tmp = "/opt/eucalyptus";
         }
     }
+
     safe_strncpy(home, tmp, sizeof(home));
     snprintf(connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
     snprintf(disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
@@ -109,10 +200,19 @@ void init_iscsi(const char *euca_home)
     iscsi_sem = sem_alloc(1, "mutex");
 }
 
+//!
+//!
+//!
+//! @param[in] dev_string
+//!
+//! @return a pointer
+//!
 char *connect_iscsi_target(const char *dev_string)
 {
-    char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
-    int ret;
+    char command[MAX_PATH] = { 0 };
+    char stdout_str[MAX_OUTPUT] = { 0 };
+    char stderr_str[MAX_OUTPUT] = { 0 };
+    int ret = 0;
 
     assert(strlen(home));
 
@@ -124,17 +224,24 @@ char *connect_iscsi_target(const char *dev_string)
     sem_v(iscsi_sem);
     logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
-    if (ret == 0) {
-        return strdup(stdout_str);
-    } else {
-        return NULL;
-    }
+    if (ret == 0)
+        return (strdup(stdout_str));
+    return (NULL);
 }
 
+//!
+//!
+//!
+//! @param[in] dev_string
+//!
+//! @return -1 for any failures, 0 if a timeout occured or a positive value is success.
+//!
 int disconnect_iscsi_target(const char *dev_string)
 {
-    char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
-    int ret;
+    char command[MAX_PATH] = { 0 };
+    char stdout_str[MAX_OUTPUT] = { 0 };
+    char stderr_str[MAX_OUTPUT] = { 0 };
+    int ret = 0;
 
     assert(strlen(home));
 
@@ -146,13 +253,22 @@ int disconnect_iscsi_target(const char *dev_string)
     sem_v(iscsi_sem);
     logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
-    return ret;
+    return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] dev_string
+//!
+//! @return a pointer
+//!
 char *get_iscsi_target(const char *dev_string)
 {
-    char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
-    int ret;
+    char command[MAX_PATH] = { 0 };
+    char stdout_str[MAX_OUTPUT] = { 0 };
+    char stderr_str[MAX_OUTPUT] = { 0 };
+    int ret = 0;
 
     assert(strlen(home));
 
@@ -164,17 +280,21 @@ char *get_iscsi_target(const char *dev_string)
     sem_v(iscsi_sem);
     logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
-    if (ret == 0) {
-        return strdup(stdout_str);
-    } else {
-        return NULL;
-    }
+    if (ret == 0)
+        return (strdup(stdout_str));
+    return (NULL);
 }
 
+//!
+//!
+//!
+//! @param[in] dev_string
+//!
+//! @return EUCA_OK if the device is an ISCSI or EUCA_ERROR if not
+//!
 int check_iscsi(const char *dev_string)
 {
-    if (strchr(dev_string, ',') == NULL) {
-        return 0;
-    }
-    return 1;
+    if (strchr(dev_string, ',') == NULL)
+        return (EUCA_OK);
+    return (EUCA_ERROR);
 }

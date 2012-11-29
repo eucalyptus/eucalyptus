@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/handlers_kvm.c
+//! This implements the operations handlers supported by the KVM hypervisor.
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU               /* strnlen */
@@ -88,50 +99,159 @@
 #include "diskutil.h"
 #include "iscsi.h"
 
-/* coming from handlers.c */
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define HYPERVISOR_URI                        "qemu:///system" /**< Defines the Hypervisor URI to use with KVM */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+// coming from handlers.c
 extern sem *hyp_sem;
 extern sem *inst_sem;
 extern bunchOfInstances *global_instances;
-extern struct nc_state_t nc_state;
 
-#define HYPERVISOR_URI "qemu:///system"
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static int doInitialize(struct nc_state_t *nc);
+static void *rebooting_thread(void *arg);
+static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
+static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              CALLBACK STRUCTURE                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! KVM LIBVIRT operation handlers
+struct handlers kvm_libvirt_handlers = {
+    .name = "kvm",
+    .doInitialize = doInitialize,
+    .doDescribeInstances = NULL,
+    .doRunInstance = NULL,
+    .doTerminateInstance = NULL,
+    .doRebootInstance = doRebootInstance,
+    .doGetConsoleOutput = doGetConsoleOutput,
+    .doDescribeResource = NULL,
+    .doStartNetwork = NULL,
+    .doAssignAddress = NULL,
+    .doPowerDown = NULL,
+    .doAttachVolume = NULL,
+    .doDetachVolume = NULL,
+    .doDescribeSensors = NULL
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Initialize the NC state structure for the KVM hypervisor.
+//!
+//! @param[in] nc a pointer to the NC state structure to initialize
+//!
+//! @return Always return EUCA_OK
+//!
 static int doInitialize(struct nc_state_t *nc)
 {
+#define GET_VALUE(_name, _var)                                                                         \
+{                                                                                                      \
+	if (get_value (s, (_name), &(_var))) {                                                             \
+		logprintfl (EUCAFATAL, "did not find %s in output from %s\n", (_name), nc->get_info_cmd_path); \
+		EUCA_FREE(s);                                                                                  \
+		return (EUCA_FATAL_ERROR);                                                                     \
+	}                                                                                                  \
+}
+
     char *s = NULL;
 
     // set up paths of Eucalyptus commands NC relies on
     snprintf(nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO, nc->home, nc->home);
     strcpy(nc->uri, HYPERVISOR_URI);
     nc->convert_to_disk = 1;
-    nc->capability = HYPERVISOR_HARDWARE;   // TODO: indicate virtio support?
+    nc->capability = HYPERVISOR_HARDWARE;   //! @todo indicate virtio support?
 
     s = system_output(nc->get_info_cmd_path);
-#define GET_VALUE(name,var) \
-	if (get_value (s, name, &var)) { \
-		logprintfl (EUCAFATAL, "did not find %s in output from %s\n", name, nc->get_info_cmd_path); \
-		if (s) free (s); \
-		return ERROR_FATAL; \
-	}
 
     GET_VALUE("nr_cores", nc->cores_max);
     GET_VALUE("total_memory", nc->mem_max);
-    if (s)
-        free(s);
+    EUCA_FREE(s);
 
     // we leave 256M to the host
     nc->mem_max -= 256;
 
-    return OK;
+    return EUCA_OK;
 }
 
-/* thread that does the actual reboot */
+//!
+//! Defines the thread that does the actual reboot of an instance.
+//!
+//! @param[in] arg a transparent pointer to the argument passed to this thread handler
+//!
+//! @return Always return NULL
+//!
 static void *rebooting_thread(void *arg)
 {
     virConnectPtr *conn;
     ncInstance *instance = (ncInstance *) arg;
-    struct stat statbuf;
-    int rc = 0;
 
     logprintfl(EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
     char *xml = file2str(instance->libvirtFilePath);
@@ -144,7 +264,7 @@ static void *rebooting_thread(void *arg)
     if (!conn) {
         logprintfl(EUCAERROR, "[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
         change_state(instance, SHUTOFF);
-        free(xml);
+        EUCA_FREE(xml);
         return NULL;
     }
 
@@ -152,19 +272,19 @@ static void *rebooting_thread(void *arg)
     virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
     sem_v(hyp_sem);
     if (dom == NULL) {
-        free(xml);
+        EUCA_FREE(xml);
         return NULL;
     }
 
     sem_p(hyp_sem);
     // for KVM, must stop and restart the instance
     logprintfl(EUCADEBUG, "[%s] destroying domain\n", instance->instanceId);
-    int error = virDomainDestroy(dom);  // TODO: change to Shutdown?  TODO: is this synchronous?
+    int error = virDomainDestroy(dom);  // @todo change to Shutdown? is this synchronous?
     virDomainFree(dom);
     sem_v(hyp_sem);
 
     if (error) {
-        free(xml);
+        EUCA_FREE(xml);
         return NULL;
     }
     // domain is now shut down, create a new one with the same XML
@@ -172,7 +292,7 @@ static void *rebooting_thread(void *arg)
     logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(*conn, xml, 0);
     sem_v(hyp_sem);
-    free(xml);
+    EUCA_FREE(xml);
 
     char *remoteDevStr = NULL;
     // re-attach each volume previously attached
@@ -203,8 +323,8 @@ static void *rebooting_thread(void *arg)
                 rc = 1;
             }
         }
-        if (remoteDevStr)
-            free(remoteDevStr);
+
+        EUCA_FREE(remoteDevStr);
 
         if (!rc) {
             // protect libvirt calls because we've seen problems during concurrent libvirt invocations
@@ -225,9 +345,9 @@ static void *rebooting_thread(void *arg)
             }
         }
 
-        if (xml)
-            free(xml);
+        EUCA_FREE(xml);
     }
+
     if (dom == NULL) {
         logprintfl(EUCAERROR, "[%s] failed to restart instance\n", instance->instanceId);
         change_state(instance, SHUTOFF);
@@ -240,33 +360,52 @@ static void *rebooting_thread(void *arg)
     return NULL;
 }
 
-static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the reboot request of an instance.
+//!
+//! @param[in] nc a pointer to the NC state structure to initialize
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
+//!         and EUCA_FATAL_ERROR.
+//!
+static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
     sem_p(inst_sem);
     ncInstance *instance = find_instance(&global_instances, instanceId);
     sem_v(inst_sem);
     if (instance == NULL) {
         logprintfl(EUCAERROR, "[%s] cannot find instance\n", instanceId);
-        return ERROR;
+        return EUCA_ERROR;
     }
 
     pthread_t tcb;
     // since shutdown/restart may take a while, we do them in a thread
     if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
         logprintfl(EUCAERROR, "[%s] failed to spawn a reboot thread\n", instanceId);
-        return ERROR_FATAL;
+        return EUCA_FATAL_ERROR;
     }
     if (pthread_detach(tcb)) {
         logprintfl(EUCAERROR, "[%s] failed to detach the rebooting thread\n", instanceId);
-        return ERROR_FATAL;
+        return EUCA_FATAL_ERROR;
     }
 
-    return OK;
+    return EUCA_OK;
 }
 
-static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *instanceId, char **consoleOutput)
+//!
+//! Handles the console output retrieval request.
+//!
+//! @param[in]  nc a pointer to the NC state structure to initialize
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[out] consoleOutput a pointer to the unallocated string that will contain the output
+//!
+//! @return EUCA_OK on success or EUCA_ERROR and EUCA_NOT_FOUND_ERROR on failure.
+//!
+static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-
     char *console_output = NULL, *console_append = NULL, *console_main = NULL;
     char console_file[MAX_PATH], userId[48];
     int rc, fd, ret, readsize;
@@ -287,20 +426,19 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
 
     if (!instance) {
         logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
-        return (1);
+        return (EUCA_NOT_FOUND_ERROR);
     }
     // read from console.append.log if it exists into dynamically allocated 4K console_append buffer
     rc = stat(console_file, &statbuf);
     if (rc >= 0) {
-        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
-            return (1);
+            return (EUCA_ERROR);
         }
         fd = open(console_file, O_RDONLY);
         if (fd >= 0) {
-            console_append = malloc(4096);
+            console_append = EUCA_ZALLOC(4096, sizeof(char));
             if (console_append) {
-                bzero(console_append, 4096);
                 rc = read(fd, console_append, (4096) - 1);
                 close(fd);
             }
@@ -314,11 +452,10 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
     // read the last 64K from console.log or the whole file, if smaller, into dynamically allocated 64K console_main buffer
     rc = stat(console_file, &statbuf);
     if (rc >= 0) {
-        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
-            if (console_append)
-                free(console_append);
-            return (1);
+            EUCA_FREE(console_append);
+            return (EUCA_ERROR);
         }
         fd = open(console_file, O_RDONLY);
         if (fd >= 0) {
@@ -330,12 +467,11 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
                     if (console_append)
                         free(console_append);
                     close(fd);
-                    return (1);
+                    return (EUCA_ERROR);
                 }
             }
-            console_main = malloc(readsize);
+            console_main = EUCA_ZALLOC(readsize, sizeof(char));
             if (console_main) {
-                bzero(console_main, readsize);
                 rc = read(fd, console_main, (readsize) - 1);
                 close(fd);
             }
@@ -347,10 +483,9 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
     }
 
     // concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
-    ret = 1;
-    console_output = malloc((readsize) + 4096);
+    ret = EUCA_ERROR;
+    console_output = EUCA_ZALLOC((readsize) + 4096, sizeof(char));
     if (console_output) {
-        bzero(console_output, (readsize) + 4096);
         if (console_append) {
             strncat(console_output, console_append, 4096);
         }
@@ -358,32 +493,12 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * meta, char *in
             strncat(console_output, console_main, readsize);
         }
         *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
-        ret = 0;
+        ret = EUCA_OK;
     }
 
-    if (console_append)
-        free(console_append);
-    if (console_main)
-        free(console_main);
-    if (console_output)
-        free(console_output);
+    EUCA_FREE(console_append);
+    EUCA_FREE(console_main);
+    EUCA_FREE(console_output);
 
     return (ret);
 }
-
-struct handlers kvm_libvirt_handlers = {
-    .name = "kvm",
-    .doInitialize = doInitialize,
-    .doDescribeInstances = NULL,
-    .doRunInstance = NULL,
-    .doTerminateInstance = NULL,
-    .doRebootInstance = doRebootInstance,
-    .doGetConsoleOutput = doGetConsoleOutput,
-    .doDescribeResource = NULL,
-    .doStartNetwork = NULL,
-    .doAssignAddress = NULL,
-    .doPowerDown = NULL,
-    .doAttachVolume = NULL,
-    .doDetachVolume = NULL,
-    .doDescribeSensors = NULL
-};

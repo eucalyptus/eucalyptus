@@ -15,7 +15,7 @@ import eucaconsole
 from eucaconsole import api
 from eucaconsole.configloader import ConfigLoader
 
-PIDFILE = "/var/run/eucalyptus-console.pid"
+PIDFILE = "/var/run/eucalyptus-console/eucalyptus-console.pid"
 
 
 def daemonize(func=None):

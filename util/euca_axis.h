@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,8 +63,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_EUCA_AXIS_H
-#define INCLUDE_EUCA_AXIS_H
+#ifndef _INCLUDE_EUCA_AXIS_H_
+#define _INCLUDE_EUCA_AXIS_H_
+
+//!
+//! @file util/euca_axis.h
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include "oxs_axiom.h"
 #include "oxs_x509_cert.h"
@@ -78,15 +92,75 @@
 #include <axis2_client.h>
 #include <axis2_stub.h>
 
-int InitWSSEC(axutil_env_t * env, axis2_stub_t * stub, char *policyFile);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 axis2_status_t __euca_authenticate(const axutil_env_t * env, axis2_msg_ctx_t * out_msg_ctx, axis2_op_ctx_t * op_ctx);
-axis2_status_t verify_references(axiom_node_t * sig_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axiom_soap_envelope_t * soap_envelope,
+axis2_status_t verify_references(axiom_node_t * sig_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axiom_soap_envelope_t * envelope,
                                  rampart_context_t * rampart_context);
 int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems,
                 rampart_context_t * rampart_context);
 int verify_addr_hdr_elem_loc(axiom_node_t * signed_node, const axutil_env_t * env, axis2_char_t * ref);
 
-#define euca_authenticate(a,b,c) do{ if( __euca_authenticate(a,b,c) == AXIS2_FAILURE ) return NULL; }while(0)
+int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);
 
-#endif // INCLUDE_EUCA_AXIS_H
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define euca_authenticate(_a, _b, _c)                                \
+{                                                                    \
+	do {                                                             \
+		if (__euca_authenticate((_a), (_b), (_c)) == AXIS2_FAILURE)  \
+			return (NULL);                                           \
+	} while(0);                                                      \
+}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_EUCA_AXIS_H_ */

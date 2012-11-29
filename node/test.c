@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/test.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,8 +82,84 @@
 #include "misc.h"
 #include "data.h"
 
-const char *euca_this_component_name = "nc";
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void test_command(char *command);
+int main(int argc, char **argv);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Execute a system command.
+//!
+//! @param[in] command the system command to execute
+//!
 void test_command(char *command)
 {
     char *result = system_output(command);
@@ -85,9 +172,17 @@ void test_command(char *command)
         result[max - 1] = 0;
     }
     printf("--->%s executed\noutput=[%s]\n\n", command, result);
-    free(result);
+    EUCA_FREE(result);
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return Always return 0
+//!
 int main(int argc, char **argv)
 {
     printf("=====> testing misc.c\n");
@@ -142,7 +237,7 @@ int main(int argc, char **argv)
         bag = NULL;
 
         n = remove_instance(&bag, NULL);
-        assert(n != 0);
+        assert(n != EUCA_OK);
         bag = NULL;
 
         for (i = 0; i < INSTS; i++) {
@@ -151,14 +246,14 @@ int main(int argc, char **argv)
             inst = Insts[i] = allocate_instance("the-uuid", id, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
             assert(inst != NULL);
             n = add_instance(&bag, inst);
-            assert(n == 0);
+            assert(n == EUCA_OK);
         }
         n = total_instances(&bag);
         assert(n == INSTS);
         n = remove_instance(&bag, Insts[0]);
-        assert(n == 0);
+        assert(n == EUCA_OK);
         n = remove_instance(&bag, Insts[INSTS - 1]);
-        assert(n == 0);
+        assert(n == EUCA_OK);
         n = total_instances(&bag);
         assert(n == INSTS - 2);
 

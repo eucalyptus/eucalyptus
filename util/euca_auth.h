@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,19 +63,86 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_EUCA_AUTH_H
-#define INCLUDE_EUCA_AUTH_H
+#ifndef _INCLUDE_EUCA_AUTH_H_
+#define _INCLUDE_EUCA_AUTH_H_
 
-/* 
- * functions for Walrus clients
- */
-int euca_init_cert(void);
+//!
+//! @file util/euca_auth.h
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 /* options for _get_cert: */
-#define TRIM_CERT        0x01   /* remove the last newline */
-#define CONCATENATE_CERT 0x02   /* remove all newlines */
-#define INDENT_CERT      0x04   /* indent lines 2-N */
+#define TRIM_CERT                     0x01  //!< remove the last newline
+#define CONCATENATE_CERT              0x02  //!< remove all newlines
+#define INDENT_CERT                   0x04  //!< indent lines 2-N
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* functions for Walrus clients */
+int euca_init_cert(void);
 char *euca_get_cert(unsigned char options);
-char *euca_sign_url(const char *verb, const char *date, const char *url);
+
 char *base64_enc(unsigned char *in, int size);
 char *base64_dec(unsigned char *in, int size);
-#endif
+
+char *euca_sign_url(const char *verb, const char *date, const char *url);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_EUCA_AUTH_H_ */
