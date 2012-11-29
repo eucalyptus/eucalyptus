@@ -1232,71 +1232,85 @@ int diskutil_grub_mbr(const char *path, const int part)
 //!
 int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
 {
-    char cmd[1024];
-    int rc = 1;
+#define _PR()                         fprintf (fp, "%s", s);    // logprintfl (EUCADEBUG, "\t%s", s)
 
-    if (grub_version != 1 && grub_version != 2) {
+    int rc = 1;
+    int tfd = -1;
+    int bytes_read = -1;
+    int read_bytes = -1;
+    FILE *fp = NULL;
+    char *output = NULL;
+    char s[EUCA_MAX_PATH] = { 0 };
+    char buf[1024] = { 0 };
+    char cmd[1024] = { 0 };
+    char part_path[EUCA_MAX_PATH] = { 0 };
+    char device_map_path[EUCA_MAX_PATH] = { 0 };
+    char device_map_buf[512] = { 0 };
+    char tmp_file[EUCA_MAX_PATH] = "/tmp/euca-temp-XXXXXX";
+    boolean saw_done = FALSE;
+    boolean created_partition_softlink = FALSE;
+
+    if (path == NULL) {
+        logprintfl(EUCAERROR, "invocation of diskutil_grub2_mbr unknown path\n");
+        return (EUCA_INVALID_ERROR);
+    }
+
+    if ((grub_version != 1) && (grub_version != 2)) {
         logprintfl(EUCAERROR, "invocation of diskutil_grub2_mbr without grub found\n");
-        return ERROR;
-    } else if (mnt_pt == NULL && grub_version != 1) {
+        return (EUCA_INVALID_ERROR);
+    }
+
+    if ((mnt_pt == NULL) && (grub_version != 1)) {
         logprintfl(EUCAERROR, "invocation of diskutil_grub2_mbr with grub 1 params\n");
-        return ERROR;
+        return (EUCA_INVALID_ERROR);
     }
 
     logprintfl(EUCAINFO, "installing grub in MBR\n");
     if (grub_version == 1) {
-        char tmp_file[EUCA_MAX_PATH] = "/tmp/euca-temp-XXXXXX";
-        int tfd = safe_mkstemp(tmp_file);
-        if (tfd < 0) {
+        if ((tfd = safe_mkstemp(tmp_file)) < 0) {
             logprintfl(EUCAERROR, "mkstemp() failed: %s\n", strerror(errno));
-            return ERROR;
+            return (EUCA_PERMISSION_ERROR);
         }
         // create a soft link of the first partition's device mapper entry in the
         // form that grub is looking for (not DISKp1 but just DISK1)
-        boolean created_partition_softlink = FALSE;
-        char part_path[EUCA_MAX_PATH];
+        created_partition_softlink = FALSE;
         snprintf(part_path, sizeof(EUCA_MAX_PATH), "%s1", path);
         if (check_path(part_path) != 0) {
-            char *output = pruntf(TRUE, "%s /bin/ln -s %sp1 %s", helpers_path[ROOTWRAP], path, part_path);
-            if (!output) {
+            if ((output = pruntf(TRUE, "%s /bin/ln -s %sp1 %s", helpers_path[ROOTWRAP], path, part_path)) == NULL) {
                 logprintfl(EUCAINFO, "warning: failed to create partition device soft-link (%s)\n", part_path);
             } else {
                 created_partition_softlink = TRUE;
-                free(output);
+                EUCA_FREE(output);
             }
         }
-
-        sync();                 // ensure buffer cache is flushed so that grub will see the files we just updated
+        // ensure buffer cache is flushed so that grub will see the files we just updated
+        sync();
 
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
         snprintf(cmd, sizeof(cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
         logprintfl(EUCADEBUG, "running %s\n", cmd);
         errno = 0;
-        FILE *fp = popen(cmd, "w");
-        if (fp != NULL) {
-            char s[EUCA_MAX_PATH];
-#define _PR fprintf (fp, "%s", s);  // logprintfl (EUCADEBUG, "\t%s", s)
+        if ((fp = popen(cmd, "w")) != NULL) {
             snprintf(s, sizeof(s), "device (hd0) %s\n", path);
-            _PR;
+            _PR();
             snprintf(s, sizeof(s), "root (hd0,%d)\n", part);
-            _PR;
+            _PR();
             snprintf(s, sizeof(s), "setup (hd0)\n");
-            _PR;
+            _PR();
             snprintf(s, sizeof(s), "quit\n");
-            _PR;
+            _PR();
             rc = pclose(fp);    // base success on exit code of grub
         }
+
         if (rc) {
             logprintfl(EUCAERROR, "failed to run grub 1 on disk '%s': %s\n", path, strerror(errno));
         } else {
-            int read_bytes;
-            char buf[1024];
             bzero(buf, sizeof(buf));
-            boolean saw_done = FALSE;
+            saw_done = FALSE;
             do {
                 // read in a line
-                int bytes_read = 0;
+                bytes_read = 0;
                 while ((sizeof(buf) - 2 - bytes_read) > 0   // there is space in buffer for \n and \0
                        && ((read_bytes = read(tfd, buf + bytes_read, 1)) > 0))
                     if (buf[bytes_read++] == '\n')
@@ -1320,18 +1334,15 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
 
         // try to remove the partition device soft link that may have been created above
         if (created_partition_softlink) {
-            char *output = pruntf(TRUE, "%s /bin/rm %s", helpers_path[ROOTWRAP], part_path);
-            if (!output) {
+            if ((output = pruntf(TRUE, "%s /bin/rm %s", helpers_path[ROOTWRAP], part_path)) == NULL) {
                 logprintfl(EUCAINFO, "warning: failed to remove partition device soft-link\n");
             } else {
-                free(output);
+                EUCA_FREE(output);
             }
         }
 
     } else if (grub_version == 2) {
         // create device.map file
-        char device_map_path[EUCA_MAX_PATH];
-        char device_map_buf[512];
         snprintf(device_map_path, sizeof(device_map_path), "%s/boot/grub/device.map", mnt_pt);
         snprintf(device_map_buf, sizeof(device_map_buf), "(hd0) %s\n", path);
         if (diskutil_write2file(device_map_path, device_map_buf) != OK) {
@@ -1341,22 +1352,24 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             logprintfl(EUCAINFO, "%s", device_map_buf);
         }
 
-        sync();                 // ensure buffer cache is flushed so that grub will see the files we just updated
+        // ensure buffer cache is flushed so that grub will see the files we just updated
+        sync();
 
-        char *output =
+        output =
             pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
         if (!output) {
             logprintfl(EUCAERROR, "failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
         } else {
-            free(output);
+            EUCA_FREE(output);
             rc = 0;
         }
     }
 
     if (rc == 0)
-        return OK;
-    else
-        return ERROR;
+        return (EUCA_OK);
+    return (EUCA_ERROR);
+
+#undef _PR
 }
 
 //!
@@ -1378,35 +1391,39 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
 //!
 int diskutil_ch(const char *path, const char *user, const char *group, const int perms)
 {
-    int ret = OK;
-    char *output;
+    char *output = NULL;
 
-    logprintfl(EUCADEBUG, "ch(own|mod) '%s' %s.%s %o\n", path, user ? user : "*", group ? group : "*", perms);
-    if (user) {
-        output = pruntf(TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
-        if (!output) {
-            return ERROR;
+    logprintfl(EUCADEBUG, "ch(own|mod) '%s' %s.%s %o\n", SP(path), ((user != NULL) ? user : "*"), ((group != NULL) ? group : "*"), perms);
+
+    if (path) {
+        if (user) {
+            output = pruntf(TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
+            if (!output) {
+                return (EUCA_ERROR);
+            }
+            EUCA_FREE(output);
         }
-        free(output);
+
+        if (group) {
+            output = pruntf(TRUE, "%s %s :%s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], group, path);
+            if (!output) {
+                return (EUCA_ERROR);
+            }
+            EUCA_FREE(output);
+        }
+
+        if (perms > 0) {
+            output = pruntf(TRUE, "%s %s 0%o %s", helpers_path[ROOTWRAP], helpers_path[CHMOD], perms, path);
+            if (!output) {
+                return (EUCA_ERROR);
+            }
+            EUCA_FREE(output);
+        }
+
+        return (EUCA_OK);
     }
 
-    if (group) {
-        output = pruntf(TRUE, "%s %s :%s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], group, path);
-        if (!output) {
-            return ERROR;
-        }
-        free(output);
-    }
-
-    if (perms > 0) {
-        output = pruntf(TRUE, "%s %s 0%o %s", helpers_path[ROOTWRAP], helpers_path[CHMOD], perms, path);
-        if (!output) {
-            return ERROR;
-        }
-        free(output);
-    }
-
-    return OK;
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -1424,15 +1441,18 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
 //!
 int diskutil_mkdir(const char *path)
 {
-    char *output;
+    char *output = NULL;
 
-    output = pruntf(TRUE, "%s %s -p %s", helpers_path[ROOTWRAP], helpers_path[MKDIR], path);
-    if (!output) {
-        return ERROR;
+    if (path) {
+        if ((output = pruntf(TRUE, "%s %s -p %s", helpers_path[ROOTWRAP], helpers_path[MKDIR], path)) == NULL) {
+            return (EUCA_ERROR);
+        }
+
+        EUCA_FREE(output);
+        return (EUCA_OK);
     }
-    free(output);
 
-    return OK;
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -1451,15 +1471,18 @@ int diskutil_mkdir(const char *path)
 //!
 int diskutil_cp(const char *from, const char *to)
 {
-    char *output;
+    char *output = NULL;
 
-    output = pruntf(TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CP], from, to);
-    if (!output) {
-        return ERROR;
+    if (from && to) {
+        if ((output = pruntf(TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CP], from, to)) == NULL) {
+            return (EUCA_ERROR);
+        }
+
+        EUCA_FREE(output);
+        return (EUCA_OK);
     }
-    free(output);
 
-    return OK;
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -1479,9 +1502,10 @@ static char *pruntf(boolean log_error, char *format, ...)
 {
     va_list ap;
     FILE *IF = NULL;
-    char cmd[1024], *ptr;
+    int rc = -1;
+    int outsize = 1025;
+    char cmd[1024] = { 0 };
     size_t bytes = 0;
-    int outsize = 1025, rc;
     char *output = NULL;
 
     va_start(ap, format);
@@ -1497,15 +1521,15 @@ static char *pruntf(boolean log_error, char *format, ...)
         return (NULL);
     }
 
-    output = malloc(sizeof(char) * outsize);
+    output = EUCA_ALLOC(outsize, sizeof(char));
     if (output) {
         output[0] = '\0';       // make sure we return an empty string if there is no output
     }
 
-    while (output != NULL && (bytes = fread(output + (outsize - 1025), 1, 1024, IF)) > 0) {
+    while ((output != NULL) && (bytes = fread(output + (outsize - 1025), 1, 1024, IF)) > 0) {
         output[(outsize - 1025) + bytes] = '\0';
         outsize += 1024;
-        output = realloc(output, outsize);
+        output = EUCA_REALLOC(output, outsize, sizeof(char));
     }
 
     if (output == NULL) {
@@ -1517,7 +1541,7 @@ static char *pruntf(boolean log_error, char *format, ...)
 
     rc = pclose(IF);
     if (rc) {
-        // TODO: improve this hacky special case: failure to find or detach non-existing loop device is not a failure
+        //! @TODO improve this hacky special case: failure to find or detach non-existing loop device is not a failure
         if (strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
             rc = 0;
         } else {
@@ -1525,9 +1549,7 @@ static char *pruntf(boolean log_error, char *format, ...)
                 logprintfl(EUCAERROR, "bad return code from cmd '%s'\n", cmd);
                 logprintfl(EUCADEBUG, "%s\n", output);
             }
-            if (output)
-                free(output);
-            output = NULL;
+            EUCA_FREE(output);
         }
     }
     va_end(ap);
