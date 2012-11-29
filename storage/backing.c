@@ -852,7 +852,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
         snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
 
     // copy blob (will 'dd' eventually)
-    if (blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != OK) {
+    if (blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != EUCA_OK) {
         logprintfl(EUCAERROR, "[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
         ret = EUCA_IO_ERROR;
         goto error;

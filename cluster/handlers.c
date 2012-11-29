@@ -2399,7 +2399,7 @@ int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock)
 
                 if (!rc) {
                     // update our cache
-                    if (sensor_merge_records(srs, srsLen, TRUE) != OK) {
+                    if (sensor_merge_records(srs, srsLen, TRUE) != EUCA_OK) {
                         logprintfl(EUCAWARN, "failed to store all sensor data due to lack of spacen");
                     }
 

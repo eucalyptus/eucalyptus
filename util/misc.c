@@ -2429,7 +2429,7 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                 }
                 ret = 1;        // we created a directory
 
-                if (diskutil_ch(path_copy, user, group, mode) != OK) {
+                if (diskutil_ch(path_copy, user, group, mode) != EUCA_OK) {
                     logprintfl(EUCAERROR, "failed to change perms on path %s\n", path_copy);
                     EUCA_FREE(path_copy);
                     return -1;

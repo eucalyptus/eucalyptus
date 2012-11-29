@@ -1736,7 +1736,7 @@ int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], co
         return (EUCA_ERROR);
 
     getstat **stats = NULL;
-    if (getstat_generate(&stats) != OK) {
+    if (getstat_generate(&stats) != EUCA_OK) {
         logprintfl(EUCAWARN, "failed to invoke getstats for sensor data\n");
         return (EUCA_ERROR);
     } else {
@@ -1916,12 +1916,12 @@ int main(int argc, char **argv)
         } else {
             euca_this_component_name = "cc";
         }
-        assert(getstat_generate(&stats) == OK);
+        assert(getstat_generate(&stats) == EUCA_OK);
         getstat *gs = getstat_find(stats, NULL);
         if (gs != NULL) {
             char id[MAX_SENSOR_NAME_LEN];
             safe_strncpy(id, gs->instanceId, sizeof(id));
-            assert(sensor_refresh_resources(id, "", 1) == OK);
+            assert(sensor_refresh_resources(id, "", 1) == EUCA_OK);
         }
         if (i % 101 == 0 || i % 102 == 0) {
             logprintfl(EUCADEBUG, "getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances(stats));

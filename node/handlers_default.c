@@ -341,7 +341,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     instance->launchTime = time(NULL);
 
     // parse and sanity-check the virtual boot record
-    if (vbr_parse(&(instance->params), pMeta) != OK) {
+    if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
         ret = EUCA_ERROR;
         goto error;
     }
@@ -1038,7 +1038,7 @@ release:
         ret = EUCA_ERROR;
     }
     // if iSCSI and there were problems, try to disconnect the target
-    if (ret != OK && is_iscsi_target && have_remote_device) {
+    if (ret != EUCA_OK && is_iscsi_target && have_remote_device) {
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
             logprintfl(EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
@@ -1612,10 +1612,10 @@ static void *bundling_thread(void *arg)
 
     logprintfl(EUCAINFO, "[%s] started bundling instance\n", instance->instanceId);
 
-    int rc = OK;
+    int rc = EUCA_OK;
     char bundlePath[MAX_PATH];
     bundlePath[0] = '\0';
-    if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != OK) {
+    if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != EUCA_OK) {
         logprintfl(EUCAERROR, "[%s] could not clone the instance image\n", instance->instanceId);
         cleanup_bundling_task(instance, params, BUNDLING_FAILED);
     } else {
@@ -1953,7 +1953,7 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 
         assert(k < total);
         rss[k] = EUCA_ZALLOC(1, sizeof(sensorResource));
-        if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != OK) {
+        if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != EUCA_OK) {
             logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
             free (rss[k]);
         } else {

@@ -947,7 +947,7 @@ void *monitoring_thread(void *arg)
 
             // check file system state and blobstore state
             blobstore_meta work_meta, cache_meta;
-            if (stat_backing_store(NULL, &work_meta, &cache_meta) == OK) {
+            if (stat_backing_store(NULL, &work_meta, &cache_meta) == EUCA_OK) {
                 long long work_fs_size_mb = (long long)(work_meta.fs_bytes_size / MEGABYTE);
                 long long work_fs_avail_mb = (long long)(work_meta.fs_bytes_available / MEGABYTE);
                 long long cache_fs_size_mb = (long long)(cache_meta.fs_bytes_size / MEGABYTE);
@@ -1595,7 +1595,7 @@ static int init(void)
 
     EUCA_FREE(hypervisor);
 
-    if (sensor_init(NULL, NULL, MAX_SENSOR_RESOURCES, FALSE, NULL) != OK) {
+    if (sensor_init(NULL, NULL, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {
         logprintfl(EUCAERROR, "failed to initialize sensor subsystem in this process\n");
         return (EUCA_FATAL_ERROR);
     }
@@ -1856,7 +1856,7 @@ static int init(void)
     // adopt running instances -- do this before disk integrity check so we know what can be purged
     adopt_instances();
 
-    if (check_backing_store(&global_instances) != OK) { // integrity check, cleanup of unused instances and shrinking of cache
+    if (check_backing_store(&global_instances) != EUCA_OK) { // integrity check, cleanup of unused instances and shrinking of cache
         logprintfl(EUCAFATAL, "integrity check of the backing store failed");
         return (EUCA_FATAL_ERROR);
     }
@@ -2215,7 +2215,7 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
 
     logprintfl(EUCAINFO, "[%s] cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk, params->mem,
                netparams->vlan, netparams->privateMac, netparams->privateIp);
-    if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != OK)
+    if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
 
     if (nc_state.H->doRunInstance)

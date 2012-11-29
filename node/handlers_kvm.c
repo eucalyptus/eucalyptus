@@ -431,7 +431,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     // read from console.append.log if it exists into dynamically allocated 4K console_append buffer
     rc = stat(console_file, &statbuf);
     if (rc >= 0) {
-        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
             return (EUCA_ERROR);
         }
@@ -452,7 +452,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     // read the last 64K from console.log or the whole file, if smaller, into dynamically allocated 64K console_main buffer
     rc = stat(console_file, &statbuf);
     if (rc >= 0) {
-        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != OK) {
+        if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
             EUCA_FREE(console_append);
             return (EUCA_ERROR);

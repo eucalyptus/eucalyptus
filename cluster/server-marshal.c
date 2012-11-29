@@ -571,7 +571,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             }
             EUCA_FREE(outResources);
 
-            result = OK;        // success
+            result = EUCA_OK;        // success
         }
     }
 

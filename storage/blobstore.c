@@ -3646,7 +3646,7 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
 
         char dm_path[MAX_DM_PATH];
         snprintf(dm_path, sizeof(dm_path), DM_PATH "%s", dev_names[i]);
-        if (diskutil_ch(dm_path, EUCALYPTUS_ADMIN, NULL, BLOBSTORE_FILE_PERM) != OK) {
+        if (diskutil_ch(dm_path, EUCALYPTUS_ADMIN, NULL, BLOBSTORE_FILE_PERM) != EUCA_OK) {
             ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to change permissions on the device mapper file\n");
             goto cleanup;
         }
@@ -5770,7 +5770,7 @@ static int do_list(const char *regex)
             blockblob_meta *bm = (blockblob_meta *) mp->val;
 
             char loop_dev[100] = "";
-            if (read_blockblob_metadata_path(BLOCKBLOB_PATH_LOOPBACK, bm->bs, bm->id, loop_dev, sizeof(loop_dev)) == OK) {
+            if (read_blockblob_metadata_path(BLOCKBLOB_PATH_LOOPBACK, bm->bs, bm->id, loop_dev, sizeof(loop_dev)) == EUCA_OK) {
 
             }
             char extras[100] = "";

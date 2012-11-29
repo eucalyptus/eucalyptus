@@ -552,7 +552,7 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                     }
                 }
                 // convert to an ASCII buffer, if such was provided
-                if (err == OK && outputXmlBuffer != NULL && outputXmlBufferSize > 0) {
+                if (err == EUCA_OK && outputXmlBuffer != NULL && outputXmlBufferSize > 0) {
                     xmlChar *buf;
                     int buf_size;
                     if (xsltSaveResultToString(&buf, &buf_size, res, cur) == 0) {   // success

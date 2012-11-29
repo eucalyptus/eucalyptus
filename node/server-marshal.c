@@ -1330,7 +1330,7 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
 
             EUCA_FREE(outResources);
 
-            result = OK;        // success
+            result = EUCA_OK;        // success
         }
     }
     // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
