@@ -392,14 +392,12 @@ public class ImageManager {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = ctx.getUser( );
-    final String action = PolicySpec.requestToAction( request );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
-               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
+               RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         imgInfo.resetPermission( );
         db.commit( );
       } else {
