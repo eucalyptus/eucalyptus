@@ -1092,13 +1092,13 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     // map the partitions to the disk
     if (blockblob_clone(a->bb, map, map_entries) == -1) {
         ret = blobstore_get_error();
-        logprintfl(EUCAERROR, "[%s] error: failed to clone partitions to created disk: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
+        logprintfl(EUCAERROR, "[%s] failed to clone partitions to created disk: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
         goto cleanup;
     }
     // create MBR
     logprintfl(EUCAINFO, "[%s] creating MBR\n", a->instanceId);
     if (diskutil_mbr(blockblob_get_dev(a->bb), "msdos") == ERROR) { // issues `parted mklabel`
-        logprintfl(EUCAERROR, "[%s] error: failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
+        logprintfl(EUCAERROR, "[%s] failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
     // add partition information to MBR
@@ -2082,8 +2082,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                 } else if (partitions) {    // there were partitions and we saw them all
                     assert(disk_arts[0] == NULL);
                     if (vm->virtualBootRecordLen == EUCA_MAX_VBRS) {
-                        logprintfl(EUCAERROR, "[%s] error: out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j,
-                                   i);
+                        logprintfl(EUCAERROR, "[%s] out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
                         goto out;
                     }
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
