@@ -959,20 +959,26 @@ int diskutil_sectors(const char *path, const int part, long long *first, long lo
 //!
 int diskutil_mount(const char *dev, const char *mnt_pt)
 {
-    int ret = OK;
-    char *output;
+    char *output = NULL;
 
-    sem_p(loop_sem);
-    output = pruntf(TRUE, "%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
-    sem_v(loop_sem);
-    if (!output) {
-        logprintfl(EUCAERROR, "cannot mount device '%s' on '%s'\n", dev, mnt_pt);
-        ret = ERROR;
-    } else {
-        free(output);
+    if (dev && mnt_pt) {
+        sem_p(loop_sem);
+        {
+            output = pruntf(TRUE, "%s %s mount %s %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev, mnt_pt);
+        }
+        sem_v(loop_sem);
+
+        if (!output) {
+            logprintfl(EUCAERROR, "cannot mount device '%s' on '%s'\n", dev, mnt_pt);
+            return (EUCA_ERROR);
+        }
+
+        EUCA_FREE(output);
+        return (EUCA_OK);
     }
 
-    return ret;
+    logprintfl(EUCAERROR, "cannot mount device '%s' on '%s'\n", SP(dev), SP(mnt_pt));
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -991,20 +997,26 @@ int diskutil_mount(const char *dev, const char *mnt_pt)
 //!
 int diskutil_umount(const char *dev)
 {
-    int ret = OK;
-    char *output;
+    char *output = NULL;
 
-    sem_p(loop_sem);
-    output = pruntf(TRUE, "%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
-    sem_v(loop_sem);
-    if (!output) {
-        logprintfl(EUCAERROR, "cannot unmount device '%s'\n", dev);
-        ret = ERROR;
-    } else {
-        free(output);
+    if (dev) {
+        sem_p(loop_sem);
+        {
+            output = pruntf(TRUE, "%s %s umount %s", helpers_path[ROOTWRAP], helpers_path[MOUNTWRAP], dev);
+        }
+        sem_v(loop_sem);
+
+        if (!output) {
+            logprintfl(EUCAERROR, "cannot unmount device '%s'\n", dev);
+            return (EUCA_ERROR);
+        }
+
+        EUCA_FREE(output);
+        return (EUCA_OK);
     }
 
-    return ret;
+    logprintfl(EUCAERROR, "cannot unmount device '%s'\n", SP(dev));
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -1024,28 +1036,36 @@ int diskutil_umount(const char *dev)
 //!
 int diskutil_write2file(const char *file, const char *str)
 {
-    int ret = OK;
+    int fd = -1;
+    int ret = EUCA_OK;
+    int size = 0;
     char tmpfile[] = "/tmp/euca-temp-XXXXXX";
-    int fd = safe_mkstemp(tmpfile);
-    if (fd < 0) {
-        logprintfl(EUCAERROR, "failed to create temporary directory\n");
-        unlink(tmpfile);
-        return ERROR;
-    }
-    int size = strlen(str);
-    if (write(fd, str, size) != size) {
-        logprintfl(EUCAERROR, "failed to create temporary directory\n");
-        ret = ERROR;
-    } else {
-        if (diskutil_cp(tmpfile, file) != OK) {
-            logprintfl(EUCAERROR, "failed to copy temp file to destination (%s)\n", file);
-            ret = ERROR;
-        }
-    }
-    close(fd);
 
-    unlink(tmpfile);
-    return ret;
+    if (file && str) {
+        if ((fd = safe_mkstemp(tmpfile)) < 0) {
+            logprintfl(EUCAERROR, "failed to create temporary file\n");
+            unlink(tmpfile);
+            return (EUCA_PERMISSION_ERROR);
+        }
+
+        size = strlen(str);
+        if (write(fd, str, size) != size) {
+            logprintfl(EUCAERROR, "failed to write to temporary file\n");
+            ret = EUCA_ACCESS_ERROR;
+        } else {
+            if (diskutil_cp(tmpfile, file) != EUCA_OK) {
+                logprintfl(EUCAERROR, "failed to copy temp file (%s) to destination (%s)\n", tmpfile, file);
+                ret = EUCA_PERMISSION_ERROR;
+            }
+        }
+
+        close(fd);
+        unlink(tmpfile);
+        return (ret);
+    }
+
+    logprintfl(EUCAERROR, "failed to write to file. Bad params: file=%p, str=%p\n", file, str);
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -1069,11 +1089,13 @@ int diskutil_write2file(const char *file, const char *str)
 //!
 int diskutil_grub(const char *path, const char *mnt_pt, const int part, const char *kernel, const char *ramdisk)
 {
-    int ret = diskutil_grub_files(mnt_pt, part, kernel, ramdisk);
-    if (ret != OK)
-        return ret;
+    int ret = EUCA_ERROR;
+
+    if ((ret = diskutil_grub_files(mnt_pt, part, kernel, ramdisk)) != EUCA_OK)
+        return (ret);
+
     ret = diskutil_grub2_mbr(path, part, mnt_pt);
-    return ret;
+    return (ret);
 }
 
 //!
@@ -1094,79 +1116,77 @@ int diskutil_grub(const char *path, const char *mnt_pt, const int part, const ch
 //!
 int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, const char *ramdisk)
 {
-    int ret = OK;
     char *output = NULL;
     char *kfile = "euca-vmlinuz";
     char *rfile = "euca-initrd";
+    char buf[1024] = { 0 };
+    char buf2[1024] = { 0 };
+    char initrd[1024] = { 0 };
+    char grub_conf_path[EUCA_MAX_PATH] = { 0 };
+    char menu_lst_path[EUCA_MAX_PATH] = { 0 };
 
-    logprintfl(EUCAINFO, "installing kernel and ramdisk\n");
-    output = pruntf(TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
-    if (!output) {
-        logprintfl(EUCAERROR, "failed to create grub directory\n");
-        return ERROR;
-    }
-    free(output);
-
-    if (grub_version == 1) {
-        output = pruntf(TRUE, "%s %s %s/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], stage_files_dir, mnt_pt);
+    if (mnt_pt && kernel) {
+        logprintfl(EUCAINFO, "installing kernel and ramdisk\n");
+        output = pruntf(TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
         if (!output) {
-            logprintfl(EUCAERROR, "failed to copy stage files into grub directory\n");
-            return ERROR;
+            logprintfl(EUCAERROR, "failed to create grub directory\n");
+            return (EUCA_ERROR);
         }
-        free(output);
-    }
+        EUCA_FREE(output);
 
-    output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
-    if (!output) {
-        logprintfl(EUCAERROR, "failed to copy the kernel to boot directory\n");
-        ret = ERROR;
-        goto cleanup;
-    }
-    free(output);
+        if (grub_version == 1) {
+            output = pruntf(TRUE, "%s %s %s/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], stage_files_dir, mnt_pt);
+            if (!output) {
+                logprintfl(EUCAERROR, "failed to copy stage files into grub directory\n");
+                return (EUCA_ERROR);
+            }
+            EUCA_FREE(output);
+        }
 
-    if (ramdisk) {
-        output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
+        output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
         if (!output) {
-            logprintfl(EUCAERROR, "failed to copy the ramdisk to boot directory\n");
-            ret = ERROR;
-            goto cleanup;
+            logprintfl(EUCAERROR, "failed to copy the kernel to boot directory\n");
+            return (EUCA_ERROR);
         }
-        free(output);
-    }
+        EUCA_FREE(output);
 
-    char buf[1024];
-    char grub_conf_path[EUCA_MAX_PATH];
-    if (grub_version == 1) {
-        char menu_lst_path[EUCA_MAX_PATH];
-        snprintf(menu_lst_path, sizeof(menu_lst_path), "%s/boot/grub/menu.lst", mnt_pt);
-        snprintf(grub_conf_path, sizeof(grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
-
-        snprintf(buf, sizeof(buf), "default=0\n" "timeout=2\n\n" "title TheOS\n" "root (hd0,%d)\n" "kernel /boot/%s root=/dev/sda1 ro\n", part, kfile); // grub 1 expects 0 for first partition
         if (ramdisk) {
-            char buf2[1024];
-            snprintf(buf2, sizeof(buf2), "initrd /boot/%s\n", rfile);
-            strncat(buf, buf2, sizeof(buf) - 1);
-        }
-        if (diskutil_write2file(menu_lst_path, buf) != OK) {
-            ret = ERROR;
-            goto cleanup;
+            output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
+            if (!output) {
+                logprintfl(EUCAERROR, "failed to copy the ramdisk to boot directory\n");
+                return (EUCA_ERROR);
+            }
+            EUCA_FREE(output);
         }
 
-    } else if (grub_version == 2) {
-        snprintf(grub_conf_path, sizeof(grub_conf_path), "%s/boot/grub/grub.cfg", mnt_pt);
-        char initrd[1024] = "";
-        if (ramdisk) {
-            snprintf(initrd, sizeof(initrd), "  initrd /boot/%s\n", rfile);
+        if (grub_version == 1) {
+            snprintf(menu_lst_path, sizeof(menu_lst_path), "%s/boot/grub/menu.lst", mnt_pt);
+            snprintf(grub_conf_path, sizeof(grub_conf_path), "%s/boot/grub/grub.conf", mnt_pt);
+
+            snprintf(buf, sizeof(buf), "default=0\n" "timeout=2\n\n" "title TheOS\n" "root (hd0,%d)\n" "kernel /boot/%s root=/dev/sda1 ro\n", part, kfile); // grub 1 expects 0 for first partition
+            if (ramdisk) {
+                snprintf(buf2, sizeof(buf2), "initrd /boot/%s\n", rfile);
+                strncat(buf, buf2, sizeof(buf) - 1);
+            }
+
+            if (diskutil_write2file(menu_lst_path, buf) != EUCA_OK) {
+                return (EUCA_ERROR);
+            }
+
+        } else if (grub_version == 2) {
+            snprintf(grub_conf_path, sizeof(grub_conf_path), "%s/boot/grub/grub.cfg", mnt_pt);
+            if (ramdisk) {
+                snprintf(initrd, sizeof(initrd), "  initrd /boot/%s\n", rfile);
+            }
+            snprintf(buf, sizeof(buf), "set default=0\n" "set timeout=2\n" "insmod part_msdos\n" "insmod ext2\n" "set root='(hd0,%d)'\n" "menuentry 'TheOS' --class os {\n" "  linux /boot/%s root=/dev/sda1 ro\n" "%s" "}\n", part + 1, kfile, initrd);    // grub 2 expects 1 for first partition
         }
-        snprintf(buf, sizeof(buf), "set default=0\n" "set timeout=2\n" "insmod part_msdos\n" "insmod ext2\n" "set root='(hd0,%d)'\n" "menuentry 'TheOS' --class os {\n" "  linux /boot/%s root=/dev/sda1 ro\n" "%s" "}\n", part + 1, kfile, initrd);    // grub 2 expects 1 for first partition
-    }
-    if (diskutil_write2file(grub_conf_path, buf) != OK) {
-        ret = ERROR;
-        goto cleanup;
+
+        if (diskutil_write2file(grub_conf_path, buf) != EUCA_OK) {
+            return (EUCA_ERROR);
+        }
     }
 
-cleanup:
-    return ret;
+    return (EUCA_INVALID_ERROR);
 }
 
 //!
@@ -1185,7 +1205,7 @@ int diskutil_grub_mbr(const char *path, const int part)
 {
     if (grub_version != 1) {
         logprintfl(EUCAERROR, "grub 2 is not supported\n");
-        return ERROR;
+        return (EUCA_ERROR);
     }
     return diskutil_grub2_mbr(path, part, NULL);
 }
