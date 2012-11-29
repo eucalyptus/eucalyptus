@@ -2604,7 +2604,7 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
 
 int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 {
-    int rc = 0, slashnet, ret = 0;
+    int rc = 0, slashnet, ret = 0, pid=0;
     char cmd[MAX_PATH], *network;
 
     if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
@@ -2616,7 +2616,23 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
         if (rc && (rc != 2)) {
             logprintfl(EUCAERROR, "failed to assign IP address '%s'\n", cmd);
             ret = 1;
-        }
+        } else {
+	  snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " arping -c 2 -U -I %s %s", vnetconfig->eucahome, vnetconfig->pubInterface, src);
+	  logprintfl(EUCADEBUG, "sending unsolicited ARP to flush caches with cmd '%s'\n", cmd);
+	  pid = fork();
+	  if (!pid) {
+	    pid = fork();
+	    if (!pid) {
+	      rc = system(cmd);
+	      rc = rc >> 8;
+	      logprintfl(EUCADEBUG, "return from cmd '%s' = %d\n", cmd, rc);
+	      exit(rc);
+	    }
+	    exit(0);
+	  } else {
+	    wait(NULL);
+	  }
+	}
 
         snprintf(cmd, MAX_PATH, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
