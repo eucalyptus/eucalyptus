@@ -62,8 +62,6 @@
 
 package com.eucalyptus.cluster.callback;
 
-import java.util.concurrent.Callable;
-import java.util.ArrayList;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
@@ -71,23 +69,13 @@ import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
-import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
-import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
@@ -99,9 +87,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType> {
@@ -197,13 +182,14 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         final Address addr = VmRunCallback.this.token.getAddress( );
         if ( addr != null ) {
           try {
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) )
-                         .then( new Callback.Success<BaseMessage>( ) {
-                           @Override
-                           public void fire( final BaseMessage response ) {
-                             vm.updateAddresses( addr.getInstanceAddress( ), addr.getName( ) );
-                           }
-                         } ).dispatch( vm.getPartition( ) );
+            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( 
+                new Callback.Success<BaseMessage>( ) {
+                  @Override
+                  public void fire( final BaseMessage response ) {
+                    Addresses.updatePublicIpByInstanceId( vm.getInstanceId(), addr.getName() );
+                  }
+                } 
+            ).dispatch( vm.getPartition( ) );
           } catch ( Exception ex ) {
             LOG.error( VmRunCallback.this.token + ": " + ex );
             Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
