@@ -4459,7 +4459,7 @@ int init_pthreads(void)
                 sigaction(SIGTERM, &newsigact, NULL);
                 logprintfl(EUCADEBUG, "sensor polling process running\n");
                 logprintfl(EUCADEBUG, "calling sensor_init() to not return.\n");
-                if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE, update_config) == ERROR)  // this call will not return
+                if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, TRUE, update_config) != EUCA_OK)  // this call will not return
                     logprintfl(EUCAERROR, "failed to invoke the sensor polling process\n");
                 exit(0);
             } else {
@@ -4467,7 +4467,7 @@ int init_pthreads(void)
             }
         }
         logprintfl(EUCADEBUG, "calling sensor_init(..., NULL) to return.\n");
-        if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE, NULL) == ERROR) {    // this call will return
+        if (sensor_init(s, ccSensorResourceCache, MAX_SENSOR_RESOURCES, FALSE, NULL) != EUCA_OK) {    // this call will return
             logprintfl(EUCAERROR, "failed to initialize sensor subsystem in this process\n");
         } else {
             logprintfl(EUCADEBUG, "sensor subsystem initialized in this process\n");

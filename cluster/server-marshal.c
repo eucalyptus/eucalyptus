@@ -503,7 +503,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
 //!
 adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env)
 {
-    int result = ERROR;
+    int result = EUCA_ERROR;
 
     adb_describeSensorsType_t *input = adb_DescribeSensors_get_DescribeSensors(describeSensors, env);
     adb_describeSensorsResponseType_t *output = adb_describeSensorsResponseType_create(env);
@@ -581,7 +581,7 @@ reply:
 
     EUCA_FREE(instIds);
 
-    if (result == ERROR) {
+    if (result != EUCA_OK) {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_TRUE);

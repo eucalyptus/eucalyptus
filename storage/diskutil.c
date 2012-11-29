@@ -1184,6 +1184,8 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
         if (diskutil_write2file(grub_conf_path, buf) != EUCA_OK) {
             return (EUCA_ERROR);
         }
+
+        return (EUCA_OK);
     }
 
     return (EUCA_INVALID_ERROR);

@@ -1097,7 +1097,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     }
     // create MBR
     logprintfl(EUCAINFO, "[%s] creating MBR\n", a->instanceId);
-    if (diskutil_mbr(blockblob_get_dev(a->bb), "msdos") == ERROR) { // issues `parted mklabel`
+    if (diskutil_mbr(blockblob_get_dev(a->bb), "msdos") != EUCA_OK) { // issues `parted mklabel`
         logprintfl(EUCAERROR, "[%s] failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
@@ -1108,7 +1108,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
                           "primary",    //! @TODO make this work with more than 4 partitions
                           NULL, // do not create file system
                           map[i].first_block_dst,   // first sector
-                          map[i].first_block_dst + map[i].len_blocks - 1) == ERROR) {
+                          map[i].first_block_dst + map[i].len_blocks - 1) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] error: failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(),
                        blobstore_get_last_msg());
             goto cleanup;
@@ -1167,7 +1167,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             logprintfl(EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", a->instanceId, strerror(errno));
             goto unloop;
         }
-        if (diskutil_mount(loop_dev, mnt_pt) != OK) {
+        if (diskutil_mount(loop_dev, mnt_pt) != EUCA_OK) {
             logprintfl(EUCAINFO, "[%s] error: failed to mount '%s' on '%s'\n", a->instanceId, loop_dev, mnt_pt);
             goto unloop;
         }
@@ -1175,13 +1175,13 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, root_part);
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
-        if (diskutil_grub(blockblob_get_dev(a->bb), mnt_pt, root_part, kernel_path, ramdisk_path) != OK) {
+        if (diskutil_grub(blockblob_get_dev(a->bb), mnt_pt, root_part, kernel_path, ramdisk_path) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
         sleep(1);               // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
-        if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
+        if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) {
             logprintfl(EUCAINFO, "[%s] error: failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN);
         }
         bootification_failed = 0;
@@ -1189,7 +1189,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
 unmount:
 
         // unmount partition and delete the mount point
-        if (diskutil_umount(mnt_pt) != OK) {
+        if (diskutil_umount(mnt_pt) != EUCA_OK) {
             logprintfl(EUCAINFO, "[%s] error: failed to unmount %s (there may be a resource leak)\n", a->instanceId, mnt_pt);
             bootification_failed = 1;
         }
@@ -1199,7 +1199,7 @@ unmount:
         }
 
 unloop:
-        if (diskutil_unloop(loop_dev) != OK) {
+        if (diskutil_unloop(loop_dev) != EUCA_OK) {
             logprintfl(EUCAINFO, "[%s] error: failed to remove %s (there may be a resource leak): %s\n", a->instanceId, loop_dev, strerror(errno));
             bootification_failed = 1;
         }
@@ -1320,7 +1320,7 @@ static int copy_creator(artifact * a)
     if (a->do_tune_fs) {
         // tune file system, which is needed to boot EMIs fscked long ago
         logprintfl(EUCAINFO, "[%s] tuning root file system on disk %d partition %d\n", a->instanceId, vbr->diskNumber, vbr->partitionNumber);
-        if (diskutil_tune(dev) == ERROR) {
+        if (diskutil_tune(dev) != EUCA_OK) {
             logprintfl(EUCAWARN, "[%s] error: failed to tune root file system: %s\n", a->instanceId, blobstore_get_last_msg());
         }
     }
@@ -1343,7 +1343,7 @@ static int copy_creator(artifact * a)
             logprintfl(EUCAINFO, "[%s] error: mkdtemp() failed: %s\n", a->instanceId, strerror(errno));
             goto error;
         }
-        if (diskutil_mount(dev, mnt_pt) != OK) {
+        if (diskutil_mount(dev, mnt_pt) != EUCA_OK) {
             logprintfl(EUCAINFO, "[%s] error: failed to mount '%s' on '%s'\n", a->instanceId, dev, mnt_pt);
             goto error;
         }

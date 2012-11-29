@@ -1257,7 +1257,7 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
 //!
 adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env)
 {
-    int result = ERROR;
+    int result = EUCA_ERROR;
 
     pthread_mutex_lock(&ncHandlerLock);
     adb_ncDescribeSensorsType_t *input = adb_ncDescribeSensors_get_ncDescribeSensors(ncDescribeSensors, env);
@@ -1339,7 +1339,7 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
 reply:
 
     EUCA_FREE(instIds);
-    if (result == ERROR) {
+    if (result != EUCA_OK) {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_TRUE);

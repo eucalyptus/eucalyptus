@@ -1005,7 +1005,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId,
                    remoteDevReal, localDevReal);
         logprintfl(EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-        ret = ERROR;
+        ret = EUCA_ERROR;
     }
 
 release:

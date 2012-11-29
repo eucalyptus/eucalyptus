@@ -937,7 +937,7 @@ int vnetDelHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan)
 //!
 //! @return If the host is not part of our list, the result of vnetAddHost() is returned. In
 //!         any other cases, EUCA_OK on success is returned or the following error codes:
-//!         \li EUCA_INVALID ERROR: if any parameters does not meet the preconditions
+//!         \li EUCA_INVALID_ERROR: if any parameters does not meet the preconditions
 //!         \li EUCA_PERMISSION_ERROR: if the virtual network support is disabled
 //!
 //! @see vnetAddHost()
