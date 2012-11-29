@@ -38,8 +38,9 @@
     <resolution>
       <message>
         1) Ensure that the CLOUD_OPTS variable set in eucalyptus.conf includes a value for 
-           --XX:MaxPermSize. Set or increase this value as necessary: by default, it should be at 
-           least 64MB. This value can be expressed in bytes, or as '64M', '1G' etc.
+           -XX:MaxPermSize=<xx>M. Set or increase this value as necessary: Eucalyptus overrides 
+           the standard java default of 64MB to 256MB, you'll likely need to set it to 384MB or higher.
+	   This value can be expressed in bytes, or as '384M', '1G' etc.
         2) Restart the cloud application.
         3) If this condition continues despite a high value for --XX:MaxPermSize, it may be 
            necessary to add more physical memory to the machine.
