@@ -366,7 +366,7 @@ static int sensor_expire_cache_entries(void)
         time_t timestamp_age = t - sr->timestamp;
         time_t cache_timeout = sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;
 
-        logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %ds), age %ds\n", sr->resourceName, sr->timestamp,
+        logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %d), age %ds\n", sr->resourceName, sr->timestamp,
                    sensor_state->interval_polled, CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL, timestamp_age);
 
         if (cache_timeout && (timestamp_age > cache_timeout)) {
