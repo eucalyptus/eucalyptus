@@ -103,7 +103,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated
+	$(MAKE) -C generated CFLAGS="$(CFLAGS) -Wno-unused-variable"
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 

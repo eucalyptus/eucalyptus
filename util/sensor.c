@@ -190,20 +190,20 @@ sensorCounterType sensor_str2type(const char *counterType);
 const char *sensor_type2str(sensorCounterType type);
 int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen);
 int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen);
-int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_on_oom);
+int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom);
 int sensor_add_value(const char *instanceId,
                      const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
                      const long long timestampMs, const boolean available, const double value);
 int sensor_get_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, long long *sequenceNum,
                      long long *timestampMs, boolean * available, double *value, long long *intervalMs, int *valLen);
-int sensor_get_instance_data(const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen);
+int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen);
 int sensor_add_resource(const char *resourceName, const char *resourceType, const char *resourceUuid);
 int sensor_set_resource_alias(const char *resourceName, const char *resourceAlias);
 int sensor_remove_resource(const char *resourceName);
 int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName,
                                const char *dimensionAlias);
 int sensor_set_volume(const char *instanceId, const char *volumeId, const char *guestDev);
-int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], const char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
+int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
 int sensor_validate_resources(sensorResource ** srs, int srsLen);
 
 #ifdef _UNIT_TEST
@@ -225,7 +225,9 @@ static void *sensor_thread(void *arg);
 static void init_state(int resources_size);
 static __inline__ boolean is_empty_sr(const sensorResource * sr);
 static int sensor_expire_cache_entries(void);
-static void log_sensor_resources(const char *name, const sensorResource ** srs, int srsLen);
+#ifdef _UNIT_TEST
+static void log_sensor_resources(const char *name, sensorResource ** srs, int srsLen);
+#endif /* _UNIT_TEST */
 static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *resourceName, const char *resourceType, const char *resourceUuid);
 static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * sr, const char *metricName);
 static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const int counterType);
@@ -841,6 +843,7 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
     return EUCA_OK;
 }
 
+#ifdef _UNIT_TEST
 //!
 //!
 //!
@@ -848,7 +851,7 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
 //! @param[in] srs
 //! @param[in] srsLen
 //!
-static void log_sensor_resources(const char *name, const sensorResource ** srs, int srsLen)
+static void log_sensor_resources(const char *name, sensorResource ** srs, int srsLen)
 {
     char buf[1024 * 1024];
     if (sensor_res2str(buf, sizeof(buf), srs, srsLen) != 0) {
@@ -857,6 +860,7 @@ static void log_sensor_resources(const char *name, const sensorResource ** srs, 
         logprintfl(EUCAINFO, "sensor resources (%s) BEGIN\n%ssensor resources END\n", name, buf);
     }
 }
+#endif /* _UNIT_TEST */
 
 //!
 //!
@@ -1143,12 +1147,10 @@ static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter *
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_on_oom)
+int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return (EUCA_ERROR);
-
-    // log_sensor_resources ("sensor_merge_records", srs, srsLen);
 
     int ret = EUCA_ERROR;
     sem_p(state_sem);
@@ -1461,7 +1463,7 @@ bail:
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-int sensor_get_instance_data(const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen)
+int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen)
 {
     int ret = EUCA_ERROR;
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
@@ -1730,7 +1732,7 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], const char resourceAliases[][MAX_SENSOR_NAME_LEN], int size)
+int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return (EUCA_ERROR);

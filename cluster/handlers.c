@@ -914,8 +914,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
         close(filedes[1]);
 
         if (!strcmp(ncOp, "ncGetConsoleOutput")) {
-            char *instId = va_arg(al, char *);
-            char **outConsoleOutput = va_arg(al, char **);
+            char *instId = NULL;
+            char **outConsoleOutput = NULL;
+
+            instId = va_arg(al, char *);
+            outConsoleOutput = va_arg(al, char **);
             if (outConsoleOutput) {
                 *outConsoleOutput = NULL;
             }
@@ -938,10 +941,15 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
         } else if (!strcmp(ncOp, "ncTerminateInstance")) {
-            char *instId = va_arg(al, char *);
-            int force = va_arg(al, int);
-            int *shutdownState = va_arg(al, int *);
-            int *previousState = va_arg(al, int *);
+            char *instId = NULL;
+            int force = 0;
+            int *shutdownState = NULL;
+            int *previousState = NULL;
+
+            instId = va_arg(al, char *);
+            force = va_arg(al, int);
+            shutdownState = va_arg(al, int *);
+            previousState = va_arg(al, int *);
             if (shutdownState && previousState) {
                 *shutdownState = *previousState = 0;
             }
@@ -964,12 +972,19 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
         } else if (!strcmp(ncOp, "ncStartNetwork")) {
-            char *uuid = va_arg(al, char *);
-            char **peers = va_arg(al, char **);
-            int peersLen = va_arg(al, int);
-            int port = va_arg(al, int);
-            int vlan = va_arg(al, int);
-            char **outStatus = va_arg(al, char **);
+            char *uuid = NULL;
+            char **peers = NULL;
+            int peersLen = 0;
+            int port = 0;
+            int vlan = 0;
+            char **outStatus = NULL;
+
+            uuid = va_arg(al, char *);
+            peers = va_arg(al, char **);
+            peersLen = va_arg(al, int);
+            port = va_arg(al, int);
+            vlan = va_arg(al, int);
+            outStatus = va_arg(al, char **);
             if (outStatus) {
                 *outStatus = NULL;
             }
@@ -993,27 +1008,49 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
         } else if (!strcmp(ncOp, "ncRunInstance")) {
-            char *uuid = va_arg(al, char *);
-            char *instId = va_arg(al, char *);
-            char *reservationId = va_arg(al, char *);
-            virtualMachine *ncvm = va_arg(al, virtualMachine *);
-            char *imageId = va_arg(al, char *);
-            char *imageURL = va_arg(al, char *);
-            char *kernelId = va_arg(al, char *);
-            char *kernelURL = va_arg(al, char *);
-            char *ramdiskId = va_arg(al, char *);
-            char *ramdiskURL = va_arg(al, char *);
-            char *ownerId = va_arg(al, char *);
-            char *accountId = va_arg(al, char *);
-            char *keyName = va_arg(al, char *);
-            netConfig *ncnet = va_arg(al, netConfig *);
-            char *userData = va_arg(al, char *);
-            char *launchIndex = va_arg(al, char *);
-            char *platform = va_arg(al, char *);
-            int expiryTime = va_arg(al, int);
-            char **netNames = va_arg(al, char **);
-            int netNamesLen = va_arg(al, int);
-            ncInstance **outInst = va_arg(al, ncInstance **);
+            char *uuid = NULL;
+            char *instId = NULL;
+            char *reservationId = NULL;
+            virtualMachine *ncvm = NULL;
+            char *imageId = NULL;
+            char *imageURL = NULL;
+            char *kernelId = NULL;
+            char *kernelURL = NULL;
+            char *ramdiskId = NULL;
+            char *ramdiskURL = NULL;
+            char *ownerId = NULL;
+            char *accountId = NULL;
+            char *keyName = NULL;
+            netConfig *ncnet = NULL;
+            char *userData = NULL;
+            char *launchIndex = NULL;
+            char *platform = NULL;
+            int expiryTime = 0;
+            char **netNames = NULL;
+            int netNamesLen = 0;
+            ncInstance **outInst = NULL;
+
+            uuid = va_arg(al, char *);
+            instId = va_arg(al, char *);
+            reservationId = va_arg(al, char *);
+            ncvm = va_arg(al, virtualMachine *);
+            imageId = va_arg(al, char *);
+            imageURL = va_arg(al, char *);
+            kernelId = va_arg(al, char *);
+            kernelURL = va_arg(al, char *);
+            ramdiskId = va_arg(al, char *);
+            ramdiskURL = va_arg(al, char *);
+            ownerId = va_arg(al, char *);
+            accountId = va_arg(al, char *);
+            keyName = va_arg(al, char *);
+            ncnet = va_arg(al, netConfig *);
+            userData = va_arg(al, char *);
+            launchIndex = va_arg(al, char *);
+            platform = va_arg(al, char *);
+            expiryTime = va_arg(al, int);
+            netNames = va_arg(al, char **);
+            netNamesLen = va_arg(al, int);
+            outInst = va_arg(al, ncInstance **);
             if (outInst) {
                 *outInst = NULL;
             }
@@ -1036,10 +1073,15 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
         } else if (!strcmp(ncOp, "ncDescribeInstances")) {
-            char **instIds = va_arg(al, char **);
-            int instIdsLen = va_arg(al, int);
-            ncInstance ***ncOutInsts = va_arg(al, ncInstance ***);
-            int *ncOutInstsLen = va_arg(al, int *);
+            char **instIds = NULL;
+            int instIdsLen = 0;
+            ncInstance ***ncOutInsts = NULL;
+            int *ncOutInstsLen = NULL;
+
+            instIds = va_arg(al, char **);
+            instIdsLen = va_arg(al, int);
+            ncOutInsts = va_arg(al, ncInstance ***);
+            ncOutInstsLen = va_arg(al, int *);
             if (ncOutInstsLen && ncOutInsts) {
                 *ncOutInstsLen = 0;
                 *ncOutInsts = NULL;
@@ -1069,8 +1111,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
-            char *resourceType = va_arg(al, char *);
-            ncResource **outRes = va_arg(al, ncResource **);
+            char *resourceType = NULL;
+            ncResource **outRes = NULL;
+
+            resourceType = va_arg(al, char *);
+            outRes = va_arg(al, ncResource **);
             if (outRes) {
                 *outRes = NULL;
             }
@@ -1093,14 +1138,23 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                 }
             }
         } else if (!strcmp(ncOp, "ncDescribeSensors")) {
-            int history_size = va_arg(al, int);
-            long long collection_interval_time_ms = va_arg(al, long long);
-            char **instIds = va_arg(al, char **);
-            int instIdsLen = va_arg(al, int);
-            char **sensorIds = va_arg(al, char **);
-            int sensorIdsLen = va_arg(al, int);
-            sensorResource ***srs = va_arg(al, sensorResource ***);
-            int *srsLen = va_arg(al, int *);
+            int history_size = 0;
+            long long collection_interval_time_ms = 0L;
+            char **instIds = NULL;
+            int instIdsLen = 0;
+            char **sensorIds = NULL;
+            int sensorIdsLen = 0;
+            sensorResource ***srs = NULL;
+            int *srsLen = NULL;
+
+            history_size = va_arg(al, int);
+            collection_interval_time_ms = va_arg(al, long long);
+            instIds = va_arg(al, char **);
+            instIdsLen = va_arg(al, int);
+            sensorIds = va_arg(al, char **);
+            sensorIdsLen = va_arg(al, int);
+            srs = va_arg(al, sensorResource ***);
+            srsLen = va_arg(al, int *);
 
             if (srs && srsLen) {
                 *srs = NULL;

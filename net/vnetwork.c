@@ -298,12 +298,8 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
     uint32_t rt = 0;
     uint32_t rc = 0;
     uint32_t slashnet = 0;
-    uint32_t *ips = NULL;
-    uint32_t *nms = NULL;
     int vlan = 0;
     int numaddrs = 1;
-    int len = 0;
-    int i = 0;
     int numberofaddrs_i = 0;
     char cmd[256] = { 0 };
     char *ipbuf = NULL;
@@ -1317,7 +1313,6 @@ int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig)
     int rc = 0;
     int fd = 0;
     int ret = EUCA_OK;
-    int wbytes = 0;
     char *file = NULL;
     char cmd[256] = { 0 };
     FILE *FH = NULL;
@@ -1528,9 +1523,7 @@ int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule)
 int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
                   char *protocol, int minPort, int maxPort)
 {
-    int i = 0;
     int rc = 0;
-    int done = 0;
     int destVlan = 0;
     int srcVlan = 0;
     int slashnet = 0;
@@ -2177,7 +2170,6 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
     char rootwrap[MAX_PATH] = { 0 };
     char *tmpstr = NULL;
     int tmppid = 0;
-    int tmpcount = 0;
     int rc = EUCA_OK;
     int i = 0;
     int numHosts = 0;
@@ -2358,10 +2350,7 @@ int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc)
 int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
 {
     int i = 0;
-    int j = 0;
     boolean found = FALSE;
-    int lastj = 0;
-    int localIpId = -1;
     int rc = 0;
     uint32_t tmpccs[NUMBER_OF_CCS] = { 0 };
 
@@ -3492,14 +3481,12 @@ int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip)
 int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
 {
     int i = 0;
-    int rc = 0;
     int slashnet = 0;
     int numips = 0;
     int j = 0;
     int found = 0;
     uint32_t minip = 0;
     uint32_t theip = 0;
-    char tmp[32] = { 0 };
     char *ip = NULL;
     char *ptr = NULL;
     char *theipstr = NULL;
@@ -3772,7 +3759,6 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
     int pubidx = 0;
     int rc = EUCA_OK;
     char *currdst = NULL;
-    char cmd[MAX_PATH] = { 0 };
     boolean done = FALSE;
 
     // assign address if unassigned, unassign/reassign if assigned
@@ -4454,7 +4440,6 @@ int check_chain(vnetConfig * vnetconfig, char *userName, char *netName)
 //!
 int check_deviceup(char *dev)
 {
-    int rc = 0;
     int ret = 0;
     char rbuf[MAX_PATH] = { 0 };
     FILE *FH = NULL;
@@ -4484,9 +4469,7 @@ int check_deviceup(char *dev)
     }
 
     fclose(FH);
-
     return (ret);
-
 }
 
 //!

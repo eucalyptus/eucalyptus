@@ -87,6 +87,7 @@ generated/stubs: $(GLWSDL)
 	@echo Adding marshalling calls to server stubs
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
 	@cp ../tools/Makefile.gen generated/Makefile
+	$(MAKE) -C generated CFLAGS="$(CFLAGS) -Wno-unused-variable"
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 

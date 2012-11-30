@@ -232,6 +232,33 @@ typedef struct _blobstore_filelock {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Blobstore errors matching strings. Make sure these match up with blobstore_error_t enums above
+const char *_blobstore_error_strings[] = {
+    "success",
+    "general error",
+
+    // system errno equivalents
+    "no such entity",
+    "bad file descriptor",
+    "out of memory",
+    "permission denied",
+    "already exists",
+    "invalid parameters",
+    "no space left",
+    "timeout",
+    "too many files open",
+
+    // blobstore-specific errors
+    "wrong signature",
+    "unknown error",
+};
+
+const char *blobstore_relation_type_name[] = {
+    "copy",
+    "map",
+    "snapshot",
+};
+
 __thread blobstore_error_t _blobstore_errno = BLOBSTORE_ERROR_OK;   //!< thread-local errno
 
 /*----------------------------------------------------------------------------*\

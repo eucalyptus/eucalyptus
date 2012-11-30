@@ -280,29 +280,8 @@ typedef struct _blobstore_meta {
 \*----------------------------------------------------------------------------*/
 
 //! Blobstore errors matching strings. Make sure these match up with blobstore_error_t enums above
-static char *_blobstore_error_strings[] = {
-    "success",
-    "general error",
-
-    // system errno equivalents
-    "no such entity",
-    "bad file descriptor",
-    "out of memory",
-    "permission denied",
-    "already exists",
-    "invalid parameters",
-    "no space left",
-    "timeout",
-    "too many files open",
-
-    // blobstore-specific errors
-    "wrong signature",
-    "unknown error"
-};
-
-static char *blobstore_relation_type_name[] = {
-    "copy", "map", "snapshot"
-};
+extern const char *_blobstore_error_strings[];
+extern const char *blobstore_relation_type_name[];
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

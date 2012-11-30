@@ -247,7 +247,7 @@ int allocate_netConfig(netConfig * out, char *pvMac, char *pvIp, char *pbIp, int
 ncMetadata *allocate_metadata(char *correlationId, char *userId);
 void free_metadata(ncMetadata ** pMeta);
 
-ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *stateName, int stateCode,
+ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, const char *stateName, int stateCode,
                               char *userId, char *ownerId, char *accountId, netConfig * ncnet, char *keyName, char *userData, char *launchIndex,
                               char *platform, int expiryTime, char **groupNames, int groupNamesSize);
 void free_instance(ncInstance ** instp);
@@ -425,7 +425,7 @@ void free_metadata(ncMetadata ** pMeta)
 //!
 //! @return a pointer to the newly allocated instance structure or NULL if any error occured.
 //!
-ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *stateName, int stateCode,
+ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, const char *stateName, int stateCode,
                               char *userId, char *ownerId, char *accountId, netConfig * ncnet, char *keyName, char *userData, char *launchIndex,
                               char *platform, int expiryTime, char **groupNames, int groupNamesSize)
 {

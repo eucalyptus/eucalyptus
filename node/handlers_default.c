@@ -523,8 +523,11 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
 {
     ncInstance *instance = NULL;
     int err = EUCA_ERROR;
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
 
-    sensor_refresh_resources(instanceId, "", 1);    // refresh stats so latest instance measurements are captured before it disappears
+    safe_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);    // refresh stats so latest instance measurements are captured before it disappears
 
     sem_p(inst_sem);
     err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance, 1);
@@ -1077,6 +1080,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     int is_iscsi_target = 0;
     int have_remote_device = 0;
     char *xml = NULL;
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
 
     char *tagBuf;
     char *localDevName;
@@ -1169,7 +1174,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         goto release;
     }
 
-    sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats so volume measurements are captured before it disappears
+    safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);  // refresh stats so volume measurements are captured before it disappears
 
     char path[MAX_PATH];
     char lpath[MAX_PATH];

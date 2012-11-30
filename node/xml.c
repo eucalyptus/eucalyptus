@@ -172,7 +172,10 @@ char **get_xpath_content(const char *xml_path, const char *xpath);
 \*----------------------------------------------------------------------------*/
 
 static void init(struct nc_state_t *nc_state);
+#if 0
+// (unused for now)
 static void cleanup(void);
+#endif /* 0 */
 static int path_check(const char *path, const char *name);
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
 
@@ -239,14 +242,16 @@ static void init(struct nc_state_t *nc_state)
     pthread_mutex_unlock(&xml_mutex);
 }
 
+#if 0
 //!
-//! Cleanup the LIBXML library
+//! Cleanup the LIBXML library (Unused for now)
 //!
 static void cleanup(void)
 {
     xsltCleanupGlobals();
     xmlCleanupParser();         // calls xmlCleanupGlobals()
 }
+#endif /* 0 */
 
 //!
 //! verify that the path for kernel/ramdisk is reasonable
