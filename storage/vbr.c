@@ -1696,6 +1696,7 @@ static char *url_get_digest(const char *url)
 static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean must_be_file, const char *sshkey)
 {
     artifact *a = NULL;
+    char *blob_sig = NULL;
 
     switch (vbr->locationType) {
     case NC_LOCATION_CLC:
@@ -1733,8 +1734,7 @@ u_out:
         }
     case NC_LOCATION_WALRUS:{
             // get the digest for size and signature
-            char *blob_sig = walrus_get_digest(vbr->preparedResourceLocation);
-            if (blob_sig == NULL) {
+            if ((blob_sig = walrus_get_digest(vbr->preparedResourceLocation)) == NULL) {
                 logprintfl(EUCAERROR, "[%s] error: failed to obtain image digest from  Walrus\n", current_instanceId);
                 goto w_out;
             }

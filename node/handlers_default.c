@@ -875,6 +875,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     int ret = EUCA_OK;
     int is_iscsi_target = 0;
     int have_remote_device = 0;
+    char *xml = NULL;
 
     char *tagBuf;
     char *localDevName;
@@ -981,8 +982,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         goto release;
     }
     // read in libvirt XML, which may have been modified by the hook above
-    char *xml = file2str(lpath);
-    if (xml == NULL) {
+    if ((xml = file2str(lpath)) == NULL) {
         logprintfl(EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
         ret = EUCA_ERROR;
         goto release;
