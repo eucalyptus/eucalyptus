@@ -360,7 +360,7 @@ static int sensor_expire_cache_entries(void)
             continue;
 
         if (!sr->timestamp) {
-            logprintfl(EUCATRACE, "resource %s does not yet have an update timestamp, skipping...\n", sr->resourceName);
+            logprintfl(EUCADEBUG, "resource %s does not yet have an update timestamp, skipping expiration...\n", sr->resourceName);
             continue;
         }
         time_t timestamp_age = t - sr->timestamp;
@@ -718,6 +718,7 @@ static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *reso
             safe_strncpy(unused_sr->resourceType, resourceType, sizeof(unused_sr->resourceType));
         if (resourceUuid)
             safe_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
+        unused_sr->timestamp = time(NULL);
         sensor_state->used_resources++;
         logprintfl(EUCADEBUG, "allocated new sensor resource %s\n", resourceName);
     }
