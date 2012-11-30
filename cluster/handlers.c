@@ -2588,7 +2588,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 //!
 int powerUp(ccResource * res)
 {
-    int rc, ret, len, i;
+    int rc, ret = EUCA_OK, len, i;
     char cmd[MAX_PATH], *bc = NULL;
     uint32_t *ips = NULL, *nms = NULL;
 
@@ -3382,7 +3382,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
 //!
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-    int i, rc, numInsts, start, stop, done, ret, timeout = 0;
+    int i, rc, numInsts, start, stop, done, ret = EUCA_OK, timeout = 0;
     ccInstance *myInstance;
     time_t op_start;
     ccResourceCache resourceCacheLocal;

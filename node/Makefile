@@ -107,7 +107,7 @@ generated/stubs: $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) $(BUILD_ID) -c $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
+	$(CC) $(BUILD_ID) -c -O $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 

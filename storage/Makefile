@@ -91,7 +91,7 @@ test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
 
 %.o: %.c %.h
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c -O $(CFLAGS) $(INCLUDES) $<
 
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
 	make -C ../util

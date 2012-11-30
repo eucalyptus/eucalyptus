@@ -92,7 +92,7 @@ generated/stubs: $(GLWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c -O $(CFLAGS) $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 
