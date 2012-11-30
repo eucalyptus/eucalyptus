@@ -69,16 +69,13 @@ buildall:
 doc: eucadoc
 
 eucadoc:
-	@doxygen eucalyptus_html.doxyfile > /dev/null;
+	@doxygen eucalyptus.doxyfile > /dev/null;
 
 nodedoc:
-	@doxygen node_html.doxyfile > /dev/null;
+	@doxygen node.doxyfile > /dev/null;
 
 clusterdoc:
-	@doxygen cluster_html.doxyfile > /dev/null;
-
-gatherdoc:
-	@doxygen gatherlog_html.doxyfile > /dev/null;
+	@doxygen cluster.doxyfile > /dev/null;
 
 deploy:
 
