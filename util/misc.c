@@ -280,7 +280,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
             }
 
         } else {                // no full path was given, so search $PATH
-            char *tok, *toka, *path, *helper, *save, *savea;
+            char *tok = NULL, *toka = NULL, *path = NULL, *helper = NULL, *save = NULL, *savea = NULL;
 
             tok = getenv("PATH");
             if (!tok) {
@@ -2133,7 +2133,7 @@ static char *find_cont(const char *xml, char *xpath)
     int tag_start;
     int tag_end = -1;
     int single;
-    int closing;
+    int closing = 0;
     char *name;
 #define _STK_SIZE 64
     char *n_stk[_STK_SIZE];
