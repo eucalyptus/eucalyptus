@@ -16,7 +16,8 @@
 
 SERVICE=eucalyptus-console
 PROCESS=euca-console-server
-PIDFILE=/var/run/eucalyptus-console.pid
+PIDFILE=/var/run/eucalyptus-console/eucalyptus-console.pid
+CONSOLEUSER=eucaconsole
 
 LOCKFILE=/var/lock/subsys/eucalyptus-console
 
@@ -26,7 +27,7 @@ start() {
     fi
 
     echo -n $"Starting $SERVICE: "
-    daemon --pidfile=$PIDFILE $PROCESS -d
+    daemon --user=$CONSOLEUSER --pidfile=$PIDFILE $PROCESS -d
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && touch $LOCKFILE
@@ -109,7 +110,10 @@ EOF
     rm -f $csr
 
     chmod 600 $cert
+    chown $CONSOLEUSER:$CONSOLEUSER $cert
+
     chmod 600 $key
+    chown $CONSOLEUSER:$CONSOLEUSER $key
 
     success $"Generating certificate"
     echo

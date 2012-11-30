@@ -97,7 +97,7 @@ test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
 	make -C ../storage
 
 %.o: %.c %.h
-	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
+	$(CC) -c -O -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
 
 indent:
 	@for idfile in *.[ch]; do \

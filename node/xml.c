@@ -63,6 +63,18 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/xml.c
+//! Implements the XML utilities to create and modify the XML data needed
+//! by the NC component.
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -90,23 +102,108 @@
 #include "misc.h"
 #include "xml.h"
 
-static int initialized = 0;
-static boolean config_use_virtio_root = 0;
-static boolean config_use_virtio_disk = 0;
-static boolean config_use_virtio_net = 0;
-static char xslt_path[MAX_PATH];
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static boolean initialized = FALSE; //!< To determine if the XML library has been initialized
+static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
+static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
+static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
+static char xslt_path[MAX_PATH];    //!< Destination path for the XSLT files
+static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int gen_instance_xml(const ncInstance * instance);
+int gen_libvirt_instance_xml(const ncInstance * instance);
+int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev);
+int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance);
+char **get_xpath_content(const char *xml_path, const char *xpath);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static void init(struct nc_state_t *nc_state);
+#if 0
+// (unused for now)
+static void cleanup(void);
+#endif /* 0 */
+static int path_check(const char *path, const char *name);
+static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
+
+static void error_handler(void *ctx, const char *fmt, ...);
+static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
+                                 int outputXmlBufferSize);
+
+#ifdef __STANDALONE
+static void create_dummy_instance(const char *file);
+int main(int argc, char **argv);
+#endif /* __STANDALONE */
+
+#ifdef __STANDALONE2
+int main(int argc, char **argv)
+#endif                          /* __STANDALONE2 */
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 #ifdef __STANDALONE             // if compiling as a stand-alone binary (for unit testing)
 #define INIT() if (!initialized) init(NULL)
 #elif __STANDALONE2
 #define INIT() if (!initialized) init(NULL)
-#else // if linking against an NC, find nc_state symbol
+#else                           // if linking against an NC, find nc_state symbol
 extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
 #endif
-
-static void error_handler(void *ctx, const char *fmt, ...);
-static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   // process-global mutex
 
 // macros for making XML construction a bit more readable
 #define _NODE(P,N) xmlNewChild((P), NULL, BAD_CAST (N), NULL)
@@ -114,6 +211,17 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   // process-globa
 #define _ATTRIBUTE(P,N,V) xmlNewProp((P), BAD_CAST (N), BAD_CAST (V))
 #define _BOOL(S) ((S)?("true"):("false"))
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Initialize the XML local parameters from the NC state structure.
+//!
+//! @param[in] nc_state a pointer to the NC state structure to initialize
+//!
 static void init(struct nc_state_t *nc_state)
 {
     pthread_mutex_lock(&xml_mutex);
@@ -129,27 +237,49 @@ static void init(struct nc_state_t *nc_state)
             config_use_virtio_net = nc_state->config_use_virtio_net;
             safe_strncpy(xslt_path, nc_state->libvirt_xslt_path, sizeof(xslt_path));
         }
-        initialized = 1;
+        initialized = TRUE;
     }
     pthread_mutex_unlock(&xml_mutex);
 }
 
+#if 0
+//!
+//! Cleanup the LIBXML library (Unused for now)
+//!
 static void cleanup(void)
 {
     xsltCleanupGlobals();
     xmlCleanupParser();         // calls xmlCleanupGlobals()
 }
+#endif /* 0 */
 
-// verify that the path for kernel/ramdisk is reasonable
-static int path_check(const char *path, const char *name)   // TODO: further checking?
+//!
+//! verify that the path for kernel/ramdisk is reasonable
+//!
+//! @param[in] path the path name to the kernel or ramdisk
+//! @param[in] name a string containing "ramdisk" or "kernel" for information reason
+//!
+//! @return EUCA_OK if the path is valid or EUCA_ERROR if the path is invalid.
+//!
+static int path_check(const char *path, const char *name)
 {
     if (strstr(path, "/dev/") == path) {
         logprintfl(EUCAERROR, "internal error: path to %s points to a device %s\n", name, path);
-        return 1;
+        return EUCA_ERROR;
     }
-    return 0;
+    return EUCA_OK;
 }
 
+//!
+//! Writes an XML file content to disk.
+//!
+//! @param[in] doc a pointer to the XML document structure to write to disk
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] path the destination path for the XML file
+//! @param[in] type the file type (currently unused and forced to UTF-8).
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type)
 {
     mode_t old_umask = umask(~BACKING_FILE_PERM);   // ensure the generated XML file has the right perms
@@ -162,24 +292,33 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     }
     umask(old_umask);
 
-    return (ret > 0) ? (OK) : (ERROR);
+    return (ret > 0) ? (EUCA_OK) : (EUCA_ERROR);
 }
 
-// Encodes instance metadata (contained in ncInstance struct) in XML
-// and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
-// That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
-// to produce /path/to/instance/libvirt.xml file that is passed to libvirt create.
+//!
+//! Encodes instance metadata (contained in ncInstance struct) in XML
+//! and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
+//! That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
+//! to produce /path/to/instance/libvirt.xml file that is passed to libvirt create.
+//!
+//! @param[in] instance a pointer to the instance to generate XML from
+//!
+//! @return EUCA_OK if the operation is successful. Known error code returned include EUCA_ERROR.
+//!
+//! @see write_xml_file()
+//!
 int gen_instance_xml(const ncInstance * instance)
 {
     INIT();
 
-    int ret = 1;
+    int ret = EUCA_ERROR;
     pthread_mutex_lock(&xml_mutex);
     xmlDocPtr doc = xmlNewDoc(BAD_CAST "1.0");
     xmlNodePtr instanceNode = xmlNewNode(NULL, BAD_CAST "instance");
     xmlDocSetRootElement(doc, instanceNode);
 
-    {                           // hypervisor-related specs
+    {
+        // hypervisor-related specs
         xmlNodePtr hypervisor = xmlNewChild(instanceNode, NULL, BAD_CAST "hypervisor", NULL);
         _ATTRIBUTE(hypervisor, "type", instance->hypervisorType);
         _ATTRIBUTE(hypervisor, "capability", hypervsorCapabilityTypeNames[instance->hypervisorCapability]);
@@ -188,7 +327,8 @@ int gen_instance_xml(const ncInstance * instance)
         _ATTRIBUTE(hypervisor, "bitness", bitness);
     }
 
-    {                           // backing specification (TODO: maybe expand this with device maps or whatnot?)
+    {
+        //! backing specification (@todo maybe expand this with device maps or whatnot?)
         xmlNodePtr backing = xmlNewChild(instanceNode, NULL, BAD_CAST "backing", NULL);
         xmlNodePtr root = xmlNewChild(backing, NULL, BAD_CAST "root", NULL);
         assert(instance->params.root);
@@ -225,13 +365,15 @@ int gen_instance_xml(const ncInstance * instance)
     snprintf(memory_s, sizeof(memory_s), "%d", instance->params.mem * 1024);
     _ELEMENT(instanceNode, "memoryKB", memory_s);
 
-    {                           // SSH-key related
+    {
+        // SSH-key related
         xmlNodePtr key = _NODE(instanceNode, "key");
         _ATTRIBUTE(key, "isKeyInjected", _BOOL(instance->do_inject_key));
         _ATTRIBUTE(key, "sshKey", instance->keyName);
     }
 
-    {                           // OS-related specs
+    {
+        // OS-related specs
         xmlNodePtr os = _NODE(instanceNode, "os");
         _ATTRIBUTE(os, "platform", instance->platform);
         _ATTRIBUTE(os, "virtioRoot", _BOOL(config_use_virtio_root));
@@ -239,7 +381,8 @@ int gen_instance_xml(const ncInstance * instance)
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
     }
 
-    {                           // disks specification
+    {
+        // disks specification
         xmlNodePtr disks = _NODE(instanceNode, "disks");
 
         // the first disk should be the root disk (at least for Windows)
@@ -313,11 +456,16 @@ free:
     return ret;
 }
 
-static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
-                                 int outputXmlBufferSize);
-
-// Given a file with instance metadata in XML (instance->xmlFilePath)
-// and an XSL-T stylesheet, produces XML document suitable for libvirt
+//!
+//! Given a file with instance metadata in XML (instance->xmlFilePath)
+//! and an XSL-T stylesheet, produces XML document suitable for libvirt
+//!
+//! @param[in] instance a pointer to the instance structure
+//!
+//! @return The error code from the call of apply_xslt_stylesheet()
+//!
+//! @see apply_xslt_stylesheet()
+//!
 int gen_libvirt_instance_xml(const ncInstance * instance)
 {
     INIT();
@@ -329,10 +477,16 @@ int gen_libvirt_instance_xml(const ncInstance * instance)
     return ret;
 }
 
-// Gets called from XSLT/XML2 library, possibly several times per error.
-// This handler concatenates the error pieces together and outputs a line,
-// either when a newlines is seen or when the internal buffer is overrun.
-// Needless to say, this function is not thread safe.
+//!
+//! Gets called from XSLT/XML2 library, possibly several times per error.
+//! This handler concatenates the error pieces together and outputs a line,
+//! either when a newlines is seen or when the internal buffer is overrun.
+//! Needless to say, this function is not thread safe.
+//!
+//! @param[in] ctx a transparent pointer (UNUSED)
+//! @param[in] fmt a format string
+//! @param[in] ... the variable argument part of the format string
+//!
 static void error_handler(void *ctx, const char *fmt, ...)
 {
     int i;
@@ -357,12 +511,22 @@ static void error_handler(void *ctx, const char *fmt, ...)
     }
 }
 
-// Processes input XML file (e.g., instance metadata) into output XML file or string (e.g., for libvirt)
-// using XSL-T specification file (e.g., libvirt.xsl)
+//!
+//! Processes input XML file (e.g., instance metadata) into output XML file or string (e.g., for libvirt)
+//! using XSL-T specification file (e.g., libvirt.xsl)
+//!
+//! @param[in]  xsltStylesheetPath a string containing the path to the XSLT Stylesheet
+//! @param[in]  inputXmlPath a string containing the path of the input XML document
+//! @param[in]  outputXmlPath a string containing the path of the output XML document
+//! @param[out] outputXmlBuffer a string that will contain the output XML data if non NULL and non-0 length.
+//! @param[in]  outputXmlBufferSize the length of outputXmlBuffer
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include EUCA_ERROR and EUCA_IO_ERROR.
+//!
 static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
                                  int outputXmlBufferSize)
 {
-    int err = OK;
+    int err = EUCA_OK;
 
     INIT();
     xsltStylesheetPtr cur = xsltParseStylesheetFile((const xmlChar *)xsltStylesheetPath);
@@ -370,7 +534,7 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
         xmlDocPtr doc = xmlParseFile(inputXmlPath);
         if (doc) {
             xsltTransformContextPtr ctxt = xsltNewTransformContext(cur, doc);   // need context to get result
-            xsltSetCtxtParseOptions(ctxt, 0);   // TODO: do we want any XSL-T parsing options?
+            xsltSetCtxtParseOptions(ctxt, 0);   //! @todo do we want any XSL-T parsing options?
             xmlDocPtr res = xsltApplyStylesheetUser(cur, doc, NULL, NULL, NULL, ctxt);  // applies XSLT to XML
             int applied_ok = ctxt->state == XSLT_STATE_OK;  // errors are communicated via ctxt->state
             xsltFreeTransformContext(ctxt);
@@ -384,16 +548,16 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                         int bytes = xsltSaveResultToFile(fp, res, cur);
                         if (bytes == -1) {
                             logprintfl(EUCAERROR, "failed to save XML document to %s\n", outputXmlPath);
-                            err = ERROR;
+                            err = EUCA_IO_ERROR;
                         }
                         fclose(fp);
                     } else {
                         logprintfl(EUCAERROR, "failed to create file %s\n", outputXmlPath);
-                        err = ERROR;
+                        err = EUCA_IO_ERROR;
                     }
                 }
                 // convert to an ASCII buffer, if such was provided
-                if (err == OK && outputXmlBuffer != NULL && outputXmlBufferSize > 0) {
+                if (err == EUCA_OK && outputXmlBuffer != NULL && outputXmlBufferSize > 0) {
                     xmlChar *buf;
                     int buf_size;
                     if (xsltSaveResultToString(&buf, &buf_size, res, cur) == 0) {   // success
@@ -406,39 +570,51 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                             }
                         } else {
                             logprintfl(EUCAERROR, "XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
-                            err = ERROR;
+                            err = EUCA_ERROR;
                         }
                         xmlFree(buf);
                     } else {
                         logprintfl(EUCAERROR, "failed to save XML document to a string\n");
-                        err = ERROR;
+                        err = EUCA_ERROR;
                     }
                 }
             } else {
                 logprintfl(EUCAERROR, "failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
-                err = ERROR;
+                err = EUCA_ERROR;
             }
             if (res != NULL)
                 xmlFreeDoc(res);
             xmlFreeDoc(doc);
         } else {
             logprintfl(EUCAERROR, "failed to parse XML document %s\n", inputXmlPath);
-            err = ERROR;
+            err = EUCA_ERROR;
         }
         xsltFreeStylesheet(cur);
     } else {
         logprintfl(EUCAERROR, "failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
-        err = ERROR;
+        err = EUCA_IO_ERROR;
     }
 
     return err;
 }
 
+//!
+//! Generates the XML content for a given volume
+//!
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] instance a pointer to our instance structure
+//! @param[in] localDevReal a string containing the target device name
+//! @param[in] remoteDev a string containing the disk path.
+//!
+//! @return The results of calling write_xml_file()
+//!
+//! @see write_xml_file()
+//!
 int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev)
 {
     INIT();
 
-    int ret = 1;
+    int ret = EUCA_ERROR;
     pthread_mutex_lock(&xml_mutex);
     xmlDocPtr doc = xmlNewDoc(BAD_CAST "1.0");
     xmlNodePtr volumeNode = xmlNewNode(NULL, BAD_CAST "volume");
@@ -465,7 +641,8 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
     }
 
-    {                           // backing specification (TODO: maybe expand this with device maps or whatnot?)
+    {
+        //! backing specification (@todo maybe expand this with device maps or whatnot?)
         xmlNodePtr backing = xmlNewChild(volumeNode, NULL, BAD_CAST "backing", NULL);
         xmlNodePtr root = xmlNewChild(backing, NULL, BAD_CAST "root", NULL);
         assert(instance->params.root);
@@ -490,6 +667,16 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
     return ret;
 }
 
+//!
+//! Generate volume XML content for LIBVIRT
+//!
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] instance a pointer to our instance structure.
+//!
+//! @return The results of calling apply_xslt_stylesheet()
+//!
+//! @see apply_xslt_stylesheet()
+//!
 int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
 {
     INIT();
@@ -506,10 +693,15 @@ int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
     return ret;
 }
 
-// Returns text content of results of an xpath query as
-// a NULL-terminated  array of string pointers, which
-// the caller must free. (To be useful, the query should
-// point to an element that does not have any children.) 
+//!
+//! Returns text content of results of an xpath query as a NULL-terminated array of string pointers, which
+//! the caller must free. (To be useful, the query should point to an element that does not have any children.)
+//!
+//! @param[in] xml_path a string containing the path to the XML file to parse
+//! @param[in] xpath a string contianing the XPATH expression to evaluate
+//!
+//! @return a pointer to a list of strings
+//!
 char **get_xpath_content(const char *xml_path, const char *xpath)
 {
     char **res = NULL;
@@ -522,11 +714,11 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
     if (doc) {
         xmlXPathContextPtr context = xmlXPathNewContext(doc);
         if (context) {
-            xmlXPathObjectPtr result = xmlXPathEvalExpression(xpath, context);
+            xmlXPathObjectPtr result = xmlXPathEvalExpression(((const xmlChar *)xpath), context);
             if (result) {
                 if (!xmlXPathNodeSetIsEmpty(result->nodesetval)) {
                     xmlNodeSetPtr nodeset = result->nodesetval;
-                    res = calloc(nodeset->nodeNr + 1, sizeof(char *));
+                    res = EUCA_ZALLOC(nodeset->nodeNr + 1, sizeof(char *));
                     for (int i = 0; i < nodeset->nodeNr && res != NULL; i++) {
                         if (nodeset->nodeTab[i]->children != NULL && nodeset->nodeTab[i]->children->content != NULL) {
                             xmlChar *val = nodeset->nodeTab[i]->children->content;
@@ -551,12 +743,12 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
     return res;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-// code for unit-testing below, to be compiled into a stand-alone binary
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 #ifdef __STANDALONE
-
+//!
+//! Create a dummy instance
+//!
+//! @param[in] file a string containing the file name for which to save our dummy instances
+//!
 static void create_dummy_instance(const char *file)
 {
     xmlDocPtr doc = xmlNewDoc(BAD_CAST "1.0");
@@ -609,11 +801,19 @@ static void create_dummy_instance(const char *file)
     xmlFreeDoc(doc);
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char **argv)
 {
     if (argc != 2) {
         logprintfl(EUCAERROR, "required parameters are <XSLT stylesheet path>\n");
-        return 1;
+        return EUCA_ERROR;
     }
     safe_strncpy(xslt_path, argv[1], sizeof(xslt_path));
     char *in_path = tempnam(NULL, "xml-");
@@ -623,16 +823,16 @@ int main(int argc, char **argv)
 
     logprintfl(EUCAINFO, "parsing stylesheet %s\n", xslt_path);
     int err = apply_xslt_stylesheet(xslt_path, in_path, out_path, NULL, 0);
-    if (err != OK)
+    if (err != EUCA_OK)
         goto out;
     logprintfl(EUCAINFO, "parsing stylesheet %s again\n", xslt_path);
     char xml_buf[2048];
     err = apply_xslt_stylesheet(xslt_path, in_path, out_path, xml_buf, sizeof(xml_buf));
-    if (err != OK)
+    if (err != EUCA_OK)
         goto out;
     logprintfl(EUCAINFO, "wrote XML to %s\n", out_path);
     if (strlen(xml_buf) < 1) {
-        err = ERROR;
+        err = EUCA_ERROR;
         logprintfl(EUCAERROR, "failed to see XML in buffer\n");
         goto out;
     }
@@ -640,18 +840,26 @@ int main(int argc, char **argv)
 out:
     remove(out_path);
     remove(in_path);
-    free(in_path);
-    free(out_path);
+    EUCA_FREE(in_path);
+    EUCA_FREE(out_path);
     return err;
 }
-#endif
+#endif /* __STANDALONE */
 
 #ifdef __STANDALONE2
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char **argv)
 {
     if (argc != 3) {
         logprintfl(EUCAERROR, "please, supply a path to an XML file and an Xpath\n");
-        return 1;
+        return (EUCA_ERROR);
     }
 
     char *inputXmlPath = argv[1];
@@ -659,11 +867,13 @@ int main(int argc, char **argv)
     if (devs) {
         for (int j = 0; devs[j]; j++) {
             logprintfl(EUCAINFO, "devs[%d] = '%s'\n", j, devs[j]);
-            free(devs[j]);
+            EUCA_FREE(devs[j]);
         }
-        free(devs);
+        EUCA_FREE(devs);
     } else {
         logprintfl(EUCAERROR, "devs[] are empty\n");
     }
+
+    return (EUCA_OK);
 }
-#endif
+#endif /* __STANDALONE2 */

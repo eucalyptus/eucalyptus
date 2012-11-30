@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,8 +63,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef CLIENT_MARSHAL_H
-#define CLIENT_MARSHAL_H
+//!
+//! @file node/client-marshal.h
+//! This defines the AXIS2C Client requests handling
+//!
+
+#ifndef _INCLUDE_CLIENT_MARSHAL_H_
+#define _INCLUDE_CLIENT_MARSHAL_H_
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include "axis2_stub_EucalyptusNC.h"    /* for axis2_ and axutil_ defs */
 #include "data.h"               /* for eucalyptus defs */
@@ -69,42 +83,97 @@
 
 #include <windows-bundle.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! NC Stub structure
 typedef struct ncStub_t {
-    axutil_env_t *env;
-    axis2_char_t *client_home;
-    axis2_char_t *endpoint_uri;
-    axis2_char_t *node_name;
-    axis2_stub_t *stub;
+    axutil_env_t *env;          //!< Pointer to the AXIS2 environment structure
+    axis2_char_t *client_home;  //!< The AXIS2 client home directory path string
+    axis2_char_t *endpoint_uri; //!< The AXIS2 endpoint URI string
+    axis2_char_t *node_name;    //!< The AXIS2 node name parameter string
+    axis2_stub_t *stub;         //!< Pointer to the AXIS2 stub structure
 } ncStub;
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 ncStub *ncStubCreate(char *endpoint, char *logfile, char *homedir);
 int ncStubDestroy(ncStub * stub);
 
-int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                       int groupNamesSize, ncInstance ** outInstPtr);
-int ncGetConsoleOutputStub(ncStub * stub, ncMetadata * meta, char *instanceId, char **consoleOutput);
-int ncRebootInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId);
-int ncTerminateInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId, int force, int *shutdownState, int *previousState);
-int ncDescribeInstancesStub(ncStub * stub, ncMetadata * meta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
-int ncDescribeResourceStub(ncStub * stub, ncMetadata * meta, char *resourceType, ncResource ** outRes);
-int ncStartNetworkStub(ncStub * stub, ncMetadata * meta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
-int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *publicIp);
-int ncPowerDownStub(ncStub * st, ncMetadata * meta);
-int ncAttachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-int ncDetachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
-int ncCreateImageStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev);
+int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
+int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
+int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
+int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
+int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
+int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp);
+int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta);
+int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
+int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 
-int ncBundleInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey,
-                         char *S3Policy, char *S3PolicySig);
-int ncBundleRestartInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId);
-int ncCancelBundleTaskStub(ncStub * stub, ncMetadata * meta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * stub, ncMetadata * meta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
                               int *outBundleTasksLen);
 
-int ncCreateImageStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev);
-int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
+int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_CLIENT_MARSHAL_H_ */

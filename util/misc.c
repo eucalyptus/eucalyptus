@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file util/misc.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,7 +93,7 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <dirent.h>             // opendir, etc
-#include <errno.h>              // errno
+#include <sys/errno.h>          // errno
 #include <sys/time.h>           // gettimeofday
 #include <limits.h>
 #include <sys/mman.h>           // mmap
@@ -96,18 +107,166 @@
 
 #include "eucalyptus.h"
 
-// Given an array of pointers to command names (e.g., "ls", "dd", etc.),
-// as well as either an array of NULL pointers or pointers to full paths,
-// either the full paths are verified or system $PATH is searched for 
-// the names and full paths are pointed to by helpers_path[] entries. 
-// Number of missing entries is returned or -1 for error.
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define OUTSIZE                                    50
+#define BUFSIZE                                  1024
+
+#ifdef _UNIT_TEST
+#define _STR                                     "a lovely string"
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int verify_helpers(char **helpers, char **helpers_path, int num_helpers);
+int timeread(int fd, void *buf, size_t bytes, int timeout);
+int add_euca_to_path(const char *euca_home_supplied);
+pid_t timewait(pid_t pid, int *status, int timeout_sec);
+int param_check(char *func, ...);
+int check_process(pid_t pid, char *search);
+int check_directory(const char *dir);
+int check_file_newer_than(char *file, time_t mtime);
+int check_block(const char *file);
+int check_file(const char *file);
+int check_path(const char *path);
+int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
+char *replace_string(char **stringp, char *source, char *destination);
+boolean sscanf_lines(char *lines, char *format, void *varp);
+char *fp2str(FILE * fp);
+char *system_output(char *shell_command);
+char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
+int get_conf_var(const char *path, const char *name, char **value);
+void free_char_list(char **value);
+char **from_var_to_char_list(const char *v);
+int hash_code(const char *s);
+int hash_code_bin(const char *buf, int buf_size);
+char *get_string_stats(const char *s);
+int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
+int daemonrun(char *incmd, char *pidfile);
+int vrun(const char *fmt, ...);
+int cat(const char *file_name);
+int touch(const char *path);
+int diff(const char *path1, const char *path2);
+long long dir_size(const char *path);
+int write2file(const char *path, char *str);
+char *file2strn(const char *path, const ssize_t limit);
+char *file2str(const char *path);
+char *file2str_seek(char *file, size_t size, int mode);
+char *str2str(const char *str, const char *begin, const char *end);
+long long str2longlong(const char *str, const char *begin, const char *end);
+int uint32compar(const void *ina, const void *inb);
+int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
+int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
+int maxint(int a, int b);
+int minint(int a, int b);
+int copy_file(const char *src, const char *dst);
+long long file_size(const char *file_path);
+char *strduplc(const char *s);
+char *xpath_content(const char *xml, const char *xpath);
+int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
+int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
+char *strdupcat(char *original, char *new);
+int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
+long long time_usec(void);
+long long time_ms(void);
+char *safe_mkdtemp(char *template);
+int safe_mkstemp(char *template);
+char *safe_strncpy(char *s1, const char *s2, size_t len);
+int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
+char parse_boolean(const char *s);
+int drop_privs(void);
+int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
+
+#ifdef _UNIT_TEST
+int main(int argc, char **argv);
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static char *next_tag(const char *xml, int *start, int *end, int *single, int *closing);
+static char *find_cont(const char *xml, char *xpath);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Given an array of pointers to command names (e.g., "ls", "dd", etc.),
+//! as well as either an array of NULL pointers or pointers to full paths,
+//! either the full paths are verified or system $PATH is searched for
+//! the names and full paths are pointed to by helpers_path[] entries.
+//!
+//! @param[in] helpers
+//! @param[in] helpers_path
+//! @param[in] num_helpers
+//!
+//! @return Number of missing entries is returned or -1 for error.
+//!
 int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
 {
     int missing_helpers = 0;
     char **tmp_helpers_path = helpers_path;
 
     if (helpers_path == NULL)
-        tmp_helpers_path = (char **)calloc(num_helpers, sizeof(char *));
+        tmp_helpers_path = (char **)EUCA_ZALLOC(num_helpers, sizeof(char *));
 
     for (int i = 0; i < num_helpers; i++) {
         struct stat statbuf;
@@ -121,7 +280,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
             }
 
         } else {                // no full path was given, so search $PATH
-            char *tok, *toka, *path, *helper, *save, *savea;
+            char *tok = NULL, *toka = NULL, *path = NULL, *helper = NULL, *save = NULL, *savea = NULL;
 
             tok = getenv("PATH");
             if (!tok) {
@@ -177,10 +336,9 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
                     toka = strtok_r(NULL, ":", &savea);
                 }
                 tok = strtok_r(NULL, ":", &save);
-                if (helper)
-                    free(helper);
+                EUCA_FREE(helper);
             }
-            free(path);
+            EUCA_FREE(path);
         }
 
         if (!done) {
@@ -195,14 +353,23 @@ cleanup:
 
     if (helpers_path == NULL) {
         for (int i = 0; i < num_helpers; i++)
-            if (tmp_helpers_path[i])
-                free(tmp_helpers_path[i]);
-        free(tmp_helpers_path);
+            EUCA_FREE(tmp_helpers_path[i]);
+        EUCA_FREE(tmp_helpers_path);
     }
 
     return missing_helpers;
 }
 
+//!
+//!
+//!
+//! @param[in]  fd
+//! @param[out] buf
+//! @param[in]  bytes
+//! @param[in]  timeout
+//!
+//! @return -1 on failure or the number of bytes read.
+//!
 int timeread(int fd, void *buf, size_t bytes, int timeout)
 {
     int rc;
@@ -228,6 +395,13 @@ int timeread(int fd, void *buf, size_t bytes, int timeout)
     return (rc);
 }
 
+//!
+//!
+//!
+//! @param[in] euca_home_supplied
+//!
+//! @return the result of the setenv() system call
+//!
 int add_euca_to_path(const char *euca_home_supplied)
 {
     const char *euca_home;
@@ -251,23 +425,30 @@ int add_euca_to_path(const char *euca_home_supplied)
     return setenv("PATH", new_path, TRUE);
 }
 
-// Wrapper around waitpid() that retries waiting until
-// a timeout, specified in seconds, occurs. Return value 
-// is that of waitpid():
-//
-//  -1 means there was an error
-//   0 means there was a timeout
-//   N is the PID of the process 
-// 
-// When a positive value is returned, status is set
-// to the exit status of the process
-
+//!
+//! Wrapper around waitpid() that retries waiting until
+//! a timeout, specified in seconds, occurs. Return value
+//! is that of waitpid():
+//!
+//!  -1 means there was an error
+//!   0 means there was a timeout
+//!   N is the PID of the process
+//!
+//! When a positive value is returned, status is set
+//! to the exit status of the process
+//!
+//! @param[in] pid
+//! @param[in] status
+//! @param[in] timeout_sec
+//!
+//! @return -1 means there was an error; 0 means there was a timeout; N is the PID of the process
+//!
 pid_t timewait(pid_t pid, int *status, int timeout_sec)
 {
     if (timeout_sec < 0)        // do not allow negative timeouts
         timeout_sec = 0;
 
-    *status = 1;                // TODO: remove this once we know that no callers rely on status to detect timeout
+    *status = 1;                //! @todo remove this once we know that no callers rely on status to detect timeout
 
     int rc = waitpid(pid, status, WNOHANG);
     time_t elapsed_usec = 0;
@@ -282,6 +463,16 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     return (rc);
 }
 
+//!
+//!
+//!
+//! @param[in] func
+//! @param[in] ...
+//!
+//! @return 0 if the parameter is valid or 1 if not
+//!
+//! @todo check to see if boolean logic would be more appropriate
+//!
 int param_check(char *func, ...)
 {
     int fail;
@@ -305,10 +496,15 @@ int param_check(char *func, ...)
             fail = 1;
         }
     } else if (!strcmp(func, "vnetAddHost")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        int d = va_arg(al, int);
+        vnetConfig *a = NULL;
+        char *b = NULL;
+        char *c = NULL;
+        int d = 0;
+
+        a = va_arg(al, vnetConfig *);
+        b = va_arg(al, char *);
+        c = va_arg(al, char *);
+        d = va_arg(al, int);
         if (!a || !b || (d < 0) || (d > NUMBER_OF_VLANS - 1)) {
             fail = 1;
         }
@@ -361,11 +557,17 @@ int param_check(char *func, ...)
             fail = 1;
         }
     } else if (!strcmp(func, "vnetInit")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        char *d = va_arg(al, char *);
-        int e = va_arg(al, int);
+        vnetConfig *a = NULL;
+        char *b = NULL;
+        char *c = NULL;
+        char *d = NULL;
+        int e = 0;
+
+        a = va_arg(al, vnetConfig *);
+        b = va_arg(al, char *);
+        c = va_arg(al, char *);
+        d = va_arg(al, char *);
+        e = va_arg(al, int);
         if (!a || !b || !c || d < 0) {
             fail = 1;
         }
@@ -380,6 +582,14 @@ int param_check(char *func, ...)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] pid
+//! @param[in] search
+//!
+//! @return 0 if the PID exists or 1 if not
+//!
 int check_process(pid_t pid, char *search)
 {
     char file[MAX_PATH], buf[1024];
@@ -417,8 +627,14 @@ int check_process(pid_t pid, char *search)
     return (ret);
 }
 
-// make sure 'dir' is a directory or a soft-link to one
-// and that it is readable by the current user (1 on error)
+//!
+//! make sure 'dir' is a directory or a soft-link to one
+//! and that it is readable by the current user (1 on error)
+//!
+//! @param[in] dir
+//!
+//! @return 0 if dir is a directory or 1 if not
+//!
 int check_directory(const char *dir)
 {
     if (!dir) {
@@ -452,6 +668,16 @@ int check_directory(const char *dir)
     return 0;
 }
 
+//!
+//! Check if a file is newer than the given timestamp
+//!
+//! @param[in] file the file name string
+//! @param[in] mtime the timestamp to compare with
+//!
+//! @return 0 if the file is newer than timestamp or 1 if not
+//!
+//! @todo use boolean instead
+//!
 int check_file_newer_than(char *file, time_t mtime)
 {
     struct stat mystat;
@@ -474,6 +700,13 @@ int check_file_newer_than(char *file, time_t mtime)
     return (1);
 }
 
+//!
+//!
+//!
+//! @param[in] file
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int check_block(const char *file)
 {
     int rc;
@@ -481,72 +714,94 @@ int check_block(const char *file)
     char *rpath;
 
     if (!file) {
-        return (1);
+        return (EUCA_ERROR);
     }
     rpath = realpath(file, NULL);
     if (!rpath) {
-        return (1);
+        return (EUCA_ERROR);
     }
     rc = lstat(rpath, &mystat);
-    free(rpath);
+    EUCA_FREE(rpath);
     if (rc < 0 || !S_ISBLK(mystat.st_mode)) {
-        return (1);
+        return (EUCA_ERROR);
     }
-    return (0);
+    return (EUCA_OK);
 }
 
-// returns 0 if file is a readable regular file, 1 otherwise
+//!
+//! Checks if a file is a readable regular file.
+//!
+//! @param[in] file
+//!
+//! @return EUCA_OK if the file is readable, EUCA_ERROR otherwise
+//!
 int check_file(const char *file)
 {
     int rc;
     struct stat mystat;
 
     if (!file) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     rc = lstat(file, &mystat);
     if (rc < 0 || !S_ISREG(mystat.st_mode)) {
-        return (1);
+        return (EUCA_ERROR);
     }
-    return (0);
+    return (EUCA_OK);
 }
 
-// return 0 if path exists
+//!
+//! Check if a path exists
+//!
+//! @param[in] path
+//!
+//! @return EUCA_OK if the path exists, othewise EUCA_ERROR is returned.
+//!
 int check_path(const char *path)
 {
     int rc;
     struct stat mystat;
 
     if (!path) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     rc = lstat(path, &mystat);
     if (rc < 0) {
-        return (1);
+        return (EUCA_ERROR);
     }
-    return (0);
+    return (EUCA_OK);
 }
 
-// obtains size & available bytes of a file system that 'path' resides on
-// path may be a symbolic link, which will get resolved (0 = success, 1 = failure)
+//!
+//! obtains size & available bytes of a file system that 'path' resides on
+//! path may be a symbolic link, which will get resolved.
+//!
+//! @param[in]  path
+//! @param[out] fs_bytes_size
+//! @param[out] fs_bytes_available
+//! @param[out] fs_id
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
+//!         and EUCA_IO_ERROR.
+//!
 int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id)
 {
     if (path == NULL)
-        return ERROR;
+        return (EUCA_ERROR);
 
     char cpath[PATH_MAX];
     errno = 0;
     if (realpath(path, cpath) == NULL) {    // will convert a path with symbolic links and '..' into canonical form
         logprintfl(EUCAERROR, "failed to resolve %s (%s)\n", path, strerror(errno));
-        return ERROR;
+        return (EUCA_IO_ERROR);
     }
 
     struct statfs fs;
     if (statfs(cpath, &fs) == -1) { // obtain the size and ID info from the file system of the canonical path
         logprintfl(EUCAERROR, "failed to stat %s (%s)\n", cpath, strerror(errno));
-        return ERROR;
+        return (EUCA_IO_ERROR);
     }
     *fs_id = hash_code_bin((char *)&fs.f_fsid, sizeof(fsid_t));
     *fs_bytes_size = (long long)fs.f_bsize * (long long)(fs.f_blocks);
@@ -556,11 +811,21 @@ int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned lo
     logprintfl(EUCADEBUG, "  to '%s' with ID %0x\n", cpath, *fs_id);
     logprintfl(EUCADEBUG, "  of size %llu bytes with available %llu bytes\n", *fs_bytes_size, *fs_bytes_available);
 
-    return OK;
+    return (EUCA_OK);
 }
 
-/* given string *stringp, replace occurences of <source> with <destination>
- * and return the new string in stringp */
+//!
+//! given string *stringp, replace occurences of source with destination
+//! and return the new string in stringp
+//!
+//! @param[in] stringp
+//! @param[in] source
+//! @param[in] destination
+//!
+//! @return the newly formatted string
+//!
+//! @note caller is reponsible to free the result
+//!
 char *replace_string(char **stringp, char *source, char *destination)
 {
     char *start = NULL, *substart = NULL, *tok = NULL, *new_string = NULL;
@@ -569,17 +834,14 @@ char *replace_string(char **stringp, char *source, char *destination)
     char *buf;
     int maxlen = 32768 * 2;
 
-    buf = malloc(sizeof(char) * maxlen);
-    new_string = malloc(sizeof(char) * maxlen); /* TODO: this has to be dynamic */
+    buf = EUCA_ALLOC(maxlen, sizeof(char));
+    new_string = EUCA_ZALLOC(maxlen, sizeof(char)); //! @todo this has to be dynamic
     if (!buf || !new_string) {
         fprintf(stderr, "replace_string: out of memory\n");
-        if (buf)
-            free(buf);
-        if (new_string)
-            free(new_string);
+        EUCA_FREE(buf);
+        EUCA_FREE(new_string);
         return NULL;
     }
-    bzero(new_string, maxlen);
 
     start = *stringp;
     substart = start;
@@ -594,22 +856,28 @@ char *replace_string(char **stringp, char *source, char *destination)
     }
     snprintf(buf, maxlen, "%s%s", new_string, substart);
     strncpy(new_string, buf, maxlen);
-    if (buf)
-        free(buf);
-
-    free(*stringp);
+    EUCA_FREE(buf);
+    EUCA_FREE(*stringp);
     *stringp = new_string;
 
     return new_string;
 }
 
-/* do sscanf() on each line in lines[], returning upon first match */
-/* returns 1 if there was match and 0 otherwise */
-int sscanf_lines(char *lines, char *format, void *varp)
+//!
+//! do sscanf() on each line in lines[], returning upon first match
+//! returns TRUE if there was match and FALSE otherwise
+//!
+//! @param[in] lines
+//! @param[in] format
+//! @param[in] varp
+//!
+//! @return TRUE if we have a match, FALSE otherwise
+//!
+boolean sscanf_lines(char *lines, char *format, void *varp)
 {
     char *copy;
     char *start, *end;
-    int found = 0;
+    boolean found = FALSE;
 
     if (!lines)
         return found;
@@ -633,11 +901,20 @@ int sscanf_lines(char *lines, char *format, void *varp)
             end--;              /* so that start=='\0' */
         }
     }
-    free(copy);
+    EUCA_FREE(copy);
 
     return found;
 }
 
+//!
+//!
+//!
+//! @param[in] fp
+//!
+//! @return a pointer to the file output string
+//!
+//! @note caller is responsible to free the returned memory
+//!
 char *fp2str(FILE * fp)
 {
 #   define INCREMENT 512
@@ -651,10 +928,8 @@ char *fp2str(FILE * fp)
     do {
         // create/enlarge the buffer
         void *new_buf;
-        if ((new_buf = realloc(buf, buf_max)) == NULL) {
-            if (buf != NULL) {  // previous realloc()s worked
-                free(buf);      // free partial buffer
-            }
+        if ((new_buf = EUCA_REALLOC(buf, buf_max, sizeof(char))) == NULL) {
+            EUCA_FREE(buf);     // free partial buffer
             return NULL;
         }
         memset(new_buf + buf_current, 0, INCREMENT * sizeof(char));
@@ -669,7 +944,7 @@ char *fp2str(FILE * fp)
             } else {
                 if (!feof(fp)) {
                     logprintfl(EUCAERROR, "failed while reading from file handle\n");
-                    free(buf);
+                    EUCA_FREE(buf);
                     return NULL;
                 }
             }
@@ -682,8 +957,15 @@ char *fp2str(FILE * fp)
     return buf;
 }
 
-/* execute system(shell_command) and return stdout in new string
- * pointed to by *stringp */
+//!
+//! execute system(shell_command) and return stdout in new string pointed to by *stringp
+//!
+//! @param[in] shell_command
+//!
+//! @return a pointer to the stdout output
+//!
+//! @note the caller is responsible to free the returned memory
+//!
 char *system_output(char *shell_command)
 {
     char *buf = NULL;
@@ -699,6 +981,17 @@ char *system_output(char *shell_command)
     return buf;
 }
 
+//!
+//!
+//!
+//! @param[in] configFiles
+//! @param[in] numFiles
+//! @param[in] key
+//!
+//! @return a pointer to the configuration string
+//!
+//! @note caller is responsible to free memory allocated
+//!
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
 {
     int rc, i, done;
@@ -722,17 +1015,23 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
     return (tmpstr);
 }
 
-/* search for variable #name# in file #path# and return whatever is after
- * = in value (which will need to be freed).
- *
- * Example of what we are able to parse:
- * TEST="test"
- * TEST=test
- *     TEST   = test
- *
- * Return 1 on success, 0 on variable not found and -1 on error (parse or
- * file not found)
- */
+//!
+//! search for variable 'name' in file 'path' and return whatever is after
+//! = in value (which will need to be freed).
+//!
+//! Example of what we are able to parse:
+//! TEST="test"
+//! TEST=test
+//!    TEST   = test
+//!
+//! @param[in] path
+//! @param[in] name
+//! @param[in] value
+//!
+//! @return 1 on success, 0 on variable not found and -1 on error (parse or file not found)
+//!
+//! @note caller is responsible to free the memory allocated for 'value'
+//!
 int get_conf_var(const char *path, const char *name, char **value)
 {
     FILE *f;
@@ -751,7 +1050,7 @@ int get_conf_var(const char *path, const char *name, char **value)
     }
 
     len = strlen(name);
-    buf = malloc(sizeof(char) * 32768);
+    buf = EUCA_ALLOC(32768, sizeof(char));
     while (fgets(buf, 32768, f)) {
         /* the process here is fairly simple: spaces are not
          * considered (unless between "") so we remove them
@@ -774,7 +1073,7 @@ int get_conf_var(const char *path, const char *name, char **value)
                 if (*ptr == '\0') {
                     /* something wrong happened */
                     fclose(f);
-                    free(buf);
+                    EUCA_FREE(buf);
                     return -1;
                 }
                 ptr++;
@@ -790,18 +1089,23 @@ int get_conf_var(const char *path, const char *name, char **value)
         *value = strdup(ret);
         if (*value == NULL) {
             fclose(f);
-            free(buf);
+            EUCA_FREE(buf);
             return -1;
         }
         fclose(f);
-        free(buf);
+        EUCA_FREE(buf);
         return 1;
     }
     fclose(f);
-    free(buf);
+    EUCA_FREE(buf);
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] value
+//!
 void free_char_list(char **value)
 {
     int i;
@@ -811,11 +1115,18 @@ void free_char_list(char **value)
     }
 
     for (i = 0; value[i] != NULL; i++) {
-        free(value[i]);
+        EUCA_FREE(value[i]);
     }
-    free(value);
+    EUCA_FREE(value);
 }
 
+//!
+//!
+//!
+//! @param[in] v
+//!
+//! @return a pointer to a char list or NULL if any error occured
+//!
 char **from_var_to_char_list(const char *v)
 {
     char *value, **tmp, *ptr, *w, a;
@@ -825,13 +1136,13 @@ char **from_var_to_char_list(const char *v)
     if (v == NULL || v[0] == '\0') {
         return NULL;
     }
-    tmp = malloc(sizeof(char *));
+    tmp = EUCA_ZALLOC(1, sizeof(char *));
     if (tmp == NULL) {
         return NULL;
     }
     value = strdup(v);
     if (value == NULL) {
-        free(tmp);
+        EUCA_FREE(tmp);
         return NULL;
     }
     tmp[0] = NULL;
@@ -853,15 +1164,15 @@ char **from_var_to_char_list(const char *v)
         a = *ptr;
         *ptr = '\0';
 
-        tmp = realloc(tmp, sizeof(char *) * (i + 2));
+        tmp = EUCA_REALLOC(tmp, (i + 2), sizeof(char *));
         if (tmp == NULL) {
-            free(value);
+            EUCA_FREE(value);
             return NULL;
         }
         tmp[i] = strdup(w);
         if (tmp[i] == NULL) {
             free_char_list(tmp);
-            free(value);
+            EUCA_FREE(value);
             return NULL;
         }
         tmp[++i] = NULL;
@@ -872,16 +1183,22 @@ char **from_var_to_char_list(const char *v)
             break;
         }
     }
-    free(value);
+    EUCA_FREE(value);
 
     return tmp;
 }
 
-// implements Java's String.hashCode() on a string
+//!
+//! implements Java's String.hashCode() on a string
+//!
+//! @param[in] s
+//!
+//! @return the computed hash code. If 's' is NULL, 0 will be returned
+//!
 int hash_code(const char *s)
 {
     int code = 0;
-    int i;
+    int i = 0;
 
     if (!s)
         return code;
@@ -894,10 +1211,19 @@ int hash_code(const char *s)
     return code;
 }
 
-// implements Java's String.hashCode() on a buffer of some size
+//!
+//! implements Java's String.hashCode() on a buffer of some size
+//!
+//! @param[in] buf
+//! @param[in] buf_size
+//!
+//! @return the result of hash_code()
+//!
+//! @see hash_code()
+//!
 int hash_code_bin(const char *buf, int buf_size)
 {
-    char *buf_str = malloc(2 * buf_size + 1);
+    char *buf_str = EUCA_ALLOC(((2 * buf_size) + 1), sizeof(char));
     if (buf_str == NULL)
         return -1;
 
@@ -907,26 +1233,42 @@ int hash_code_bin(const char *buf, int buf_size)
     buf_str[2 * buf_size] = '\0';
 
     int code = hash_code(buf_str);
-    free(buf_str);
+    EUCA_FREE(buf_str);
 
     return code;
 }
 
-/* given a string, returns 3 relevant statistics as a static string */
-#define OUTSIZE 50
+//!
+//! given a string, returns 3 relevant statistics as a static string
+//!
+//! @param[in] s
+//!
+//! @return a pointer to the static string containing teh stats
+//!
 char *get_string_stats(const char *s)
 {
-    static char out[OUTSIZE];   // TODO: malloc this?
+    static char out[OUTSIZE];   //! @todo malloc this?
     int len = (int)strlen(s);
     snprintf(out, OUTSIZE, "length=%d buf[n-1]=%i hash=%d", len, (int)((signed char)s[len - 1]), hash_code(s));
     return out;
 }
 
-#define BUFSIZE 1024
-
-/* daemonize and store pid in pidfile. if pidfile exists and contained
-   pid is daemon already running, do nothing.  force option will first
-   kill and then re-daemonize */
+//!
+//! daemonize and store pid in pidfile. if pidfile exists and contained
+//! pid is daemon already running, do nothing.  force option will first
+//! kill and then re-daemonize */
+//!
+//! @param[in] cmd
+//! @param[in] procname
+//! @param[in] pidfile
+//! @param[in] force
+//! @param[in] rootwrap
+//!
+//! @return EUCA_OK on success. If an error occured, EUCA_ERROR is returned or
+//!         the result of the daemonrun().
+//!
+//! @see daemonrun()
+//!
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap)
 {
     int rc, found, ret;
@@ -934,7 +1276,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
     FILE *FH;
 
     if (!cmd || !procname) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     if (pidfile) {
@@ -958,7 +1300,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                         fclose(FH);
                     }
                 }
-                free(pidstr);
+                EUCA_FREE(pidstr);
             }
         }
 
@@ -969,7 +1311,7 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
                 rc = safekillfile(pidfile, procname, 9, rootwrap);
             } else {
                 // nothing to do
-                return (0);
+                return (EUCA_OK);
             }
         } else {
             // pidfile passed in but process is not running
@@ -979,34 +1321,39 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
         }
     }
 
-    rc = daemonrun(cmd, pidfile);
-    if (!rc) {
+    if ((ret = daemonrun(cmd, pidfile)) == 0) {
         // success
         //    if (pidfile) {
         //      char pidstr[32];
         //      snprintf(pidstr, 32, "%d", *dpid);
         //      rc = write2file(pidfile, pidstr);
         //    }
-        ret = 0;
-    } else {
-        ret = 1;
     }
+
     return (ret);
 }
 
-/* daemonize and run 'cmd', returning pid of the daemonized process */
+//!
+//! daemonize and run 'cmd', returning pid of the daemonized process
+//!
+//! @param[in] incmd
+//! @param[in] pidfile
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
+//!         and EUCA_THREAD_ERROR
+//!
 int daemonrun(char *incmd, char *pidfile)
 {
     int pid, sid, i, status, rc;
     char **argv = NULL, *cmd;
 
     if (!incmd) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     pid = fork();
     if (pid < 0) {
-        return (1);
+        return (EUCA_THREAD_ERROR);
     }
     if (!pid) {
         char *tok = NULL, *ptr = NULL;
@@ -1026,17 +1373,17 @@ int daemonrun(char *incmd, char *pidfile)
         // construct argv
         cmd = strdup(incmd);
         idx = 0;
-        argv = realloc(NULL, sizeof(char *));
+        argv = EUCA_ZALLOC(1, sizeof(char *));
         tok = strtok_r(cmd, " ", &ptr);
         while (tok) {
             fflush(stdout);
             argv[idx] = strdup(tok);
             idx++;
             tok = strtok_r(NULL, " ", &ptr);
-            argv = realloc(argv, sizeof(char *) * (idx + 1));
+            argv = EUCA_REALLOC(argv, (idx + 1), sizeof(char *));
         }
         argv[idx] = NULL;
-        free(cmd);
+        EUCA_FREE(cmd);
 
         // close all fds
         for (i = 0; i < sysconf(_SC_OPEN_MAX); i++) {
@@ -1054,10 +1401,17 @@ int daemonrun(char *incmd, char *pidfile)
         rc = waitpid(pid, &status, 0);
     }
 
-    return (0);
+    return (EUCA_OK);
 }
 
-/* given printf-style arguments, run the resulting string in the shell */
+//!
+//! given printf-style arguments, run the resulting string in the shell
+//!
+//! @param[in] fmt
+//! @param[in] ...
+//!
+//! @return the result of the system() call.
+//!
 int vrun(const char *fmt, ...)
 {
     char buf[MAX_PATH];
@@ -1070,15 +1424,21 @@ int vrun(const char *fmt, ...)
 
     logprintfl(EUCAINFO, "[%s]\n", buf);
     if ((e = system(buf)) != 0) {
-        logprintfl(EUCAERROR, "system(%s) failed with %d\n", buf, e);   /* TODO: remove? */
+        logprintfl(EUCAERROR, "system(%s) failed with %d\n", buf, e);   //! @todo remove?
     }
     return e;
 }
 
-/* given a file path, prints it to stdout */
+//!
+//! given a file path, prints it to stdout
+//!
+//! @param[in] file_name
+//!
+//! @return the number of bytes written to stdout
+//!
 int cat(const char *file_name)
 {
-    int got;
+    int got = 0;
     int put = 0;
     char buf[BUFSIZE];
 
@@ -1094,26 +1454,39 @@ int cat(const char *file_name)
     return put;
 }
 
-/* "touch" a file, creating if necessary */
+//!
+//! "touch" a file, creating if necessary
+//!
+//! @param[in] path
+//!
+//! @return EUCA_OK on success or EUCA_IO_ERROR on failure
+//!
 int touch(const char *path)
 {
-    int ret = 0;
-    int fd;
+    int ret = EUCA_OK;
+    int fd = -1;
 
     if ((fd = open(path, O_WRONLY | O_CREAT | O_NONBLOCK, 0644)) >= 0) {
         close(fd);
         if (utime(path, NULL) != 0) {
             logprintfl(EUCAERROR, "failed to adjust time for %s (%s)\n", path, strerror(errno));
-            ret = 1;
+            ret = EUCA_IO_ERROR;
         }
     } else {
         logprintfl(EUCAERROR, "failed to create/open file %s (%s)\n", path, strerror(errno));
-        ret = 1;
+        ret = EUCA_IO_ERROR;
     }
     return ret;
 }
 
-/* diffs two files: 0=same, -N=different, N=error */
+//!
+//! diffs two files: 0=same, -N=different, N=error
+//!
+//! @param[in] path1
+//! @param[in] path2
+//!
+//! @return 0=same, -N=different, N=error
+//!
 int diff(const char *path1, const char *path2)
 {
     int fd1, fd2;
@@ -1138,12 +1511,18 @@ int diff(const char *path1, const char *path2)
         close(fd2);
         return (-(read1 + read2));  /* both should be 0s if files are equal */
     }
-    return ERROR;
+    return EUCA_ERROR;
 }
 
-/* sums up sizes of files in the directory, as well as the size of the
- * directory itself; no subdirectories are allowed - if there are any, this
- * returns -1 */
+//!
+//! sums up sizes of files in the directory, as well as the size of the
+//! directory itself; no subdirectories are allowed - if there are any, this
+//! returns -1
+//!
+//! @param[in] path
+//!
+//! @return the sommation of all file size in a directory
+//!
 long long dir_size(const char *path)
 {
     struct stat mystat;
@@ -1190,6 +1569,14 @@ long long dir_size(const char *path)
     return size;
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] str
+//!
+//! @return EUCA_OK on success or EUCA_IO_ERROR on failure
+//!
 int write2file(const char *path, char *str)
 {
     FILE *FH = NULL;
@@ -1199,11 +1586,23 @@ int write2file(const char *path, char *str)
         fprintf(FH, "%s", str);
         fclose(FH);
     } else {
-        return (1);
+        return (EUCA_IO_ERROR);
     }
-    return (0);
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in] path
+//! @param[in] limit
+//!
+//! @return the result of teh file2str() call
+//!
+//! @see file2str()
+//!
+//! @note the caller must free the memory when done.
+//!
 char *file2strn(const char *path, const ssize_t limit)
 {
     struct stat mystat;
@@ -1218,7 +1617,15 @@ char *file2strn(const char *path, const ssize_t limit)
     return file2str(path);
 }
 
-/* read file 'path' into a new string */
+//!
+//! read file 'path' into a new string
+//!
+//! @param[in] path
+//!
+//! @return the string content of the given file
+//!
+//! @note the caller must free the memory when done.
+//!
 char *file2str(const char *path)
 {
     char *content = NULL;
@@ -1231,7 +1638,7 @@ char *file2str(const char *path)
     }
     file_size = mystat.st_size;
 
-    if ((content = malloc(file_size + 1)) == NULL) {
+    if ((content = EUCA_ALLOC((file_size + 1), sizeof(char))) == NULL) {
         logprintfl(EUCAERROR, "out of memory reading file %s\n", path);
         return content;
     }
@@ -1239,7 +1646,7 @@ char *file2str(const char *path)
     int fp;
     if ((fp = open(path, O_RDONLY)) < 0) {
         logprintfl(EUCAERROR, "failed to open file %s\n", path);
-        free(content);
+        EUCA_FREE(content);
         content = NULL;
         return content;
     }
@@ -1259,7 +1666,7 @@ char *file2str(const char *path)
 
     if (bytes < 0) {
         logprintfl(EUCAERROR, "failed to read file %s\n", path);
-        free(content);
+        EUCA_FREE(content);
         content = NULL;
         return content;
     }
@@ -1268,6 +1675,17 @@ char *file2str(const char *path)
     return content;
 }
 
+//!
+//!
+//!
+//! @param[in] file
+//! @param[in] size
+//! @param[in] mode
+//!
+//! @return the newly allocated string or NULL if any error occured
+//!
+//! @note caller is responsible to free the allocated memory
+//!
 char *file2str_seek(char *file, size_t size, int mode)
 {
     int rc, fd;
@@ -1279,7 +1697,7 @@ char *file2str_seek(char *file, size_t size, int mode)
         return (NULL);
     }
 
-    ret = malloc(size);
+    ret = EUCA_ZALLOC(size, sizeof(char));
     if (!ret) {
         logprintfl(EUCAERROR, "out of memory!\n");
         return (NULL);
@@ -1295,34 +1713,40 @@ char *file2str_seek(char *file, size_t size, int mode)
                     rc = lseek(fd, (off_t) 0, SEEK_SET);
                     if (rc < 0) {
                         logprintfl(EUCAERROR, "cannot seek\n");
-                        if (ret)
-                            free(ret);
+                        EUCA_FREE(ret);
                         close(fd);
                         return (NULL);
                     }
                 }
             }
 
-            bzero(ret, size);
             rc = read(fd, ret, (size) - 1);
             close(fd);
         } else {
             logprintfl(EUCAERROR, "cannot open '%s' read-only\n", file);
-            if (ret)
-                free(ret);
+            EUCA_FREE(ret);
             return (NULL);
         }
     } else {
         logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", file);
-        if (ret)
-            free(ret);
+        EUCA_FREE(ret);
         return (NULL);
     }
 
     return (ret);
 }
 
-// extract string from str bound by 'begin' and 'end'
+//!
+//! extract string from str bound by 'begin' and 'end'
+//!
+//! @param[in] str
+//! @param[in] begin
+//! @param[in] end
+//!
+//! @return the newly constructed string or NULL if any error occured.
+//!
+//! @note caller is responsible to free the returned memory
+//!
 char *str2str(const char *str, const char *begin, const char *end)
 {
     char *buf = NULL;
@@ -1356,7 +1780,7 @@ char *str2str(const char *str, const char *begin, const char *end)
         return buf;
     }
 
-    buf = malloc(len + 1);
+    buf = EUCA_ALLOC(len + 1, sizeof(char));
     if (buf != NULL) {
         strncpy(buf, b, len);
         buf[len] = '\0';
@@ -1365,19 +1789,35 @@ char *str2str(const char *str, const char *begin, const char *end)
     return buf;
 }
 
-/* extract integer from str bound by 'begin' and 'end' */
+//!
+//! extract integer from str bound by 'begin' and 'end'
+//!
+//! @param[in] str
+//! @param[in] begin
+//! @param[in] end
+//!
+//! @return the integer value from the string and its parameters
+//!
 long long str2longlong(const char *str, const char *begin, const char *end)
 {
     long long val = -1L;
     char *buf = str2str(str, begin, end);
     if (buf != NULL) {
         val = atoll(buf);
-        free(buf);
+        EUCA_FREE(buf);
     }
 
     return val;
 }
 
+//!
+//!
+//!
+//! @param[in] ina
+//! @param[in] inb
+//!
+//! @return 0 if ina and inb are the same, -1 if ina is less than inb and 1 if inb is less than ina
+//!
 int uint32compar(const void *ina, const void *inb)
 {
     uint32_t a, b;
@@ -1391,6 +1831,18 @@ int uint32compar(const void *ina, const void *inb)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] pidfile
+//! @param[in] procname
+//! @param[in] sig
+//! @param[in] rootwrap
+//!
+//! @return
+//!
+//! @see safekill()
+//!
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
 {
     int rc;
@@ -1405,12 +1857,22 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
     if (pidstr) {
         logprintfl(EUCADEBUG, "calling safekill with pid %d\n", atoi(pidstr));
         rc = safekill(atoi(pidstr), procname, sig, rootwrap);
-        free(pidstr);
+        EUCA_FREE(pidstr);
     }
     unlink(pidfile);
     return (rc);
 }
 
+//!
+//!
+//!
+//! @param[in] pid
+//! @param[in] procname
+//! @param[in] sig
+//! @param[in] rootwrap
+//!
+//! @return
+//!
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
 {
     char cmdstr[MAX_PATH], file[MAX_PATH], cmd[MAX_PATH];
@@ -1453,53 +1915,76 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] a
+//! @param[in] b
+//!
+//! @return the maximum of the two given values
+//!
 int maxint(int a, int b)
 {
     return (a > b ? a : b);
 }
 
+//!
+//!
+//!
+//! @param[in] a
+//! @param[in] b
+//!
+//! @return the minimum of the two given values
+//!
 int minint(int a, int b)
 {
     return (a < b ? a : b);
 }
 
-// copies contents of src to dst, possibly overwriting whatever is in dst
+//!
+//! copies contents of src to dst, possibly overwriting whatever is in dst
+//!
+//! @param[in] src
+//! @param[in] dst
+//!
+//! @return EUCA_OK on success or EUCA_IO_ERROR on failure
+//!
 int copy_file(const char *src, const char *dst)
 {
     struct stat mystat;
 
     if (stat(src, &mystat) < 0) {
         logprintfl(EUCAERROR, "cannot stat '%s'\n", src);
-        return ERROR;
+        return (EUCA_IO_ERROR);
     }
 
     int ifp = open(src, O_RDONLY);
     if (ifp < 0) {
         logprintfl(EUCAERROR, "failed to open the input file '%s'\n", src);
-        return ERROR;
+        return (EUCA_IO_ERROR);
     }
 
     int ofp = open(dst, O_WRONLY | O_CREAT, 0600);
     if (ofp < 0) {
         logprintfl(EUCAERROR, "failed to create the ouput file '%s'\n", dst);
         close(ifp);
-        return ERROR;
+        return (EUCA_IO_ERROR);
     }
 #   define _BUFSIZE 16384
     char buf[_BUFSIZE];
     ssize_t bytes;
-    int ret = OK;
+    int ret = EUCA_OK;
 
     while ((bytes = read(ifp, buf, _BUFSIZE)) > 0) {
         if (write(ofp, buf, bytes) < 1) {
             logprintfl(EUCAERROR, "failed while writing to '%s'\n", dst);
-            ret = ERROR;
+            ret = EUCA_IO_ERROR;
             break;
         }
     }
     if (bytes < 0) {
         logprintfl(EUCAERROR, "failed while writing to '%s'\n", dst);
-        ret = ERROR;
+        ret = EUCA_IO_ERROR;
     }
 
     close(ifp);
@@ -1508,6 +1993,13 @@ int copy_file(const char *src, const char *dst)
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] file_path
+//!
+//! @return the size of the file
+//!
 long long file_size(const char *file_path)
 {
     struct stat mystat;
@@ -1517,8 +2009,15 @@ long long file_size(const char *file_path)
     return (long long)(mystat.st_size);
 }
 
-// tolower for strings (result must be freed by the caller)
-
+//!
+//! tolower for strings
+//!
+//! @param[in] s the string to convert to lower case
+//!
+//! @return a pointer to the lower care result
+//!
+//! @note result must be freed by the caller
+//!
 char *strduplc(const char *s)
 {
     char *lc = strdup(s);
@@ -1528,18 +2027,27 @@ char *strduplc(const char *s)
     return lc;
 }
 
-// some XML parsing routines
-
-// given a '\0'-terminated string in 'xml', finds the next complete <tag...>
-// and returns its name in a newly allocated string (which must be freed by
-// the caller) or returns NULL if no tag can be found or if the XML is not 
-// well formed; when not NULL, the following parameters are also returned:
-// 
-//     start   = index of the '<' character
-//     end     = index of the '>' character
-//     single  = 1 if this is a <..../> tag
-//     closing = 1 if this is a </....> tag
-
+//!
+//! given a null-terminated string in 'xml', finds the next complete <tag...>
+//! and returns its name in a newly allocated string (which must be freed by
+//! the caller) or returns NULL if no tag can be found or if the XML is not
+//! well formed; when not NULL, the following parameters are also returned:
+//!
+//!     start   = index of the '<' character
+//!     end     = index of the '>' character
+//!     single  = 1 if this is a <..../> tag
+//!     closing = 1 if this is a </....> tag
+//!
+//! @param[in]  xml
+//! @param[out] start
+//! @param[out] end
+//! @param[out] single
+//! @param[out] closing
+//!
+//! @return the name of the next complete xml tag
+//!
+//! @note the caller is responsible to free the returned memory
+//!
 static char *next_tag(const char *xml, int *start, int *end, int *single, int *closing)
 {
     char *ret = NULL;
@@ -1588,7 +2096,7 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
             }
 
             if ((name_end - name_start) >= 0) { // we have a name rather than '<>'
-                ret = calloc(name_end - name_start + 2, sizeof(char));
+                ret = EUCA_ZALLOC(name_end - name_start + 2, sizeof(char));
                 if (ret == NULL)
                     break;
                 strncpy(ret, xml + name_start, name_end - name_start + 1);
@@ -1602,14 +2110,22 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
     return ret;
 }
 
-// given a '\0'-terminated string in 'xml' and an 'xpath' of an XML
-// element, returns the "content" of that element in a newly allocated
-// string, which must be freed by the caller; for example, with XML:
-// 
-//   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
-// 
-// the content returned for xpath "a/c/e" is "baz"
-
+//!
+//! given a null-terminated string in 'xml' and an 'xpath' of an XML
+//! element, returns the "content" of that element in a newly allocated
+//! string; for example, with XML:
+//!
+//!   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
+//!
+//! the content returned for xpath "a/c/e" is "baz"
+//!
+//! @param[in] xml
+//! @param[in] xpath
+//!
+//! @return a pointer to the content we're looking for
+//!
+//! @note the caller is responsible to free the returned memory
+//!
 static char *find_cont(const char *xml, char *xpath)
 {
     char *ret = NULL;
@@ -1617,7 +2133,7 @@ static char *find_cont(const char *xml, char *xpath)
     int tag_start;
     int tag_end = -1;
     int single;
-    int closing;
+    int closing = 0;
     char *name;
 #define _STK_SIZE 64
     char *n_stk[_STK_SIZE];
@@ -1643,7 +2159,7 @@ static char *find_cont(const char *xml, char *xpath)
         } else {                // closing tag
             // get the name in all lower-case, for consistency with xpath
             char *name_lc = strduplc(name);
-            free(name);
+            EUCA_FREE(name);
             name = name_lc;
 
             // name doesn't match last seen opening tag, error
@@ -1665,12 +2181,12 @@ static char *find_cont(const char *xml, char *xpath)
                 goto cleanup;
             const char *contp = c_stk[stk_p];
             int cont_len = xml + xml_offset + tag_start - contp;
-            free(n_stk[stk_p]);
+            EUCA_FREE(n_stk[stk_p]);
             stk_p--;
 
             // see if current xpath matches the requested one
             if (strcmp(xpath, xpath_cur) == 0) {
-                char *cont = calloc(cont_len + 1, sizeof(char));
+                char *cont = EUCA_ZALLOC(cont_len + 1, sizeof(char));
                 if (cont == NULL)
                     goto cleanup;
                 strncpy(cont, contp, cont_len);
@@ -1678,26 +2194,35 @@ static char *find_cont(const char *xml, char *xpath)
                 break;
             }
         }
-        free(name);
+        EUCA_FREE(name);
         name = NULL;
     }
 
 cleanup:
-    if (name)
-        free(name);             // for exceptions
+    EUCA_FREE(name);            // for exceptions
     for (int i = 0; i <= stk_p; i++)
-        free(n_stk[i]);         // free everything on the stack
+        EUCA_FREE(n_stk[i]);    // free everything on the stack
     return ret;
 }
 
-// given a '\0'-terminated string in 'xml' and an 'xpath' of an XML
-// element, returns the "content" of that element in a newly allocated
-// string, which must be freed by the caller; for example, with XML:
-// 
-//   "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
-// 
-// the content returned for xpath "a/c/e" is "baz"
-
+//!
+//! given a null-terminated string in 'xml' and an 'xpath' of an XML
+//! element, returns the "content" of that element in a newly allocated
+//! string; for example, with XML:
+//!
+//!  "<a><b>foo</b><c><d>bar</d><e>baz</e></c></a>"
+//!
+//! the content returned for xpath "a/c/e" is "baz"
+//!
+//! @param[in] xml
+//! @param[in] xpath
+//!
+//! @return a pointer to the content we're looking for
+//!
+//! @see find_cont()
+//!
+//! @note the caller is responsible to free the returned memory
+//!
 char *xpath_content(const char *xml, const char *xpath)
 {
     char *ret = NULL;
@@ -1707,17 +2232,27 @@ char *xpath_content(const char *xml, const char *xpath)
     char *xpath_l = strduplc(xpath);    // lower-case copy of requested xpath
     if (xpath_l != NULL) {
         ret = find_cont(xml, xpath_l);
-        free(xpath_l);
+        EUCA_FREE(xpath_l);
     }
 
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] uri
+//! @param[in] uriType
+//! @param[in] host
+//! @param[in] port
+//! @param[in] path
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path)
 {
-
     if (!uri || !uriType || !host || !strlen(uriType) || !strlen(host)) {
-        return (1);
+        return (EUCA_ERROR);
     }
 
     uri[0] = '\0';
@@ -1737,9 +2272,20 @@ int construct_uri(char *uri, char *uriType, char *host, int port, char *path)
         strncat(uri, path, strlen(path));
     }
 
-    return (0);
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in] uri
+//! @param[in] uriType
+//! @param[in] host
+//! @param[in] port
+//! @param[in] path
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
 {
     char *tok, *start;
@@ -1752,7 +2298,7 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
     // must have a type
     tok = strsep(&start, "://");
     if (!start) {
-        return (1);
+        return (EUCA_ERROR);
     }
     snprintf(uriType, strlen(tok) + 1, "%s", tok);
     start += 2;
@@ -1770,7 +2316,7 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
             } else {
                 // no host
                 // must have a host
-                return (1);
+                return (EUCA_ERROR);
             }
         } else {
             // path present
@@ -1792,11 +2338,18 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
             snprintf(path, strlen(start) + 1, "%s", start);
         }
     }
-    return (0);
+    return (EUCA_OK);
 }
 
-// returns a new string in which 'new' is appended to 'original'
-// and frees 'original'
+//!
+//! returns a new string in which 'new' is appended to 'original'
+//! and frees 'original'
+//!
+//! @param[in] original
+//! @param[in] new
+//!
+//! @return a pointer to the newly allocated string
+//!
 char *strdupcat(char *original, char *new)
 {
     int len = 0;
@@ -1811,11 +2364,11 @@ char *strdupcat(char *original, char *new)
         len += strlen(new);
     }
 
-    char *ret = calloc(len + 1, sizeof(char));
+    char *ret = EUCA_ZALLOC(len + 1, sizeof(char));
     if (ret) {
         if (original) {
             strncat(ret, original, len);
-            free(original);
+            EUCA_FREE(original);
         }
 
         if (new) {
@@ -1826,9 +2379,18 @@ char *strdupcat(char *original, char *new)
     return ret;
 }
 
-// given path=A/B/C and only A existing, create A/B and, unless
-// is_file_path==1, also create A/B/C directory
-// returns: 0 = path already existed, 1 = created OK, -1 = error
+//!
+//! given path=A/B/C and only A existing, create A/B and, unless
+//! is_file_path==1, also create A/B/C directory
+//!
+//! @param[in] path
+//! @param[in] is_file_path
+//! @param[in] user
+//! @param[in] group
+//! @param[in] mode
+//!
+//! @return 0 = path already existed, 1 = created OK, -1 = error
+//!
 int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode)
 {
     int len = strlen(path);
@@ -1862,14 +2424,14 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                 if (mkdir(path_copy, mode) == -1) {
                     logprintfl(EUCAERROR, "failed to create path %s: %s\n", path_copy, strerror(errno));
 
-                    free(path_copy);
+                    EUCA_FREE(path_copy);
                     return -1;
                 }
                 ret = 1;        // we created a directory
 
-                if (diskutil_ch(path_copy, user, group, mode) != OK) {
+                if (diskutil_ch(path_copy, user, group, mode) != EUCA_OK) {
                     logprintfl(EUCAERROR, "failed to change perms on path %s\n", path_copy);
-                    free(path_copy);
+                    EUCA_FREE(path_copy);
                     return -1;
                 }
                 //                chmod (path_copy, mode); // ensure perms are right despite mask
@@ -1878,11 +2440,15 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
         }
     }
 
-    free(path_copy);
+    EUCA_FREE(path_copy);
     return ret;
 }
 
-// time since 1970 in microseconds
+//!
+//! time since 1970 in microseconds
+//!
+//! @return the time since 1970 in microseconds
+//!
 long long time_usec(void)
 {
     struct timeval tv;
@@ -1890,13 +2456,23 @@ long long time_usec(void)
     return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
-// time since 1970 in milliseconds
+//!
+//! time since 1970 in milliseconds
+//!
+//! @return the time since 1970 in milliseconds
+//!
 long long time_ms(void)
 {
     return time_usec() / 1000;
 }
 
-// ensure the temp file is only readable by the user
+//!
+//! ensure the temp file is only readable by the user
+//!
+//! @param[in] template
+//!
+//! @return -1 on failure or the corresponding files descriptor for the temp file
+//!
 char *safe_mkdtemp(char *template)
 {
     mode_t u;
@@ -1907,7 +2483,13 @@ char *safe_mkdtemp(char *template)
     return (ret);
 }
 
-// ensure the temp file is only readable by the user
+//!
+//! ensure the temp file is only readable by the user
+//!
+//! @param[in] template
+//!
+//! @return -1 on failure or the corresponding files descriptor for the temp file
+//!
 int safe_mkstemp(char *template)
 {
     mode_t u;
@@ -1918,23 +2500,41 @@ int safe_mkstemp(char *template)
     return (ret);
 }
 
-// ensure the string is aways 0-terminated
+//!
+//! ensure the string is aways 0-terminated
+//!
+//! @param[in] s1
+//! @param[in] s2
+//! @param[in] len
+//!
+//! @return the number of character copied in s1
+//!
 char *safe_strncpy(char *s1, const char *s2, size_t len)
 {
     char *ret = strncpy(s1, s2, len);
     s1[len - 1] = '\0';
-    return ret;
+    return (ret);
 }
 
-// try to get UUID of the block device, returning 0 on success and 1 otherwise (TODO: use blkidlib maybe)
+//!
+//! try to get UUID of the block device
+//!
+//! @param[in] dev_path
+//! @param[in] uuid
+//! @param[in] uuid_size
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+//! @todo use blkidlib maybe
+//!
 int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
 {
     char cmd[1024];
     snprintf(cmd, sizeof(cmd), "blkid %s", dev_path);   // option '-u filesystem' did not exist on Centos
     char *blkid_output = system_output(cmd);
     if (blkid_output == NULL)
-        return 1;
-    int ret = 1;
+        return (EUCA_ERROR);
+    int ret = EUCA_ERROR;
     char *first_char = strstr(blkid_output, "UUID=\"");
     if (first_char) {
         first_char += 6;
@@ -1943,15 +2543,21 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
             *last_char = '\0';
             safe_strncpy(uuid, first_char, uuid_size);
             assert(0 == strcmp(uuid, first_char));
-            ret = 0;
+            ret = EUCA_OK;
         }
     }
-    free(blkid_output);
+    EUCA_FREE(blkid_output);
 
     return ret;
 }
 
-// turn a string into a boolean (returned as a char)
+//!
+//! turn a string into a boolean (returned as a char)
+//!
+//! @param[in] s the string to parse
+//!
+//! @return 1 if 's' is "y", "yes", "t" or "true". Otherwise 0 is returned
+//!
 char parse_boolean(const char *s)
 {
     char *lc = strduplc(s);
@@ -1963,43 +2569,60 @@ char parse_boolean(const char *s)
         val = 0;
     } else
         logprintfl(EUCAERROR, "failed to parse value '%s' as boolean", lc);
-    free(lc);
+    EUCA_FREE(lc);
 
     return val;
 }
 
-// become user 'eucalyptus'
+//!
+//! become user 'eucalyptus'
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int drop_privs(void)
 {
-    struct passwd pwd;
-    struct passwd *result;
-    char buf[16384];            // man-page said this is enough
+    int s = 0;
+    struct passwd pwd = { 0 };
+    struct passwd *result = NULL;
+    char buf[16384] = { 0 };    // man-page said this is enough
 
-    int s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
+    s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
     if (result == NULL)
-        return ERROR;           // not found if s==0, check errno otherwise
+        return (EUCA_ERROR);    // not found if s==0, check errno otherwise
 
     if (setgid(pwd.pw_gid) != 0)
-        return ERROR;
+        return (EUCA_ERROR);
 
     if (setuid(pwd.pw_uid) != 0)
-        return ERROR;
+        return (EUCA_ERROR);
 
-    return OK;
+    return (EUCA_OK);
 }
 
-// run shell command with timeout and get back: return value, stdout and stderr all in one
+//!
+//! run shell command with timeout and get back: return value, stdout and stderr all in one
+//!
+//! @param[in] command
+//! @param[in] stdout_str
+//! @param[in] stderr_str
+//! @param[in] max_size
+//! @param[in] timeout
+//!
+//! @return -1 for any failures, 0 if a timeout occured or a positive value is success.
+//!
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout)
 {
-    int stdoutfds[2];
-    int stderrfds[2];
-    int oldstdout, oldstderr;
-    int child_pid;
-    int maxfd;
-    int rc;
-    int status;
-    int stdout_toread, stderr_toread;
-    time_t start_time, remaining_time;
+    int stdoutfds[2] = { 0, 0 };
+    int stderrfds[2] = { 0, 0 };
+    int child_pid = 0;
+    int maxfd = 0;
+    int rc = 0;
+    int status = 0;
+    int stdout_toread = 0;
+    int stderr_toread = 0;
+    char errorBuf[256] = { 0 };
+    time_t start_time = 0;
+    time_t remaining_time = 0;
 
     // force nonempty on all arguments to simplify the logic
     assert(command);
@@ -2007,11 +2630,11 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     assert(stderr_str);
 
     if (pipe(stdoutfds) < 0) {
-        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, NULL, 0));
+        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, errorBuf, 256));
         return -1;
     }
     if (pipe(stderrfds) < 0) {
-        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, NULL, 0));
+        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, errorBuf, 256));
         return -1;
     }
 
@@ -2019,14 +2642,14 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     if (child_pid == 0) {
         close(stdoutfds[0]);
         if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
-            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, NULL, 0));
+            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, errorBuf, 256));
             exit(1);
         }
         close(stdoutfds[1]);
 
         close(stderrfds[0]);
         if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
-            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, NULL, 0));
+            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, errorBuf, 256));
             exit(1);
         };
         close(stderrfds[1]);
@@ -2086,7 +2709,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
                 }
             }
         } else if (retval < 0) {
-            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, NULL, 0));
+            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, errorBuf, 256));
             break;
         }
         if (time(NULL) - start_time > timeout) {
@@ -2109,17 +2732,28 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     return rc;
 }
 
-/////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
-
 #ifdef _UNIT_TEST
-
-#define _STR "a lovely string"
-
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char **argv)
 {
+    int p = 0;
+    int ret = 0;
     int errors = 0;
-    char cwd[1024];
-    char *s;
+    char cwd[1024] = { 0 };
+    char *s = NULL;
+    FILE *fp = NULL;
+    char **d = NULL;
+    char uuid[64] = "";
+    char dev_path[32] = { 0 };
+    char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
+
     getcwd(cwd, sizeof(cwd));
     srandom(time(NULL));
 
@@ -2128,37 +2762,34 @@ int main(int argc, char **argv)
     assert(s);
     assert(strlen(s) != 0);
     printf("echo Hello == |%s|\n", s);
-    free(s);
+    EUCA_FREE(s);
 
     printf("testing fp2str in misc.c\n");
-    FILE *fp = tmpfile();
+    fp = tmpfile();
     assert(fp);
     s = fp2str(fp);
     assert(s);
     assert(strlen(s) == 0);
-    free(s);
+    EUCA_FREE(s);
     rewind(fp);
     fputs(_STR, fp);
     rewind(fp);
     s = fp2str(fp);
     assert(s);
     assert(strlen(s) == strlen(_STR));
-    free(s);
+    EUCA_FREE(s);
     fclose(fp);
 
     printf("testing get_blkid in misc.c\n");
-    char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
-    for (char **d = devs; *d != NULL; d++) {
-        for (int p = 1; p < 4; p++) {
-            char dev_path[32];
-            char uuid[64] = "";
+    for (d = devs; *d != NULL; d++) {
+        for (p = 1; p < 4; p++) {
             snprintf(dev_path, sizeof(dev_path), "/dev/%s%d", *d, p);
-            int ret = get_blkid(dev_path, uuid, sizeof(uuid));
-            printf("\t%s: %s\n", dev_path, ret == 0 ? uuid : "UUID not found");
+            ret = get_blkid(dev_path, uuid, sizeof(uuid));
+            printf("\t%s: %s\n", dev_path, ((ret == 0) ? uuid : "UUID not found"));
         }
     }
 
-    return 0;
+    return (0);
 }
 
 #endif // _UNIT_TEST

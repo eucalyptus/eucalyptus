@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/hooks.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -74,13 +85,103 @@
 #include <sys/stat.h>
 #include <sys/wait.h>           // WEXITSTATUS on Lucid
 
+#include "handlers.h"
 #include "hooks.h"
 #include "misc.h"
+#include "eucalyptus.h"
 
-static int initialized = 0;
-static char euca_path[MAX_PATH];
-static char hooks_path[MAX_PATH];
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#ifdef __STANDALONE
+const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
+#endif /* __STANDALONE */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static boolean initialized = FALSE; //!< To check wether or not the hooks were initialized
+static char euca_path[MAX_PATH] = { 0 };    //!< eucalyptus path
+static char hooks_path[MAX_PATH] = { 0 };   //!< hook path
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int init_hooks(const char *euca_dir, const char *hooks_dir);
+int call_hooks(const char *event_name, const char *param1);
+
+#ifdef __STANDALONE
+int main(int argc, char **argv);
+#endif /* __STANDALONE */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Validate and initialize the Eucalyptus and hook directories to use.
+//!
+//! @param[in] euca_dir a string containing the Eucalyptus directory to use
+//! @param[in] hooks_dir a string containing the hook directory to use
+//!
+//! @return EUCA_OK if the operation is successful or proper error code. Known error
+//!         code returned include EUCA_ERROR.
+//!
 int init_hooks(const char *euca_dir, const char *hooks_dir)
 {
     assert(euca_dir);
@@ -88,25 +189,35 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
 
     safe_strncpy(euca_path, euca_dir, sizeof(euca_path));
     if (check_directory(euca_path))
-        return 1;
+        return EUCA_ERROR;
     safe_strncpy(hooks_path, hooks_dir, sizeof(hooks_path));
     if (check_directory(hooks_path))
-        return 1;
+        return EUCA_ERROR;
     logprintfl(EUCAINFO, "using hooks directory %s\n", hooks_path);
 
-    initialized = 1;
-    return 0;
+    initialized = TRUE;
+    return EUCA_OK;
 }
 
+//!
+//! Execute a system command
+//!
+//! @param[in] event_name the event to work on
+//! @param[in] param1 the parameters to pass to the command.
+//!
+//! @return 0 on failure or the proper hook status code [1-99]
+//!
 int call_hooks(const char *event_name, const char *param1)
 {
     assert(event_name);
-    if (!initialized)
-        return 0;               // return OK if hooks were not initialized
+    if (!initialized) {
+        // return EUCA_OK if hooks were not initialized
+        return 0;
+    }
 
     DIR *dir;
     if ((dir = opendir(hooks_path)) == NULL) {
-        return 1;
+        return EUCA_ERROR;
     }
 
     int ret = 0;
@@ -146,9 +257,14 @@ int call_hooks(const char *event_name, const char *param1)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef __STANDALONE
-
-const char *euca_this_component_name = "nc";
-
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return Always return 0
+//!
 int main(int argc, char **argv)
 {
     int status = 0;
@@ -191,4 +307,4 @@ int main(int argc, char **argv)
 
     return status;
 }
-#endif
+#endif /* __STANDALONE */

@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,8 +63,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_HANDLERS_STATE_H
-#define INCLUDE_HANDLERS_STATE_H
+#ifndef _INCLUDE_HANDLERS_STATE_H_
+#define _INCLUDE_HANDLERS_STATE_H_
+
+//!
+//! @file cluster/handlers-state.h
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <eucalyptus.h>
 #include <semaphore.h>
@@ -70,17 +84,71 @@
 #include <vnetwork.h>
 #include <linux/limits.h>
 
-int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
-int doStartService(ncMetadata * ccMeta);
-int doStopService(ncMetadata * ccMeta);
-int doEnableService(ncMetadata * ccMeta);
-int doDisableService(ncMetadata * ccMeta);
-int doShutdownService(ncMetadata * ccMeta);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
+int doStartService(ncMetadata * pMeta);
+int doStopService(ncMetadata * pMeta);
+int doEnableService(ncMetadata * pMeta);
+int doDisableService(ncMetadata * pMeta);
+int doShutdownService(ncMetadata * pMeta);
 
 int validCmp(ccInstance * inst, void *in);
+int instIpSync(ccInstance * inst, void *in);
 int instNetParamsSet(ccInstance * inst, void *in);
 int instNetReassignAddrs(ccInstance * inst, void *in);
-int instIpSync(ccInstance * inst, void *in);
 int clean_network_state(void);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_HANDLERS_STATE_H_ */

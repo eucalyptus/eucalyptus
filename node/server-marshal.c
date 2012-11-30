@@ -63,11 +63,23 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/server-marshal.c
+//! This implements the AXIS2C server requests handling
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
+#include <axutil_utils_defines.h>
 
 #include <server-marshal.h>
 #define HANDLERS_FANOUT
@@ -78,12 +90,113 @@
 
 #include <windows-bundle.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 pthread_mutex_t ncHandlerLock = PTHREAD_MUTEX_INITIALIZER;
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void adb_InitService(void);
+
+adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * ncAssignAddress, const axutil_env_t * env);
+adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, const axutil_env_t * env);
+adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncStartNetwork, const axutil_env_t * env);
+adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResource_t * ncDescribeResource, const axutil_env_t * env);
+adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunInstance, const axutil_env_t * env);
+adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInstances_t * ncDescribeInstances, const axutil_env_t * env);
+adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t * ncRebootInstance, const axutil_env_t * env);
+adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutput_t * ncGetConsoleOutput, const axutil_env_t * env);
+adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateInstance_t * ncTerminateInstance, const axutil_env_t * env);
+adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAttachVolume, const axutil_env_t * env);
+adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDetachVolume, const axutil_env_t * env);
+adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t * ncBundleInstance, const axutil_env_t * env);
+adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance,
+                                                                      const axutil_env_t * env);
+adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTask_t * ncCancelBundleTask, const axutil_env_t * env);
+adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribeBundleTasks_t * ncDescribeBundleTasks, const axutil_env_t * env);
+adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env_t * env, ncInstance * outInst);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Inits the ADB services
+//!
 void adb_InitService(void)
 {
 }
 
+//!
+//! Handles the reception of the assign address request.
+//!
+//! @param[in] ncAssignAddress a pointer to the assign address request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * ncAssignAddress, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -127,6 +240,14 @@ adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * nc
     return response;
 }
 
+//!
+//! Handles the reception of the power down request.
+//!
+//! @param[in] ncPowerDown a pointer to the NC power down request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, const axutil_env_t * env)
 {
     //    pthread_mutex_lock(&ncHandlerLock);
@@ -141,7 +262,8 @@ adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, c
     // get operation-specific fields from input
     fprintf(stderr, "powerdown called\n\n");
     //    eventlog("NC", userId, correlationId, "PowerDown", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncPowerDownType, input, (&meta));
@@ -177,6 +299,14 @@ adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, c
     return response;
 }
 
+//!
+//! Handles the reception of the start network request.
+//!
+//! @param[in] ncStartNetwork a pointer to the start nerwork request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncStartNetwork, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -193,14 +323,15 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
     int port = adb_ncStartNetworkType_get_remoteHostPort(input, env);
     int vlan = adb_ncStartNetworkType_get_vlan(input, env);
     int peersLen = adb_ncStartNetworkType_sizeof_remoteHosts(input, env);
-    char **peers = malloc(sizeof(char *) * peersLen);
+    char **peers = EUCA_ZALLOC(peersLen, sizeof(char *));
     int i;
     for (i = 0; i < peersLen; i++) {
         peers[i] = adb_ncStartNetworkType_get_remoteHosts_at(input, env, i);
     }
 
     //    eventlog("NC", userId, correlationId, "StartNetwork", "begin");
-    {                           // do it
+    {
+        // do it
         //ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncStartNetworkType, input, (&meta));
@@ -226,8 +357,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
         }
     }
 
-    if (peers)
-        free(peers);
+    EUCA_FREE(peers);
 
     // set response to output
     adb_ncStartNetworkResponse_set_ncStartNetworkResponse(response, env, output);
@@ -237,6 +367,14 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
     return response;
 }
 
+//!
+//! Handles the reception of the describe resource request.
+//!
+//! @param[in] ncDescribeResource a pointer to the describe resource request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResource_t * ncDescribeResource, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -252,7 +390,8 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
     axis2_char_t *resourceType = adb_ncDescribeResourceType_get_resourceType(input, env);
 
     //    eventlog("NC", userId, correlationId, "DescribeResource", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncDescribeResourceType, input, (&meta));
@@ -263,7 +402,6 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
         if (error) {
             logprintfl(EUCAERROR, "failed error=%d\n", error);
             adb_ncDescribeResourceResponseType_set_return(output, env, AXIS2_FALSE);
-
         } else {
             // set standard fields in output
             adb_ncDescribeResourceResponseType_set_return(output, env, AXIS2_TRUE);
@@ -281,7 +419,6 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
             adb_ncDescribeResourceResponseType_set_numberOfCoresAvailable(output, env, outRes->numberOfCoresAvailable);
             adb_ncDescribeResourceResponseType_set_publicSubnets(output, env, outRes->publicSubnets);
             free_resource(&outRes);
-
         }
     }
     // set response to output
@@ -292,7 +429,13 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
     return response;
 }
 
-// helper function used by RunInstance and DescribeInstances
+//!
+//! Helper function used by RunInstance and DescribeInstances
+//!
+//! @param[in]  instance a pointer to the instance type structure we are converting
+//! @param[in]  env pointer to the AXIS2 environment structure
+//! @param[out] outInst a pointer to the resulting instance
+//!
 static void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env_t * env, ncInstance * outInst)
 {
     // NOTE: the order of set operations reflects the order in the WSDL
@@ -336,7 +479,7 @@ static void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env
         adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
     }
 
-    // updated by NC upon Attach/DetachVolume 
+    // updated by NC upon Attach/DetachVolume
     for (int i = 0; i < EUCA_MAX_VOLUMES; i++) {
         if (strlen(outInst->volumes[i].volumeId) == 0)
             continue;
@@ -348,9 +491,17 @@ static void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env
         adb_instanceType_add_volumes(instance, env, volume);
     }
 
-    // NOTE: serviceTag seen in the WSDL is unused in NC, used by CC 
+    // NOTE: serviceTag seen in the WSDL is unused in NC, used by CC
 }
 
+//!
+//! Handles the reception of the run instance request.
+//!
+//! @param[in] ncRunInstance a pointer to the run instance request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunInstance, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -393,7 +544,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     expiryTime = datetime_to_unix(dt, env);
 
     int groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
-    char **groupNames = calloc(groupNamesSize, sizeof(char *));
+    char **groupNames = EUCA_ZALLOC(groupNamesSize, sizeof(char *));
     if (groupNames == NULL) {
         logprintfl(EUCAERROR, "[%s] out of memory\n", instanceId);
         adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -404,7 +555,8 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             groupNames[i] = adb_ncRunInstanceType_get_groupNames_at(input, env, i);
         }
 
-        {                       // do it
+        {
+            // do it
             //            ncMetadata meta = { correlationId, userId };
             ncMetadata meta;
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
@@ -425,21 +577,20 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
                 adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
 
             } else {
-                ///// set standard fields in output
+                // set standard fields in output
                 adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_TRUE);
                 adb_ncRunInstanceResponseType_set_correlationId(output, env, meta.correlationId);
                 adb_ncRunInstanceResponseType_set_userId(output, env, meta.userId);
 
-                ///// set operation-specific fields in output            
+                // set operation-specific fields in output
                 adb_instanceType_t *instance = adb_instanceType_create(env);
                 copy_instance_to_adb(instance, env, outInst);   // copy all values outInst->instance
 
-                // TODO: should we free_instance(&outInst) here or not? currently you don't have to
+                //! @TODO should we free_instance(&outInst) here or not? currently you don't have to
                 adb_ncRunInstanceResponseType_set_instance(output, env, instance);
             }
 
-            if (groupNamesSize)
-                free(groupNames);
+            EUCA_FREE(groupNames);
         }
     }
 
@@ -451,6 +602,14 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     return response;
 }
 
+//!
+//! Handles the reception of the describe instance request.
+//!
+//! @param[in] ncDescribeInstances a pointer to the describe instance request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInstances_t * ncDescribeInstances, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -464,7 +623,7 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
 
     // get operation-specific fields from input
     int instIdsLen = adb_ncDescribeInstancesType_sizeof_instanceIds(input, env);
-    char **instIds = malloc(sizeof(char *) * instIdsLen);
+    char **instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
     if (instIds == NULL) {
         logprintfl(EUCAERROR, "out of memory\n");
         adb_ncDescribeInstancesResponseType_set_return(output, env, AXIS2_FALSE);
@@ -476,7 +635,8 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
         }
 
         //        eventlog("NC", userId, correlationId, "DescribeInstances", "begin");
-        {                       // do it
+        {
+            // do it
             //            ncMetadata meta = { correlationId, userId };
             ncMetadata meta;
             EUCA_MESSAGE_UNMARSHAL(ncDescribeInstancesType, input, (&meta));
@@ -499,21 +659,19 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
                 for (i = 0; i < outInstsLen; i++) {
                     adb_instanceType_t *instance = adb_instanceType_create(env);
                     copy_instance_to_adb(instance, env, outInsts[i]);   // copy all values outInst->instance
-                    if (outInsts[i])
-                        free(outInsts[i]);
+                    EUCA_FREE(outInsts[i]);
 
-                    /* TODO: should we free_instance(&outInst) here or not? currently you only have to free outInsts[] */
+                    //! @TODO should we free_instance(&outInst) here or not? currently you only have to free outInsts[]
                     adb_ncDescribeInstancesResponseType_add_instances(output, env, instance);
                 }
 
-                if (outInstsLen)
-                    free(outInsts);
+                EUCA_FREE(outInsts);
             }
         }
         //        eventlog("NC", userId, correlationId, "DescribeInstances", "end");
     }
-    if (instIds)
-        free(instIds);
+
+    EUCA_FREE(instIds);
 
     // set response to output
     adb_ncDescribeInstancesResponse_set_ncDescribeInstancesResponse(response, env, output);
@@ -521,6 +679,14 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
     return response;
 }
 
+//!
+//! Handles the reception of the reboot instance request.
+//!
+//! @param[in] ncRebootInstance a pointer to the reboot instance request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t * ncRebootInstance, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -536,7 +702,8 @@ adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t *
     axis2_char_t *instanceId = adb_ncRebootInstanceType_get_instanceId(input, env);
 
     //    eventlog("NC", userId, correlationId, "RebootInstance", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncRebootInstanceType, input, (&meta));
@@ -565,6 +732,14 @@ adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t *
     return response;
 }
 
+//!
+//! Handles the reception of the get console output request.
+//!
+//! @param[in] ncGetConsoleOutput a pointer to the get console output request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutput_t * ncGetConsoleOutput, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -580,7 +755,8 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
     axis2_char_t *instanceId = adb_ncGetConsoleOutputType_get_instanceId(input, env);
 
     //    eventlog("NC", userId, correlationId, "GetConsoleOutput", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncGetConsoleOutputType, input, (&meta));
@@ -601,8 +777,7 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
             // set operation-specific fields in output
             adb_ncGetConsoleOutputResponseType_set_consoleOutput(output, env, consoleOutput);
         }
-        if (consoleOutput)
-            free(consoleOutput);
+        EUCA_FREE(consoleOutput);
     }
     // set response to output
     adb_ncGetConsoleOutputResponse_set_ncGetConsoleOutputResponse(response, env, output);
@@ -612,6 +787,14 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
     return response;
 }
 
+//!
+//! Handles the reception of the terminate instance request.
+//!
+//! @param[in] ncTerminateInstance a pointer to the terminate instance request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateInstance_t * ncTerminateInstance, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -634,7 +817,8 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
     }
 
     //    eventlog("NC", userId, correlationId, "TerminateInstance", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncTerminateInstanceType, input, (&meta));
@@ -659,7 +843,7 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
 
             // set operation-specific fields in output
             adb_ncTerminateInstanceResponseType_set_instanceId(output, env, instanceId);
-            // TODO: change the WSDL to use the name/code pair
+            //! @TODO change the WSDL to use the name/code pair
             char s[128];
             snprintf(s, 128, "%d", shutdownState);
             adb_ncTerminateInstanceResponseType_set_shutdownState(output, env, s);
@@ -676,6 +860,14 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
     return response;
 }
 
+//!
+//! Handles the reception of the attach volume request.
+//!
+//! @param[in] ncAttachVolume a pointer to the attach volume request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAttachVolume, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -694,7 +886,8 @@ adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAtt
     axis2_char_t *localDev = adb_ncAttachVolumeType_get_localDev(input, env);
 
     //    eventlog("NC", userId, correlationId, "AttachVolume", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncAttachVolumeType, input, (&meta));
@@ -722,6 +915,14 @@ adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAtt
     return response;
 }
 
+//!
+//! Handles the reception of the detach volume request.
+//!
+//! @param[in] ncDetachVolume a pointer to the detach volume request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDetachVolume, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -747,7 +948,8 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
     }
 
     //    eventlog("NC", userId, correlationId, "DetachVolume", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncDetachVolumeType, input, (&meta));
@@ -774,6 +976,14 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
     return response;
 }
 
+//!
+//! Handles the reception of the create image request.
+//!
+//! @param[in] ncCreateImage a pointer to the create image request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreateImage, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -787,7 +997,8 @@ adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreate
     axis2_char_t *remoteDev = adb_ncCreateImageType_get_remoteDev(input, env);
 
     //    eventlog("NC", userId, correlationId, "CreateImage", "begin");
-    {                           // do it
+    {
+        // do it
         //        ncMetadata meta = { correlationId, userId };
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncCreateImageType, input, (&meta));
@@ -814,6 +1025,14 @@ adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreate
     return response;
 }
 
+//!
+//! Handles the reception of the bundle instance request.
+//!
+//! @param[in] ncBundleInstance a pointer to the bundle instance request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t * ncBundleInstance, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -861,6 +1080,14 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
     return response;
 }
 
+//!
+//! Handles the reception of the bundle restart instance request.
+//!
+//! @param[in] ncBundleRestartInstance a pointer to the bundle restart instance request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBundleRestartInstance_t * ncBundleRestartInstance,
                                                                       const axutil_env_t * env)
 {
@@ -900,6 +1127,14 @@ adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBund
     return (response);
 }
 
+//!
+//! Handles the reception of the cancel bundle task request.
+//!
+//! @param[in] ncCancelBundleTask a pointer to the cancel bundle task request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTask_t * ncCancelBundleTask, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -941,6 +1176,14 @@ adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTa
     return response;
 }
 
+//!
+//! Handles the reception of the describe bundle task request.
+//!
+//! @param[in] ncDescribeBundleTasks a pointer to the describe bundle task request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribeBundleTasks_t * ncDescribeBundleTasks, const axutil_env_t * env)
 {
     pthread_mutex_lock(&ncHandlerLock);
@@ -954,7 +1197,7 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
 
     // get operation-specific fields from input
     int instIdsLen = adb_ncDescribeBundleTasksType_sizeof_instanceIds(input, env);
-    char **instIds = malloc(sizeof(char *) * instIdsLen);
+    char **instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
 
     bundleTask **outBundleTasks = NULL;
     int outBundleTasksLen = 0;
@@ -962,7 +1205,6 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
     if (instIds == NULL) {
         logprintfl(EUCAERROR, "out of memory\n");
         adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
-
     } else {
         int i;
         for (i = 0; i < instIdsLen; i++) {
@@ -970,14 +1212,14 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
         }
 
         eventlog("NC", userId, correlationId, "DescribeBundleTasks", "begin");
-        {                       // do it
+        {
+            // do it
             ncMetadata meta = { correlationId, userId };
 
             int error = doDescribeBundleTasks(&meta, instIds, instIdsLen, &outBundleTasks, &outBundleTasksLen);
             if (error) {
                 logprintfl(EUCAERROR, "failed error=%d\n", error);
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_FALSE);
-
             } else {
                 // set standard fields in output
                 adb_ncDescribeBundleTasksResponseType_set_return(output, env, AXIS2_TRUE);
@@ -990,9 +1232,9 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
                     adb_bundleTaskType_set_instanceId(btt, env, outBundleTasks[i]->instanceId);
                     adb_bundleTaskType_set_state(btt, env, outBundleTasks[i]->state);
                     adb_ncDescribeBundleTasksResponseType_add_bundleTasks(output, env, btt);
-                    free(outBundleTasks[i]);
+                    EUCA_FREE(outBundleTasks[i]);
                 }
-                free(outBundleTasks);
+                EUCA_FREE(outBundleTasks);
             }
         }
     }
@@ -1005,9 +1247,17 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
     return response;
 }
 
+//!
+//! Handles the reception of the describe sensors request.
+//!
+//! @param[in] ncDescribeSensors a pointer to the describe sensors request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
 adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env)
 {
-    int result = ERROR;
+    int result = EUCA_ERROR;
 
     pthread_mutex_lock(&ncHandlerLock);
     adb_ncDescribeSensorsType_t *input = adb_ncDescribeSensors_get_ncDescribeSensors(ncDescribeSensors, env);
@@ -1021,12 +1271,10 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
     // get operation-specific fields from input
     int historySize = adb_ncDescribeSensorsType_get_historySize(input, env);
     long long collectionIntervalTimeMs = adb_ncDescribeSensorsType_get_collectionIntervalTimeMs(input, env);
-
     int instIdsLen = adb_ncDescribeSensorsType_sizeof_instanceIds(input, env);
     char **instIds = NULL;
     if (instIdsLen > 0) {
-        instIds = malloc(sizeof(char *) * instIdsLen);
-        if (instIds == NULL) {
+        if ((instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *))) == NULL) {
             logprintfl(EUCAERROR, "out of memory for 'instIds'\n");
             goto reply;
         }
@@ -1038,8 +1286,7 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
     int sensorIdsLen = adb_ncDescribeSensorsType_sizeof_sensorIds(input, env);
     char **sensorIds = NULL;
     if (sensorIdsLen > 0) {
-        sensorIds = malloc(sizeof(char *) * sensorIdsLen);
-        if (sensorIds == NULL) {
+        if ((sensorIds = EUCA_ZALLOC(sensorIdsLen, sizeof(char *))) == NULL) {
             logprintfl(EUCAERROR, "out of memory for 'sensorIds'\n");
             goto reply;
         }
@@ -1049,25 +1296,24 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
     }
 
     // eventlog("NC", userId, correlationId, "DescribeSensors", "begin");
-    {                           // do it
+    {
+        // do it
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(ncDescribeSensorsType, input, (&meta));
 
         sensorResource **outResources;
         int outResourcesLen;
 
-        int error =
-            doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
-                              &outResourcesLen);
+        int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
+                                      &outResourcesLen);
 
         if (error) {
             logprintfl(EUCAERROR, "failed error=%d\n", error);
             if (outResourcesLen) {
                 for (int i = 0; i < outResourcesLen; i++) {
-                    if (outResources[i])
-                        free(outResources[i]);
+                    EUCA_FREE(outResources[i]);
                 }
-                free(outResources);
+                EUCA_FREE(outResources);
             }
         } else {
 
@@ -1075,27 +1321,25 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
             adb_ncDescribeSensorsResponseType_set_correlationId(output, env, correlationId);
             adb_ncDescribeSensorsResponseType_set_userId(output, env, userId);
 
-            // set operation-specific fields in output                                                                                                                      
+            // set operation-specific fields in output
             for (int i = 0; i < outResourcesLen; i++) {
                 adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i]);
-                if (outResources[i])
-                    free(outResources[i]);
                 adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);
+                EUCA_FREE(outResources[i]);
             }
-            if (outResourcesLen)
-                free(outResources);
 
-            result = OK;        // success
+            EUCA_FREE(outResources);
+
+            result = EUCA_OK;   // success
         }
     }
     // eventlog("NC", userId, correlationId, "DescribeSensors", "end");
-    free(sensorIds);
+    EUCA_FREE(sensorIds);
 
 reply:
 
-    free(instIds);
-
-    if (result == ERROR) {
+    EUCA_FREE(instIds);
+    if (result != EUCA_OK) {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
         adb_ncDescribeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
@@ -1149,4 +1393,4 @@ reply:
 
     eventlog("NC", userId, correlationId, "OPERATION", "end");
     return response;
-*/
+ */

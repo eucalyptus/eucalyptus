@@ -1,0 +1,241 @@
+/******************************************************************************
+ *                Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, only version 3 of the License.
+ *
+ *  This file is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along
+ *  with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Please contact Eucalyptus Systems, Inc., 130 Castilian
+ *  Dr., Goleta, CA 93101 USA or visit <http://www.eucalyptus.com/licenses/>
+ *  if you need additional information or have any questions.
+ *
+ *  This file may incorporate work covered under the following copyright and
+ *  permission notice:
+ *
+ *  Software License Agreement (BSD License)
+ *
+ *         Copyright (c) 2008, Regents of the University of California
+ *
+ *  Redistribution and use of this software in source and binary forms, with
+ *  or without modification, are permitted provided that the following
+ *  conditions are met:
+ *
+ *  Redistributions of source code must retain the above copyright notice,
+ *  this list of conditions and the following disclaimer.
+ *
+ *  Redistributions in binary form must reproduce the above copyright
+ *  notice, this list of conditions and the following disclaimer in the
+ *  documentation and/or other materials provided with the distribution.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ *  IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ *  TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ *  PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ *  OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ *  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ *  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. USERS OF
+ *  THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE
+ *  LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS
+ *  SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *  IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, SANTA
+ *  BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH IN
+ *  THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT
+ *  OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR
+ *  WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH
+ *  ANY SUCH LICENSES OR RIGHTS.
+ ******************************************************************************/
+
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
+//!
+//! @file doxygen/extra_pages/install.txt
+//! Use by doxygen to fill in for some of the documentation
+//!
+
+#ifndef _EUCALYPTUS_INSTALL_H_
+#define _EUCALYPTUS_INSTALL_H_
+
+//!
+//! @page install_page Install
+//!
+//! @section install_intro_sec These are build instructions for the development version of Eucalyptus.
+//! ***NOTE*** The following install instructions are still under development and may be INCOMPLETE. Contributions encouraged! :)
+//! What follows are instructions to build and install Eucalyptus from source on CentOS/RHEL 5/6 and Ubuntu 10.04 LTS/12.04 LTS.
+//! You must install all dependencies to be able to build and install Eucalyptus.
+//!
+//! @section install_download_sec Get the source code
+//! git clone git://github.com/eucalyptus/eucalyptus --recursive
+//!
+//! @section install_dependencies_sec Install dependencies
+//! Please follow the following instructions to install required build and run-time dependencies.
+//!
+//! @subsection install_dependencies_rhel6_sec CentOS/RHEL 6
+//! Install the EPEL repository:
+//!
+//! yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm
+//!
+//! Install the ELRepo repository (needed on the Walrus host only):
+//!
+//! yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
+//!
+//! Use the following repository baseurl to get extra dependencies:
+//!
+//! http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
+//!
+//! Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
+//!
+//! yum install gcc make ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel jpackage-utils libvirt-devel \
+//! libxml2-devel libxslt-devel python-devel python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk \
+//! java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresql91 postgresql91-server \
+//! python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
+//! sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
+//! dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
+//! PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server
+//!
+//! Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
+//!
+//! - drbd-utils was replaced by drbd83-utils.
+//! - libcurl4 was replaced by libcurl.
+//! - apache2 was replaced by httpd.
+//! - dhcp-server was replaced by dhcp.
+//! - tgt was replaced by scsi-target-utils.
+//! - bitstream-vera-fonts is no longer available.
+//!
+//! Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh to /opt/euca-WSDL2C.sh
+//!
+//! @subsection install_dependencies_rhel5_sec CentOS/RHEL 5
+//! Install the EPEL repository
+//!
+//! wget http://download.fedoraproject.org/pub/epel/5/i386/epel-release-5-4.noarch.rpm
+//!
+//! rpm -Uvh epel-release-5-4.noarch.rpm
+//!
+//! Use the following repository baseurl to get extra dependencies:
+//!
+//! http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
+//!
+//! Install the following build dependencies:
+//!
+//! ant ant-nodeps axis2-adb-codegen axis2-codegen axis2c-devel
+//! jpackage-utils libvirt-devel libxml2-devel libxslt-devel python-devel
+//! python-setuptools rampartc-devel swig velocity xalan-j2-xsltc gawk
+//! xen-tools java-devel libopenssl-devel java-devel openssl-devel curl-devel
+//!
+//! Install the following runtime dependencies (this is the superset of all dependencies. Not all may be required for every component):
+//!
+//! axis2c dhcp41 dhcp41-common postgresql91 postgresql91-libs postgresql91-server
+//! python-boto rampartc open-iscsi iscsi-initiator-utils perl-Crypt-OpenSSL-RSA
+//! perl-Crypt-OpenSSL-Random sudo which jpackage-utils java lvm2 velocity drbd83
+//! drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts
+//! bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted
+//! util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils
+//! vconfig wget xen dhcp-server
+//!
+//! Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh to /opt/euca-WSDL2C.sh
+//!
+//! @subsection install_dependencies_precise_sec Ubuntu 12.04 LTS
+//! Install the following build dependencies.
+//!
+//! cdbs debhelper libaxis2c-dev librampart-dev default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev \
+//! libssl-dev ant-optional zlib1g-dev pkg-config swig python python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
+//! groovy postgresql-server-dev-9.1
+//!
+//! Download axis2-1.4 from http://archive.apache.org/dist/ws/axis2/1_4/axis2-1.4-bin.zip and unzip it in /opt, so /opt/axis2-1.4 exists
+//!
+//! Install the following runtime dependencies. Dependencies are broken down by Eucalyptus component.
+//!
+//! CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python2.7, python (>= 2.5), rsync, python-boto, python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1, vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity, libpostgresql-jdbc-java (>= 9.1), libjboss-common-java, libhibernate-commons-annotations-java
+//!
+//! Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil, python-pygresql, drbd8-utils
+//!
+//! SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil, tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, lvm2, vblade
+//!
+//! CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3)
+//!
+//! NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4), libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server, openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), file, rsync
+//!
+//! @subsection install_dependencies_lucid_sec Ubuntu 10.04 LTS
+//! Add Martin Pitt's PPA to get postgreSQL 9.1
+//!
+//! sudo add-apt-repository ppa:pitti/postgresql (You might need to install python-software-properties)
+//!
+//! Run "apt-get update"
+//!
+//! Install the following build dependencies.
+//!
+//! cdbs debhelper libaxis2c-dev librampart-dev \
+//! default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev \
+//! libssl-dev ant-optional zlib1g-dev pkg-config swig python \
+//! python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
+//! groovy postgresql-server-dev-9.1
+//!
+//! Install the following runtime dependencies. Dependencies are broken down by Eucalyptus component.
+//!
+//! CLC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python2.6, python (>= 2.5), rsync, python-boto, python-psutil, python-pygresql, lvm2, libgetargs-long-perl, postgresql-9.1, vblade, dmsetup, default-jre-headless | java6-runtime-headless, velocity, libpostgresql-jdbc-java (>= 9.1), libjboss-common-java, libhibernate-commons-annotations-java
+//!
+//! Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil, python-pygresql, drbd8-utils
+//!
+//! SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil, tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, lvm2, vblade
+//!
+//! CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3)
+//!
+//! NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4), libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server, openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), file, rsync
+//!
+//! @section install_build_sec Build Eucalyptus
+//! First, make sure JAVA_HOME and EUCALYPTUS are defined. For example,
+//!
+//! export JAVA_HOME="/usr/lib/jvm/java-openjdk/"
+//! export JAVA="$JAVA_HOME/JRE/bin/java"
+//! export EUCALYPTUS="/"
+//!
+//! Then run the "configure" script.
+//!
+//! For instance, on Ubuntu,
+//!
+//! ./configure --with-axis2c=/usr/lib/axis2 \
+//! --with-axis2c-services=/usr/lib/axis2/services --prefix=$EUCALYPTUS \
+//! --with-apache2-module-dir=/usr/lib/apache2/modules \
+//! --with-axis2=/opt/axis2-1.4
+//!
+//! On RHEL or CentOS,
+//!
+//! ./configure '--with-axis2=/usr/share/axis2-*' \
+//! --with-axis2c=/usr/lib64/axis2c --prefix=$EUCALYPTUS \
+//! --with-apache2-module-dir=/usr/lib64/httpd/modules \
+//! --with-db-home=/usr/pgsql-9.1 \
+//! --with-wsdl2c-sh=/opt/euca-WSDL2C.sh
+//!
+//! make clean ; make ; make install
+//!
+//! @section install_deploy_sec Deploy Eucalyptus
+//! At this point, if you plan to use Eucalyptus on more than one system, you're ready to push the software out to the other systems (although not all software components are required on all systems, it is simpler to just mirror everything and selectively enable components via start-up scripts). If you installed Eucalyptus in its own directory, you can just sync the entire package to all of the hosts listed above using whatever mechanism you typically use to push changes to systems (rsync, for instance).
+//!
+//! rsync -a $EUCALYPTUS/ root@{host-2}:$EUCALYPTUS/
+//! rsync -a $EUCALYPTUS/ root@{host-3}:$EUCALYPTUS/
+//! ...
+//!
+//! On installations without a root user that can log in, such as Ubuntu, it may be easier to pull the software from each system one at a time:
+//!
+//! host-2# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
+//! host-3# rsync -a {user}@{host-1}:$EUCALYPTUS/ $EUCALYPTUS/
+//!
+//! @section install_configure_sec Configure and Use Eucalyptus
+//! At this point forward, please follow instructions from the "Configuring Eucalyptus" section of the Installation Guide.
+//!
+//! You can access Eucalyptus Documentation here (under construction): http://www.eucalyptus.com/eucalyptus-cloud/documentation
+//!
+
+#endif /* ! _EUCALYPTUS_INSTALL_H_ */

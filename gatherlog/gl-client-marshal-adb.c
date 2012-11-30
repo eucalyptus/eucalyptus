@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,20 +63,113 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file gatherlog/gl-client-marshal-adb.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <gl-client-marshal.h>
 #include <euca_auth.h>
+#include <eucalyptus.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, char **outAlog, axutil_env_t * env, axis2_stub_t * stub);
+int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t * env, axis2_stub_t * stub);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Client side of the get log service request
+//!
+//! @param[in]  service service name identifier
+//! @param[out] outCClog output CC logs
+//! @param[out] outNClog output NC logs
+//! @param[out] outHlog output HTTPD logs
+//! @param[out] outAlog output AXIS2 logs
+//! @param[in]  env pointer to AXIS2 environment
+//! @param[in]  stub pointer to AXIS2 stub
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, char **outAlog, axutil_env_t * env, axis2_stub_t * stub)
 {
-    char *outservice;
-
-    adb_GetLogsResponse_t *out;
-    adb_getLogsResponseType_t *response;
-
-    adb_GetLogs_t *in;
-    adb_getLogsType_t *request;
+    adb_GetLogsResponse_t *out = NULL;
+    adb_getLogsResponseType_t *response = NULL;
+    adb_GetLogs_t *in = NULL;
+    adb_getLogsType_t *request = NULL;
 
     request = adb_getLogsType_create(env);
     adb_getLogsType_set_userId(request, env, "eucalyptus");
@@ -83,31 +179,36 @@ int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, 
     in = adb_GetLogs_create(env);
     adb_GetLogs_set_GetLogs(in, env, request);
 
-    out = axis2_stub_op_EucalyptusGL_GetLogs(stub, env, in);
-    if (!out) {
+    if ((out = axis2_stub_op_EucalyptusGL_GetLogs(stub, env, in)) == NULL) {
         printf("ERROR: operation call failed\n");
-        return (1);
+        return (EUCA_ERROR);
     }
-    response = adb_GetLogsResponse_get_GetLogsResponse(out, env);
 
-    //outservice = adb_getLogsResponseType_get_serviceTag(response, env);
+    response = adb_GetLogsResponse_get_GetLogsResponse(out, env);
     *outCClog = adb_getLogsResponseType_get_CCLog(response, env);
     *outNClog = adb_getLogsResponseType_get_NCLog(response, env);
     *outHlog = adb_getLogsResponseType_get_httpdLog(response, env);
     *outAlog = adb_getLogsResponseType_get_axis2Log(response, env);
-
-    return (0);
+    return (EUCA_OK);
 }
 
+ //!
+ //! Client side of the get keys service request.
+ //!
+ //! @param[in]  service service name identifier
+ //! @param[out] outCCCert output CC Certificate
+ //! @param[out] outNCCert output NC Certificate
+ //! @param[in]  env pointer to the AXIS2 environment
+ //! @param[in]  stub pointer to the AXIS2 stub
+ //!
+ //! @return EUCA_OK on success or EUCA_ERROR on failure
+ //!
 int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t * env, axis2_stub_t * stub)
 {
-    char *outservice;
-
-    adb_GetKeysResponse_t *out;
-    adb_getKeysResponseType_t *response;
-
-    adb_GetKeys_t *in;
-    adb_getKeysType_t *request;
+    adb_GetKeysResponse_t *out = NULL;
+    adb_getKeysResponseType_t *response = NULL;
+    adb_GetKeys_t *in = NULL;
+    adb_getKeysType_t *request = NULL;
 
     request = adb_getKeysType_create(env);
     adb_getKeysType_set_userId(request, env, "eucalyptus");
@@ -117,16 +218,13 @@ int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t *
     in = adb_GetKeys_create(env);
     adb_GetKeys_set_GetKeys(in, env, request);
 
-    out = axis2_stub_op_EucalyptusGL_GetKeys(stub, env, in);
-    if (!out) {
+    if ((out = axis2_stub_op_EucalyptusGL_GetKeys(stub, env, in)) == NULL) {
         printf("ERROR: operation call failed\n");
-        return (1);
+        return (EUCA_ERROR);
     }
-    response = adb_GetKeysResponse_get_GetKeysResponse(out, env);
 
-    //outservice = adb_getKeysResponseType_get_serviceTag(response, env);
+    response = adb_GetKeysResponse_get_GetKeysResponse(out, env);
     *outCCCert = adb_getKeysResponseType_get_CCcert(response, env);
     *outNCCert = adb_getKeysResponseType_get_NCcert(response, env);
-
-    return (0);
+    return (EUCA_OK);
 }

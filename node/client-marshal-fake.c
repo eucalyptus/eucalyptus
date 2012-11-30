@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/client-marshal-fake.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,17 +89,125 @@
 #include <sys/stat.h>           /* For mode constants */
 #include <fcntl.h>              /* For O_* constants */
 
-enum { SHARED_MEM, SHARED_FILE };
-#define MAX_FAKE_INSTANCES 4096
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-typedef struct fakeconfig_t {
-    ncInstance global_instances[MAX_FAKE_INSTANCES];
-    ncResource res;
-    time_t current, last;
-} fakeconfig;
-fakeconfig *myconfig;
-sem_t *fakelock;
+#define MAX_FAKE_INSTANCES                      4096    //!< Maximum number of fake instances
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+typedef struct fakeconfig_t fakeconfig;
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+enum {
+    SHARED_MEM,                 //!< Shared memory
+    SHARED_FILE,                //!< Shared file
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+ //! Fake Client Configuration Structure
+struct fakeconfig_t {
+    ncInstance global_instances[MAX_FAKE_INSTANCES];    //!< list of instances
+    ncResource res;             //!< NC component resources
+    time_t current;
+    time_t last;
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+fakeconfig *myconfig;           //!< fake configuration
+sem_t *fakelock;                //!< fake configuration lock
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void saveNcStuff();
+int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
+void loadNcStuff();
+
+ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir);
+int ncStubDestroy(ncStub * pStub);
+
+int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+                      char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
+                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                      int groupNamesSize, ncInstance ** outInstPtr);
+int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
+int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp);
+int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta);
+int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig);
+int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen);
+int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
+int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
+int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force);
+int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
+int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+                          char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Save the NC stuff
+//!
 void saveNcStuff()
 {
     int fd, i, done = 0;
@@ -93,6 +215,18 @@ void saveNcStuff()
     sem_post(fakelock);
 }
 
+//!
+//! Setup a shared buffer
+//!
+//! @param[in] buf a pointer to a string buffer
+//! @param[in] bufname the name of our buffer
+//! @param[in] bytes the size of hte buffer
+//! @param[in] lock a pointer to the lock pointer
+//! @param[in] lockname the name of the lock
+//! @param[in] mode the access mode (SHARED_MEM or SHARED_FILE)
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode)
 {
     int shd, rc, ret;
@@ -100,7 +234,7 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
     // create a lock and grab it
     *lock = sem_open(lockname, O_CREAT, 0644, 1);
     sem_wait(*lock);
-    ret = 0;
+    ret = EUCA_OK;
 
     if (mode == SHARED_MEM) {
         // set up shared memory segment for config
@@ -111,12 +245,14 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
         } else {
             shd = shm_open(bufname, O_CREAT | O_RDWR, 0644);
         }
+
         if (shd < 0) {
             fprintf(stderr, "cannot initialize shared memory segment\n");
             sem_post(*lock);
             sem_close(*lock);
-            return (1);
+            return (EUCA_ERROR);
         }
+
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
         char *tmpstr, path[MAX_PATH];
@@ -129,6 +265,7 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
         } else {
             snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
         }
+
         fd = open(path, O_RDWR | O_CREAT, 0600);
         if (fd < 0) {
             fprintf(stderr, "ERROR: cannot open/create '%s' to set up mmapped buffer\n", path);
@@ -140,6 +277,7 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
             if (mystat.st_size != bytes) {
                 rc = ftruncate(fd, bytes);
             }
+
             *buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
             if (*buf == NULL) {
                 fprintf(stderr, "ERROR: cannot mmap fd\n");
@@ -152,6 +290,9 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
     return (ret);
 }
 
+//!
+//! Loads NC stuff
+//!
 void loadNcStuff()
 {
     int fd, i, count = 0, done = 0, rc, j;
@@ -177,6 +318,7 @@ void loadNcStuff()
     } else {
         myconfig->current = time(NULL);
     }
+
     logprintfl(EUCADEBUG, "fakeNC: setup(): last=%d current=%d\n", myconfig->last, myconfig->current);
     if ((myconfig->current - myconfig->last) > 30) {
         // do a refresh
@@ -202,11 +344,20 @@ void loadNcStuff()
     }
 }
 
+//!
+//! Creates and initialize an NC stub entry
+//!
+//! @param[in] endpoint_uri the endpoint URI string
+//! @param[in] logfile the log file name string
+//! @param[in] homedir the home directory path string
+//!
+//! @return a pointer to the newly created NC stub structure
+//!
 ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 {
     axutil_env_t *env = NULL;
-    axis2_char_t *client_home;
-    axis2_stub_t *stub;
+    axis2_char_t *client_home = NULL;
+    axis2_stub_t *stub = NULL;
     ncStub *st = NULL;
 
     if (logfile) {
@@ -214,6 +365,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     } else {
         env = axutil_env_create_all(NULL, 0);
     }
+
     if (homedir) {
         client_home = (axis2_char_t *) homedir;
     } else {
@@ -224,6 +376,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAERROR, "fakeNC: ERROR: cannot get AXIS2C_HOME");
         return NULL;
     }
+
     if (endpoint_uri == NULL) {
         logprintfl(EUCAERROR, "fakeNC: ERROR: empty endpoint_url");
         return NULL;
@@ -237,13 +390,16 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAERROR, "fakeNC: ncStubCreate received invalid URI %s\n", uri);
         return NULL;
     }
+
     char *node_name = strdup(p + 3);    // copy without the protocol prefix
     if (node_name == NULL) {
         logprintfl(EUCAERROR, "fakeNC: ncStubCreate is out of memory\n");
         return NULL;
     }
+
     if ((p = strchr(node_name, ':')) != NULL)
         *p = '\0';              // cut off the port
+
     if ((p = strchr(node_name, '/')) != NULL)
         *p = '\0';              // if there is no port
 
@@ -254,10 +410,10 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         uri = "http://localhost:8773/services/EucalyptusBroker";
         logprintfl(EUCADEBUG, "fakeNC: DEBUG: redirecting request to %s\n", uri);
     }
-    // TODO: what if endpoint_uri, home, or env are NULL?
+    //! @todo what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *) uri);
 
-    if (stub && (st = malloc(sizeof(ncStub)))) {
+    if (stub && (st = EUCA_ZALLOC(1, sizeof(ncStub)))) {
         st->env = env;
         st->client_home = strdup((char *)client_home);
         st->endpoint_uri = (axis2_char_t *) strdup(endpoint_uri);
@@ -270,19 +426,53 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         logprintfl(EUCAWARN, "fakeNC: WARNING: out of memory");
     }
 
-    free(node_name);
+    EUCA_FREE(node_name);
     return st;
 }
 
-int ncStubDestroy(ncStub * st)
+//!
+//! destroy an NC stub structure
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//!
+//! @return Always returns EUCA_OK
+//!
+int ncStubDestroy(ncStub * pStub)
 {
-    free(st);
-    return (0);
+    EUCA_FREE(pStub);
+    return (EUCA_OK);
 }
 
-/************************** stubs **************************/
-
-int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
+//!
+//! Handles the Run instance request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  uuid unique user identifier string
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in]  reservationId the reservation identifier string
+//! @param[in]  params a pointer to the virtual machine parameters to use
+//! @param[in]  imageId the image identifier string
+//! @param[in]  imageURL the image URL address tring
+//! @param[in]  kernelId the kernel image identifier (eki-XXXXXXXX)
+//! @param[in]  kernelURL the kernel image URL address
+//! @param[in]  ramdiskId the ramdisk image identifier (eri-XXXXXXXX)
+//! @param[in]  ramdiskURL the ramdisk image URL address
+//! @param[in]  ownerId the owner identifier string
+//! @param[in]  accountId the account identifier string
+//! @param[in]  keyName the key name string
+//! @param[in]  netparams a pointer to the network parameters string
+//! @param[in]  userData the user data string
+//! @param[in]  launchIndex the launch index string
+//! @param[in]  platform the platform name string
+//! @param[in]  expiryTime the reservation expiration time
+//! @param[in]  groupNames a list of group name string
+//! @param[in]  groupNamesSize the number of group name in the groupNames list
+//! @param[out] outInstPtr the list of instances created by this request
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                       int groupNamesSize, ncInstance ** outInstPtr)
@@ -293,9 +483,9 @@ int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instance
     logprintfl(EUCADEBUG, "fakeNC: runInstance(): params: uuid=%s instanceId=%s reservationId=%s ownerId=%s accountId=%s platform=%s\n", SP(uuid),
                SP(instanceId), SP(reservationId), SP(ownerId), SP(accountId), SP(platform));
 
-    if (!uuid || !instanceId || !reservationId || !ownerId || !accountId || !platform || !meta || !netparams) {
+    if (!uuid || !instanceId || !reservationId || !ownerId || !accountId || !platform || !pMeta || !netparams) {
         logprintfl(EUCAERROR, "fakeNC: runInstance(): bad input params\n");
-        return (0);
+        return (EUCA_ERROR);
     }
 
     loadNcStuff();
@@ -304,7 +494,7 @@ int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instance
                                  instanceId,
                                  reservationId,
                                  params,
-                                 instance_state_names[PENDING], PENDING, meta->userId, ownerId, accountId, netparams, keyName, userData, launchIndex,
+                                 instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId, netparams, keyName, userData, launchIndex,
                                  platform, expiryTime, groupNames, groupNamesSize);
     if (instance) {
         instance->launchTime = time(NULL);
@@ -327,10 +517,22 @@ int ncRunInstanceStub(ncStub * st, ncMetadata * meta, char *uuid, char *instance
     }
 
     saveNcStuff();
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, int force, int *shutdownState, int *previousState)
+//!
+//! Handles the Terminate instance request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in]  force if set to 1 will force the termination of the instance
+//! @param[out] shutdownState the instance state code after the call to find_and_terminate_instance() if successful
+//! @param[out] previousState the instance state code after the call to find_and_terminate_instance() if successful
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
     int i, done = 0;
 
@@ -338,7 +540,7 @@ int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, in
 
     if (!instanceId) {
         logprintfl(EUCAERROR, "fakeNC: termianteInstance(): bad input params\n");
-        return (0);
+        return (EUCA_ERROR);
     }
 
     loadNcStuff();
@@ -359,17 +561,27 @@ int ncTerminateInstanceStub(ncStub * st, ncMetadata * meta, char *instanceId, in
     }
 
     saveNcStuff();
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *publicIp)
+//!
+//! Handles the client assign address request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] publicIp a string representation of the public IP to assign to the instance
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp)
 {
     int i, done = 0;
 
     logprintfl(EUCADEBUG, "fakeNC: assignAddress(): params: instanceId=%s publicIp=%s\n", SP(instanceId), SP(publicIp));
     if (!instanceId || !publicIp) {
         logprintfl(EUCADEBUG, "fakeNC: assignAddress(): bad input params\n");
-        return (0);
+        return (EUCA_ERROR);
     }
 
     loadNcStuff();
@@ -383,32 +595,52 @@ int ncAssignAddressStub(ncStub * st, ncMetadata * meta, char *instanceId, char *
     }
 
     saveNcStuff();
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncPowerDownStub(ncStub * st, ncMetadata * meta)
+//!
+//! Handles the client power down rquest
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return Always return EUCA_OK.
+//!
+int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta)
 {
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
+//!
+//! Handles the client describe instance request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instIds a pointer the list of instance identifiers to retrieve data for
+//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
+//! @param[out] outInsts a pointer the list of instances for which we have data
+//! @param[out] outInstsLen the number of instances in the outInsts list.
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
 {
     int i, numinsts = 0;
     logprintfl(EUCADEBUG, "fakeNC: describeInstances(): params: instIdsLen=%d\n", instIdsLen);
 
     if (instIdsLen < 0) {
         logprintfl(EUCAERROR, "fakeNC: describeInstances(): bad input params\n");
-        return (0);
+        return (EUCA_ERROR);
     }
 
     loadNcStuff();
 
     //  *outInstsLen = myconfig->instanceidx+1;
-    *outInsts = malloc(sizeof(ncInstance *) * MAX_FAKE_INSTANCES);
+    *outInsts = EUCA_ZALLOC(MAX_FAKE_INSTANCES, sizeof(ncInstance *));
     for (i = 0; i < MAX_FAKE_INSTANCES; i++) {
         if (strlen(myconfig->global_instances[i].instanceId)) {
             ncInstance *newinst;
-            newinst = malloc(sizeof(ncInstance));
+            newinst = EUCA_ZALLOC(1, sizeof(ncInstance));
             if (!strcmp(myconfig->global_instances[i].stateName, "Pending")) {
                 snprintf(myconfig->global_instances[i].stateName, 8, "Extant");
             }
@@ -422,34 +654,90 @@ int ncDescribeInstancesStub(ncStub * st, ncMetadata * meta, char **instIds, int 
     *outInstsLen = numinsts;
 
     saveNcStuff();
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncBundleInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey,
-                         char *S3Policy, char *S3PolicySig)
+//!
+//! Handles the client bundle instance request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] bucketName the bucket name string to which the bundle will be saved
+//! @param[in] filePrefix the prefix name string of the bundle
+//! @param[in] walrusURL the walrus URL address string
+//! @param[in] userPublicKey the public key string
+//! @param[in] S3Policy the S3 engine policy
+//! @param[in] S3PolicySig the S3 engine policy signature
+//!
+//! @return Always return EUCA_OK
+//!
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+                         char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
-    return (ncTerminateInstanceStub(stub, meta, instanceId, 0, NULL, NULL));
+    return (EUCA_OK);
 }
 
-int ncBundleRestartInstanceStub(ncStub * stub, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the client restart instance request once bundling has completed.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return Always return EUCA_OK
+//!
+int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
-    return (ncTerminateInstanceStub(stub, meta, instanceId, 0, NULL, NULL));
+    return (EUCA_OK);
 }
 
-int ncCancelBundleTaskStub(ncStub * stub, ncMetadata * meta, char *instanceId)
+//!
+//! Handles the client cancel bundle task request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return Always return EUCA_OK
+//!
+int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncDescribeBundleTasksStub(ncStub * stub, ncMetadata * meta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
+//!
+//! Handles the client describe bundles task request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instIds a list of instance identifier string
+//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
+//! @param[out] outBundleTasks a pointer to the created bundle tasks list
+//! @param[out] outBundleTasksLen the number of bundle tasks in the outBundleTasks list
+//!
+//! @return Always return EUCA_OK
+//!
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
+                              int *outBundleTasksLen)
 {
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, ncResource ** outRes)
+//!
+//! Handle the client describe resource request
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  resourceType UNUSED
+//! @param[out] outRes a list of resources we retrieved data for
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes)
 {
-    int ret = 0;
-    ncResource *res;
+    int ret = EUCA_OK;
+    ncResource *res = NULL;
 
     loadNcStuff();
 
@@ -458,15 +746,15 @@ int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, n
         res = allocate_resource("OK", "iqn.1993-08.org.debian:01:736a4e92c588", 1024000, 1024000, 30000000, 30000000, 4096, 4096, "none");
         if (!res) {
             logprintfl(EUCAERROR, "fakeNC: describeResource(): failed to allocate fake resource\n");
-            ret = 1;
+            ret = EUCA_ERROR;
         } else {
             memcpy(&(myconfig->res), res, sizeof(ncResource));
-            free(res);
+            EUCA_FREE(res);
         }
     }
 
     if (!ret) {
-        res = malloc(sizeof(ncResource));
+        res = EUCA_ALLOC(1, sizeof(ncResource));
         memcpy(res, &(myconfig->res), sizeof(ncResource));
         *outRes = res;
     } else {
@@ -477,7 +765,19 @@ int ncDescribeResourceStub(ncStub * st, ncMetadata * meta, char *resourceType, n
     return (ret);
 }
 
-int ncAttachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
+//!
+//! Handles the client attach volume request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] remoteDev the target device name
+//! @param[in] localDev the local device name
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
     int i, j, done = 0, vdone = 0, foundidx = -1;
 
@@ -485,7 +785,7 @@ int ncAttachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char 
                SP(remoteDev), SP(localDev));
     if (!instanceId || !volumeId || !remoteDev || !localDev) {
         logprintfl(EUCADEBUG, "fakeNC:  attachVolume(): bad input params\n");
-        return (0);
+        return (EUCA_ERROR);
     }
 
     loadNcStuff();
@@ -516,10 +816,23 @@ int ncAttachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char 
     }
 
     saveNcStuff();
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncDetachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
+//!
+//! Handles the client detach volume request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] remoteDev the target device name
+//! @param[in] localDev the local device name
+//! @param[in] force if set to 1, this will force the volume to detach
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
     int i, j, done = 0, vdone = 0, foundidx = -1;
 
@@ -527,7 +840,7 @@ int ncDetachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char 
                SP(remoteDev), SP(localDev));
     if (!instanceId || !volumeId || !remoteDev || !localDev) {
         logprintfl(EUCADEBUG, "fakeNC:  detachVolume(): bad input params\n");
-        return (0);
+        return (EUCA_ERROR);
     }
 
     loadNcStuff();
@@ -550,16 +863,43 @@ int ncDetachVolumeStub(ncStub * stub, ncMetadata * meta, char *instanceId, char 
     }
 
     saveNcStuff();
-    return (0);
+    return (EUCA_OK);
 }
 
-int ncCreateImageStub(ncStub * stub, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev)
+//!
+//! Handles the client create image request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] remoteDev the remote device name
+//!
+//! @return Always return EUCA_OK
+//!
+int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev)
 {
-    return (ncTerminateInstanceStub(stub, meta, instanceId, 0, NULL, NULL));
+    return (EUCA_OK);
 }
 
-int ncDescribeSensorsStub(ncStub * st, ncMetadata * meta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
+//!
+//! Handles the client describe sensor request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  historySize teh size of the data history to retrieve
+//! @param[in]  collectionIntervalTimeMs the data collection interval in milliseconds
+//! @param[in]  instIds the list of instance identifiers string
+//! @param[in]  instIdsLen the number of instance identifiers in the instIds list
+//! @param[in]  sensorIds a list of sensor identifiers string
+//! @param[in]  sensorIdsLen the number of sensor identifiers string in the sensorIds list
+//! @param[out] outResources a list of sensor resources created by this request
+//! @param[out] outResourcesLen the number of sensor resources contained in the outResources list
+//!
+//! @return Always return EUCA_OK
+//!
+int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen)
 {
-    return -1;                  // not supported
+    return (EUCA_OK);
 }

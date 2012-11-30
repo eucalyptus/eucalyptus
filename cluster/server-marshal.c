@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file cluster/server-marshal.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,15 +85,122 @@
 #include <vnetwork.h>
 #include "adb-helpers.h"
 
-#define DONOTHING 0
-#define EVENTLOG 0
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+#define DONOTHING                                0
+#define EVENTLOG                                 0
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void adb_InitService(void);
+adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolume, const axutil_env_t * env);
+adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolume, const axutil_env_t * env);
+adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundleInstance, const axutil_env_t * env);
+adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRestartInstance_t * bundleInstance, const axutil_env_t * env);
+adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t * cancelBundleTask, const axutil_env_t * env);
+adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env);
+adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, const axutil_env_t * env);
+adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t * describeNetworks, const axutil_env_t * env);
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
+                                                                      const axutil_env_t * env);
+adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAddress, const axutil_env_t * env);
+adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * unassignAddress, const axutil_env_t * env);
+adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t * configureNetwork, const axutil_env_t * env);
+adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t * getConsoleOutput, const axutil_env_t * env);
+adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwork, const axutil_env_t * env);
+adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_t * describeResources, const axutil_env_t * env);
+adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_t * describeInstances, const axutil_env_t * env);
+int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axutil_env_t * env);
+adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstances, const axutil_env_t * env);
+adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * rebootInstances, const axutil_env_t * env);
+adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstances_t * terminateInstances, const axutil_env_t * env);
+adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, const axutil_env_t * env);
+void print_adb_ccInstanceType(adb_ccInstanceType_t * in);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! initialize the AXIS2 services
+//!
 void adb_InitService(void)
 {
-    int rc;
     doInitCC();
 }
 
+//!
+//! Process the attach volume request an provides the response.
+//!
+//! @param[in] attachVolume a pointer to the attach volume message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolume, const axutil_env_t * env)
 {
     adb_AttachVolumeResponse_t *ret = NULL;
@@ -127,19 +248,33 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
     return (ret);
 }
 
+//!
+//! Process the detach volume request an provides the response.
+//!
+//! @param[in] detachVolume a pointer to the detach volume message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolume, const axutil_env_t * env)
 {
     adb_DetachVolumeResponse_t *ret = NULL;
     adb_detachVolumeResponseType_t *dvrt = NULL;
-
     adb_detachVolumeType_t *dvt = NULL;
-
-    int rc;
-    axis2_bool_t status = AXIS2_TRUE, forceBool = AXIS2_FALSE;
-    char statusMessage[256];
-    char *volumeId = NULL, *instanceId = NULL, *remoteDev = NULL, *localDev = NULL;
-    int force;
-    ncMetadata ccMeta;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    axis2_bool_t forceBool = AXIS2_FALSE;
+    char statusMessage[256] = { 0 };
+    char *volumeId = NULL;
+    char *instanceId = NULL;
+    char *remoteDev = NULL;
+    char *localDev = NULL;
+    int force = 0;
+    ncMetadata ccMeta = { 0 };
 
     dvt = adb_DetachVolume_get_DetachVolume(detachVolume, env);
 
@@ -181,18 +316,34 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
     return (ret);
 }
 
+//!
+//! Process the bundle instance request and provides the response
+//!
+//! @param[in] bundleInstance a pointer to the bundle instance message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundleInstance, const axutil_env_t * env)
 {
     adb_BundleInstanceResponse_t *ret = NULL;
     adb_bundleInstanceResponseType_t *birt = NULL;
-
     adb_bundleInstanceType_t *bit = NULL;
-
-    int rc;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    char *instanceId = NULL, *bucketName = NULL, *filePrefix = NULL, *walrusURL = NULL, *userPublicKey = NULL, *S3Policy = NULL, *S3PolicySig = NULL;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *instanceId = NULL;
+    char *bucketName = NULL;
+    char *filePrefix = NULL;
+    char *walrusURL = NULL;
+    char *userPublicKey = NULL;
+    char *S3Policy = NULL;
+    char *S3PolicySig = NULL;
+    ncMetadata ccMeta = { 0 };
 
     bit = adb_BundleInstance_get_BundleInstance(bundleInstance, env);
 
@@ -231,6 +382,21 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     return (ret);
 }
 
+//!
+//! Process the bundle restart instance request and provides the response
+//! Once the bundling is completed, we need to synchronize with CLC prior
+//! restarting the instance. Once the CLC detects the bundling activity
+//! has completed, it'll send the restart request.
+//!
+//! @param[in] bundleInstance a pointer to the bundle restart instance message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRestartInstance_t * bundleInstance, const axutil_env_t * env)
 {
     int rc = 0;
@@ -269,18 +435,28 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
     return (ret);
 }
 
+//!
+//! Process the cancel bundle task request and provides the response
+//!
+//! @param[in] cancelBundleTask a pointer to the cancel bundle task message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t * cancelBundleTask, const axutil_env_t * env)
 {
     adb_CancelBundleTaskResponse_t *ret = NULL;
     adb_cancelBundleTaskResponseType_t *birt = NULL;
-
     adb_cancelBundleTaskType_t *bit = NULL;
-
-    int rc;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    char *instanceId = NULL, *bucketName = NULL, *filePrefix = NULL, *walrusURL = NULL, *userPublicKey = NULL;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *instanceId = NULL;
+    ncMetadata ccMeta = { 0 };
 
     bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
 
@@ -313,16 +489,24 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
     return (ret);
 }
 
+//!
+//! Process the describe sensors request and provides the response
+//!
+//! @param[in] describeSensors a pointer to the describe sensors message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env)
 {
-    int result = ERROR;
+    int result = EUCA_ERROR;
 
     adb_describeSensorsType_t *input = adb_DescribeSensors_get_DescribeSensors(describeSensors, env);
     adb_describeSensorsResponseType_t *output = adb_describeSensorsResponseType_create(env);
-
-    // get standard fields from input
-    /////axis2_char_t * correlationId = adb_describeSensorsType_get_correlationId(input, env);
-    /////axis2_char_t * userId = adb_describeSensorsType_get_userId(input, env);
 
     // get operation-specific fields from input
     int historySize = adb_describeSensorsType_get_historySize(input, env);
@@ -331,12 +515,13 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     int instIdsLen = adb_describeSensorsType_sizeof_instanceIds(input, env);
     char **instIds = NULL;
     if (instIdsLen > 0) {
-        instIds = malloc(sizeof(char *) * instIdsLen);
+        instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
         if (instIds == NULL) {
             logprintfl(EUCAERROR, "out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
             goto reply;
         }
     }
+
     for (int i = 0; i < instIdsLen; i++) {
         instIds[i] = adb_describeSensorsType_get_instanceIds_at(input, env, i);
     }
@@ -344,38 +529,36 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     int sensorIdsLen = adb_describeSensorsType_sizeof_sensorIds(input, env);
     char **sensorIds = NULL;
     if (sensorIdsLen > 0) {
-        sensorIds = malloc(sizeof(char *) * sensorIdsLen);
+        sensorIds = EUCA_ZALLOC(sensorIdsLen, sizeof(char *));
         if (sensorIds == NULL) {
             logprintfl(EUCAERROR, "out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
             goto reply;
         }
     }
+
     for (int i = 0; i < sensorIdsLen; i++) {
         sensorIds[i] = adb_describeSensorsType_get_sensorIds_at(input, env, i);
     }
 
-    {                           // do it
+    {
+        // do it
         ncMetadata meta;
         EUCA_MESSAGE_UNMARSHAL(describeSensorsType, input, (&meta));
 
-        sensorResource **outResources;
-        int outResourcesLen;
+        sensorResource **outResources = NULL;
+        int outResourcesLen = 0;
 
-        int error =
-            doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
-                              &outResourcesLen);
-
+        int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
+                                      &outResourcesLen);
         if (error) {
             logprintfl(EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
                 for (int i = 0; i < outResourcesLen; i++) {
-                    if (outResources[i])
-                        free(outResources[i]);
+                    EUCA_FREE(outResources[i]);
                 }
-                free(outResources);
+                EUCA_FREE(outResources);
             }
         } else {
-
             // set standard fields in output
             adb_describeSensorsResponseType_set_correlationId(output, env, meta.correlationId);
             adb_describeSensorsResponseType_set_userId(output, env, meta.userId);
@@ -383,24 +566,22 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             // set operation-specific fields in output
             for (int i = 0; i < outResourcesLen; i++) {
                 adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i]);
-                if (outResources[i])
-                    free(outResources[i]);
+                EUCA_FREE(outResources[i]);
                 adb_describeSensorsResponseType_add_sensorsResources(output, env, resource);
             }
-            if (outResourcesLen > 0 && outResources != NULL)
-                free(outResources);
+            EUCA_FREE(outResources);
 
-            result = OK;        // success
+            result = EUCA_OK;   // success
         }
     }
 
-    free(sensorIds);
+    EUCA_FREE(sensorIds);
 
 reply:
 
-    free(instIds);
+    EUCA_FREE(instIds);
 
-    if (result == ERROR) {
+    if (result != EUCA_OK) {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_FALSE);
     } else {
         adb_describeSensorsResponseType_set_return(output, env, AXIS2_TRUE);
@@ -413,18 +594,30 @@ reply:
     return response;
 }
 
+//!
+//! Process the stop network request and provides the response
+//!
+//! @param[in] stopNetwork a pointer to the stop network message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, const axutil_env_t * env)
 {
     adb_StopNetworkResponse_t *ret = NULL;
     adb_stopNetworkResponseType_t *snrt = NULL;
-
     adb_stopNetworkType_t *snt = NULL;
-
-    int rc, vlan;
+    int rc = 0;
+    int vlan = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    char *userName = NULL, *netName = NULL, *accountId = NULL;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *netName = NULL;
+    char *accountId = NULL;
+    ncMetadata ccMeta = { 0 };
 
     snt = adb_StopNetwork_get_StopNetwork(stopNetwork, env);
 
@@ -461,26 +654,39 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
     return (ret);
 }
 
+//!
+//! Process the describe networks request and provides the response
+//!
+//! @param[in] describeNetworks a pointer to the describe network message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t * describeNetworks, const axutil_env_t * env)
 {
-    // output vars
     adb_DescribeNetworksResponse_t *ret = NULL;
     adb_describeNetworksResponseType_t *snrt = NULL;
-
-    //input vars
     adb_describeNetworksType_t *snt = NULL;
-
-    // working vars
-    int rc, i, j;
+    adb_networkType_t *nt = NULL;
+    int rc = 0;
+    int i = 0;
+    int j = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-
-    char **clusterControllers = NULL, *nameserver = NULL, *vnetSubnet = NULL, *vnetNetmask = NULL;
+    char *incc = NULL;
+    char statusMessage[256] = { 0 };
+    char **clusterControllers = NULL;
+    char *nameserver = NULL;
+    char *vnetSubnet = NULL;
+    char *vnetNetmask = NULL;
     int clusterControllersLen = 0;
-    ncMetadata ccMeta;
+    ncMetadata ccMeta = { 0 };
     vnetConfig *outvnetConfig = NULL;
 
-    outvnetConfig = malloc(sizeof(vnetConfig));
+    outvnetConfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
 
     snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
     EUCA_MESSAGE_UNMARSHAL(describeNetworksType, snt, (&ccMeta));
@@ -488,9 +694,8 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     nameserver = adb_describeNetworksType_get_nameserver(snt, env);
 
     clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
-    clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
+    clusterControllers = EUCA_ZALLOC(clusterControllersLen, sizeof(char *));
     for (i = 0; i < clusterControllersLen; i++) {
-        char *incc;
         incc = adb_describeNetworksType_get_clusterControllers_at(snt, env, i);
         clusterControllers[i] = host2ip(incc);
     }
@@ -504,7 +709,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
-
             if (!strcmp(outvnetConfig->mode, "MANAGED") || !strcmp(outvnetConfig->mode, "MANAGED-NOVLAN")) {
                 adb_describeNetworksResponseType_set_useVlans(snrt, env, 1);
             } else {
@@ -518,20 +722,19 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
             vnetSubnet = hex2dot(outvnetConfig->nw);
             if (vnetSubnet) {
                 adb_describeNetworksResponseType_set_vnetSubnet(snrt, env, vnetSubnet);
-                free(vnetSubnet);
+                EUCA_FREE(vnetSubnet);
             }
 
             vnetNetmask = hex2dot(outvnetConfig->nm);
             if (vnetNetmask) {
                 adb_describeNetworksResponseType_set_vnetNetmask(snrt, env, vnetNetmask);
-                free(vnetNetmask);
+                EUCA_FREE(vnetNetmask);
             }
             adb_describeNetworksResponseType_set_vlanMin(snrt, env, 2);
             adb_describeNetworksResponseType_set_vlanMax(snrt, env, outvnetConfig->max_vlan);
 
             for (i = 2; i < NUMBER_OF_VLANS; i++) {
                 if (outvnetConfig->networks[i].active) {
-                    adb_networkType_t *nt = NULL;
                     nt = adb_networkType_create(env);
                     adb_networkType_set_uuid(nt, env, outvnetConfig->users[i].uuid);
                     adb_networkType_set_vlan(nt, env, i);
@@ -550,11 +753,9 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
         }
     }
     for (i = 0; i < clusterControllersLen; i++) {
-        if (clusterControllers[i])
-            free(clusterControllers[i]);
+        EUCA_FREE(clusterControllers[i]);
     }
-    if (clusterControllers)
-        free(clusterControllers);
+    EUCA_FREE(clusterControllers);
 
     adb_describeNetworksResponseType_set_return(snrt, env, status);
     if (status == AXIS2_FALSE) {
@@ -567,26 +768,36 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     ret = adb_DescribeNetworksResponse_create(env);
     adb_DescribeNetworksResponse_set_DescribeNetworksResponse(ret, env, snrt);
 
-    if (outvnetConfig)
-        free(outvnetConfig);
+    EUCA_FREE(outvnetConfig);
     return (ret);
 }
 
+//!
+//! Process the describe public addresses request and provides the response
+//!
+//! @param[in] describePublicAddresses a pointer to the describe public addresses message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
                                                                       const axutil_env_t * env)
 {
     adb_describePublicAddressesType_t *dpa = NULL;
-
     adb_DescribePublicAddressesResponse_t *ret = NULL;
     adb_describePublicAddressesResponseType_t *dpart = NULL;
-
+    adb_publicAddressType_t *addr;
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256], *ipstr = NULL;
-
-    int rc, outAddressesLen, i;
-    ncMetadata ccMeta;
-    //  char **outAddresses=NULL;
-    publicip *outAddresses;
+    int rc = 0;
+    int outAddressesLen = 0;
+    int i = 0;
+    ncMetadata ccMeta = { 0 };
+    publicip *outAddresses = NULL;
 
     dpa = adb_DescribePublicAddresses_get_DescribePublicAddresses(describePublicAddresses, env);
     EUCA_MESSAGE_UNMARSHAL(describePublicAddressesType, dpa, (&ccMeta));
@@ -611,21 +822,18 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     dpart = adb_describePublicAddressesResponseType_create(env);
     for (i = 0; i < outAddressesLen; i++) {
         if (outAddresses[i].ip) {
-            adb_publicAddressType_t *addr;
             addr = adb_publicAddressType_create(env);
 
             adb_publicAddressType_set_uuid(addr, env, outAddresses[i].uuid);
 
             ipstr = hex2dot(outAddresses[i].ip);
             adb_publicAddressType_set_sourceAddress(addr, env, ipstr);
-            if (ipstr)
-                free(ipstr);
+            EUCA_FREE(ipstr);
 
             if (outAddresses[i].dstip) {
                 ipstr = hex2dot(outAddresses[i].dstip);
                 adb_publicAddressType_set_destAddress(addr, env, ipstr);
-                if (ipstr)
-                    free(ipstr);
+                EUCA_FREE(ipstr);
             } else {
                 adb_publicAddressType_set_destAddress(addr, env, "0.0.0.0");
             }
@@ -646,18 +854,30 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
     return (ret);
 }
 
+//!
+//! Process the assign address request and provides the response
+//!
+//! @param[in] assignAddress a pointer to the assign address message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAddress, const axutil_env_t * env)
 {
     adb_AssignAddressResponse_t *ret = NULL;
     adb_assignAddressResponseType_t *aart = NULL;
-
     adb_assignAddressType_t *aat = NULL;
-
-    int rc;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    char *src = NULL, *dst = NULL, *uuid = NULL;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *src = NULL;
+    char *dst = NULL;
+    char *uuid = NULL;
+    ncMetadata ccMeta = { 0 };
 
     aat = adb_AssignAddress_get_AssignAddress(assignAddress, env);
 
@@ -692,18 +912,29 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
     return (ret);
 }
 
+//!
+//! Process the unassign address request and provides the response
+//!
+//! @param[in] unassignAddress a pointer to the unassign address message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * unassignAddress, const axutil_env_t * env)
 {
     adb_UnassignAddressResponse_t *ret = NULL;
     adb_unassignAddressResponseType_t *uart = NULL;
-
     adb_unassignAddressType_t *uat = NULL;
-
-    int rc;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    char *src, *dst;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *src = NULL;
+    char *dst = NULL;
+    ncMetadata ccMeta = { 0 };
 
     uat = adb_UnassignAddress_get_UnassignAddress(unassignAddress, env);
     EUCA_MESSAGE_UNMARSHAL(unassignAddressType, uat, (&ccMeta));
@@ -736,23 +967,45 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
     return (ret);
 }
 
+//!
+//! Process the configure network request and provides the response
+//!
+//! @param[in] configureNetwork a pointer to the configure network message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t * configureNetwork, const axutil_env_t * env)
 {
     adb_ConfigureNetworkResponse_t *ret = NULL;
     adb_configureNetworkResponseType_t *cnrt = NULL;
-
     adb_configureNetworkType_t *cnt = NULL;
     adb_networkRule_t *nr = NULL;
-
-    // working vars
-    int rc, i, ruleLen, j, done;
+    int rc = 0;
+    int i = 0;
+    int ruleLen = 0;
+    int j = 0;
+    int done = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-
-    char **sourceNets = NULL, **userNames = NULL, **sourceNames = NULL, *protocol = NULL, *destName = NULL, *type = NULL, *destNameLast =
-        NULL, *destUserName = NULL, *accountId = NULL;
-    int minPort, maxPort, namedLen, netLen;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char **sourceNets = NULL;
+    char **userNames = NULL;
+    char **sourceNames = NULL;
+    char *protocol = NULL;
+    char *destName = NULL;
+    char *type = NULL;
+    char *destNameLast = NULL;
+    char *destUserName = NULL;
+    char *accountId = NULL;
+    int minPort = 0;
+    int maxPort = 0;
+    int namedLen = 0;
+    int netLen = 0;
+    ncMetadata ccMeta = { 0 };
 
     cnt = adb_ConfigureNetwork_get_ConfigureNetwork(configureNetwork, env);
     EUCA_MESSAGE_UNMARSHAL(configureNetworkType, cnt, (&ccMeta));
@@ -771,9 +1024,9 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
         snprintf(statusMessage, 255, "ERROR");
         return ret;
     }
+
     for (j = 0; j < ruleLen && !done; j++) {
         nr = adb_configureNetworkType_get_rules_at(cnt, env, j);
-
         type = adb_networkRule_get_type(nr, env);
         destName = adb_networkRule_get_destName(nr, env);
         destUserName = adb_networkRule_get_destUserName(nr, env);
@@ -784,8 +1037,8 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
         if (strcmp(destName, destNameLast)) {
             doFlushNetwork(&ccMeta, accountId, destName);
         }
-        if (destNameLast)
-            free(destNameLast);
+
+        EUCA_FREE(destNameLast);
         destNameLast = strdup(destName);
         if (!destNameLast) {
             logprintf("ERROR: out of memory\n");
@@ -797,25 +1050,26 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
         userNames = NULL;
         namedLen = adb_networkRule_sizeof_userNames(nr, env);
         if (namedLen) {
-            userNames = malloc(sizeof(char *) * namedLen);
+            userNames = EUCA_ZALLOC(namedLen, sizeof(char *));
         }
 
         sourceNames = NULL;
         namedLen = adb_networkRule_sizeof_sourceNames(nr, env);
         if (namedLen) {
-            sourceNames = malloc(sizeof(char *) * namedLen);
+            sourceNames = EUCA_ZALLOC(namedLen, sizeof(char *));
         }
 
         sourceNets = NULL;
         netLen = adb_networkRule_sizeof_sourceNets(nr, env);
         if (netLen) {
-            sourceNets = malloc(sizeof(char *) * netLen);
+            sourceNets = EUCA_ZALLOC(netLen, sizeof(char *));
         }
 
         for (i = 0; i < namedLen; i++) {
             if (userNames) {
                 userNames[i] = adb_networkRule_get_userNames_at(nr, env, i);
             }
+
             if (sourceNames) {
                 sourceNames[i] = adb_networkRule_get_sourceNames_at(nr, env, i);
             }
@@ -835,19 +1089,15 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
                                     minPort, maxPort);
         }
 
-        if (userNames)
-            free(userNames);
-        if (sourceNames)
-            free(sourceNames);
-        if (sourceNets)
-            free(sourceNets);
+        EUCA_FREE(userNames);
+        EUCA_FREE(sourceNames);
+        EUCA_FREE(sourceNets);
 
         if (rc) {
             done++;
         }
     }
-    if (destNameLast)
-        free(destNameLast);
+    EUCA_FREE(destNameLast);
 
     if (done) {
         logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);
@@ -870,21 +1120,29 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     return (ret);
 }
 
+//!
+//! Process the get console output request and provides the response
+//!
+//! @param[in] getConsoleOutput a pointer to the get console output message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t * getConsoleOutput, const axutil_env_t * env)
 {
-    // output vars
     adb_GetConsoleOutputResponse_t *ret = NULL;
     adb_getConsoleOutputResponseType_t *gcort = NULL;
-
-    //input vars
     adb_getConsoleOutputType_t *gcot = NULL;
-
-    // working vars
-    int rc;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    char *instId, *output = NULL;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *instId = NULL;
+    char *output = NULL;
+    ncMetadata ccMeta = { 0 };
 
     gcot = adb_GetConsoleOutput_get_GetConsoleOutput(getConsoleOutput, env);
     EUCA_MESSAGE_UNMARSHAL(getConsoleOutputType, gcot, (&ccMeta));
@@ -907,8 +1165,7 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
             }
         }
     }
-    if (output)
-        free(output);
+    EUCA_FREE(output);
 
     adb_getConsoleOutputResponseType_set_correlationId(gcort, env, ccMeta.correlationId);
     adb_getConsoleOutputResponseType_set_userId(gcort, env, ccMeta.userId);
@@ -923,24 +1180,35 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     return (ret);
 }
 
+//!
+//! Process the start networks request and provides the response
+//!
+//! @param[in] startNetwork a pointer to the start network message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwork, const axutil_env_t * env)
 {
-    // output vars
     adb_StartNetworkResponse_t *ret = NULL;
     adb_startNetworkResponseType_t *snrt = NULL;
-
-    //input vars
     adb_startNetworkType_t *snt = NULL;
-
-    // working vars
-    int rc, i;
+    int rc = 0;
+    int i = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-
-    char *netName = NULL, **clusterControllers = NULL, *nameserver = NULL, *uuid = NULL, *accountId = NULL;
-
-    int vlan, clusterControllersLen = 0;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    char *netName = NULL;
+    char **clusterControllers = NULL;
+    char *nameserver = NULL;
+    char *uuid = NULL;
+    char *accountId = NULL;
+    int vlan = 0;
+    int clusterControllersLen = 0;
+    ncMetadata ccMeta = { 0 };
 
     snt = adb_StartNetwork_get_StartNetwork(startNetwork, env);
     EUCA_MESSAGE_UNMARSHAL(startNetworkType, snt, (&ccMeta));
@@ -955,7 +1223,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     }
 
     clusterControllersLen = adb_startNetworkType_sizeof_clusterControllers(snt, env);
-    clusterControllers = malloc(sizeof(char *) * clusterControllersLen);
+    clusterControllers = EUCA_ZALLOC(clusterControllersLen, sizeof(char *));
     for (i = 0; i < clusterControllersLen; i++) {
         clusterControllers[i] = host2ip(adb_startNetworkType_get_clusterControllers_at(snt, env, i));
     }
@@ -972,11 +1240,9 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     }
 
     for (i = 0; i < clusterControllersLen; i++) {
-        if (clusterControllers[i])
-            free(clusterControllers[i]);
+        EUCA_FREE(clusterControllers[i]);
     }
-    if (clusterControllers)
-        free(clusterControllers);
+    EUCA_FREE(clusterControllers);
 
     adb_startNetworkResponseType_set_return(snrt, env, status);
     if (status == AXIS2_FALSE) {
@@ -992,37 +1258,45 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     return (ret);
 }
 
+//!
+//! Process the describe resources request and provides the response
+//!
+//! @param[in] describeResources a pointer to the describe resources message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_t * describeResources, const axutil_env_t * env)
 {
-    // output vars
     adb_DescribeResourcesResponse_t *ret = NULL;
     adb_describeResourcesResponseType_t *drrt = NULL;
-
-    // input vars
     adb_describeResourcesType_t *drt = NULL;
-
-    // working vars
-    int i, rc, *outTypesMax = NULL, *outTypesAvail = NULL;
-    int vmLen = 0, outTypesLen = 0;
+    int i = 0;
+    int rc = 0;
+    int *outTypesMax = NULL;
+    int *outTypesAvail = NULL;
+    int vmLen = 0;
+    int outTypesLen = 0;
     ccResource *outNodes = NULL;
     int outNodesLen = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
+    char statusMessage[256] = { 0 };
     virtualMachine *vms = NULL;
     adb_virtualMachineType_t *vm = NULL;
-    ncMetadata ccMeta;
-    adb_serviceInfoType_t *sit = NULL;
-    int servicesLen = 0, urisLen = 0, j;
+    ncMetadata ccMeta = { 0 };
 
     drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
 
     EUCA_MESSAGE_UNMARSHAL(describeResourcesType, drt, (&ccMeta));
 
     vmLen = adb_describeResourcesType_sizeof_instanceTypes(drt, env);
-    vms = malloc(sizeof(virtualMachine) * vmLen);
+    vms = EUCA_ZALLOC(vmLen, sizeof(virtualMachine));
 
     for (i = 0; i < vmLen; i++) {
-        char *name;
         vm = adb_describeResourcesType_get_instanceTypes_at(drt, env, i);
         copy_vm_type_from_adb(&(vms[i]), vm, env);
     }
@@ -1050,8 +1324,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             adb_describeResourcesResponseType_add_nodes(drrt, env, nt);
 
         }
-        if (outNodes)
-            free(outNodes);
+        EUCA_FREE(outNodes);
 
         for (i = 0; i < outTypesLen; i++) {
             adb_ccResourceType_t *rt = NULL;
@@ -1064,14 +1337,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
             adb_ccResourceType_set_availableInstances(rt, env, outTypesAvail[i]);
             adb_describeResourcesResponseType_add_resources(drrt, env, rt);
         }
-        if (outTypesMax)
-            free(outTypesMax);
-        if (outTypesAvail)
-            free(outTypesAvail);
+        EUCA_FREE(outTypesMax);
+        EUCA_FREE(outTypesAvail);
     }
 
-    if (vms)
-        free(vms);
+    EUCA_FREE(vms);
 
     adb_describeResourcesResponseType_set_correlationId(drrt, env, ccMeta.correlationId);
     adb_describeResourcesResponseType_set_userId(drrt, env, ccMeta.userId);
@@ -1085,30 +1355,40 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     return (ret);
 }
 
+//!
+//! Process the describe instances request and provides the response
+//!
+//! @param[in] describeInstances a pointer to the describe instances message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_t * describeInstances, const axutil_env_t * env)
 {
-    // output vars
     adb_DescribeInstancesResponse_t *ret = NULL;
     adb_describeInstancesResponseType_t *dirt = NULL;
-
-    // input vars
     adb_describeInstancesType_t *dit = NULL;
-
-    // working vars
     adb_ccInstanceType_t *it = NULL;
     char **instIds = NULL;
-    int instIdsLen, outInstsLen, i, rc;
+    int instIdsLen = 0;
+    int outInstsLen = 0;
+    int i = 0;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-
-    ccInstance *outInsts = NULL, *myInstance = NULL;
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    ccInstance *outInsts = NULL;
+    ccInstance *myInstance = NULL;
+    ncMetadata ccMeta = { 0 };
 
     dit = adb_DescribeInstances_get_DescribeInstances(describeInstances, env);
     EUCA_MESSAGE_UNMARSHAL(describeInstancesType, dit, (&ccMeta));
 
     instIdsLen = adb_describeInstancesType_sizeof_instanceIds(dit, env);
-    instIds = malloc(sizeof(char *) * instIdsLen);
+    instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
 
     for (i = 0; i < instIdsLen; i++) {
         instIds[i] = adb_describeInstancesType_get_instanceIds_at(dit, env, i);
@@ -1121,25 +1401,20 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
         rc = doDescribeInstances(&ccMeta, instIds, instIdsLen, &outInsts, &outInstsLen);
     }
 
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
     if (rc) {
         logprintf("ERROR: doDescribeInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
-
     } else {
         for (i = 0; i < outInstsLen; i++) {
             myInstance = &(outInsts[i]);
 
             it = adb_ccInstanceType_create(env);
-
-            //      myInstance->ccvm.virtualBootRecordLen = 0;
             rc = ccInstanceUnmarshal(it, myInstance, env);
             adb_describeInstancesResponseType_add_instances(dirt, env, it);
         }
-        if (outInsts)
-            free(outInsts);
+        EUCA_FREE(outInsts);
     }
 
     adb_describeInstancesResponseType_set_correlationId(dirt, env, ccMeta.correlationId);
@@ -1155,13 +1430,26 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
     return (ret);
 }
 
+//!
+//! Converts an instance structure to an AXIS2 instance structure.
+//!
+//! @param[in] dst a pointer to the AXIS2 instance structure
+//! @param[in] src a pointer to the instance structure to convert
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axutil_env_t * env)
 {
     axutil_date_time_t *dt = NULL;
     adb_virtualMachineType_t *vm = NULL;
     adb_netConfigType_t *netconf = NULL;
     adb_volumeType_t *vol = NULL;
-    int i;
+    int i = 0;
 
     dt = axutil_date_time_create_with_offset(env, src->ts - time(NULL));
 
@@ -1223,32 +1511,62 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     return (0);
 }
 
+//!
+//! Process the run instances request and provides the response
+//!
+//! @param[in] runInstances a pointer to the run instance message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstances, const axutil_env_t * env)
 {
-    // output vars
     adb_RunInstancesResponse_t *ret = NULL;
     adb_runInstancesResponseType_t *rirt = NULL;
-
-    // input vars
     adb_runInstancesType_t *rit = NULL;
-
-    // working vars
     adb_ccInstanceType_t *it = NULL;
     adb_virtualMachineType_t *vm = NULL;
-
     ccInstance *outInsts = NULL, *myInstance = NULL;
-    int minCount, maxCount, rc, outInstsLen, i, vlan, instIdsLen, netNamesLen, macAddrsLen, *networkIndexList =
-        NULL, networkIndexListLen, uuidsLen, expiryTime;
+    int minCount = 0;
+    int maxCount = 0;
+    int rc = 0;
+    int outInstsLen = 0;
+    int i = 0;
+    int vlan = 0;
+    int instIdsLen = 0;
+    int netNamesLen = 0;
+    int macAddrsLen = 0;
+    int *networkIndexList = NULL;
+    int networkIndexListLen = 0;
+    int uuidsLen = 0;
+    int expiryTime = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-
-    char *emiId = NULL, *keyName = NULL, **instIds = NULL, *reservationId = NULL, **netNames = NULL, **macAddrs = NULL, *kernelId = NULL, *ramdiskId =
-        NULL, *emiURL = NULL, *kernelURL = NULL, *ramdiskURL = NULL, *vmName = NULL, *userData = NULL, *launchIndex = NULL, *platform = NULL, *tmp =
-        NULL, **uuids = NULL, *accountId = NULL, *ownerId = NULL;
-    ncMetadata ccMeta;
-
-    virtualMachine ccvm;
-
+    char statusMessage[256] = { 0 };
+    char *emiId = NULL;
+    char *keyName = NULL;
+    char **instIds = NULL;
+    char *reservationId = NULL;
+    char **netNames = NULL;
+    char **macAddrs = NULL;
+    char *kernelId = NULL;
+    char *ramdiskId = NULL;
+    char *emiURL = NULL;
+    char *kernelURL = NULL;
+    char *ramdiskURL = NULL;
+    char *vmName = NULL;
+    char *userData = NULL;
+    char *launchIndex = NULL;
+    char *platform = NULL;
+    char *tmp = NULL;
+    char **uuids = NULL;
+    char *accountId = NULL;
+    char *ownerId = NULL;
+    ncMetadata ccMeta = { 0 };
+    virtualMachine ccvm = { 0 };
     axutil_date_time_t *dt = NULL;
 
     rit = adb_RunInstances_get_RunInstances(runInstances, env);
@@ -1289,13 +1607,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     vlan = adb_runInstancesType_get_vlan(rit, env);
 
     instIdsLen = adb_runInstancesType_sizeof_instanceIds(rit, env);
-    instIds = malloc(sizeof(char *) * instIdsLen);
+    instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
     for (i = 0; i < instIdsLen; i++) {
         instIds[i] = adb_runInstancesType_get_instanceIds_at(rit, env, i);
     }
 
     netNamesLen = adb_runInstancesType_sizeof_netNames(rit, env);
-    netNames = malloc(sizeof(char *) * netNamesLen);
+    netNames = EUCA_ZALLOC(netNamesLen, sizeof(char *));
     if (netNamesLen > 1) {
         netNamesLen = 1;
     }
@@ -1304,13 +1622,13 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     }
 
     macAddrsLen = adb_runInstancesType_sizeof_macAddresses(rit, env);
-    macAddrs = malloc(sizeof(char *) * macAddrsLen);
+    macAddrs = EUCA_ZALLOC(macAddrsLen, sizeof(char *));
     for (i = 0; i < macAddrsLen; i++) {
         macAddrs[i] = adb_runInstancesType_get_macAddresses_at(rit, env, i);
     }
 
     uuidsLen = adb_runInstancesType_sizeof_uuids(rit, env);
-    uuids = malloc(sizeof(char *) * uuidsLen);
+    uuids = EUCA_ZALLOC(uuidsLen, sizeof(char *));
     for (i = 0; i < uuidsLen; i++) {
         uuids[i] = adb_runInstancesType_get_uuids_at(rit, env, i);
     }
@@ -1318,7 +1636,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     networkIndexList = NULL;
     networkIndexListLen = adb_runInstancesType_sizeof_networkIndexList(rit, env);
     if (networkIndexListLen) {
-        networkIndexList = malloc(sizeof(int) * networkIndexListLen);
+        networkIndexList = EUCA_ZALLOC(networkIndexListLen, sizeof(int));
         for (i = 0; i < networkIndexListLen; i++) {
             networkIndexList[i] = adb_runInstancesType_get_networkIndexList_at(rit, env, i);
         }
@@ -1355,8 +1673,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
             rc = ccInstanceUnmarshal(it, myInstance, env);
             adb_runInstancesResponseType_add_instances(rirt, env, it);
         }
-        if (outInsts)
-            free(outInsts);
+        EUCA_FREE(outInsts);
     }
 
     adb_runInstancesResponseType_set_correlationId(rirt, env, ccMeta.correlationId);
@@ -1368,37 +1685,45 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
 
     ret = adb_RunInstancesResponse_create(env);
     adb_RunInstancesResponse_set_RunInstancesResponse(ret, env, rirt);
-    free(networkIndexList);
-    free(macAddrs);
-    free(netNames);
-    free(instIds);
-    free(userData);
-    if (uuids != NULL)
-        free(uuids);
-
+    EUCA_FREE(networkIndexList);
+    EUCA_FREE(macAddrs);
+    EUCA_FREE(netNames);
+    EUCA_FREE(instIds);
+    EUCA_FREE(userData);
+    EUCA_FREE(uuids);
     return (ret);
 }
 
+//!
+//! Process the reboot instances request and provides the response
+//!
+//! @param[in] rebootInstances a pointer to the reboot instance message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * rebootInstances, const axutil_env_t * env)
 {
     adb_RebootInstancesResponse_t *ret = NULL;
     adb_rebootInstancesResponseType_t *rirt = NULL;
-
-    // input vars
     adb_rebootInstancesType_t *rit = NULL;
-
-    // working vars
-    char **instIds;
-    int instIdsLen, i, rc;
+    char **instIds = NULL;
+    int instIdsLen = 0;
+    int i = 0;
+    int rc = 0;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    ncMetadata ccMeta = { 0 };
 
     rit = adb_RebootInstances_get_RebootInstances(rebootInstances, env);
     EUCA_MESSAGE_UNMARSHAL(rebootInstancesType, rit, (&ccMeta));
 
     instIdsLen = adb_rebootInstancesType_sizeof_instanceIds(rit, env);
-    instIds = malloc(sizeof(char *) * instIdsLen);
+    instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
     for (i = 0; i < instIdsLen; i++) {
         instIds[i] = adb_rebootInstancesType_get_instanceIds_at(rit, env, i);
     }
@@ -1408,8 +1733,7 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
         rc = doRebootInstances(&ccMeta, instIds, instIdsLen);
     }
 
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
 
     rirt = adb_rebootInstancesResponseType_create(env);
     if (rc) {
@@ -1434,31 +1758,43 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
     return (ret);
 }
 
+//!
+//! Process the terminate isntances request and provides the response
+//!
+//! @param[in] terminateInstances a pointer to the terminate instance message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstances_t * terminateInstances, const axutil_env_t * env)
 {
-    // OUTPUT VARS
     adb_TerminateInstancesResponse_t *ret = NULL;
     adb_terminateInstancesResponseType_t *tirt = NULL;
-
-    // input vars
     adb_terminateInstancesType_t *tit = NULL;
-
-    // working vars
-    char **instIds;
-    int instIdsLen, i, rc, *outStatus = NULL, force = 0;
-    axis2_bool_t status = AXIS2_TRUE, forceBool = AXIS2_FALSE;
-    char statusMessage[256];
-
-    ncMetadata ccMeta;
+    char **instIds = NULL;
+    int instIdsLen = 0;
+    int i = 0;
+    int rc = 0;
+    int *outStatus = NULL;
+    int force = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    axis2_bool_t forceBool = AXIS2_FALSE;
+    char statusMessage[256] = { 0 };
+    ncMetadata ccMeta = { 0 };
 
     tit = adb_TerminateInstances_get_TerminateInstances(terminateInstances, env);
     EUCA_MESSAGE_UNMARSHAL(terminateInstancesType, tit, (&ccMeta));
 
     instIdsLen = adb_terminateInstancesType_sizeof_instanceIds(tit, env);
-    instIds = malloc(sizeof(char *) * instIdsLen);
+    instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
     for (i = 0; i < instIdsLen; i++) {
         instIds[i] = adb_terminateInstancesType_get_instanceIds_at(tit, env, i);
     }
+
     forceBool = adb_terminateInstancesType_get_force(tit, env);
     if (forceBool == AXIS2_TRUE) {
         force = 1;
@@ -1468,12 +1804,11 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
 
     rc = 1;
     if (!DONOTHING) {
-        outStatus = malloc(sizeof(int) * instIdsLen);
+        outStatus = EUCA_ZALLOC(instIdsLen, sizeof(int));
         rc = doTerminateInstances(&ccMeta, instIds, instIdsLen, force, &outStatus);
     }
 
-    if (instIds)
-        free(instIds);
+    EUCA_FREE(instIds);
 
     tirt = adb_terminateInstancesResponseType_create(env);
     if (rc) {
@@ -1489,8 +1824,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
             }
         }
     }
-    if (outStatus)
-        free(outStatus);
+    EUCA_FREE(outStatus);
 
     adb_terminateInstancesResponseType_set_correlationId(tirt, env, ccMeta.correlationId);
     adb_terminateInstancesResponseType_set_userId(tirt, env, ccMeta.userId);
@@ -1505,20 +1839,30 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
     return (ret);
 }
 
+//!
+//! Process the create image request and provides the response
+//!
+//! @param[in] createImage a pointer to the create image message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, const axutil_env_t * env)
 {
-    int rc;
+    int rc = 0;
     adb_CreateImageResponse_t *ret = NULL;
     adb_createImageResponseType_t *cirt = NULL;
-
-    // input vars
     adb_createImageType_t *cit = NULL;
-
-    // working vars
-    char *instanceId = NULL, *volumeId = NULL, *remoteDev = NULL;
+    char *instanceId = NULL;
+    char *volumeId = NULL;
+    char *remoteDev = NULL;
     axis2_bool_t status = AXIS2_TRUE;
-    char statusMessage[256];
-    ncMetadata ccMeta;
+    char statusMessage[256] = { 0 };
+    ncMetadata ccMeta = { 0 };
 
     cit = adb_CreateImage_get_CreateImage(createImage, env);
 
@@ -1555,6 +1899,17 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] in a pointer to the AXIS2 instance type structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 void print_adb_ccInstanceType(adb_ccInstanceType_t * in)
 {
 
