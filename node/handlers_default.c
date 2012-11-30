@@ -523,11 +523,11 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
 {
     ncInstance *instance = NULL;
     int err = EUCA_ERROR;
-    char resourceName[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
-    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
     safe_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);    // refresh stats so latest instance measurements are captured before it disappears
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
 
     sem_p(inst_sem);
     err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance, 1);
@@ -1080,8 +1080,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     int is_iscsi_target = 0;
     int have_remote_device = 0;
     char *xml = NULL;
-    char resourceName[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
-    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { { 0 } };
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
     char *tagBuf;
     char *localDevName;
@@ -1175,7 +1175,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
 
     safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);  // refresh stats so volume measurements are captured before it disappears
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so volume measurements are captured before it disappears
 
     char path[MAX_PATH];
     char lpath[MAX_PATH];
@@ -1961,10 +1961,10 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
         rss[k] = EUCA_ZALLOC(1, sizeof(sensorResource));
         if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != EUCA_OK) {
             logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
-            free (rss[k]);
+            free(rss[k]);
         } else {
-        k++;
-    }
+            k++;
+        }
     }
 
     *outResourcesLen = k;

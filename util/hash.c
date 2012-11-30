@@ -204,7 +204,7 @@ int hash_b64enc_string(const char *in, char **out)
 
     *out = NULL;
     bzero(hash, 17);
-    md5ret = MD5(((const unsigned char *) in), strlen(in), hash);
+    md5ret = MD5(((const unsigned char *)in), strlen(in), hash);
     if (md5ret) {
         if ((*out = base64_enc(hash, 16)) == NULL) {
             return (EUCA_ERROR);
@@ -232,7 +232,7 @@ int str2md5str(char *buf, unsigned int buf_size, const char *str)
     if (buf_size < (MD5_DIGEST_LENGTH * 2 + 1))
         return (EUCA_ERROR);
 
-    if (MD5(((const unsigned char *) str), strlen(str), md5digest) == NULL)
+    if (MD5(((const unsigned char *)str), strlen(str), md5digest) == NULL)
         return (EUCA_ERROR);
 
     for (i = 0, p = buf; i < MD5_DIGEST_LENGTH; i++) {
@@ -267,7 +267,7 @@ char *file2md5str(const char *path)
     struct stat mystat = { 0 };
     unsigned char md5digest[MD5_DIGEST_LENGTH] = { 0 };
 
-    if(path == NULL)
+    if (path == NULL)
         return (NULL);
 
     if ((fd = open(path, O_RDONLY)) < 0)
@@ -279,7 +279,7 @@ char *file2md5str(const char *path)
     if ((buf = mmap(0, mystat.st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED)
         goto cleanup;
 
-    if (MD5(((unsigned char *) buf), mystat.st_size, md5digest) == NULL)
+    if (MD5(((unsigned char *)buf), mystat.st_size, md5digest) == NULL)
         goto cleanup;
 
     md5string = EUCA_ZALLOC(((MD5_DIGEST_LENGTH * 2) + 1), sizeof(char));
@@ -346,7 +346,7 @@ uint32_t jenkins(const char *key, size_t len)
 //!
 int hexjenkins(char *buf, unsigned int buf_size, const char *str)
 {
-    if((buf != NULL) && (buf_size > 0) && (str != NULL)) {
+    if ((buf != NULL) && (buf_size > 0) && (str != NULL)) {
         snprintf(buf, buf_size, "%08x", jenkins(str, strlen(str)));
         return (EUCA_OK);
     }

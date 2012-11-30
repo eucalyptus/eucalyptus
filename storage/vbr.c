@@ -1097,7 +1097,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     }
     // create MBR
     logprintfl(EUCAINFO, "[%s] creating MBR\n", a->instanceId);
-    if (diskutil_mbr(blockblob_get_dev(a->bb), "msdos") != EUCA_OK) { // issues `parted mklabel`
+    if (diskutil_mbr(blockblob_get_dev(a->bb), "msdos") != EUCA_OK) {   // issues `parted mklabel`
         logprintfl(EUCAERROR, "[%s] failed to add MBR to disk: %d %s\n", a->instanceId, blobstore_get_error(), blobstore_get_last_msg());
         goto cleanup;
     }
@@ -1359,7 +1359,7 @@ static int copy_creator(artifact * a)
             goto unmount;
         }
         snprintf(path, sizeof(path), "%s/root/.ssh/authorized_keys", mnt_pt);
-        if (diskutil_write2file(path, a->sshkey) != EUCA_OK) {   //! @TODO maybe append the key instead of overwriting?
+        if (diskutil_write2file(path, a->sshkey) != EUCA_OK) {  //! @TODO maybe append the key instead of overwriting?
             logprintfl(EUCAINFO, "[%s] error: failed to save key in '%s'\n", a->instanceId, path);
             goto unmount;
         }
@@ -2196,7 +2196,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
     if (a->id_is_path) {
         if (check_path(a->id)) {
             if (do_create) {
-                return EUCA_OK;      // creating only matters for blobs, which get locked, not for files
+                return EUCA_OK; // creating only matters for blobs, which get locked, not for files
             } else {
                 return BLOBSTORE_ERROR_NOENT;
             }
@@ -2300,7 +2300,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
 
             // try to open the artifact
             switch (ret = find_or_create_artifact(FIND, root, work_bs, cache_bs, work_prefix, &(root->bb))) {
-            case  BLOBSTORE_ERROR_OK:
+            case BLOBSTORE_ERROR_OK:
                 logprintfl(EUCADEBUG, "[%s] found existing artifact %03d|%s on try %d\n", root->instanceId, root->seq, root->id, tries);
                 update_vbr_with_backing_info(root);
                 do_deps = FALSE;

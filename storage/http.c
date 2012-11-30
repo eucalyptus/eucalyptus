@@ -167,7 +167,7 @@ struct write_request {
 \*----------------------------------------------------------------------------*/
 
 #ifndef _UNIT_TEST
-static boolean curl_initialized = FALSE; //!< boolean to indicate if we have already initialize libcurl
+static boolean curl_initialized = FALSE;    //!< boolean to indicate if we have already initialize libcurl
 #endif /* ! _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\

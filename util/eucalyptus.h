@@ -91,35 +91,35 @@
 
 // Maybe we should have no defaults, but I will put them here for the moment.
 #ifndef LIBDIR
-#define LIBDIR                                   "/usr/lib"   //!< default user library directory path
+#define LIBDIR                                   "/usr/lib" //!< default user library directory path
 #endif /* ! LIBDIR */
 
 #ifndef SYSCONFDIR
-#define SYSCONFDIR                               "/etc"       //!< default etc directory path
+#define SYSCONFDIR                               "/etc" //!< default etc directory path
 #endif /* ! SYSCONFDIR */
 
 #ifndef DATADIR
-#define DATADIR                                  "/usr/share" //!< default user share directory path
+#define DATADIR                                  "/usr/share"   //!< default user share directory path
 #endif /* ! DATADIR */
 
 #ifndef LIBEXECDIR
-#define LIBEXECDIR                               "/usr/lib"   //!< default user exec library directory path
+#define LIBEXECDIR                               "/usr/lib" //!< default user exec library directory path
 #endif /* ! LIBEXECDIR */
 
 #ifndef SBINDIR
-#define SBINDIR                                  "/usr/sbin"  //!< default user standard binary directory path
+#define SBINDIR                                  "/usr/sbin"    //!< default user standard binary directory path
 #endif /* ! SBINDIR */
 
 #ifndef LOCALSTATEDIR
-#define LOCALSTATEDIR                            "/var"       //!< default var directory path
+#define LOCALSTATEDIR                            "/var" //!< default var directory path
 #endif /* ! LOCALSTATEDIR */
 
 #ifndef HELPERDIR
-#define HELPERDIR                                DATADIR      //!< default help directory path
+#define HELPERDIR                                DATADIR    //!< default help directory path
 #endif /* ! HELPERDIR */
 
 //! environment variable set at startup
-#define EUCALYPTUS_ENV_VAR_NAME                  "EUCALYPTUS" //!< Eucalyptus environment variable name
+#define EUCALYPTUS_ENV_VAR_NAME                  "EUCALYPTUS"   //!< Eucalyptus environment variable name
 
 //! @{
 //! @name file paths relative to $EUCALYPTUS

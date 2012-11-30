@@ -1856,7 +1856,7 @@ static int init(void)
     // adopt running instances -- do this before disk integrity check so we know what can be purged
     adopt_instances();
 
-    if (check_backing_store(&global_instances) != EUCA_OK) { // integrity check, cleanup of unused instances and shrinking of cache
+    if (check_backing_store(&global_instances) != EUCA_OK) {    // integrity check, cleanup of unused instances and shrinking of cache
         logprintfl(EUCAFATAL, "integrity check of the backing store failed");
         return (EUCA_FATAL_ERROR);
     }

@@ -311,7 +311,7 @@ int sem_prolaag(sem * s, boolean do_log)
 
     if (s) {
         if (do_log) {
-            snprintf(addr, sizeof(addr), "%lx", ((unsigned long) s));
+            snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
             logprintfl(EUCAEXTREME, "%s locking\n", ((s->name) ? (s->name) : (addr)));
         }
 
@@ -373,7 +373,7 @@ int sem_verhogen(sem * s, boolean do_log)
 
     if (s) {
         if (do_log) {
-            snprintf(addr, sizeof(addr), "%lx", ((unsigned long) s));
+            snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
             logprintfl(EUCAEXTREME, "%s unlocking\n", ((s->name) ? (s->name) : (addr)));
         }
 
