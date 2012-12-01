@@ -364,8 +364,15 @@ static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceT
     return sr;
 }
 
-static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr)
+static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size)
 {
+    int total_num_metrics = 0;
+    int total_num_counters = 0;
+    int total_num_dimensions = 0;
+    int total_num_values = 0;
+
+    logprintfl(EUCATRACE, "invoked\n");
+
     adb_sensorsResourceType_t *resource = adb_sensorsResourceType_create(env);
     adb_sensorsResourceType_set_resourceName(resource, env, sr->resourceName);
     adb_sensorsResourceType_set_resourceType(resource, env, sr->resourceType);
@@ -387,38 +394,86 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
             adb_metricCounterType_t *counter = adb_metricCounterType_create(env);
             adb_metricCounterType_set_type(counter, env, sensor_type2str(sc->type));
             adb_metricCounterType_set_collectionIntervalMs(counter, env, sc->collectionIntervalMs);
-            adb_metricCounterType_set_sequenceNum(counter, env, sc->sequenceNum);
             if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
                 logprintfl(EUCAERROR, "inconsistency in sensor database (dimensionsLen=%d for %s:%s:%s)\n", sc->dimensionsLen, sr->resourceName,
                            sm->metricName, sensor_type2str(sc->type));
                 return resource;
             }
+
+            // First, sanity check the values. All dimensions must have same number of values.
+            int num_values = 0;
+            for (int d = 0; d < sc->dimensionsLen; d++) {
+                const sensorDimension *sd = sc->dimensions + d;
+                if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {
+                    logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d is out of range for %s:%s:%s:%s)\n",
+                               sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                    return resource;
+                }
+                if (d == 0) {
+                    num_values = sd->valuesLen;
+                } else {
+                    if (num_values != sd->valuesLen) {
+                        logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen is not consistent across dimensions for %s:%s:%s)\n",
+                                   sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+                    }
+                }
+            }
+
+            if (num_values == 0) // no measurements to include
+                continue;
+
+            // If requested history_size is smaller than the number of values in each array,
+            // we need to select the batch of latest values of size history_size and adjust
+            // the sequence number accordingly.
+            int batch_size = num_values;
+            if (batch_size > history_size) { // have more values that the requested history
+                batch_size = history_size;
+            }
+            int array_offset = num_values - batch_size; // index of first value in each dimension's array that we are using
+            adb_metricCounterType_set_sequenceNum(counter, env, sc->sequenceNum + array_offset);
+
             for (int d = 0; d < sc->dimensionsLen; d++) {
                 const sensorDimension *sd = sc->dimensions + d;
                 adb_metricDimensionsType_t *dimension = adb_metricDimensionsType_create(env);
                 adb_metricDimensionsType_set_dimensionName(dimension, env, sd->dimensionName);
-                if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {
-                    logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
-                               sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
-                    return resource;
-                }
-                for (int v = 0; v < sd->valuesLen; v++) {
+
+                for (int v = array_offset; v < sd->valuesLen; v++) {
                     int v_adj = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
                     const sensorValue *sv = sd->values + v_adj;
                     adb_metricDimensionsValuesType_t *value = adb_metricDimensionsValuesType_create(env);
                     axutil_date_time_t *ts = unixms_to_datetime(env, sv->timestampMs);
                     adb_metricDimensionsValuesType_set_timestamp(value, env, ts);
                     if (sv->available) {
-                        adb_metricDimensionsValuesType_set_value(value, env, sv->value);
+                        double val = sv->value + sd->shift_value;
+                        if (val < 0) {
+                            logprintfl(EUCAERROR, "negative value in sensor database (%f for %s:%s:%s:%s)\n",
+                                       sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                        } else {
+                            adb_metricDimensionsValuesType_set_value(value, env, val);
+                        }
+                        if (v == (sd->valuesLen - 1)) { // last value
+                            logprintfl(EUCATRACE, "sending sensor value [%d of %d] %s:%s:%s:%s %05lld %014lld %s %f\n",
+                                       batch_size, num_values, 
+                                       sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + v, sv->timestampMs,
+                                       sv->available ? "YES" : " NO", sv->available ? val : -1);
+                        }
                     }
                     adb_metricDimensionsType_add_values(dimension, env, value);
+                    total_num_values++;
                 }
                 adb_metricCounterType_add_dimensions(counter, env, dimension);
+                total_num_dimensions++;
             }
             adb_metricsResourceType_add_counters(metric, env, counter);
+            total_num_counters++;
         }
         adb_sensorsResourceType_add_metrics(resource, env, metric);
+        total_num_metrics++;
     }
+
+    logprintfl(EUCATRACE, "marshalled %d metrics %d counters %d dimensions %d sensor values\n",
+               total_num_metrics, total_num_counters, total_num_dimensions, total_num_values);
+
     return resource;
 }
 

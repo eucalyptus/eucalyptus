@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -241,7 +244,7 @@ typedef struct ccConfig_t {
     int initialized, kick_dhcp;
     int schedPolicy, schedState;
     int idleThresh, wakeThresh;
-    time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency;
+    time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncSensorsPollingInterval;
     int threads[NUM_THREADS];
     int ncFanout;
     int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;

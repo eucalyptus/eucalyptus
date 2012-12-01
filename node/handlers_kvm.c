@@ -87,6 +87,7 @@
 #include "xml.h"
 #include "diskutil.h"
 #include "iscsi.h"
+#include "sensor.h"
 
 /* coming from handlers.c */
 extern sem *hyp_sem;
@@ -167,12 +168,23 @@ static void *rebooting_thread(void *arg)
         free(xml);
         return NULL;
     }
+
+    // Add a shift to values of three of the metrics: ones that
+    // drop back to zero after a reboot. The shift, which is based
+    // on the latest value, ensures that values sent upstream do
+    // not go backwards .
+    sensor_shift_metric (instance->instanceId, "CPUUtilization");
+    sensor_shift_metric (instance->instanceId, "NetworkIn");
+    sensor_shift_metric (instance->instanceId, "NetworkOut");
+
     // domain is now shut down, create a new one with the same XML
     sem_p(hyp_sem);
     logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(*conn, xml, 0);
     sem_v(hyp_sem);
     free(xml);
+
+    sensor_refresh_resources(instance->instanceId, "", 1);    // refresh stats so we set base value accurately
 
     char *remoteDevStr = NULL;
     // re-attach each volume previously attached

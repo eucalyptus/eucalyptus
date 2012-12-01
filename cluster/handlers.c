@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,9 +63,6 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -101,6 +101,8 @@
 
 #define SUPERUSER "eucalyptus"
 #define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC
+#define POLL_INTERVAL_SAFETY_MARGIN_SEC 3
+#define POLL_INTERVAL_MINIMUM_SEC 6
 
 // Globals
 
@@ -1858,14 +1860,13 @@ int refresh_instances(ncMetadata * ccMeta, int timeout, int dolock)
 
 int refresh_sensors(ncMetadata * ccMeta, int timeout, int dolock)
 {
-
     time_t op_start = time(NULL);
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCATRACE, "invoked\n");
 
     int history_size;
     long long collection_interval_time_ms;
     if ((sensor_get_config(&history_size, &collection_interval_time_ms) != 0) || history_size < 1 || collection_interval_time_ms == 0)
-        return 0;               // sensor system not configured yet
+        return 1;               // sensor system not configured yet
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -1898,7 +1899,7 @@ int refresh_sensors(ncMetadata * ccMeta, int timeout, int dolock)
                 if (!rc) {
                     // update our cache
                     if (sensor_merge_records(srs, srsLen, TRUE) != OK) {
-                        logprintfl(EUCAWARN, "failed to store all sensor data due to lack of spacen");
+                        logprintfl(EUCAWARN, "failed to store all sensor data due to lack of space");
                     }
 
                     if (srsLen > 0) {
@@ -2996,6 +2997,16 @@ int doDescribeSensors(ncMetadata * meta, int historySize, long long collectionIn
     int err = sensor_config(historySize, collectionIntervalTimeMs); // update the config parameters if they are different
     if (err != 0)
         logprintfl(EUCAWARN, "failed to update sensor configuration (err=%d)\n", err);
+    if (historySize > 0 && collectionIntervalTimeMs > 0) {
+        int col_interval_sec = collectionIntervalTimeMs / 1000;
+        int nc_poll_interval_sec = col_interval_sec * historySize - POLL_INTERVAL_SAFETY_MARGIN_SEC;
+        if (nc_poll_interval_sec < POLL_INTERVAL_MINIMUM_SEC)
+            nc_poll_interval_sec = POLL_INTERVAL_MINIMUM_SEC;
+        if (config->ncSensorsPollingInterval != nc_poll_interval_sec) {
+            config->ncSensorsPollingInterval = nc_poll_interval_sec;
+            logprintfl(EUCADEBUG, "changed NC sensors poll interval to %d (col_interval_sec=%d historySize=%d)\n", nc_poll_interval_sec, col_interval_sec, historySize);
+        }
+    }
 
     int num_resources = sensor_get_num_resources();
     if (num_resources < 0) {
@@ -3046,6 +3057,8 @@ int doDescribeSensors(ncMetadata * meta, int historySize, long long collectionIn
         }
         *outResourcesLen = num_results;
     }
+
+    logprintfl (EUCATRACE, "returning (outResourcesLen=%d)\n", *outResourcesLen);
 
     return 0;
 }
@@ -3463,7 +3476,7 @@ int doBrokerPairing()
 */
 void *monitor_thread(void *in)
 {
-    int rc, ncTimer, clcTimer, ncRefresh = 0, clcRefresh = 0;
+    int rc, ncTimer, clcTimer, ncSensorsTimer, ncRefresh = 0, clcRefresh = 0, ncSensorsRefresh = 0;
     ncMetadata ccMeta;
     char pidfile[MAX_PATH], *pidstr = NULL;
 
@@ -3482,9 +3495,11 @@ void *monitor_thread(void *in)
     sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
     sigaction(SIGTERM, &newsigact, NULL);
 
+    // add 1 to each Timer so they will all fire upon the first loop iteration
     ncTimer = config->ncPollingFrequency + 1;
     clcTimer = config->clcPollingFrequency + 1;
-
+    ncSensorsTimer = config->ncSensorsPollingInterval + 1;
+    
     while (1) {
         logprintfl(EUCADEBUG, "running\n");
 
@@ -3514,20 +3529,34 @@ void *monitor_thread(void *in)
             }
             clcTimer++;
 
+            // NC Sensors Polling operation
+            if (ncSensorsTimer >= config->ncSensorsPollingInterval) {
+                ncSensorsTimer = 0;
+                ncSensorsRefresh = 1;
+            }
+            ncSensorsTimer++;
+
             if (ncRefresh) {
                 rc = refresh_resources(&ccMeta, 60, 1);
                 if (rc) {
                     logprintfl(EUCAWARN, "call to refresh_resources() failed in monitor thread\n");
                 }
 
-                rc = refresh_sensors(&ccMeta, 60, 1);   // TODO3.2: change this to use sensorTimer instead of ncTimer
-                if (rc) {
-                    logprintfl(EUCAWARN, "call to refresh_sensors() failed in monitor thread\n");
-                }
-
                 rc = refresh_instances(&ccMeta, 60, 1);
                 if (rc) {
                     logprintfl(EUCAWARN, "call to refresh_instances() failed in monitor thread\n");
+                }
+            }
+
+            if (ncSensorsRefresh) {
+                rc = refresh_sensors(&ccMeta, 60, 1);
+                if (rc == 0) { 
+                    // refresh_sensors() only returns non-zero when sensor subsystem has not been initialized.
+                    // Until it is initialized, keep checking every second, so that sensory subsystems on NCs are
+                    // initialized soon after it is initialized on the CC (otherwise it may take a while and NC
+                    // may miss initial measurements from early instances). Once initialized, refresh can happen
+                    // as configured by config->ncSensorsPollingInterval.
+                    ncSensorsRefresh = 0;
                 }
             }
 
@@ -4481,6 +4510,7 @@ int init_config(void)
     config->wakeThresh = wakeThresh;
     config->instanceTimeout = instanceTimeout;
     config->ncPollingFrequency = ncPollingFrequency;
+    config->ncSensorsPollingInterval = ncPollingFrequency; // initially poll sensors with the same frequency as other NC ops
     config->clcPollingFrequency = clcPollingFrequency;
     config->ncFanout = ncFanout;
     locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);

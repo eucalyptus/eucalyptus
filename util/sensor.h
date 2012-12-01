@@ -61,6 +61,7 @@ typedef struct {
     sensorValue values[MAX_SENSOR_VALUES];  // array of values (not pointers, to simplify shared-memory region use)
     int valuesLen;              // size of the array
     int firstValueIndex;        // index into values[] of the first value (one that matches sequenceNum)
+    double shift_value;         // amount that should be added to all values at this dimension
 } sensorDimension;
 
 static char *sensorCounterTypeName[] = {
@@ -97,6 +98,7 @@ typedef struct {
     long long collection_interval_time_ms;
     int history_size;
     boolean initialized;
+    boolean suspend_polling;
     int max_resources;
     int used_resources;
     time_t last_polled;
@@ -105,6 +107,8 @@ typedef struct {
 } sensorResourceCache;
 
 int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function) (void));
+int sensor_suspend_polling(void);
+int sensor_resume_polling(void);
 int sensor_config(int new_history_size, long long new_collection_interval_time_ms);
 int sensor_set_hyp_sem(sem * hyp_sem);
 int sensor_get_config(int *new_history_size, long long *new_collection_interval_time_ms);
@@ -112,6 +116,7 @@ int sensor_get_num_resources(void);
 int sensor_add_resource(const char *resourceName, const char *resourceType, const char *resourceUuid);
 int sensor_set_resource_alias(const char *resourceName, const char *resourceAlias);
 int sensor_remove_resource(const char *resourceName);
+int sensor_shift_metric(const char *resourceName, const char *metricName);
 int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName,
                                const char *dimensionAlias);
 int sensor_set_volume(const char *instanceId, const char *volumeId, const char *guestDev);
