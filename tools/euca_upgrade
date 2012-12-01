@@ -218,7 +218,7 @@ log "# Upgrade keys:             %-12.12s       using: %-15.15s" "$(boole ${UP_K
 log "# Upgrade configuration:    %-12.12s       using: %-15.15s" "$(boole ${UP_CONF})" ${UP_CONF}
 log "# Upgrade database:         %-12.12s       using: %-15.15s" "$(boole ${UP_DB})" ${UP_DB}
 log "# Same version:             %-12.12s       using: %-15.15s" "$(boole ${UP_SAMEVERSION})" ${UP_SAMEVERSION}
- 
+
 for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
   log "$(echo "# Start upgrading: ${f}" | sed 's/upgrade_//g')"
   if ! $f; then
@@ -227,10 +227,6 @@ for f in $(echo ${UP_SAMEVERSION} ${UP_KEYS} ${UP_DB} ${UP_CONF}); do
     log "$(echo "# Done upgrading:  ${f}" | sed 's/upgrade_//g;s/_//g')"
   fi
 done
-
-if [ -f "$EUCALYPTUS/usr/sbin/euca_conf" ]; then
-    $EUCALYPTUS/usr/sbin/euca_conf --setup
-fi
 ## NOTE: Don't bother reading past here.
 
 
