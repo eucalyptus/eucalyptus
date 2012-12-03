@@ -869,10 +869,19 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, root_part);
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
-        if (diskutil_grub(blockblob_get_dev(a->bb), mnt_pt, root_part, kernel_path, ramdisk_path) != OK) {
-            logprintfl(EUCAERROR, "[%s] error: failed to make disk bootable\n", a->instanceId, root_part);
+        if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != OK) {
+            logprintfl(EUCAERROR, "[%s] error: failed to make disk bootable (could not install grub files)\n", a->instanceId, root_part);
             goto unmount;
         }
+        if (blockblob_sync(mapper_dev, a->bb) != 0) {
+            logprintfl (EUCAERROR, "[%s] error: failed to flush I/O on disk\n", a->instanceId, root_part);
+            goto unmount;
+        }
+        if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != OK) {
+            logprintfl(EUCAERROR, "[%s] error: failed to make disk bootable (could not install grub)\n", a->instanceId, root_part);
+            goto unmount;
+        }
+
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
         sleep(1);               // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
         if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
