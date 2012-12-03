@@ -334,7 +334,7 @@ virConnectPtr *check_hypervisor_conn()
     if (nc_state.conn) {
         rc = virConnectClose(nc_state.conn);
         if (rc) {
-            logprintfl(EUCADEBUG, "check_hypervisor_conn(): refcount on close was non-zero: %d\n", rc);
+            logprintfl(EUCADEBUG, "refcount on close was non-zero: %d\n", rc);
         }
     }
     nc_state.conn = virConnectOpen(nc_state.uri);
@@ -343,7 +343,7 @@ virConnectPtr *check_hypervisor_conn()
         free(uri);
     sem_v(hyp_sem);
     if (nc_state.conn == NULL) {
-        logprintfl(EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
+        logprintfl(EUCAFATAL, "failed to connect to %s\n", nc_state.uri);
         return NULL;
     }
     return &(nc_state.conn);
@@ -381,7 +381,7 @@ void change_state(ncInstance * instance, instance_states state)
         instance->stateCode = TEARDOWN;
         break;
     default:
-        logprintfl(EUCAERROR, "[%s] error: change_sate(): unexpected state (%d)\n", instance->instanceId, instance->state);
+        logprintfl(EUCAERROR, "[%s] unexpected state (%d)\n", instance->instanceId, instance->state);
         return;
     }
 
@@ -488,7 +488,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         logprintfl(EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names[new_state]);
         break;
     default:
-        logprintfl(EUCAERROR, "[%s] refresh...(): unexpected state (%d)\n", instance->instanceId, old_state);
+        logprintfl(EUCAERROR, "[%s] unexpected state (%d) in refresh\n", instance->instanceId, old_state);
         return;
     }
     sem_p(hyp_sem);
@@ -577,9 +577,9 @@ void *monitoring_thread(void *arg)
     int cleaned_up;
     struct nc_state_t *nc;
 
-    logprintfl(EUCADEBUG, "spawning monitoring thread\n");
+    logprintfl(EUCAINFO, "spawning monitoring thread\n");
     if (arg == NULL) {
-        logprintfl(EUCAFATAL, "NULL parameter!\n");
+        logprintfl(EUCAFATAL, "internal error (NULL parameter to monitoring_thread)\n");
         return NULL;
     }
     nc = (struct nc_state_t *)arg;
@@ -665,7 +665,7 @@ void *monitoring_thread(void *arg)
                 logprintfl(EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId,
                            (destroy_files) ? ("") : (" (but keeping the files)"));
                 if (destroy_instance_backing(instance, destroy_files)) {
-                    logprintfl(EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
+                    logprintfl(EUCAWARN, "[%s] failed to cleanup instance state\n", instance->instanceId);
                 }
                 // check to see if this is the last instance running on vlan, handle local networking information drop
                 int left = 0;
@@ -769,7 +769,6 @@ void *startup_thread(void *arg)
             instance->params.nicType = NIC_TYPE_LINUX;
         }
     }
-    logprintfl(EUCAINFO, "[%s] started network\n", instance->instanceId);
 
     safe_strncpy(instance->hypervisorType, nc_state.H->name, sizeof(instance->hypervisorType)); // set the hypervisor type
 
@@ -954,7 +953,6 @@ void *restart_thread(void *arg)
     }
     // Save our instance bridge name for later use
     safe_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
-    logprintfl(EUCAINFO, "[%s] started network\n", instance->instanceId);
 
     if (instance->state == TEARDOWN) {
         // timed out in STAGING
@@ -978,7 +976,7 @@ void *restart_thread(void *arg)
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests
-    logprintfl(EUCADEBUG, "[%s] instance about to boot\n", instance->instanceId);
+    logprintfl(EUCATRACE, "[%s] instance about to boot\n", instance->instanceId);
 
     // retry loop
     for (i = 0; i < MAX_CREATE_TRYS; i++) {
@@ -1521,7 +1519,7 @@ static int init(void)
             }
             // sanity check
             if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > work_fs_avail_mb) {
-                logprintfl(EUCAWARN, "warning: sum of work and cache sizes exceeds available disk space\n");
+                logprintfl(EUCAWARN, "sum of work and cache sizes exceeds available disk space\n");
             }
 
         } else {                // cache and work are on different file systems
@@ -1879,7 +1877,7 @@ int doRunInstance(ncMetadata * meta, char *uuid, char *instanceId, char *reserva
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk, params->mem,
+    logprintfl(EUCAINFO, "[%s] running instance cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk, params->mem,
                netparams->vlan, netparams->privateMac, netparams->privateIp);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != OK)
         return ERROR;
@@ -1939,7 +1937,7 @@ int doGetConsoleOutput(ncMetadata * meta, char *instanceId, char **consoleOutput
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCAINFO, "[%s] console output requested\n", instanceId);
 
     if (nc_state.H->doGetConsoleOutput)
         ret = nc_state.H->doGetConsoleOutput(&nc_state, meta, instanceId, consoleOutput);
@@ -1988,7 +1986,7 @@ int doAttachVolume(ncMetadata * meta, char *instanceId, char *volumeId, char *re
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s][%s] invoked (remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
+    logprintfl(EUCADEBUG, "[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
 
     if (nc_state.H->doAttachVolume)
         ret = nc_state.H->doAttachVolume(&nc_state, meta, instanceId, volumeId, remoteDev, localDev);
@@ -2005,7 +2003,7 @@ int doDetachVolume(ncMetadata * meta, char *instanceId, char *volumeId, char *re
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s][%s] invoked (remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
+    logprintfl(EUCADEBUG, "[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
 
     if (nc_state.H->doDetachVolume)
         ret = nc_state.H->doDetachVolume(&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
@@ -2023,7 +2021,8 @@ int doBundleInstance(ncMetadata * meta, char *instanceId, char *bucketName, char
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] invoked (bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s)\n",
+    logprintfl(EUCAINFO, "[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
+    logprintfl(EUCADEBUG, "[%s] bundling parameters: bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
                instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
 
     if (nc_state.H->doBundleInstance)
@@ -2039,7 +2038,7 @@ int doBundleRestartInstance(ncMetadata * meta, char *instanceId)
     if (init())
         return (1);
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCAINFO, "[%s] restarting bundling instance\n", instanceId);
     if (nc_state.H->doBundleRestartInstance)
         return (nc_state.H->doBundleRestartInstance(&nc_state, meta, instanceId));
     return (nc_state.D->doBundleRestartInstance(&nc_state, meta, instanceId));
@@ -2052,7 +2051,7 @@ int doCancelBundleTask(ncMetadata * meta, char *instanceId)
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCAINFO, "[%s] canceling bundling instance\n", instanceId);
 
     if (nc_state.H->doCancelBundleTask)
         ret = nc_state.H->doCancelBundleTask(&nc_state, meta, instanceId);
@@ -2069,7 +2068,7 @@ int doDescribeBundleTasks(ncMetadata * meta, char **instIds, int instIdsLen, bun
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "invoked (for %d instances)\n", instIdsLen);
+    logprintfl(EUCAINFO, "describing bundle tasks (for %d instances)\n", instIdsLen);
 
     if (nc_state.H->doDescribeBundleTasks)
         ret = nc_state.H->doDescribeBundleTasks(&nc_state, meta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
@@ -2086,7 +2085,7 @@ int doCreateImage(ncMetadata * meta, char *instanceId, char *volumeId, char *rem
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] invoked (vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
+    logprintfl(EUCAINFO, "[%s][%s] creating image\n", instanceId, volumeId);
 
     if (nc_state.H->doCreateImage)
         ret = nc_state.H->doCreateImage(&nc_state, meta, instanceId, volumeId, remoteDev);

@@ -430,7 +430,7 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * ccMeta, char *ins
     ncInstance *instance = NULL;
 
     if (instanceId == NULL || publicIp == NULL) {
-        logprintfl(EUCAERROR, "[%s] bad input params\n", instanceId);
+        logprintfl(EUCAERROR, "[%s] internal error (bad input parameters to doAssignAddress)\n", instanceId);
         return (ERROR);
     }
 
@@ -469,10 +469,10 @@ static int doStartNetwork(struct nc_state_t *nc, ncMetadata * ccMeta, char *uuid
     rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
     if (rc) {
         ret = 1;
-        logprintfl(EUCAERROR, "ERROR return from vnetStartNetwork return=%d\n", rc);
+        logprintfl(EUCAERROR, "failed to start network (port=%d vlan=%d return=%d)\n", port, vlan, rc);
     } else {
         ret = 0;
-        logprintfl(EUCAINFO, "SUCCESS return from vnetStartNetwork\n");
+        logprintfl(EUCAINFO, "started network (port=%d vlan=%d)\n", port, vlan);
         if (brname)
             free(brname);
     }
@@ -516,9 +516,9 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
             close(fd);
 
             char cmd[MAX_PATH];
-            snprintf(cmd, MAX_PATH, "[%s] %s %s `which virsh` %s %s %s", instanceId, nc->detach_cmd_path,   // TODO: does this work?
+            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path,   // TODO: does this work?
                      nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
-            logprintfl(EUCAINFO, "%s\n", cmd);
+            logprintfl(EUCADEBUG, "%s\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
             unlink(tmpfile);
@@ -670,7 +670,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * meta, char *instan
         if (err) {
             logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId,
                        remoteDevReal, localDevReal, i);
-            logprintfl(EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            logprintfl(EUCADEBUG, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
             sleep(3);           //sleep a bit and retry.
         } else {
             break;
@@ -680,7 +680,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * meta, char *instan
     if (err) {
         logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId,
                    remoteDevReal, localDevReal);
-        logprintfl(EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+        logprintfl(EUCADEBUG, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         ret = ERROR;
     }
 
@@ -709,7 +709,8 @@ release:
         err = virDomainDetachDevice(dom, xml);
         sem_v(hyp_sem);
         if (err) {
-            logprintfl(EUCAERROR, "[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            logprintfl(EUCAERROR, "[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
+            logprintfl(EUCADEBUG, "[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
         ret = ERROR;
     }
@@ -717,12 +718,17 @@ release:
     if (ret != OK && is_iscsi_target && have_remote_device) {
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
-            logprintfl(EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
+            logprintfl(EUCAERROR, "[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
         }
     }
 
     if (ret == OK)
-        logprintfl(EUCAINFO, "[%s][%s] attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        logprintfl(EUCAINFO, "[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+    // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
+    int log_level_for_devstring = EUCATRACE;
+    if (ret != OK)
+        log_level_for_devstring = EUCADEBUG;
+    logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     if (xml)
         free(xml);
@@ -892,7 +898,7 @@ release:
     if (is_iscsi_target && have_remote_device) {
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
-            logprintfl(EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
+            logprintfl(EUCAERROR, "[%s][%s] failed to disconnet iscsi target\n", instanceId, volumeId);
             if (!force)
                 ret = ERROR;
         }
@@ -900,6 +906,11 @@ release:
 
     if (ret == OK)
         logprintfl(EUCAINFO, "[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+    // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
+    int log_level_for_devstring = EUCATRACE;
+    if (ret != OK)
+        log_level_for_devstring = EUCADEBUG;
+    logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     if (xml)
         free(xml);
@@ -998,8 +1009,6 @@ static void *createImage_thread(void *arg)
 
 static int doCreateImage(struct nc_state_t *nc, ncMetadata * meta, char *instanceId, char *volumeId, char *remoteDev)
 {
-    logprintfl(EUCAINFO, "[%s][%s] invoked\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId), ((volumeId == NULL) ? "UNKNOWN" : volumeId));
-
     // sanity checking
     if (instanceId == NULL || remoteDev == NULL || volumeId == NULL) {
         logprintfl(EUCAERROR, "[%s][%s] called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId),
@@ -1504,7 +1513,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * meta, char 
                                  int *outBundleTasksLen)
 {
     if (instIdsLen < 1 || instIds == NULL) {
-        logprintfl(EUCADEBUG, "input instIds empty\n");
+        logprintfl(EUCADEBUG, "internal error (invalid parameters to doDescribeBundleTasks)\n");
         return ERROR;
     }
 

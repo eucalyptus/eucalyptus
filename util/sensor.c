@@ -344,7 +344,7 @@ static void init_state(int resources_size)
         bzero(sr, sizeof(sensorResource));
     }
     sensor_state->initialized = TRUE;   // inter-process init done
-    logprintfl(EUCADEBUG, "initialized sensor shared memory\n");
+    logprintfl(EUCAINFO, "initialized sensor shared memory\n");
 }
 
 __inline__ static boolean is_empty_sr(const sensorResource * sr)
@@ -628,7 +628,7 @@ static void log_sensor_resources(const char *name, const sensorResource ** srs, 
     if (sensor_res2str(buf, sizeof(buf), srs, srsLen) != 0) {
         logprintfl(EUCAERROR, "failed to print sensor resources (%s)\n", name);
     } else {
-        logprintfl(EUCAINFO, "sensor resources (%s) BEGIN\n%ssensor resources END\n", name, buf);
+        logprintfl(EUCADEBUG, "sensor resources (%s) BEGIN\n%ssensor resources END\n", name, buf);
     }
 }
 
@@ -760,7 +760,7 @@ static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *reso
             safe_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
         unused_sr->timestamp = time(NULL);
         sensor_state->used_resources++;
-        logprintfl(EUCADEBUG, "allocated new sensor resource %s\n", resourceName);
+        logprintfl(EUCAINFO, "allocated new sensor resource %s\n", resourceName);
     }
 
     return unused_sr;
@@ -770,10 +770,10 @@ static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * s
 {
     // sanity check
     if (sr->metricsLen < 0 || sr->metricsLen > MAX_SENSOR_METRICS) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
+        logprintfl(EUCAWARN, "inconsistency in sensor database (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
         char trace[8172] = "";  // print stack trace to see which invocation led to this erroneous condition
         log_dump_trace(trace, sizeof(trace));
-        logprintfl(EUCADEBUG, "%s", trace);
+        logprintfl(EUCATRACE, "%s", trace);
         return NULL;
     }
 
@@ -801,7 +801,7 @@ static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm
 {
     // sanity check
     if (sm->countersLen < 0 || sm->countersLen > MAX_SENSOR_COUNTERS) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (countersLen=%d for %s)\n", sm->countersLen, sm->metricName);
+        logprintfl(EUCAWARN, "inconsistency in sensor database (countersLen=%d for %s)\n", sm->countersLen, sm->metricName);
         return NULL;
     }
 
@@ -830,7 +830,7 @@ static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter *
 {
     // sanity check
     if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (dimensionsLen=%d for %s)\n", sc->dimensionsLen, sensor_type2str(sc->type));
+        logprintfl(EUCAWARN, "inconsistency in sensor database (dimensionsLen=%d for %s)\n", sc->dimensionsLen, sensor_type2str(sc->type));
         return NULL;
     }
 
@@ -866,9 +866,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return 1;
 
-    // log_sensor_resources ("sensor_merge_records", srs, srsLen);
-
-    logprintfl(EUCADEBUG, "invoked\n");
+    logprintfl(EUCATRACE, "invoked with srsLen=%d fail_on_oom=%d\n", srsLen, fail_on_oom);
 
     int ret = 1;
     int num_merged = 0;
@@ -925,7 +923,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                     }
 
                     if (cache_sd->valuesLen < 0 || cache_sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
-                        logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
+                        logprintfl(EUCAWARN, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
                                    cache_sd->valuesLen, cache_sr->resourceName, cache_sm->metricName, sensor_type2str(cache_sc->type),
                                    cache_sd->dimensionName);
                         goto bail;
@@ -1393,7 +1391,7 @@ int sensor_set_dimension_alias(const char *resourceName, const char *metricName,
         return 1;
 
     if (resourceName == NULL || strlen(resourceName) < 1 || strlen(resourceName) > MAX_SENSOR_NAME_LEN) {
-        logprintfl(EUCADEBUG, "invoked with invalid resourceName (%s)\n", resourceName);
+        logprintfl(EUCAWARN, "invoked with invalid resourceName (%s)\n", resourceName);
         return 1;
     }
 
@@ -1531,7 +1529,7 @@ int sensor_validate_resources(sensorResource ** srs, int srsLen)
     for (int i = 0; i < srsLen; i++) {
         sensorResource *sr = srs[i];
         if (sr == NULL) {
-            logprintfl(EUCAERROR, "invalid resource arrfay: [%d] empty slot\n", i);
+            logprintfl(EUCAERROR, "invalid resource array: [%d] empty slot\n", i);
             errors++;
             continue;
         }
