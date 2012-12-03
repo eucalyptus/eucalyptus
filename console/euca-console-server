@@ -85,7 +85,6 @@ def sessionChecker():
 
 def start_console():
     settings = {
-      "cookie_secret": "getting-from-config-now",
       "xsrf_cookies": True,
     }
 
@@ -101,9 +100,6 @@ def start_console():
         webroot = eucaconsole.config.get('paths', 'staticpath')
     except ConfigParser.Error:
         pass
-
-    if eucaconsole.config.has_option('server', 'cookie.secret'):
-        settings['cookie_secret'] = eucaconsole.config.get('server', 'cookie.secret')
 
     if eucaconsole.config.has_option('server', 'sslcert'):
         ssl_settings['certfile'] = eucaconsole.config.get('server', 'sslcert')
