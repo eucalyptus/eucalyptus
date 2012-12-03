@@ -24,6 +24,7 @@
       support_url : ''
     },
     errorDialog : null,
+    nocookiesDialog : null,
     _init : function() {
      },
     _create : function() { 
@@ -31,7 +32,7 @@
       var $tmpl = $('html body').find('.templates #loginTmpl').clone(); 
       var $login = $($tmpl.render($.i18n.map));
       
-      var  $tmpl = $('html body').find('.templates #loginErrorDlgTmpl').clone();
+      var $tmpl = $('html body').find('.templates #loginErrorDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $err_dialog = $rendered.children().first();
       var $err_help = $rendered.children().last();
@@ -44,6 +45,19 @@
         help: {content: $err_help}
       });
 
+      var $tmpl = $('html body').find('.templates #noCookiesDlgTmpl').clone();
+      var $rendered = $($tmpl.render($.extend($.i18n.map)));
+      var $cookies_dialog = $rendered.children().first();
+      this.nocookiesDialog = $cookies_dialog.eucadialog({
+        id: 'no-cookies',
+        title: no_cookies_title,
+        buttons: {
+          'Close': {text: dialog_close_btn, focus:true, click: function() { $cookies_dialog.eucadialog("close");}}
+        }
+      });
+      if (navigator.cookieEnabled == false) {
+        this.nocookiesDialog.eucadialog('open');
+      }
       var $form = $login.find('form');
       // set the login event handler
       $form.find('input[type=text]').change( function(evt) {

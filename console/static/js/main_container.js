@@ -41,7 +41,7 @@
     _create : function() {
       var thisObj = this;
       // about cloud dialog
-      $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
+      $tmpl = $('html body').find('.templates #aboutCloudDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
       var $dialog = $rendered.children().first();
       var $dialog_help = $rendered.children().last();
