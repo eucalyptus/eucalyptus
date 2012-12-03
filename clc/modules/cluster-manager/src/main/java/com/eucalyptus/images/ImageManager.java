@@ -370,9 +370,9 @@ public class ImageManager {
         imgInfo.addProductCode( productCode );
       }
       // Launch permissions
-      if (request.getQueryUserGroup( ).isEmpty( ) && request.getQueryUserId( ).isEmpty( ) )
-        throw new EucalyptusCloudException( "No userId provided" );
       if ( "launchPermission".equals( request.getAttribute( ) ) ) {
+        if (request.getQueryUserGroup( ).isEmpty( ) && request.getQueryUserId( ).isEmpty( ) )
+          throw new EucalyptusCloudException( "No userId provided" );
         if ( ADD.equals( request.getOperationType( ) ) ) {
         	this.verifyUserIds( request.getQueryUserId( ) );
           imgInfo.addPermissions( request.getQueryUserId( ) );
