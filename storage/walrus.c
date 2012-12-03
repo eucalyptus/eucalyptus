@@ -179,6 +179,8 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, write_header);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // TODO: make this optional?
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 360L);  // must have at least a 360 baud modem
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 10L);    // abort if below speed limit for this many seconds
     // curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1); // TODO: remove the comment once we want to follow redirects (e.g., on HTTP 407)
 
     if (strncmp(verb, "GET", 4) == 0) {
