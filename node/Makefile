@@ -202,12 +202,14 @@ deploy:
 # no ws
 #	cp $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services_noWS.xml $(AXIS2C_SERVICES)/$(SERVICE_NAME)/services.xml
 
+indent:
+	@for idfile in *.[ch]; do \
+		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+	done
+
 clean:
 	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#* test_xml
-
-indent:
-	@indent *.[ch] -nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i4 -ut -ip0 -l200 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -ss -ts4 -il0 -nip
-	@\rm *.*~
 
 distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc test_hooks *~* *#*

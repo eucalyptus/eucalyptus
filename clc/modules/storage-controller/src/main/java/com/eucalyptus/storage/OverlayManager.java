@@ -75,6 +75,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.Cipher;
 import javax.persistence.EntityNotFoundException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
@@ -92,6 +93,7 @@ import com.eucalyptus.storage.StorageManagers.StorageManagerProperty;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.WalrusProperties;
+import com.google.common.base.Joiner;
 
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
@@ -101,6 +103,7 @@ import edu.ucsb.eucalyptus.cloud.entities.StorageInfo;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 @StorageManagerProperty("overlay")
 public class OverlayManager implements LogicalStorageManager {
@@ -118,6 +121,7 @@ public class OverlayManager implements LogicalStorageManager {
 	public static boolean zeroFillVolumes = false;
 
 	private ConcurrentHashMap<String, VolumeOpMonitor> volumeOps;
+	private static final Joiner JOINER = Joiner.on(" ").skipNulls();
 
 	public void checkPreconditions() throws EucalyptusCloudException {
 		//check if binaries exist, commands can be executed, etc.
@@ -196,8 +200,38 @@ public class OverlayManager implements LogicalStorageManager {
 		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "pvremove", loDevName});
 	}
 
+	// losetup -d fails a LOT of times, added retries.
+	// losetup -d does not return any output, so there's no way to detect if the command was successful with previous logic
+	// losetup return code is not reliable, introduced check on the error stream and loop device
 	private String removeLoopback(String loDevName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName});
+		int retryCount = 0;
+		do {
+			try {
+				String[] command = new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "losetup", "-d", loDevName };
+				CommandOutput resultObj1 = SystemUtil.runWithRawOutput(command);
+				LOG.debug("Executed: " + JOINER.join(command) + "\n return=" + resultObj1.returnValue + "\n stdout=" + resultObj1.output + "\n stderr="
+						+ resultObj1.error);
+
+				command = new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "losetup", loDevName };
+				CommandOutput resultObj2 = SystemUtil.runWithRawOutput(command);
+				LOG.debug("Executed: " + JOINER.join(command) + "\n return=" + resultObj2.returnValue + "\n stdout=" + resultObj2.output + "\n stderr="
+						+ resultObj2.error);
+
+				if (StringUtils.isNotBlank(resultObj2.output)) {
+					LOG.debug("Unable to disconnect the loop device at: " + loDevName);
+					Thread.sleep(2000);
+				} else {
+					LOG.debug("Detached loop device: " + loDevName);
+					return "";
+				}
+			} catch (Exception e) {
+				LOG.error("Error removing loop device", e);
+			}
+			retryCount++;
+		} while (retryCount < 20);
+		
+		LOG.error("All attempts to remove loop device " + loDevName + " failed.");
+		return "";
 	}
 
 	private String reduceVolumeGroup(String vgName, String pvName) throws EucalyptusCloudException {
@@ -659,38 +693,79 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
+
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		if(foundLVMVolumeInfo != null) {
-			try {
-				exportManager.cleanup(foundLVMVolumeInfo);
-			} catch(EucalyptusCloudException ee) {
-				LOG.error(ee, ee);
-			}
-			String loDevName = foundLVMVolumeInfo.getLoDevName();
-			if(loDevName != null) {
-				String vgName = foundLVMVolumeInfo.getVgName();
-				String lvName = foundLVMVolumeInfo.getLvName();
-				String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-				try {
-					disableLogicalVolume(absoluteLVName);
-					removeLoopback(loDevName);
-					foundLVMVolumeInfo.setLoDevName(null);
-				} catch (EucalyptusCloudException e) {
-					LOG.error(e, e);
-				}
-			}
+		
+		if (foundLVMVolumeInfo != null) {
 
-			removeMonitor(volumeId);
-			volumeManager.remove(foundLVMVolumeInfo);
-			volumeManager.finish();
-			File volFile = new File (DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + volumeId);
-			if (volFile.exists()) {
-				if(!volFile.delete()) {
-					LOG.error("Unable to delete: " + volFile.getAbsolutePath());
+			boolean isReadyForDelete = false;
+			int retryCount = 0;
+
+			// Obtain a lock on the volume
+			VolumeOpMonitor monitor = getMonitor(foundLVMVolumeInfo.getVolumeId());
+
+			LOG.debug("Trying to lock volume " + volumeId);
+			synchronized (monitor) {
+				do {
+					try {
+						volumeManager = new VolumeEntityWrapperManager();
+						foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
+
+						if (foundLVMVolumeInfo.getCleanup()) {
+							// Volume is set to be cleaned up, let go of the lock as the cleanup process needs it.
+							LOG.debug("Volume " + volumeId + " has been marked for cleanup. Will resume after cleanup is complete");
+							monitor.wait(60000);
+						} else {
+							// Volume cleanup flag is not set, check the volume state
+							LOG.debug("Volume " + volumeId + " is not marked for cleanup. Checking loop back device status");
+
+							// Check if the loopback has been removed, if not set it for cleanup and wait.
+							// Logical volume is not available after the loopback is removed
+							if (StringUtils.isNotBlank(foundLVMVolumeInfo.getLoDevName())
+									&& StringUtils.isNotBlank(getLoopback(foundLVMVolumeInfo.getLoDevName()))) {
+								foundLVMVolumeInfo.setCleanup(true);
+								volumeManager.finish();
+								LOG.debug("Loop back device for volume " + volumeId
+										+ " exists. Marking the volume for cleanup. Will resume after cleanup is complete");
+								monitor.wait(60000);
+							} else {
+								LOG.debug("Volume " + volumeId + " is prepped for deletion");
+								isReadyForDelete = true;
+								break;
+							}
+						}
+					} catch (Exception e) {
+						LOG.error("Error trying to check volume status", e);
+					}
+
+					LOG.debug("Lap: " + retryCount++);
+				} while (!isReadyForDelete && retryCount < 10);
+
+				// delete the volume
+				if (isReadyForDelete) {
+					LOG.debug("Deleting volume " + volumeId);
+					File volFile = new File(DirectStorageInfo.getStorageInfo().getVolumesDir() + File.separator + volumeId);
+					if (volFile.exists()) {
+						if (!volFile.delete()) {
+							LOG.error("Unable to delete: " + volFile.getAbsolutePath());
+							throw new EucalyptusCloudException("Unable to delete volume file: " + volFile.getAbsolutePath());
+						}
+					}
+					volumeManager.remove(foundLVMVolumeInfo);
+					try {
+						volumeManager.finish();
+					} catch (Exception e) {
+						LOG.error("Error deleting volume " + volumeId + ", failed to commit DB transaction", e);
+					}
+				} else {
+					LOG.error("All attempts to cleanup volume " + volumeId + " failed");
+					throw new EucalyptusCloudException("Unable to delete volume: " + volumeId + ". All attempts to cleanup the volume failed");
 				}
 			}
-		}  else {
+			// Remove the monitor
+			removeMonitor(volumeId);
+		} else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume: " + volumeId);
 		}
@@ -1457,39 +1532,53 @@ public class OverlayManager implements LogicalStorageManager {
 	throws EucalyptusCloudException {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
-		if(lvmVolumeInfo != null) {
-			//create file and attach to loopback device
-			//long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
+		if (lvmVolumeInfo != null) {
+			// create file and attach to loopback device
+			// long absoluteSize = lvmVolumeInfo.getSize() * StorageProperties.GB + LVM_HEADER_LENGTH;
 			String rawFileName = DirectStorageInfo.getStorageInfo().getVolumesDir() + "/" + volumeId;
-			try {
-				VolumeOpMonitor monitor = getMonitor(volumeId);
-				synchronized (monitor) {					
+
+			VolumeOpMonitor monitor = getMonitor(volumeId);
+			synchronized (monitor) {
+				try {
+					volumeManager = new VolumeEntityWrapperManager();
+					lvmVolumeInfo = volumeManager.getVolumeInfo(volumeId);
+
 					String loDevName = lvmVolumeInfo.getLoDevName();
-					if(loDevName == null) {
-						loDevName = createLoopback(rawFileName);
+					if (loDevName == null) {
+						try {
+							loDevName = createLoopback(rawFileName);
+							lvmVolumeInfo.setLoDevName(loDevName);
+						} catch (EucalyptusCloudException ex) {
+							LOG.error("Unable to create loop back device for " + volumeId, ex);
+							throw ex;
+						}
 					}
 					String vgName = lvmVolumeInfo.getVgName();
 					String lvName = lvmVolumeInfo.getLvName();
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-					lvmVolumeInfo.setLoDevName(loDevName);
+
+					// enable logical volume
 					enableLogicalVolume(absoluteLVName);
-					//export logical volume
+
 					try {
+						// export logical volume
 						volumeManager.exportVolume(lvmVolumeInfo, vgName, lvName);
-					} catch(EucalyptusCloudException ex) {
-						LOG.error(ex);
+						lvmVolumeInfo.setCleanup(false);
+					} catch (EucalyptusCloudException ex) {
+						LOG.error("Unable to export volume " + volumeId, ex);
 						throw ex;
 					}
-					lvmVolumeInfo.setCleanup(false);
-					volumeManager.finish();
-				}//synchronized
-			} catch(EucalyptusCloudException ex) {
-				String error = "Unable to run command: " + ex.getMessage();
-				volumeManager.abort();
-				LOG.debug(error);
-				LOG.error(ex, ex);
-				throw new EucalyptusCloudException(error);
-			}
+				} catch (Exception ex) {
+					LOG.error("Failed to attach volume " + volumeId, ex);
+					throw new EucalyptusCloudException("Failed to attach volume " + volumeId, ex);
+				} finally {
+					try {
+						volumeManager.finish();
+					} catch (Exception e) {
+						LOG.error("Unable to commit the database transaction after an attempt to attach volume " + volumeId, e);
+					}
+				}
+			}// synchronized
 		}
 		return getVolumeProperty(volumeId);
 	}
@@ -1519,6 +1608,7 @@ public class OverlayManager implements LogicalStorageManager {
 		if(!varDir.exists()) {
 			varDir.mkdirs();
 		}
+		exportManager.check();
 	}
 
 	@Override
@@ -1579,54 +1669,58 @@ public class OverlayManager implements LogicalStorageManager {
 					if(foundLVMVolumeInfo.getCleanup()) {
 						VolumeOpMonitor monitor = getMonitor(foundLVMVolumeInfo.getVolumeId());
 						synchronized (monitor) {
-							volumeManager = new VolumeEntityWrapperManager();
-							String volumeId = foundLVMVolumeInfo.getVolumeId();
-							LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
-							if(!volInfo.getCleanup()) {
-								LOG.info("Volume: " + volumeId + " no longer marked for cleanup...aborting");
-								volumeManager.abort();
-								continue;
-							}
-							LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
 							try {
-								exportManager.cleanup(volInfo);
-								volumeManager.finish();
 								volumeManager = new VolumeEntityWrapperManager();
-								volInfo = volumeManager.getVolumeInfo(volumeId);
-							} catch(EucalyptusCloudException ee) {
-								LOG.error(ee, ee);
-								volumeManager.abort();
-								continue;
-							}
-							String loDevName = foundLVMVolumeInfo.getLoDevName();
-							if(loDevName != null) {
-								if(volInfo != null) {
-									String vgName = foundLVMVolumeInfo.getVgName();
-									String lvName = foundLVMVolumeInfo.getLvName();
-									String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
-									if(!volumeManager.areSnapshotsPending(volumeId)) {
-										try {
-											disableLogicalVolume(absoluteLVName);
-											LOG.info("Detaching loop device: " + loDevName);
-											removeLoopback(loDevName);
-											volInfo.setLoDevName(null);
-											LOG.info("Done cleaning up: " + volumeId);
-											volInfo.setCleanup(false);
-											volumeManager.finish();
-										} catch (EucalyptusCloudException e) {
-											LOG.error(e, e);
+								String volumeId = foundLVMVolumeInfo.getVolumeId();
+								LVMVolumeInfo volInfo = volumeManager.getVolumeInfo(volumeId);
+								if (!volInfo.getCleanup()) {
+									LOG.info("Volume: " + volumeId + " no longer marked for cleanup...aborting");
+									volumeManager.abort();
+									continue;
+								}
+								LOG.info("Cleaning up volume: " + foundLVMVolumeInfo.getVolumeId());
+								try {
+									exportManager.cleanup(volInfo);
+									volumeManager.finish();
+									volumeManager = new VolumeEntityWrapperManager();
+									volInfo = volumeManager.getVolumeInfo(volumeId);
+								} catch (EucalyptusCloudException ee) {
+									LOG.error(ee, ee);
+									volumeManager.abort();
+									continue;
+								}
+								String loDevName = foundLVMVolumeInfo.getLoDevName();
+								if (loDevName != null) {
+									if (volInfo != null) {
+										String vgName = foundLVMVolumeInfo.getVgName();
+										String lvName = foundLVMVolumeInfo.getLvName();
+										String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
+										if (!volumeManager.areSnapshotsPending(volumeId)) {
+											try {
+												disableLogicalVolume(absoluteLVName);
+												LOG.info("Detaching loop device: " + loDevName);
+												removeLoopback(loDevName);
+												volInfo.setLoDevName(null);
+												LOG.info("Done cleaning up: " + volumeId);
+												volInfo.setCleanup(false);
+												volumeManager.finish();
+											} catch (EucalyptusCloudException e) {
+												LOG.error(e, e);
+												volumeManager.abort();
+											}
+										} else {
+											LOG.info("Snapshot in progress. Not detaching loop device.");
 											volumeManager.abort();
 										}
-									} else {
-										LOG.info("Snapshot in progress. Not detaching loop device.");
-										volumeManager.abort();
 									}
+								} else {
+									volumeManager.abort();
 								}
-							} else {
-								volumeManager.abort();
+							} finally {
+								monitor.notifyAll();
 							}
-						}
-					}//synchronized
+						} // synchronized
+					}
 				}
 			} catch(Exception ex) {
 				LOG.error(ex, ex);

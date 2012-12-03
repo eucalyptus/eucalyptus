@@ -99,6 +99,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   public void fire( final DescribeNetworksResponseType reply ) {
     NetworkStateCallback.this.updateClusterConfiguration( reply );
     NetworkGroups.updateNetworkRangeConfiguration( );
+    NetworkGroups.updateExtantNetworks( this.getSubject( ).getConfiguration( ), reply.getActiveNetworks( ) );
   }
   
   private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {

@@ -19,10 +19,12 @@
   additional information or have any questions.
   -->
 <project name="eucalyptus-tokens" basedir=".">
-    <property name="builder.suffix" value="groovy" />
-    <uptodate property="groovyc.notRequired" targetfile="${jar.file}">
-        <srcfiles dir="${src.dir}" includes="**/*" />
-    </uptodate>
-    <import file="../module-inc.xml"/>
+	<property name="builder.suffix" value="groovy" />
+	<uptodate property="groovyc.notRequired" targetfile="${jar.file}">
+		<srcfiles dir="${src.dir}" includes="**/*" />
+	</uptodate>
+	<import file="../module-inc.xml" />
+	<target name="indent-module">
+	</target>
 </project>
 

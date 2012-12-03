@@ -86,7 +86,6 @@
 #define HELPERDIR	DATADIR
 #endif
 
-
 /* environment variable set at startup */
 #define EUCALYPTUS_ENV_VAR_NAME  "EUCALYPTUS"
 
@@ -135,9 +134,9 @@
 #define EUCALYPTUS_CONNECT_ISCSI    EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/connect_iscsitarget.pl"
 #define EUCALYPTUS_DISCONNECT_ISCSI EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/disconnect_iscsitarget.pl"
 #define EUCALYPTUS_GET_ISCSI        EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_iscsitarget.pl"
-#define EUCALYPTUS_NC_CHECK_BUCKET "euca-check-bucket" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_BUNDLE_UPLOAD "euca-bundle-upload" // can be overriden from eucalyptus.conf
-#define EUCALYPTUS_NC_DELETE_BUNDLE "euca-delete-bundle" // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_CHECK_BUCKET "euca-check-bucket"  // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_BUNDLE_UPLOAD "euca-bundle-upload"    // can be overriden from eucalyptus.conf
+#define EUCALYPTUS_NC_DELETE_BUNDLE "euca-delete-bundle"    // can be overriden from eucalyptus.conf
 #define EUCALYPTUS_NC_HOOKS_DIR     EUCALYPTUS_CONF_DIR "/nc-hooks"
 
 #define NC_NET_PATH_DEFAULT         EUCALYPTUS_RUN_DIR "/net"
@@ -196,19 +195,19 @@
 #define EUCA_MAX_VOLUMES 27
 #define EUCA_MAX_VBRS 64
 #define EUCA_MAX_PATH 4096
-#define EUCA_MAX_PARTITIONS 32 // partitions per disk
-#define EUCA_MAX_DISKS 26 // disks per bus: sd[a-z]
-#define MAX_PATH_SIZE 4096 // TODO: remove
+#define EUCA_MAX_PARTITIONS 32  // partitions per disk
+#define EUCA_MAX_DISKS 26       // disks per bus: sd[a-z]
+#define MAX_PATH_SIZE 4096      // TODO: remove
 
 // NC hook events
-#define NC_EVENT_PRE_INIT      "euca-nc-pre-init"      // p1: eucalyptusHome
-#define NC_EVENT_POST_INIT     "euca-nc-post-init"     // p1: eucalyptusHome
-#define NC_EVENT_PRE_HYP_CHECK "euca-nc-pre-hyp-check" // p1: eucalyptusHome
-#define NC_EVENT_PRE_BOOT      "euca-nc-pre-boot"      // p1: eucalyptusHome p2: instancePath
-#define NC_EVENT_ADOPTING      "euca-nc-pre-adopt"     // p1: eucalyptusHome p2: instancePath
-#define NC_EVENT_PRE_CLEAN     "euca-nc-pre-clean"     // p1: eucalyptusHome p2: instancePath
-#define NC_EVENT_PRE_ATTACH    "euca-nc-pre-attach"    // p1: eucalyptusHome p2: volumeXmlPath
-#define NC_EVENT_POST_DETACH   "euca-nc-post-detach"   // p1: eucalyptusHome p2: volumeXmlPath
+#define NC_EVENT_PRE_INIT      "euca-nc-pre-init"   // p1: eucalyptusHome
+#define NC_EVENT_POST_INIT     "euca-nc-post-init"  // p1: eucalyptusHome
+#define NC_EVENT_PRE_HYP_CHECK "euca-nc-pre-hyp-check"  // p1: eucalyptusHome
+#define NC_EVENT_PRE_BOOT      "euca-nc-pre-boot"   // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_ADOPTING      "euca-nc-pre-adopt"  // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_PRE_CLEAN     "euca-nc-pre-clean"  // p1: eucalyptusHome p2: instancePath
+#define NC_EVENT_PRE_ATTACH    "euca-nc-pre-attach" // p1: eucalyptusHome p2: volumeXmlPath
+#define NC_EVENT_POST_DETACH   "euca-nc-post-detach"    // p1: eucalyptusHome p2: volumeXmlPath
 
 // Timeout values (suggestions)
 #define ATTACH_VOL_TIMEOUT_SECONDS	180 //CC Timeout for an doAttachVolume() operation on the NC. In failure cases NC may take 60 sec.
@@ -224,7 +223,7 @@
 #define READER 2
 #define WRITER 3
 
-typedef enum instance_states_t { // these must match instance_sate_names[] below!
+typedef enum instance_states_t {    // these must match instance_sate_names[] below!
     /* the first 7 should match libvirt */
     NO_STATE = 0,
     RUNNING,
@@ -248,14 +247,14 @@ typedef enum instance_states_t { // these must match instance_sate_names[] below
     CREATEIMAGE_SHUTOFF,
 
     /* the only three states reported to CLC */
-    PENDING,  /* staging in data, starting to boot, failed to boot */
-    EXTANT,   /* guest OS booting, running, shutting down, cleaning up state */
-    TEARDOWN, /* a marker for a terminated domain, one not taking up resources */
+    PENDING,                    /* staging in data, starting to boot, failed to boot */
+    EXTANT,                     /* guest OS booting, running, shutting down, cleaning up state */
+    TEARDOWN,                   /* a marker for a terminated domain, one not taking up resources */
 
     TOTAL_STATES
 } instance_states;
 
-static char * instance_state_names[] = {
+static char *instance_state_names[] = {
     "Unknown",
     "Running",
     "Waiting",
@@ -280,34 +279,34 @@ static char * instance_state_names[] = {
 
 typedef enum bundling_progress_t {
     NOT_BUNDLING = 0,
-	BUNDLING_IN_PROGRESS,
-	BUNDLING_SUCCESS,
-        BUNDLING_FAILED,
-        BUNDLING_CANCELLED
+    BUNDLING_IN_PROGRESS,
+    BUNDLING_SUCCESS,
+    BUNDLING_FAILED,
+    BUNDLING_CANCELLED
 } bundling_progress;
 
-static char * bundling_progress_names[] = {
-	"none",
-	"bundling",
-	"succeeded",
-	"failed",
-        "cancelled"
+static char *bundling_progress_names[] = {
+    "none",
+    "bundling",
+    "succeeded",
+    "failed",
+    "cancelled"
 };
 
 typedef enum createImage_progress_t {
-  NOT_CREATEIMAGE = 0,
-  CREATEIMAGE_IN_PROGRESS,
-  CREATEIMAGE_SUCCESS,
-  CREATEIMAGE_FAILED,
-  CREATEIMAGE_CANCELLED
+    NOT_CREATEIMAGE = 0,
+    CREATEIMAGE_IN_PROGRESS,
+    CREATEIMAGE_SUCCESS,
+    CREATEIMAGE_FAILED,
+    CREATEIMAGE_CANCELLED
 } createImage_progress;
 
-static char * createImage_progress_names[] = {
-  "none",
-  "creating",
-  "succeeded",
-  "failed",
-  "cancelled"
+static char *createImage_progress_names[] = {
+    "none",
+    "creating",
+    "succeeded",
+    "failed",
+    "cancelled"
 };
 
 #ifndef EUCA_FREE

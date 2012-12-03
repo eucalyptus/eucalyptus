@@ -68,59 +68,60 @@
 #include <cc-client-marshal.h>
 
 #ifndef NO_COMP
-const char * euca_this_component_name   = "cc";
-const char * euca_client_component_name = "clc";
+const char *euca_this_component_name = "cc";
+const char *euca_client_component_name = "clc";
 #endif
 
 ncMetadata mymeta;
 
-int main(int argc, char **argv) {
-  axutil_env_t * env = NULL;
-  axis2_char_t * client_home = NULL;
-  axis2_char_t endpoint_uri[256], *tmpstr;
-  axis2_stub_t * stub = NULL;
-  int rc, i, port, use_wssec;
-  char *euca_home, configFile[1024], policyFile[1024], logFile[1024];
+int main(int argc, char **argv)
+{
+    axutil_env_t *env = NULL;
+    axis2_char_t *client_home = NULL;
+    axis2_char_t endpoint_uri[256], *tmpstr;
+    axis2_stub_t *stub = NULL;
+    int rc, i, port, use_wssec;
+    char *euca_home, configFile[1024], policyFile[1024], logFile[1024];
 
-  bzero(&mymeta, sizeof(ncMetadata));
-  mymeta.userId = strdup("admin");
-  mymeta.correlationId = strdup("shutdowncorrid");
-  mymeta.epoch = 1;
-  mymeta.servicesLen = 0;
-  euca_home = getenv("EUCALYPTUS");
-  if (!euca_home) {
-    euca_home = "";
-  }
-  snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
-  snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/cc-client-policy.xml", euca_home);
-  snprintf(logFile, 1024, EUCALYPTUS_LOG_DIR "/shutdownCC_axis2c.log", euca_home);
+    bzero(&mymeta, sizeof(ncMetadata));
+    mymeta.userId = strdup("admin");
+    mymeta.correlationId = strdup("shutdowncorrid");
+    mymeta.epoch = 1;
+    mymeta.servicesLen = 0;
+    euca_home = getenv("EUCALYPTUS");
+    if (!euca_home) {
+        euca_home = "";
+    }
+    snprintf(configFile, 1024, EUCALYPTUS_CONF_LOCATION, euca_home);
+    snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/cc-client-policy.xml", euca_home);
+    snprintf(logFile, 1024, EUCALYPTUS_LOG_DIR "/shutdownCC_axis2c.log", euca_home);
 
-  if (argc != 2 || !argv[1]) {
-    printf("must supply argument <host>:<port>\n");
-  }
-  snprintf(endpoint_uri, 256,"http://%s/axis2/services/EucalyptusCC", argv[1]);
+    if (argc != 2 || !argv[1]) {
+        printf("must supply argument <host>:<port>\n");
+    }
+    snprintf(endpoint_uri, 256, "http://%s/axis2/services/EucalyptusCC", argv[1]);
 
-  env =  axutil_env_create_all(logFile, AXIS2_LOG_LEVEL_TRACE);
-  
-  client_home = AXIS2_GETENV("AXIS2C_HOME");
-  if (!client_home) {
-    printf("must have AXIS2C_HOME set\n");
-    exit(1);
-  }
-  stub = axis2_stub_create_EucalyptusCC(env, client_home, endpoint_uri);
-  
-  rc = InitWSSEC(env, stub, policyFile);
-  if (rc) {
-    printf("cannot initialize WS-SEC policy (%s)\n",policyFile);
-    exit(1);
-  } 
-  
-  rc = cc_shutdownService(env, stub);
-  if (rc != 0) {
-    printf("cc_shutdownService() failed\n");
-    exit(1);
-  }
+    env = axutil_env_create_all(logFile, AXIS2_LOG_LEVEL_TRACE);
 
-  sleep(10);
-  exit(0);
+    client_home = AXIS2_GETENV("AXIS2C_HOME");
+    if (!client_home) {
+        printf("must have AXIS2C_HOME set\n");
+        exit(1);
+    }
+    stub = axis2_stub_create_EucalyptusCC(env, client_home, endpoint_uri);
+
+    rc = InitWSSEC(env, stub, policyFile);
+    if (rc) {
+        printf("cannot initialize WS-SEC policy (%s)\n", policyFile);
+        exit(1);
+    }
+
+    rc = cc_shutdownService(env, stub);
+    if (rc != 0) {
+        printf("cc_shutdownService() failed\n");
+        exit(1);
+    }
+
+    sleep(10);
+    exit(0);
 }

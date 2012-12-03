@@ -101,6 +101,7 @@ public class ISCSIManager implements StorageExportManager {
 
 	// TODO define fault IDs in a enum
 	private static final int TGT_HOSED = 2000;
+	private static final int TGT_CORRUPTED = 2002;
 
 	@Override
 	public void checkPreconditions() throws EucalyptusCloudException {		
@@ -108,6 +109,7 @@ public class ISCSIManager implements StorageExportManager {
 
 		CommandOutput output = execute(new String[] { ROOT_WRAP, "tgtadm", "--help" }, timeout);
 		if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
+			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "tgtadm --help").withVar("error", output.error).log();
 			throw new EucalyptusCloudException("tgtadm not found: Is tgt installed?");
 		}
 		
@@ -115,18 +117,37 @@ public class ISCSIManager implements StorageExportManager {
 		if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
 			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
 			LOG.info("Attempting to start tgtd ISCSI daemon");
-			output = execute(new String[] { ROOT_WRAP, "service", "tgt", "status" }, timeout);
+			output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "status" }, timeout);
 			if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
 				output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "start" }, timeout);
 				if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
+					Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "service tgt start").withVar("error", output.error).log();
 					throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
 				}
 			} else {
 				output = execute(new String[] { ROOT_WRAP, "service", "tgt", "start" } ,timeout);
 				if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
+					Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "service tgt start").withVar("error", output.error).log();
 					throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
 				}
 			}
+		}
+	}
+
+	@Override
+	public void check() throws EucalyptusCloudException {
+		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
+
+		CommandOutput output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "status" }, timeout);
+		if (StringUtils.isNotBlank(output.error)) {
+			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "service tgt status").withVar("error", output.error).log();
+			throw new EucalyptusCloudException("tgt service check failed with error: " + output.error);
+		}
+		
+		output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}, timeout);
+		if (StringUtils.isNotBlank(output.error)) {
+			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "tgtadm --lld iscsi --mode target --op show").withVar("error", output.error).log();
+			throw new EucalyptusCloudException("tgtadm command failed with error: " + output.error);
 		}
 	}
 

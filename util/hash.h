@@ -64,9 +64,9 @@
 #define INCLUDE_HASH_H
 
 int hash_b64enc_string(const char *in, char **out);
-int str2md5str (char * buf, unsigned int buf_size, const char * str);
-uint32_t jenkins (const char * key, size_t len);
-int hexjenkins (char * buf, unsigned int buf_size, const char * str);
-char * file2md5str (const char *path);
+int str2md5str(char *buf, unsigned int buf_size, const char *str);
+uint32_t jenkins(const char *key, size_t len);
+int hexjenkins(char *buf, unsigned int buf_size, const char *str);
+char *file2md5str(const char *path);
 
 #endif

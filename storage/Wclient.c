@@ -68,8 +68,8 @@
 #include <time.h>
 #include <assert.h>
 #include <string.h>
-#include <unistd.h> /* getopt */
-#include <fcntl.h> /* open */
+#include <unistd.h>             /* getopt */
+#include <fcntl.h>              /* open */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "euca_auth.h"
@@ -78,23 +78,23 @@
 #include "walrus.h"
 #include "http.h"
 
-#define BUFSIZE 262144 /* should be big enough for CERT and the signature */
-#define STRSIZE 1024 /* for short strings: files, hosts, URLs */
+#define BUFSIZE 262144          /* should be big enough for CERT and the signature */
+#define STRSIZE 1024            /* for short strings: files, hosts, URLs */
 #define WALRUS_ENDPOINT "/services/Walrus"
 #define DEFAULT_HOST_PORT "localhost:8773"
 #define DEFAULT_COMMAND "GetObject"
 #define USAGE { fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject|HttpPut] -h [host:port] -u [URL] -m [manifest] -f [in|out file] -l [login] -p [password] [-z]\n"); exit (1); }
 char debug = 1;
 
-int main (int argc, char * argv[])
+int main(int argc, char *argv[])
 {
-    char * command = DEFAULT_COMMAND;
-    char * hostport = NULL;
-    char * manifest = NULL;
-    char * file_name = NULL;
-    char * url = NULL;
-    char * login = NULL;
-    char * password = NULL;
+    char *command = DEFAULT_COMMAND;
+    char *hostport = NULL;
+    char *manifest = NULL;
+    char *file_name = NULL;
+    char *url = NULL;
+    char *login = NULL;
+    char *password = NULL;
     int do_compress = 0;
     int ch;
 
@@ -132,74 +132,73 @@ int main (int argc, char * argv[])
     argc -= optind;
     argv += optind;
 
-    if (argc>0) {
+    if (argc > 0) {
         command = argv[0];
     }
 
     int do_get;
-    if ( strcmp (command, "GetDecryptedImage")==0
-         || strcmp (command, "GetObject")==0 ) {
-        if (manifest==NULL) {
-            fprintf (stderr, "Error: manifest must be specified\n");
+    if (strcmp(command, "GetDecryptedImage") == 0 || strcmp(command, "GetObject") == 0) {
+        if (manifest == NULL) {
+            fprintf(stderr, "Error: manifest must be specified\n");
             USAGE;
         }
         do_get = 1;
-    } else if ( strcmp (command, "HttpPut")==0) {
-        if (url==NULL || file_name==NULL) {
-            fprintf (stderr, "Error: URL and input file must be specified\n");
+    } else if (strcmp(command, "HttpPut") == 0) {
+        if (url == NULL || file_name == NULL) {
+            fprintf(stderr, "Error: URL and input file must be specified\n");
             USAGE;
         }
         do_get = 0;
     } else {
-        fprintf (stderr, "Error: unknown command [%s]\n", command);
+        fprintf(stderr, "Error: unknown command [%s]\n", command);
         USAGE;
     }
 
     if (do_get) {
         /* use a temporary file for network data */
-        char * tmp_name = strdup ("walrus-download-XXXXXX");
-        int tmp_fd = safe_mkstemp (tmp_name);
-        if (tmp_fd<0) {
-            fprintf (stderr, "Error: failed to create a temporary file\n");
+        char *tmp_name = strdup("walrus-download-XXXXXX");
+        int tmp_fd = safe_mkstemp(tmp_name);
+        if (tmp_fd < 0) {
+            fprintf(stderr, "Error: failed to create a temporary file\n");
             USAGE;
         }
-        close (tmp_fd);
+        close(tmp_fd);
 
         int result;
-        char request [STRSIZE];
+        char request[STRSIZE];
         if (hostport) {
-            snprintf (request, STRSIZE, "http://%s%s/%s", hostport, WALRUS_ENDPOINT, manifest);
-            if ( strcmp(command, "GetObject")==0 ) {
-                result = walrus_object_by_url (request, tmp_name, do_compress);
+            snprintf(request, STRSIZE, "http://%s%s/%s", hostport, WALRUS_ENDPOINT, manifest);
+            if (strcmp(command, "GetObject") == 0) {
+                result = walrus_object_by_url(request, tmp_name, do_compress);
             } else {
-                result = walrus_image_by_manifest_url (request, tmp_name, do_compress);
+                result = walrus_image_by_manifest_url(request, tmp_name, do_compress);
             }
         } else {
-            safe_strncpy (request, manifest, STRSIZE);
-            if ( strcmp(command, "GetObject")==0 ) {
-                result = walrus_object_by_path (request, tmp_name, do_compress);
+            safe_strncpy(request, manifest, STRSIZE);
+            if (strcmp(command, "GetObject") == 0) {
+                result = walrus_object_by_path(request, tmp_name, do_compress);
             } else {
-                result = walrus_image_by_manifest_path (request, tmp_name, do_compress);
+                result = walrus_image_by_manifest_path(request, tmp_name, do_compress);
             }
         }
 
         if (result) {
             /* error has occured */
-            cat (tmp_name);
-            fprintf (stderr, "\n"); /* in case error doesn't end with a newline */
-            remove (tmp_name);
+            cat(tmp_name);
+            fprintf(stderr, "\n");  /* in case error doesn't end with a newline */
+            remove(tmp_name);
         } else {
             /* all's well */
             if (file_name) {
-                rename (tmp_name, file_name);
+                rename(tmp_name, file_name);
             } else {
-                fprintf (stderr, "Saved output in %s\n", tmp_name);
+                fprintf(stderr, "Saved output in %s\n", tmp_name);
             }
         }
 
-        free (tmp_name);
-    } else { // HttpPut
-        int result = http_put (file_name, url, login, password);
+        free(tmp_name);
+    } else {                    // HttpPut
+        int result = http_put(file_name, url, login, password);
     }
     return 0;
 }

@@ -65,33 +65,28 @@ package com.eucalyptus.util.async;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 
-public class NOOP implements RemoteCallback {
-  public NOOP( ) {}
-  
-  public void fireException( Throwable throwable ) {}
-  
-  public void fire( BaseMessage msg ) {}
-  
-  public void initialize( BaseMessage msg ) throws Exception {}
-  
+public class NOOP implements RemoteCallback<BaseMessage,BaseMessage> {
+
   /**
    * @see com.eucalyptus.util.Callback.TwiceChecked#initialize(java.lang.Object)
-   * @param request
-   * @throws Exception
    */
   @Override
-  public void initialize( Object request ) throws Exception {}
+  public void initialize( BaseMessage request ) throws Exception {}
   
   /**
    * @see com.eucalyptus.util.Callback#fire(java.lang.Object)
-   * @param t
    */
   @Override
-  public void fire( Object t ) {}
-  
+  public void fire( BaseMessage t ) {}
+
+  /**
+   * @see com.eucalyptus.util.Callback.Checked#fireException(Throwable)
+   */
+  @Override
+  public void fireException( Throwable throwable ) {}
+
   /**
    * @see com.eucalyptus.util.async.RemoteCallback#getRequest()
-   * @return
    */
   @Override
   public BaseMessage getRequest( ) {

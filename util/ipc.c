@@ -63,7 +63,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#define _FILE_OFFSET_BITS 64 // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -71,12 +71,12 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <fcntl.h> /* For O_* */
+#include <fcntl.h>              /* For O_* */
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
-#include "misc.h" /* logprintfl */
+#include "misc.h"               /* logprintfl */
 #include "ipc.h"
 
 /* these are wrappers support BOTH SYS V semaphores and the POSIX named
@@ -84,73 +84,73 @@
 
 #define DECLARE_ARG union semun { int val; struct semid_ds *buf; ushort *array; } arg
 
-sem * sem_alloc (const int val, const char * name)
+sem *sem_alloc(const int val, const char *name)
 {
-    return sem_realloc (val, name, O_EXCL);
+    return sem_realloc(val, name, O_EXCL);
 }
 
-sem * sem_realloc (const int val, const char * name, int flags) 
+sem *sem_realloc(const int val, const char *name, int flags)
 {
     DECLARE_ARG;
-    
-    assert (name);
-    sem * s = malloc (sizeof (sem));
-    if (s==NULL) 
+
+    assert(name);
+    sem *s = malloc(sizeof(sem));
+    if (s == NULL)
         return NULL;
-    bzero (s, sizeof (sem));
+    bzero(s, sizeof(sem));
     s->sysv = -1;
     s->flags = flags;
-    
-    if (name && !strcmp(name, "mutex")) { /* use pthread mutex */
+
+    if (name && !strcmp(name, "mutex")) {   /* use pthread mutex */
         s->usemutex = 1;
         s->mutcount = val;
         s->mutwaiters = 0;
         pthread_mutex_init(&(s->mutex), NULL);
         pthread_cond_init(&(s->cond), NULL);
-    } else if (name) { /* named semaphores */
+    } else if (name) {          /* named semaphores */
         if (s->flags & O_EXCL) {
-            if ( sem_unlink (name) == 0) { /* clean up in case previous sem holder crashed */
-                logprintfl (EUCAINFO, "cleaning up old semaphore %s\n", name);
+            if (sem_unlink(name) == 0) {    /* clean up in case previous sem holder crashed */
+                logprintfl(EUCAINFO, "cleaning up old semaphore %s\n", name);
             }
         }
-        if ((s->posix = sem_open (name, O_CREAT | flags, 0644, val))==SEM_FAILED) {
-            free (s);
+        if ((s->posix = sem_open(name, O_CREAT | flags, 0644, val)) == SEM_FAILED) {
+            free(s);
             return NULL;
         }
-        s->name = strdup (name);
+        s->name = strdup(name);
 
-    } else { /* SYS V IPC semaphores */
-        s->sysv = semget (IPC_PRIVATE, /* private to process & children */
-                        1, /* only need one */
-                        IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR /* user-only */);
-        if (s->sysv<0) {
-            free (s);
+    } else {                    /* SYS V IPC semaphores */
+        s->sysv = semget(IPC_PRIVATE,   /* private to process & children */
+                         1,     /* only need one */
+                         IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR /* user-only */ );
+        if (s->sysv < 0) {
+            free(s);
             return NULL;
         }
-        
+
         /* set the value */
         arg.val = val;
         if (semctl(s->sysv, 0, SETVAL, arg) == -1) {
-            free (s);
+            free(s);
             return NULL;
         }
     }
-    
+
     return s;
 }
 
 // allocates sem structure from an already allocated Posix named
 // semaphore; sem_p/v can be used with it; freeing the sem struct
 // also closes the Posix semaphore that was passed in
-sem * sem_alloc_posix (sem_t * external_lock)
+sem *sem_alloc_posix(sem_t * external_lock)
 {
-    sem * s = malloc (sizeof (sem));
+    sem *s = malloc(sizeof(sem));
     if (s == NULL)
         return NULL;
-    bzero (s, sizeof (sem));
+    bzero(s, sizeof(sem));
     s->posix = external_lock;
-    s->name = strdup ("unknown");
-    
+    s->name = strdup("unknown");
+
     return s;
 }
 
@@ -158,60 +158,60 @@ sem * sem_alloc_posix (sem_t * external_lock)
 // The second parameter tells it not to log the event 
 // (useful for avoiding infinite recursion when locking
 // from the logging code).
-int sem_prolaag (sem * s, boolean do_log)
+int sem_prolaag(sem * s, boolean do_log)
 {
     int rc;
 
     if (s && do_log) {
-        char addr [24];
-        snprintf (addr, sizeof (addr), "%lx", (unsigned long)s);
-        logprintfl (EUCAEXTREME, "%s locking\n", (s->name)?(s->name):(addr));
+        char addr[24];
+        snprintf(addr, sizeof(addr), "%lx", (unsigned long)s);
+        logprintfl(EUCAEXTREME, "%s locking\n", (s->name) ? (s->name) : (addr));
     }
-    
+
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
-	s->mutwaiters++;
-	while(s->mutcount == 0) {
-	  pthread_cond_wait(&(s->cond), &(s->mutex));
-	}
-	s->mutwaiters--;
-	s->mutcount--;
-	rc = pthread_mutex_unlock(&(s->mutex));
-	return(rc);
+        s->mutwaiters++;
+        while (s->mutcount == 0) {
+            pthread_cond_wait(&(s->cond), &(s->mutex));
+        }
+        s->mutwaiters--;
+        s->mutcount--;
+        rc = pthread_mutex_unlock(&(s->mutex));
+        return (rc);
     }
 
     if (s && s->posix) {
-        return sem_wait (s->posix);
+        return sem_wait(s->posix);
     }
 
     if (s && s->sysv > 0) {
-        struct sembuf sb = {0, -1, 0};
-        return semop (s->sysv, &sb, 1);
+        struct sembuf sb = { 0, -1, 0 };
+        return semop(s->sysv, &sb, 1);
     }
 
     return -1;
 }
 
 // The semaphore increment (aka lock acquisition) function used throughout.
-int sem_p (sem * s)
+int sem_p(sem * s)
 {
-    return sem_prolaag (s, TRUE);
+    return sem_prolaag(s, TRUE);
 }
 
 // Semaphore decrement (aka lock release) function.
 // The second parameter tells it not to log the event 
 // (useful for avoiding infinite recursion when unlocking
 // from the logging code).
-int sem_verhogen (sem * s, boolean do_log)
+int sem_verhogen(sem * s, boolean do_log)
 {
     int rc;
 
     if (s && do_log) {
-        char addr [24];
-        snprintf (addr, sizeof (addr), "%lx", (unsigned long)s);
-        logprintfl (EUCAEXTREME, "%s unlocking\n", (s->name)?(s->name):(addr));
+        char addr[24];
+        snprintf(addr, sizeof(addr), "%lx", (unsigned long)s);
+        logprintfl(EUCAEXTREME, "%s unlocking\n", (s->name) ? (s->name) : (addr));
     }
-    
+
     if (s && s->usemutex) {
         rc = pthread_mutex_lock(&(s->mutex));
         if (s->mutwaiters > 0) {
@@ -219,43 +219,43 @@ int sem_verhogen (sem * s, boolean do_log)
         }
         s->mutcount++;
         rc = pthread_mutex_unlock(&(s->mutex));
-        return(rc);
+        return (rc);
     }
-    
+
     if (s && s->posix) {
-        return sem_post (s->posix);
+        return sem_post(s->posix);
     }
 
     if (s && s->sysv > 0) {
-        struct sembuf sb = {0, 1, 0};
-        return semop (s->sysv, &sb, 1);
+        struct sembuf sb = { 0, 1, 0 };
+        return semop(s->sysv, &sb, 1);
     }
-    
+
     return -1;
 }
 
 // The semaphore decrement (aka lock release) function used throughout.
-int sem_v (sem * s)
+int sem_v(sem * s)
 {
-    return sem_verhogen (s, TRUE);
+    return sem_verhogen(s, TRUE);
 }
 
-void sem_free (sem * s)
+void sem_free(sem * s)
 {
     DECLARE_ARG;
-    
+
     if (s && s->posix) {
-        sem_close (s->posix);
+        sem_close(s->posix);
         if (s->flags & O_EXCL) {
-            sem_unlink (s->name);            
+            sem_unlink(s->name);
         }
-        free (s->name);
+        free(s->name);
     }
-    
+
     if (s && s->sysv > 0) {
-        semctl (s->sysv, 0, IPC_RMID, arg); /* TODO: check return */
+        semctl(s->sysv, 0, IPC_RMID, arg);  /* TODO: check return */
     }
-    
+
     if (s)
-        free (s);
+        free(s);
 }

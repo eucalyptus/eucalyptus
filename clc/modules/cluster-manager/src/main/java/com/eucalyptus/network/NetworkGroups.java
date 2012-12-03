@@ -67,9 +67,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
@@ -81,15 +83,19 @@ import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
+import com.eucalyptus.cloud.util.Reference;
 import com.eucalyptus.cluster.ClusterConfiguration;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.configurable.Properties;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.network.NetworkGroups.NetworkRangeConfiguration;
+import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
@@ -99,12 +105,17 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
+import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
@@ -123,8 +134,10 @@ public class NetworkGroups {
   public static Integer       GLOBAL_MAX_NETWORK_TAG        = 4096;
   @ConfigurableField( description = "Default min vlan tag." )
   public static Integer       GLOBAL_MIN_NETWORK_TAG        = 1;
+  @ConfigurableField( description = "Minutes before a pending tag allocation timesout and is released." )
+  public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 30;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
-  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 5;
+  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 30;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
@@ -190,8 +203,141 @@ public class NetworkGroups {
       return builder.toString( );
     }
     
+  }  
+  private enum ActiveTags implements Function<NetworkInfoType, Integer> {
+    INSTANCE;
+    private final SetMultimap<String, Integer> backingMap            = HashMultimap.create( );
+    private final SetMultimap<String, Integer> activeTagsByPartition = Multimaps.synchronizedSetMultimap( backingMap );
+    
+    public Integer apply( final NetworkInfoType input ) {
+      return input.getTag( );
+    }
+    
+    /**
+     * Update the cache of currently active network tags based on the most recent reported value.
+     * 
+     * @param cluster
+     * @param activeNetworks
+     */
+    private void update( ServiceConfiguration cluster, List<NetworkInfoType> activeNetworks ) {
+      removeStalePartitions( );
+      Set<Integer> activeTags = Sets.newHashSet( Lists.transform( activeNetworks, ActiveTags.INSTANCE ) );
+      this.activeTagsByPartition.replaceValues( cluster.getPartition( ), activeTags );
+    }
+    
+    /**
+     * Update the {@link #partitionActiveNetworkTags} map by removing any {@code key} values which
+     * no longer have a corresponding service registration.
+     * 
+     * @throws PersistenceException
+     */
+    private void removeStalePartitions( ) throws PersistenceException {
+      Set<String> partitions = Sets.newHashSet( );
+      for ( ServiceConfiguration cc : ServiceConfigurations.list( ClusterController.class ) ) {
+        partitions.add( cc.getPartition( ) );
+      }
+      for ( String stalePartition : Sets.difference( this.activeTagsByPartition.keySet( ), partitions ) ) {
+        this.activeTagsByPartition.removeAll( stalePartition );
+      }
+    }
+    
+    /**
+     * Returns true if the collection of most recently reported active network tags across the whole
+     * system included the argument {@code tag}.
+     * 
+     * @param tag
+     * @return true if {@code tag} is active
+     */
+    private boolean isActive( Integer tag ) {
+      return this.activeTagsByPartition.containsValue( tag );
+    }
   }
   
+  /**
+   * Update network tag information by marking reported tags as being EXTANT and removing previously
+   * EXTANT tags which are no longer reported
+   * 
+   * @param activeNetworks
+   */
+  public static void updateExtantNetworks( ServiceConfiguration cluster, List<NetworkInfoType> activeNetworks ) {
+    ActiveTags.INSTANCE.update( cluster, activeNetworks );
+    /**
+     * For each of the reported active network tags ensure that the locally stored extant network
+     * state reflects that the network has now been EXTANT in the system (i.e. is no longer PENDING)
+     */
+    for ( NetworkInfoType activeNetInfo : activeNetworks ) {
+      EntityTransaction tx = Entities.get( NetworkGroup.class );
+      try {
+        NetworkGroup net = NetworkGroups.lookupByNaturalId( activeNetInfo.getUuid( ) );
+        if ( net.hasExtantNetwork( ) ) {
+          ExtantNetwork exNet = net.extantNetwork( );
+          if ( Reference.State.PENDING.equals( exNet.getState( ) ) ) {
+            LOG.debug( "Found PENDING extant network for " + net.getFullName( ) + " updating to EXTANT." );
+            exNet.setState( Reference.State.EXTANT );
+          } else {
+            LOG.debug( "Found " + exNet.getState( ) + " extant network for " + net.getFullName( ) + ": skipped." );
+          }
+        } else {
+          LOG.warn( "Failed to find extant network for " + net.getFullName( ) );//TODO:GRZE: likely we should be trying to reclaim tag here
+        }
+        tx.commit( );
+      } catch ( Exception ex ) {
+        LOG.debug( ex );
+        Logs.extreme( ).error( ex, ex );
+      } finally {
+        if ( tx.isActive( ) ) tx.rollback( );
+      }
+    }
+    /**
+     * For each defined network group check to see if the extant network is in the set of active
+     * tags and remove it if appropriate.
+     * 
+     * It is appropriate to remove the network when the state of the extant network is
+     * {@link Reference.State.RELEASING}.
+     * 
+     * Otherwise, if {@link ActiveTags#INSTANCE#isActive()} is false and:
+     * <ol>
+     * <li>The state of the extant network is {@link Reference.State.EXTANT}
+     * <li>The state of the extant network is {@link Reference.State.PENDING} and has exceeded
+     * {@link NetworksGroups#NETWORK_TAG_PENDING_TIMEOUT}
+     * </ol>
+     * Then the state of the extant network is updated to {@link Reference.State.RELEASING}.
+     */    
+    try {
+      final List<NetworkGroup> groups = NetworkGroups.lookupAll( null, null );
+      for ( NetworkGroup net : groups ) {
+        final EntityTransaction tx = Entities.get( NetworkGroup.class );
+        try {
+          net = Entities.merge( net );
+          if ( net.hasExtantNetwork( ) ) {
+            ExtantNetwork exNet = net.getExtantNetwork( );
+            Integer exNetTag = exNet.getTag( );
+            if ( !ActiveTags.INSTANCE.isActive( exNetTag ) ) {
+              if ( Reference.State.EXTANT.equals( exNet.getState( ) ) ) {
+                exNet.setState( Reference.State.RELEASING );
+              } else if ( Reference.State.PENDING.equals( exNet.getState( ) )
+                              && exNet.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
+                exNet.setState( Reference.State.RELEASING );
+              } else if ( Reference.State.RELEASING.equals( exNet.getState( ) ) ) {
+                exNet.teardown( );
+                Entities.delete( exNet );
+                net.setExtantNetwork( null );
+              }
+            }
+          }          
+          tx.commit( );
+        } catch ( final Exception ex ) {
+          LOG.debug( ex );
+          Logs.extreme( ).error( ex, ex );
+        } finally {
+          if ( tx.isActive( ) ) tx.rollback( );
+        }
+      }
+    } catch ( MetadataException ex ) {
+      LOG.error( ex );
+    }
+  }
+
   static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
@@ -315,6 +461,19 @@ public class NetworkGroups {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+    }
+  }
+  
+  public static NetworkGroup lookupByNaturalId( final String uuid ) throws NoSuchMetadataException {
+    EntityTransaction db = Entities.get( NetworkGroup.class );
+    try {
+      NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withNaturalId( uuid ) );
+      db.commit( );
+      return entity;
+    } catch ( Exception ex ) {
+      Logs.exhaust( ).error( ex, ex );
+      db.rollback( );
+      throw new NoSuchMetadataException( "Failed to find security group: " + uuid, ex );
     }
   }
   

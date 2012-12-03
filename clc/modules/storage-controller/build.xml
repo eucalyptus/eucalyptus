@@ -61,46 +61,48 @@
   -->
 
 <project name="eucalyptus-storagecontroller" basedir=".">
-
 	<import file="../module-inc.xml" />
 	<!--================================== BUILD TARGETS ==================================-->
-  <property name="builder.suffix" value="jni" />
+	<target name="indent-module">
+		<native-make dir="native" target="indent" />
+	</target>
+	<property name="builder.suffix" value="jni" />
 	<target name="do-build-jni">
-		<antcall target="build-jni"/>
+		<antcall target="build-jni" />
 	</target>
 	<target name="build-jni">
 		<antcall target="build-java" />
-    <antcall target="jar" />
+		<antcall target="jar" />
 		<mkdir dir="include" />
 		<javah classpath="${build.dir}" destdir="include" force="yes">
 			<class name="com.eucalyptus.storage.OverlayManager" />
 			<class name="com.eucalyptus.storage.AOEManager" />
 			<class name="com.eucalyptus.storage.DASManager" />
 		</javah>
-		<native-make dir="native" target="all"/>
+		<native-make dir="native" target="all" />
 	</target>
 
 	<target name="clean-module">
 		<delete dir="h" />
 		<delete dir="include" />
-		<native-make dir="native" target="clean"/>
+		<native-make dir="native" target="clean" />
 	</target>
 	<target name="distclean-module">
-		<native-make dir="native" target="distclean"/>
+		<native-make dir="native" target="distclean" />
 	</target>
 	<target name="uninstall-module">
-		<native-make dir="native" target="uninstall"/>
+		<native-make dir="native" target="uninstall" />
 	</target>
 	<!--================================== install target ==================================-->
 	<target name="install">
-    <copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
-      <fileset dir="conf">
-        <include name="**/*" />
-      </fileset>
-    </copy>
-    <copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
-      <fileset file="${jar.file}" />
-    </copy>
-		<native-make dir="native" target="install"/>
+		<copy todir="${DESTDIR}${euca.conf.dir}" overwrite="true">
+			<fileset dir="conf">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+		<copy todir="${DESTDIR}${euca.lib.dir}" overwrite="true">
+			<fileset file="${jar.file}" />
+		</copy>
+		<native-make dir="native" target="install" />
 	</target>
 </project>

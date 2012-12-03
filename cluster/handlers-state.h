@@ -70,17 +70,17 @@
 #include <vnetwork.h>
 #include <linux/limits.h>
 
-int doDescribeServices(ncMetadata *ccMeta, serviceInfoType *serviceIds, int serviceIdsLen, serviceStatusType **outStatuses, int *outStatusesLen);
-int doStartService(ncMetadata *ccMeta);
-int doStopService(ncMetadata *ccMeta);
-int doEnableService(ncMetadata *ccMeta);
-int doDisableService(ncMetadata *ccMeta);
-int doShutdownService(ncMetadata *ccMeta);
+int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
+int doStartService(ncMetadata * ccMeta);
+int doStopService(ncMetadata * ccMeta);
+int doEnableService(ncMetadata * ccMeta);
+int doDisableService(ncMetadata * ccMeta);
+int doShutdownService(ncMetadata * ccMeta);
 
-int validCmp(ccInstance *inst, void *in);
-int instNetParamsSet(ccInstance *inst, void *in);
-int instNetReassignAddrs(ccInstance *inst, void *in);
-int instIpSync(ccInstance *inst, void *in);
+int validCmp(ccInstance * inst, void *in);
+int instNetParamsSet(ccInstance * inst, void *in);
+int instNetReassignAddrs(ccInstance * inst, void *in);
+int instIpSync(ccInstance * inst, void *in);
 int clean_network_state(void);
 
 #endif

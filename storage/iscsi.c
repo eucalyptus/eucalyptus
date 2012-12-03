@@ -67,11 +67,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h> /* close */
+#include <unistd.h>             /* close */
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h> /* open */
+#include <fcntl.h>              /* open */
 #include <signal.h>
 #include "eucalyptus.h"
 #include <sys/types.h>
@@ -85,96 +85,96 @@
 #define DISCONNECT_TIMEOUT 120
 #define GET_TIMEOUT 60
 
-static char home [MAX_PATH] = "";
-static char connect_storage_cmd_path [MAX_PATH];
-static char disconnect_storage_cmd_path [MAX_PATH];
-static char get_storage_cmd_path [MAX_PATH];
-static sem * iscsi_sem; // for serializing attach and detach invocations
+static char home[MAX_PATH] = "";
+static char connect_storage_cmd_path[MAX_PATH];
+static char disconnect_storage_cmd_path[MAX_PATH];
+static char get_storage_cmd_path[MAX_PATH];
+static sem *iscsi_sem;          // for serializing attach and detach invocations
 
-void init_iscsi (const char * euca_home)
+void init_iscsi(const char *euca_home)
 {
-  const char * tmp;
-  if (euca_home) {
-    tmp = euca_home;
-  } else {
-    tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
-    if (!tmp) {
-      tmp = "/opt/eucalyptus";
+    const char *tmp;
+    if (euca_home) {
+        tmp = euca_home;
+    } else {
+        tmp = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        if (!tmp) {
+            tmp = "/opt/eucalyptus";
+        }
     }
-  } 
-  safe_strncpy (home, tmp, sizeof (home));
-  snprintf(connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
-  snprintf(disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
-  snprintf(get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
-  iscsi_sem = sem_alloc(1, "mutex");
+    safe_strncpy(home, tmp, sizeof(home));
+    snprintf(connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
+    snprintf(disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
+    snprintf(get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
+    iscsi_sem = sem_alloc(1, "mutex");
 }
 
 char *connect_iscsi_target(const char *dev_string)
 {
-  char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
-  int ret;
+    char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
+    int ret;
 
-  assert(strlen(home));
+    assert(strlen(home));
 
-  snprintf(command, MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
-  logprintfl(EUCADEBUG, "invoking `%s`\n", command);
+    snprintf(command, MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
+    logprintfl(EUCADEBUG, "invoking `%s`\n", command);
 
-  sem_p(iscsi_sem);
-  ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, CONNECT_TIMEOUT);
-  sem_v(iscsi_sem);
-  logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
+    sem_p(iscsi_sem);
+    ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, CONNECT_TIMEOUT);
+    sem_v(iscsi_sem);
+    logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
-  if (ret == 0) {
-    return strdup(stdout_str);
-  } else {
-    return NULL;
-  }
+    if (ret == 0) {
+        return strdup(stdout_str);
+    } else {
+        return NULL;
+    }
 }
 
-int disconnect_iscsi_target(const char *dev_string) 
+int disconnect_iscsi_target(const char *dev_string)
 {
-  char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
-  int ret;
+    char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
+    int ret;
 
-  assert(strlen(home));
+    assert(strlen(home));
 
-  snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
-  logprintfl(EUCADEBUG, "invoking `%s`\n", command);
+    snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
+    logprintfl(EUCADEBUG, "invoking `%s`\n", command);
 
-  sem_p(iscsi_sem);
-  ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, DISCONNECT_TIMEOUT);
-  sem_v(iscsi_sem);
-  logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
+    sem_p(iscsi_sem);
+    ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, DISCONNECT_TIMEOUT);
+    sem_v(iscsi_sem);
+    logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
-  return ret;
+    return ret;
 }
 
-char *get_iscsi_target(const char *dev_string) 
+char *get_iscsi_target(const char *dev_string)
 {
-  char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
-  int ret;
+    char command[MAX_PATH], stdout_str[MAX_OUTPUT], stderr_str[MAX_OUTPUT];
+    int ret;
 
-  assert(strlen(home));
+    assert(strlen(home));
 
-  snprintf(command, MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
-  logprintfl(EUCADEBUG, "invoking `%s`\n", command);
+    snprintf(command, MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
+    logprintfl(EUCADEBUG, "invoking `%s`\n", command);
 
-  sem_p(iscsi_sem);
-  ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, GET_TIMEOUT);
-  sem_v(iscsi_sem);
-  logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
+    sem_p(iscsi_sem);
+    ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, GET_TIMEOUT);
+    sem_v(iscsi_sem);
+    logprintfl(EUCADEBUG, "returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
-  if (ret == 0) {
-    return strdup(stdout_str);
-  } else {
-    return NULL;
-  }
+    if (ret == 0) {
+        return strdup(stdout_str);
+    } else {
+        return NULL;
+    }
 }
 
-int check_iscsi(const char* dev_string) 
+int check_iscsi(const char *dev_string)
 {
-  if (strchr (dev_string, ',') == NULL) {
-    return 0;
-  }
-  return 1;
+    if (strchr(dev_string, ',') == NULL) {
+        return 0;
+    }
+    return 1;
 }

@@ -61,7 +61,9 @@
   -->
 
 <project name="eucalyptus-msgs" basedir=".">
-  <property name="builder.suffix" value="groovy" />
-  <import file="../module-inc.xml"/>
-  <!--================================== BUILD TARGETS ==================================-->
+	<property name="builder.suffix" value="groovy" />
+	<import file="../module-inc.xml"/>
+	<!--================================== BUILD TARGETS ==================================-->
+	<target name="indent-module">
+	</target>
 </project>

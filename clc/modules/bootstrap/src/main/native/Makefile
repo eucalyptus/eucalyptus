@@ -88,6 +88,12 @@ install: eucalyptus-cloud
 	$(INSTALL) -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 0755 eucalyptus-cloud $(DESTDIR)$(sbindir)/eucalyptus-cloud
 
+indent:
+	@for idfile in *.[ch]; do \
+		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
+	done
+
 clean:
 	@$(RM) -f $(OBJS) eucalyptus-cloud
 

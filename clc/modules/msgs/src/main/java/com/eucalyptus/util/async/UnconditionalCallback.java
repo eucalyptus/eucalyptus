@@ -64,10 +64,10 @@ package com.eucalyptus.util.async;
 
 import com.eucalyptus.util.Callback;
 
-public abstract class UnconditionalCallback implements Callback {
+public abstract class UnconditionalCallback<T> implements Callback<T> {
   
   @Override
-  public void fire( Object o ) {
+  public void fire( T t ) {
     this.fire( );
   }
   

@@ -27,14 +27,14 @@
 #include "misc.h"
 
 typedef struct configEntry_t {
-  char *key;
-  char *defaultValue;
+    char *key;
+    char *defaultValue;
 } configEntry;
 
-void configInitValues (configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);
+void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);
 char *configFileValue(const char *key);
 int configFileValueLong(const char *key, long *val);
-int isConfigModified (char configFiles[][MAX_PATH], int numFiles);
+int isConfigModified(char configFiles[][MAX_PATH], int numFiles);
 int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
 void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix);
 

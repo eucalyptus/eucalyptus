@@ -474,13 +474,7 @@ public class VmInstances {
     } else {
       failureHander = Callbacks.noopFailure();
     }
-    final Request request = AsyncRequests.newRequest( callback ).then( failureHander );
-    try {
-      request.dispatch( vm.getPartition() );
-    } catch ( NoSuchElementException e ) {
-      // No message was sent, so handle failure manually
-      request.getCallback().fireException( e );
-    }
+    AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {

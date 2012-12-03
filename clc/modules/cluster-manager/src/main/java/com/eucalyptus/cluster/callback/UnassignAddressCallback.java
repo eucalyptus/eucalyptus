@@ -78,6 +78,7 @@ import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmNetworkConfig;
+import com.google.common.base.Function;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressResponseType;
 import edu.ucsb.eucalyptus.msgs.UnassignAddressType;
 
@@ -126,14 +127,14 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   }
   
   public void clearVmAddress( ) {
-    try {
-      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
-      if ( vm.getPublicAddress( ).equals( super.getRequest( ).getSource( ) ) ) {
-        vm.updatePublicAddress( vm.getPrivateAddress( ) );
+    final String privateIp = super.getRequest( ).getDestination( );
+    final String publicIp = super.getRequest( ).getSource( );
+    Addresses.updatePublicIPOnMatch( privateIp, publicIp, new Function<VmInstance,String>(){
+      @Override
+      public String apply( final VmInstance vmInstance ) {
+        return vmInstance.getPrivateAddress();
       }
-    } catch ( NoSuchElementException e ) {} catch ( Exception t ) {
-      LOG.debug( t, t );
-    }
+    } );
   }
   
   @Override
@@ -166,8 +167,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
   @Override
   public void fireException( Throwable e ) {
     try {
-      VmInstance vm = VmInstances.lookupByPrivateIp( super.getRequest( ).getDestination( ) );
-      vm.updatePublicAddress( VmNetworkConfig.DEFAULT_IP );
+      Addresses.updatePublicIP( super.getRequest( ).getDestination( ), VmNetworkConfig.DEFAULT_IP );
     } catch ( Exception t ) {
       LOG.debug( t, t );
     } finally {
@@ -188,7 +188,7 @@ public class UnassignAddressCallback extends MessageCallback<UnassignAddressType
     LOG.error( e, e );
     LOG.warn( "Address potentially in an inconsistent state: " + LogUtil.dumpObject( this.address ) );
   }
-  
+
   /**
    * @see com.eucalyptus.util.Expendable#duplicateOf
    */

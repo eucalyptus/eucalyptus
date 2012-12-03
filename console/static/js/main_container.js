@@ -71,7 +71,10 @@
          help_icon_class : 'help-euca',
        });
       this._aboutDialog.find('#version').html($.eucaData.g_session['version']);
-      this._aboutDialog.find('#admin-url').attr('href', $.eucaData.g_session['admin_console_url']);
+      var admin_url = $.eucaData.g_session['admin_console_url'];
+      if(admin_url.indexOf('://localhost:') > 0)
+        admin_url = admin_url.replace('localhost', location.hostname)
+      this._aboutDialog.find('#admin-url').attr('href', admin_url);
 
       $(window).hashchange( function(){
         thisObj._windowsHashChanged();

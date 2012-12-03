@@ -70,74 +70,74 @@
 #include <unistd.h>
 #include <pwd.h>
 
-int main (int argc, char **argv) 
+int main(int argc, char **argv)
 {
     int rc;
-    
-    if (argc < 2) { 
+
+    if (argc < 2) {
         exit(1);
     }
-    
+
     if (!strcmp("mount", argv[1])) {
         if (argc < 4) {
             exit(1);
         }
-        
-        char * source = argv [2];
-        char * target = argv [3];
-        char * extra = NULL;
+
+        char *source = argv[2];
+        char *target = argv[3];
+        char *extra = NULL;
         if (argc > 4)
-            extra = argv [4];
-        
-        if (extra && !strcmp("--bind", extra)) { // option --bind is not used by Eucalyptus, this is for debugging
-            rc = mount (source, target, NULL, MS_BIND, NULL);
+            extra = argv[4];
+
+        if (extra && !strcmp("--bind", extra)) {    // option --bind is not used by Eucalyptus, this is for debugging
+            rc = mount(source, target, NULL, MS_BIND, NULL);
             if (rc) {
                 perror("mount");
                 exit(1);
             }
 
-        } else { // normal mount, with or without the userid
+        } else {                // normal mount, with or without the userid
 
-            char * filesystems [] = { "ext4", "ext3", "ext2" }; // file systems to try, in that order
-            for (int i=0; i < (sizeof(filesystems)/sizeof(char *)); i++) {
-                rc = mount (source, target, filesystems [i], MS_MGC_VAL, NULL);
+            char *filesystems[] = { "ext4", "ext3", "ext2" };   // file systems to try, in that order
+            for (int i = 0; i < (sizeof(filesystems) / sizeof(char *)); i++) {
+                rc = mount(source, target, filesystems[i], MS_MGC_VAL, NULL);
                 if (rc) {
                     perror("mount");
                 } else {
                     break;
                 }
             }
-            if (rc) { // none of the file systems we tried worked
+            if (rc) {           // none of the file systems we tried worked
                 exit(1);
             }
 
-            if (extra) { // extra parameter is the username to chown the target to
-                struct passwd * pass = getpwnam(extra);
+            if (extra) {        // extra parameter is the username to chown the target to
+                struct passwd *pass = getpwnam(extra);
                 if (pass == NULL) {
                     perror("getpwnam");
                     exit(1);
                 }
                 uid_t uid = pass->pw_uid;
-                rc = chown (target, uid, (gid_t)-1);
+                rc = chown(target, uid, (gid_t) - 1);
                 if (rc) {
                     perror("chown");
                     exit(1);
                 }
             }
         }
- 
+
     } else if (!strcmp("umount", argv[1])) {
         if (argc < 3) {
             exit(1);
         }
-        
-        rc = umount (argv[2]);
+
+        rc = umount(argv[2]);
         if (rc) {
             perror("umount");
             exit(1);
         }
 
-    } else { // unknown command
+    } else {                    // unknown command
         exit(1);
     }
 
