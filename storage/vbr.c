@@ -575,7 +575,10 @@ static void update_vbr_with_backing_info(artifact * a)
     virtualBootRecord *vbr = a->vbr;
 
     assert(a->bb);
-    if (!a->must_be_file && strlen(blockblob_get_dev(a->bb)) && (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) {  // without snapshots we can use files
+    if (!a->must_be_file && // not required to be a file
+        strlen(blockblob_get_dev(a->bb)) && // there is a block device
+        blockblob_get_file(a->bb)==NULL && // there is NO file access
+        (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) {  // without snapshots we can use files
         safe_strncpy(vbr->backingPath, blockblob_get_dev(a->bb), sizeof(vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
