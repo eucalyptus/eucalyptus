@@ -106,7 +106,7 @@ int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int se
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
     // TODO: for now, return error if list of services is passed in as parameter
@@ -204,7 +204,7 @@ int doStartService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     // this is actually a NOP
@@ -237,7 +237,7 @@ int doStopService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
@@ -269,7 +269,7 @@ int doEnableService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
@@ -282,7 +282,7 @@ int doEnableService(ncMetadata * ccMeta)
     } else if (config->ccState != ENABLED) {
         logprintfl(EUCADEBUG, "enabling service\n");
         ret = 0;
-        // tell monitor thread to (re)enable  
+        // tell monitor thread to (re)enable
         config->kick_monitor_running = 0;
         config->kick_network = 1;
         config->kick_dhcp = 1;
@@ -321,7 +321,7 @@ int doDisableService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
@@ -353,7 +353,7 @@ int doShutdownService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);

@@ -153,7 +153,7 @@ int doBundleInstance(ncMetadata * ccMeta, char *instanceId, char *bucketName, ch
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG,
                "params: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n",
                SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey), SP(S3Policy),
@@ -231,7 +231,7 @@ int doBundleRestartInstance(ncMetadata * ccMeta, char *instanceId)
     if (rc || ccIsEnabled())
         return (1);
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, instanceId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId));
     if (instanceId == NULL) {
         logprintfl(EUCAERROR, "bad input params\n");
@@ -291,7 +291,7 @@ int doCancelBundleTask(ncMetadata * ccMeta, char *instanceId)
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, instanceId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(instanceId));
     if (!instanceId) {
         logprintfl(EUCAERROR, "bad input params\n");
@@ -896,7 +896,7 @@ int doAttachVolume(ncMetadata * ccMeta, char *volumeId, char *instanceId, char *
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"),
                SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev));
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
@@ -957,7 +957,7 @@ int doDetachVolume(ncMetadata * ccMeta, char *volumeId, char *instanceId, char *
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n",
                SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
@@ -1012,7 +1012,7 @@ int doConfigureNetwork(ncMetadata * ccMeta, char *accountId, char *type, int nam
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG,
                "params: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
                ccMeta ? SP(ccMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol),
@@ -1096,7 +1096,7 @@ int doAssignAddress(ncMetadata * ccMeta, char *uuid, char *src, char *dst)
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: src=%s, dst=%s\n", SP(src), SP(dst));
 
     if (!src || !dst || !strcmp(src, "0.0.0.0")) {
@@ -1182,7 +1182,7 @@ int doDescribePublicAddresses(ncMetadata * ccMeta, publicip ** outAddresses, int
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     ret = 0;
@@ -1215,7 +1215,7 @@ int doUnassignAddress(ncMetadata * ccMeta, char *src, char *dst)
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
 
     logprintfl(EUCADEBUG, "params: userId=%s, src=%s, dst=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(src), SP(dst));
 
@@ -1289,7 +1289,7 @@ int doStopNetwork(ncMetadata * ccMeta, char *accountId, char *netName, int vlan)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName),
                vlan);
     if (!ccMeta || !netName || vlan < 0) {
@@ -1324,7 +1324,7 @@ int doDescribeNetworks(ncMetadata * ccMeta, char *nameserver, char **ccs, int cc
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(nameserver), ccsLen);
 
     // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
@@ -1361,7 +1361,7 @@ int doStartNetwork(ncMetadata * ccMeta, char *accountId, char *uuid, char *netNa
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, accountId=%s, netName=%s, vlan=%d, nameserver=%s, ccsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"),
                SP(accountId), SP(netName), vlan, SP(nameserver), ccsLen);
 
@@ -1409,7 +1409,7 @@ int doDescribeResources(ncMetadata * ccMeta, virtualMachine ** ccvms, int vmLen,
     ccResourceCache resourceCacheLocal;
     char strbuf[4096];
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, vmLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), vmLen);
 
     rc = initialize(ccMeta);
@@ -1539,7 +1539,7 @@ int refresh_resources(ncMetadata * ccMeta, int timeout, int dolock)
         timeout = 1;
 
     op_start = time(NULL);
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -1675,7 +1675,7 @@ int refresh_instances(ncMetadata * ccMeta, int timeout, int dolock)
 
     op_start = time(NULL);
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
 
     set_clean_instanceCache();
 
@@ -1963,7 +1963,7 @@ int doDescribeInstances(ncMetadata * ccMeta, char **instIds, int instIdsLen, ccI
     ncInstance **ncOutInsts = NULL;
     ncStub *ncs;
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, instIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen);
 
     op_start = time(NULL);
@@ -2363,7 +2363,7 @@ int doRunInstances(ncMetadata * ccMeta, char *amiId, char *kernelId, char *ramdi
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG,
                "params: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n",
                SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen,
@@ -2694,7 +2694,7 @@ int doGetConsoleOutput(ncMetadata * ccMeta, char *instId, char **outConsoleOutpu
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, instId=%s\n", SP(ccMeta->userId), SP(instId));
 
     sem_mywait(RESCACHE);
@@ -2781,7 +2781,7 @@ int doRebootInstances(ncMetadata * ccMeta, char **instIds, int instIdsLen)
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, instIdsLen=%d\n", SP(ccMeta->userId), instIdsLen);
 
     sem_mywait(RESCACHE);
@@ -2840,7 +2840,7 @@ int doTerminateInstances(ncMetadata * ccMeta, char **instIds, int instIdsLen, in
     }
     set_dirty_instanceCache();
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, instIdsLen=%d, firstInstId=%s, force=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), instIdsLen,
                SP(instIdsLen ? instIds[0] : "UNSET"), force);
 
@@ -2937,7 +2937,7 @@ int doCreateImage(ncMetadata * ccMeta, char *instanceId, char *volumeId, char *r
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
+    logprintfl(EUCADEBUG, "invoked\n");
     logprintfl(EUCADEBUG, "params: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(volumeId),
                SP(instanceId), SP(remoteDev));
     if (!volumeId || !instanceId || !remoteDev) {
@@ -3048,7 +3048,7 @@ int doDescribeSensors(ncMetadata * meta, int historySize, long long collectionIn
                 num_results = num_slots;    // actually num_results <= num_slots, but that's OK
 
         } else {                // report on specific instances
-            // if some instances requested by ID were not found on this CC, 
+            // if some instances requested by ID were not found on this CC,
             // we will have fewer records in outResources[] (ok, since empty ones will be ignored)
             for (int i = 0; i < num_instances; i++) {
                 if (sensor_get_instance_data(instIds[i], NULL, 0, (*outResources + num_results), 1) == 0)
@@ -3499,7 +3499,7 @@ void *monitor_thread(void *in)
     ncTimer = config->ncPollingFrequency + 1;
     clcTimer = config->clcPollingFrequency + 1;
     ncSensorsTimer = config->ncSensorsPollingInterval + 1;
-    
+
     while (1) {
         logprintfl(EUCADEBUG, "running\n");
 
@@ -3550,7 +3550,7 @@ void *monitor_thread(void *in)
 
             if (ncSensorsRefresh) {
                 rc = refresh_sensors(&ccMeta, 60, 1);
-                if (rc == 0) { 
+                if (rc == 0) {
                     // refresh_sensors() only returns non-zero when sensor subsystem has not been initialized.
                     // Until it is initialized, keep checking every second, so that sensory subsystems on NCs are
                     // initialized soon after it is initialized on the CC (otherwise it may take a while and NC

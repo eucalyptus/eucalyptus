@@ -386,10 +386,10 @@ virConnectPtr *check_hypervisor_conn()
     logprintfl(EUCATRACE, "process check for libvirt succeeded\n");
 
     // At this point, the check for libvirt done in a separate process was
-    // successful, so we proceed to close and reopen the connection in a 
+    // successful, so we proceed to close and reopen the connection in a
     // separate thread, which we will try to wake up with SIGUSR1 if it
     // blocks for too long (as a last-resource effort). The reason we reset
-    // the connection so often is because libvirt operations have a 
+    // the connection so often is because libvirt operations have a
     // tendency to block indefinitely if we do not do this.
 
     pthread_t thread;
@@ -419,7 +419,7 @@ virConnectPtr *check_hypervisor_conn()
             sleep(1);
         }
     }
-    
+
     sem_v(hyp_sem);
     if (bail) {
         return NULL;
@@ -1276,7 +1276,7 @@ static int init(void)
         sigaddset(&mask, SIGUSR1);
         sigaddset(&mask, SIGALRM);
         sigprocmask(SIG_BLOCK, &mask, NULL);
-        
+
         // establish function nc_signal_handler() as the handler for delivery of SIGUSR1, in whatever thread
         struct sigaction act;
         bzero (&act, sizeof(struct sigaction));

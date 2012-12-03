@@ -280,7 +280,7 @@ static void sensor_bottom_half(void)
 
     for (;;) {
         usleep (next_sleep_duration_usec);
-        
+
         if (sensor_update_euca_config) {
             logprintfl (EUCATRACE, "calling sensor_update_euca_config() after sleeping %lld usec\n", next_sleep_duration_usec);
             sensor_update_euca_config ();
@@ -295,7 +295,7 @@ static void sensor_bottom_half(void)
             next_sleep_duration_usec = sensor_state->collection_interval_time_ms * 1000;
         }
         sem_v (state_sem);
-        
+
         if (skip)
             continue;
 
@@ -315,7 +315,7 @@ static void sensor_bottom_half(void)
         sem_v (state_sem);
         sensor_refresh_resources (resourceNames, resourceAliases, MAX_SENSOR_RESOURCES);
         useconds_t stop_usec = time_usec();
-        
+
         // adjust the next sleep time to account for how long sensor refresh took
         next_sleep_duration_usec = next_sleep_duration_usec - (stop_usec - start_usec);
         if (next_sleep_duration_usec < SENSOR_SYSTEM_POLL_INTERVAL_MINIMUM_USEC)
@@ -999,7 +999,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                             if ((sc->sequenceNum + iov) == 0 && copied == 0 && sc->type==SENSOR_SUMMATION) {
                                 if (sd->values[vn_adj].value != 0) {
                                     cache_sd->shift_value = -sd->values[vn_adj].value; // TODO: deal with the case when available is FALSE?
-                                    logprintfl(EUCATRACE, "at seq 0, setting shift for %s:%s:%s:%s to %f\n", 
+                                    logprintfl(EUCATRACE, "at seq 0, setting shift for %s:%s:%s:%s to %f\n",
                                                sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, cache_sd->shift_value);
                                 }
                             } else {
@@ -1331,13 +1331,13 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
                        sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
             goto bail;
         }
-        
+
         if (sc->type != SENSOR_SUMMATION) // shifting numbers only makes sense for summation counters
             continue;
 
         for (int d = 0; d < sc->dimensionsLen; d++) {
             sensorDimension *sd = sc->dimensions + d;
-                        
+
             if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
                 logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
                            sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
@@ -1350,12 +1350,12 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
             // find the latest value in the history (TODO: use the latest available, not just latest value?)
             int i_last_logical = sd->valuesLen - 1;  // logical index for the latest value
             int i_last_actual  = (i_last_logical + sd->firstValueIndex) % MAX_SENSOR_VALUES; // actual index, adjusted for offset and wrap
-            double offset = sd->values [i_last_actual].value; 
+            double offset = sd->values [i_last_actual].value;
 
             // increment the shift by the latest value: this way the next measurement can reset to zero,
             // while DescribeSensors() can continue reporting a strictly growing set of numbers
             sd->shift_value += offset;
-            logprintfl(EUCATRACE, "increasing shift for %s:%s:%s:%s by %f to %f\n", 
+            logprintfl(EUCATRACE, "increasing shift for %s:%s:%s:%s by %f to %f\n",
                        sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, offset, sd->shift_value);
 
             // adjust the history to reflect the shift so that these pre-shift values
@@ -1364,7 +1364,7 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
                 int i_actual = (i + sd->firstValueIndex) % MAX_SENSOR_VALUES;
                 if (sd->values[i_actual].available) {
                     sd->values[i_actual].value -= offset;
-                    
+
                     // sanity check
                     if (sd->values[i_actual].value > 0) {
                         logprintfl(EUCAERROR, "inconsistency in sensor database (positive history value after shift: %f for %s:%s:%s:%s)\n",
@@ -1376,7 +1376,7 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
     }
 
     ret = 0;
-    
+
 bail:
 
     sem_v(state_sem);
@@ -1391,7 +1391,7 @@ int sensor_set_dimension_alias(const char *resourceName, const char *metricName,
         return 1;
 
     if (resourceName == NULL || strlen(resourceName) < 1 || strlen(resourceName) > MAX_SENSOR_NAME_LEN) {
-        logprintfl(EUCAWARN, "invoked with invalid resourceName (%s)\n", resourceName);
+        logprintfl(EUCAWARN, "sensor_set_dimension_alias() invoked with invalid resourceName (%s)\n", resourceName);
         return 1;
     }
 

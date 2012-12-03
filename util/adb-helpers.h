@@ -453,7 +453,7 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         }
                         if (v == (sd->valuesLen - 1)) { // last value
                             logprintfl(EUCATRACE, "sending sensor value [%d of %d] %s:%s:%s:%s %05lld %014lld %s %f\n",
-                                       batch_size, num_values, 
+                                       batch_size, num_values,
                                        sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + v, sv->timestampMs,
                                        sv->available ? "YES" : " NO", sv->available ? val : -1);
                         }
