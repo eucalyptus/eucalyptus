@@ -46,17 +46,11 @@
       });
 
       var $tmpl = $('html body').find('.templates #noCookiesDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map)));
-      var $cookies_dialog = $rendered.children().first();
-      this.nocookiesDialog = $cookies_dialog.eucadialog({
-        id: 'no-cookies',
-        title: no_cookies_title,
-        buttons: {
-          'Close': {text: dialog_close_btn, focus:true, click: function() { $cookies_dialog.eucadialog("close");}}
-        }
-      });
+      var $cookies_dialog = $($tmpl.render($.extend($.i18n.map)));
+
       if (navigator.cookieEnabled == false) {
-        this.nocookiesDialog.eucadialog('open');
+        this.element.append($cookies_dialog);
+        return;
       }
       var $form = $login.find('form');
       // set the login event handler
