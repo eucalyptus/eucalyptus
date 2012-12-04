@@ -326,18 +326,18 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
                 code = OK;
                 break;
             case 408L:         /* timeout, retry */
-                logprintfl(EUCAWARN, "server responded with HTTP code %ld (timeout)\n", httpcode);
+                logprintfl(EUCAWARN, "server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
                 //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
                 break;
             default:           /* some kind of error */
-                logprintfl(EUCAERROR, "server responded with HTTP code %ld\n", httpcode);
+                logprintfl(EUCAERROR, "server responded with HTTP code %ld for %s\n", httpcode, url);
                 //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
                 retries = 0;
             }
         }
 
         if (code != OK && retries > 0) {
-            logprintfl(EUCAWARN, "download retry %d of %d will commence in %d seconds\n", retries, TOTAL_RETRIES, timeout);
+            logprintfl(EUCAWARN, "download retry %d of %d will commence in %d sec for %s\n", retries, TOTAL_RETRIES, timeout, url);
             sleep(timeout);
             lseek(fd, 0L, SEEK_SET);
             timeout <<= 1;
@@ -350,7 +350,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     close(fd);
 
     if (code != OK) {
-        logprintfl(EUCAERROR, "due to download failure, removing %s\n", outfile);
+        logprintfl(EUCAWARN, "removing %s\n", outfile);
         remove(outfile);
     }
 

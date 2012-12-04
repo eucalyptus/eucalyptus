@@ -107,7 +107,7 @@ static const int syslog_options = 0;    // flags to be passed to openlog(), such
 
 // these can be modified through setters
 static int log_level = DEFAULT_LOG_LEVEL;
-static int log_roll_number = 4;
+static int log_roll_number = 10;
 static long log_max_size_bytes = MAXLOGFILESIZE;
 static char log_file_path[EUCA_MAX_PATH] = "";
 static char log_custom_prefix[34] = USE_STANDARD_PREFIX;    // any other string means use it as custom prefix

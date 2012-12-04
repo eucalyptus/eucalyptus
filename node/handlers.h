@@ -139,8 +139,8 @@ static configEntry configKeysRestartNC[] = {
 
 static configEntry configKeysNoRestartNC[] = {
     {"LOGLEVEL", "INFO"},
-    {"LOGROLLNUMBER", "4"},
-    {"LOGMAXSIZE", "10485760"},
+    {"LOGROLLNUMBER", "10"},
+    {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
     {"LOGFACILITY", ""},
     {NULL, NULL}
