@@ -23,7 +23,7 @@ LOCKFILE=/var/lock/subsys/eucalyptus-console
 
 start() {
     if [ "x${GENERATE_CERT}" != "xNO" ]; then
-        generate_cert && generate_secret
+        generate_cert
     fi
 
     echo -n $"Starting $SERVICE: "
@@ -119,26 +119,6 @@ EOF
     echo
 }
 
-generate_secret() {
-    echo -n $"Generating cookie secret: "
-    local secret=$(dd if=/dev/random count=16 bs=1 2>/dev/null | openssl md5 | cut -d' ' -f2)
-
-    if [ $? -ne 0 ]; then
-        failure $"Generating cookie secret"
-        echo
-        exit 1
-    fi
-
-    if ! sed -i "s/^cookie\.secret:.*$/cookie.secret: $secret/" \
-            /etc/eucalyptus-console/console.ini &>/dev/null; then
-        failure $"Writing cookie secret"
-        echo
-        exit 1
-    fi
-
-    success $"Generating cookie secret"
-    echo
-}
 
 # See how we were called.
 case "$1" in
