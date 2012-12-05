@@ -26,7 +26,6 @@
     delDialog : null,
     addDialog : null,
     importDialog : null,
-    // TODO: is _init() the right method to instantiate everything? 
     _init : function() {
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #keypairTblTmpl').clone();
@@ -323,7 +322,6 @@
    
 /**** Public Methods ****/ 
     close: function() {
-   //   this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },

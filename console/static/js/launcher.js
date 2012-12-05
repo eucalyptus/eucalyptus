@@ -493,7 +493,7 @@
       var $size = $content.find('#launch-wizard-type-size');
       var $option = $content.find('#launch-wizard-type-options');
     
-      var $list = $('<ul>').addClass('launch-wizard-type-size clearfix'); //.html(launch_instance_type_size_header);
+      var $list = $('<ul>').addClass('launch-wizard-type-size clearfix'); 
       var $legend = $('<div>').attr('id','launch-wizard-type-size-legend').addClass('wizard-type-size-legend');
       var selectedType = 'm1.small';
       var typeSelected = false;
@@ -550,7 +550,7 @@
                    $('<div>').addClass('wizard-section-content').append($list),
                    $legend); 
 
-      var $list = $('<div>').addClass('launch-wizard-type-option'); //.html(launch_instance_type_option_header);
+      var $list = $('<div>').addClass('launch-wizard-type-option'); 
       $list.append(
         $('<div>').addClass('form-row').addClass('clearfix').attr('id','launch-wizard-type-option-num-instance').append(
           $('<label>').attr('for','launch-instance-type-num-instance').text(launch_instance_type_option_numinstance),

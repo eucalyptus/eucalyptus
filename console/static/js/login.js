@@ -115,7 +115,6 @@
         else
           window.open(thisObj.options.support_url,'_blank');
       });
-      //rendered = $login.render($.i18n.map);
       this.element.append($login);
       $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
       if (last_account == null) {

@@ -73,10 +73,10 @@
                  });
                }
              }else {
-               ;//TODO: how to notify errors?
+               ;
              }
            },
-           error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
+           error: function(jqXHR, textStatus, errorThrown){ 
              thisObj._errorCode = jqXHR.status;
              thisObj._numPending--;
              if(thisObj._data[name]){
@@ -141,7 +141,6 @@
         }
         if(!duplicate)
           thisObj._listeners[resource].push({src:source, callback: callback});
-     //   alert(resource+' num cb: '+thisObj._listeners[resource].length);
       }
     },
     
@@ -168,7 +167,6 @@
     },
 
     // status: online, offline, error
-    // TODO: refine implementation
     getStatus : function(){
       var thisObj = this;
       var status = 'online';

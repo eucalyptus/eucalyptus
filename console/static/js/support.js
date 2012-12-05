@@ -559,7 +559,6 @@ function sortArray(array, comperator){
     var idx2 = 0;
     while(idx1 < arr1.length  || idx2 < arr2.length){
       if(idx1 < arr1.length && idx2 < arr2.length){
-       // if(arr1[idx1] < arr2[idx2])
         if(comperator(arr1[idx1], arr2[idx2]))
           merged.push(arr1[idx1++]);
         else

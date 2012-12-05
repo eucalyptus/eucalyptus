@@ -93,7 +93,7 @@
     _reloadInstSummary : function($instObj){
       var thisObj = this;
       $('html body').eucadata('addCallback', 'instance', 'dashboard-summary', function(){
-            // selector is different for these two because of extra div
+        // selector is different for these two because of extra div
         $instObj.find('#dashboard-instance-running div img').remove();
         $instObj.find('#dashboard-instance-stopped div img').remove();
         var numRunning = 0;
@@ -211,7 +211,6 @@
       }));
       $('html body').eucadata('refresh', 'keypair');
 
-      //az = $instObj.find('#dashboard-instance-dropbox').value();
       $netsecObj.find('#dashboard-netsec-sgroup').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $netsecObj.find('#dashboard-netsec-eip').prepend(
