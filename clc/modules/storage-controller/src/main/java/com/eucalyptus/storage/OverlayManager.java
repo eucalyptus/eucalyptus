@@ -284,9 +284,9 @@ public class OverlayManager implements LogicalStorageManager {
 			output.start();
 			int errorCode = proc.waitFor();
 			output.join();
-			LOG.info("losetup " + loDevName + " " + absoluteFileName);
-			LOG.info(output.getReturnValue());
-			LOG.info(error.getReturnValue());
+			LOG.info("Finished executing: losetup " + loDevName + " " + absoluteFileName);
+			LOG.info("Result of: losetup " + loDevName + " " + absoluteFileName + " stdout: " + output.getReturnValue());
+			LOG.info("Result of: losetup" + loDevName + " " + absoluteFileName + " return value: " + error.getReturnValue());
 			return errorCode;
 		} catch (Exception t) {
 			LOG.error(t);
@@ -339,7 +339,12 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	public void startupChecks() {
-		reload();
+		/* zhill: removed because now we only export volumes on 'attach', so no reload needed.
+		 *  It is assumed that if the service goes down the exports are unaffected. If a reboot
+		 *  of the machine is done then it is admin responsibility to ensure that volumes are
+		 *  detached.
+		 */
+		//reload();
 	}
 
 	private void checkVolumesDir() {
@@ -374,6 +379,7 @@ public class OverlayManager implements LogicalStorageManager {
 				returnValue = removeVolumeGroup(vgName);
 				returnValue = removePhysicalVolume(loDevName);
 				removeLoopback(loDevName);
+				lvmVolInfo.setLoDevName(null);
 			} catch(EucalyptusCloudException ex) {
 				volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
@@ -539,25 +545,39 @@ public class OverlayManager implements LogicalStorageManager {
 			String lvName = "lv-" + Hashes.getRandom(4);
 			//create file and attach to loopback device
 			String loDevName = createLoopback(rawFileName, absoluteSize);
+			lvmVolumeInfo.setVolumeId(volumeId);
+			lvmVolumeInfo.setLoDevName(loDevName);
+			
 			//create physical volume, volume group and logical volume
 			createLogicalVolume(loDevName, vgName, lvName);
 			lvmVolumeInfo.setVgName(vgName);
 			lvmVolumeInfo.setLvName(lvName);
-			lvmVolumeInfo.setVolumeId(volumeId);
+			
 			lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 			lvmVolumeInfo.setSize(size);
 			//tear down
 			String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 			disableLogicalVolume(absoluteLVName);
 			removeLoopback(loDevName);
+			lvmVolumeInfo.setLoDevName(null);
 			volumeManager = new VolumeEntityWrapperManager();
-			volumeManager.add(lvmVolumeInfo);
-			volumeManager.finish();
+			volumeManager.add(lvmVolumeInfo);			
 		} catch(EucalyptusCloudException ex) {
-			String error = "Unable to run command: " + ex.getMessage();
-			volumeManager.abort();
+			String error = "Unable to run command: " + ex.getMessage();			
+			//zhill: should always commit what we have thus far
+			//volumeManager.abort();
 			LOG.error(error);
 			throw new EucalyptusCloudException(error);
+		} finally {
+			try {
+				if(volumeManager != null) {
+					volumeManager.finish();
+				} else {
+					LOG.error("Cannot commit to db. EntityWrapper is null");
+				}
+			} catch(final Throwable e) {
+				LOG.error("Volume: " + volumeId + " db commit error: " + e.getMessage());
+			}
 		}
 	}
 
@@ -587,12 +607,15 @@ public class OverlayManager implements LogicalStorageManager {
 					}
 					
 					String loDevName = createLoopback(rawFileName, absoluteSize);
+					lvmVolumeInfo.setVolumeId(volumeId);
+					lvmVolumeInfo.setLoDevName(loDevName);
+					
 					//create physical volume, volume group and logical volume
 					createLogicalVolume(loDevName, vgName, lvName);
 					//duplicate snapshot volume
 					String absoluteLVName = lvmRootDirectory + PATH_SEPARATOR + vgName + PATH_SEPARATOR + lvName;
 					duplicateLogicalVolume(loFileName, absoluteLVName);
-					lvmVolumeInfo.setVolumeId(volumeId);
+					
 					lvmVolumeInfo.setVgName(vgName);
 					lvmVolumeInfo.setLvName(lvName);
 					lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
@@ -600,14 +623,28 @@ public class OverlayManager implements LogicalStorageManager {
 					//tear down
 					disableLogicalVolume(absoluteLVName);
 					removeLoopback(loDevName);
+					lvmVolumeInfo.setLoDevName(null);
 					volumeManager = new VolumeEntityWrapperManager();
 					volumeManager.add(lvmVolumeInfo);
-					volumeManager.finish();
+					//Do this finish in the finally block
+					//volumeManager.finish();
 				}  catch(EucalyptusCloudException ex) {
-					volumeManager.abort();
+					//zhill: always commit what we have, so as not to orphan resources. This allows cleanup to properly
+					// clean local resources.
+					//volumeManager.abort();
 					String error = "Unable to run command: " + ex.getMessage();
 					LOG.error(error);
 					throw new EucalyptusCloudException(error);
+				} finally {			
+					try {
+						if(volumeManager != null) {
+							volumeManager.finish();
+						} else {
+							LOG.error("Cannot commit to db. EntityWrapper is null");
+						}
+					} catch(final Throwable e) {
+						LOG.error("Volume: " + volumeId + " could not commit db transaction. " + e.getMessage());							
+					}					
 				}
 			}
 		} else {
@@ -637,6 +674,7 @@ public class OverlayManager implements LogicalStorageManager {
 				long absoluteSize = parentVolumeFile.length();
 
 				String loDevName = createLoopback(rawFileName, absoluteSize);
+				lvmVolumeInfo.setLoDevName(loDevName);
 				//create physical volume, volume group and logical volume
 				createLogicalVolume(loDevName, vgName, lvName);
 				//duplicate snapshot volume
@@ -651,24 +689,31 @@ public class OverlayManager implements LogicalStorageManager {
 					returnValue = removeVolumeGroup(vgName);
 					returnValue = removePhysicalVolume(loDevName);
 					removeLoopback(loDevName);
+					lvmVolumeInfo.setLoDevName(null);
 					throw ex;
 				}
-				lvmVolumeInfo.setVolumeId(volumeId);
-				lvmVolumeInfo.setLoDevName(loDevName);
+				lvmVolumeInfo.setVolumeId(volumeId);				
 				lvmVolumeInfo.setPvName(loDevName);
 				lvmVolumeInfo.setVgName(vgName);
 				lvmVolumeInfo.setLvName(lvName);
 				lvmVolumeInfo.setStatus(StorageProperties.Status.available.toString());
 				lvmVolumeInfo.setSize(size);
 				volumeManager = new VolumeEntityWrapperManager();
-				volumeManager.add(lvmVolumeInfo);
-				volumeManager.finish();
+				volumeManager.add(lvmVolumeInfo);	
 			}  catch(EucalyptusCloudException ex) {
 				volumeManager.abort();
 				String error = "Unable to run command: " + ex.getMessage();
 				LOG.error(error);
 				throw new EucalyptusCloudException(error);
-			}			
+			} finally {
+				if(null != volumeManager) {
+					try {
+						volumeManager.finish();
+					} catch(final Throwable e) {
+						LOG.error("Error committing to db.",e);
+					}
+				}				
+			}		
 		} else {
 			volumeManager.abort();
 			throw new EucalyptusCloudException("Unable to find volume: " + parentVolumeId);
@@ -947,6 +992,15 @@ public class OverlayManager implements LogicalStorageManager {
 		volumeManager.finish();
 	}
 
+	/**
+	 * Called on service start to load and export any volumes that should be available to clients immediately.
+	 * This is a legacy call from the old OverlayManager that always exported volumes on creation rather than
+	 * attach.
+	 * 
+	 * TODO: For the new version, don't export volumes unless they were in an exported state when the service terminated
+	 * and are not exported currently. (i.e. machine reboot)
+	 * TODO: this is currently *NOT* called during startup.
+	 */
 	public void reload() {
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		List<LVMVolumeInfo> volumeInfos = volumeManager.getAllVolumeInfos();
@@ -1703,10 +1757,12 @@ public class OverlayManager implements LogicalStorageManager {
 												volInfo.setLoDevName(null);
 												LOG.info("Done cleaning up: " + volumeId);
 												volInfo.setCleanup(false);
-												volumeManager.finish();
+												//Moved volumeManager.finish() to finally block.
 											} catch (EucalyptusCloudException e) {
 												LOG.error(e, e);
-												volumeManager.abort();
+												//volumeManager.abort();
+											} finally {
+												volumeManager.finish();
 											}
 										} else {
 											LOG.info("Snapshot in progress. Not detaching loop device.");

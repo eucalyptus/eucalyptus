@@ -135,9 +135,9 @@ public class NetworkGroups {
   @ConfigurableField( description = "Default min vlan tag." )
   public static Integer       GLOBAL_MIN_NETWORK_TAG        = 1;
   @ConfigurableField( description = "Minutes before a pending tag allocation timesout and is released." )
-  public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 30;
+  public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
-  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 30;
+  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
