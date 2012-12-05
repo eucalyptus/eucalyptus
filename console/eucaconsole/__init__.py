@@ -377,7 +377,8 @@ class InitProcessor(ProxyProcessor):
     def post(web_req):
         language = config.get('locale','language')
         support_url = config.get('locale','support.url')
-        if web_req.get_argument('host', False): 
+        url_rewrite = config.get('server', 'url.rewrite')
+        if web_req.get_argument('host', False) and (url_rewrite in ['true', '1', 'True']): 
           try:
             host = web_req.get_argument('host')
             ip_list = socket.getaddrinfo(host, 0, 0, 0, socket.SOL_TCP)
