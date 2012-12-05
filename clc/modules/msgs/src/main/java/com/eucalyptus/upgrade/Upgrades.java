@@ -30,15 +30,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.sql.Timestamp;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
+import org.hibernate.tool.hbm2ddl.SchemaUpdate;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Bootstrapper;
@@ -364,6 +364,7 @@ public class Upgrades {
             break;
           }
         } while ( !UpgradeState.isFinished( ) );
+        Upgrades.runSchemaUpdate( DatabaseFilters.EUCALYPTUS );
         if ( BootstrapArgs.isUpgradeSystem( ) ) {
           System.exit( 0 );
           return false;
@@ -481,7 +482,6 @@ public class Upgrades {
       }
       
     },
-    
     /**
      * Determines whether or not to execute the database upgrade code.
      * 
@@ -526,6 +526,7 @@ public class Upgrades {
             case START:
             case CHECK_ARGS:
             case CHECK_UPGRADE_LOG:
+            case PRE_SCHEMA_UPDATE:
             case CHECK_VERSIONS:
               /**
                * Here no data was changed, we can proceed.
@@ -535,7 +536,6 @@ public class Upgrades {
             case BEGIN_UPGRADE:
             case PRE_BACKINGUP_DATABASE:
             case PRE_COPYING_DATABASES:
-            case PRE_SCHEMA_UPDATE:
             case PRE_SETUP_JPA:
             case RUN_PRE_UPGRADE:
             case RUN_ENTITY_UPGRADE:
@@ -673,6 +673,7 @@ public class Upgrades {
        */
       @Override
       public Boolean call( ) {
+        Upgrades.runSchemaUpdate( DatabaseFilters.NEWVERSION );
         return true;
       }
       
@@ -684,23 +685,7 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         try {
-          DatabaseBootstrapper db = Databases.getBootstrapper( );
-          final Map<String, String> props = ImmutableMap.<String, String> builder( )
-                                                        .put( "hibernate.show_sql", "false" )
-                                                        .put( "hibernate.format_sql", "false" )
-                                                        .put( "hibernate.connection.autocommit", "false" )
-                                                        .put( "hibernate.hbm2ddl.auto", "update" )
-                                                        .put( "hibernate.generate_statistics", "false" )
-                                                        .put( "hibernate.connection.driver_class", db.getDriverName( ) )
-                                                        .put( "hibernate.connection.username", db.getUserName( ) )
-                                                        .put( "hibernate.connection.password", db.getPassword( ) )
-                                                        .put( "hibernate.bytecode.use_reflection_optimizer", "true" )
-                                                        .put( "hibernate.cglib.use_reflection_optimizer", "true" )
-                                                        .put( "hibernate.dialect", db.getHibernateDialect( ) )
-                                                        .put( "hibernate.cache.use_second_level_cache", "false" )
-                                                        .put( "hibernate.cache.use_query_cache", "false" )
-                                                        .build( );
-          
+          final Map<String, String> props = UpgradeState.getDatabaseProperties( );
           for ( final String ctx : PersistenceContexts.list( ) ) {
             final Properties p = new Properties( );
             p.putAll( props );
@@ -891,6 +876,26 @@ public class Upgrades {
       return next;
     }
     
+    public static Map<String, String> getDatabaseProperties( ) {
+      DatabaseBootstrapper db = Databases.getBootstrapper( );
+      final Map<String, String> props = ImmutableMap.<String, String> builder( )
+                                                    .put( "hibernate.show_sql", "false" )
+                                                    .put( "hibernate.format_sql", "false" )
+                                                    .put( "hibernate.connection.autocommit", "false" )
+                                                    .put( "hibernate.hbm2ddl.auto", "update" )
+                                                    .put( "hibernate.generate_statistics", "false" )
+                                                    .put( "hibernate.connection.driver_class", db.getDriverName( ) )
+                                                    .put( "hibernate.connection.username", db.getUserName( ) )
+                                                    .put( "hibernate.connection.password", db.getPassword( ) )
+                                                    .put( "hibernate.bytecode.use_reflection_optimizer", "true" )
+                                                    .put( "hibernate.cglib.use_reflection_optimizer", "true" )
+                                                    .put( "hibernate.dialect", db.getHibernateDialect( ) )
+                                                    .put( "hibernate.cache.use_second_level_cache", "false" )
+                                                    .put( "hibernate.cache.use_query_cache", "false" )
+                                                    .build( );
+      return props;
+    }
+
     private static UpgradeState currentState = UpgradeState.START;
     
     public static boolean isFinished( ) {
@@ -900,6 +905,29 @@ public class Upgrades {
     public static UpgradeState nextState( ) {
       currentState = currentState.next( );
       return currentState;
+    }
+  }
+
+  private static void runSchemaUpdate( DatabaseFilters dbName ) throws RuntimeException {
+    try {
+      final Map<String, String> props = UpgradeState.getDatabaseProperties( );          
+      for ( final String ctx : PersistenceContexts.list( ) ) {
+        final Properties p = new Properties( );
+        p.putAll( props );
+        final String ctxUrl = String.format( "jdbc:%s",
+                                             ServiceUris.remote( Components.lookup( Database.class ), dbName.getVersionedName( ctx ) ) );
+        p.put( "hibernate.connection.url", ctxUrl );
+        final Ejb3Configuration config = new Ejb3Configuration( );
+        config.setProperties( p );
+        for ( final Class c : PersistenceContexts.listEntities( ctx ) ) {
+          config.addAnnotatedClass( c );
+        }
+        new SchemaUpdate(config.getHibernateConfiguration()).execute(true, true);
+      }
+    } catch ( final Exception e ) {
+      LOG.fatal( e, e );
+      LOG.fatal( "Failed to initialize the persistence layer." );
+      throw Exceptions.toUndeclared( e );
     }
   }
   
