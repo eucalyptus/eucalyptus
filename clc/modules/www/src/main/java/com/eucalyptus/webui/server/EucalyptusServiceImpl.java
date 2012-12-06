@@ -346,6 +346,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     }
     ArrayList<String> users = Lists.newArrayList( );
     for ( String name : names.split( NAME_SEPARATOR_PATTERN ) ) {
+      name = name.trim( );
       if ( !Strings.isNullOrEmpty( name ) ) {
         String created = EuareWebBackend.createUser( requestUser, accountId, name, path );
         if ( created != null ) {
@@ -364,6 +365,7 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
     }
     ArrayList<String> groups = Lists.newArrayList( );
     for ( String name : names.split( NAME_SEPARATOR_PATTERN ) ) {
+      name = name.trim( );
       if ( !Strings.isNullOrEmpty( name ) ) {
         String created = EuareWebBackend.createGroup( requestUser, accountId, name, path );
         if ( created != null ) {
@@ -429,9 +431,12 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String groupId : groupIds ) {
-      for ( String userName : userNames.split( NAME_SEPARATOR_PATTERN ) ) {
-        if ( !Strings.isNullOrEmpty( userName ) && !Strings.isNullOrEmpty( groupId ) ) {
-          EuareWebBackend.addUserToGroupByName( requestUser, userName, groupId );
+      if ( !Strings.isNullOrEmpty( groupId ) ) {
+        for ( String userName : userNames.split( NAME_SEPARATOR_PATTERN ) ) {
+          userName = userName.trim( );
+          if ( !Strings.isNullOrEmpty( userName ) ) {
+            EuareWebBackend.addUserToGroupByName( requestUser, userName, groupId );
+          }
         }
       }
     }
@@ -444,8 +449,13 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String userId : userIds ) {
-      for ( String groupName : groupNames.split( NAME_SEPARATOR_PATTERN ) ) {
-        EuareWebBackend.addUserToGroupById( requestUser, userId, groupName );
+      if ( !Strings.isNullOrEmpty( userId ) ) {
+        for ( String groupName : groupNames.split( NAME_SEPARATOR_PATTERN ) ) {
+          groupName = groupName.trim( );
+          if ( !Strings.isNullOrEmpty( groupName ) ) {
+            EuareWebBackend.addUserToGroupById( requestUser, userId, groupName );
+          }
+        }
       }
     }
   }
@@ -457,9 +467,12 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String groupId : groupIds ) {
-      for ( String userName : userNames.split( NAME_SEPARATOR_PATTERN ) ) {
-        if ( !Strings.isNullOrEmpty( userName ) && !Strings.isNullOrEmpty( groupId ) ) {
-          EuareWebBackend.removeUserFromGroupByName( requestUser, userName, groupId );
+      if ( !Strings.isNullOrEmpty( groupId ) ) {
+        for ( String userName : userNames.split( NAME_SEPARATOR_PATTERN ) ) {
+          userName = userName.trim();
+          if ( !Strings.isNullOrEmpty( userName ) ) {
+            EuareWebBackend.removeUserFromGroupByName( requestUser, userName, groupId );
+          }
         }
       }
     }
@@ -472,8 +485,13 @@ public class EucalyptusServiceImpl extends RemoteServiceServlet implements Eucal
       throw new EucalyptusServiceException( "Empty names or empty group ids" );
     }
     for ( String userId : userIds ) {
-      for ( String groupName : groupNames.split( NAME_SEPARATOR_PATTERN ) ) {
-        EuareWebBackend.removeUserFromGroupById( requestUser, userId, groupName );
+      if ( !Strings.isNullOrEmpty( userId ) ) {
+        for ( String groupName : groupNames.split( NAME_SEPARATOR_PATTERN ) ) {
+          groupName = groupName.trim( );
+          if ( !Strings.isNullOrEmpty( groupName ) ) {
+            EuareWebBackend.removeUserFromGroupById( requestUser, userId, groupName );
+          }
+        }
       }
     }
   }
