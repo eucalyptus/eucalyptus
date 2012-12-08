@@ -133,7 +133,7 @@ import com.google.common.primitives.Longs;
                     description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
   
-  private static int                             REJOIN_BACKOFF_SECS        = 30;
+  private static int                             REJOIN_BACKOFF_SECS        = 60;
   @ConfigurableField( description = "Timeout for state transfers (in msec).",
                       readonly = true )
   public static final Long                       STATE_TRANSFER_TIMEOUT     = 10000L;
