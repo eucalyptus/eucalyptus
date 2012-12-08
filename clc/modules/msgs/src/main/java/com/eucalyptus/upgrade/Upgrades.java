@@ -60,6 +60,7 @@ import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -134,7 +135,14 @@ public class Upgrades {
   
   enum Arguments {
     CURRENT_VERSION( "euca.version" ),
-    OLD_VERSION( "euca.upgrade.old.version" ),
+    OLD_VERSION( "euca.upgrade.old.version" ){
+
+      @Override
+      public String getValue( ) {
+        return System.getProperty( this.propName, BootstrapArgs.isUpgradeSystem( ) ? null : CURRENT_VERSION.getValue( ) );
+      }
+      
+    },
     NEW_VERSION( "euca.version" );
     String propName;
     
@@ -622,6 +630,8 @@ public class Upgrades {
       @Override
       public Boolean call( ) throws Exception {
         if ( Version.getCurrentVersion( ).equals( UpgradeEventLog.getLastUpgradedVersion( ) ) ) {
+          return Boolean.TRUE.parseBoolean( System.getProperty( "euca.upgrade.force" ) );
+        } else if ( Version.getCurrentVersion( ).equals( Version.getOldVersion( ) ) && !BootstrapArgs.isUpgradeSystem( ) ) {
           return Boolean.TRUE.parseBoolean( System.getProperty( "euca.upgrade.force" ) );
         } else {
           return true;
