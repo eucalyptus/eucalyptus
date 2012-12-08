@@ -331,7 +331,7 @@ public class Upgrades {
     }
     
     private static boolean create( ) {
-      if ( !Databases.getBootstrapper( ).listTables( Databases.Events.INSTANCE.getName( ) ).contains( UpgradeEventLog.INSTANCE.tableName ) ) {
+      if ( !exists( ) ) {
         Sql sql = null;
         try {
           sql = Databases.Events.getConnection( );
@@ -348,6 +348,10 @@ public class Upgrades {
       } else {
         return false;
       }
+    }
+
+    public static boolean exists( ) {
+      return Databases.getBootstrapper( ).listTables( Databases.Events.INSTANCE.getName( ) ).contains( UpgradeEventLog.INSTANCE.tableName );
     }
   }
   
@@ -450,6 +454,12 @@ public class Upgrades {
    */
   enum UpgradeState implements Callable<Boolean> {
     START {
+      @Override
+      public boolean callAndLog( ) throws Exception {
+        return this.call( );
+      }
+    },
+    PARSE_ARGS {
       
       @Override
       public boolean callAndLog( ) throws Exception {
@@ -474,7 +484,7 @@ public class Upgrades {
       
       @Override
       public Boolean call( ) throws Exception {
-        if ( BootstrapArgs.isCloudController( ) && BootstrapArgs.isUpgradeSystem( ) ) {
+        if ( BootstrapArgs.isCloudController( ) && ( BootstrapArgs.isUpgradeSystem( ) || !UpgradeEventLog.exists( ) ) ) {
           return true;
         } else {
           return false;
@@ -524,6 +534,7 @@ public class Upgrades {
           boolean continueUpgrade = false;
           switch ( previousState ) {
             case START:
+            case PARSE_ARGS:
             case CHECK_ARGS:
             case CHECK_UPGRADE_LOG:
             case PRE_SCHEMA_UPDATE:
