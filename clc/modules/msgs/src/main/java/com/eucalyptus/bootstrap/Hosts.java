@@ -66,8 +66,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -131,6 +133,7 @@ import com.google.common.primitives.Longs;
                     description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
   
+  private static int                             REJOIN_BACKOFF_SECS        = 30;
   @ConfigurableField( description = "Timeout for state transfers (in msec).",
                       readonly = true )
   public static final Long                       STATE_TRANSFER_TIMEOUT     = 10000L;
@@ -1292,7 +1295,14 @@ public class Hosts {
     public boolean apply( Host c ) {
       if ( c != null && ( c.isLocalHost( ) || c.hasBootstrapped( ) ) ) {
         LOG.info( "Found system view with database: " + c );
-        return false;
+        Calendar now = GregorianCalendar.getInstance( );
+        now.roll( Calendar.SECOND, -1 * ( REJOIN_BACKOFF_SECS * 5 ) );
+        if ( now.after( c.getTimestamp( ) ) ) { 
+          return false;
+        } else {
+          LOG.info( "Waiting for system view to settle till " + now.getTimeInMillis( ) + " for coordinator " + c.getTimestamp( ).getTime( ) + " (" + ( c.getTimestamp( ).getTime( ) - now.getTimeInMillis( ) )/1000l + " secs)." );
+          return true;
+        }
       } else {
         try {
           TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
@@ -1317,7 +1327,7 @@ public class Hosts {
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
       while ( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
-      TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
+      TimeUnit.SECONDS.sleep( REJOIN_BACKOFF_SECS );//GRZE: rejoin backoff
     }
   }
 
