@@ -380,7 +380,7 @@ public class Databases {
       return super.check( );
     }
   }
-  
+
   static DriverDatabaseClusterMBean lookup( final String ctx ) throws NoSuchElementException {
     final DriverDatabaseClusterMBean cluster = Mbeans.lookup( Databases.jdbcJmxDomain,
                                                               ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
@@ -744,7 +744,10 @@ public class Databases {
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasDatabase( ) ) {
+    if ( !host.hasDatabase( ) || Bootstrap.isShuttingDown( ) ) {
+      return false;
+    } else if ( !Hosts.contains(host.getGroupsId())  ) {
+      Hosts.remove( host.getGroupsId( ) );
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
@@ -872,7 +875,7 @@ public class Databases {
           try {
             Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
             if ( BootstrapArgs.isCloudController( ) ) {
-              activeDatabases.add( Hosts.localHost( ).getDisplayName( ) );
+              activeDatabases.add( Internets.localHostIdentifier( ) );//GRZE: use Internets.localHostIdentifier() which is static, rather than the Hosts reference as it is stateful
             }
             union.addAll( activeDatabases );
             intersection.retainAll( activeDatabases );
@@ -1164,14 +1167,17 @@ public class Databases {
   public static String getJdbcScheme( ) {
     return singleton.getJdbcScheme( );
   }
-  
+
   public static void check( ) {
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
         DriverDatabaseClusterMBean db = lookup( ctx );
         for ( String host : db.getActiveDatabases( ) ) {
-          if ( Hosts.lookup( host ) == null ) {
+          Host hostEntry = Hosts.lookup( host );
+          if ( hostEntry == null ) {
             disable( host );
+          } else if ( !Hosts.contains( hostEntry.getGroupsId() ) ) {
+            Hosts.remove( host );//GRZE: this will clean up group state and de-activate db.
           }
         }
       } catch ( NoSuchElementException ex ) {
@@ -1180,7 +1186,7 @@ public class Databases {
       return;
     }
   }
-  
+
   public static final class SynchronizationSupport {
     private SynchronizationSupport( ) {
       // Hide
