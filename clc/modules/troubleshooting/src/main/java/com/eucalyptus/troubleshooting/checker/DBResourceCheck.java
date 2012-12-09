@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.eucalyptus.records.Logs;
 import org.apache.log4j.Logger;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.ProxoolFacade;
@@ -204,7 +205,7 @@ public class DBResourceCheck extends Thread {
 				for (DBPoolInfo dbPool : this.dbPools) {
 					// Enclose everything between try catch because nothing should throw an exception to the executor upstream or it may halt subsequent tasks
 					try {
-						LOG.debug("Polling dbpool " + dbPool.getAlias() + ",pollInterval="+ pollInterval + ", threshold = " + dbPool.getThreshold());
+						Logs.extreme().debug("Polling dbpool " + dbPool.getAlias() + ",pollInterval=" + pollInterval + ", threshold = " + dbPool.getThreshold());
 						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getThreshold()) {
 							if (!this.alreadyFaulted.contains(dbPool)) {
 								Faults.forComponent(this.componentIdClass).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
