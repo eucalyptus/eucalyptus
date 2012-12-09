@@ -70,6 +70,7 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
@@ -839,9 +840,11 @@ public class ServiceTransitions {
             try {
               PropertyDirectory.addProperty( prop );
               try {
-                prop.getValue( );
-              } catch ( Exception ex ) {
-                Logs.extreme( ).error( ex );
+                if (!Databases.isVolatile()) {
+                  prop.getValue();
+                }
+              } catch (Exception ex) {
+                Logs.extreme().error(ex);
               }
             } catch ( Exception ex ) {
               Logs.extreme( ).error( ex, ex );
