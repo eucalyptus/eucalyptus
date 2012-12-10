@@ -318,6 +318,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 		if(!isPrimary()) {
 			throw new EucalyptusCloudException("Unable to make resource primary.");
 		}
+		LOG.debug("Enable complete...DRBD mounted");
 	}
 
 	public void becomeSlave() throws EucalyptusCloudException, ExecutionException {
@@ -356,6 +357,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 	@Override
 	public void enable() throws EucalyptusCloudException {
 		try {
+			LOG.debug("Enabling Walrus...");
 			becomeMaster();
 		} catch (ExecutionException e) {
 			throw new EucalyptusCloudException(e);
@@ -384,15 +386,18 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 				}
 			}
 			if (Component.State.ENABLED.equals(Components.lookup(Walrus.class).getState())) {
+				LOG.debug("Check: Walrus state is ENABLED...");
 				if(!isPrimary()  || !isMounted()) {
 					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Please make me primary. Aborting!");
 				}
+				LOG.debug("Check: DRBD is primary and mounted");
 			} else {
 				if((isConnected()) && (!isUpToDate())) {
 					throw new EucalyptusCloudException("Resource connected but not up to date!");
 				}
 				if (Component.State.DISABLED.equals(Components.lookup(Walrus.class).getState())) {
 					if(!isSecondary()) {
+						LOG.debug("Check: Walrus is DISABLED and DRBD is not secondary");
 						LOG.warn("I am the slave, but not DRBD secondary. Trying to become secondary...");
 						if(isMounted()) {
 							unmountPrimary();
