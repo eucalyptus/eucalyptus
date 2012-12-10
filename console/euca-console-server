@@ -15,8 +15,7 @@ import eucaconsole
 from eucaconsole import api
 from eucaconsole.configloader import ConfigLoader
 
-PIDFILE = "/var/run/eucalyptus-console/eucalyptus-console.pid"
-
+pid_file = "/var/run/eucalyptus-console.pid"
 
 def daemonize(func=None):
     # Fork process
@@ -46,7 +45,7 @@ def daemonize(func=None):
 
     # Create pidfile
     try:
-        f = open(PIDFILE, "w")
+        f = open(pid_file, "w")
         fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         f.write(str(os.getpid()))
         f.flush()
@@ -61,7 +60,7 @@ def daemonize(func=None):
 
 
 def cleanpid(signum=None, action=None):
-    os.remove(PIDFILE)
+    os.remove(pid_file)
     sys.exit(0)
 
 
@@ -85,7 +84,6 @@ def sessionChecker():
 
 def start_console():
     settings = {
-      "cookie_secret": "getting-from-config-now",
       "xsrf_cookies": True,
     }
 
@@ -101,9 +99,6 @@ def start_console():
         webroot = eucaconsole.config.get('paths', 'staticpath')
     except ConfigParser.Error:
         pass
-
-    if eucaconsole.config.has_option('server', 'cookie.secret'):
-        settings['cookie_secret'] = eucaconsole.config.get('server', 'cookie.secret')
 
     if eucaconsole.config.has_option('server', 'sslcert'):
         ssl_settings['certfile'] = eucaconsole.config.get('server', 'sslcert')
@@ -157,10 +152,12 @@ if __name__ == "__main__":
     config_file = None
     try:
         opts, _ = getopt.getopt(sys.argv[1:],
-            "hdc:", ["--help", "--daemonize", "--config"])
+            "hdc:", ["--help", "--daemonize", "--config", "--pidfile"])
         for arg, value in opts:
             if arg == "-d" or arg == "--daemonize":
                 daemon = True
+            elif arg == "-p" or arg == "--pidfile":
+                pid_file = value
             elif arg == "-c" or arg == "--config":
                 config_file = value
             elif arg == "-h" or arg == "--help":
