@@ -85,6 +85,7 @@ package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -92,7 +93,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -102,7 +102,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -142,7 +141,6 @@ import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.upgrade.Upgrades.Version;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
@@ -173,6 +171,77 @@ public class Databases {
   }
   
   private static Logger LOG = Logger.getLogger( Databases.class );
+
+  public enum Locks {
+    DISABLED {
+      @Override
+      void isLocked() {
+        File dbLockFile = this.getLockFile();
+        if ( dbLockFile.exists() && Hosts.isCoordinator() ) {
+          this.failStop();
+        }
+      }
+
+      public void failStop() {
+        Faults.forComponent( Eucalyptus.class ).havingId( 1010 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
+        LOG.error( "WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE " + this.getLockName() + "FILE TO PROCEED WITH RISK" );
+        System.exit( 1 );
+      }
+
+    },
+    PARTITIONED {
+      @Override
+      void isLocked() {
+        if ( this.getLockFile().exists() ) {
+          failStop();
+        }
+      }
+
+      public void failStop() {
+        Faults.forComponent( Eucalyptus.class ).havingId( 1011 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
+        LOG.error( "PARTITION DETECTED -- FAIL-STOP TO AVOID POSSIBLE INCONSISTENCY." );
+        LOG.error( "PARTITION DETECTED -- Shutting down CLC after experiencing a possible split-brain partition." );
+        LOG.error( "PARTITION DETECTED -- See cloud-fault.log for guidance." );
+        System.exit( 1 );
+      }
+
+      @Override
+      public void create() {
+        super.create();
+        Faults.forComponent( Eucalyptus.class ).havingId( 1011 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
+      }
+    };
+    public static final String DB_LOCK_FILE = "DB_LOCK_FILE";
+
+    public void delete( ) {
+      SubDirectory.DB.getChildFile("data",this.getLockName()).delete();
+      LOG.info( "The " + this.getLockName( ) + " file was deleted" );
+    }
+
+    protected String getLockName() {
+      return this.name().toLowerCase() + ".lock";
+    }
+
+    abstract void isLocked( );
+
+    public abstract void failStop( );
+
+    protected File getLockFile( ) {
+      return SubDirectory.DB.getChildFile( "data", this.getLockName() );
+    }
+
+    public void create( ) {
+      try {
+        if ( getLockFile( ).createNewFile( ) ) {
+          LOG.debug( "The " + this.getLockName( ) + " file was created." );
+        }
+      } catch ( IOException e ) {
+        LOG.debug("Unable to create the disabled.lock file: " + e.getMessage());
+      }
+    }
+
+
+  }
 
   public enum Events {
     INSTANCE;
@@ -258,13 +327,9 @@ public class Databases {
     @Override
     public boolean load( ) throws Exception {
       Hosts.awaitDatabases( );
-      File dbLockFile = SubDirectory.DB.getChildFile("data", "disabled.lock" );
-      if( dbLockFile.exists() && Hosts.isCoordinator( ) ) {
-	  Faults.forComponent(Eucalyptus.class).havingId(1010).withVar("DB_LOCK_FILE", dbLockFile.getAbsolutePath()).log();
-	  LOG.error("WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE disabled.lock FILE TO PROCEED WITH RISK");
-	  System.exit(1);
-      }
-	
+      Locks.DISABLED.isLocked( );
+      Locks.PARTITIONED.isLocked( );
+
       Groovyness.run( "setup_dbpool.groovy" );
       OrderedShutdown.registerShutdownHook( Empyrean.class, new Runnable( ) {
         
@@ -301,11 +366,9 @@ public class Databases {
             TimeUnit.SECONDS.sleep( INITIAL_DB_SYNC_RETRY_WAIT );
           }
         }
-        
-        if (SubDirectory.DB.getChildFile("data","disabled.lock").createNewFile()) {
-            LOG.debug("The disabled.lock file was created.");
-        }
-        
+
+        Locks.DISABLED.create( );
+
         Hosts.UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         LOG.info( LogUtil.subheader( "Database synchronization complete: " + Hosts.localHost( ) ) );
       }
@@ -317,7 +380,7 @@ public class Databases {
       return super.check( );
     }
   }
-  
+
   static DriverDatabaseClusterMBean lookup( final String ctx ) throws NoSuchElementException {
     final DriverDatabaseClusterMBean cluster = Mbeans.lookup( Databases.jdbcJmxDomain,
                                                               ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
@@ -681,7 +744,10 @@ public class Databases {
   }
   
   static boolean enable( final Host host ) {
-    if ( !host.hasDatabase( ) ) {
+    if ( !host.hasDatabase( ) || Bootstrap.isShuttingDown( ) ) {
+      return false;
+    } else if ( !Hosts.contains(host.getGroupsId())  ) {
+      Hosts.remove( host.getGroupsId( ) );
       return false;
     } else {
       if ( host.isLocalHost( ) ) {
@@ -809,7 +875,7 @@ public class Databases {
           try {
             Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
             if ( BootstrapArgs.isCloudController( ) ) {
-              activeDatabases.add( Hosts.localHost( ).getDisplayName( ) );
+              activeDatabases.add( Internets.localHostIdentifier( ) );//GRZE: use Internets.localHostIdentifier() which is static, rather than the Hosts reference as it is stateful
             }
             union.addAll( activeDatabases );
             intersection.retainAll( activeDatabases );
@@ -1101,14 +1167,17 @@ public class Databases {
   public static String getJdbcScheme( ) {
     return singleton.getJdbcScheme( );
   }
-  
+
   public static void check( ) {
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
         DriverDatabaseClusterMBean db = lookup( ctx );
         for ( String host : db.getActiveDatabases( ) ) {
-          if ( Hosts.lookup( host ) == null ) {
+          Host hostEntry = Hosts.lookup( host );
+          if ( hostEntry == null ) {
             disable( host );
+          } else if ( !Hosts.contains( hostEntry.getGroupsId() ) ) {
+            Hosts.remove( host );//GRZE: this will clean up group state and de-activate db.
           }
         }
       } catch ( NoSuchElementException ex ) {
@@ -1117,7 +1186,7 @@ public class Databases {
       return;
     }
   }
-  
+
   public static final class SynchronizationSupport {
     private SynchronizationSupport( ) {
       // Hide
