@@ -536,6 +536,8 @@ public class Hosts {
                 LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
                 Logs.extreme().error( e, e );
               }
+            } else {
+              localView = v;
             }
 
             /**
@@ -546,29 +548,32 @@ public class Hosts {
             }
           }
           /**
-           * At this point local state is up-to-date and only the coordinator needs to make any kind of decisions based on that information.
+           * At this point local state is up-to-date and only the previous coordinators need to make any kind of decisions based on that information.
            */
           if ( this.coordinator ) {
             /**
-             * Check if any DB was partitions from the local view.
-             * Check if db hosts have differing partitions.
+             * Check if any DB was partitioned from the local view.
+             * Check if db hosts have differing partitions:  are there two distinct views which match a DB host.
              */
-            List<View> dbViews = Lists.newArrayList();
+            Set<View> dbViews = Sets.newHashSet( );
             for ( Host db : Hosts.listDatabases() ) {
               View dbView = partitions.get( db.getDisplayName( ) );
-              dbViews.add( dbView );
-              if ( !localView.equals( dbView ) ) {
+              if ( !dbView.equals( localView ) ) {
+                LOG.warn( logPrefix( localView ) + " found partitioned database: " + dbView );
+                Databases.Locks.PARTITIONED.create( );
+              } else {
+                dbViews.add( dbView );
               }
             }
             /**
              * Check each database and determine if a partition arose between them.
              */
-            if ( dbViews.size() > 1 ) {
+            if ( !dbViews.isEmpty( ) ) {
               LOG.warn( logPrefix( localView ) + " found partitioned database views: " + Joiner.on( ", " ).join( dbViews ) );
               Databases.Locks.PARTITIONED.create( );
             }
             /**
-             * Check to ensure that if this host was coordinator it remains coordinator.
+             * Check to ensure that if this host was not the original coordinator it isn't restarted as the coordinator.
              */
             Host newCoordinator = Coordinator.INSTANCE.get( );
             if ( !coordinatorAddress.equals( newCoordinator.getDisplayName() ) ) {
@@ -578,8 +583,9 @@ public class Hosts {
 
             if ( Hosts.hasCoordinator() && !Hosts.isCoordinator() && BootstrapArgs.isCloudController() ) {
               LOG.fatal( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
-              LOG.fatal( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
               Databases.Locks.PARTITIONED.failStop( );
+            } else if ( Hosts.isCoordinator( ) ) {
+              LOG.fatal( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
             }
           }
         }

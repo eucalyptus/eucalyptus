@@ -236,7 +236,7 @@ public class Databases {
           LOG.debug( "The " + this.getLockName( ) + " file was created." );
         }
       } catch ( IOException e ) {
-        LOG.debug("Unable to create the disabled.lock file: " + e.getMessage());
+        LOG.debug("Unable to create the " + this.getLockName( ) + " file: " + e.getMessage());
       }
     }
 
