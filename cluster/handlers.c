@@ -4530,7 +4530,7 @@ int init_config(void)
     if (tmpstr) {
         proxy_max_cache_size = atoi(tmpstr);
         if (proxy_max_cache_size <= 0) {
-            logprintfl(EUCAINFO, "disabling CC image proxy cache due to %d size", proxy_max_cache_size);
+            logprintfl(EUCAINFO, "disabling CC image proxy cache due to size %d\n", proxy_max_cache_size);
             use_proxy = 0;      /* Disable proxy if zero-sized. */
         }
     }
@@ -4546,6 +4546,9 @@ int init_config(void)
     } else {
         snprintf(proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv", eucahome);
     }
+
+    if (use_proxy)
+        logprintfl(EUCAINFO, "enabling CC image proxy cache with size %d, path %s\n", proxy_max_cache_size, proxyPath);
 
     sem_mywait(CONFIG);
     // set up the current config
