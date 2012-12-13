@@ -435,7 +435,7 @@ public class Handlers {
       if ( channelEvent instanceof MessageEvent && componentIdClass != null ) {
         final BaseMessage message = BaseMessage.extractMessage( channelEvent );
         final ComponentMessage componentMessage = message==null ? null :
-            Ats.inClassHierarchy( message ).get( ComponentMessage.class );
+            Ats.inClassHierarchy( message.getClass() ).get( ComponentMessage.class );
         if ( message != null && (componentMessage == null || !componentIdClass.equals( componentMessage.value() ) ) ) {
           LOG.warn( String.format("Message %s does not match pipeline component %s",
               message.getClass(),
