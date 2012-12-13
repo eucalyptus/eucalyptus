@@ -316,7 +316,7 @@ public class NetworkGroups {
               if ( Reference.State.EXTANT.equals( exNet.getState( ) ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.PENDING.equals( exNet.getState( ) )
-                              && exNet.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
+                              && exNet.lastUpdateMillis( ) > 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.RELEASING.equals( exNet.getState( ) ) ) {
                 exNet.teardown( );
