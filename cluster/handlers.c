@@ -1845,6 +1845,8 @@ int refresh_instances(ncMetadata * ccMeta, int timeout, int dolock)
         }
     }
 
+    invalidate_instanceCache();
+
     sem_mywait(RESCACHE);
     memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
@@ -4662,7 +4664,7 @@ int checkActiveNetworks()
 
         for (i = 0; i < NUMBER_OF_VLANS; i++) {
             sem_mywait(VNET);
-            if (!activeNetworks[i] && vnetconfig->networks[i].active) {
+            if (!activeNetworks[i] && vnetconfig->networks[i].active && ( (time(NULL) - vnetconfig->networks[i].createTime) > 300 ) ) {
                 logprintfl(EUCAWARN, "checkActiveNetworks(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName,
                            vnetconfig->users[i].netName, i);
                 rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
