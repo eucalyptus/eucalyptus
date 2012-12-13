@@ -20,7 +20,7 @@
   -->
 <eucafaults version="1" description="Templates for the fault subsystem">
   <fault
-  id="1010"
+  id="1011"
   message="CLC will not start with the ${DB_LOCK_FILE} present on the file system.">
 
     <condition
