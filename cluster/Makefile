@@ -108,7 +108,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
 ../node/client-marshal-fake.o:
 	make -C ../node fake

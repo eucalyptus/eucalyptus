@@ -70,25 +70,25 @@ all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.
 build: all
 
 euca_rootwrap: euca_rootwrap.c
-	$(CC) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c $(LDFLAGS)
 
 euca_mountwrap: euca_mountwrap.c
-	$(CC) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c $(LDFLAGS)
 
 test: test.c ipc.o log.o misc.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o data.o -lpthread $(LIBS) $(LDFLAGS)
 
 test_misc: misc.c log.o ../storage/diskutil.o ipc.o
-	$(CC) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_misc misc.c log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
 test_wc: wc.c misc.o log.o ../storage/diskutil.o ipc.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUGS) -D_UNIT_TEST -o test_wc wc.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) -D_UNIT_TEST -o test_wc wc.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS)
 
 test_fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
-	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -D_UNIT_TEST -o test_fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
 euca-generate-fault: fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o
-	$(CC) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) `xslt-config --cflags` $(DEBUGS) -DEUCA_GENERATE_FAULT -o euca-generate-fault fault.c misc.o log.o wc.o ../storage/diskutil.o ipc.o utf8.o -lpthread -lxml2 $(LDFLAGS)
 
 test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(DEBUG) -D_UNIT_TEST -o test_sensor sensor.c misc.o log.o ../storage/diskutil.o ipc.o $(LIBS) $(LDFLAGS) $(EFENCE)
@@ -97,7 +97,7 @@ test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
 	make -C ../storage
 
 %.o: %.c %.h
-	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
+	$(CC) -c -std=gnu99 $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
 
 indent:
 	@for idfile in *.[ch]; do \
