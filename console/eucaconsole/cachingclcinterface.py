@@ -94,6 +94,12 @@ class CachingClcInterface(ClcInterface):
             freq = pollfreq
         self.snapshots = Cache(freq)
 
+        try:
+            freq = config.getint('server', 'pollfreq.tags')
+        except ConfigParser.NoOptionError:
+            freq = pollfreq
+        self.tags = Cache(freq)
+
     def get_cache_summary(self):
         summary = {'zone':self.zones.isCacheFresh(),
                    'image':self.images.isCacheFresh(),
@@ -128,29 +134,29 @@ class CachingClcInterface(ClcInterface):
                     ret.append(inst)
         return ret
 
-    def get_all_zones(self, callback):
+    def get_all_zones(self, filters, callback):
         # if cache stale, update it
         if self.zones.isCacheStale():
-            Threads.instance().runThread(self.__get_all_zones_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_zones_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.zones.values))
 
     def __get_all_zones_cb__(self, kwargs, callback):
         try:
-            self.zones.values = self.clc.get_all_zones()
+            self.zones.values = self.clc.get_all_zones(kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.zones.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def get_all_images(self, owners, callback):
+    def get_all_images(self, owners, filters, callback):
         if self.images.isCacheStale():
-            Threads.instance().runThread(self.__get_all_images_cb__, ({'owners': owners}, callback))
+            Threads.instance().runThread(self.__get_all_images_cb__, ({'owners': owners, 'filters':filters}, callback))
         else:
             callback(Response(data=self.images.values))
 
     def __get_all_images_cb__(self, kwargs, callback):
         try:
-            self.images.values = self.clc.get_all_images(kwargs['owners'])
+            self.images.values = self.clc.get_all_images(kwargs['owners'], kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.images.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -195,15 +201,15 @@ class CachingClcInterface(ClcInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def get_all_instances(self, callback):
+    def get_all_instances(self, filters, callback):
         if self.instances.isCacheStale():
-            Threads.instance().runThread(self.__get_all_instances_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_instances_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.__normalize_instances__(self.instances.values)))
 
     def __get_all_instances_cb__(self, kwargs, callback):
         try:
-            self.instances.values = self.clc.get_all_instances()
+            self.instances.values = self.clc.get_all_instances(kwargs['filters'])
             Threads.instance().invokeCallback(callback,
                             Response(data=self.__normalize_instances__(self.instances.values)))
         except Exception as ex:
@@ -330,15 +336,15 @@ class CachingClcInterface(ClcInterface):
     def get_password_data(self, instance_id):
         return self.clc.get_password_data(instance_id)
 
-    def get_all_addresses(self, callback):
+    def get_all_addresses(self, filters, callback):
         if self.addresses.isCacheStale():
-            Threads.instance().runThread(self.__get_all_addresses_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_addresses_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.addresses.values))
 
     def __get_all_addresses_cb__(self, kwargs, callback):
         try:
-            self.addresses.values = self.clc.get_all_addresses()
+            self.addresses.values = self.clc.get_all_addresses(kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.addresses.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -392,15 +398,15 @@ class CachingClcInterface(ClcInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def get_all_key_pairs(self, callback):
+    def get_all_key_pairs(self, filters, callback):
         if self.keypairs.isCacheStale():
-            Threads.instance().runThread(self.__get_all_key_pairs_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_key_pairs_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.keypairs.values))
 
     def __get_all_key_pairs_cb__(self, kwargs, callback):
         try:
-            self.keypairs.values = self.clc.get_all_key_pairs()
+            self.keypairs.values = self.clc.get_all_key_pairs(kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.keypairs.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -442,15 +448,15 @@ class CachingClcInterface(ClcInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def get_all_security_groups(self, callback):
+    def get_all_security_groups(self, filters, callback):
         if self.groups.isCacheStale():
-            Threads.instance().runThread(self.__get_all_security_groups_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_security_groups_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.groups.values))
 
     def __get_all_security_groups_cb__(self, kwargs, callback):
         try:
-            self.groups.values = self.clc.get_all_security_groups()
+            self.groups.values = self.clc.get_all_security_groups(kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.groups.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -540,15 +546,15 @@ class CachingClcInterface(ClcInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def get_all_volumes(self, callback):
+    def get_all_volumes(self, filters, callback):
         if self.volumes.isCacheStale():
-            Threads.instance().runThread(self.__get_all_volumes_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_volumes_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.volumes.values))
 
     def __get_all_volumes_cb__(self, kwargs, callback):
         try:
-            self.volumes.values = self.clc.get_all_volumes()
+            self.volumes.values = self.clc.get_all_volumes(kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.volumes.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -604,15 +610,15 @@ class CachingClcInterface(ClcInterface):
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def get_all_snapshots(self, callback):
+    def get_all_snapshots(self, filters, callback):
         if self.snapshots.isCacheStale():
-            Threads.instance().runThread(self.__get_all_snapshots_cb__, ({}, callback))
+            Threads.instance().runThread(self.__get_all_snapshots_cb__, ({'filters':filters}, callback))
         else:
             callback(Response(data=self.snapshots.values))
 
     def __get_all_snapshots_cb__(self, kwargs, callback):
         try:
-            self.snapshots.values = self.clc.get_all_snapshots()
+            self.snapshots.values = self.clc.get_all_snapshots(kwargs['filters'])
             Threads.instance().invokeCallback(callback, Response(data=self.snapshots.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
@@ -709,6 +715,45 @@ class CachingClcInterface(ClcInterface):
             ret = self.clc.register_image(kwargs['name'], kwargs['image_location'], kwargs['description'],
                                           kwargs['architecture'], kwargs['kernel_id'], kwargs['ramdisk_id'],
                                           kwargs['root_dev_name'], kwargs['block_device_map'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_tags(self, filters, callback):
+        if self.tags.isCacheStale():
+            Threads.instance().runThread(self.__get_all_tags_cb__, ({'filters':filters}, callback))
+        else:
+            callback(Response(data=self.tags.values))
+
+    def __get_all_tags_cb__(self, kwargs, callback):
+        try:
+            self.tags.values = self.clc.get_all_tags(kwargs['filters'])
+            Threads.instance().invokeCallback(callback, Response(data=self.tags.values))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # returns tag info
+    def create_tags(self, resourceIds, tags, callback):
+        self.tags.expireCache()
+        Threads.instance().runThread(self.__create_tag_cb__,
+                            ({'resource_ids':resourceIds, 'tags':tags}, callback))
+
+    def __create_tag_cb__(self, kwargs, callback):
+        try:
+            ret = self.clc.create_tags(kwargs['resource_ids'], kwargs['tags'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # returns True if successful
+    def delete_tags(self, resourceIds, tags, callback):
+        self.tags.expireCache()
+        Threads.instance().runThread(self.__delete_tag_cb__,
+                            ({'resource_ids':resourceIds, 'tags':tags}, callback))
+
+    def __delete_tag_cb__(self, kwargs, callback):
+        try:
+            ret = self.clc.delete_tags(kwargs['resource_ids'], kwargs['tags'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))

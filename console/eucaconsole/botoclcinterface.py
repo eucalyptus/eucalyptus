@@ -36,10 +36,10 @@ from .clcinterface import ClcInterface
 # This class provides an implmentation of the clcinterface using boto
 class BotoClcInterface(ClcInterface):
     conn = None
-    saveclcdata = False
+    saveclcdata = True
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        #boto.set_stream_logger('foo')
+        boto.set_stream_logger('foo')
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         path='/services/Eucalyptus'
         port=8773
@@ -53,7 +53,7 @@ class BotoClcInterface(ClcInterface):
             pass
         self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=2)
         self.conn.APIVersion = '2012-03-01'
         self.conn.http_connection_kwargs['timeout'] = 30
 
@@ -62,14 +62,14 @@ class BotoClcInterface(ClcInterface):
         json.dump(obj, f, cls=BotoJsonEncoder, indent=2)
         f.close()
 
-    def get_all_zones(self, callback=None):
-        obj = self.conn.get_all_zones()
+    def get_all_zones(self, filters, callback=None):
+        obj = self.conn.get_all_zones(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Zones.json")
         return obj
 
-    def get_all_images(self, owners, callback=None):
-        obj = self.conn.get_all_images(owners=owners)
+    def get_all_images(self, owners, filters, callback=None):
+        obj = self.conn.get_all_images(owners=owners, filters=filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Images.json")
         return obj
@@ -86,8 +86,8 @@ class BotoClcInterface(ClcInterface):
     def reset_image_attribute(self, image_id, attribute):
         return self.conn.reset_image_attribute(image_id, attribute)
 
-    def get_all_instances(self, callback=None):
-        obj = self.conn.get_all_instances()
+    def get_all_instances(self, filters, callback=None):
+        obj = self.conn.get_all_instances(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Instances.json")
         return obj
@@ -149,8 +149,8 @@ class BotoClcInterface(ClcInterface):
     def get_password_data(self, instance_id):
         return self.conn.get_password_data(instance_id)
 
-    def get_all_addresses(self, callback=None):
-        obj = self.conn.get_all_addresses()
+    def get_all_addresses(self, filters, callback=None):
+        obj = self.conn.get_all_addresses(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Addresses.json")
         return obj
@@ -171,8 +171,8 @@ class BotoClcInterface(ClcInterface):
     def disassociate_address(self, publicip):
         return self.conn.disassociate_address(publicip)
 
-    def get_all_key_pairs(self, callback=None):
-        obj = self.conn.get_all_key_pairs()
+    def get_all_key_pairs(self, filters, callback=None):
+        obj = self.conn.get_all_key_pairs(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Keypairs.json")
         return obj
@@ -189,8 +189,8 @@ class BotoClcInterface(ClcInterface):
     def import_key_pair(self, key_name, public_key_material):
         return self.conn.import_key_pair(key_name, public_key_material)
 
-    def get_all_security_groups(self, callback=None):
-        obj = self.conn.get_all_security_groups()
+    def get_all_security_groups(self, filters, callback=None):
+        obj = self.conn.get_all_security_groups(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Groups.json")
         return obj
@@ -231,8 +231,8 @@ class BotoClcInterface(ClcInterface):
                                  cidr_ip)#, group_id,
                                  #src_security_group_group_id)
 
-    def get_all_volumes(self, callback=None):
-        obj = self.conn.get_all_volumes()
+    def get_all_volumes(self, filters, callback=None):
+        obj = self.conn.get_all_volumes(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Volumes.json")
         return obj
@@ -253,8 +253,8 @@ class BotoClcInterface(ClcInterface):
     def detach_volume(self, volume_id, force=False):
         return self.conn.detach_volume(volume_id, None, None, force)
 
-    def get_all_snapshots(self, callback=None):
-        obj = self.conn.get_all_snapshots()
+    def get_all_snapshots(self, filters, callback=None):
+        obj = self.conn.get_all_snapshots(filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Snapshots.json")
         return obj
@@ -288,3 +288,16 @@ class BotoClcInterface(ClcInterface):
 #            kernel_id = 'windows'
         return self.conn.register_image(name, description, image_location, architecture, kernel_id, ramdisk_id, root_dev_name, block_device_map)
 
+    def get_all_tags(self, filters):
+        obj = self.conn.get_all_tags(filters)
+        if self.saveclcdata:
+            self.__save_json__(obj, "mockdata/Tags.json")
+        return obj
+
+    # returns tag info
+    def create_tags(self, resourceIds, tags):
+        return self.conn.create_tags(resourceIds, tags)
+
+    # returns True if successful
+    def delete_tags(self, resourceIds, tags):
+        return self.conn.delete_tags(resourceIds, tags)

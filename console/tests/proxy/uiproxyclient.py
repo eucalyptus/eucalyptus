@@ -69,6 +69,23 @@ class UIProxyClient(object):
         for idx, val in enumerate(list):
             params["%s.%d" % (name, idx + 1)] = val
 
+    # taken from boto/ec2/connection.py
+    def __build_filter_params__(self, params, filters):
+        i = 1
+        for name in filters:
+            aws_name = name
+            if not aws_name.startswith('tag:'):
+                aws_name = name.replace('_', '-')
+            params['Filter.%d.Name' % i] = aws_name
+            value = filters[name]
+            if not isinstance(value, list):
+                value = [value]
+            j = 1
+            for v in value:
+                params['Filter.%d.Value.%d' % (i, j)] = v
+                j += 1
+            i += 1
+
     def __make_request__(self, action, params):
         url = 'http://%s:%s/ec2?'%(self.host, self.port)
         for param in params.keys():
@@ -77,6 +94,7 @@ class UIProxyClient(object):
         params['Action'] = action
         params['_xsrf'] = self.xsrf
         data = urllib.urlencode(params)
+        print "request : "+data
         try:
             req = urllib2.Request(url)
             self.__check_logged_in__(req)
@@ -88,14 +106,20 @@ class UIProxyClient(object):
     ##
     # Zone methods
     ##
-    def get_zones(self):
-        return self.__make_request__('DescribeAvailabilityZones', {})
+    def get_zones(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeAvailabilityZones', params)
 
     ##
     # Image methods
     ##
-    def get_images(self):
-        return self.__make_request__('DescribeImages', {})
+    def get_images(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeImages', params)
 
     def get_image_attribute(self, image_id, attribute='launchPermission'):
         return self.__make_request__('DescribeImageAttribute', {'ImageId': image_id, 'Attribute': attribute})
@@ -217,8 +241,11 @@ class UIProxyClient(object):
     ##
     # Keypair methods
     ##
-    def get_keypairs(self):
-        return self.__make_request__('DescribeKeyPairs', {})
+    def get_keypairs(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeKeyPairs', params)
 
     def create_keypair(self, name):
         return self.__make_request__('CreateKeyPair', {'KeyName': name})
@@ -226,14 +253,14 @@ class UIProxyClient(object):
     def delete_keypair(self, name):
         return self.__make_request__('DeleteKeyPair', {'KeyName': name})
 
-    def get_keypairs(self):
-        return self.__make_request__('DescribeKeyPairs', {})
-
     ##
     # Security Group methods
     ##
-    def get_security_groups(self):
-        return self.__make_request__('DescribeSecurityGroups', {})
+    def get_security_groups(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeSecurityGroups', params)
 
     # returns True if successful
     def create_security_group(self, name, description):
@@ -290,8 +317,11 @@ class UIProxyClient(object):
     ##
     # Addresss methods
     ##
-    def get_addresses(self):
-        return self.__make_request__('DescribeAddresses', {})
+    def get_addresses(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeAddresses', params)
 
     def allocate_address(self):
         return self.__make_request__('AllocateAddress', {})
@@ -308,8 +338,11 @@ class UIProxyClient(object):
     ##
     # Volume methods
     ##
-    def get_volumes(self):
-        return self.__make_request__('DescribeVolumes', {})
+    def get_volumes(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeVolumes', params)
 
     def create_volume(self, size, zone, snapshot_id):
         params = {'Size': size, 'AvailabilityZone': zone}
@@ -331,8 +364,11 @@ class UIProxyClient(object):
     ##
     # Snapshot methods
     ##
-    def get_snapshots(self):
-        return self.__make_request__('DescribeSnapshots', {})
+    def get_snapshots(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeSnapshots', params)
 
     def create_snapshot(self, volume_id, description=None):
         params = {'VolumeId': volume_id}
@@ -349,9 +385,9 @@ class UIProxyClient(object):
     def modify_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission', operation='add', users=None, groups=None):
         params = {'SnapshotId': snapshot_id, 'Attribute': attribute, 'OperationType': operation}
         if users:
-            self.__add_params_list__(params, 'UserId', users);
+            self.__add_param_list__(params, 'UserId', users);
         if groups:
-            self.__add_params_list__(params, 'UserGroup', groups);
+            self.__add_param_list__(params, 'UserGroup', groups);
         return self.__make_request__('ModifySnapshotAttribute', params)
 
     def reset_snapshot_attribute(self, snapshot_id, attribute='createVolumePermission'):
@@ -364,3 +400,37 @@ class UIProxyClient(object):
         return self.__make_request__('RegisterImage', {'SnapshotId': snapshot_id, 'Name': name})
     def deregister_image(self, image_id):
         return self.__make_request__('DeregisterImage', {'ImageId': image_id})
+
+    ##
+    # Tag methods
+    ##
+    def get_tags(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeTags', params)
+
+    def create_tags(self, resource_ids, tags):
+        params = {}
+        self.__add_param_list__(params, 'ResourceId', resource_ids)
+        i = 1
+        for key in tags.keys():
+            value = tags[key]
+            params['Tag.%d.Key'%i] = key
+            if value is not None:
+                params['Tag.%d.Value'%(i)] = value
+            i += 1
+        return self.__make_request__('CreateTags', params)
+
+    def delete_tags(self, resource_ids, tags):
+        params = {}
+        self.__add_param_list__(params, 'ResourceId', resource_ids)
+        i = 1
+        for key in tags.keys():
+            value = tags[key]
+            params['Tag.%d.Key'%i] = key
+            if value is not None:
+                params['Tag.%d.Value'%(i)] = value
+            i += 1
+        return self.__make_request__('DeleteTags', params)
+
