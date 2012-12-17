@@ -118,11 +118,11 @@ static virConnectPtr *check_hypervisor_conn()
 
 static void *checker_thread(void *ptr)
 {
-    for (int iter=0; iter<IITERS; iter++) {
-        printf ("checker thread starting iteration %d\n", iter);
+    for (int iter = 0; iter < IITERS; iter++) {
+        printf("checker thread starting iteration %d\n", iter);
         check_hypervisor_conn();
     }
-    
+
     return NULL;
 }
 
@@ -131,8 +131,8 @@ static void *tortura_thread(void *ptr)
     long long tid = *(long long *)ptr;
 
     check_hypervisor_conn();
-    for (int iter=0; iter<ITERS; iter++) {
-        printf ("thread %lld starting iteration %d\n", tid, iter);
+    for (int iter = 0; iter < ITERS; iter++) {
+        printf("thread %lld starting iteration %d\n", tid, iter);
         {
             int dom_ids[MAXDOMS];
             virDomainPtr dom[MAXDOMS];
@@ -141,19 +141,25 @@ static void *tortura_thread(void *ptr)
             pthread_mutex_lock(&check_mutex);
             int num_doms = virConnectListDomains(conn, dom_ids, MAXDOMS);
             pthread_mutex_unlock(&check_mutex);
-            
+
             for (int i = 0; i < num_doms; i++) {
                 pthread_mutex_lock(&check_mutex);
                 dom[i] = virDomainLookupByID(conn, dom_ids[i]);
                 pthread_mutex_unlock(&check_mutex);
-                if (!dom[i]) { printf("failed to look up domain %d\n", dom_ids[i]); continue; }
+                if (!dom[i]) {
+                    printf("failed to look up domain %d\n", dom_ids[i]);
+                    continue;
+                }
             }
-            
+
             for (int i = 0; i < num_doms; i++) {
                 pthread_mutex_lock(&check_mutex);
                 int error = virDomainGetInfo(dom[i], &info[i]);
                 pthread_mutex_unlock(&check_mutex);
-                if (error < 0) { printf("failed to get info on domain %d\n", dom_ids[i]); continue; }
+                if (error < 0) {
+                    printf("failed to get info on domain %d\n", dom_ids[i]);
+                    continue;
+                }
 
             }
 
@@ -161,11 +167,14 @@ static void *tortura_thread(void *ptr)
                 pthread_mutex_lock(&check_mutex);
                 int error = virDomainFree(dom[i]);
                 pthread_mutex_unlock(&check_mutex);
-                if (error < 0) { printf("failed to close domain %d\n", dom_ids[i]); continue; }
+                if (error < 0) {
+                    printf("failed to close domain %d\n", dom_ids[i]);
+                    continue;
+                }
             }
         }
     }
-    
+
     return NULL;
 }
 
@@ -175,36 +184,36 @@ static void *tortura_thread(void *ptr)
 static void *startup_thread(void *ptr)
 {
     long long tid = *(long long *)ptr;
-    char file_name [1024];
-    
-    snprintf (file_name, sizeof(file_name), "%s/%s-%lld", get_current_dir_name(), DUMMY_DISK_FILE, tid);
+    char file_name[1024];
 
-    umask (0000);
-    int fd = open (file_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    snprintf(file_name, sizeof(file_name), "%s/%s-%lld", get_current_dir_name(), DUMMY_DISK_FILE, tid);
+
+    umask(0000);
+    int fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
         printf("failed to create %s\n", DUMMY_DISK_FILE);
-        perror ("libvirt_tortura");
-        exit (1);
+        perror("libvirt_tortura");
+        exit(1);
     }
-    if (lseek (fd, DUMMY_DISK_SIZE_BYTES, SEEK_SET) == (off_t) -1) {
+    if (lseek(fd, DUMMY_DISK_SIZE_BYTES, SEEK_SET) == (off_t) - 1) {
         printf("failed to seek in %s\n", DUMMY_DISK_FILE);
-        perror ("libvirt_tortura");
-        exit (1);
+        perror("libvirt_tortura");
+        exit(1);
     }
-    if (write (fd, "x", 1) != 1) {
+    if (write(fd, "x", 1) != 1) {
         printf("failed to write to %s\n", DUMMY_DISK_FILE);
-        perror ("libvirt_tortura");
-        exit (1);
+        perror("libvirt_tortura");
+        exit(1);
     }
-    close (fd);
-    sync ();
+    close(fd);
+    sync();
 
     check_hypervisor_conn();
-    for (int iter=0; iter<SITERS; iter++) {
-        printf ("startup thread %lld starting iteration %d\n", tid, iter);
-        
-        char xml [4096];
-        char * xml_template = 
+    for (int iter = 0; iter < SITERS; iter++) {
+        printf("startup thread %lld starting iteration %d\n", tid, iter);
+
+        char xml[4096];
+        char *xml_template =
             "<?xml version='1.0' encoding='UTF-8'?>"
             "<domain type='kvm'>"
             "  <name>tortura-%04lld</name>"
@@ -222,22 +231,17 @@ static void *startup_thread(void *ptr)
             "  <vcpu>1</vcpu>"
             "  <memory>52428</memory>"
             "  <devices>"
-            "    <disk device='disk'>"
-            "      <source file='%s'/>"
-            "      <target bus='virtio' dev='vda'/>"
-            "    </disk>"
-            "  </devices>"
-            "</domain>";
-        snprintf (xml, sizeof(xml), xml_template, tid, file_name);
+            "    <disk device='disk'>" "      <source file='%s'/>" "      <target bus='virtio' dev='vda'/>" "    </disk>" "  </devices>" "</domain>";
+        snprintf(xml, sizeof(xml), xml_template, tid, file_name);
 
         pthread_mutex_lock(&check_mutex);
         virDomainPtr dom = virDomainCreateLinux(conn, xml, 0);
         pthread_mutex_unlock(&check_mutex);
 
-        sleep (3);
+        sleep(3);
 
         if (dom == NULL) {
-            printf("ERROR: failed to start domain\n"); 
+            printf("ERROR: failed to start domain\n");
             continue;
         }
 
@@ -247,23 +251,23 @@ static void *startup_thread(void *ptr)
         pthread_mutex_unlock(&check_mutex);
     }
 
-    unlink (file_name);
+    unlink(file_name);
 
     return NULL;
 }
 
-int main(int argc, char ** argv)
-{    
+int main(int argc, char **argv)
+{
     printf("spawning %d competing threads\n", THREADS);
     pthread_t threads[THREADS];
     long long thread_par[THREADS];
     int thread_par_sum = 0;
     for (int j = 0; j < THREADS; j++) {
         thread_par[j] = j;
-        if (j==0) {
+        if (j == 0) {
             pthread_create(&threads[j], NULL, checker_thread, (void *)&thread_par[j]);
         } else {
-            if (j%2 == 0) {
+            if (j % 2 == 0) {
                 pthread_create(&threads[j], NULL, tortura_thread, (void *)&thread_par[j]);
             } else {
                 pthread_create(&threads[j], NULL, startup_thread, (void *)&thread_par[j]);

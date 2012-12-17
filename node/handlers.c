@@ -318,7 +318,7 @@ static void invalidate_hypervisor_conn()
     sem_v(hyp_sem);
 }
 
-static void * libvirt_thread(void *ptr)
+static void *libvirt_thread(void *ptr)
 {
     // allow SIGUSR1 signal to be delivered to this thread and its children
     sigset_t mask;
@@ -345,7 +345,6 @@ virConnectPtr *check_hypervisor_conn()
         sem_v(hyp_sem);
         return NULL;
     }
-
     // Fork off a process just to open and immediately close a libvirt connection.
     // The purpose is to try to identify periods when open or close calls block indefinitely.
     // Success in the child process does not guarantee success in the parent process, but
@@ -353,16 +352,16 @@ virConnectPtr *check_hypervisor_conn()
 
     boolean bail = FALSE;
     pid_t cpid = fork();
-    if (cpid < 0) {         // fork error
+    if (cpid < 0) {             // fork error
         logprintfl(EUCAERROR, "[%s] failed to fork to check hypervisor connection\n");
-        bail = TRUE; // we are in big trouble if we cannot fork
-    } else if (cpid == 0) { // child process - checks on the connection
+        bail = TRUE;            // we are in big trouble if we cannot fork
+    } else if (cpid == 0) {     // child process - checks on the connection
         virConnectPtr tmp_conn = virConnectOpen(nc_state.uri);
         if (tmp_conn == NULL)
             exit(1);
         virConnectClose(tmp_conn);
         exit(0);
-    } else {                // parent process - waits for the child, kills it if necessary
+    } else {                    // parent process - waits for the child, kills it if necessary
         int status;
         int rc = timewait(cpid, &status, LIBVIRT_TIMEOUT_SEC);
         if (rc < 0) {
@@ -376,12 +375,12 @@ virConnectPtr *check_hypervisor_conn()
             bail = TRUE;
         }
         // terminate the child, if any
-        kill(cpid, SIGKILL); // should be able to do
-        kill(cpid, 9); // may not be able to do
+        kill(cpid, SIGKILL);    // should be able to do
+        kill(cpid, 9);          // may not be able to do
     }
     if (bail) {
         sem_v(hyp_sem);
-        return NULL; // better fail the operation than block the whole NC
+        return NULL;            // better fail the operation than block the whole NC
     }
     logprintfl(EUCATRACE, "process check for libvirt succeeded\n");
 
@@ -408,8 +407,8 @@ virConnectPtr *check_hypervisor_conn()
             ts.tv_sec += LIBVIRT_TIMEOUT_SEC;
             int rc = pthread_timedjoin_np(thread, NULL, &ts);
             if (rc == 0)
-                break; // all is well
-            if (rc != ETIMEDOUT) { // error other than timeout
+                break;          // all is well
+            if (rc != ETIMEDOUT) {  // error other than timeout
                 logprintfl(EUCAERROR, "failed to wait for libvirt refreshing thread (rc=%d)\n", rc);
                 bail = TRUE;
                 break;
@@ -1265,7 +1264,6 @@ static int init(void)
 
     bzero(&nc_state, sizeof(struct nc_state_t));    // ensure that MAXes are zeroed out
 
-
     // configure signal handling for this thread and its children:
     // - ignore SIGALRM, which may be used in libraries we depend on
     // - deliver SIGUSR1 to a no-op signal handler, as a way to unblock 'stuck' system calls in libraries we depend on
@@ -1279,7 +1277,7 @@ static int init(void)
 
         // establish function nc_signal_handler() as the handler for delivery of SIGUSR1, in whatever thread
         struct sigaction act;
-        bzero (&act, sizeof(struct sigaction));
+        bzero(&act, sizeof(struct sigaction));
         act.sa_handler = nc_signal_handler;
         act.sa_flags = 0;
         sigemptyset(&act.sa_mask);
@@ -1978,8 +1976,8 @@ int doRunInstance(ncMetadata * meta, char *uuid, char *instanceId, char *reserva
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] running instance cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk, params->mem,
-               netparams->vlan, netparams->privateMac, netparams->privateIp);
+    logprintfl(EUCAINFO, "[%s] running instance cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk,
+               params->mem, netparams->vlan, netparams->privateMac, netparams->privateIp);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != OK)
         return ERROR;
 
@@ -2104,7 +2102,8 @@ int doDetachVolume(ncMetadata * meta, char *instanceId, char *volumeId, char *re
     if (init())
         return 1;
 
-    logprintfl(EUCADEBUG, "[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force, grab_inst_sem);
+    logprintfl(EUCADEBUG, "[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force,
+               grab_inst_sem);
 
     if (nc_state.H->doDetachVolume)
         ret = nc_state.H->doDetachVolume(&nc_state, meta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);

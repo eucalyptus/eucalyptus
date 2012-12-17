@@ -1292,8 +1292,8 @@ int doStopNetwork(ncMetadata * ccMeta, char *accountId, char *netName, int vlan)
     }
 
     logprintfl(EUCAINFO, "stopping network %d\n", vlan);
-    logprintfl(EUCADEBUG, "invoked: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId), SP(netName),
-               vlan);
+    logprintfl(EUCADEBUG, "invoked: userId=%s, accountId=%s, netName=%s, vlan=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), SP(accountId),
+               SP(netName), vlan);
     if (!ccMeta || !netName || vlan < 0) {
         logprintfl(EUCAERROR, "bad input params\n");
     }
@@ -2338,15 +2338,15 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
     return (0);
 }
 
-static void print_abbreviated_instances(const char * gerund, char **instIds, int instIdsLen)
+static void print_abbreviated_instances(const char *gerund, char **instIds, int instIdsLen)
 {
-    char list [60] = "";
+    char list[60] = "";
     int offset = 0;
-    for (int k = 0; k < instIdsLen && offset < (sizeof (list) - 4); k++) {
-        offset += snprintf (list + offset, sizeof (list) - 3 - offset, "%s%s", (k==0)?(""):(", "), instIds [k]);
+    for (int k = 0; k < instIdsLen && offset < (sizeof(list) - 4); k++) {
+        offset += snprintf(list + offset, sizeof(list) - 3 - offset, "%s%s", (k == 0) ? ("") : (", "), instIds[k]);
     }
-    if (strlen (list) == sizeof (list) - 4) {
-        sprintf (list + offset, "...");
+    if (strlen(list) == sizeof(list) - 4) {
+        sprintf(list + offset, "...");
     }
 
     logprintfl(EUCAINFO, "%s %d instance(s): %s\n", gerund, instIdsLen, list);
@@ -2375,7 +2375,7 @@ int doRunInstances(ncMetadata * ccMeta, char *amiId, char *kernelId, char *ramdi
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    print_abbreviated_instances ("running", instIds, instIdsLen);
+    print_abbreviated_instances("running", instIds, instIdsLen);
     logprintfl(EUCADEBUG,
                "invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n",
                SP(ccMeta ? ccMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId), SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen,
@@ -2535,8 +2535,7 @@ int doRunInstances(ncMetadata * ccMeta, char *amiId, char *kernelId, char *ramdi
                 int pid, status, ret, rbytes;
 
                 // try to run the instance on the chosen resource
-                logprintfl(EUCAINFO, "scheduler decided to run instance %s on resource %s, running count %d\n", instId, res->ncURL,
-                           res->running);
+                logprintfl(EUCAINFO, "scheduler decided to run instance %s on resource %s, running count %d\n", instId, res->ncURL, res->running);
 
                 outInst = NULL;
 
@@ -3017,7 +3016,8 @@ int doDescribeSensors(ncMetadata * meta, int historySize, long long collectionIn
             nc_poll_interval_sec = POLL_INTERVAL_MINIMUM_SEC;
         if (config->ncSensorsPollingInterval != nc_poll_interval_sec) {
             config->ncSensorsPollingInterval = nc_poll_interval_sec;
-            logprintfl(EUCADEBUG, "changed NC sensors poll interval to %d (col_interval_sec=%d historySize=%d)\n", nc_poll_interval_sec, col_interval_sec, historySize);
+            logprintfl(EUCADEBUG, "changed NC sensors poll interval to %d (col_interval_sec=%d historySize=%d)\n", nc_poll_interval_sec,
+                       col_interval_sec, historySize);
         }
     }
 
@@ -3071,7 +3071,7 @@ int doDescribeSensors(ncMetadata * meta, int historySize, long long collectionIn
         *outResourcesLen = num_results;
     }
 
-    logprintfl (EUCATRACE, "returning (outResourcesLen=%d)\n", *outResourcesLen);
+    logprintfl(EUCATRACE, "returning (outResourcesLen=%d)\n", *outResourcesLen);
 
     return 0;
 }
@@ -3561,13 +3561,13 @@ void *monitor_thread(void *in)
                 }
             }
 
-            {   // print a periodic summary of instances in the log
+            {                   // print a periodic summary of instances in the log
                 static time_t last_log_update = 0;
 
                 int res_idle = 0, res_busy = 0, res_bad = 0;
                 sem_mywait(RESCACHE);
                 for (int i = 0; i < resourceCache->numResources; i++) {
-                    ccResource * res = &(resourceCache->resources[i]);
+                    ccResource *res = &(resourceCache->resources[i]);
                     if (res->state == RESDOWN) {
                         res_bad++;
                     } else {
@@ -4566,7 +4566,7 @@ int init_config(void)
     config->wakeThresh = wakeThresh;
     config->instanceTimeout = instanceTimeout;
     config->ncPollingFrequency = ncPollingFrequency;
-    config->ncSensorsPollingInterval = ncPollingFrequency; // initially poll sensors with the same frequency as other NC ops
+    config->ncSensorsPollingInterval = ncPollingFrequency;  // initially poll sensors with the same frequency as other NC ops
     config->clcPollingFrequency = clcPollingFrequency;
     config->ncFanout = ncFanout;
     locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
@@ -4664,7 +4664,7 @@ int checkActiveNetworks()
 
         for (i = 0; i < NUMBER_OF_VLANS; i++) {
             sem_mywait(VNET);
-            if (!activeNetworks[i] && vnetconfig->networks[i].active && ( (time(NULL) - vnetconfig->networks[i].createTime) > 300 ) ) {
+            if (!activeNetworks[i] && vnetconfig->networks[i].active && ((time(NULL) - vnetconfig->networks[i].createTime) > 300)) {
                 logprintfl(EUCAWARN, "checkActiveNetworks(): network active but no running instances (%s, %s, %d)\n", vnetconfig->users[i].userName,
                            vnetconfig->users[i].netName, i);
                 rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
