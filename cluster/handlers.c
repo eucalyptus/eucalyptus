@@ -3010,7 +3010,7 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
     int offset = 0;
     char list[60] = "";
     
-    for (k = 0; ((k < instIdsLen) && (offset < ((sizeof(list) - 4))); k++) {
+    for (k = 0; ((k < instIdsLen) && (offset < ((sizeof(list) - 4)))); k++) {
         offset += snprintf(list + offset, sizeof(list) - 3 - offset, "%s%s", (k == 0) ? ("") : (", "), instIds[k]);
     }
     
