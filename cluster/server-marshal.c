@@ -508,10 +508,6 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     adb_describeSensorsType_t *input = adb_DescribeSensors_get_DescribeSensors(describeSensors, env);
     adb_describeSensorsResponseType_t *output = adb_describeSensorsResponseType_create(env);
 
-    // get standard fields from input
-    /////axis2_char_t * correlationId = adb_describeSensorsType_get_correlationId(input, env);
-    /////axis2_char_t * userId = adb_describeSensorsType_get_userId(input, env);
-
     // get operation-specific fields from input
     int historySize = adb_describeSensorsType_get_historySize(input, env);
     long long collectionIntervalTimeMs = adb_describeSensorsType_get_collectionIntervalTimeMs(input, env);

@@ -223,8 +223,8 @@ configEntry configKeysNoRestartCC[] = {
     {"CLC_POLLING_FREQUENCY", "6"},
     {"CC_ARBITRATORS", NULL},
     {"LOGLEVEL", "INFO"},
-    {"LOGROLLNUMBER", "4"},
-    {"LOGMAXSIZE", "10485760"},
+    {"LOGROLLNUMBER", "10"},
+    {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
     {"LOGFACILITY", ""},
     {NULL, NULL},
@@ -2392,6 +2392,8 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
         }
     }
 
+    invalidate_instanceCache();
+
     sem_mywait(RESCACHE);
     memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
@@ -3004,12 +3006,15 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
 //!
 static void print_abbreviated_instances(const char *gerund, char **instIds, int instIdsLen)
 {
-    char list[60] = "";
+	int k = 0;
     int offset = 0;
-    for (int k = 0; k < instIdsLen && offset < (sizeof(list) - 4); k++) {
+    char list[60] = "";
+    
+    for (k = 0; ((k < instIdsLen) && (offset < ((sizeof(list) - 4))); k++) {
         offset += snprintf(list + offset, sizeof(list) - 3 - offset, "%s%s", (k == 0) ? ("") : (", "), instIds[k]);
     }
-    if (strlen(list) == sizeof(list) - 4) {
+    
+    if (strlen(list) == (sizeof(list) - 4)) {
         sprintf(list + offset, "...");
     }
 
