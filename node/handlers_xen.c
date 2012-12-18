@@ -306,7 +306,6 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             sensor_shift_metric(instance->instanceId, "NetworkOut");
             sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats immediately to minimize loss
             sensor_resume_polling();    // now that metrics have been shifted, resume polling
-
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl(EUCAWARN, "[%s] domain to be rebooted not running on hypervisor\n", instanceId);

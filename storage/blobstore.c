@@ -2669,7 +2669,7 @@ int blobstore_stat(blobstore * bs, blobstore_meta * meta)
     int ret = 0;
 
     if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC) == -1) {    // lock it so we can traverse blobstore safely
-        return ERROR;
+        return EUCA_ERROR;
     }
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;

@@ -527,9 +527,11 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
 {
     ncInstance *instance = NULL;
     int err = EUCA_ERROR;
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
-    // refresh stats so latest instance measurements are captured before it disappears
-    sensor_refresh_resources(instanceId, "", 1);
+    safe_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
 
     sem_p(inst_sem);
     err = find_and_terminate_instance(nc, pMeta, instanceId, force, &instance, 1);
@@ -1053,12 +1055,13 @@ release:
         }
     }
 
-    if (ret == EUCA_OK)
+    if (ret == EUCA_OK) {
         logprintfl(EUCAINFO, "[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal,
                    localDevReal);
+    }
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
     int log_level_for_devstring = EUCATRACE;
-    if (ret != OK)
+    if (ret != EUCA_OK)
         log_level_for_devstring = EUCADEBUG;
     logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
@@ -1091,6 +1094,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     int is_iscsi_target = 0;
     int have_remote_device = 0;
     char *xml = NULL;
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
     char *tagBuf;
     char *localDevName;
@@ -1183,7 +1188,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         goto release;
     }
 
-    sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats so volume measurements are captured before it disappears
+    safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so volume measurements are captured before it disappears
 
     char path[MAX_PATH];
     char lpath[MAX_PATH];
@@ -1254,7 +1260,7 @@ release:
         logprintfl(EUCAINFO, "[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
     int log_level_for_devstring = EUCATRACE;
-    if (ret != OK)
+    if (ret != EUCA_OK)
         log_level_for_devstring = EUCADEBUG;
     logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
@@ -1972,7 +1978,7 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
         rss[k] = EUCA_ZALLOC(1, sizeof(sensorResource));
         if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != EUCA_OK) {
             logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
-            free(rss[k]);
+            EUCA_FREE(rss[k]);
         } else {
             k++;
         }
