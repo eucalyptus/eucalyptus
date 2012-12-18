@@ -39,7 +39,7 @@ class BotoClcInterface(ClcInterface):
     saveclcdata = True
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        boto.set_stream_logger('foo')
+        #boto.set_stream_logger('foo')
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         path='/services/Eucalyptus'
         port=8773
@@ -53,7 +53,7 @@ class BotoClcInterface(ClcInterface):
             pass
         self.conn = EC2Connection(access_id, secret_key, region=reg,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2012-03-01'
         self.conn.http_connection_kwargs['timeout'] = 30
 
