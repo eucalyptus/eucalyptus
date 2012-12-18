@@ -68,21 +68,16 @@
 //! This implements the default operations handlers supported by all hypervisor.
 //!
 
-#define _FILE_OFFSET_BITS      64   //!< so large-file support works on 32-bit systems
-#define __USE_GNU
-#ifndef MAX_PATH
-#define MAX_PATH               4096 //!< Max path string length
-#endif /*  ! MAX_PATH */
-#define HANDLERS_FANOUT
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _FILE_OFFSET_BITS      64   //!< so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU               /* strnlen */
 #include <string.h>             /* strlen, strcpy */
 #include <time.h>
 #include <limits.h>             /* INT_MAX */
@@ -101,12 +96,16 @@
 #include <signal.h>             /* SIGINT */
 #include <linux/limits.h>
 #include <pwd.h>                /* getpwuid_r */
+#ifndef MAX_PATH
+#define MAX_PATH               4096 //!< Max path string length
+#endif /*  ! MAX_PATH */
 
 #include "eucalyptus-config.h"
 #include "ipc.h"
 #include "misc.h"
 #include "backing.h"
 #include "diskutil.h"
+#define HANDLERS_FANOUT
 #include "handlers.h"
 #include "eucalyptus.h"
 #include "euca_auth.h"

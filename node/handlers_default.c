@@ -68,8 +68,6 @@
 //! This implements the default operations handlers supported by all hypervisor.
 //!
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
-#define __USE_GNU               /* strnlen */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -77,8 +75,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU               /* strnlen */
 #include <string.h>             /* strlen, strcpy */
 #include <time.h>
 #ifndef __DARWIN_UNIX03

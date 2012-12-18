@@ -68,17 +68,16 @@
 //! Need to provide description
 //!
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
-#define __USE_GNU
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU
 #include <string.h>             /* strlen, strcpy */
 #include <time.h>
 #include <limits.h>             /* INT_MAX */
