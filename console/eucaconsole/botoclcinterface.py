@@ -36,7 +36,7 @@ from .clcinterface import ClcInterface
 # This class provides an implmentation of the clcinterface using boto
 class BotoClcInterface(ClcInterface):
     conn = None
-    saveclcdata = True
+    saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
         #boto.set_stream_logger('foo')
