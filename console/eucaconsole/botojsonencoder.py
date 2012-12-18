@@ -82,11 +82,13 @@ class BotoJsonEncoder(JSONEncoder):
     def __sanitize_and_copy__(self, dict):
         try:
             ret = copy.copy(dict)
-            for key in ret.keys():
-                if key in self.FIELD_WHITELIST:
-                    continue
-                if isinstance(ret[key], basestring):
-                    ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
+            # Don't sanitize. We're doing this in the browser now!
+            # Leave this code in for now... 
+            #for key in ret.keys():
+            #    if key in self.FIELD_WHITELIST:
+            #        continue
+            #    if isinstance(ret[key], basestring):
+            #        ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
             return ret
         except Exception, e:
             logging.error(e)
