@@ -2018,7 +2018,8 @@ int sensor_validate_resources(sensorResource ** srs, int srsLen)
                 }
             }
         }
-next_resource:continue;        // label so we can bail out of loops, continue to keep gcc happy
+next_resource:
+        continue;        // label so we can bail out of loops, continue to keep gcc happy
     }
 
     return errors;

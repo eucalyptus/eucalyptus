@@ -282,7 +282,7 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
     }
 
     logprintfl(EUCADEBUG, "uploading %s\n", file_path);
-    logprintfl(EUCADEBUG, "            to %s\n", url);
+    logprintfl(EUCADEBUG, "       to %s\n", url);
 
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt(curl, CURLOPT_URL, url);

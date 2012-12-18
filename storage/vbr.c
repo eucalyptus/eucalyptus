@@ -632,7 +632,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
 int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
 {
     virtualBootRecord *partitions[BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];    // for validating partitions
-    bzero(partitions, sizeof(partitions));
+    bzero(partitions, sizeof(partitions));  //! @fixme: chuck - this is not zeroing out the hole structure!!!
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
 
@@ -1178,7 +1178,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, root_part);
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
-        if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != OK) {
+        if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId, root_part);
             goto unmount;
         }
@@ -1186,13 +1186,13 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId, root_part);
             goto unmount;
         }
-        if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != OK) {
+        if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId, root_part);
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
         sleep(1);               // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
-        if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
+        if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != EUCA_OK) {
             logprintfl(EUCAINFO, "[%s] failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN);
         }
         bootification_failed = 0;

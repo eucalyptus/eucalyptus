@@ -4436,15 +4436,15 @@ int blockblob_sync(const char *dev_path, const blockblob * bb)
 
     sync();                     // ensure the whole buffer cache is flushed
 
-    if (err == 0 && dev_path != NULL) {
+    if ((err == 0) && (dev_path != NULL)) {
         err = dm_suspend_resume(dev_path);
     }
 
-    if (err == 0 && bb != NULL) {
+    if ((err == 0) && (bb != NULL)) {
         err = dm_suspend_resume(bb->device_path);
     }
 
-    return err;
+    return (err);
 }
 
 #ifdef _UNIT_TEST
