@@ -515,7 +515,7 @@ static void invalidate_hypervisor_conn(void)
 static void *libvirt_thread(void *ptr)
 {
     int rc = 0;
-    sigset_t mask = { { 0 } };
+    sigset_t mask = { {0} };
 
     // allow SIGUSR1 signal to be delivered to this thread and its children
     sigemptyset(&mask);
