@@ -20,7 +20,7 @@
 
 (function($, eucalyptus) {
   eucalyptus.help = function(args){
-    language = args['language']; // not used yet
+    language = args['language']; 
     try{
       try{
         help_keypair.load({language:language});
@@ -96,7 +96,6 @@ function loadHtml(url, handler){
           handler(data);
         },
         error : function (){
-          //handler($.i18n.prop('error_loading_help_file'));
           throw "static html files not found";
         }
     });
@@ -110,7 +109,6 @@ var help_dashboard = {
    landing_content: '',
    landing_content_url : '', 
 }
-  //[keypair]
 var help_keypair = {
   load : function(arg){
     help_keypair.landing_content_url = 'help/'+arg.language+'/console_manage_keypairs.html';

@@ -95,6 +95,7 @@
 #include "eucalyptus.h"
 #include "euca_auth.h"
 #include "backing.h"
+#include "sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -281,6 +282,10 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
         sem_v(hyp_sem);
         if (dom) {
+
+            // stop polling so values after reboot are not picked up until after we shift the metric
+            sensor_suspend_polling();
+
             /* also protect 'reboot', just in case */
             sem_p(hyp_sem);
             int err = virDomainReboot(dom, 0);
@@ -291,6 +296,17 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             sem_p(hyp_sem);
             virDomainFree(dom); /* necessary? */
             sem_v(hyp_sem);
+
+            // Add a shift to values of three of the metrics: ones that
+            // drop back to zero after a reboot. The shift, which is based
+            // on the latest value, ensures that values sent upstream do
+            // not go backwards .
+            sensor_shift_metric(instance->instanceId, "CPUUtilization");
+            sensor_shift_metric(instance->instanceId, "NetworkIn");
+            sensor_shift_metric(instance->instanceId, "NetworkOut");
+            sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats immediately to minimize loss
+            sensor_resume_polling();    // now that metrics have been shifted, resume polling
+
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
                 logprintfl(EUCAWARN, "[%s] domain to be rebooted not running on hypervisor\n", instanceId);

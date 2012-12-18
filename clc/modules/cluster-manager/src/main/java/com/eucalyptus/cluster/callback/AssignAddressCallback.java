@@ -151,7 +151,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     if ( this.address.isSystemOwned( ) ) {
       Addresses.release( this.address );
     } else if ( this.address.isAssigned( ) && this.vm != null ) {
-      AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ).dispatch( vm.getPartition( ) );
+      AsyncRequests.dispatchSafely( AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ), vm.getPartition( ) );
     } else if ( this.address.isAssigned( ) && this.vm == null ) {
       this.address.unassign( ).clearPending( );
     }

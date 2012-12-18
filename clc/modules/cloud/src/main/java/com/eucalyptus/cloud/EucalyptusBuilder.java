@@ -139,22 +139,15 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
         + " is not currently the coordinator "
         + Hosts.list( ) ) );
     } else if ( config.isVmLocal() && Hosts.isCoordinator() ) {
-        SubDirectory.DB.getChildFile("data","disabled.lock").delete();
-        LOG.info("The disabled.lock file was deleted");
+      Databases.Locks.DISABLED.delete();
     }
   }
   
   @Override
   public void fireDisable( ServiceConfiguration config ) throws ServiceRegistrationException {
-      try {
 	  if (!Hosts.isCoordinator()) {
-	      SubDirectory.DB.getChildFile("data", "disabled.lock")
-	      .createNewFile();
-	      LOG.debug("Created the disabled.lock file");
+      Databases.Locks.DISABLED.create();
 	  }
-      } catch (IOException e) {
-	  LOG.debug("Unable to create the disabled.lock file"); 
-      }
   }
   
   @Override
@@ -188,15 +181,16 @@ public class EucalyptusBuilder extends AbstractServiceBuilder<EucalyptusConfigur
       
       @Override
       public boolean apply( ServiceConfiguration config ) {
-        if ( config.isVmLocal( ) ) {  
-   
+        if ( config.isVmLocal( ) ) {
+
           if ( BootstrapArgs.isCloudController( ) ) {
-              if ( !Databases.isRunning( ) ) {
- 	           LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
- 	           System.exit(123);
-              }
- 	  }
-          
+            if ( !Databases.isRunning( ) ) {
+              LOG.fatal( "config.getFullName( )" + " : does not have a running database. Restarting process to force re-synchronization." );
+              System.exit( 123 );
+            }
+          }
+
+
           if ( !Databases.isSynchronized( ) ) {
             throw Faults.failure( config,
                                   Exceptions.error( config.getFullName( )

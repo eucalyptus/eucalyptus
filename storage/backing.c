@@ -212,7 +212,8 @@ static int stale_blob_examiner(const blockblob * bb);
 //!
 static void bs_errors(const char *msg)
 {
-    logprintfl(EUCATRACE, "{%u} blobstore: %s", (unsigned int)pthread_self(), msg);
+    // we normally do not care to print all messages from blobstore as many are errors that we can handle
+    logprintfl(EUCATRACE, "blobstore: %s", msg);
 }
 
 //!
@@ -273,7 +274,7 @@ int check_backing_store(bunchOfInstances ** global_instances)
 
     if (work_bs) {
         if (blobstore_fsck(work_bs, stale_blob_examiner)) {
-            logprintfl(EUCAERROR, "ERROR: work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            logprintfl(EUCAERROR, "work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             //! @todo CHUCK -> Ok to close cache_bs and not set to NULL???
             BLOBSTORE_CLOSE(cache_bs);
             return (EUCA_ERROR);
@@ -283,7 +284,7 @@ int check_backing_store(bunchOfInstances ** global_instances)
     if (cache_bs) {
         if (blobstore_fsck(cache_bs, NULL)) {
             //! @TODO verify checksums?
-            logprintfl(EUCAERROR, "ERROR: cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            logprintfl(EUCAERROR, "cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return (EUCA_ERROR);
         }
     }
@@ -393,15 +394,15 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
             blobstore_open(cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU,
                            snapshot_policy);
         if (cache_bs == NULL) {
-            logprintfl(EUCAERROR, "ERROR: failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            logprintfl(EUCAERROR, "failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return (EUCA_PERMISSION_ERROR);
         }
     }
     // Lets open the work blobstore
     work_bs = blobstore_open(work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, snapshot_policy);
     if (work_bs == NULL) {
-        logprintfl(EUCAERROR, "ERROR: failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
-        logprintfl(EUCAERROR, "ERROR: %s\n", blobstore_get_last_trace());
+        logprintfl(EUCAERROR, "failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        logprintfl(EUCAERROR, "%s\n", blobstore_get_last_trace());
         BLOBSTORE_CLOSE(cache_bs);
         return (EUCA_PERMISSION_ERROR);
     }
@@ -596,7 +597,7 @@ int save_instance_struct(const ncInstance * instance)
 
     // Make sure the given instance is valid
     if (instance == NULL) {
-        logprintfl(EUCADEBUG, "invalid param: instance=%p\n", instance);
+        logprintfl(EUCAERROR, "internal error (NULL instance in save_instance_struct)\n");
         return (EUCA_INVALID_ERROR);
     }
     // Figure out our path to the checkpoint file
@@ -604,12 +605,12 @@ int save_instance_struct(const ncInstance * instance)
 
     // Create and open our checkpoint file
     if ((fd = open(checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_PERM)) < 0) {
-        logprintfl(EUCADEBUG, "[%s] failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
+        logprintfl(EUCADEBUG, "[%s] save_instance_struct: failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         return (EUCA_PERMISSION_ERROR);
     }
     // Store our instance in the file entirely.
     if (write(fd, ((char *)instance), sizeof(struct ncInstance_t)) != sizeof(struct ncInstance_t)) {
-        logprintfl(EUCADEBUG, "[%s] failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
+        logprintfl(EUCADEBUG, "[%s] save_instance_struct: failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         close(fd);
         //! @TODO: unlink the file here?
         return (EUCA_IO_ERROR);
@@ -646,7 +647,7 @@ ncInstance *load_instance_struct(const char *instanceId)
 
     // Allocate memory for our instance
     if ((instance = EUCA_ZALLOC(1, meta_size)) == NULL) {
-        logprintfl(EUCADEBUG, "out of memory for instance struct\n");
+        logprintfl(EUCAERROR, "out of memory (for instance struct)\n");
         return (NULL);
     }
     // We know the instance indentifier
@@ -656,7 +657,7 @@ ncInstance *load_instance_struct(const char *instanceId)
     // directory (we're assuming that instanceIds are unique in the system)
     set_path(user_paths, sizeof(user_paths), NULL, NULL);
     if ((insts_dir = opendir(user_paths)) == NULL) {
-        logprintfl(EUCADEBUG, "failed to open %s\n", user_paths);
+        logprintfl(EUCAERROR, "failed to open %s\n", user_paths);
         goto free;
     }
     // Scan every path under the user path for one that conaints our instance
@@ -675,13 +676,13 @@ ncInstance *load_instance_struct(const char *instanceId)
 
     // Did we really find one?
     if (strlen(instance->userId) < 1) {
-        logprintfl(EUCADEBUG, "didn't find instance %s\n", instance->instanceId);
+        logprintfl(EUCAERROR, "didn't find instance %s\n", instance->instanceId);
         goto free;
     }
     // Now open our checkpoint file and load it up
     set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
     if (((fd = open(checkpoint_path, O_RDONLY)) < 0) || (read(fd, instance, meta_size) < meta_size)) {
-        logprintfl(EUCADEBUG, "failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
+        logprintfl(EUCAERROR, "failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
         if (fd >= 0)
             close(fd);
         goto free;

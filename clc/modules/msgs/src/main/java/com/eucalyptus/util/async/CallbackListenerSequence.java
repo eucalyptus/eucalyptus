@@ -66,7 +66,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -77,8 +76,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  */
 public class CallbackListenerSequence<R extends BaseMessage> implements Callback.Checked<R> {
   private Logger                    LOG              = Logger.getLogger( this.getClass( ) );
-  private List<Callback<R>>         successCallbacks = Lists.newArrayList( );
-  private List<Callback.Checked<R>> failureCallbacks = Lists.newArrayList( );
+  private List<Callback<? super R>>         successCallbacks = Lists.newArrayList( );
+  private List<Callback.Checked<? super R>> failureCallbacks = Lists.newArrayList( );
   
   /**
    * Add a callback which is to be invoked when the operation completes, regardless of the outcome.
@@ -87,10 +86,10 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    *          - callback to invoke
    * @return <tt>this</tt>
    */
-  public CallbackListenerSequence<R> addCallback( final UnconditionalCallback c ) {
+  public CallbackListenerSequence<R> addCallback( final UnconditionalCallback<? super R> c ) {
     EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, UnconditionalCallback.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.successCallbacks.add( c );
-    this.failureCallbacks.add( new Callback.Failure() {
+    this.failureCallbacks.add( new Callback.Failure<Object> () {
       @Override
       public void fireException( Throwable t ) {
         c.fire( );
@@ -106,7 +105,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    *          - callback to invoke
    * @return <tt>this</tt>
    */
-  public CallbackListenerSequence<R> addCallback( Callback.Checked c ) {
+  public CallbackListenerSequence<R> addCallback( Callback.Checked<? super R> c ) {
     EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Checked.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.successCallbacks.add( c );
     this.failureCallbacks.add( c );
@@ -120,8 +119,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    *          - callback to invoke
    * @return <tt>this</tt>
    */
-  @SuppressWarnings( "unchecked" )
-  public CallbackListenerSequence<R> addSuccessCallback( Callback.Success<R> c ) {
+  public CallbackListenerSequence<R> addSuccessCallback( Callback.Success<? super R> c ) {
     EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Success.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.successCallbacks.add( c );
     return this;
@@ -134,7 +132,7 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
    *          - callback to invoke
    * @return <tt>this</tt>
    */
-  public CallbackListenerSequence<R> addFailureCallback( Callback.Failure c ) {
+  public CallbackListenerSequence<R> addFailureCallback( Callback.Failure<? super R> c ) {
     EventRecord.caller( CallbackListenerSequence.class, EventType.CALLBACK, Callback.Failure.class.getSimpleName( ), c.getClass( ) ).extreme( );
     this.failureCallbacks.add( c );
     return this;
@@ -142,13 +140,13 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
   
   /**
    * Fire the response on all listeners.
-   * 
+   *
    * @param response
    */
   @Override
   public void fire( R response ) {
     EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fire(" + response.getClass( ).getName( ) + ")" ).extreme( );
-    for ( Callback<R> cb : this.successCallbacks ) {
+    for ( Callback<? super R> cb : this.successCallbacks ) {
       try {
         EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fire(" + response.getClass( ).getCanonicalName( ) + ")" ).extreme( );
         cb.fire( response );
@@ -161,13 +159,13 @@ public class CallbackListenerSequence<R extends BaseMessage> implements Callback
   
   /**
    * Trigger the failure case.
-   * 
+   *
    * @param t
    */
   @Override
   public void fireException( Throwable t ) {
     EventRecord.here( CallbackListenerSequence.class, EventType.CALLBACK, "fireException(" + t.getClass( ).getName( ) + ")" ).extreme( );
-    for ( Callback.Checked<R> cb : this.failureCallbacks ) {
+    for ( Callback.Checked<? super R> cb : this.failureCallbacks ) {
       try {
         EventRecord.here( this.getClass( ), EventType.CALLBACK, "" + cb.getClass( ), "fireException(" + t.getClass( ).getCanonicalName( ) + ")" ).extreme( );
         cb.fireException( t );

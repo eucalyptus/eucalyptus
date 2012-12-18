@@ -324,6 +324,7 @@ const char *blockblob_get_dev(blockblob * bb);
 const char *blockblob_get_file(blockblob * bb);
 unsigned long long blockblob_get_size_blocks(blockblob * bb);
 unsigned long long blockblob_get_size_bytes(blockblob * bb);
+int blockblob_sync(const char *dev_path, const blockblob * bb);
 //! @}
 
 /*----------------------------------------------------------------------------*\

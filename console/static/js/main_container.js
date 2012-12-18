@@ -41,7 +41,7 @@
     _create : function() {
       var thisObj = this;
       // about cloud dialog
-      $tmpl = $('html body').find('.templates #aboutCloundDlgTmpl').clone();
+      $tmpl = $('html body').find('.templates #aboutCloudDlgTmpl').clone();
       var $rendered = $($tmpl.render($.extend($.i18n.map, help_about)));
       var $dialog = $rendered.children().first();
       var $dialog_help = $rendered.children().last();
@@ -102,7 +102,6 @@
     updateSelected : function (selected, filter, options) {
       var thisObj = this;
       if(this._curSelected === selected){
-        //$('html body').trigger('click'); // Manage resources --> uncomment this line
         return;
       }
 
@@ -115,8 +114,6 @@
       var $container = $('html body').find(DOM_BINDING['main']);
       if (options !== KEEP_VIEW)
         $container.children().detach();
-     // $('html body').eucaevent('unclick_all'); // this will close menus that's pulled down
-     // Manage resources-->uncomment above
       switch(selected){
         case 'dashboard':
           this.element.dashboard({select: function(evt, ui){$container.maincontainer("changeSelected", evt, ui)}});

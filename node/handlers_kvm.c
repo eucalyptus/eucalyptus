@@ -98,6 +98,7 @@
 #include "xml.h"
 #include "diskutil.h"
 #include "iscsi.h"
+#include "sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -256,7 +257,7 @@ static void *rebooting_thread(void *arg)
     logprintfl(EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
     char *xml = file2str(instance->libvirtFilePath);
     if (xml == NULL) {
-        logprintfl(EUCAERROR, "[%s] cannot obtain XML file %s\n", instance->instanceId, instance->libvirtFilePath);
+        logprintfl(EUCAERROR, "[%s] cannot obtain instance XML file %s\n", instance->instanceId, instance->libvirtFilePath);
         return NULL;
     }
 
@@ -287,12 +288,22 @@ static void *rebooting_thread(void *arg)
         EUCA_FREE(xml);
         return NULL;
     }
+    // Add a shift to values of three of the metrics: ones that
+    // drop back to zero after a reboot. The shift, which is based
+    // on the latest value, ensures that values sent upstream do
+    // not go backwards .
+    sensor_shift_metric(instance->instanceId, "CPUUtilization");
+    sensor_shift_metric(instance->instanceId, "NetworkIn");
+    sensor_shift_metric(instance->instanceId, "NetworkOut");
+
     // domain is now shut down, create a new one with the same XML
     sem_p(hyp_sem);
     logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
     dom = virDomainCreateLinux(*conn, xml, 0);
     sem_v(hyp_sem);
     EUCA_FREE(xml);
+
+    sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats so we set base value accurately
 
     char *remoteDevStr = NULL;
     // re-attach each volume previously attached
@@ -301,7 +312,7 @@ static void *rebooting_thread(void *arg)
         if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
             continue;           // skip the entry unless attached or attaching
 
-        logprintfl(EUCADEBUG, "[%s] volumes [%d] = '%'s'\n", instance->instanceId, i, volume->stateName);
+        logprintfl(EUCADEBUG, "[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
         char *xml = NULL;
         int rc = 0;
         // get credentials, decrypt them
@@ -327,22 +338,29 @@ static void *rebooting_thread(void *arg)
         EUCA_FREE(remoteDevStr);
 
         if (!rc) {
-            // protect libvirt calls because we've seen problems during concurrent libvirt invocations
             // zhill - wrap with retry in case libvirt is dumb.
             int err = 0;
-            for (int i = 1; i < 3; i++) {
+#define REATTACH_RETRIES 3
+            for (int i = 1; i < REATTACH_RETRIES; i++) {
+                // protect libvirt calls because we've seen problems during concurrent libvirt invocations
                 sem_p(hyp_sem);
                 err = virDomainAttachDevice(dom, xml);
                 sem_v(hyp_sem);
                 if (err) {
-                    logprintfl(EUCAERROR, "[%s] virDomainAttachDevice() failed on attempt %d of 3 (err=%d) XML='%s'\n", instance->instanceId, i, err,
+                    logprintfl(EUCAERROR, "[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, i,
+                               REATTACH_RETRIES);
+                    logprintfl(EUCADEBUG, "[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err,
                                xml);
-                    sleep(3);   //sleep a bit and retry.
+                    sleep(3);   // sleep a bit and retry
                 } else {
-                    logprintfl(EUCAINFO, "[%s] reattached '%s' to '%s' in domain\n", instance->instanceId, volume->remoteDev, volume->localDevReal);
+                    logprintfl(EUCAINFO, "[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
                     break;
                 }
             }
+            int log_level_for_devstring = EUCATRACE;
+            if (err)
+                log_level_for_devstring = EUCADEBUG;
+            logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
         }
 
         EUCA_FREE(xml);

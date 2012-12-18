@@ -286,7 +286,7 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     chmod(path, BACKING_FILE_PERM); // ensure perms in case when XML file exists
     int ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1);
     if (ret > 0) {
-        logprintfl(EUCAINFO, "[%s] wrote %s XML to %s\n", instanceId, type, path);
+        logprintfl(EUCADEBUG, "[%s] wrote %s XML to %s\n", instanceId, type, path);
     } else {
         logprintfl(EUCAERROR, "[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }
@@ -736,7 +736,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
         }
         xmlFreeDoc(doc);
     } else {
-        logprintfl(EUCAERROR, "failed to parse XML in '%s'\n", xml_path);
+        logprintfl(EUCADEBUG, "failed to parse XML in '%s'\n", xml_path);
     }
     pthread_mutex_unlock(&xml_mutex);
 

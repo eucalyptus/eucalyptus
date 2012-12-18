@@ -81,6 +81,7 @@ import com.google.common.base.Predicate;
 
 import javax.persistence.*;
 
+@PersistenceContext(name="eucalyptus_storage")
 @MappedSuperclass
 public class LVMVolumeInfo extends AbstractPersistent {
 	@Column(name = "volume_name")

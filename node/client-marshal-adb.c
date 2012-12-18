@@ -93,7 +93,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define NULL_ERROR_MSG               "could not be invoked (check NC host, port, and credentials)\n"    //!< Predefined NULL error message
+#define NULL_ERROR_MSG               "operation on %s could not be invoked (check NC host, port, and credentials)\n", pStub->node_name
 
 #define CORRELATION_ID               NULL   //!< Default Corelation ID value
 
@@ -246,8 +246,6 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 
     if ((p = strchr(node_name, '/')) != NULL)
         *p = '\0';              // if there is no port
-
-    logprintfl(EUCADEBUG, "requested URI %s\n", uri);
 
     // see if we should redirect to a local broker
     if (strstr(uri, "EucalyptusBroker")) {
@@ -456,13 +454,13 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     adb_ncRunInstance_set_ncRunInstance(input, env, request);
 
     int status = 0;
-    {                           // do it
+    {
+        // do it
         adb_ncRunInstanceResponse_t *output = axis2_stub_op_EucalyptusNC_ncRunInstance(stub, env, input);
 
         if (!output) {
             logprintfl(EUCAERROR, NULL_ERROR_MSG);
             status = -1;
-
         } else {
             adb_ncRunInstanceResponseType_t *response = adb_ncRunInstanceResponse_get_ncRunInstanceResponse(output, env);
             if (adb_ncRunInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
