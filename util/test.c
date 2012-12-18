@@ -333,7 +333,7 @@ static void test_volumes(void)
     int i = 0;
     int j = 0;
     int pivot = 0;
-    char id[100];
+    char id[100] = { 0 };
     ncInstance inst = { 0 };
     ncVolume *vols[EUCA_MAX_VOLUMES + 1] = { NULL };
     ncVolume *v = NULL;
