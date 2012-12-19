@@ -171,7 +171,7 @@ int allocate_bundleTask(bundleTask * out, char *instanceId, char *state);
 //!
 //! Initialize a new bundle task with the given instance identifier and state
 //!
-//! @param[in] out pointer to the bundle task to initialize
+//! @param[in] out optional pointer to the bundle task to initialize
 //! @param[in] instanceId the optional instance identifier string (i-XXXXXXXX)
 //! @param[in] state the optional state of the bundle task
 //!

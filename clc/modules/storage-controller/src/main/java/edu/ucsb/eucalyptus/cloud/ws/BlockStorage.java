@@ -145,7 +145,6 @@ public class BlockStorage {
 
 	static LogicalStorageManager blockManager;
 	static BlockStorageChecker checker;
-	static BlockStorageStatistics blockStorageStatistics;
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
@@ -170,9 +169,6 @@ public class BlockStorage {
 		}
 				
 		checker = new BlockStorageChecker(blockManager);
-		if(StorageProperties.trackUsageStatistics) { 
-			blockStorageStatistics = new BlockStorageStatistics();
-		}
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
 		checkerService = new StorageCheckerService();
@@ -209,7 +205,6 @@ public class BlockStorage {
 		//clean all state.
 		blockManager = null;
 		checker = null;
-		blockStorageStatistics = null;
 		if(volumeService != null) {
 			volumeService.shutdown();
 		}
@@ -1270,21 +1265,6 @@ public class BlockStorage {
 					throw new EucalyptusCloudException();
 				}
 				db.commit();
-				if (success) {
-					if(StorageProperties.trackUsageStatistics) {
-						boolean updated = false;
-						int retryCount = 0;
-						do {
-							try {
-								blockStorageStatistics.incrementVolumeCount((size * StorageProperties.GB));
-								updated = true;
-							} catch (RollbackException ex) {
-								retryCount++;
-								LOG.trace("retrying stats update for: " + volumeId);
-							} 
-						} while(!updated && (retryCount < 5));
-					}
-				}
 			} catch(EucalyptusCloudException ex) {
 				db.rollback();
 				LOG.error(ex);
@@ -1313,9 +1293,6 @@ public class BlockStorage {
 				db.delete(foundVolume);
 				db.commit();
 				EucaSemaphoreDirectory.removeSemaphore(volumeId);
-				if(StorageProperties.trackUsageStatistics) { 
-					blockStorageStatistics.decrementVolumeCount(-(foundVolume.getSize() * StorageProperties.GB));
-				}
 			} catch (EucalyptusCloudException e) {
 				db.rollback();
 			}

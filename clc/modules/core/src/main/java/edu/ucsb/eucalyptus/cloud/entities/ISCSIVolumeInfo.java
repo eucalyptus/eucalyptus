@@ -63,24 +63,30 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import org.hibernate.annotations.Entity;
+
+import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
 
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIVolumeInfo" )
 @Entity @javax.persistence.Entity
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ISCSIVolumeInfo extends LVMVolumeInfo {
-    private String storeName;
+		@Column(name="storename")
+		private String storeName;
+		@Column(name="tid")
     private Integer tid;
+		@Column(name="lun")
     private Integer lun;
+		@Column(name="storeuser")
     private String storeUser;
-	@Lob
+	
+    @Lob
     @Type(type="org.hibernate.type.StringClobType")
     private String encryptedPassword;
 

@@ -389,7 +389,7 @@ class CachingClcInterface(ClcInterface):
     # returns True if successful
     def disassociate_address(self, publicip, callback):
         self.addresses.expireCache()
-        Threads.instance().runThread(self.__release_address_cb__,
+        Threads.instance().runThread(self.__disassociate_address_cb__,
                             ({'publicip':publicip}, callback))
     def __disassociate_address_cb__(self, kwargs, callback):
         try:

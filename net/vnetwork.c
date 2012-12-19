@@ -631,10 +631,14 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                  */
             }
         }
-        logprintfl(EUCAINFO,
-                   "VNET Configuration: eucahome=%s, path=%s, dhcpdaemon=%s, dhcpuser=%s, pubInterface=%s, privInterface=%s, bridgedev=%s, networkMode=%s\n",
-                   SP(vnetconfig->eucahome), SP(vnetconfig->path), SP(vnetconfig->dhcpdaemon), SP(vnetconfig->dhcpuser), SP(vnetconfig->pubInterface),
-                   SP(vnetconfig->privInterface), SP(vnetconfig->bridgedev), SP(vnetconfig->mode));
+        logprintfl(EUCAINFO, " VNET Configuration: eucahome=%s,\n", SP(vnetconfig->eucahome));
+        logprintfl(EUCAINFO, "                     path=%s,\n", SP(vnetconfig->path));
+        logprintfl(EUCAINFO, "                     dhcpdaemon=%s,\n", SP(vnetconfig->dhcpdaemon));
+        logprintfl(EUCAINFO, "                     dhcpuser=%s,\n", SP(vnetconfig->dhcpuser));
+        logprintfl(EUCAINFO, "                     pubInterface=%s,\n", SP(vnetconfig->pubInterface));
+        logprintfl(EUCAINFO, "                     privInterface=%s,\n", SP(vnetconfig->privInterface));
+        logprintfl(EUCAINFO, "                     bridgedev=%s,\n", SP(vnetconfig->bridgedev));
+        logprintfl(EUCAINFO, "                     networkMode=%s\n", SP(vnetconfig->mode));
     }
     return (EUCA_OK);
 }
@@ -2241,7 +2245,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
     if (rc != -1) {
         close(rc);
     } else {
-        logprintfl(EUCAWARN, "failed to create/open euca-dhcp.leases\n");
+        logprintfl(EUCAWARN, "not creating/opening %s\n", buf);
     }
 
     if (strncmp(vnetconfig->dhcpuser, "root", 32) && strncmp(vnetconfig->path, "/", MAX_PATH) && strstr(vnetconfig->path, "eucalyptus/net")) {
@@ -2256,13 +2260,12 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
 
     snprintf(buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " %s -cf %s/euca-dhcp.conf -lf %s/euca-dhcp.leases -pf %s/euca-dhcp.pid -tf %s/euca-dhcp.trace %s",
              vnetconfig->eucahome, vnetconfig->dhcpdaemon, vnetconfig->path, vnetconfig->path, vnetconfig->path, vnetconfig->path, dstring);
-    logprintfl(EUCAINFO, "executing: %s\n", buf);
+    logprintfl(EUCADEBUG, "executing: %s\n", buf);
     // cannot use 'daemonrun()' here, dhcpd3 is too picky about FDs and signal handlers...
     rc = system(buf);
-    logprintfl(EUCAINFO, "RC from cmd: %d\n", rc);
+    logprintfl(EUCATRACE, "RC from cmd: %d\n", rc);
 
     return (rc);
-
 }
 
 //!
@@ -2589,6 +2592,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
     } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
 
         vnetconfig->networks[vlan].active = 1;
+        vnetconfig->networks[vlan].createTime = time(NULL);
         for (i = 0; i <= NUMBER_OF_CCS; i++) {
             vnetconfig->networks[vlan].addrs[i].active = 1;
         }

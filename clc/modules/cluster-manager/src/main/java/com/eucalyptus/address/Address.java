@@ -101,6 +101,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 @Entity
 @javax.persistence.Entity
@@ -118,38 +119,42 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   public enum Transition {
     allocating {
-      public Class getCallback( ) {
+      @Override
+      public Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( ) {
         return NOOP.class;
       }
     },
     unallocating {
-      public Class getCallback( ) {
+      @Override
+      public Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( ) {
         return NOOP.class;
       }
     },
     assigning {
       @Override
-      public Class getCallback( ) {
+      public Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( ) {
         return AssignAddressCallback.class;
       }
     },
     unassigning {
       @Override
-      public Class getCallback( ) {
+      public Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( ) {
         return UnassignAddressCallback.class;
       }
     },
     system {
-      public Class getCallback( ) {
+      @Override
+      public Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( ) {
         return NOOP.class;
       }
     },
     quiescent {
-      public Class getCallback( ) {
+      @Override
+      public Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( ) {
         return NOOP.class;
       }
     };
-    public abstract Class getCallback( );
+    public abstract Class<? extends RemoteCallback<? extends BaseMessage,? extends BaseMessage>> getCallback( );
     
     @Override
     public String toString( ) {
@@ -421,11 +426,11 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
     return this.transition.getName( );
   }
   
-  public RemoteCallback getCallback( ) {
+  public RemoteCallback<? extends BaseMessage, ? extends BaseMessage> getCallback( ) {
     try {
       Class cbClass = this.transition.getName( ).getCallback( );
       Constructor cbCons = cbClass.getConstructor( Address.class );
-      return ( RemoteCallback ) cbCons.newInstance( this );
+      return ( RemoteCallback<? extends BaseMessage, ? extends BaseMessage> ) cbCons.newInstance( this );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );

@@ -1043,18 +1043,18 @@ int diskutil_write2file(const char *file, const char *str)
 
     if (file && str) {
         if ((fd = safe_mkstemp(tmpfile)) < 0) {
-            logprintfl(EUCAERROR, "failed to create temporary file\n");
+            logprintfl(EUCAERROR, "failed to create temporary directory\n");
             unlink(tmpfile);
             return (EUCA_PERMISSION_ERROR);
         }
 
         size = strlen(str);
         if (write(fd, str, size) != size) {
-            logprintfl(EUCAERROR, "failed to write to temporary file\n");
+            logprintfl(EUCAERROR, "failed to write to temporary directory\n");
             ret = EUCA_ACCESS_ERROR;
         } else {
             if (diskutil_cp(tmpfile, file) != EUCA_OK) {
-                logprintfl(EUCAERROR, "failed to copy temp file (%s) to destination (%s)\n", tmpfile, file);
+                logprintfl(EUCAERROR, "failed to copy temp file (%s)\n", file);
                 ret = EUCA_PERMISSION_ERROR;
             }
         }
@@ -1283,9 +1283,6 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
                 EUCA_FREE(output);
             }
         }
-        // ensure buffer cache is flushed so that grub will see the files we just updated
-        sync();
-
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
         snprintf(cmd, sizeof(cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
@@ -1351,9 +1348,6 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
             logprintfl(EUCAINFO, "wrote to '%s':\n", device_map_path);
             logprintfl(EUCAINFO, "%s", device_map_buf);
         }
-
-        // ensure buffer cache is flushed so that grub will see the files we just updated
-        sync();
 
         output =
             pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);

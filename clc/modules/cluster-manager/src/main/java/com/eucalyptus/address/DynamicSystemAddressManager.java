@@ -66,13 +66,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.Partition;
-import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
@@ -109,13 +106,7 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   
   @Override
   public void assignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
-    final Address addr = this.allocateSystemAddress( vm.lookupPartition( ) );
-    AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( new Callback.Success<BaseMessage>( ) {
-      @Override
-      public void fire( final BaseMessage response ) {
-        vm.updatePublicAddress( addr.getName( ) );
-      }
-    } ).dispatch( vm.getPartition( ) );
+    super.doAssignSystemAddress( vm );
   }
   
   @Override

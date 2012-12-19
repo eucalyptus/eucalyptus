@@ -164,7 +164,7 @@
         return;
       }
       $helpLink.click(function(evt) {
-        if(!thisObj.help_flipped){ // TODO: is this right comparison(text comparison)?
+        if(!thisObj.help_flipped){ 
           thisObj.element.data('dialog').option('closeOnEscape', false);
           if (thisObj.options.beforeHelpFlipped && isFunction(thisObj.options.beforeHelpFlipped))
             thisObj.options.beforeHelpFlipped.call();
@@ -256,14 +256,6 @@
 
       if($('html body').find(DOM_BINDING['hidden']).children() && $('html body').find(DOM_BINDING['hidden']).children().length > 0){
         $('html body').find(DOM_BINDING['hidden']).children().detach();/* if the page A references page B's function, we should detach them from hidden DOM */
-/*        var hash = location.hash;
-        if (hash)
-          hash = hash.replace(/^#/, '');
-        if (hash !== ''){
-          var $container = $('html body').find(DOM_BINDING['main']);
-          $container.maincontainer("clearSelected");
-          $container.maincontainer("changeSelected", null, {selected:hash});
-        }*/
       }
     },
 

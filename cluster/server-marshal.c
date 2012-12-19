@@ -559,13 +559,15 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
                 EUCA_FREE(outResources);
             }
         } else {
+            logprintfl(EUCATRACE, "marshalling results outResourcesLen=%d\n", outResourcesLen);
+
             // set standard fields in output
             adb_describeSensorsResponseType_set_correlationId(output, env, meta.correlationId);
             adb_describeSensorsResponseType_set_userId(output, env, meta.userId);
 
             // set operation-specific fields in output
             for (int i = 0; i < outResourcesLen; i++) {
-                adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i]);
+                adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
                 EUCA_FREE(outResources[i]);
                 adb_describeSensorsResponseType_add_sensorsResources(output, env, resource);
             }
@@ -590,6 +592,8 @@ reply:
     // set response to output
     adb_DescribeSensorsResponse_t *response = adb_DescribeSensorsResponse_create(env);
     adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
+
+    logprintfl(EUCATRACE, "done\n");
 
     return response;
 }
@@ -811,7 +815,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
         status = AXIS2_FALSE;
         outAddressesLen = 0;
     } else if (rc) {
-        logprintf("ERROR: doDescribePublicAddresses() returned FAIL\n");
+        logprintfl(EUCAERROR, "doDescribePublicAddresses() failed\n");
         snprintf(statusMessage, 256, "ERROR");
         status = AXIS2_FALSE;
         outAddressesLen = 0;

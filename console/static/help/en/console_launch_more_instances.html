@@ -80,25 +80,9 @@
                         Translation) device or an elastic IP address mapped to the instance. </span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd">You can add one or more additional storage devices to your instance:</span>
+                    <span class="ph cmd">For EBS-backed instances, you can configure the root volume of your
+                        instance:</span>
                     <ol type="a" class="ol substeps" id="launch_instances_ui_advanced_steps__launch_instances_ui_advanced_storage_steps">
-                        <li class="li substep">
-                            <span class="ph cmd"> Specify the storage type (EBS or ephemeral) using the
-                                    <span class="ph uicontrol">Volume</span> drop-down list box. </span>
-                        </li>
-
-                        <li class="li substep">
-                            <span class="ph cmd"> Type the desired device mapping into the
-                                    <span class="ph uicontrol">Map</span> text box (for example, sdc for
-                                /dev/sdc). </span>
-                        </li>
-
-                        <li class="li substep">
-                            <span class="ph cmd"> If you are creating the attached volume from a snapshot, specify
-                                the snapshot using the <span class="ph uicontrol">Create from snapshot</span>
-                                drop-down list box. </span>
-                        </li>
-
                         <li class="li substep">
                             <span class="ph cmd"> Type the size of the attached storage in gigabytes into the
                                     <span class="ph uicontrol">Size (GB) </span>text box. </span>
@@ -108,11 +92,6 @@
                             <span class="ph cmd"> Select the <span class="ph uicontrol">Delete on termination</span> check box
                                 if you would like the attached storage to be deleted when the
                                 instance is terminated. </span>
-                        </li>
-
-                        <li class="li substep">
-                            <span class="ph cmd"> Click the <span class="ph uicontrol">Add another</span> button to add the
-                                storage to your new instance. </span>
                         </li>
 
                     </ol>

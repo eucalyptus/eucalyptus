@@ -26,6 +26,11 @@ else
   MAIN="groovy.ui.GroovyMain"
 fi
 java -classpath ${CLASSPATH} \
+-Deuca.home=/tmp \
+-Deuca.log.dir=/tmp \
+-Deuca.log.level=DEBUG \
+-Deuca.log.appender=console \
+-Deuca.exhaust.level=DEBUG \
 -Dscript.name=${TOP}/devel/groovy.sh \
 -Dprogram.name=groovy \
 -Deuca.src.dir=${TOP} \

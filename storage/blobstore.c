@@ -368,6 +368,7 @@ const char *blockblob_get_dev(blockblob * bb);
 const char *blockblob_get_file(blockblob * bb);
 unsigned long long blockblob_get_size_blocks(blockblob * bb);
 unsigned long long blockblob_get_size_bytes(blockblob * bb);
+int blockblob_sync(const char *dev_path, const blockblob * bb);
 //! @}
 
 #ifdef _UNIT_TEST
@@ -421,9 +422,7 @@ static int compare_bbs(const void *bb1, const void *bb2);
 static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long long need_blocks);
 static int get_stale_refs(const blockblob * bb, char ***refs);
 static int loop_remove(blobstore * bs, const char *bb_id);
-#ifdef _UNIT_TEST
 static int dm_suspend_resume(const char *dev_name);
-#endif /* _UNIT_TEST */
 static int dm_check_device(const char *dev_name);
 static int dm_delete_device(const char *dev_name);
 static int dm_delete_devices(char *dev_names[], int size);
@@ -2670,7 +2669,7 @@ int blobstore_stat(blobstore * bs, blobstore_meta * meta)
     int ret = 0;
 
     if (blobstore_lock(bs, BLOBSTORE_LOCK_TIMEOUT_USEC) == -1) {    // lock it so we can traverse blobstore safely
-        return ERROR;
+        return EUCA_ERROR;
     }
     // put existing items in the blobstore into a LL
     _blobstore_errno = BLOBSTORE_ERROR_OK;
@@ -3439,7 +3438,6 @@ int blockblob_close(blockblob * bb)
     return ret;
 }
 
-#ifdef _UNIT_TEST
 //!
 //!
 //!
@@ -3469,7 +3467,6 @@ static int dm_suspend_resume(const char *dev_name)
     }
     return 0;
 }
-#endif /* _UNIT_TEST */
 
 //!
 //!
@@ -4420,6 +4417,34 @@ unsigned long long blockblob_get_size_bytes(blockblob * bb)
         return 0;
     }
     return bb->size_bytes;
+}
+
+//!
+//! flushes outstanding I/O on:
+//! \li system's buffer cache
+//! \li dm device at dev_path (if specified)
+//! \li dm device pointing to the blob (if bb is specified)
+//!
+//! @param[in] dev_path
+//! @param[in] bb
+//!
+//! @return
+//!
+int blockblob_sync(const char *dev_path, const blockblob * bb)
+{
+    int err = 0;
+
+    sync();                     // ensure the whole buffer cache is flushed
+
+    if ((err == 0) && (dev_path != NULL)) {
+        err = dm_suspend_resume(dev_path);
+    }
+
+    if ((err == 0) && (bb != NULL)) {
+        err = dm_suspend_resume(bb->device_path);
+    }
+
+    return (err);
 }
 
 #ifdef _UNIT_TEST

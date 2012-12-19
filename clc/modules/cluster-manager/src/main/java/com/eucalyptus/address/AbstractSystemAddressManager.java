@@ -84,6 +84,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
@@ -96,6 +97,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Predicate;
 import edu.ucsb.eucalyptus.cloud.exceptions.ExceptionList;
 import edu.ucsb.eucalyptus.msgs.ClusterAddressInfo;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class AbstractSystemAddressManager {
   private final static Logger                                              LOG     = Logger.getLogger( AbstractSystemAddressManager.class );
@@ -234,6 +236,20 @@ public abstract class AbstractSystemAddressManager {
         LOG.debug( e, e );
       }
     }
+  }
+
+  protected void doAssignSystemAddress( final VmInstance vm ) throws NotEnoughResourcesException {
+    final String instanceId = vm.getInstanceId();
+    final Address addr = this.allocateSystemAddress( vm.lookupPartition( ) );
+    final Callback.Success<BaseMessage> onSuccess = new Callback.Success<BaseMessage>( ) {
+      @Override
+      public void fire( final BaseMessage response ) {
+        Addresses.updatePublicIpByInstanceId( instanceId, addr.getName() );
+      }
+    };
+    AsyncRequests.dispatchSafely( 
+        AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( onSuccess ),
+        vm.getPartition() );
   }
   
   protected static class Helper {

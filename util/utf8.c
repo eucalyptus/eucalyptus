@@ -211,6 +211,11 @@ static int __utf8_forbitten(u_char octet)
 //!
 //! @return The function returns size of result buffer (in wide characters). Zero is returned in case of error.
 //!
+//! @pre \li The in and out fields must not be NULL
+//!      \li The insize and outsize must not be 0.
+//!
+//! @post The out field is set appropriately if non-NULL. If the out field is NULL, function returns size of result buffer.
+//!
 //! @note 1. If UTF-8 string contains zero symbols, they will be translated as regular symbols.
 //!       2. If UTF8_IGNORE_ERROR or UTF8_SKIP_BOM flag is set, sizes may vary when `out' is NULL
 //!          and not NULL. It's because of special UTF-8 sequences which may result in forbitten
@@ -332,6 +337,11 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsiz
 //!
 //! @return The function returns size of result buffer (in bytes). Zero is returned in case of error.
 //!
+//! @pre \li The in and out fields must not be NULL
+//!      \li The insize and outsize must not be 0.
+//!
+//! @post The out field is set appropriately if non-NULL. If the out field is NULL, function returns size of result buffer.
+//!
 //! @note If UCS-4 string contains zero symbols, they will be translated as regular symbols.
 //!
 size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsize, int flags)
@@ -353,6 +363,7 @@ size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsiz
     p = ((u_char *) out);
     lim = p + outsize;
     total = 0;
+
     for (; w < wlim; w++) {
         if (__wchar_forbitten(*w) != 0) {
             if ((flags & UTF8_IGNORE_ERROR) == 0)

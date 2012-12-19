@@ -402,7 +402,7 @@ public class VmInstances {
         try {
           Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
           if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly
-               || VmState.PENDING.equals( vmLastState ) ) { //partial assignment implicitly associated with this failed (PENDING->SHUTTINGDOWN) instance
+               || ( !address.isReallyAssigned( ) && address.isAssigned( ) && VmState.PENDING.equals( vmLastState ) ) ) { //partial assignment implicitly associated with this failed (PENDING->SHUTTINGDOWN) instance
             if ( address.isSystemOwned( ) ) {
               EventRecord.caller( VmInstances.class, EventType.VM_TERMINATING, "SYSTEM_ADDRESS", address.toString( ) ).debug( );
             } else {
@@ -474,13 +474,7 @@ public class VmInstances {
     } else {
       failureHander = Callbacks.noopFailure();
     }
-    final Request request = AsyncRequests.newRequest( callback ).then( failureHander );
-    try {
-      request.dispatch( vm.getPartition() );
-    } catch ( NoSuchElementException e ) {
-      // No message was sent, so handle failure manually
-      request.getCallback().fireException( e );
-    }
+    AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
   
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
