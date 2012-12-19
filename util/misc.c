@@ -168,10 +168,10 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers);
 int timeread(int fd, void *buf, size_t bytes, int timeout);
 int add_euca_to_path(const char *euca_home_supplied);
 pid_t timewait(pid_t pid, int *status, int timeout_sec);
-int param_check(char *func, ...);
+int param_check(const char *func, ...);
 int check_process(pid_t pid, char *search);
 int check_directory(const char *dir);
-int check_file_newer_than(char *file, time_t mtime);
+int check_file_newer_than(const char *file, time_t mtime);
 int check_block(const char *file);
 int check_file(const char *file);
 int check_path(const char *path);
@@ -262,72 +262,72 @@ static char *find_cont(const char *xml, char *xpath);
 //!
 int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
 {
+    int i = 0;
+    int j = 0;
+    int rc = 0;
+    int done = 0;
     int missing_helpers = 0;
+    char *tok = NULL;
+    char *toka = NULL;
+    char *path = NULL;
+    char *helper = NULL;
+    char *save = NULL;
+    char *savea = NULL;
+    char *euca = NULL;
+    char *newpath = NULL;
+    char file[MAX_PATH] = { 0 };
+    char lpath[MAX_PATH] = { 0 };
     char **tmp_helpers_path = helpers_path;
+    struct stat statbuf = { 0 };
+    char *locations[] = {
+        ":" EUCALYPTUS_LIBEXEC_DIR,
+        ":" EUCALYPTUS_HELPER_DIR,
+        ":" EUCALYPTUS_SBIN_DIR,
+        NULL
+    };
 
     if (helpers_path == NULL)
         tmp_helpers_path = (char **)EUCA_ZALLOC(num_helpers, sizeof(char *));
 
-    for (int i = 0; i < num_helpers; i++) {
-        struct stat statbuf;
-        int done = 0;
-
+    for (i = 0; i < num_helpers; i++) {
         // full path was given, so it just needs to be verified
         if (helpers_path != NULL && helpers_path[i] != NULL) {
-            int rc = stat(helpers_path[i], &statbuf);
+            rc = stat(helpers_path[i], &statbuf);
             if (!rc && S_ISREG(statbuf.st_mode)) {
                 done++;
             }
-
         } else {                // no full path was given, so search $PATH
-            char *tok = NULL, *toka = NULL, *path = NULL, *helper = NULL, *save = NULL, *savea = NULL;
-
-            tok = getenv("PATH");
-            if (!tok) {
+            if ((tok = getenv("PATH")) == NULL) {
                 missing_helpers = -1;
                 goto cleanup;
             }
 
-            path = strdup(tok);
-            if (!path) {
+            if ((path = strdup(tok)) == NULL) {
                 missing_helpers = -1;
                 goto cleanup;
             }
-
-            {                   // append some Eucalyptus-specific locations to $PATH
-                char *euca = getenv(EUCALYPTUS_ENV_VAR_NAME);
-                if (euca == NULL) {
-                    euca = "";
-                }
-                char *locations[] = {
-                    ":" EUCALYPTUS_LIBEXEC_DIR,
-                    ":" EUCALYPTUS_HELPER_DIR,
-                    ":" EUCALYPTUS_SBIN_DIR,
-                    NULL
-                };
-                for (int i = 0; locations[i]; i++) {
-                    char lpath[MAX_PATH];
-                    snprintf(lpath, sizeof(lpath), locations[i], euca);
-                    char *newpath = strdupcat(path, lpath);
-                    if (newpath == NULL) {
-                        missing_helpers = -1;
-                        goto cleanup;
-                    }
-                    path = newpath;
-                }
+            // append some Eucalyptus-specific locations to $PATH
+            if ((euca = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
+                euca = "";
             }
 
-            tok = strtok_r(path, ":", &save);
+            for (j = 0; (locations[j] != NULL); j++) {
+                snprintf(lpath, sizeof(lpath), locations[j], euca);
+                if ((newpath = strdupcat(path, lpath)) == NULL) {
+                    missing_helpers = -1;
+                    goto cleanup;
+                }
+                path = newpath;
+            }
+
             done = 0;
+            tok = strtok_r(path, ":", &save);
             while (tok && !done) {
                 helper = strdup(helpers[i]);
                 toka = strtok_r(helper, ",", &savea);
                 while (toka && !done) {
-                    char file[MAX_PATH];
-
                     snprintf(file, MAX_PATH, "%s/%s", tok, toka);
-                    int rc = stat(file, &statbuf);
-                    if (!rc) {
+                    if ((rc = stat(file, &statbuf)) == 0) {
                         if (S_ISREG(statbuf.st_mode)) {
                             tmp_helpers_path[i] = strdup(file);
                             done++;
@@ -350,14 +350,13 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
     }
 
 cleanup:
-
     if (helpers_path == NULL) {
-        for (int i = 0; i < num_helpers; i++)
+        for (i = 0; i < num_helpers; i++)
             EUCA_FREE(tmp_helpers_path[i]);
         EUCA_FREE(tmp_helpers_path);
     }
 
-    return missing_helpers;
+    return (missing_helpers);
 }
 
 //!
@@ -372,9 +371,9 @@ cleanup:
 //!
 int timeread(int fd, void *buf, size_t bytes, int timeout)
 {
-    int rc;
-    fd_set rfds;
-    struct timeval tv;
+    int rc = 0;
+    fd_set rfds = { {0} };
+    struct timeval tv = { 0 };
 
     if (timeout <= 0)
         timeout = 1;
@@ -385,12 +384,12 @@ int timeread(int fd, void *buf, size_t bytes, int timeout)
     tv.tv_sec = timeout;
     tv.tv_usec = 0;
 
-    rc = select(fd + 1, &rfds, NULL, NULL, &tv);
-    if (rc <= 0) {
+    if ((rc = select(fd + 1, &rfds, NULL, NULL, &tv)) <= 0) {
         // timeout
         logprintfl(EUCAERROR, "select() timed out for read: timeout=%d\n", timeout);
         return (-1);
     }
+
     rc = read(fd, buf, bytes);
     return (rc);
 }
@@ -404,30 +403,32 @@ int timeread(int fd, void *buf, size_t bytes, int timeout)
 //!
 int add_euca_to_path(const char *euca_home_supplied)
 {
-    const char *euca_home;
+    char *old_path = NULL;
+    char new_path[4098] = { 0 };
+    const char *euca_home = NULL;
+
     if (euca_home_supplied && strlen(euca_home_supplied)) {
         euca_home = euca_home_supplied;
     } else if (getenv(EUCALYPTUS_ENV_VAR_NAME) && strlen(getenv(EUCALYPTUS_ENV_VAR_NAME))) {
         euca_home = getenv(EUCALYPTUS_ENV_VAR_NAME);
-    } else {                    // we'll assume root
+    } else {
+        // we'll assume root
         euca_home = "";
     }
 
-    char *old_path = getenv("PATH");
-    if (old_path == NULL)
+    if ((old_path = getenv("PATH")) == NULL)
         old_path = "";
 
-    char new_path[4098];
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
              EUCALYPTUS_SBIN_DIR ":"    // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
-    return setenv("PATH", new_path, TRUE);
+
+    return (setenv("PATH", new_path, TRUE));
 }
 
 //!
-//! Wrapper around waitpid() that retries waiting until
-//! a timeout, specified in seconds, occurs. Return value
+//! Wrapper around waitpid() that retries waiting until a timeout, specified in seconds, occurs. Return value
 //! is that of waitpid():
 //!
 //!  -1 means there was an error
@@ -445,134 +446,134 @@ int add_euca_to_path(const char *euca_home_supplied)
 //!
 pid_t timewait(pid_t pid, int *status, int timeout_sec)
 {
-    if (timeout_sec < 0)        // do not allow negative timeouts
+    int rc = 0;
+    time_t elapsed_usec = 0;
+
+    // do not allow negative timeouts
+    if (timeout_sec < 0)
         timeout_sec = 0;
 
-    *status = 1;                //! @todo remove this once we know that no callers rely on status to detect timeout
+    //! @todo remove this once we know that no callers rely on status to detect timeout
+    *status = 1;
 
-    int rc = waitpid(pid, status, WNOHANG);
-    time_t elapsed_usec = 0;
-    while (rc == 0 && elapsed_usec < (timeout_sec * 1000000)) {
+    rc = waitpid(pid, status, WNOHANG);
+    while ((rc == 0) && (elapsed_usec < (timeout_sec * 1000000))) {
         usleep(10000);
         elapsed_usec += 10000;
         rc = waitpid(pid, status, WNOHANG);
     }
+
     if (rc == 0) {
         logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
     }
+
     return (rc);
 }
 
 //!
+//! Validates a list of parameters for a given vnet function.
 //!
+//! @param[in] func the function name that parameters will be validated against
+//! @param[in] ... the list of parameters
 //!
-//! @param[in] func
-//! @param[in] ...
+//! @return 0 if the parameter list is valid or 1 if not
 //!
-//! @return 0 if the parameter is valid or 1 if not
-//!
-//! @todo check to see if boolean logic would be more appropriate
-//!
-int param_check(char *func, ...)
+int param_check(const char *func, ...)
 {
-    int fail;
-    va_list al;
+    int i1 = 0;
+    char *str1 = NULL;
+    char *str2 = NULL;
+    char *str3 = NULL;
+    char *str4 = NULL;
+    char *str5 = NULL;
+    char *str6 = NULL;
+    va_list al = { {0} };
+    boolean fail = FALSE;
+    vnetConfig *vnet1 = NULL;
 
     if (!func) {
         return (1);
     }
 
     va_start(al, func);
-    fail = 0;
-    if (!strcmp(func, "vnetGenerateDHCP") || !strcmp(func, "vnetKickDHCP")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        if (!a) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetAddPublicIP") || !strcmp(func, "vnetAddDev")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        if (!a || !b) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetAddHost")) {
-        vnetConfig *a = NULL;
-        char *b = NULL;
-        char *c = NULL;
-        int d = 0;
-
-        a = va_arg(al, vnetConfig *);
-        b = va_arg(al, char *);
-        c = va_arg(al, char *);
-        d = va_arg(al, int);
-        if (!a || !b || (d < 0) || (d > NUMBER_OF_VLANS - 1)) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetGetNextHost")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        int d = va_arg(al, int);
-        if (!a || !b || !c || d < 0 || d > NUMBER_OF_VLANS - 1) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetDelHost") || !strcmp(func, "vnetEnableHost") || !strcmp(func, "vnetDisableHost")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        int d = va_arg(al, int);
-        if (!a || (!b && !c) || d < 0 || d > NUMBER_OF_VLANS - 1) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetDeleteChain") || !strcmp(func, "vnetCreateChain")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        if (!a || !b || !c) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetTableRule")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        char *d = va_arg(al, char *);
-        char *e = va_arg(al, char *);
-        char *f = va_arg(al, char *);
-        char *g = va_arg(al, char *);
-        if (!a || !b || !c || !d || (!e && !f && !g)) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetSetVlan")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        int b = va_arg(al, int);
-        char *c = va_arg(al, char *);
-        char *d = va_arg(al, char *);
-        if (!a || b < 0 || b >= NUMBER_OF_VLANS || !c || !d) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetDelVlan")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        int b = va_arg(al, int);
-        if (!a || b < 0 || b >= NUMBER_OF_VLANS) {
-            fail = 1;
-        }
-    } else if (!strcmp(func, "vnetInit")) {
-        vnetConfig *a = NULL;
-        char *b = NULL;
-        char *c = NULL;
-        char *d = NULL;
-        int e = 0;
-
-        a = va_arg(al, vnetConfig *);
-        b = va_arg(al, char *);
-        c = va_arg(al, char *);
-        d = va_arg(al, char *);
-        e = va_arg(al, int);
-        if (!a || !b || !c || d < 0) {
-            fail = 1;
+    {
+        if (!strcmp(func, "vnetGenerateDHCP") || !strcmp(func, "vnetKickDHCP")) {
+            if ((vnet1 = va_arg(al, vnetConfig *)) == NULL) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetAddPublicIP") || !strcmp(func, "vnetAddDev")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            if (!vnet1 || !str1) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetAddHost")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            i1 = va_arg(al, int);
+            if (!vnet1 || !str1 || (i1 < 0) || (i1 > (NUMBER_OF_VLANS - 1))) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetGetNextHost")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            i1 = va_arg(al, int);
+            if (!vnet1 || !str1 || !str2 || (i1 < 0) || (i1 > (NUMBER_OF_VLANS - 1))) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetDelHost") || !strcmp(func, "vnetEnableHost") || !strcmp(func, "vnetDisableHost")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            i1 = va_arg(al, int);
+            if (!vnet1 || (!str1 && !str2) || (i1 < 0) || (i1 > (NUMBER_OF_VLANS - 1))) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetDeleteChain") || !strcmp(func, "vnetCreateChain")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            if (!vnet1 || !str1 || !str2) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetTableRule")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            str3 = va_arg(al, char *);
+            str4 = va_arg(al, char *);
+            str5 = va_arg(al, char *);
+            str6 = va_arg(al, char *);
+            if (!vnet1 || !str1 || !str2 || !str3 || (!str4 && !str5 && !str6)) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetSetVlan")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            i1 = va_arg(al, int);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            if (!vnet1 || (i1 < 0) || (i1 >= NUMBER_OF_VLANS) || !str1 || !str2) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetDelVlan")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            i1 = va_arg(al, int);
+            if (!vnet1 || (i1 < 0) || (i1 >= NUMBER_OF_VLANS)) {
+                fail = TRUE;
+            }
+        } else if (!strcmp(func, "vnetInit")) {
+            vnet1 = va_arg(al, vnetConfig *);
+            str1 = va_arg(al, char *);
+            str2 = va_arg(al, char *);
+            str3 = va_arg(al, char *);
+            i1 = va_arg(al, int);
+            if (!vnet1 || !str1 || !str2 || (i1 < 0)) {
+                fail = TRUE;
+            }
         }
     }
-
     va_end(al);
 
     if (fail) {
@@ -588,29 +589,30 @@ int param_check(char *func, ...)
 //! @param[in] pid
 //! @param[in] search
 //!
-//! @return 0 if the PID exists or 1 if not
+//! @return 0 on success or 1 if not valid
 //!
 int check_process(pid_t pid, char *search)
 {
-    char file[MAX_PATH], buf[1024];
+    int rc = 0;
+    int ret = 1;
     FILE *FH = NULL;
-    int rc, ret = 0;
+    char *p = NULL;
+    char file[MAX_PATH] = "";
+    char buf[1024] = "";
 
     snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
-    rc = check_file(file);
-    if (!rc) {
+    if ((rc = check_file(file)) == 0) {
         // cmdline exists
-        ret = 1;
         if (search) {
             // check if cmdline contains 'search'
-            FH = fopen(file, "r");
-            if (FH) {
+            if ((FH = fopen(file, "r")) != NULL) {
                 bzero(buf, 1024);
                 while (fgets(buf, 1024, FH)) {
-                    char *p;
                     while ((p = memchr(buf, '\0', 1024))) {
                         *p = 'X';
                     }
+
+                    // safety
                     buf[1023] = '\0';
                     if (strstr(buf, search)) {
                         ret = 0;
@@ -621,8 +623,6 @@ int check_process(pid_t pid, char *search)
         } else {
             ret = 0;
         }
-    } else {
-        ret = 1;
     }
     return (ret);
 }
@@ -631,41 +631,43 @@ int check_process(pid_t pid, char *search)
 //! make sure 'dir' is a directory or a soft-link to one
 //! and that it is readable by the current user (1 on error)
 //!
-//! @param[in] dir
+//! @param[in] dir the directory name to validate
 //!
 //! @return 0 if dir is a directory or 1 if not
 //!
+//! @pre The dir field must not be NULL
+//!
 int check_directory(const char *dir)
 {
+    int rc = 0;
+    DIR *d = NULL;
+    char checked_dir[MAX_PATH] = "";
+    struct stat mystat = { 0 };
+
     if (!dir) {
         return (1);
     }
 
-    char checked_dir[MAX_PATH];
     snprintf(checked_dir, sizeof(checked_dir), "%s", dir);
 
-    struct stat mystat;
-    int rc = lstat(checked_dir, &mystat);
-    if (rc < 0)
-        return 1;
+    if ((rc = lstat(checked_dir, &mystat)) < 0)
+        return (1);
 
     // if a soft link, append '/' and try lstat() again
     if (!S_ISDIR(mystat.st_mode) && S_ISLNK(mystat.st_mode)) {
         snprintf(checked_dir, sizeof(checked_dir), "%s/", dir);
-        rc = lstat(checked_dir, &mystat);
-        if (rc < 0)
-            return 1;
+        if ((rc = lstat(checked_dir, &mystat)) < 0)
+            return (1);
     }
 
     if (!S_ISDIR(mystat.st_mode))
-        return 1;
+        return (1);
 
-    DIR *d = opendir(checked_dir);
-    if (d == NULL)
-        return 1;
+    if ((d = opendir(checked_dir)) == NULL)
+        return (1);
 
     closedir(d);
-    return 0;
+    return (0);
 }
 
 //!
@@ -676,12 +678,10 @@ int check_directory(const char *dir)
 //!
 //! @return 0 if the file is newer than timestamp or 1 if not
 //!
-//! @todo use boolean instead
-//!
-int check_file_newer_than(char *file, time_t mtime)
+int check_file_newer_than(const char *file, time_t mtime)
 {
-    struct stat mystat;
-    int rc;
+    int rc = 0;
+    struct stat mystat = { 0 };
 
     if (!file) {
         return (1);
@@ -690,13 +690,14 @@ int check_file_newer_than(char *file, time_t mtime)
     }
 
     bzero(&mystat, sizeof(struct stat));
-    rc = stat(file, &mystat);
-    if (rc) {
+    if ((rc = stat(file, &mystat)) != 0) {
         return (1);
     }
+
     if (mystat.st_mtime > mtime) {
         return (0);
     }
+
     return (1);
 }
 
@@ -705,27 +706,30 @@ int check_file_newer_than(char *file, time_t mtime)
 //!
 //! @param[in] file
 //!
-//! @return EUCA_OK on success or EUCA_ERROR on failure
+//! @return 0 on success or 1 on failure
 //!
 int check_block(const char *file)
 {
-    int rc;
-    struct stat mystat;
-    char *rpath;
+    int rc = 0;
+    char *rpath = NULL;
+    struct stat mystat = { 0 };
 
     if (!file) {
-        return (EUCA_ERROR);
+        return (1);
     }
-    rpath = realpath(file, NULL);
-    if (!rpath) {
-        return (EUCA_ERROR);
+
+    if ((rpath = realpath(file, NULL)) == NULL) {
+        return (1);
     }
+
     rc = lstat(rpath, &mystat);
     EUCA_FREE(rpath);
-    if (rc < 0 || !S_ISBLK(mystat.st_mode)) {
-        return (EUCA_ERROR);
+
+    if ((rc < 0) || !S_ISBLK(mystat.st_mode)) {
+        return (1);
     }
-    return (EUCA_OK);
+
+    return (0);
 }
 
 //!
@@ -733,22 +737,25 @@ int check_block(const char *file)
 //!
 //! @param[in] file
 //!
-//! @return EUCA_OK if the file is readable, EUCA_ERROR otherwise
+//! @return 0 if the file is readable, 1 otherwise
+//!
+//! @pre The file field must not be NULL.
 //!
 int check_file(const char *file)
 {
-    int rc;
-    struct stat mystat;
+    int rc = 0;
+    struct stat mystat = { 0 };
 
     if (!file) {
-        return (EUCA_ERROR);
+        return (1);
     }
 
     rc = lstat(file, &mystat);
-    if (rc < 0 || !S_ISREG(mystat.st_mode)) {
-        return (EUCA_ERROR);
+    if ((rc < 0) || !S_ISREG(mystat.st_mode)) {
+        return (1);
     }
-    return (EUCA_OK);
+
+    return (0);
 }
 
 //!
@@ -756,22 +763,22 @@ int check_file(const char *file)
 //!
 //! @param[in] path
 //!
-//! @return EUCA_OK if the path exists, othewise EUCA_ERROR is returned.
+//! @return 0 if the path exists, othewise 1 is returned.
 //!
 int check_path(const char *path)
 {
-    int rc;
-    struct stat mystat;
+    int rc = 0;
+    struct stat mystat = { 0 };
 
     if (!path) {
-        return (EUCA_ERROR);
+        return (1);
     }
 
-    rc = lstat(path, &mystat);
-    if (rc < 0) {
-        return (EUCA_ERROR);
+    if ((rc = lstat(path, &mystat)) < 0) {
+        return (1);
     }
-    return (EUCA_OK);
+
+    return (0);
 }
 
 //!
@@ -783,26 +790,36 @@ int check_path(const char *path)
 //! @param[out] fs_bytes_available
 //! @param[out] fs_id
 //!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
-//!         and EUCA_IO_ERROR.
+//! @return EUCA_OK on success or the following error code.
+//!         \li EUCA_INVALID_ERROR
+//!         \li EUCA_IO_ERROR
+//!
+//! @pre \li The path, fs_bytes_size, fs_bytes_available and fs_id fields must not be NULL.
+//!      \li The path field must be a valid path.
+//!
+//! @post The fs_id, fs_bytes_size and fs_bytes_available fields are set appropriately.
 //!
 int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id)
 {
-    if (path == NULL)
-        return (EUCA_ERROR);
+    char cpath[PATH_MAX] = { 0 };
+    struct statfs fs = { 0 };
 
-    char cpath[PATH_MAX];
+    if ((path == NULL) || (fs_bytes_size == NULL) || (fs_bytes_available == NULL) || (fs_id == NULL))
+        return (EUCA_INVALID_ERROR);
+
     errno = 0;
-    if (realpath(path, cpath) == NULL) {    // will convert a path with symbolic links and '..' into canonical form
+
+    // will convert a path with symbolic links and '..' into canonical form
+    if (realpath(path, cpath) == NULL) {
         logprintfl(EUCAERROR, "failed to resolve %s (%s)\n", path, strerror(errno));
         return (EUCA_IO_ERROR);
     }
-
-    struct statfs fs;
-    if (statfs(cpath, &fs) == -1) { // obtain the size and ID info from the file system of the canonical path
+    // obtain the size and ID info from the file system of the canonical path
+    if (statfs(cpath, &fs) == -1) {
         logprintfl(EUCAERROR, "failed to stat %s (%s)\n", cpath, strerror(errno));
         return (EUCA_IO_ERROR);
     }
+
     *fs_id = hash_code_bin((char *)&fs.f_fsid, sizeof(fsid_t));
     *fs_bytes_size = (long long)fs.f_bsize * (long long)(fs.f_blocks);
     *fs_bytes_available = (long long)fs.f_bsize * (long long)(fs.f_bavail);
@@ -818,29 +835,40 @@ int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned lo
 //! given string *stringp, replace occurences of source with destination
 //! and return the new string in stringp
 //!
-//! @param[in] stringp
-//! @param[in] source
-//! @param[in] destination
+//! @param[in,out] stringp
+//! @param[in]     source
+//! @param[in]     destination
 //!
 //! @return the newly formatted string
+//!
+//! @pre The stringp, source and destination pointers must not be NULL.
+//!
+//! @post On success the current string pointed by stringp is freed and replaced
+//!       by the new string.
 //!
 //! @note caller is reponsible to free the result
 //!
 char *replace_string(char **stringp, char *source, char *destination)
 {
-    char *start = NULL, *substart = NULL, *tok = NULL, *new_string = NULL;
-    if (source == NULL || destination == NULL)
-        return NULL;
-    char *buf;
     int maxlen = 32768 * 2;
+    char *buf = NULL;
+    char *start = NULL;
+    char *substart = NULL;
+    char *tok = NULL;
+    char *new_string = NULL;
 
+    if ((stringp == NULL) || (source == NULL) || (destination == NULL))
+        return (NULL);
+
+    // Allocate some memory
     buf = EUCA_ALLOC(maxlen, sizeof(char));
-    new_string = EUCA_ZALLOC(maxlen, sizeof(char)); //! @todo this has to be dynamic
+    new_string = EUCA_ZALLOC(maxlen, sizeof(char));
+
     if (!buf || !new_string) {
         fprintf(stderr, "replace_string: out of memory\n");
         EUCA_FREE(buf);
         EUCA_FREE(new_string);
-        return NULL;
+        return (NULL);
     }
 
     start = *stringp;
@@ -848,19 +876,22 @@ char *replace_string(char **stringp, char *source, char *destination)
     tok = strstr(start, source);
     while (tok != NULL) {
         *tok = '\0';
+
         snprintf(buf, maxlen, "%s%s%s", new_string, substart, destination);
         strncpy(new_string, buf, maxlen);
+
         tok += strlen(source);
         substart = tok;
         tok = strstr(substart, source);
     }
+
     snprintf(buf, maxlen, "%s%s", new_string, substart);
     strncpy(new_string, buf, maxlen);
+
     EUCA_FREE(buf);
     EUCA_FREE(*stringp);
     *stringp = new_string;
-
-    return new_string;
+    return (new_string);
 }
 
 //!
@@ -875,35 +906,39 @@ char *replace_string(char **stringp, char *source, char *destination)
 //!
 boolean sscanf_lines(char *lines, char *format, void *varp)
 {
-    char *copy;
-    char *start, *end;
+    char *copy = NULL;
+    char *start = NULL;
+    char *end = NULL;
     boolean found = FALSE;
+    boolean newline = FALSE;
 
-    if (!lines)
-        return found;
-    copy = strdup(lines);
-    if (!copy)
-        return found;
+    if (!lines || !format || !varp)
+        return (FALSE);
 
-    for (start = copy; start && *start != '\0' && !found; start = end + 1) {
-        int newline = 0;
+    if ((copy = strdup(lines)) == NULL)
+        return (FALSE);
 
-        for (end = start + 1; *end != '\n' && *end != '\0'; end++) ;
+    for (start = copy, found = FALSE; start && *start != '\0' && !found; start = end + 1) {
+        newline = FALSE;
+
+        for (end = start + 1; ((*end != '\n') && (*end != '\0')); end++) ;
+
         if (*end == '\n') {
             *end = '\0';
-            newline = 1;
+            newline = TRUE;
         }
 
         if (sscanf(start, format, varp) == 1)
-            found = 1;
+            found = TRUE;
 
         if (!newline) {
-            end--;              /* so that start=='\0' */
+            // so that start == '\0'
+            end--;
         }
     }
-    EUCA_FREE(copy);
 
-    return found;
+    EUCA_FREE(copy);
+    return (found);
 }
 
 //!
@@ -913,26 +948,35 @@ boolean sscanf_lines(char *lines, char *format, void *varp)
 //!
 //! @return a pointer to the file output string
 //!
+//! @pre \li The fp field MUST not be NULL.
+//!      \li The file handles must have previously been opened.
+//!
+//! @post The file remains open regardless of the result.
+//!
 //! @note caller is responsible to free the returned memory
 //!
 char *fp2str(FILE * fp)
 {
-#   define INCREMENT 512
+#define INCREMENT              512
+
     int buf_max = INCREMENT;
     int buf_current = 0;
-    char *last_read;
+    void *new_buf = NULL;
+    char *last_read = NULL;
     char *buf = NULL;
 
     if (fp == NULL)
-        return NULL;
+        return (NULL);
+
     do {
         // create/enlarge the buffer
-        void *new_buf;
         if ((new_buf = EUCA_REALLOC(buf, buf_max, sizeof(char))) == NULL) {
-            EUCA_FREE(buf);     // free partial buffer
-            return NULL;
+            // free partial buffer
+            EUCA_FREE(buf);
+            return (NULL);
         }
-        memset(new_buf + buf_current, 0, INCREMENT * sizeof(char));
+
+        memset((new_buf + buf_current), 0, (INCREMENT * sizeof(char)));
 
         buf = new_buf;
         logprintfl(EUCAEXTREME, "enlarged buf to %d\n", buf_max);
@@ -941,20 +985,22 @@ char *fp2str(FILE * fp)
             last_read = fgets(buf + buf_current, buf_max - buf_current, fp);
             if (last_read != NULL) {
                 buf_current = strlen(buf);
-            } else {
-                if (!feof(fp)) {
-                    logprintfl(EUCAERROR, "failed while reading from file handle\n");
-                    EUCA_FREE(buf);
-                    return NULL;
-                }
+            } else if (!feof(fp)) {
+                logprintfl(EUCAERROR, "failed while reading from file handle\n");
+                EUCA_FREE(buf);
+                return (NULL);
             }
-            logprintfl(EUCAEXTREME, "read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read ? "no" : "yes");
-        } while (last_read && buf_max > buf_current + 1);   // +1 is needed for fgets() to put \0
 
-        buf_max += INCREMENT;   // in case it is full
+            logprintfl(EUCAEXTREME, "read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read ? "no" : "yes");
+        } while (last_read && (buf_max > (buf_current + 1)));   // +1 is needed for fgets() to put \0
+
+        // in case it is full
+        buf_max += INCREMENT;
     } while (last_read);
 
-    return buf;
+    return (buf);
+
+#undef INCREMENT
 }
 
 //!
@@ -964,21 +1010,28 @@ char *fp2str(FILE * fp)
 //!
 //! @return a pointer to the stdout output
 //!
+//! @pre The shell_command field must not be NULL.
+//!
 //! @note the caller is responsible to free the returned memory
 //!
 char *system_output(char *shell_command)
 {
     char *buf = NULL;
-    FILE *fp;
+    FILE *fp = NULL;
 
-    /* forks off command (this doesn't fail if command doesn't exist */
+    if (!shell_command)
+        return (NULL);
+
+    // forks off command (this doesn't fail if command doesn't exist
     logprintfl(EUCATRACE, "[%s]\n", shell_command);
-    if ((fp = popen(shell_command, "r")) == NULL)
-        return NULL;            /* caller can check errno */
+    if ((fp = popen(shell_command, "r")) == NULL) {
+        // caller can check errno
+        return (NULL);
+    }
+
     buf = fp2str(fp);
     pclose(fp);
-
-    return buf;
+    return (buf);
 }
 
 //!
@@ -994,24 +1047,27 @@ char *system_output(char *shell_command)
 //!
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
 {
-    int rc, i, done;
+    int rc = 0;
+    int i = 0;
+    int done = 0;
     char *tmpstr = NULL;
+    char *tmpptr = NULL;
 
     done = 0;
-    for (i = 0; i < numFiles && !done; i++) {
-        rc = get_conf_var(configFiles[i], key, &tmpstr);
-        if (rc == 1) {
+    for (i = 0; ((i < numFiles) && !done); i++) {
+        if ((rc = get_conf_var(configFiles[i], key, &tmpstr)) == 1) {
             done++;
         }
     }
+
     if (tmpstr && strlen(tmpstr)) {
-        char *tmpptr;
         tmpptr = tmpstr + (strlen(tmpstr) - 1);
         while (*tmpptr == ' ') {
             *tmpptr = '\0';
             tmpptr = tmpstr + (strlen(tmpstr) - 1);
         }
     }
+
     return (tmpstr);
 }
 
@@ -1024,9 +1080,16 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
 //! TEST=test
 //!    TEST   = test
 //!
-//! @param[in] path
-//! @param[in] name
-//! @param[in] value
+//! @param[in]     path
+//! @param[in]     name
+//! @param[in,out] value
+//!
+//! @pre \li The path, name and value fields must not be NULL.
+//!      \li The path field must be a valid path name.
+//!      \li The name field must not be 0 length.
+//!      \li The value field should be set to NULL. If not NULL, it'll be freed.
+//!
+//! @post On success, the value field is updated.
 //!
 //! @return 1 on success, 0 on variable not found and -1 on error (parse or file not found)
 //!
@@ -1034,71 +1097,78 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
 //!
 int get_conf_var(const char *path, const char *name, char **value)
 {
-    FILE *f;
-    char *buf, *ptr, *ret;
-    int len;
+    FILE *f = NULL;
+    char *buf = NULL;
+    char *ptr = NULL;
+    char *ret = NULL;
+    int len = 0;
 
     /* sanity check */
-    if (path == NULL || path[0] == '\0' || name == NULL || name[0] == '\0' || value == NULL) {
+    if ((path == NULL) || (path[0] == '\0') || (name == NULL) || (name[0] == '\0') || (value == NULL)) {
         return -1;
     }
-    *value = NULL;
 
-    f = fopen(path, "r");
-    if (f == NULL) {
-        return -1;
+    EUCA_FREE(*value);
+
+    if ((f = fopen(path, "r")) == NULL) {
+        return (-1);
     }
 
     len = strlen(name);
     buf = EUCA_ALLOC(32768, sizeof(char));
     while (fgets(buf, 32768, f)) {
-        /* the process here is fairly simple: spaces are not
-         * considered (unless between "") so we remove them
-         * before every step. We look for the variable *name*
-         * first, then for an = then for the value */
-        for (ptr = buf; (*ptr != '\0') && isspace((int)*ptr); ptr++) ;
+        // the process here is fairly simple: spaces are not considered (unless between "")
+        // so we remove them before every step. We look for the variable *name* first, then
+        // for an = then for the value
+        for (ptr = buf; ((*ptr != '\0') && isspace((int)*ptr)); ptr++) ;
+
         if (strncmp(ptr, name, len) != 0) {
             continue;
         }
+
         for (ptr += len; (*ptr != '\0') && isspace((int)*ptr); ptr++) ;
+
         if (*ptr != '=') {
             continue;
         }
-        /* we are in business */
+        // we are in business
         for (ptr++; (*ptr != '\0') && isspace((int)*ptr); ptr++) ;
+
         if (*ptr == '"') {
-            /* we have a quote, we need the companion */
+            // we have a quote, we need the companion
             ret = ++ptr;
             while ((*ptr != '"')) {
                 if (*ptr == '\0') {
-                    /* something wrong happened */
+                    // something wrong happened
                     fclose(f);
                     EUCA_FREE(buf);
-                    return -1;
+                    return (-1);
                 }
                 ptr++;
             }
         } else {
-            /* well we get the single word right after the = */
+            // well we get the single word right after the =
             ret = ptr;
-            while (!isspace((int)*ptr) && *ptr != '#' && *ptr != '\0') {
+            while (!isspace((int)*ptr) && (*ptr != '#') && (*ptr != '\0')) {
                 ptr++;
             }
         }
+
         *ptr = '\0';
-        *value = strdup(ret);
-        if (*value == NULL) {
+        if ((*value = strdup(ret)) == NULL) {
             fclose(f);
             EUCA_FREE(buf);
-            return -1;
+            return (-1);
         }
+
         fclose(f);
         EUCA_FREE(buf);
-        return 1;
+        return (1);
     }
+
     fclose(f);
     EUCA_FREE(buf);
-    return 0;
+    return (0);
 }
 
 //!
@@ -1108,16 +1178,14 @@ int get_conf_var(const char *path, const char *name, char **value)
 //!
 void free_char_list(char **value)
 {
-    int i;
+    int i = 0;
 
-    if (value == NULL || *value == NULL) {
-        return;
+    if ((value != NULL) && (*value != NULL)) {
+        for (i = 0; value[i] != NULL; i++) {
+            EUCA_FREE(value[i]);
+        }
+        EUCA_FREE(value);
     }
-
-    for (i = 0; value[i] != NULL; i++) {
-        EUCA_FREE(value[i]);
-    }
-    EUCA_FREE(value);
 }
 
 //!
@@ -1125,67 +1193,72 @@ void free_char_list(char **value)
 //!
 //! @param[in] v
 //!
+//! @pre The v field must not be NULL and must not be of 0 length.
+//!
 //! @return a pointer to a char list or NULL if any error occured
 //!
 char **from_var_to_char_list(const char *v)
 {
-    char *value, **tmp, *ptr, *w, a;
-    int i;
+    int i = 0;
+    char a = '\0';
+    char *w = NULL;
+    char *ptr = NULL;
+    char *value = NULL;
+    char **tmp = NULL;
 
-    /* sanity check */
-    if (v == NULL || v[0] == '\0') {
-        return NULL;
+    // sanity check
+    if ((v == NULL) || (v[0] == '\0')) {
+        return (NULL);
     }
-    tmp = EUCA_ZALLOC(1, sizeof(char *));
-    if (tmp == NULL) {
-        return NULL;
+
+    if ((tmp = EUCA_ZALLOC(1, sizeof(char *))) == NULL) {
+        return (NULL);
     }
-    value = strdup(v);
-    if (value == NULL) {
+
+    if ((value = strdup(v)) == NULL) {
         EUCA_FREE(tmp);
-        return NULL;
+        return (NULL);
     }
-    tmp[0] = NULL;
 
+    tmp[0] = NULL;
     i = 0;
     ptr = value;
     for (i = 0, ptr = value; *ptr != '\0'; ptr++) {
-        /* let's look for the beginning of the word */
+        // let's look for the beginning of the word
         for (; *ptr != '\0' && isspace((int)*ptr); ptr++) ;
+
         if (*ptr == '\0') {
-            /* end of string with no starting word: we are
-             * done here */
+            // end of string with no starting word: we are done here
             break;
         }
-        w = ptr;                /* beginning of word */
+        // beginning of word
+        w = ptr;
         for (ptr++; *ptr != '\0' && !isspace((int)*ptr); ptr++) ;
 
-        /* found the end of word */
+        // found the end of word
         a = *ptr;
         *ptr = '\0';
 
-        tmp = EUCA_REALLOC(tmp, (i + 2), sizeof(char *));
-        if (tmp == NULL) {
+        if ((tmp = EUCA_REALLOC(tmp, (i + 2), sizeof(char *))) == NULL) {
             EUCA_FREE(value);
-            return NULL;
+            return (NULL);
         }
-        tmp[i] = strdup(w);
-        if (tmp[i] == NULL) {
+
+        if ((tmp[i] = strdup(w)) == NULL) {
             free_char_list(tmp);
             EUCA_FREE(value);
-            return NULL;
+            return (NULL);
         }
         tmp[++i] = NULL;
 
-        /* now we need to check if we were at the end of the
-         * string */
+        // now we need to check if we were at the end of the string
         if (a == '\0') {
             break;
         }
     }
-    EUCA_FREE(value);
 
-    return tmp;
+    EUCA_FREE(value);
+    return (tmp);
 }
 
 //!
@@ -1193,22 +1266,23 @@ char **from_var_to_char_list(const char *v)
 //!
 //! @param[in] s
 //!
+//! @pre The s field must not be NULL.
+//!
 //! @return the computed hash code. If 's' is NULL, 0 will be returned
 //!
 int hash_code(const char *s)
 {
-    int code = 0;
     int i = 0;
+    int len = 0;
+    int code = 0;
 
-    if (!s)
-        return code;
-
-    int len = strlen((char *)s);
-    for (i = 0; i < len; i++) {
-        code = 31 * code + (unsigned char)s[i];
+    if (s) {
+        len = strlen(s);
+        for (i = 0; i < len; i++) {
+            code = 31 * code + ((unsigned char)s[i]);
+        }
     }
-
-    return code;
+    return (0);
 }
 
 //!
@@ -1217,25 +1291,33 @@ int hash_code(const char *s)
 //! @param[in] buf
 //! @param[in] buf_size
 //!
-//! @return the result of hash_code()
+//! @return the result of hash_code() or -1 on failure.
+//!
+//! @pre \li The buf field must not be NULL.
+//!      \li The buf_size field must not be 0.
 //!
 //! @see hash_code()
 //!
 int hash_code_bin(const char *buf, int buf_size)
 {
-    char *buf_str = EUCA_ALLOC(((2 * buf_size) + 1), sizeof(char));
-    if (buf_str == NULL)
-        return -1;
+    int i = 0;
+    int code = 0;
+    char *buf_str = NULL;
 
-    for (int i = 0; i < buf_size; i++) {
+    if ((buf == NULL) || (buf_size == 0))
+        return (-1);
+
+    if ((buf_str = EUCA_ALLOC(((2 * buf_size) + 1), sizeof(char))) == NULL)
+        return (-1);
+
+    for (i = 0; i < buf_size; i++) {
         snprintf(buf_str + (i * 2), 2, "%0x", *(buf + i));
     }
     buf_str[2 * buf_size] = '\0';
 
-    int code = hash_code(buf_str);
+    code = hash_code(buf_str);
     EUCA_FREE(buf_str);
-
-    return code;
+    return (code);
 }
 
 //!
@@ -1247,10 +1329,15 @@ int hash_code_bin(const char *buf, int buf_size)
 //!
 char *get_string_stats(const char *s)
 {
-    static char out[OUTSIZE];   //! @todo malloc this?
-    int len = (int)strlen(s);
-    snprintf(out, OUTSIZE, "length=%d buf[n-1]=%i hash=%d", len, (int)((signed char)s[len - 1]), hash_code(s));
-    return out;
+    size_t len = 0;
+    static char out[OUTSIZE] = "";  //! @todo malloc this?
+
+    out[0] = '\0';
+    if ((s != NULL) && (s[0] != '\0')) {
+        len = strlen(s);
+        snprintf(out, OUTSIZE, "length=%ld buf[n-1]=%i hash=%d", len, (int)((signed char)s[len - 1]), hash_code(s));
+    }
+    return (out);
 }
 
 //!
@@ -1264,42 +1351,45 @@ char *get_string_stats(const char *s)
 //! @param[in] force
 //! @param[in] rootwrap
 //!
-//! @return EUCA_OK on success. If an error occured, EUCA_ERROR is returned or
-//!         the result of the daemonrun().
+//! @return EUCA_OK on success. If an error occured, the following error
+//!         codes are returned or the result of the daemonrun():
+//!         \li EUCA_INVALID_ERROR if any parameter does not meet our pre-conditions.
 //!
 //! @see daemonrun()
 //!
+//! @pre The cmd and procname pointers must not be NULL
+//!
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap)
 {
-    int rc, found, ret;
-    char cmdstr[MAX_PATH], file[MAX_PATH];
-    FILE *FH;
+    int rc = 0;
+    char cmdstr[MAX_PATH] = "";
+    char file[MAX_PATH] = "";
+    char *pidstr = NULL;
+    FILE *FH = NULL;
+    boolean found = FALSE;
 
     if (!cmd || !procname) {
-        return (EUCA_ERROR);
+        return (EUCA_INVALID_ERROR);
     }
 
     if (pidfile) {
-        found = 0;
-        rc = check_file(pidfile);
-        if (!rc) {
-            char *pidstr = NULL;
+        found = FALSE;
+        if ((rc = check_file(pidfile)) == 0) {
             // pidfile exists
-            pidstr = file2str(pidfile);
-            if (pidstr) {
+            if ((pidstr = file2str(pidfile)) != NULL) {
                 snprintf(file, MAX_PATH, "/proc/%s/cmdline", pidstr);
                 if (!check_file(file)) {
-                    FH = fopen(file, "r");
-                    if (FH) {
+                    if ((FH = fopen(file, "r")) != NULL) {
                         if (fgets(cmdstr, MAX_PATH, FH)) {
                             if (strstr(cmdstr, procname)) {
                                 // process is running, and is indeed procname
-                                found = 1;
+                                found = TRUE;
                             }
                         }
                         fclose(FH);
                     }
                 }
+
                 EUCA_FREE(pidstr);
             }
         }
@@ -1321,20 +1411,33 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
         }
     }
 
-    if ((ret = daemonrun(cmd, pidfile)) == 0) {
-        // success
-        //    if (pidfile) {
-        //      char pidstr[32];
-        //      snprintf(pidstr, 32, "%d", *dpid);
-        //      rc = write2file(pidfile, pidstr);
-        //    }
-    }
-
-    return (ret);
+    return (daemonrun(cmd, pidfile));
 }
 
 //!
-//! daemonize and run 'cmd', returning pid of the daemonized process
+//!
+//!
+//! @param[in,out] list pointer to the list of strings to free
+//! @param[in]     nmemb number of members in the list
+//!
+//! @pre The list must not be NULL.
+//!
+void free_string_list(char ***list, int nmemb)
+{
+    int i = 0;
+    char **tmpList = NULL;
+
+    if (list != NULL) {
+        tmpList = (*list);
+        for (i = 0; i < nmemb; i++)
+            EUCA_FREE(tmpList[i]);
+        EUCA_FREE(tmpList);
+        (*list) = NULL;
+    }
+}
+
+//!
+//! daemonize and run 'incmd', returning pid of the daemonized process
 //!
 //! @param[in] incmd
 //! @param[in] pidfile
@@ -1344,22 +1447,28 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
 //!
 int daemonrun(char *incmd, char *pidfile)
 {
-    int pid, sid, i, status, rc;
-    char **argv = NULL, *cmd;
+    int i = 0;
+    int rc = 0;
+    int pid = 0;
+    int sid = 0;
+    int idx = 0;
+    int status = 0;
+    char *tok = NULL;
+    char *ptr = NULL;
+    char *cmd = NULL;
+    char **argv = NULL;
+    char pidstr[32] = "";
+    struct sigaction newsigact = { {NULL} };
 
     if (!incmd) {
-        return (EUCA_ERROR);
+        return (EUCA_INVALID_ERROR);
     }
 
-    pid = fork();
-    if (pid < 0) {
+    if ((pid = fork()) < 0) {
         return (EUCA_THREAD_ERROR);
     }
-    if (!pid) {
-        char *tok = NULL, *ptr = NULL;
-        int idx, rc;
-        struct sigaction newsigact = { {NULL} };
 
+    if (pid == 0) {
         newsigact.sa_handler = SIG_DFL;
         newsigact.sa_flags = 0;
         sigemptyset(&newsigact.sa_mask);
@@ -1367,21 +1476,27 @@ int daemonrun(char *incmd, char *pidfile)
         sigaction(SIGTERM, &newsigact, NULL);
 
         rc = daemon(0, 0);
+
         // become parent of session
         sid = setsid();
 
+        if ((cmd = strdup(incmd)) == NULL)
+            return (EUCA_MEMORY_ERROR);
+
         // construct argv
-        cmd = strdup(incmd);
-        idx = 0;
-        argv = EUCA_ZALLOC(1, sizeof(char *));
+        if ((argv = EUCA_ZALLOC(1, sizeof(char *))) == NULL)
+            return (EUCA_MEMORY_ERROR);
+
         tok = strtok_r(cmd, " ", &ptr);
         while (tok) {
             fflush(stdout);
             argv[idx] = strdup(tok);
+
             idx++;
             tok = strtok_r(NULL, " ", &ptr);
             argv = EUCA_REALLOC(argv, (idx + 1), sizeof(char *));
         }
+
         argv[idx] = NULL;
         EUCA_FREE(cmd);
 
@@ -1391,7 +1506,6 @@ int daemonrun(char *incmd, char *pidfile)
         }
 
         if (pidfile) {
-            char pidstr[32];
             snprintf(pidstr, 32, "%d", getpid());
             rc = write2file(pidfile, pidstr);
         }
@@ -1414,10 +1528,10 @@ int daemonrun(char *incmd, char *pidfile)
 //!
 int vrun(const char *fmt, ...)
 {
-    char buf[MAX_PATH];
-    int e;
+    int e = 0;
+    char buf[MAX_PATH] = "";
+    va_list ap = { {0} };
 
-    va_list ap;
     va_start(ap, fmt);
     vsnprintf(buf, MAX_PATH, fmt, ap);
     va_end(ap);
@@ -1426,7 +1540,7 @@ int vrun(const char *fmt, ...)
     if ((e = system(buf)) != 0) {
         logprintfl(EUCAERROR, "system(%s) failed with %d\n", buf, e);   //! @todo remove?
     }
-    return e;
+    return (e);
 }
 
 //!
@@ -1438,20 +1552,22 @@ int vrun(const char *fmt, ...)
 //!
 int cat(const char *file_name)
 {
+    int fd = 0;
     int got = 0;
     int put = 0;
-    char buf[BUFSIZE];
+    char buf[BUFSIZE] = "";
 
-    int fd = open(file_name, O_RDONLY);
-    if (fd == -1) {
+    if ((fd = open(file_name, O_RDONLY)) == -1) {
         // we should print some error
-        return put;
+        return (put);
     }
+
     while ((got = read(fd, buf, BUFSIZE)) > 0) {
         put += write(1, buf, got);
     }
+
     close(fd);
-    return put;
+    return (put);
 }
 
 //!
@@ -1476,7 +1592,7 @@ int touch(const char *path)
         logprintfl(EUCAERROR, "failed to create/open file %s (%s)\n", path, strerror(errno));
         ret = EUCA_IO_ERROR;
     }
-    return ret;
+    return (ret);
 }
 
 //!
@@ -1489,8 +1605,12 @@ int touch(const char *path)
 //!
 int diff(const char *path1, const char *path2)
 {
-    int fd1, fd2;
-    char buf1[BUFSIZE], buf2[BUFSIZE];
+    int fd1 = 0;
+    int fd2 = 0;
+    int read1 = 0;
+    int read2 = 0;
+    char buf1[BUFSIZE] = "";
+    char buf2[BUFSIZE] = "";
 
     if ((fd1 = open(path1, O_RDONLY)) < 0) {
         logprintfl(EUCAERROR, "failed to open %s\n", path1);
@@ -1498,18 +1618,19 @@ int diff(const char *path1, const char *path2)
         logprintfl(EUCAERROR, "failed to open %s\n", path2);
         close(fd1);
     } else {
-        int read1, read2;
         do {
             read1 = read(fd1, buf1, BUFSIZE);
             read2 = read(fd2, buf2, BUFSIZE);
             if (read1 != read2)
                 break;
+
             if (read1 && memcmp(buf1, buf2, read1))
                 break;
         } while (read1);
+
         close(fd1);
         close(fd2);
-        return (-(read1 + read2));  /* both should be 0s if files are equal */
+        return (-(read1 + read2));  // both should be 0s if files are equal
     }
     return EUCA_ERROR;
 }
@@ -1525,25 +1646,30 @@ int diff(const char *path1, const char *path2)
 //!
 long long dir_size(const char *path)
 {
-    struct stat mystat;
-    DIR *dir;
+    DIR *dir = NULL;
+    char *name = NULL;
+    char filepath[MAX_PATH] = "";
+    unsigned char type = '\0';
     long long size = 0;
+    struct stat mystat = { 0 };
+    struct dirent *dir_entry = NULL;
 
     if ((dir = opendir(path)) == NULL) {
         logprintfl(EUCAWARN, "unopeneable directory %s\n", path);
-        return -1;
+        return (-1);
     }
+
     if (stat(path, &mystat) < 0) {
         logprintfl(EUCAWARN, "could not stat %s\n", path);
         closedir(dir);
-        return -1;
+        return (-1);
     }
-    size += (long long)mystat.st_size;
 
-    struct dirent *dir_entry;
+    size += ((long long)mystat.st_size);
+
     while ((dir_entry = readdir(dir)) != NULL) {
-        char *name = dir_entry->d_name;
-        unsigned char type = dir_entry->d_type;
+        name = dir_entry->d_name;
+        type = dir_entry->d_type;
 
         if (!strcmp(".", name) || !strcmp("..", name))
             continue;
@@ -1554,7 +1680,6 @@ long long dir_size(const char *path)
             break;
         }
 
-        char filepath[MAX_PATH];
         snprintf(filepath, MAX_PATH, "%s/%s", path, name);
         if (stat(filepath, &mystat) < 0) {
             logprintfl(EUCAWARN, "could not stat file %s\n", filepath);
@@ -1562,11 +1687,11 @@ long long dir_size(const char *path)
             break;
         }
 
-        size += (long long)mystat.st_size;
+        size += ((long long)mystat.st_size);
     }
 
     closedir(dir);
-    return size;
+    return (size);
 }
 
 //!
@@ -1581,14 +1706,13 @@ int write2file(const char *path, char *str)
 {
     FILE *FH = NULL;
 
-    FH = fopen(path, "w");
-    if (FH) {
+    if ((FH = fopen(path, "w")) != NULL) {
         fprintf(FH, "%s", str);
         fclose(FH);
-    } else {
-        return (EUCA_IO_ERROR);
+        return (EUCA_OK);
     }
-    return (EUCA_OK);
+
+    return (EUCA_IO_ERROR);
 }
 
 //!
@@ -1605,16 +1729,19 @@ int write2file(const char *path, char *str)
 //!
 char *file2strn(const char *path, const ssize_t limit)
 {
-    struct stat mystat;
+    struct stat mystat = { 0 };
+
     if (stat(path, &mystat) < 0) {
         logprintfl(EUCAERROR, "could not stat file %s\n", path);
-        return NULL;
+        return (NULL);
     }
+
     if (mystat.st_size > limit) {
         logprintfl(EUCAERROR, "file %s exceeds the limit (%d) in file2strn()\n", path, limit);
-        return NULL;
+        return (NULL);
     }
-    return file2str(path);
+
+    return (file2str(path));
 }
 
 //!
@@ -1628,33 +1755,35 @@ char *file2strn(const char *path, const ssize_t limit)
 //!
 char *file2str(const char *path)
 {
+    int fp = 0;
+    int bytes = 0;
+    int bytes_total = 0;
+    int to_read = 0;
+    char *p = NULL;
+    int file_size = 0;
     char *content = NULL;
-    int file_size;
+    struct stat mystat = { 0 };
 
-    struct stat mystat;
     if (stat(path, &mystat) < 0) {
         logprintfl(EUCAERROR, "could not stat file %s\n", path);
-        return content;
+        return (content);
     }
+
     file_size = mystat.st_size;
 
     if ((content = EUCA_ALLOC((file_size + 1), sizeof(char))) == NULL) {
         logprintfl(EUCAERROR, "out of memory reading file %s\n", path);
-        return content;
+        return (content);
     }
 
-    int fp;
     if ((fp = open(path, O_RDONLY)) < 0) {
         logprintfl(EUCAERROR, "failed to open file %s\n", path);
         EUCA_FREE(content);
-        content = NULL;
-        return content;
+        return (content);
     }
 
-    int bytes;
-    int bytes_total = 0;
-    int to_read = ((SSIZE_MAX) < file_size) ? (SSIZE_MAX) : file_size;
-    char *p = content;
+    p = content;
+    to_read = (((SSIZE_MAX) < file_size) ? (SSIZE_MAX) : file_size);
     while ((bytes = read(fp, p, to_read)) > 0) {
         bytes_total += bytes;
         p += bytes;
@@ -1662,17 +1791,17 @@ char *file2str(const char *path)
             to_read = file_size - bytes_total;
         }
     }
+
     close(fp);
 
     if (bytes < 0) {
         logprintfl(EUCAERROR, "failed to read file %s\n", path);
         EUCA_FREE(content);
-        content = NULL;
-        return content;
+        return (content);
     }
 
     *p = '\0';
-    return content;
+    return (content);
 }
 
 //!
@@ -1688,30 +1817,26 @@ char *file2str(const char *path)
 //!
 char *file2str_seek(char *file, size_t size, int mode)
 {
-    int rc, fd;
-    struct stat statbuf;
+    int rc = 0;
+    int fd = 0;
     char *ret = NULL;
+    struct stat statbuf = { 0 };
 
     if (!file || size <= 0) {
         logprintfl(EUCAERROR, "bad input parameters\n");
         return (NULL);
     }
 
-    ret = EUCA_ZALLOC(size, sizeof(char));
-    if (!ret) {
+    if ((ret = EUCA_ZALLOC(size, sizeof(char))) == NULL) {
         logprintfl(EUCAERROR, "out of memory!\n");
         return (NULL);
     }
 
-    rc = stat(file, &statbuf);
-    if (rc >= 0) {
-        fd = open(file, O_RDONLY);
-        if (fd >= 0) {
+    if ((rc = stat(file, &statbuf)) >= 0) {
+        if ((fd = open(file, O_RDONLY)) >= 0) {
             if (mode == 1) {
-                rc = lseek(fd, (off_t) (-1 * size), SEEK_END);
-                if (rc < 0) {
-                    rc = lseek(fd, (off_t) 0, SEEK_SET);
-                    if (rc < 0) {
+                if ((rc = lseek(fd, (off_t) (-1 * size), SEEK_END)) < 0) {
+                    if ((rc = lseek(fd, (off_t) 0, SEEK_SET)) < 0) {
                         logprintfl(EUCAERROR, "cannot seek\n");
                         EUCA_FREE(ret);
                         close(fd);
@@ -1749,44 +1874,44 @@ char *file2str_seek(char *file, size_t size, int mode)
 //!
 char *str2str(const char *str, const char *begin, const char *end)
 {
+    int len = 0;
+    char *b = NULL;
+    char *e = NULL;
     char *buf = NULL;
 
-    if (str == NULL || begin == NULL || end == NULL || strlen(str) < 3 || strlen(begin) < 1 || strlen(end) < 1) {
+    if (!str || !begin || !end || (strlen(str) < 3) || (strlen(begin) < 1) || (strlen(end) < 1)) {
         logprintfl(EUCAERROR, "called with bad parameters\n");
-        return buf;
+        return (NULL);
     }
 
-    char *b = strstr(str, begin);
-    if (b == NULL) {
+    if ((b = strstr(str, begin)) == NULL) {
         logprintfl(EUCAERROR, "beginning string '%s' not found\n", begin);
-        return buf;
+        return (NULL);
     }
 
-    char *e = strstr(str, end);
-    if (e == NULL) {
+    if ((e = strstr(str, end)) == NULL) {
         logprintfl(EUCAERROR, "end string '%s' not found\n", end);
-        return buf;
+        return (NULL);
     }
 
     b += strlen(begin);         // b now points at the supposed content
-    int len = e - b;
+    len = e - b;
     if (len < 0) {
         logprintfl(EUCAERROR, "there is nothing between '%s' and '%s'\n", begin, end);
-        return buf;
+        return (NULL);
     }
 
-    if (len > BUFSIZE - 1) {
+    if (len > (BUFSIZE - 1)) {
         logprintfl(EUCAERROR, "string between '%s' and '%s' is too long\n", begin, end);
-        return buf;
+        return (NULL);
     }
 
-    buf = EUCA_ALLOC(len + 1, sizeof(char));
-    if (buf != NULL) {
+    if ((buf = EUCA_ALLOC(len + 1, sizeof(char))) != NULL) {
         strncpy(buf, b, len);
         buf[len] = '\0';
     }
 
-    return buf;
+    return (buf);
 }
 
 //!
@@ -1801,13 +1926,14 @@ char *str2str(const char *str, const char *begin, const char *end)
 long long str2longlong(const char *str, const char *begin, const char *end)
 {
     long long val = -1L;
-    char *buf = str2str(str, begin, end);
-    if (buf != NULL) {
+    char *buf = NULL;
+
+    if ((buf = str2str(str, begin, end)) != NULL) {
         val = atoll(buf);
         EUCA_FREE(buf);
     }
 
-    return val;
+    return (val);
 }
 
 //!
@@ -1820,14 +1946,18 @@ long long str2longlong(const char *str, const char *begin, const char *end)
 //!
 int uint32compar(const void *ina, const void *inb)
 {
-    uint32_t a, b;
-    a = *(uint32_t *) ina;
-    b = *(uint32_t *) inb;
+    uint32_t a = 0;
+    uint32_t b = 0;
+
+    a = (*(uint32_t *) ina);
+    b = (*(uint32_t *) inb);
+
     if (a < b) {
         return (-1);
     } else if (a > b) {
         return (1);
     }
+
     return (0);
 }
 
@@ -1845,21 +1975,21 @@ int uint32compar(const void *ina, const void *inb)
 //!
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
 {
-    int rc;
-    char *pidstr;
+    int rc = 0;
+    char *pidstr = NULL;
 
-    if (!pidfile || !procname || sig < 0 || check_file(pidfile)) {
+    if (!pidfile || !procname || (sig < 0) || check_file(pidfile)) {
         return (1);
     }
 
     rc = 1;
-    pidstr = file2str(pidfile);
-    if (pidstr) {
+    if ((pidstr = file2str(pidfile)) != NULL) {
         logprintfl(EUCADEBUG, "calling safekill with pid %d\n", atoi(pidstr));
         rc = safekill(atoi(pidstr), procname, sig, rootwrap);
         EUCA_FREE(pidstr);
     }
     unlink(pidfile);
+
     return (rc);
 }
 
@@ -1875,11 +2005,13 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
 //!
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
 {
-    char cmdstr[MAX_PATH], file[MAX_PATH], cmd[MAX_PATH];
-    FILE *FH;
-    int ret;
+    int ret = 0;
+    FILE *FH = NULL;
+    char cmdstr[MAX_PATH] = "";
+    char file[MAX_PATH] = "";
+    char cmd[MAX_PATH] = "";
 
-    if (pid < 2 || !procname) {
+    if ((pid < 2) || !procname) {
         return (1);
     }
 
@@ -1888,8 +2020,7 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
         return (1);
     }
 
-    FH = fopen(file, "r");
-    if (FH) {
+    if ((FH = fopen(file, "r")) != NULL) {
         if (!fgets(cmdstr, MAX_PATH, FH)) {
             fclose(FH);
             return (1);
@@ -1925,7 +2056,7 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
 //!
 int maxint(int a, int b)
 {
-    return (a > b ? a : b);
+    return ((a > b) ? a : b);
 }
 
 //!
@@ -1938,7 +2069,7 @@ int maxint(int a, int b)
 //!
 int minint(int a, int b)
 {
-    return (a < b ? a : b);
+    return ((a < b) ? a : b);
 }
 
 //!
@@ -1951,29 +2082,30 @@ int minint(int a, int b)
 //!
 int copy_file(const char *src, const char *dst)
 {
-    struct stat mystat;
+#define _BUFSIZE          16384
+
+    int ret = EUCA_OK;
+    int ifp = 0;
+    int ofp = 0;
+    char buf[_BUFSIZE] = "";
+    ssize_t bytes = 0;
+    struct stat mystat = { 0 };
 
     if (stat(src, &mystat) < 0) {
         logprintfl(EUCAERROR, "cannot stat '%s'\n", src);
         return (EUCA_IO_ERROR);
     }
 
-    int ifp = open(src, O_RDONLY);
-    if (ifp < 0) {
+    if ((ifp = open(src, O_RDONLY)) < 0) {
         logprintfl(EUCAERROR, "failed to open the input file '%s'\n", src);
         return (EUCA_IO_ERROR);
     }
 
-    int ofp = open(dst, O_WRONLY | O_CREAT, 0600);
-    if (ofp < 0) {
+    if ((ofp = open(dst, O_WRONLY | O_CREAT, 0600)) < 0) {
         logprintfl(EUCAERROR, "failed to create the ouput file '%s'\n", dst);
         close(ifp);
         return (EUCA_IO_ERROR);
     }
-#   define _BUFSIZE 16384
-    char buf[_BUFSIZE];
-    ssize_t bytes;
-    int ret = EUCA_OK;
 
     while ((bytes = read(ifp, buf, _BUFSIZE)) > 0) {
         if (write(ofp, buf, bytes) < 1) {
@@ -1982,6 +2114,7 @@ int copy_file(const char *src, const char *dst)
             break;
         }
     }
+
     if (bytes < 0) {
         logprintfl(EUCAERROR, "failed while writing to '%s'\n", dst);
         ret = EUCA_IO_ERROR;
@@ -1990,7 +2123,9 @@ int copy_file(const char *src, const char *dst)
     close(ifp);
     close(ofp);
 
-    return ret;
+    return (ret);
+
+#undef _BUFSIZE
 }
 
 //!
@@ -2002,11 +2137,12 @@ int copy_file(const char *src, const char *dst)
 //!
 long long file_size(const char *file_path)
 {
-    struct stat mystat;
-    int err = stat(file_path, &mystat);
-    if (err < 0)
-        return (long long)err;
-    return (long long)(mystat.st_size);
+    int err = 0;
+    struct stat mystat = { 0 };
+
+    if ((err = stat(file_path, &mystat)) < 0)
+        return ((long long) err);
+    return ((long long) mystat.st_size);
 }
 
 //!
@@ -2020,9 +2156,14 @@ long long file_size(const char *file_path)
 //!
 char *strduplc(const char *s)
 {
-    char *lc = strdup(s);
-    for (int i = 0; i < strlen(s); i++) {
-        lc[i] = tolower(lc[i]);
+    int i = 0;
+    char *lc = NULL;
+
+    if (s) {
+        lc = strdup(s);
+        for (i = 0; i < strlen(s); i++) {
+            lc[i] = tolower(lc[i]);
+        }
     }
     return lc;
 }
@@ -2050,19 +2191,19 @@ char *strduplc(const char *s)
 //!
 static char *next_tag(const char *xml, int *start, int *end, int *single, int *closing)
 {
-    char *ret = NULL;
-
     int name_start = -1;
     int name_end = -1;
     int tag_start = -1;
+    char *ret = NULL;
+    const char *p = NULL;
+    const char *last_ch = NULL;
 
-    for (const char *p = xml; *p; p++) {
-
+    for (p = xml; *p; p++) {
         if (*p == '<') {        // found a new tag
             tag_start = (p - xml);  // record the char so its offset can be returned
 
             *closing = 0;
-            if (*(p + 1) == '/' || *(p + 1) == '?') {
+            if ((*(p + 1) == '/') || (*(p + 1) == '?')) {
                 if (*(p + 1) == '/')    // if followed by '/' then it is a "closing" tag
                     *closing = 1;
                 name_start = (p - xml + 2);
@@ -2073,7 +2214,7 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
             continue;
         }
 
-        if (*p == ' ' && name_start != -1 && name_end == -1) {  // a name may be terminated by a space
+        if ((*p == ' ') && (name_start != -1) && (name_end == -1)) {  // a name may be terminated by a space
             name_end = (p - 1 - xml);
             continue;
         }
@@ -2081,23 +2222,24 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
         if (*p == '>') {
             if (name_start == -1)   // never saw '<', error
                 break;
-            if (p < xml + 2)    // tag is too short, error
+
+            if (p < (xml + 2))    // tag is too short, error
                 break;
-            const char *last_ch = p - 1;
-            if (*last_ch == '/' || *last_ch == '?') {
+
+            last_ch = p - 1;
+            if ((*last_ch == '/') || (*last_ch == '?')) {
                 *single = 1;    // preceded by '/' then it is a "single" tag
                 last_ch--;
             } else {
                 *single = 0;
             }
 
-            if (name_start != -1 && name_end == -1) {   // a name may be terminated by '/' or '>' or '?'
+            if ((name_start != -1) && (name_end == -1)) {   // a name may be terminated by '/' or '>' or '?'
                 name_end = (last_ch - xml);
             }
 
             if ((name_end - name_start) >= 0) { // we have a name rather than '<>'
-                ret = EUCA_ZALLOC(name_end - name_start + 2, sizeof(char));
-                if (ret == NULL)
+                if ((ret = EUCA_ZALLOC(name_end - name_start + 2, sizeof(char))) == NULL)
                     break;
                 strncpy(ret, xml + name_start, name_end - name_start + 1);
                 *start = tag_start;
@@ -2107,7 +2249,7 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
         }
     }
 
-    return ret;
+    return (ret);
 }
 
 //!
@@ -2128,26 +2270,31 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
 //!
 static char *find_cont(const char *xml, char *xpath)
 {
-    char *ret = NULL;
+#define _STK_SIZE            64
 
-    int tag_start;
+    int i = 0;
+    int xml_offset = 0;
+    int tag_start = 0;
     int tag_end = -1;
-    int single;
+    int single = 0;
     int closing = 0;
-    char *name;
-#define _STK_SIZE 64
-    char *n_stk[_STK_SIZE];
-    const char *c_stk[_STK_SIZE];
     int stk_p = -1;
+    int cont_len = 0;
+    char *ret = NULL;
+    char *cont = NULL;
+    char *name = NULL;
+    char *name_lc = NULL;
+    char *n_stk[_STK_SIZE] = { NULL};
+    char xpath_cur[MAX_PATH] = "";
+    const char *contp = NULL;
+    const char *c_stk[_STK_SIZE] = { NULL };
 
-    // iterate over tags until the matching xpath is reached or
-    // until no more tags are found in the 'xml'
+    // iterate over tags until the matching xpath is reached or until no more tags are found in the 'xml'
     bzero(n_stk, sizeof(char *) * _STK_SIZE);
 
-    for (int xml_offset = 0; (name = next_tag(xml + xml_offset, &tag_start, &tag_end, &single, &closing)) != NULL; xml_offset += tag_end + 1) {
+    for (xml_offset = 0; (name = next_tag(xml + xml_offset, &tag_start, &tag_end, &single, &closing)) != NULL; xml_offset += tag_end + 1) {
         if (single) {
             // not interested in singles because we are looking for content
-
         } else if (!closing) {  // opening a tag
             // put name and pointer to content onto the stack
             stk_p++;
@@ -2155,10 +2302,9 @@ static char *find_cont(const char *xml, char *xpath)
                 goto cleanup;
             n_stk[stk_p] = strduplc(name);  // put a lower-case-only copy onto stack
             c_stk[stk_p] = xml + xml_offset + tag_end + 1;
-
         } else {                // closing tag
             // get the name in all lower-case, for consistency with xpath
-            char *name_lc = strduplc(name);
+            name_lc = strduplc(name);
             EUCA_FREE(name);
             name = name_lc;
 
@@ -2169,8 +2315,8 @@ static char *find_cont(const char *xml, char *xpath)
                 }
             }
             // construct the xpath of the closing tag based on stack contents
-            char xpath_cur[MAX_PATH] = "";
-            for (int i = 0; i <= stk_p; i++) {
+            xpath_cur[0] = '\0';
+            for (i = 0; i <= stk_p; i++) {
                 if (i > 0)
                     strncat(xpath_cur, "/", MAX_PATH);
                 strncat(xpath_cur, n_stk[i], MAX_PATH);
@@ -2179,15 +2325,15 @@ static char *find_cont(const char *xml, char *xpath)
             // pop the stack whether we have a match or not
             if (stk_p < 0)      // past the bottom of the stack, error
                 goto cleanup;
-            const char *contp = c_stk[stk_p];
-            int cont_len = xml + xml_offset + tag_start - contp;
+
+            contp = c_stk[stk_p];
+            cont_len = xml + xml_offset + tag_start - contp;
             EUCA_FREE(n_stk[stk_p]);
             stk_p--;
 
             // see if current xpath matches the requested one
             if (strcmp(xpath, xpath_cur) == 0) {
-                char *cont = EUCA_ZALLOC(cont_len + 1, sizeof(char));
-                if (cont == NULL)
+                if ((cont = EUCA_ZALLOC(cont_len + 1, sizeof(char))) == NULL)
                     goto cleanup;
                 strncpy(cont, contp, cont_len);
                 ret = cont;
@@ -2200,9 +2346,11 @@ static char *find_cont(const char *xml, char *xpath)
 
 cleanup:
     EUCA_FREE(name);            // for exceptions
-    for (int i = 0; i <= stk_p; i++)
+    for (i = 0; i <= stk_p; i++)
         EUCA_FREE(n_stk[i]);    // free everything on the stack
-    return ret;
+    return (ret);
+
+#undef _STK_SIZE
 }
 
 //!
@@ -2226,16 +2374,18 @@ cleanup:
 char *xpath_content(const char *xml, const char *xpath)
 {
     char *ret = NULL;
+    char *xpath_l = NULL;
 
-    if (xml == NULL || xpath == NULL)
-        return NULL;
-    char *xpath_l = strduplc(xpath);    // lower-case copy of requested xpath
+    if ((xml == NULL) || (xpath == NULL))
+        return (NULL);
+
+    xpath_l = strduplc(xpath);    // lower-case copy of requested xpath
     if (xpath_l != NULL) {
         ret = find_cont(xml, xpath_l);
         EUCA_FREE(xpath_l);
     }
 
-    return ret;
+    return (ret);
 }
 
 //!
@@ -2251,6 +2401,8 @@ char *xpath_content(const char *xml, const char *xpath)
 //!
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path)
 {
+    char tmp[32] = "";
+
     if (!uri || !uriType || !host || !strlen(uriType) || !strlen(host)) {
         return (EUCA_ERROR);
     }
@@ -2262,7 +2414,6 @@ int construct_uri(char *uri, char *uriType, char *host, int port, char *path)
     strncat(uri, host, strlen(host));
 
     if (port > 0) {
-        char tmp[32];
         snprintf(tmp, 32, ":%d", port);
         strncat(uri, tmp, strlen(tmp));
     }
@@ -2288,7 +2439,8 @@ int construct_uri(char *uri, char *uriType, char *host, int port, char *path)
 //!
 int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
 {
-    char *tok, *start;
+    char *tok = NULL;
+    char *start = NULL;
 
     uriType[0] = host[0] = path[0] = '\0';
     *port = 0;
@@ -2300,9 +2452,9 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
     if (!start) {
         return (EUCA_ERROR);
     }
+
     snprintf(uriType, strlen(tok) + 1, "%s", tok);
     start += 2;
-    //  printf("HERE: %s %s\n", start, tok);
 
     tok = strsep(&start, ":");
     if (!start) {
@@ -2338,6 +2490,7 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
             snprintf(path, strlen(start) + 1, "%s", start);
         }
     }
+
     return (EUCA_OK);
 }
 
@@ -2354,6 +2507,7 @@ char *strdupcat(char *original, char *new)
 {
     int len = 0;
     int olen = 0;
+    char *ret = NULL;
 
     if (original) {
         olen = strlen(original);
@@ -2364,8 +2518,7 @@ char *strdupcat(char *original, char *new)
         len += strlen(new);
     }
 
-    char *ret = EUCA_ZALLOC(len + 1, sizeof(char));
-    if (ret) {
+    if ((ret = EUCA_ZALLOC(len + 1, sizeof(char))) != NULL) {
         if (original) {
             strncat(ret, original, len);
             EUCA_FREE(original);
@@ -2376,7 +2529,7 @@ char *strdupcat(char *original, char *new)
         }
     }
 
-    return ret;
+    return (ret);
 }
 
 //!
@@ -2393,26 +2546,29 @@ char *strdupcat(char *original, char *new)
 //!
 int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode)
 {
-    int len = strlen(path);
-    char *path_copy = NULL;
     int ret = 0;
-    int i;
+    int i = 0;
+    int len = strlen(path);
+    int try_dir = 0;
+    char *path_copy = NULL;
+    struct stat buf = { 0 };
 
     if (len > 0)
         path_copy = strdup(path);
 
     if (path_copy == NULL)
-        return -1;
+        return (-1);
 
     for (i = 0; i < len; i++) {
-        struct stat buf;
-        int try_dir = 0;
+        try_dir = 0;
 
-        if (path[i] == '/' && i > 0) {  // dir path, not root
+        if ((path[i] == '/') && (i > 0)) {
+            // dir path, not root
             path_copy[i] = '\0';
             try_dir = 1;
 
-        } else if (path[i] != '/' && i + 1 == len) {    // last one
+        } else if ((path[i] != '/') && ((i + 1) == len)) {
+            // last one
             if (!is_file_path)
                 try_dir = 1;
         }
@@ -2425,23 +2581,24 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
                     logprintfl(EUCAERROR, "failed to create path %s: %s\n", path_copy, strerror(errno));
 
                     EUCA_FREE(path_copy);
-                    return -1;
+                    return (-1);
                 }
+
                 ret = 1;        // we created a directory
 
                 if (diskutil_ch(path_copy, user, group, mode) != EUCA_OK) {
                     logprintfl(EUCAERROR, "failed to change perms on path %s\n", path_copy);
                     EUCA_FREE(path_copy);
-                    return -1;
+                    return (-1);
                 }
-                //                chmod (path_copy, mode); // ensure perms are right despite mask
             }
+
             path_copy[i] = '/'; // restore the slash
         }
     }
 
     EUCA_FREE(path_copy);
-    return ret;
+    return (ret);
 }
 
 //!
@@ -2451,9 +2608,10 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
 //!
 long long time_usec(void)
 {
-    struct timeval tv;
+    struct timeval tv = { 0 };
+
     gettimeofday(&tv, NULL);
-    return (long long)tv.tv_sec * 1000000 + tv.tv_usec;
+    return ((long long)tv.tv_sec * 1000000 + tv.tv_usec);
 }
 
 //!
@@ -2463,7 +2621,7 @@ long long time_usec(void)
 //!
 long long time_ms(void)
 {
-    return time_usec() / 1000;
+    return (time_usec() / 1000);
 }
 
 //!
@@ -2475,8 +2633,9 @@ long long time_ms(void)
 //!
 char *safe_mkdtemp(char *template)
 {
-    mode_t u;
+    mode_t u = 0;
     char *ret = NULL;
+
     u = umask(0077);
     ret = mkdtemp(template);
     umask(u);
@@ -2492,8 +2651,9 @@ char *safe_mkdtemp(char *template)
 //!
 int safe_mkstemp(char *template)
 {
-    mode_t u;
-    int ret;
+    mode_t u = 0;
+    int ret = 0;
+
     u = umask(0077);
     ret = mkstemp(template);
     umask(u);
@@ -2529,16 +2689,19 @@ char *safe_strncpy(char *s1, const char *s2, size_t len)
 //!
 int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
 {
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "blkid %s", dev_path);   // option '-u filesystem' did not exist on Centos
-    char *blkid_output = system_output(cmd);
-    if (blkid_output == NULL)
-        return (EUCA_ERROR);
     int ret = EUCA_ERROR;
-    char *first_char = strstr(blkid_output, "UUID=\"");
-    if (first_char) {
+    char cmd[1024] = "";
+    char *first_char = NULL;
+    char *last_char = NULL;
+    char *blkid_output = NULL;
+
+    snprintf(cmd, sizeof(cmd), "blkid %s", dev_path);   // option '-u filesystem' did not exist on Centos
+    if ((blkid_output = system_output(cmd)) == NULL)
+        return (EUCA_ERROR);
+
+    if ((first_char = strstr(blkid_output, "UUID=\"")) != NULL) {
         first_char += 6;
-        char *last_char = strchr(first_char, '"');
+        last_char = strchr(first_char, '"');
         if (last_char && ((last_char - first_char) > 0)) {
             *last_char = '\0';
             safe_strncpy(uuid, first_char, uuid_size);
@@ -2546,9 +2709,9 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
             ret = EUCA_OK;
         }
     }
-    EUCA_FREE(blkid_output);
 
-    return ret;
+    EUCA_FREE(blkid_output);
+    return (ret);
 }
 
 //!
@@ -2560,18 +2723,19 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
 //!
 char parse_boolean(const char *s)
 {
+    char val = '\0';
     char *lc = strduplc(s);
-    char val = 0;
 
-    if (strcmp(lc, "y") == 0 || strcmp(lc, "yes") == 0 || strcmp(lc, "t") == 0 || strcmp(lc, "true") == 0) {
+    if (!strcmp(lc, "y") || !strcmp(lc, "yes") || !strcmp(lc, "t") || !strcmp(lc, "true")) {
         val = 1;
-    } else if (strcmp(lc, "n") == 0 || strcmp(lc, "no") == 0 || strcmp(lc, "f") == 0 || strcmp(lc, "false") == 0) {
+    } else if (!strcmp(lc, "n") || !strcmp(lc, "no") || !strcmp(lc, "f") || !strcmp(lc, "false")) {
         val = 0;
-    } else
+    } else {
         logprintfl(EUCAERROR, "failed to parse value '%s' as boolean", lc);
-    EUCA_FREE(lc);
+    }
 
-    return val;
+    EUCA_FREE(lc);
+    return (val);
 }
 
 //!
@@ -2612,6 +2776,8 @@ int drop_privs(void)
 //!
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout)
 {
+    int retval;
+    int readn;
     int stdoutfds[2] = { 0, 0 };
     int stderrfds[2] = { 0, 0 };
     int child_pid = 0;
@@ -2623,6 +2789,8 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     char errorBuf[256] = { 0 };
     time_t start_time = 0;
     time_t remaining_time = 0;
+    fd_set rfds = { {0} };
+    struct timeval tv = { 0 };
 
     // force nonempty on all arguments to simplify the logic
     assert(command);
@@ -2631,27 +2799,28 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 
     if (pipe(stdoutfds) < 0) {
         logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, errorBuf, 256));
-        return -1;
+        return (-1);
     }
     if (pipe(stderrfds) < 0) {
         logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, errorBuf, 256));
-        return -1;
+        return (-1);
     }
 
-    child_pid = fork();
-    if (child_pid == 0) {
+    if ((child_pid = fork()) == 0) {
         close(stdoutfds[0]);
         if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
             logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, errorBuf, 256));
             exit(1);
         }
-        close(stdoutfds[1]);
 
+        close(stdoutfds[1]);
         close(stderrfds[0]);
+
         if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
             logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, errorBuf, 256));
             exit(1);
         };
+
         close(stderrfds[1]);
 
         execl("/bin/sh", "sh", "-c", command, (char *)0);
@@ -2665,22 +2834,17 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     if (child_pid < 0) {
         close(stdoutfds[0]);
         close(stderrfds[0]);
-        return -1;
+        return (-1);
     }
 
     memset(stdout_str, 0, max_size);
     memset(stderr_str, 0, max_size);
     stdout_toread = stderr_toread = max_size - 1;
 
-    maxfd = stdoutfds[0] > stderrfds[0] ? stdoutfds[0] : stderrfds[0];
+    maxfd = ((stdoutfds[0] > stderrfds[0]) ? stdoutfds[0] : stderrfds[0]);
 
     start_time = time(NULL);
     for (;;) {
-        fd_set rfds;
-        struct timeval tv;
-        int retval;
-        int readn;
-
         FD_ZERO(&rfds);
         FD_SET(stdoutfds[0], &rfds);
         FD_SET(stderrfds[0], &rfds);
@@ -2688,20 +2852,18 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
         tv.tv_sec = 1;
         tv.tv_usec = 0;
 
-        retval = select(maxfd + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv);
-        if (retval > 0) {
+        if ((retval = select(maxfd + 1, &rfds, (fd_set *) 0, (fd_set *) 0, &tv)) > 0) {
             if (FD_ISSET(stdoutfds[0], &rfds) && stdout_toread > 0) {
-                readn = read(stdoutfds[0], stdout_str, stdout_toread);
-                if (readn > 0) {
+                if ((readn = read(stdoutfds[0], stdout_str, stdout_toread)) > 0) {
                     stdout_toread -= readn;
                     stdout_str += readn;
                 } else {
                     break;
                 }
             }
+
             if (FD_ISSET(stderrfds[0], &rfds) && stderr_toread > 0) {
-                readn = read(stderrfds[0], stderr_str, stderr_toread);
-                if (readn > 0) {
+                if ((readn = read(stderrfds[0], stderr_str, stderr_toread)) > 0) {
                     stderr_toread -= readn;
                     stderr_str += readn;
                 } else {
@@ -2712,24 +2874,26 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
             logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, errorBuf, 256));
             break;
         }
-        if (time(NULL) - start_time > timeout) {
+
+        if ((time(NULL) - start_time) > timeout) {
             logprintfl(EUCAWARN, "warning: read timeout\n");
             break;
         }
     }
+
     close(stdoutfds[0]);
     close(stderrfds[0]);
 
     remaining_time = timeout - (time(NULL) - start_time);
-    rc = timewait(child_pid, &status, remaining_time);
-    if (rc) {
+    if ((rc = timewait(child_pid, &status, remaining_time)) != 0) {
         rc = WEXITSTATUS(status);
     } else {
         kill(child_pid, SIGKILL);
         logprintfl(EUCAERROR, "warning: shell execution timeout\n");
-        return -1;
+        return (-1);
     }
-    return rc;
+
+    return (rc);
 }
 
 #ifdef _UNIT_TEST
