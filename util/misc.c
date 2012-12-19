@@ -2141,8 +2141,8 @@ long long file_size(const char *file_path)
     struct stat mystat = { 0 };
 
     if ((err = stat(file_path, &mystat)) < 0)
-        return ((long long) err);
-    return ((long long) mystat.st_size);
+        return ((long long)err);
+    return ((long long)mystat.st_size);
 }
 
 //!
@@ -2214,7 +2214,7 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
             continue;
         }
 
-        if ((*p == ' ') && (name_start != -1) && (name_end == -1)) {  // a name may be terminated by a space
+        if ((*p == ' ') && (name_start != -1) && (name_end == -1)) {    // a name may be terminated by a space
             name_end = (p - 1 - xml);
             continue;
         }
@@ -2223,7 +2223,7 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
             if (name_start == -1)   // never saw '<', error
                 break;
 
-            if (p < (xml + 2))    // tag is too short, error
+            if (p < (xml + 2))  // tag is too short, error
                 break;
 
             last_ch = p - 1;
@@ -2284,7 +2284,7 @@ static char *find_cont(const char *xml, char *xpath)
     char *cont = NULL;
     char *name = NULL;
     char *name_lc = NULL;
-    char *n_stk[_STK_SIZE] = { NULL};
+    char *n_stk[_STK_SIZE] = { NULL };
     char xpath_cur[MAX_PATH] = "";
     const char *contp = NULL;
     const char *c_stk[_STK_SIZE] = { NULL };
@@ -2379,7 +2379,7 @@ char *xpath_content(const char *xml, const char *xpath)
     if ((xml == NULL) || (xpath == NULL))
         return (NULL);
 
-    xpath_l = strduplc(xpath);    // lower-case copy of requested xpath
+    xpath_l = strduplc(xpath);  // lower-case copy of requested xpath
     if (xpath_l != NULL) {
         ret = find_cont(xml, xpath_l);
         EUCA_FREE(xpath_l);
