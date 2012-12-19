@@ -68,21 +68,16 @@
 //! This implements the default operations handlers supported by all hypervisor.
 //!
 
-#define _FILE_OFFSET_BITS      64   //!< so large-file support works on 32-bit systems
-#define __USE_GNU
-#ifndef MAX_PATH
-#define MAX_PATH               4096 //!< Max path string length
-#endif /*  ! MAX_PATH */
-#define HANDLERS_FANOUT
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _FILE_OFFSET_BITS      64   //!< so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU               /* strnlen */
 #include <string.h>             /* strlen, strcpy */
 #include <time.h>
 #include <limits.h>             /* INT_MAX */
@@ -101,12 +96,16 @@
 #include <signal.h>             /* SIGINT */
 #include <linux/limits.h>
 #include <pwd.h>                /* getpwuid_r */
+#ifndef MAX_PATH
+#define MAX_PATH               4096 //!< Max path string length
+#endif /*  ! MAX_PATH */
 
 #include "eucalyptus-config.h"
 #include "ipc.h"
 #include "misc.h"
 #include "backing.h"
 #include "diskutil.h"
+#define HANDLERS_FANOUT
 #include "handlers.h"
 #include "eucalyptus.h"
 #include "euca_auth.h"
@@ -126,9 +125,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define MONITORING_PERIOD                            5  //!< Instance state transition monitoring period in seconds.
+#define MONITORING_PERIOD                           (5) //!< Instance state transition monitoring period in seconds.
 #define MAX_CREATE_TRYS                              5
 #define CREATE_TIMEOUT_SEC                           60
+#define LIBVIRT_TIMEOUT_SEC                          5
 #define PER_INSTANCE_BUFFER_MB                       20 //!< by default reserve this much extra room (in MB) per instance (for kernel, ramdisk, and metadata overhead)
 #define MAX_SENSOR_RESOURCES                         MAXINSTANCES_PER_NC
 #define SEC_PER_MB                                   ((1024 * 1024) / 512)
@@ -208,8 +208,8 @@ configEntry configKeysRestartNC[] = {
 
 configEntry configKeysNoRestartNC[] = {
     {"LOGLEVEL", "DEBUG"},
-    {"LOGROLLNUMBER", "4"},
-    {"LOGMAXSIZE", "10485760"},
+    {"LOGROLLNUMBER", "10"},
+    {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
     {NULL, NULL}
 };
@@ -283,9 +283,11 @@ ncInstance *find_global_instance(const char *instanceId);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static void invalidate_hypervisor_conn();
+static void invalidate_hypervisor_conn(void);
+static void *libvirt_thread(void *ptr);
 static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance);
 static void update_log_params(void);
+static void nc_signal_handler(int sig);
 static int init(void);
 
 /*----------------------------------------------------------------------------*\
@@ -494,10 +496,38 @@ void print_running_domains(void)
 //!
 //! Closes the connection with the hypervisor
 //!
-static void invalidate_hypervisor_conn()
+static void invalidate_hypervisor_conn(void)
 {
-    virConnectClose(nc_state.conn);
-    nc_state.conn = NULL;
+    sem_p(hyp_sem);
+    {
+        virConnectClose(nc_state.conn);
+        nc_state.conn = NULL;
+    }
+    sem_v(hyp_sem);
+}
+
+//!
+//!
+//!
+//! @param[in] ptr
+//!
+static void *libvirt_thread(void *ptr)
+{
+    int rc = 0;
+    sigset_t mask = { {0} };
+
+    // allow SIGUSR1 signal to be delivered to this thread and its children
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGUSR1);
+    sigprocmask(SIG_UNBLOCK, &mask, NULL);
+
+    if (nc_state.conn) {
+        if ((rc = virConnectClose(nc_state.conn)) != 0) {
+            logprintfl(EUCADEBUG, "refcount on close was non-zero: %d\n", rc);
+        }
+    }
+    nc_state.conn = virConnectOpen(nc_state.uri);
+    return (NULL);
 }
 
 //!
@@ -508,7 +538,10 @@ static void invalidate_hypervisor_conn()
 virConnectPtr *check_hypervisor_conn()
 {
     int rc = 0;
-    char *uri = NULL;
+    int status = 0;
+    pthread_t thread = { 0 };
+    long long thread_par = 0L;
+    struct timespec ts = { 0 };
 
     // Acquire our hypervisor semaphore
     sem_p(hyp_sem);
@@ -518,29 +551,86 @@ virConnectPtr *check_hypervisor_conn()
         sem_v(hyp_sem);
         return NULL;
     }
-    // we close the connection to hypervisor prophylactically (experience shows that a connection may enter a bad state
-    // without any outward manifestation of that except libvirt invocations blocking indefinitely)
-    if (nc_state.conn != NULL) {
-        if ((rc = virConnectClose(nc_state.conn)) != 0) {
-            logprintfl(EUCADEBUG, "check_hypervisor_conn(): refcount on close was non-zero: %d\n", rc);
+    // Fork off a process just to open and immediately close a libvirt connection.
+    // The purpose is to try to identify periods when open or close calls block indefinitely.
+    // Success in the child process does not guarantee success in the parent process, but
+    // hopefully it will flag certain bad conditions and will allow the parent to avoid them.
+
+    boolean bail = FALSE;
+    pid_t cpid = fork();
+    if (cpid < 0) {             // fork error
+        logprintfl(EUCAERROR, "[%s] failed to fork to check hypervisor connection\n");
+        bail = TRUE;            // we are in big trouble if we cannot fork
+    } else if (cpid == 0) {     // child process - checks on the connection
+        virConnectPtr tmp_conn = virConnectOpen(nc_state.uri);
+        if (tmp_conn == NULL)
+            exit(1);
+        virConnectClose(tmp_conn);
+        exit(0);
+    } else {                    // parent process - waits for the child, kills it if necessary
+        rc = timewait(cpid, &status, LIBVIRT_TIMEOUT_SEC);
+        if (rc < 0) {
+            logprintfl(EUCAERROR, "failed to wait for forked process: %s\n", strerror(errno));
+            bail = TRUE;
+        } else if (rc == 0) {
+            logprintfl(EUCAERROR, "timed out waiting for hypervisor checker pid=%d\n", cpid);
+            bail = TRUE;
+        } else if (WEXITSTATUS(status) != 0) {
+            logprintfl(EUCAERROR, "child process failed to connect to hypervisor\n");
+            bail = TRUE;
         }
-
-        nc_state.conn = NULL;
+        // terminate the child, if any
+        kill(cpid, SIGKILL);    // should be able to do
+        kill(cpid, 9);          // may not be able to do
     }
-    // try to econnect
-    nc_state.conn = virConnectOpen(nc_state.uri);
+    if (bail) {
+        sem_v(hyp_sem);
+        return NULL;            // better fail the operation than block the whole NC
+    }
+    logprintfl(EUCATRACE, "process check for libvirt succeeded\n");
 
-    EUCA_FREE(uri);
+    // At this point, the check for libvirt done in a separate process was
+    // successful, so we proceed to close and reopen the connection in a
+    // separate thread, which we will try to wake up with SIGUSR1 if it
+    // blocks for too long (as a last-resource effort). The reason we reset
+    // the connection so often is because libvirt operations have a
+    // tendency to block indefinitely if we do not do this.
 
-    // Release our hypervisor semaphore
+    if (pthread_create(&thread, NULL, libvirt_thread, (void *)&thread_par) != 0) {
+        logprintfl(EUCAERROR, "failed to create the libvirt refreshing thread\n");
+        bail = TRUE;
+    } else {
+        for (;;) {
+            if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+                logprintfl(EUCAERROR, "failed to obtain time\n");
+                bail = TRUE;
+                break;
+            }
+            ts.tv_sec += LIBVIRT_TIMEOUT_SEC;
+            rc = pthread_timedjoin_np(thread, NULL, &ts);
+            if (rc == 0)
+                break;          // all is well
+            if (rc != ETIMEDOUT) {  // error other than timeout
+                logprintfl(EUCAERROR, "failed to wait for libvirt refreshing thread (rc=%d)\n", rc);
+                bail = TRUE;
+                break;
+            }
+            logprintfl(EUCAERROR, "timed out on libvirt refreshing thread\n");
+            pthread_kill(thread, SIGUSR1);
+            sleep(1);
+        }
+    }
+
     sem_v(hyp_sem);
-
-    // Were we able to establish a new connection?
-    if (nc_state.conn == NULL) {
-        logprintfl(EUCAFATAL, "Failed to connect to %s\n", nc_state.uri);
+    if (bail) {
         return NULL;
     }
+    logprintfl(EUCATRACE, "thread check for libvirt succeeded\n");
 
+    if (nc_state.conn == NULL) {
+        logprintfl(EUCAERROR, "failed to connect to %s\n", nc_state.uri);
+        return NULL;
+    }
     return &(nc_state.conn);
 }
 
@@ -582,14 +672,15 @@ void change_state(ncInstance * instance, instance_states state)
         instance->stateCode = TEARDOWN;
         break;
     default:
-        logprintfl(EUCAERROR, "[%s] error: change_sate(): unexpected state (%d)\n", instance->instanceId, instance->state);
+        logprintfl(EUCAERROR, "[%s] unexpected state (%d)\n", instance->instanceId, instance->state);
         return;
     }
 
     safe_strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
     if (old_state != state) {
-        logprintfl(EUCADEBUG, "[%s] state change for instance: %s -> %s (%s)\n", instance->instanceId, instance_state_names[old_state],
-                   instance_state_names[instance->state], instance_state_names[instance->stateCode]);
+        logprintfl(EUCADEBUG, "[%s] state change for instance: %s -> %s (%s)\n",
+                   instance->instanceId, instance_state_names[old_state], instance_state_names[instance->state],
+                   instance_state_names[instance->stateCode]);
     }
 }
 
@@ -704,7 +795,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         logprintfl(EUCADEBUG, "[%s] hypervisor state for bundle/createImage domain is %s\n", instance->instanceId, instance_state_names[new_state]);
         break;
     default:
-        logprintfl(EUCAERROR, "[%s] refresh...(): unexpected state (%d)\n", instance->instanceId, old_state);
+        logprintfl(EUCAERROR, "[%s] unexpected state (%d) in refresh\n", instance->instanceId, old_state);
         return;
     }
     sem_p(hyp_sem);
@@ -803,9 +894,9 @@ void *monitoring_thread(void *arg)
     int cleaned_up;
     struct nc_state_t *nc;
 
-    logprintfl(EUCADEBUG, "spawning monitoring thread\n");
+    logprintfl(EUCAINFO, "spawning monitoring thread\n");
     if (arg == NULL) {
-        logprintfl(EUCAFATAL, "NULL parameter!\n");
+        logprintfl(EUCAFATAL, "internal error (NULL parameter to monitoring_thread)\n");
         return NULL;
     }
     nc = (struct nc_state_t *)arg;
@@ -892,7 +983,7 @@ void *monitoring_thread(void *arg)
                 logprintfl(EUCAINFO, "[%s] cleaning up state for instance%s\n", instance->instanceId,
                            (destroy_files) ? ("") : (" (but keeping the files)"));
                 if (destroy_instance_backing(instance, destroy_files)) {
-                    logprintfl(EUCAWARN, "[%s] warning: failed to cleanup instance state\n", instance->instanceId);
+                    logprintfl(EUCAWARN, "[%s] failed to cleanup instance state\n", instance->instanceId);
                 }
                 // check to see if this is the last instance running on vlan, handle local networking information drop
                 int left = 0;
@@ -1006,7 +1097,6 @@ void *startup_thread(void *arg)
             instance->params.nicType = NIC_TYPE_LINUX;
         }
     }
-    logprintfl(EUCAINFO, "[%s] started network\n", instance->instanceId);
 
     safe_strncpy(instance->hypervisorType, nc_state.H->name, sizeof(instance->hypervisorType)); // set the hypervisor type
 
@@ -1221,7 +1311,7 @@ void *restart_thread(void *arg)
 
     // serialize domain creation as hypervisors can get confused with
     // too many simultaneous create requests
-    logprintfl(EUCADEBUG, "[%s] instance about to boot\n", instance->instanceId);
+    logprintfl(EUCATRACE, "[%s] instance about to boot\n", instance->instanceId);
 
     // retry loop
     for (i = 0; i < MAX_CREATE_TRYS; i++) {
@@ -1322,7 +1412,11 @@ void adopt_instances()
     logprintfl(EUCAINFO, "looking for existing domains\n");
     virSetErrorFunc(NULL, libvirt_err_handler);
 
-    num_doms = virConnectListDomains(nc_state.conn, dom_ids, MAXDOMS);
+    sem_p(hyp_sem);
+    {
+        num_doms = virConnectListDomains(nc_state.conn, dom_ids, MAXDOMS);
+    }
+    sem_v(hyp_sem);
     if (num_doms == 0) {
         logprintfl(EUCAINFO, "no currently running domains to adopt\n");
         return;
@@ -1408,6 +1502,16 @@ void adopt_instances()
 }
 
 //!
+//!
+//!
+//! @param[in] sig
+//!
+static void nc_signal_handler(int sig)
+{
+    logprintfl(EUCADEBUG, "signal handler caught %d\n", sig);
+}
+
+//!
 //! Initialize the NC handlers
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include EUCA_ERROR,
@@ -1431,6 +1535,8 @@ static int init(void)
     char logFile[MAX_PATH], *bridge = NULL, *hypervisor = NULL, *s = NULL, *tmp = NULL, *pubinterface = NULL;
     struct stat mystat;
     struct handlers **h;
+    sigset_t mask;
+    struct sigaction act;
 
     // 0 => hasn't run, -1 => failed, 1 => ok
     if (initialized > 0)
@@ -1441,15 +1547,22 @@ static int init(void)
     // ensure that MAXes are zeroed out
     bzero(&nc_state, sizeof(struct nc_state_t));
 
-    // set up default signal handler for this child process (for SIGALRM)
+    // configure signal handling for this thread and its children:
+    // - ignore SIGALRM, which may be used in libraries we depend on
+    // - deliver SIGUSR1 to a no-op signal handler, as a way to unblock 'stuck' system calls in libraries we depend on
     {
-        struct sigaction newsigact;
-        memset(&newsigact, 0, sizeof(struct sigaction));
-        newsigact.sa_handler = SIG_IGN;
-        newsigact.sa_flags = 0;
-        sigemptyset(&newsigact.sa_mask);
-        sigprocmask(SIG_SETMASK, &newsigact.sa_mask, NULL);
-        sigaction(SIGALRM, &newsigact, NULL);
+        // add SIGUSR1 & SIGALRM to the list of signals blocked by this thread and all of its children threads
+        sigemptyset(&mask);
+        sigaddset(&mask, SIGUSR1);
+        sigaddset(&mask, SIGALRM);
+        sigprocmask(SIG_BLOCK, &mask, NULL);
+
+        // establish function nc_signal_handler() as the handler for delivery of SIGUSR1, in whatever thread
+        bzero(&act, sizeof(struct sigaction));
+        act.sa_handler = nc_signal_handler;
+        act.sa_flags = 0;
+        sigemptyset(&act.sa_mask);
+        sigaction(SIGUSR1, &act, NULL);
     }
 
     // read in configuration - this should be first!
@@ -1791,7 +1904,7 @@ static int init(void)
             }
             // sanity check
             if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > work_fs_avail_mb) {
-                logprintfl(EUCAWARN, "warning: sum of work and cache sizes exceeds available disk space\n");
+                logprintfl(EUCAWARN, "sum of work and cache sizes exceeds available disk space\n");
             }
         } else {                // cache and work are on different file systems
             if (work_size_mb == -1) {
@@ -2213,8 +2326,8 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s] cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk, params->mem,
-               netparams->vlan, netparams->privateMac, netparams->privateIp);
+    logprintfl(EUCAINFO, "[%s] running instance cores=%d disk=%d memory=%d vlan=%d priMAC=%s privIp=%s\n", instanceId, params->cores, params->disk,
+               params->mem, netparams->vlan, netparams->privateMac, netparams->privateIp);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
 
@@ -2275,7 +2388,7 @@ int doRebootInstance(ncMetadata * pMeta, char *instanceId)
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCADEBUG, "[%s] invoked\n", instanceId);
 
     if (nc_state.H->doRebootInstance)
         ret = nc_state.H->doRebootInstance(&nc_state, pMeta, instanceId);
@@ -2301,7 +2414,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     if (init())
         return 1;
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCAINFO, "[%s] console output requested\n", instanceId);
 
     if (nc_state.H->doGetConsoleOutput)
         ret = nc_state.H->doGetConsoleOutput(&nc_state, pMeta, instanceId, consoleOutput);
@@ -2382,7 +2495,7 @@ int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s][%s] invoked (remote=%s local=%s)\n", instanceId, volumeId, remoteDev, localDev);
+    logprintfl(EUCADEBUG, "[%s][%s] volume attaching (localDev=%s)\n", instanceId, volumeId, localDev);
 
     if (nc_state.H->doAttachVolume)
         ret = nc_state.H->doAttachVolume(&nc_state, pMeta, instanceId, volumeId, remoteDev, localDev);
@@ -2412,7 +2525,8 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s][%s] invoked (remote=%s local=%s force=%d)\n", instanceId, volumeId, remoteDev, localDev, force);
+    logprintfl(EUCADEBUG, "[%s][%s] volume detaching (localDev=%s force=%d grab_inst_sem=%d)\n", instanceId, volumeId, localDev, force,
+               grab_inst_sem);
 
     if (nc_state.H->doDetachVolume)
         ret = nc_state.H->doDetachVolume(&nc_state, pMeta, instanceId, volumeId, remoteDev, localDev, force, grab_inst_sem);
@@ -2444,7 +2558,8 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s] invoked (bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s)\n",
+    logprintfl(EUCAINFO, "[%s] starting instance bundling into bucket %s\n", instanceId, bucketName);
+    logprintfl(EUCADEBUG, "[%s] bundling parameters: bucketName=%s filePrefix=%s walrusURL=%s userPublicKey=%s S3Policy=%s, S3PolicySig=%s\n",
                instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
 
     if (nc_state.H->doBundleInstance)
@@ -2468,7 +2583,7 @@ int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId)
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCAINFO, "[%s] restarting bundling instance\n", instanceId);
     if (nc_state.H->doBundleRestartInstance)
         return (nc_state.H->doBundleRestartInstance(&nc_state, pMeta, instanceId));
     return (nc_state.D->doBundleRestartInstance(&nc_state, pMeta, instanceId));
@@ -2489,7 +2604,7 @@ int doCancelBundleTask(ncMetadata * pMeta, char *instanceId)
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s] invoked\n", instanceId);
+    logprintfl(EUCAINFO, "[%s] canceling bundling instance\n", instanceId);
 
     if (nc_state.H->doCancelBundleTask)
         ret = nc_state.H->doCancelBundleTask(&nc_state, pMeta, instanceId);
@@ -2517,7 +2632,7 @@ int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bu
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "invoked (for %d instances)\n", instIdsLen);
+    logprintfl(EUCAINFO, "describing bundle tasks (for %d instances)\n", instIdsLen);
 
     if (nc_state.H->doDescribeBundleTasks)
         ret = nc_state.H->doDescribeBundleTasks(&nc_state, pMeta, instIds, instIdsLen, outBundleTasks, outBundleTasksLen);
@@ -2544,7 +2659,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "[%s] invoked (vol=%s remote=%s)\n", instanceId, volumeId, remoteDev);
+    logprintfl(EUCAINFO, "[%s][%s] creating image\n", instanceId, volumeId);
 
     if (nc_state.H->doCreateImage)
         ret = nc_state.H->doCreateImage(&nc_state, pMeta, instanceId, volumeId, remoteDev);

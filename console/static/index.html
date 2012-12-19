@@ -88,7 +88,12 @@
       </div>
 
       <div id="euca-explorer" class="euca-explorer-container">
-        <div class="inner-container clearfix"></div>
+        <div class="inner-container clearfix">
+          <noscript>
+            Warning! JavaScript is not enabled on your browser.
+            To use the Eucalyptus User Console, please enable JavaScript in your browser's settings.
+          </noscript>
+        </div>
       </div>      
 
       <div class="euca-notification-container">
@@ -1320,9 +1325,20 @@
         </div>
       </script>
 
-      <script id="aboutCloundDlgTmpl" type="text/x-jsrender">
+      <script id="noCookiesDlgTmpl" type="text/x-jsrender">
+        <div id="nocookies-euca-dialog-wrapper" class="content-box">
+          <div id="title" class="box-header"><span>{{!>no_cookies_title}}</span></div>
+          <div id="no-cookies-euca-dialog" class="euca-dialog">
+            <div class="dialog-inner-content">
+              <p>{{!: no_cookies_dialog }}</p>
+            </div>
+          </div>
+        </div>
+      </script>
+
+      <script id="aboutCloudDlgTmpl" type="text/x-jsrender">
         <div id="aboutcloud-euca-dialog-wrapper">
-          <div id="about-clound-euca-dialog" class="euca-dialog">
+          <div id="about-cloud-euca-dialog" class="euca-dialog">
             <div class="dialog-inner-content">
               <p>{{!: about_dialog_version }}&nbsp;<span id="version"/></p>
               <p>{{!: about_dialog_link_text }}&nbsp;<a href="#" target="_blank" id="admin-url">{{!: about_dialog_link_label }}</a>.</p>

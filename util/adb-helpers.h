@@ -136,7 +136,7 @@ static inline int copy_sensor_dimension_from_adb(sensorDimension * sd, adb_metri
 static inline int copy_sensor_counter_from_adb(sensorCounter * sc, adb_metricCounterType_t * counter, axutil_env_t * env);
 static inline int copy_sensor_metric_from_adb(sensorMetric * sm, adb_metricsResourceType_t * metric, axutil_env_t * env);
 static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceType_t * resource, axutil_env_t * env);
-static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr);
+static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -623,16 +623,25 @@ static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceT
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] sr a pointer to the ADB sensor resource structure to convert
+//! @param[in] history_size the size of the history to copy
 //!
 //! @return a pointer to the converted value or NULL if any error occured
 //!
-static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr)
+static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size)
 {
     int m = 0;
     int c = 0;
     int d = 0;
     int v = 0;
     int v_adj = 0;
+    int num_values = 0;
+    int batch_size = 0;
+    int array_offset = 0;
+    int total_num_metrics = 0;
+    int total_num_counters = 0;
+    int total_num_dimensions = 0;
+    int total_num_values = 0;
+    double val = 0.0;
     axutil_date_time_t *ts = NULL;
     adb_sensorsResourceType_t *resource = NULL;
     adb_metricsResourceType_t *metric = NULL;
@@ -643,6 +652,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
     const sensorMetric *sm = NULL;
     const sensorCounter *sc = NULL;
     const sensorDimension *sd = NULL;
+
+    logprintfl(EUCATRACE, "invoked\n");
 
     if ((sr != NULL) && (env != NULL)) {
         if ((resource = adb_sensorsResourceType_create(env)) == NULL) {
@@ -681,12 +692,44 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
 
                 adb_metricCounterType_set_type(counter, env, sensor_type2str(sc->type));
                 adb_metricCounterType_set_collectionIntervalMs(counter, env, sc->collectionIntervalMs);
-                adb_metricCounterType_set_sequenceNum(counter, env, sc->sequenceNum);
-                if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
+                if ((sc->dimensionsLen < 0) || (sc->dimensionsLen > MAX_SENSOR_DIMENSIONS)) {
                     logprintfl(EUCAERROR, "inconsistency in sensor database (dimensionsLen=%d for %s:%s:%s)\n", sc->dimensionsLen, sr->resourceName,
                                sm->metricName, sensor_type2str(sc->type));
-                    return (resource);
+                    return resource;
                 }
+                // First, sanity check the values. All dimensions must have same number of values.
+                for (d = 0; d < sc->dimensionsLen; d++) {
+                    sd = sc->dimensions + d;
+                    if ((sd->valuesLen < 0) || (sd->valuesLen > MAX_SENSOR_VALUES)) {
+                        logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d is out of range for %s:%s:%s:%s)\n",
+                                   sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                        return (resource);
+                    }
+
+                    if (d == 0) {
+                        num_values = sd->valuesLen;
+                    } else {
+                        if (num_values != sd->valuesLen) {
+                            logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen is not consistent across dimensions for %s:%s:%s)\n",
+                                       sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+                        }
+                    }
+                }
+
+                // no measurements to include
+                if (num_values == 0)
+                    continue;
+
+                // If requested history_size is smaller than the number of values in each array,
+                // we need to select the batch of latest values of size history_size and adjust
+                // the sequence number accordingly.
+                if ((batch_size = num_values) > history_size) {
+                    // have more values that the requested history
+                    batch_size = history_size;
+                }
+                // index of first value in each dimension's array that we are using
+                array_offset = num_values - batch_size;
+                adb_metricCounterType_set_sequenceNum(counter, env, sc->sequenceNum + array_offset);
 
                 for (d = 0; d < sc->dimensionsLen; d++) {
                     sd = sc->dimensions + d;
@@ -697,13 +740,7 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                     }
 
                     adb_metricDimensionsType_set_dimensionName(dimension, env, sd->dimensionName);
-                    if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {
-                        logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
-                                   sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
-                        return (resource);
-                    }
-
-                    for (v = 0; v < sd->valuesLen; v++) {
+                    for (v = array_offset; v < sd->valuesLen; v++) {
                         v_adj = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
                         sv = sd->values + v_adj;
                         if ((value = adb_metricDimensionsValuesType_create(env)) == NULL) {
@@ -715,17 +752,42 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         ts = unixms_to_datetime(env, sv->timestampMs);
                         adb_metricDimensionsValuesType_set_timestamp(value, env, ts);
                         if (sv->available) {
-                            adb_metricDimensionsValuesType_set_value(value, env, sv->value);
+                            val = sv->value + sd->shift_value;
+                            if (val < 0) {
+                                logprintfl(EUCAERROR, "negative value in sensor database (%f for %s:%s:%s:%s)\n",
+                                           sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                            } else {
+                                adb_metricDimensionsValuesType_set_value(value, env, val);
+                            }
+
+                            if (v == (sd->valuesLen - 1)) {
+                                // last value
+                                logprintfl(EUCATRACE, "sending sensor value [%d of %d] %s:%s:%s:%s %05lld %014lld %s %f\n",
+                                           batch_size, num_values,
+                                           sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + v,
+                                           sv->timestampMs, sv->available ? "YES" : " NO", sv->available ? val : -1);
+                            }
                         }
+
                         adb_metricDimensionsType_add_values(dimension, env, value);
+                        total_num_values++;
                     }
+
                     adb_metricCounterType_add_dimensions(counter, env, dimension);
+                    total_num_dimensions++;
                 }
+
                 adb_metricsResourceType_add_counters(metric, env, counter);
+                total_num_counters++;
             }
+
             adb_sensorsResourceType_add_metrics(resource, env, metric);
+            total_num_metrics++;
         }
     }
+
+    logprintfl(EUCATRACE, "marshalled %d metrics %d counters %d dimensions %d sensor values\n",
+               total_num_metrics, total_num_counters, total_num_dimensions, total_num_values);
 
     return (resource);
 }

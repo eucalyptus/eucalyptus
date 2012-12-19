@@ -201,15 +201,19 @@ int main(int argc, char **argv);
 //!
 //! @return the looked up value if found otherwise NULL is returned
 //!
+//! @pre The name field must not be NULL.
+//!
 static wchar_t *find_valn(const wchar_map * vars[], const wchar_t * name, size_t name_len)
 {
     int i = 0;
     const wchar_map *v = NULL;
 
-    for (i = 0; vars[i] != NULL; i++) {
-        v = vars[i];
-        if (wcsncmp(v->key, name, name_len) == 0)
-            return (v->val);
+    if (name != NULL) {
+        for (i = 0; vars[i] != NULL; i++) {
+            v = vars[i];
+            if (wcsncmp(v->key, name, name_len) == 0)
+                return (v->val);
+        }
     }
     return (NULL);
 }
@@ -225,15 +229,19 @@ static wchar_t *find_valn(const wchar_map * vars[], const wchar_t * name, size_t
 //!
 //! @return the looked up value if found otherwise NULL is returned
 //!
+//! @pre The name field must not be NULL.
+//!
 static char *c_find_valn(const char_map * vars[], const char *name, size_t name_len)
 {
     int i = 0;
     const char_map *v = NULL;
 
-    for (i = 0; vars[i] != NULL; i++) {
-        v = vars[i];
-        if (strncmp(v->key, name, name_len) == 0)
-            return (v->val);
+    if (name != NULL) {
+        for (i = 0; vars[i] != NULL; i++) {
+            v = vars[i];
+            if (strncmp(v->key, name, name_len) == 0)
+                return (v->val);
+        }
     }
     return (NULL);
 }
@@ -279,6 +287,7 @@ static wchar_t *wcappendn(wchar_t * dst, const wchar_t * src, size_t src_limit)
         }
         *dst = L'\0';
     }
+
     return (wcsncat(dst, src, src_len));
 }
 
@@ -323,10 +332,10 @@ static char *c_wcappendn(char *dst, const char *src, size_t src_limit)
         }
         *dst = '\0';
     }
+
     return (strncat(dst, src, src_len));
 }
 
-//
 //!
 //! substitutes in 's' all occurence of variables '${var}' based on the 'vars' map (NULL-terminated
 //! array of wchar_map * pointers) returns a new string with all variables substituted or returns NULL
@@ -337,6 +346,8 @@ static char *c_wcappendn(char *dst, const char *src, size_t src_limit)
 //! @param[in] vars the list of variables
 //!
 //! @return s string containing the substitution or NULL if any error occured
+//!
+//! @pre The s field must not be NULL
 //!
 //! @note caller is responsible to free the returned string
 //!
@@ -404,6 +415,7 @@ wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
         result = wcappendn(result, val, 0);
         remainder = var_end + suff_len;
     }
+
     result = wcappendn(result, remainder, 0);
 
     if (malformed) {
@@ -485,6 +497,8 @@ void varmap_free(wchar_map ** map)
 //!
 //! @return a string containing the substitution
 //!
+//! @pre The s field must not be NULL
+//!
 //! @note caller is responsible to free the returned string
 //!
 char *c_varsub(const char *s, const char_map * vars[])
@@ -497,6 +511,7 @@ char *c_varsub(const char *s, const char_map * vars[])
     char *val = NULL;
     char *missed_var = NULL;
     char *vartok = NULL;
+    size_t var_len = 0;
     size_t pref_len = strlen(C_VAR_PREFIX);
     size_t suff_len = strlen(C_VAR_SUFFIX);
 
@@ -522,7 +537,7 @@ char *c_varsub(const char *s, const char_map * vars[])
             break;
         }
         // length of the variable
-        size_t var_len = var_end - var_start - pref_len;
+        var_len = var_end - var_start - pref_len;
         if (var_len < 1) {
             // empty var name
             remainder = var_end + suff_len; // move the pointer past the empty variable (skip it)
@@ -654,6 +669,13 @@ void c_varmap_free(char_map ** map)
 //!
 int main(int argc, char **argv)
 {
+    char *c_s1_sub = NULL;
+    char *c_s2_sub = NULL;
+    char *c_s3_sub = NULL;
+    wchar_t *s1_sub = NULL;
+    wchar_t *s2_sub = NULL;
+    wchar_t *s3_sub = NULL;
+
     setlocale(LC_ALL, "en_US.UTF-8");
 
     m = varmap_alloc(NULL, L"color", L"brown");
@@ -661,12 +683,12 @@ int main(int argc, char **argv)
     m = varmap_alloc(m, L"øbject", L"dog");
 
     printf("       nice string: %ls\n", s1);
-    wchar_t *s1_sub = varsub(s1, (const wchar_map **)m);
+    s1_sub = varsub(s1, (const wchar_map **)m);
     assert(s1_sub != NULL);
     printf("nice string subbed: %ls\n", s1_sub);
     EUCA_FREE(s1_sub);
     printf("       ugly string: %ls\n", s2);
-    wchar_t *s2_sub = varsub(s2, (const wchar_map **)m);
+    s2_sub = varsub(s2, (const wchar_map **)m);
     assert(s2_sub != NULL);
     printf("ugly string subbed: %ls\n", s2_sub);
     EUCA_FREE(s2_sub);
@@ -676,7 +698,7 @@ int main(int argc, char **argv)
     varmap_free(m);
 
     printf("  sending null map: %ls\n", s3);    // Reuse s3
-    wchar_t *s3_sub = varsub(s3, NULL);
+    s3_sub = varsub(s3, NULL);
     printf("returned from null: %ls\n", s3_sub);
     EUCA_FREE(s3_sub);
 
@@ -686,20 +708,19 @@ int main(int argc, char **argv)
     c_m = c_varmap_alloc(c_m, "object", "dog");
 
     printf("       nice string: %s\n", c_s1);
-    char *c_s1_sub = c_varsub(c_s1, (const char_map **)c_m);
-
+    c_s1_sub = c_varsub(c_s1, (const char_map **)c_m);
     printf("nice string subbed: %s\n", c_s1_sub);
 
     assert(c_s1_sub != NULL);
     EUCA_FREE(c_s1_sub);
     printf("       ugly string: %s\n", c_s2);
-    char *c_s2_sub = c_varsub(c_s2, (const char_map **)c_m);
+    c_s2_sub = c_varsub(c_s2, (const char_map **)c_m);
     assert(c_s2_sub != NULL);
     printf("ugly string subbed: %s\n", c_s2_sub);
     EUCA_FREE(c_s2_sub);
 
     printf(" unsubbable string: %s\n", c_s3);
-    char *c_s3_sub = c_varsub(c_s3, (const char_map **)c_m);
+    c_s3_sub = c_varsub(c_s3, (const char_map **)c_m);
     printf("   unsubbed string: %s\n", c_s3_sub);
     assert(!strcmp(c_s3, c_s3_sub));
     EUCA_FREE(c_s3_sub);

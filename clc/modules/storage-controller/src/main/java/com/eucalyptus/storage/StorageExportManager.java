@@ -80,4 +80,6 @@ public interface StorageExportManager {
 	public void cleanup(LVMVolumeInfo volume) throws EucalyptusCloudException;
 	
 	public void stop();
+
+	public void check() throws EucalyptusCloudException;
 }

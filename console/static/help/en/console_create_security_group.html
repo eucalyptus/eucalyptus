@@ -35,23 +35,32 @@
         <div class="body taskbody"><p class="shortdesc"/>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd"> Enter a name for your security group in the <span class="ph uicontrol">Name</span> text box. </span>
+                    <span class="ph cmd"> Enter a name for your security group in the <span class="ph uicontrol">Name</span>
+                        text box. </span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd"> Enter a description for your security group in the <span class="ph uicontrol">Description</span> text box.
-                    </span>
+                    <span class="ph cmd"> Enter a description for your security group in the
+                            <span class="ph uicontrol">Description</span> text box. </span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd">You can optionally create one or more rules for the security group. A rule grants inbound
-                        access to a port or port range for a specified protocol.</span>
+                    <span class="ph cmd">You can optionally create one or more rules for the security group. A
+                            <dfn class="term">rule</dfn> grants a specified range of IP addresses inbound
+                        access to your instances for a protocol or custom port range. Rules for many of the most
+                        popular protocols are pre-defined and available for selection in the
+                        drop-down list box, or you can define your own rule. </span>
+                     
+                        <div class="note important"><span class="importanttitle">Important:</span> You should specify at least one rule for your security group.</div>
+
+                    
                     <ol type="a" class="ol substeps">
                         <li class="li substep">
-                            <span class="ph cmd"> Select a protocol for the rule from the <span class="ph uicontrol">Protocol</span> drop-down list
-                                box. </span>
+                            <span class="ph cmd"> Select a protocol for the rule from the
+                                    <span class="ph uicontrol">Protocol</span> drop-down list box, or select a custom protocol. </span>
                         </li>
 
                         <li class="li substep">
-                            <span class="ph cmd"> Enter a port range for the rule in the <span class="ph uicontrol">Port range</span> text box. </span>
+                            <span class="ph cmd"> If you've selected a custom protocol, enter a port range for the rule in the <span class="ph uicontrol">Port
+                                    range</span> text box. </span>
                         </li>
 
                         <li class="li substep">
@@ -60,21 +69,19 @@
                                 buttons: </span>
                              
                                 <p class="p">To grant access to an IP address or range of IP addresses, select
-                                    the <span class="ph uicontrol">IP Address</span> radio button and enter a CIDR range in the text
-                                    box.</p>
+                                    the <span class="ph uicontrol">IP Address</span> radio button and enter a
+                                    CIDR range in the text box.</p>
 
-                                <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation, please see the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR
-                                        notation Wikipedia article</a>.</div>
+                                <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation, please see the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR notation Wikipedia
+                                        article</a>.</div>
 
-                                <p class="p">To grant access to another security group, select the <span class="ph uicontrol">Other
-                                    security group</span> radio button and enter the name of the security
-                                    group in the text box.</p>
+                                <p class="p">To grant access to another security group, select the
+                                        <span class="ph uicontrol">Other security group</span> radio button and
+                                    enter the name of the security group in the text box.</p>
 
-                                <div class="note note"><span class="notetitle">Note:</span> 
-                                    To specify a security group in another account, use the format "userid/groupname".
-                                </div>
+                                <div class="note note"><span class="notetitle">Note:</span>  To specify a security group in another account, use the
+                                    format "userid/groupname". </div>
 
-                                
                             
                         </li>
 

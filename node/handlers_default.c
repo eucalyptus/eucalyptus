@@ -68,8 +68,6 @@
 //! This implements the default operations handlers supported by all hypervisor.
 //!
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
-#define __USE_GNU               /* strnlen */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -77,8 +75,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
+#define __USE_GNU               /* strnlen */
 #include <string.h>             /* strlen, strcpy */
 #include <time.h>
 #ifndef __DARWIN_UNIX03
@@ -312,8 +312,9 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 {
     int ret = EUCA_OK;
     ncInstance *instance = NULL;
-    *outInstPtr = NULL;
     netConfig ncnet = { 0 };
+
+    *outInstPtr = NULL;
 
     memcpy(&ncnet, netparams, sizeof(netConfig));
 
@@ -494,8 +495,11 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
                 else
                     logprintfl(EUCAINFO, "[%s] shutting down instance\n", instanceId);
             }
+
             sem_p(hyp_sem);
-            virDomainFree(dom); //! @todo necessary?
+            {
+                virDomainFree(dom); //! @todo necessary?
+            }
             sem_v(hyp_sem);
         } else {
             if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
@@ -708,17 +712,19 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     ncInstance *instance = NULL;
 
     if (instanceId == NULL || publicIp == NULL) {
-        logprintfl(EUCAERROR, "[%s] bad input params\n", instanceId);
+        logprintfl(EUCAERROR, "[%s] internal error (bad input parameters to doAssignAddress)\n", instanceId);
         return (EUCA_INVALID_ERROR);
     }
 
     sem_p(inst_sem);
-    instance = find_instance(&global_instances, instanceId);
-    if (instance) {
-        snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);
+    {
+        instance = find_instance(&global_instances, instanceId);
+        if (instance) {
+            snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);
+        }
+        save_instance_struct(instance);
+        copy_instances();
     }
-    save_instance_struct(instance);
-    copy_instances();
     sem_v(inst_sem);
 
     return EUCA_OK;
@@ -771,10 +777,10 @@ static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid,
     rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
     if (rc) {
         ret = EUCA_ERROR;
-        logprintfl(EUCAERROR, "ERROR return from vnetStartNetwork return=%d\n", rc);
+        logprintfl(EUCAERROR, "failed to start network (port=%d vlan=%d return=%d)\n", port, vlan, rc);
     } else {
         ret = EUCA_OK;
-        logprintfl(EUCAINFO, "SUCCESS return from vnetStartNetwork\n");
+        logprintfl(EUCAINFO, "started network (port=%d vlan=%d)\n", port, vlan);
     }
 
     // Regardless of the error code, we should always check and free brname
@@ -829,9 +835,9 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
 
             char cmd[MAX_PATH];
             //! @todo does this work?
-            snprintf(cmd, MAX_PATH, "[%s] %s %s `which virsh` %s %s %s", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal,
-                     tmpfile);
-            logprintfl(EUCAINFO, "%s\n", cmd);
+            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path,
+                     nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            logprintfl(EUCADEBUG, "%s\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
             unlink(tmpfile);
@@ -997,7 +1003,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         if (err) {
             logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId,
                        remoteDevReal, localDevReal, i);
-            logprintfl(EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            logprintfl(EUCADEBUG, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
             sleep(3);           //sleep a bit and retry.
         } else {
             break;
@@ -1007,7 +1013,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (err) {
         logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId,
                    remoteDevReal, localDevReal);
-        logprintfl(EUCAERROR, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+        logprintfl(EUCADEBUG, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         ret = EUCA_ERROR;
     }
 
@@ -1036,7 +1042,8 @@ release:
         err = virDomainDetachDevice(dom, xml);
         sem_v(hyp_sem);
         if (err) {
-            logprintfl(EUCAERROR, "[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            logprintfl(EUCAERROR, "[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
+            logprintfl(EUCADEBUG, "[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
         ret = EUCA_ERROR;
     }
@@ -1044,12 +1051,19 @@ release:
     if (ret != EUCA_OK && is_iscsi_target && have_remote_device) {
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
-            logprintfl(EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
+            logprintfl(EUCAERROR, "[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
         }
     }
 
-    if (ret == EUCA_OK)
-        logprintfl(EUCAINFO, "[%s][%s] attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+    if (ret == EUCA_OK) {
+        logprintfl(EUCAINFO, "[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal,
+                   localDevReal);
+    }
+    // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
+    int log_level_for_devstring = EUCATRACE;
+    if (ret != EUCA_OK)
+        log_level_for_devstring = EUCADEBUG;
+    logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     EUCA_FREE(xml);
 
@@ -1236,7 +1250,7 @@ release:
     if (is_iscsi_target && have_remote_device) {
         logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
-            logprintfl(EUCAERROR, "[%s][%s] disconnect_iscsi_target failed for %s\n", instanceId, volumeId, remoteDev);
+            logprintfl(EUCAERROR, "[%s][%s] failed to disconnet iscsi target\n", instanceId, volumeId);
             if (!force)
                 ret = EUCA_ERROR;
         }
@@ -1244,6 +1258,11 @@ release:
 
     if (ret == EUCA_OK)
         logprintfl(EUCAINFO, "[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+    // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
+    int log_level_for_devstring = EUCATRACE;
+    if (ret != EUCA_OK)
+        log_level_for_devstring = EUCADEBUG;
+    logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     EUCA_FREE(xml);
 
@@ -1366,8 +1385,6 @@ static void *createImage_thread(void *arg)
 //!
 static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev)
 {
-    logprintfl(EUCAINFO, "[%s][%s] invoked\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId), ((volumeId == NULL) ? "UNKNOWN" : volumeId));
-
     // sanity checking
     if (instanceId == NULL || remoteDev == NULL || volumeId == NULL) {
         logprintfl(EUCAERROR, "[%s][%s] called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId),
@@ -1859,7 +1876,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
                                  int *outBundleTasksLen)
 {
     if (instIdsLen < 1 || instIds == NULL) {
-        logprintfl(EUCADEBUG, "input instIds empty\n");
+        logprintfl(EUCADEBUG, "internal error (invalid parameters to doDescribeBundleTasks)\n");
         return EUCA_ERROR;
     }
     // Maximum size
@@ -1961,7 +1978,7 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
         rss[k] = EUCA_ZALLOC(1, sizeof(sensorResource));
         if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != EUCA_OK) {
             logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
-            free(rss[k]);
+            EUCA_FREE(rss[k]);
         } else {
             k++;
         }

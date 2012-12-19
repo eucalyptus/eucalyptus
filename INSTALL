@@ -1,5 +1,5 @@
 These are build instructions for the development version of Eucalyptus.
-====================================================================
+=======================================================================
 
 ***NOTE*** The following install instructions are still under development and may be INCOMPLETE. Contributions encouraged! :)
 
@@ -22,15 +22,15 @@ CentOS/RHEL 6
 
 Install the EPEL repository:
 
-yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm
+yum install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm
 
 Install the ELRepo repository (needed on the Walrus host only):
 
-yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
+yum install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$releasever/$basearch
 
 Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
 
@@ -66,7 +66,7 @@ rpm -Uvh epel-release-5-4.noarch.rpm
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$releasever/$basearch
 
 Install the following build dependencies:
 

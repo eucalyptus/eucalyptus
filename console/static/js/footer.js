@@ -19,7 +19,6 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  /* jQuery widget factory */
   $.widget("eucalyptus.footer", {
      options: { } , 
      _init: function () {
@@ -29,16 +28,13 @@
        this.element.show();
      },
 
-     // jQuery widget method 
      _create: function () {
      },
 
      _setOption: function () {
      },     
 
-     // jQuery widget method 
      _destroy: function () {
-       //
        this.element.hide();
      }
    });

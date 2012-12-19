@@ -415,7 +415,7 @@
       });
     },
 
-    _initAssociateDialog : function(dfd) {  // should resolve dfd object
+    _initAssociateDialog : function(dfd) {  
       var thisObj = this;
       var $selector = thisObj.associateDialog.find('#associate-selected-value').html('');
       if(! thisObj.options.from_instance){ 
@@ -512,7 +512,6 @@
       this.allocateDialog.eucadialog('open');
     },
     close: function() {
-//      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },

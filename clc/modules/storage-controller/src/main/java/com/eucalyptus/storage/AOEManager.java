@@ -65,18 +65,17 @@ package com.eucalyptus.storage;
 import java.io.File;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.StorageProperties;
+
 import edu.ucsb.eucalyptus.cloud.entities.AOEMetaInfo;
 import edu.ucsb.eucalyptus.cloud.entities.AOEVolumeInfo;
 import edu.ucsb.eucalyptus.cloud.entities.LVMVolumeInfo;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.util.EucalyptusCloudException;
-import java.util.concurrent.ExecutionException;
-import com.eucalyptus.util.StorageProperties;
 
 public class AOEManager implements StorageExportManager {
 	private static Logger LOG = Logger.getLogger(AOEManager.class);
@@ -187,5 +186,11 @@ public class AOEManager implements StorageExportManager {
 	public void stop() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public void check() throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+
 	}
 }

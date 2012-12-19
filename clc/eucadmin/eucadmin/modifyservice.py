@@ -24,11 +24,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from boto.roboto.awsqueryrequest import AWSQueryRequest
+from . import EucadminRequest
 from boto.roboto.param import Param
 import eucadmin
 import os
 
-class ModifyService(AWSQueryRequest):
+class ModifyService(EucadminRequest):
     ServicePath = '/services/Empyrean'
     ServiceClass = eucadmin.EucAdmin
     Description = 'Modify service state'
@@ -46,10 +47,14 @@ class ModifyService(AWSQueryRequest):
                   optional=False,
                   doc='The name of the service')]
 
+    def __init__(self, **args):
+      AWSQueryRequest.__init__(self, **args)
+
+
     def get_connection(self, **args):
         if self.connection is None:
             args['path'] = self.ServicePath
-            self.connection = self.ServiceClass()
+            self.connection = self.ServiceClass(**args)
         return self.connection
 
     def cli_formatter(self, data):

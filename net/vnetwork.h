@@ -144,6 +144,7 @@ typedef struct networkEntry_t {
     uint32_t dns;
     uint32_t router;
     netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
+    time_t createTime;
 } networkEntry;
 
 typedef struct publicip_t {

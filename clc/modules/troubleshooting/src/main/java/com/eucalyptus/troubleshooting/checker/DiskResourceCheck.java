@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.eucalyptus.records.Logs;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
@@ -193,7 +194,7 @@ public class DiskResourceCheck {
 		public void run() {
 			if (null != locations) {
 				for (LocationInfo location : this.locations) {
-					LOG.debug("Polling disk " + location.getFile() + ", pollInterval=" + pollInterval + ", threshold = " + location.getThreshold());
+					Logs.extreme().debug("Polling disk " + location.getFile() + ", pollInterval=" + pollInterval + ", threshold = " + location.getThreshold());
 					// Enclose everything between try catch because nothing should throw an exception to the executor upstream or it may halt subsequent tasks
 					try {
 						long usableSpace = location.getFile().getUsableSpace();

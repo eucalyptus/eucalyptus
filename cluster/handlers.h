@@ -98,6 +98,7 @@
 #define OP_TIMEOUT                               60
 #define OP_TIMEOUT_PERNODE                       20
 #define OP_TIMEOUT_MIN                            5
+#define LOG_INTERVAL_SUMMARY_SEC                 60
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -302,18 +303,31 @@ typedef struct ccConfig_t {
     int use_proxy;
     int proxy_max_cache_size;
     char configFiles[2][MAX_PATH];
-    int use_wssec, use_tunnels;
+    int use_wssec;
+    int use_tunnels;
     char policyFile[MAX_PATH];
-    int initialized, kick_dhcp;
-    int schedPolicy, schedState;
-    int idleThresh, wakeThresh;
-    time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency;
+    int initialized;
+    int kick_dhcp;
+    int schedPolicy;
+    int schedState;
+    int idleThresh;
+    int wakeThresh;
+    time_t instanceTimeout;
+    time_t ncPollingFrequency;
+    time_t clcPollingFrequency;
+    time_t ncSensorsPollingInterval;
     int threads[NUM_THREADS];
     int ncFanout;
-    int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
+    int ccState;
+    int ccLastState;
+    int kick_network;
+    int kick_enabled;
+    int kick_monitor_running;
     uint32_t cloudIp;
     serviceStatusType ccStatus;
-    serviceInfoType services[16], disabledServices[16], notreadyServices[16];
+    serviceInfoType services[16];
+    serviceInfoType disabledServices[16];
+    serviceInfoType notreadyServices[16];
     char arbitrators[256];
     int arbitratorFails;
 } ccConfig;
