@@ -80,9 +80,3 @@ To add a language, follow these steps:
   - After updating 'Messages_xx_YY.properties' during the translation, you can simply refresh your browser to see the change.
   - The console includes HTML help files stored under 'static/help'. You may want to translate the static HTML files as well to your language (If no such translation found, the console falls back to the English help). You should create a subdirectory named after the language&country code, under 'static/help', and store your translated help files.
 
-DISCLAIMER
-
-The Eucalyptus user console is in-progress and hasn't been released yet. 
-It is our plan to make it feature complete with Eucalyptus 3.2 release. 
-For answers to some of your questions, try here: https://github.com/eucalyptus/eucalyptus-ui/wiki/FAQ
-
