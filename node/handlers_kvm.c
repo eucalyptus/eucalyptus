@@ -168,14 +168,13 @@ static void *rebooting_thread(void *arg)
         free(xml);
         return NULL;
     }
-
     // Add a shift to values of three of the metrics: ones that
     // drop back to zero after a reboot. The shift, which is based
     // on the latest value, ensures that values sent upstream do
     // not go backwards .
-    sensor_shift_metric (instance->instanceId, "CPUUtilization");
-    sensor_shift_metric (instance->instanceId, "NetworkIn");
-    sensor_shift_metric (instance->instanceId, "NetworkOut");
+    sensor_shift_metric(instance->instanceId, "CPUUtilization");
+    sensor_shift_metric(instance->instanceId, "NetworkIn");
+    sensor_shift_metric(instance->instanceId, "NetworkOut");
 
     // domain is now shut down, create a new one with the same XML
     sem_p(hyp_sem);
@@ -184,7 +183,7 @@ static void *rebooting_thread(void *arg)
     sem_v(hyp_sem);
     free(xml);
 
-    sensor_refresh_resources(instance->instanceId, "", 1);    // refresh stats so we set base value accurately
+    sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats so we set base value accurately
 
     char *remoteDevStr = NULL;
     // re-attach each volume previously attached
@@ -228,9 +227,11 @@ static void *rebooting_thread(void *arg)
                 err = virDomainAttachDevice(dom, xml);
                 sem_v(hyp_sem);
                 if (err) {
-                    logprintfl(EUCAERROR, "[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, i, REATTACH_RETRIES);
-                    logprintfl(EUCADEBUG, "[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
-                    sleep(3); // sleep a bit and retry
+                    logprintfl(EUCAERROR, "[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, i,
+                               REATTACH_RETRIES);
+                    logprintfl(EUCADEBUG, "[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err,
+                               xml);
+                    sleep(3);   // sleep a bit and retry
                 } else {
                     logprintfl(EUCAINFO, "[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
                     break;

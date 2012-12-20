@@ -1860,6 +1860,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
     } else if (vlan > 0 && (vnetconfig->role == CC || vnetconfig->role == CLC)) {
 
         vnetconfig->networks[vlan].active = 1;
+        vnetconfig->networks[vlan].createTime = time(NULL);
         for (i = 0; i <= NUMBER_OF_CCS; i++) {
             vnetconfig->networks[vlan].addrs[i].active = 1;
         }

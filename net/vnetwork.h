@@ -96,6 +96,7 @@ typedef struct networkEntry_t {
     char active;
     uint32_t nw, nm, bc, dns, router;
     netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
+    time_t createTime;
 } networkEntry;
 
 typedef struct publicip_t {

@@ -2451,7 +2451,7 @@ int blockblob_close(blockblob * bb)
     return ret;
 }
 
-static int dm_suspend_resume(const char * dev_name)
+static int dm_suspend_resume(const char *dev_name)
 {
     char cmd[1024];
 
@@ -3264,18 +3264,18 @@ unsigned long long blockblob_get_size_bytes(blockblob * bb)
 // * system's buffer cache
 // * dm device at dev_path (if specified)
 // * dm device pointing to the blob (if bb is specified)
-int blockblob_sync ( const char * dev_path, const blockblob * bb )
+int blockblob_sync(const char *dev_path, const blockblob * bb)
 {
     int err = 0;
 
-    sync(); // ensure the whole buffer cache is flushed
+    sync();                     // ensure the whole buffer cache is flushed
 
     if (err == 0 && dev_path != NULL) {
-        err = dm_suspend_resume (dev_path);
+        err = dm_suspend_resume(dev_path);
     }
 
     if (err == 0 && bb != NULL) {
-        err = dm_suspend_resume (bb->device_path);
+        err = dm_suspend_resume(bb->device_path);
     }
 
     return err;

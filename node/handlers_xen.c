@@ -178,11 +178,11 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *inst
             // drop back to zero after a reboot. The shift, which is based
             // on the latest value, ensures that values sent upstream do
             // not go backwards .
-            sensor_shift_metric (instance->instanceId, "CPUUtilization");
-            sensor_shift_metric (instance->instanceId, "NetworkIn");
-            sensor_shift_metric (instance->instanceId, "NetworkOut");
-            sensor_refresh_resources(instance->instanceId, "", 1);    // refresh stats immediately to minimize loss
-            sensor_resume_polling(); // now that metrics have been shifted, resume polling
+            sensor_shift_metric(instance->instanceId, "CPUUtilization");
+            sensor_shift_metric(instance->instanceId, "NetworkIn");
+            sensor_shift_metric(instance->instanceId, "NetworkOut");
+            sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats immediately to minimize loss
+            sensor_resume_polling();    // now that metrics have been shifted, resume polling
 
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {

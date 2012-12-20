@@ -283,6 +283,6 @@ const char *blockblob_get_dev(blockblob * bb);  // returns a block device pointi
 const char *blockblob_get_file(blockblob * bb); // returns a path to the file containg the blob, but only if snapshot_type={ANY|NONE}
 unsigned long long blockblob_get_size_blocks(blockblob * bb);   // size of blob in blocks
 unsigned long long blockblob_get_size_bytes(blockblob * bb);    // size of blob in bytes
-int blockblob_sync(const char * dev_path, const blockblob * bb); // flushes outstanding I/O in dev and/or blob
+int blockblob_sync(const char *dev_path, const blockblob * bb); // flushes outstanding I/O in dev and/or blob
 
 #endif // _BLOBSTORE_H
