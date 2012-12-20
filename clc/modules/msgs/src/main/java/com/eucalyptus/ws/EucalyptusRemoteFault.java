@@ -77,6 +77,11 @@ public class EucalyptusRemoteFault extends Exception {
     this.faultString = faultString;
   }
 
+  public EucalyptusRemoteFault( String action, String relatesTo, String faultCode, String faultString, String faultDetail ) {
+    this(  action, relatesTo, faultCode, faultString );
+    this.faultDetail = faultDetail;
+  }
+
   public String getRelatesTo( ) {
     return this.relatesTo;
   }
