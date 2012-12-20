@@ -246,6 +246,8 @@ public class ImageManager {
       LOG.trace( ex );
       reply.set_return( false );
       return reply;
+    } catch ( InstanceNotTerminatedException re ) {
+      throw new EucalyptusCloudException( re );
     } finally {
       db.commit( );
     }
