@@ -143,12 +143,6 @@ public class ISCSIManager implements StorageExportManager {
 			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "service tgt status").withVar("error", output.error).log();
 			throw new EucalyptusCloudException("tgt service check failed with error: " + output.error);
 		}
-		
-		output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--mode", "target", "--op", "show"}, timeout);
-		if (StringUtils.isNotBlank(output.error)) {
-			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "tgtadm --lld iscsi --mode target --op show").withVar("error", output.error).log();
-			throw new EucalyptusCloudException("tgtadm command failed with error: " + output.error);
-		}
 	}
 
 	public void addUser(String username, String password) throws EucalyptusCloudException {

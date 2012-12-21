@@ -2451,7 +2451,6 @@ int blockblob_close(blockblob * bb)
     return ret;
 }
 
-#ifdef _UNIT_TEST               // only used by the unit test for now
 static int dm_suspend_resume(const char *dev_name)
 {
     char cmd[1024];
@@ -2470,7 +2469,6 @@ static int dm_suspend_resume(const char *dev_name)
     }
     return 0;
 }
-#endif // _UNIT_TEST
 
 static int dm_check_device(const char *dev_name)
 {
@@ -3260,6 +3258,27 @@ unsigned long long blockblob_get_size_bytes(blockblob * bb)
         return 0;
     }
     return bb->size_bytes;
+}
+
+// flushes outstanding I/O on:
+// * system's buffer cache
+// * dm device at dev_path (if specified)
+// * dm device pointing to the blob (if bb is specified)
+int blockblob_sync(const char *dev_path, const blockblob * bb)
+{
+    int err = 0;
+
+    sync();                     // ensure the whole buffer cache is flushed
+
+    if (err == 0 && dev_path != NULL) {
+        err = dm_suspend_resume(dev_path);
+    }
+
+    if (err == 0 && bb != NULL) {
+        err = dm_suspend_resume(bb->device_path);
+    }
+
+    return err;
 }
 
 /////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////

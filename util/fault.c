@@ -578,7 +578,7 @@ int init_eucafaults(char *fileprefix)
     logprintfl(EUCATRACE, "Initializing fault registry directories.\n");
 
     if ((locale = getenv(LOCALIZATION_ENV_VAR)) == NULL) {
-        logprintfl(EUCAINFO, "$%s not set, using default value of: %s\n", LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
+        logprintfl(EUCADEBUG, "$%s not set, using default value of: %s\n", LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
     }
     LIBXML_TEST_VERSION;
 
@@ -629,7 +629,7 @@ int init_eucafaults(char *fileprefix)
         }
     }
     pthread_mutex_unlock(&fault_mutex);
-    logprintfl(EUCAINFO, "Loaded %d eucafault descriptions into registry.\n", faults_loaded);
+    logprintfl(EUCADEBUG, "Loaded %d eucafault descriptions into registry.\n", faults_loaded);
     return faults_loaded;
 }
 

@@ -492,12 +492,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
         
         @Override
         public boolean apply( final String input ) {
-          try {
-            final Account account = Accounts.lookupAccountById( input );
-            ImageInfo.this.getPermissions( ).remove( input );
-          } catch ( final Exception e ) {
-            LOG.error( e, e );
-          }
+          ImageInfo.this.getPermissions( ).remove( input );
           return true;
         }
       } );

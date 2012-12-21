@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -361,9 +364,9 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         sensorResource **outResources;
         int outResourcesLen;
 
-        int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
-                                      &outResourcesLen);
-
+        int error =
+            doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
+                              &outResourcesLen);
         if (error) {
             logprintfl(EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
@@ -374,6 +377,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
                 free(outResources);
             }
         } else {
+            logprintfl(EUCATRACE, "marshalling results outResourcesLen=%d\n", outResourcesLen);
 
             // set standard fields in output
             adb_describeSensorsResponseType_set_correlationId(output, env, meta.correlationId);
@@ -381,7 +385,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
 
             // set operation-specific fields in output
             for (int i = 0; i < outResourcesLen; i++) {
-                adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i]);
+                adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
                 if (outResources[i])
                     free(outResources[i]);
                 adb_describeSensorsResponseType_add_sensorsResources(output, env, resource);
@@ -408,6 +412,8 @@ reply:
     // set response to output
     adb_DescribeSensorsResponse_t *response = adb_DescribeSensorsResponse_create(env);
     adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
+
+    logprintfl(EUCATRACE, "done\n");
 
     return response;
 }
@@ -599,7 +605,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
         status = AXIS2_FALSE;
         outAddressesLen = 0;
     } else if (rc) {
-        logprintf("ERROR: doDescribePublicAddresses() returned FAIL\n");
+        logprintfl(EUCAERROR, "doDescribePublicAddresses() failed\n");
         snprintf(statusMessage, 256, "ERROR");
         status = AXIS2_FALSE;
         outAddressesLen = 0;

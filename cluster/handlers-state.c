@@ -106,8 +106,7 @@ int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int se
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
+    logprintfl(EUCADEBUG, "invoked: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
 
     // TODO: for now, return error if list of services is passed in as parameter
     /*
@@ -191,7 +190,7 @@ int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int se
     myStatus->localEpoch = config->ccStatus.localEpoch;
     memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
 
-    logprintfl(EUCAINFO, "done\n");
+    logprintfl(EUCATRACE, "done\n");
     return (0);
 }
 
@@ -204,8 +203,7 @@ int doStartService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     // this is actually a NOP
     sem_mywait(CONFIG);
@@ -216,14 +214,14 @@ int doStartService(ncMetadata * ccMeta)
         logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
         ret++;
     } else {
-        logprintfl(EUCADEBUG, "starting service\n");
+        logprintfl(EUCAINFO, "starting service\n");
         ret = 0;
         config->kick_enabled = 0;
         ccChangeState(DISABLED);
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
+    logprintfl(EUCATRACE, "done\n");
 
     return (ret);
 }
@@ -237,8 +235,7 @@ int doStopService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     if (config->ccState == SHUTDOWNCC) {
@@ -248,14 +245,14 @@ int doStopService(ncMetadata * ccMeta)
         logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
         ret++;
     } else {
-        logprintfl(EUCADEBUG, "stopping service\n");
+        logprintfl(EUCAINFO, "stopping service\n");
         ret = 0;
         config->kick_enabled = 0;
         ccChangeState(STOPPED);
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
+    logprintfl(EUCATRACE, "done\n");
 
     return (ret);
 }
@@ -269,8 +266,7 @@ int doEnableService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     if (config->ccState == SHUTDOWNCC) {
@@ -282,7 +278,7 @@ int doEnableService(ncMetadata * ccMeta)
     } else if (config->ccState != ENABLED) {
         logprintfl(EUCADEBUG, "enabling service\n");
         ret = 0;
-        // tell monitor thread to (re)enable  
+        // tell monitor thread to (re)enable
         config->kick_monitor_running = 0;
         config->kick_network = 1;
         config->kick_dhcp = 1;
@@ -307,7 +303,7 @@ int doEnableService(ncMetadata * ccMeta)
         }
     }
 
-    logprintfl(EUCAINFO, "done\n");
+    logprintfl(EUCATRACE, "done\n");
 
     return (ret);
 }
@@ -321,8 +317,7 @@ int doDisableService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     if (config->ccState == SHUTDOWNCC) {
@@ -332,14 +327,14 @@ int doDisableService(ncMetadata * ccMeta)
         logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
         ret++;
     } else {
-        logprintfl(EUCADEBUG, "disabling service\n");
+        logprintfl(EUCAINFO, "disabling service\n");
         ret = 0;
         config->kick_enabled = 0;
         ccChangeState(DISABLED);
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
+    logprintfl(EUCATRACE, "done\n");
 
     return (ret);
 }
@@ -353,15 +348,14 @@ int doShutdownService(ncMetadata * ccMeta)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     config->kick_enabled = 0;
     ccChangeState(SHUTDOWNCC);
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
+    logprintfl(EUCATRACE, "done\n");
 
     return (ret);
 }

@@ -75,7 +75,7 @@
 #include "adb-helpers.h"
 #include "sensor.h"
 
-#define NULL_ERROR_MSG "could not be invoked (check NC host, port, and credentials)\n"
+#define NULL_ERROR_MSG "operation on %s could not be invoked (check NC host, port, and credentials)\n", st->node_name
 
 //#define CORRELATION_ID meta->correlationId
 #define CORRELATION_ID NULL
@@ -124,8 +124,6 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         *p = '\0';              // cut off the port
     if ((p = strchr(node_name, '/')) != NULL)
         *p = '\0';              // if there is no port
-
-    logprintfl(EUCADEBUG, "requested URI %s\n", uri);
 
     // see if we should redirect to a local broker
     if (strstr(uri, "EucalyptusBroker")) {

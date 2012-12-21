@@ -1076,7 +1076,7 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
 
             // set operation-specific fields in output                                                                                                                      
             for (int i = 0; i < outResourcesLen; i++) {
-                adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i]);
+                adb_sensorsResourceType_t *resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
                 if (outResources[i])
                     free(outResources[i]);
                 adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);

@@ -44,15 +44,14 @@
           if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
-              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port; // + '/?hostname='+out.hostname;
+              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port; 
             else 
-              newLocation = location.protocol + '//' + out.ipaddr; // + '/?hostname='+out.hostname;
+              newLocation = location.protocol + '//' + out.ipaddr; 
             location.href = newLocation;
             redirected = true;
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
-          //TODO: should present error screen; can we use notification?
           notifyError($.i18n.prop('server_unavailable'));
           logout();
         }

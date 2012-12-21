@@ -193,8 +193,6 @@
               var $selectedRow = $currentRow; 
               var $rowCheckbox = $selectedRow.find('input[type="checkbox"]');
               if($rowCheckbox && $rowCheckbox.length > 0){
-               // thisObj.element.find('table tbody').find('tr.expanded').remove(); // remove all expanded
-               //thisObj.element.find('table tbody').find('div.expanded').removeClass('expanded');
                 $selectedRow.toggleClass('selected-row');
                 if($selectedRow.hasClass('selected-row'))
                   $rowCheckbox.attr('checked', true);
@@ -260,7 +258,6 @@
     // args.refresh = text 'Refresh'
     _decorateSearchBar : function(args) {
       var thisObj = this; // ref to widget instance
-  // filters : null, // e.g., [{name: "volume_state", options: ["available","attached","attaching"], filter_col: 8, alias: {"detached":"available" }}]
       if(thisObj.options.filters){
         $.each(thisObj.options.filters, function (idx, filter){
           var $filter = thisObj.element.find('#'+filter['name']+'-filter');
@@ -396,9 +393,7 @@
         return undefined;
       var txt_action = this.options.text.action ? this.options.text.action : table_menu_main_action;
 
-       //menuItems['connect'] = {"name":instance_action_connect, callback: function(key, opt) { ; }, disabled: function(){ return true; }};
       $menuDiv.append(
-        //.attr('id','more-actions-'+this.options.id).addClass("inactive-menu").append(
           $('<a>').attr('id','more-actions-'+this.options.id).addClass("button").addClass("inactive-menu").attr('href','#').text(txt_action).click(function(e){
             if($(this).hasClass('inactive-menu') && !$menuDiv.find('ul').hasClass('toggle-on'))
               return false;

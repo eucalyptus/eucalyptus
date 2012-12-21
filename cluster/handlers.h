@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -78,6 +81,7 @@
 #define OP_TIMEOUT 60
 #define OP_TIMEOUT_PERNODE 20
 #define OP_TIMEOUT_MIN 5
+#define LOG_INTERVAL_SUMMARY_SEC 60
 
 enum { SHARED_MEM, SHARED_FILE };
 enum { INIT, CONFIG, VNET, INSTCACHE, RESCACHE, RESCACHESTAGE, REFRESHLOCK, BUNDLECACHE, SENSORCACHE, NCCALL0, NCCALL1, NCCALL2, NCCALL3, NCCALL4,
@@ -127,8 +131,8 @@ static configEntry configKeysNoRestartCC[] = {
     {"CLC_POLLING_FREQUENCY", "6"},
     {"CC_ARBITRATORS", NULL},
     {"LOGLEVEL", "INFO"},
-    {"LOGROLLNUMBER", "4"},
-    {"LOGMAXSIZE", "10485760"},
+    {"LOGROLLNUMBER", "10"},
+    {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
     {"LOGFACILITY", ""},
     {NULL, NULL}
@@ -241,7 +245,7 @@ typedef struct ccConfig_t {
     int initialized, kick_dhcp;
     int schedPolicy, schedState;
     int idleThresh, wakeThresh;
-    time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency;
+    time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncSensorsPollingInterval;
     int threads[NUM_THREADS];
     int ncFanout;
     int ccState, ccLastState, kick_network, kick_enabled, kick_monitor_running;
