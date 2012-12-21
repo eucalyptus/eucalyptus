@@ -2630,7 +2630,10 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 	    }
 	    exit(0);
 	  } else {
-	    wait(NULL);
+	    
+	    // wait here?  or continue to let arpings complete and let 'shawn()' clean up defunct processes.  If there are many assigns to do, it could take a long time to complete.
+	    int status;
+	    timewait(pid, &status, 5);
 	  }
 	}
 
