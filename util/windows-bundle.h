@@ -109,7 +109,7 @@
 //! Bundle task structure
 typedef struct bundleTask_t {
     char instanceId[CHAR_BUFFER_SIZE];  //!< the instance indentifier for this bundle task
-    char state[CHAR_BUFFER_SIZE];       //!< the state of the bundling task
+    char state[CHAR_BUFFER_SIZE];   //!< the state of the bundling task
 } bundleTask;
 
 /*----------------------------------------------------------------------------*\

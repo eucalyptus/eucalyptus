@@ -66,8 +66,6 @@
 #ifndef _INCLUDE_UTF8_H_
 #define _INCLUDE_UTF8_H_
 
-__BEGIN_DECLS
-
 //!
 //! @file util/utf8.h
 //! Definition of UTF-8 charset encoding (RFC3629).
@@ -147,5 +145,4 @@ size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsiz
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-__END_DECLS
 #endif /* ! _INCLUDE_UTF8_H_ */

@@ -42,6 +42,7 @@
 									<listOptionValue builtIn="false" value="_POSIX_C_SOURCE"/>
 									<listOptionValue builtIn="false" value="__need_fd_set"/>
 									<listOptionValue builtIn="false" value="_UNIT_TEST"/>
+									<listOptionValue builtIn="false" value="DT_REG=8"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1809342783" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -84,4 +85,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 </cproject>
