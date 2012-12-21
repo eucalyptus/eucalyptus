@@ -30,6 +30,14 @@
       @import "css/eucalyptus.css";
     </style>
 
+    <!-- encoder libarary for XSS protection -->
+    <script type="text/javascript" language="javascript" src="lib/esapi/Codec.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/esapi/HTMLEntityCodec.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/esapi/JavascriptCodec.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/esapi/CSSCodec.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/esapi/PercentCodec.js"></script>
+    <script type="text/javascript" language="javascript" src="lib/esapi/DefaultEncoder.js"></script>
+
     <!-- jQuery libraries -->
     <script type="text/javascript" language="javascript" src="lib/jquery-1.8.2.js"></script> 
     <script type="text/javascript" language="javascript" src="lib/jquery-ui-1.9.1.custom.js"></script>

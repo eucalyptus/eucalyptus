@@ -106,7 +106,10 @@ if( !Array.prototype.indexOf ) {
 }
 
 function addEllipsis(input, maxLen){
-  if (input == undefined || input.length < maxLen)
+  if (input == undefined)
+    return input;
+  input = DefaultEncoder().encodeForHTML(input);
+  if (input.length < maxLen)
     return input;
   input = input.substring(0, maxLen);
   i = input.lastIndexOf(" ");
