@@ -78,6 +78,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include "sensor.h"
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -315,23 +316,23 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
         params->mem = adb_virtualMachineType_get_memory(vm_type, env);
         params->cores = adb_virtualMachineType_get_cores(vm_type, env);
         params->disk = adb_virtualMachineType_get_disk(vm_type, env);
-        safe_strncpy(params->name, adb_virtualMachineType_get_name(vm_type, env), sizeof(params->name));
+        euca_strncpy(params->name, adb_virtualMachineType_get_name(vm_type, env), sizeof(params->name));
         params->virtualBootRecordLen = adb_virtualMachineType_sizeof_virtualBootRecord(vm_type, env);
         for (i = 0; ((i < EUCA_MAX_VBRS) && (i < params->virtualBootRecordLen)); i++) {
             if ((vbr_type = adb_virtualMachineType_get_virtualBootRecord_at(vm_type, env, i)) != NULL) {
-                safe_strncpy(params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env),
+                euca_strncpy(params->virtualBootRecord[i].resourceLocation, adb_virtualBootRecordType_get_resourceLocation(vbr_type, env),
                              CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
-                safe_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env),
+                euca_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env),
                              SMALL_CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
                 params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
                 logprintfl(EUCATRACE, "             size: %d\n", params->virtualBootRecord[i].size);
-                safe_strncpy(params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+                euca_strncpy(params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "           format: %s\n", params->virtualBootRecord[i].formatName);
-                safe_strncpy(params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+                euca_strncpy(params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "               id: %s\n", params->virtualBootRecord[i].id);
-                safe_strncpy(params->virtualBootRecord[i].typeName, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
+                euca_strncpy(params->virtualBootRecord[i].typeName, adb_virtualBootRecordType_get_type(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "             type: %s\n", params->virtualBootRecord[i].typeName);
             }
         }
@@ -494,7 +495,7 @@ static inline int copy_sensor_dimension_from_adb(sensorDimension * sd, adb_metri
             }
         }
 
-        safe_strncpy(sd->dimensionName, (char *)adb_metricDimensionsType_get_dimensionName(dimension, env), sizeof(sd->dimensionName));
+        euca_strncpy(sd->dimensionName, (char *)adb_metricDimensionsType_get_dimensionName(dimension, env), sizeof(sd->dimensionName));
         return (EUCA_OK);
     }
 
@@ -568,7 +569,7 @@ static inline int copy_sensor_metric_from_adb(sensorMetric * sm, adb_metricsReso
             }
         }
 
-        safe_strncpy(sm->metricName, (char *)adb_metricsResourceType_get_metricName(metric, env), sizeof(sm->metricName));
+        euca_strncpy(sm->metricName, (char *)adb_metricsResourceType_get_metricName(metric, env), sizeof(sm->metricName));
         return (EUCA_OK);
     }
 
@@ -609,9 +610,9 @@ static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceT
             }
         }
 
-        safe_strncpy(sr->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof(sr->resourceName));
-        safe_strncpy(sr->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof(sr->resourceType));
-        safe_strncpy(sr->resourceUuid, (char *)adb_sensorsResourceType_get_resourceUuid(resource, env), sizeof(sr->resourceUuid));
+        euca_strncpy(sr->resourceName, (char *)adb_sensorsResourceType_get_resourceName(resource, env), sizeof(sr->resourceName));
+        euca_strncpy(sr->resourceType, (char *)adb_sensorsResourceType_get_resourceType(resource, env), sizeof(sr->resourceType));
+        euca_strncpy(sr->resourceUuid, (char *)adb_sensorsResourceType_get_resourceUuid(resource, env), sizeof(sr->resourceUuid));
         return (sr);
     }
 
@@ -754,7 +755,7 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         if (sv->available) {
                             val = sv->value + sd->shift_value;
                             if (val < 0) {
-                                logprintfl(EUCAERROR, "negative value in sensor database (%f for %s:%s:%s:%s)\n",
+                                logprintfl(EUCAERROR, "negative value in sensor database (%d for %s:%s:%s:%s)\n",
                                            sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                             } else {
                                 adb_metricDimensionsValuesType_set_value(value, env, val);

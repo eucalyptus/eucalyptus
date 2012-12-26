@@ -76,13 +76,17 @@
 
 #include <stdio.h>
 #include <unistd.h>             /* getopt */
-#include "data.h"
+
+#include <data.h>
+
 #include "client-marshal.h"
-#include "misc.h"
-#include "euca_axis.h"
-#include "sensor.h"
-#include "eucalyptus.h"
-#include "adb-helpers.h"
+
+#include <misc.h>
+#include <euca_axis.h>
+#include <sensor.h>
+#include <eucalyptus.h>
+#include <adb-helpers.h>
+#include <euca_string.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -96,7 +100,7 @@
 #define DEFAULT_NC_HOSTPORT         "localhost:8775"
 #define DEFAULT_MAC_ADDR            "aa:bb:cc:dd:ee:ff"
 #define DEFAULT_PUBLIC_IP           "10.1.2.3"
-#define BUFSIZE 1024
+#define BUFSIZE                     1024
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -243,12 +247,12 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
         fprintf(stderr, "ERROR: invalid 'type' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
+    euca_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
     if (id_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'id' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->id, id_spec, sizeof(vbr->id));
+    euca_strncpy(vbr->id, id_spec, sizeof(vbr->id));
     if (size_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'size' specification in VBR '%s'\n", spec_str);
         goto out_error;
@@ -258,17 +262,17 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
         fprintf(stderr, "ERROR: invalid 'format' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
+    euca_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
     if (dev_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
+    euca_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
     if (loc_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
+    euca_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
 
     EUCA_FREE(spec_copy);
     return EUCA_OK;
@@ -478,9 +482,9 @@ int main(int argc, char **argv)
     char walrus_url[BUFSIZE];
     snprintf(walrus_url, BUFSIZE, "http://%s%s", walrus_hostport, WALRUS_ENDPOINT);
     serviceInfoType *si = &(meta.services[meta.servicesLen++]);
-    safe_strncpy(si->type, "walrus", sizeof(si->type));
-    safe_strncpy(si->name, "walrus", sizeof(si->name));
-    safe_strncpy(si->uris[0], walrus_url, sizeof(si->uris[0]));
+    euca_strncpy(si->type, "walrus", sizeof(si->type));
+    euca_strncpy(si->name, "walrus", sizeof(si->name));
+    euca_strncpy(si->uris[0], walrus_url, sizeof(si->uris[0]));
     si->urisLen = 1;
 
     if (use_wssec && !local) {

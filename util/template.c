@@ -165,4 +165,3 @@ int euca_template(int in, char *out, char **inout)
 {
     return (0);
 }
-

@@ -96,11 +96,12 @@
 #include <libxml/tree.h>
 #include <eucalyptus-config.h>
 
-#include <eucalyptus.h>
-#include <misc.h>
-#include <fault.h>
-#include <wc.h>
-#include <utf8.h>
+#include "eucalyptus.h"
+#include "misc.h"
+#include "fault.h"
+#include "wc.h"
+#include "utf8.h"
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -983,8 +984,8 @@ boolean is_redundant_eucafault(const char *fault_id, const char_map ** vars)
     char *new = strdup(fault_id);
     for (int i = 0; vars && vars[i] != NULL; i++) {
         const char_map *v = vars[i];
-        new = strdupcat(new, v->key);
-        new = strdupcat(new, v->val);
+        new = euca_strdupcat(new, v->key);
+        new = euca_strdupcat(new, v->val);
     }
 
     //! see if it is already in our linked list (@TODO switch to a more efficient data structure)

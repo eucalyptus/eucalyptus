@@ -95,6 +95,7 @@
 #include "log.h"
 #include "misc.h"               // TRUE/FALSE
 #include "ipc.h"                // semaphores
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -442,7 +443,7 @@ int log_file_set(const char *file)
         return (EUCA_OK);
     }
 
-    safe_strncpy(log_file_path, file, EUCA_MAX_PATH);
+    euca_strncpy(log_file_path, file, EUCA_MAX_PATH);
     if (get_file(TRUE) == NULL) {
         return (EUCA_ERROR);
     }
@@ -460,10 +461,10 @@ int log_file_set(const char *file)
 int log_prefix_set(const char *log_spec)
 {
     // @todo eventually, enable empty prefix
-    if (log_spec == NULL || strlen(log_spec) == 0)
-        safe_strncpy(log_custom_prefix, USE_STANDARD_PREFIX, sizeof(log_custom_prefix));
+    if ((log_spec == NULL) || (strlen(log_spec) == 0))
+        euca_strncpy(log_custom_prefix, USE_STANDARD_PREFIX, sizeof(log_custom_prefix));
     else
-        safe_strncpy(log_custom_prefix, log_spec, sizeof(log_custom_prefix));
+        euca_strncpy(log_custom_prefix, log_spec, sizeof(log_custom_prefix));
     return (EUCA_OK);
 }
 
@@ -750,7 +751,7 @@ int logprintfl(int level, const char *format, ...)
 
         case 'L':{             // log-level
                 char l[6];
-                safe_strncpy(l, log_level_names[level], 6); // we want hard truncation
+                euca_strncpy(l, log_level_names[level], 6); // we want hard truncation
                 size = snprintf(s, left, "%5s", l);
                 break;
             }

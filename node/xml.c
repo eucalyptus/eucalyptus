@@ -95,11 +95,13 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 
+#include <eucalyptus-config.h>
+#include <backing.h>            // umask
+#include <data.h>
+#include <misc.h>
+#include <euca_string.h>
+
 #include "handlers.h"           // nc_state_t
-#include "eucalyptus-config.h"
-#include "backing.h"            // umask
-#include "data.h"
-#include "misc.h"
 #include "xml.h"
 
 /*----------------------------------------------------------------------------*\
@@ -235,7 +237,7 @@ static void init(struct nc_state_t *nc_state)
             config_use_virtio_root = nc_state->config_use_virtio_root;
             config_use_virtio_disk = nc_state->config_use_virtio_disk;
             config_use_virtio_net = nc_state->config_use_virtio_net;
-            safe_strncpy(xslt_path, nc_state->libvirt_xslt_path, sizeof(xslt_path));
+            euca_strncpy(xslt_path, nc_state->libvirt_xslt_path, sizeof(xslt_path));
         }
         initialized = TRUE;
     }
@@ -815,7 +817,7 @@ int main(int argc, char **argv)
         logprintfl(EUCAERROR, "required parameters are <XSLT stylesheet path>\n");
         return EUCA_ERROR;
     }
-    safe_strncpy(xslt_path, argv[1], sizeof(xslt_path));
+    euca_strncpy(xslt_path, argv[1], sizeof(xslt_path));
     char *in_path = tempnam(NULL, "xml-");
     char *out_path = tempnam(NULL, "xml-");
 

@@ -79,7 +79,9 @@
 #define __USE_GNU
 #include <string.h>
 #include <assert.h>
+
 #include "data.h"
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -345,13 +347,13 @@ int allocate_netConfig(netConfig * out, char *pvMac, char *pvIp, char *pbIp, int
 {
     if (out != NULL) {
         if (pvMac)
-            safe_strncpy(out->privateMac, pvMac, 24);
+            euca_strncpy(out->privateMac, pvMac, 24);
 
         if (pvIp)
-            safe_strncpy(out->privateIp, pvIp, 24);
+            euca_strncpy(out->privateIp, pvIp, 24);
 
         if (pbIp)
-            safe_strncpy(out->publicIp, pbIp, 24);
+            euca_strncpy(out->publicIp, pbIp, 24);
 
         out->networkIndex = networkIndex;
         out->vlan = vlan;
@@ -437,52 +439,52 @@ ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId,
         return (NULL);
 
     if (userData)
-        safe_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE * 32);
+        euca_strncpy(inst->userData, userData, CHAR_BUFFER_SIZE * 32);
 
     if (launchIndex)
-        safe_strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->launchIndex, launchIndex, CHAR_BUFFER_SIZE);
 
     if (platform)
-        safe_strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->platform, platform, CHAR_BUFFER_SIZE);
 
     inst->groupNamesSize = groupNamesSize;
     if ((groupNames != NULL) && (groupNamesSize > 0)) {
         for (i = 0; i < groupNamesSize && groupNames[i]; i++)
-            safe_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
+            euca_strncpy(inst->groupNames[i], groupNames[i], CHAR_BUFFER_SIZE);
     }
 
     if (ncnet != NULL)
         memcpy(&(inst->ncnet), ncnet, sizeof(netConfig));
 
     if (uuid)
-        safe_strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->uuid, uuid, CHAR_BUFFER_SIZE);
 
     if (instanceId)
-        safe_strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->instanceId, instanceId, CHAR_BUFFER_SIZE);
 
     if (keyName)
-        safe_strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE * 4);
+        euca_strncpy(inst->keyName, keyName, CHAR_BUFFER_SIZE * 4);
 
     if (reservationId)
-        safe_strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->reservationId, reservationId, CHAR_BUFFER_SIZE);
 
     if (stateName)
-        safe_strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->stateName, stateName, CHAR_BUFFER_SIZE);
 
     if (userId)
-        safe_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->userId, userId, CHAR_BUFFER_SIZE);
 
     if (ownerId)
-        safe_strncpy(inst->ownerId, ownerId, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->ownerId, ownerId, CHAR_BUFFER_SIZE);
 
     if (accountId)
-        safe_strncpy(inst->accountId, accountId, CHAR_BUFFER_SIZE);
+        euca_strncpy(inst->accountId, accountId, CHAR_BUFFER_SIZE);
 
     if (params)
         memcpy(&(inst->params), params, sizeof(virtualMachine));
 
     inst->stateCode = stateCode;
-    safe_strncpy(inst->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    euca_strncpy(inst->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
     inst->expiryTime = expiryTime;
     return (inst);
 }
@@ -676,12 +678,12 @@ ncResource *allocate_resource(char *nodeStatus, char *iqn, int memorySizeMax, in
     if ((res = EUCA_ZALLOC(1, sizeof(ncResource))) == NULL)
         return (NULL);
 
-    safe_strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
+    euca_strncpy(res->nodeStatus, nodeStatus, CHAR_BUFFER_SIZE);
     if (iqn)
-        safe_strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
+        euca_strncpy(res->iqn, iqn, CHAR_BUFFER_SIZE);
 
     if (publicSubnets)
-        safe_strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
+        euca_strncpy(res->publicSubnets, publicSubnets, CHAR_BUFFER_SIZE);
 
     res->memorySizeMax = memorySizeMax;
     res->memorySizeAvailable = memorySizeAvailable;
@@ -784,15 +786,15 @@ ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *r
     assert(volumeId != NULL);
 
     if ((v = find_volume(instance, volumeId)) != NULL) {
-        safe_strncpy(v->volumeId, volumeId, CHAR_BUFFER_SIZE);
+        euca_strncpy(v->volumeId, volumeId, CHAR_BUFFER_SIZE);
         if (remoteDev)
-            safe_strncpy(v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
+            euca_strncpy(v->remoteDev, remoteDev, CHAR_BUFFER_SIZE);
         if (localDev)
-            safe_strncpy(v->localDev, localDev, CHAR_BUFFER_SIZE);
+            euca_strncpy(v->localDev, localDev, CHAR_BUFFER_SIZE);
         if (localDevReal)
-            safe_strncpy(v->localDevReal, localDevReal, CHAR_BUFFER_SIZE);
+            euca_strncpy(v->localDevReal, localDevReal, CHAR_BUFFER_SIZE);
         if (stateName)
-            safe_strncpy(v->stateName, stateName, CHAR_BUFFER_SIZE);
+            euca_strncpy(v->stateName, stateName, CHAR_BUFFER_SIZE);
     }
 
     return (v);

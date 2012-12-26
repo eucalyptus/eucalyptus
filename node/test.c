@@ -79,8 +79,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "misc.h"
-#include "data.h"
+#include <misc.h>
+#include <data.h>
+#include <euca_string.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -196,19 +197,19 @@ int main(int argc, char **argv)
         int i = 0;
         long long ll = 0;
 
-        sscanf_lines("a1\na\na2\n", "a%d", &i);
+        euca_lscanf("a1\na\na2\n", "a%d", &i);
         assert(i == 1);
-        sscanf_lines("a\nab3\na   4\na5", "a %d", &i);
+        euca_lscanf("a\nab3\na   4\na5", "a %d", &i);
         assert(i == 4);
-        sscanf_lines("", "%d", &i);
-        sscanf_lines("\n\n\n", "%d", &i);
-        sscanf_lines("abcdefg6", "g%d", &i);
+        euca_lscanf("", "%d", &i);
+        euca_lscanf("\n\n\n", "%d", &i);
+        euca_lscanf("abcdefg6", "g%d", &i);
         assert(i != 6);
-        sscanf_lines("abcdefg", "ab%cdefg", &c);
+        euca_lscanf("abcdefg", "ab%cdefg", &c);
         assert(c == 'c');
-        sscanf_lines("a\na    7\na\n", "a %ld", &l);
+        euca_lscanf("a\na    7\na\n", "a %ld", &l);
         assert(l == 7L);
-        sscanf_lines("a\n8a\na9\n", "a %lld", &ll);
+        euca_lscanf("a\n8a\na9\n", "a %lld", &ll);
         assert(ll == 9L);
     }
 

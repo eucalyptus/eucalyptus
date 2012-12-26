@@ -85,10 +85,12 @@
 #include <sys/stat.h>
 #include <sys/wait.h>           // WEXITSTATUS on Lucid
 
+#include <misc.h>
+#include <eucalyptus.h>
+#include <euca_string.h>
+
 #include "handlers.h"
 #include "hooks.h"
-#include "misc.h"
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -187,10 +189,10 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
     assert(euca_dir);
     assert(hooks_dir);
 
-    safe_strncpy(euca_path, euca_dir, sizeof(euca_path));
+    euca_strncpy(euca_path, euca_dir, sizeof(euca_path));
     if (check_directory(euca_path))
         return EUCA_ERROR;
-    safe_strncpy(hooks_path, hooks_dir, sizeof(hooks_path));
+    euca_strncpy(hooks_path, hooks_dir, sizeof(hooks_path));
     if (check_directory(hooks_path))
         return EUCA_ERROR;
     logprintfl(EUCAINFO, "using hooks directory %s\n", hooks_path);

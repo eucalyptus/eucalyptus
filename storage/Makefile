@@ -62,10 +62,10 @@
 
 include ../Makedefs
 
-EUCA_BLOBS_OBJS =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
-WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
-TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
-TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_auth.o
+EUCA_BLOBS_OBJS =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
+WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
+TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
+TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
 
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 TESTS           = test_vbr test_blobstore
@@ -99,6 +99,9 @@ test_url: http.c
 ../util/misc.o: ../util/misc.c ../util/misc.h ../util/eucalyptus.h
 	make -C ../util
 
+../util/euca_string.o: ../util/euca_string.c ../util/euca_string.h ../util/eucalyptus.h
+	make -C ../util
+	
 ../util/hash.o: ../util/hash.c ../util/hash.h ../util/misc.c ../util/misc.h ../util/eucalyptus.h
 	make -C ../util
 

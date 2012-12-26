@@ -63,12 +63,12 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_HTTP_H_
-#define _INCLUDE_HTTP_H_
+#ifndef _INCLUDE_EUCA_STRING_H_
+#define _INCLUDE_EUCA_STRING_H_
 
 //!
-//! @file storage/http.h
-//! Need to provide description
+//! @file util/euca_string.h
+//! Definition of various string utility functions
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -113,11 +113,13 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
+char *euca_strreplace(char **haystack, char *source, char *value);
+int euca_lscanf(const char *haystack, const char *format, void *value);
+char *euca_strestr(const char *haystack, const char *begin, const char *end);
+long long euca_strtoll(const char *string, const char *begin, const char *end);
+char *euca_strduptolower(const char *restrict string);
+char *euca_strdupcat(char *restrict s1, const char *restrict s2);
+char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -137,4 +139,4 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_HTTP_H_ */
+#endif /* ! _INCLUDE_EUCA_STRING_H_ */

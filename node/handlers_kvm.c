@@ -89,16 +89,18 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "ipc.h"
-#include "misc.h"
+#include <ipc.h>
+#include <misc.h>
+#include <eucalyptus.h>
+#include <euca_auth.h>
+#include <backing.h>
+#include <diskutil.h>
+#include <iscsi.h>
+#include <sensor.h>
+#include <euca_string.h>
+
 #include "handlers.h"
-#include "eucalyptus.h"
-#include "euca_auth.h"
-#include "backing.h"
 #include "xml.h"
-#include "diskutil.h"
-#include "iscsi.h"
-#include "sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -305,8 +307,8 @@ static void *rebooting_thread(void *arg)
     sem_v(hyp_sem);
     EUCA_FREE(xml);
 
-    safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-    sensor_refresh_resources(resourceName, resourceAlias, 1);  // refresh stats so we set base value accurately
+    euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
     char *remoteDevStr = NULL;
     // re-attach each volume previously attached

@@ -100,24 +100,26 @@
 #define MAX_PATH               4096 //!< Max path string length
 #endif /*  ! MAX_PATH */
 
-#include "eucalyptus-config.h"
-#include "ipc.h"
-#include "misc.h"
-#include "backing.h"
-#include "diskutil.h"
+#include <eucalyptus-config.h>
+#include <ipc.h>
+#include <misc.h>
+#include <backing.h>
+#include <diskutil.h>
+#include <eucalyptus.h>
+#include <euca_auth.h>
+
+#include <vbr.h>
+#include <iscsi.h>
+#include <config.h>
+#include <fault.h>
+#include <log.h>
+#include <euca_string.h>
+#include <windows-bundle.h>
+
 #define HANDLERS_FANOUT
 #include "handlers.h"
-#include "eucalyptus.h"
-#include "euca_auth.h"
 #include "xml.h"
-#include "vbr.h"
-#include "iscsi.h"
 #include "hooks.h"
-#include "config.h"
-#include "fault.h"
-#include "log.h"
-
-#include "windows-bundle.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -321,7 +323,7 @@ int get_value(char *s, const char *name, long long *valp)
     if ((s == NULL) || (name == NULL) || (valp == NULL))
         return (EUCA_ERROR);
     snprintf(buf, CHAR_BUFFER_SIZE, "%s=%%lld", name);
-    return ((sscanf_lines(s, buf, valp) == 1) ? EUCA_OK : EUCA_NOT_FOUND_ERROR);
+    return ((euca_lscanf(s, buf, valp) == 1) ? EUCA_OK : EUCA_NOT_FOUND_ERROR);
 }
 
 //!
@@ -676,7 +678,7 @@ void change_state(ncInstance * instance, instance_states state)
         return;
     }
 
-    safe_strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
+    euca_strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
     if (old_state != state) {
         logprintfl(EUCADEBUG, "[%s] state change for instance: %s -> %s (%s)\n",
                    instance->instanceId, instance_state_names[old_state], instance_state_names[instance->state],
@@ -812,7 +814,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
                 if (!rc && ip) {
                     logprintfl(EUCAINFO, "[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
-                    safe_strncpy(instance->ncnet.publicIp, ip, 24);
+                    euca_strncpy(instance->ncnet.publicIp, ip, 24);
                     EUCA_FREE(ip);
                 }
             }
@@ -821,7 +823,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc && ip) {
                 logprintfl(EUCAINFO, "[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
-                safe_strncpy(instance->ncnet.privateIp, ip, 24);
+                euca_strncpy(instance->ncnet.privateIp, ip, 24);
                 EUCA_FREE(ip);
             }
         }
@@ -1085,7 +1087,7 @@ void *startup_thread(void *arg)
         goto shutoff;
     }
 
-    safe_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
+    euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
     EUCA_FREE(brname);
 
     if (nc_state.config_use_virtio_net) {
@@ -1098,7 +1100,7 @@ void *startup_thread(void *arg)
         }
     }
 
-    safe_strncpy(instance->hypervisorType, nc_state.H->name, sizeof(instance->hypervisorType)); // set the hypervisor type
+    euca_strncpy(instance->hypervisorType, nc_state.H->name, sizeof(instance->hypervisorType)); // set the hypervisor type
 
     instance->hypervisorCapability = nc_state.capability;   // set the cap (xen/hw/hw+xen)
     char *s = system_output("getconf LONG_BIT");
@@ -1286,7 +1288,7 @@ void *restart_thread(void *arg)
         goto shutoff;
     }
     // Save our instance bridge name for later use
-    safe_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
+    euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
     logprintfl(EUCAINFO, "[%s] started network\n", instance->instanceId);
 
     if (instance->state == TEARDOWN) {

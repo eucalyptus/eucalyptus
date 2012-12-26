@@ -89,13 +89,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "ipc.h"
-#include "misc.h"
+#include <ipc.h>
+#include <misc.h>
+#include <eucalyptus.h>
+#include <euca_auth.h>
+#include <backing.h>
+#include <sensor.h>
+#include <euca_string.h>
+
 #include "handlers.h"
-#include "eucalyptus.h"
-#include "euca_auth.h"
-#include "backing.h"
-#include "sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -307,8 +309,8 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             sensor_shift_metric(instance->instanceId, "NetworkIn");
             sensor_shift_metric(instance->instanceId, "NetworkOut");
 
-			safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-            sensor_refresh_resources(resourceName, resourceAlias, 1);  // refresh stats immediately to minimize loss
+            euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+            sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats immediately to minimize loss
             sensor_resume_polling();    // now that metrics have been shifted, resume polling
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {

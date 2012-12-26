@@ -107,8 +107,8 @@
 #include <euca_auth.h>
 
 #include <handlers-state.h>
-#include "fault.h"
-
+#include <fault.h>
+#include <euca_string.h>
 #include <eucalyptus.h>
 
 /*----------------------------------------------------------------------------*\
@@ -2158,7 +2158,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
                 char *mac;
                 rc = ip2mac(vnetconfig, resourceCacheStage->resources[i].ip, &mac);
                 if (!rc) {
-                    safe_strncpy(resourceCacheStage->resources[i].mac, mac, 24);
+                    euca_strncpy(resourceCacheStage->resources[i].mac, mac, 24);
                     EUCA_FREE(mac);
                     logprintfl(EUCADEBUG, "discovered MAC '%s' for host %s(%s)\n", resourceCacheStage->resources[i].mac,
                                resourceCacheStage->resources[i].hostname, resourceCacheStage->resources[i].ip);
@@ -2300,7 +2300,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
-                            safe_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 64);
+                            euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 64);
                             {
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
@@ -2308,7 +2308,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                         || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
-                                            safe_strncpy(myInstance->ccnet.publicIp, ip, 24);
+                                            euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
                                         }
                                     }
                                 }
@@ -2317,7 +2317,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
                                     rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                     if (!rc) {
-                                        safe_strncpy(myInstance->ccnet.privateIp, ip, 24);
+                                        euca_strncpy(myInstance->ccnet.privateIp, ip, 24);
                                     }
                                 }
 
@@ -2723,21 +2723,21 @@ int ccInstance_to_ncInstance(ccInstance * dst, ncInstance * src)
 {
     int i;
 
-    safe_strncpy(dst->uuid, src->uuid, 48);
-    safe_strncpy(dst->instanceId, src->instanceId, 16);
-    safe_strncpy(dst->reservationId, src->reservationId, 16);
-    safe_strncpy(dst->accountId, src->accountId, 48);
-    safe_strncpy(dst->ownerId, src->ownerId, 48);
-    safe_strncpy(dst->amiId, src->imageId, 16);
-    safe_strncpy(dst->kernelId, src->kernelId, 16);
-    safe_strncpy(dst->ramdiskId, src->ramdiskId, 16);
-    safe_strncpy(dst->keyName, src->keyName, 1024);
-    safe_strncpy(dst->launchIndex, src->launchIndex, 64);
-    safe_strncpy(dst->platform, src->platform, 64);
-    safe_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
-    safe_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
-    safe_strncpy(dst->userData, src->userData, 16384);
-    safe_strncpy(dst->state, src->stateName, 16);
+    euca_strncpy(dst->uuid, src->uuid, 48);
+    euca_strncpy(dst->instanceId, src->instanceId, 16);
+    euca_strncpy(dst->reservationId, src->reservationId, 16);
+    euca_strncpy(dst->accountId, src->accountId, 48);
+    euca_strncpy(dst->ownerId, src->ownerId, 48);
+    euca_strncpy(dst->amiId, src->imageId, 16);
+    euca_strncpy(dst->kernelId, src->kernelId, 16);
+    euca_strncpy(dst->ramdiskId, src->ramdiskId, 16);
+    euca_strncpy(dst->keyName, src->keyName, 1024);
+    euca_strncpy(dst->launchIndex, src->launchIndex, 64);
+    euca_strncpy(dst->platform, src->platform, 64);
+    euca_strncpy(dst->bundleTaskStateName, src->bundleTaskStateName, 64);
+    euca_strncpy(dst->createImageTaskStateName, src->createImageTaskStateName, 64);
+    euca_strncpy(dst->userData, src->userData, 16384);
+    euca_strncpy(dst->state, src->stateName, 16);
     dst->ts = src->launchTime;
 
     memcpy(&(dst->ncnet), &(src->ncnet), sizeof(netConfig));
@@ -4692,14 +4692,14 @@ int init_log(void)
         char *log_prefix;
         configReadLogParams(&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
         if (log_prefix && strlen(log_prefix) > 0) {
-            safe_strncpy(config->log_prefix, log_prefix, sizeof(config->log_prefix));
+            euca_strncpy(config->log_prefix, log_prefix, sizeof(config->log_prefix));
         }
         EUCA_FREE(log_prefix);
 
         char *log_facility = configFileValue("LOGFACILITY");
         if (log_facility) {
             if (strlen(log_facility) > 0) {
-                safe_strncpy(config->log_facility, log_facility, sizeof(config->log_facility));
+                euca_strncpy(config->log_facility, log_facility, sizeof(config->log_facility));
             }
             EUCA_FREE(log_facility);
         }
@@ -4847,14 +4847,14 @@ int update_config(void)
             char *log_prefix;
             configReadLogParams(&(config->log_level), &(config->log_roll_number), &(config->log_max_size_bytes), &log_prefix);
             if (log_prefix && strlen(log_prefix) > 0) {
-                safe_strncpy(config->log_prefix, log_prefix, sizeof(config->log_prefix));
+                euca_strncpy(config->log_prefix, log_prefix, sizeof(config->log_prefix));
             }
             EUCA_FREE(log_prefix);
 
             char *log_facility = configFileValue("LOGFACILITY");
             if (log_facility) {
                 if (strlen(log_facility) > 0) {
-                    safe_strncpy(config->log_facility, log_facility, sizeof(config->log_facility));
+                    euca_strncpy(config->log_facility, log_facility, sizeof(config->log_facility));
                 }
                 EUCA_FREE(log_facility);
             }
@@ -5396,7 +5396,7 @@ int init_config(void)
 
     tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
     if (tmpstr)
-        tmpstr = replace_string(&tmpstr, "$EUCALYPTUS", eucahome);
+        tmpstr = euca_strreplace(&tmpstr, "$EUCALYPTUS", eucahome);
     if (tmpstr) {
         snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
         EUCA_FREE(tmpstr);
@@ -5406,8 +5406,8 @@ int init_config(void)
 
     sem_mywait(CONFIG);
     // set up the current config
-    safe_strncpy(config->eucahome, eucahome, MAX_PATH);
-    safe_strncpy(config->policyFile, policyFile, MAX_PATH);
+    euca_strncpy(config->eucahome, eucahome, MAX_PATH);
+    euca_strncpy(config->policyFile, policyFile, MAX_PATH);
     //  snprintf(config->proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv/data", config->eucahome);
     snprintf(config->proxyPath, MAX_PATH, "%s", proxyPath);
     config->use_proxy = use_proxy;
@@ -6041,15 +6041,15 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 
     if (out != NULL) {
         if (ncURL)
-            safe_strncpy(out->ncURL, ncURL, 128);
+            euca_strncpy(out->ncURL, ncURL, 128);
         if (ncService)
-            safe_strncpy(out->ncService, ncService, 128);
+            euca_strncpy(out->ncService, ncService, 128);
         if (hostname)
-            safe_strncpy(out->hostname, hostname, 128);
+            euca_strncpy(out->hostname, hostname, 128);
         if (mac)
-            safe_strncpy(out->mac, mac, 24);
+            euca_strncpy(out->mac, mac, 24);
         if (ip)
-            safe_strncpy(out->ip, ip, 24);
+            euca_strncpy(out->ip, ip, 24);
 
         out->ncPort = ncPort;
         out->maxMemory = maxMemory;
@@ -6165,50 +6165,50 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
     if (out != NULL) {
         bzero(out, sizeof(ccInstance));
         if (id)
-            safe_strncpy(out->instanceId, id, 16);
+            euca_strncpy(out->instanceId, id, 16);
         if (amiId)
-            safe_strncpy(out->amiId, amiId, 16);
+            euca_strncpy(out->amiId, amiId, 16);
         if (kernelId)
-            safe_strncpy(out->kernelId, kernelId, 16);
+            euca_strncpy(out->kernelId, kernelId, 16);
         if (ramdiskId)
-            safe_strncpy(out->ramdiskId, ramdiskId, 16);
+            euca_strncpy(out->ramdiskId, ramdiskId, 16);
 
         if (amiURL)
-            safe_strncpy(out->amiURL, amiURL, 512);
+            euca_strncpy(out->amiURL, amiURL, 512);
         if (kernelURL)
-            safe_strncpy(out->kernelURL, kernelURL, 512);
+            euca_strncpy(out->kernelURL, kernelURL, 512);
         if (ramdiskURL)
-            safe_strncpy(out->ramdiskURL, ramdiskURL, 512);
+            euca_strncpy(out->ramdiskURL, ramdiskURL, 512);
 
         if (state)
-            safe_strncpy(out->state, state, 16);
+            euca_strncpy(out->state, state, 16);
         if (state)
-            safe_strncpy(out->ccState, ccState, 16);
+            euca_strncpy(out->ccState, ccState, 16);
         if (ownerId)
-            safe_strncpy(out->ownerId, ownerId, 48);
+            euca_strncpy(out->ownerId, ownerId, 48);
         if (accountId)
-            safe_strncpy(out->accountId, accountId, 48);
+            euca_strncpy(out->accountId, accountId, 48);
         if (reservationId)
-            safe_strncpy(out->reservationId, reservationId, 16);
+            euca_strncpy(out->reservationId, reservationId, 16);
         if (keyName)
-            safe_strncpy(out->keyName, keyName, 1024);
+            euca_strncpy(out->keyName, keyName, 1024);
         out->ts = ts;
         out->ncHostIdx = ncHostIdx;
         if (serviceTag)
-            safe_strncpy(out->serviceTag, serviceTag, 64);
+            euca_strncpy(out->serviceTag, serviceTag, 64);
         if (userData)
-            safe_strncpy(out->userData, userData, 16384);
+            euca_strncpy(out->userData, userData, 16384);
         if (launchIndex)
-            safe_strncpy(out->launchIndex, launchIndex, 64);
+            euca_strncpy(out->launchIndex, launchIndex, 64);
         if (platform)
-            safe_strncpy(out->platform, platform, 64);
+            euca_strncpy(out->platform, platform, 64);
         if (bundleTaskStateName)
-            safe_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
+            euca_strncpy(out->bundleTaskStateName, bundleTaskStateName, 64);
         if (groupNames) {
             int i;
             for (i = 0; i < 64; i++) {
                 if (groupNames[i]) {
-                    safe_strncpy(out->groupNames[i], groupNames[i], 64);
+                    euca_strncpy(out->groupNames[i], groupNames[i], 64);
                 }
             }
         }

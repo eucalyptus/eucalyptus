@@ -68,7 +68,6 @@
 //! This implements the default operations handlers supported by all hypervisor.
 //!
 
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  INCLUDES                                  |
@@ -98,20 +97,21 @@
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
-#include "ipc.h"
-#include "misc.h"
+#include <ipc.h>
+#include <misc.h>
+#include <backing.h>
+#include <eucalyptus.h>
+#include <vnetwork.h>
+#include <euca_auth.h>
+#include <vbr.h>
+#include <iscsi.h>
+#include <sensor.h>
+#include <windows-bundle.h>
+#include <euca_string.h>
+
 #include "handlers.h"
-#include "backing.h"
-#include "eucalyptus.h"
-#include "vnetwork.h"
-#include "euca_auth.h"
-#include "vbr.h"
-#include "iscsi.h"
 #include "xml.h"
 #include "hooks.h"
-#include "sensor.h"
-
-#include "windows-bundle.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -530,7 +530,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
-    safe_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
+    euca_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
 
     sem_p(inst_sem);
@@ -1188,7 +1188,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         goto release;
     }
 
-    safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+    euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so volume measurements are captured before it disappears
 
     char path[MAX_PATH];
@@ -1281,7 +1281,7 @@ release:
 static void change_createImage_state(ncInstance * instance, createImage_progress state)
 {
     instance->createImageTaskState = state;
-    safe_strncpy(instance->createImageTaskStateName, createImage_progress_names[state], CHAR_BUFFER_SIZE);
+    euca_strncpy(instance->createImageTaskStateName, createImage_progress_names[state], CHAR_BUFFER_SIZE);
 }
 
 //!
@@ -1444,7 +1444,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
 static void change_bundling_state(ncInstance * instance, bundling_progress state)
 {
     instance->bundleTaskState = state;
-    safe_strncpy(instance->bundleTaskStateName, bundling_progress_names[state], CHAR_BUFFER_SIZE);
+    euca_strncpy(instance->bundleTaskStateName, bundling_progress_names[state], CHAR_BUFFER_SIZE);
 }
 
 //!
@@ -1478,9 +1478,9 @@ static int restart_instance(ncInstance * instance)
     instance->createImagePid = 0;
     instance->createImageCanceled = 0;
 
-    safe_strncpy(instance->stateName, instance_state_names[EXTANT], CHAR_BUFFER_SIZE);
-    safe_strncpy(instance->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
-    safe_strncpy(instance->createImageTaskStateName, createImage_progress_names[NOT_CREATEIMAGE], CHAR_BUFFER_SIZE);
+    euca_strncpy(instance->stateName, instance_state_names[EXTANT], CHAR_BUFFER_SIZE);
+    euca_strncpy(instance->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
+    euca_strncpy(instance->createImageTaskStateName, createImage_progress_names[NOT_CREATEIMAGE], CHAR_BUFFER_SIZE);
 
     // Reset our pthread structure
     memset(&(instance->tcb), 0, sizeof(instance->tcb));

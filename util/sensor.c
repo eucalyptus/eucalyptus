@@ -90,6 +90,7 @@
 #include "misc.h"
 #include "sensor.h"
 #include "ipc.h"
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -394,7 +395,7 @@ static int getstat_generate(getstat *** pstats)
                             for (; gsp->next != NULL; gsp = gsp->next) ;    // walk the linked list to the end
                             gsp->next = gs; // add the new record
                         }
-                        safe_strncpy(gs->instanceId, subtoken, sizeof(gs->instanceId));
+                        euca_strncpy(gs->instanceId, subtoken, sizeof(gs->instanceId));
                         break;
                     }
                 case 2:{
@@ -408,13 +409,13 @@ static int getstat_generate(getstat *** pstats)
                         break;
                     }
                 case 3:
-                    safe_strncpy(gs->metricName, subtoken, sizeof(gs->metricName));
+                    euca_strncpy(gs->metricName, subtoken, sizeof(gs->metricName));
                     break;
                 case 4:
                     gs->counterType = sensor_str2type(subtoken);
                     break;
                 case 5:
-                    safe_strncpy(gs->dimensionName, subtoken, sizeof(gs->dimensionName));
+                    euca_strncpy(gs->dimensionName, subtoken, sizeof(gs->dimensionName));
                     break;
                 case 6:{
                         char *endptr;
@@ -490,8 +491,8 @@ static void sensor_bottom_half(void)
         useconds_t start_usec = time_usec();
         sem_p(state_sem);
         for (int i = 0; i < sensor_state->max_resources && i < MAX_SENSOR_RESOURCES; i++) {
-            safe_strncpy(resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
-            safe_strncpy(resourceAliases[i], sensor_state->resources[i].resourceAlias, MAX_SENSOR_NAME_LEN);
+            euca_strncpy(resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
+            euca_strncpy(resourceAliases[i], sensor_state->resources[i].resourceAlias, MAX_SENSOR_NAME_LEN);
             if (strlen(resourceNames[i]) && strlen(resourceAliases[i])) {
                 logprintfl(EUCATRACE, "Found alias '%s' for resource '%s'\n", resourceAliases[i], resourceNames[i]);
             }
@@ -1011,7 +1012,7 @@ int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const c
     assert(srsLen > 0);
     sensorResource *sr = srs[0];
     memcpy(sr, &example, sizeof(sensorResource));
-    safe_strncpy(sr->resourceName, instanceId, sizeof(sr->resourceName));
+    euca_strncpy(sr->resourceName, instanceId, sizeof(sr->resourceName));
 
     return (EUCA_OK);
 }
@@ -1064,11 +1065,11 @@ static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *reso
     // fill out the new slot
     if (unused_sr != NULL) {
         bzero(unused_sr, sizeof(sensorResource));
-        safe_strncpy(unused_sr->resourceName, resourceName, sizeof(unused_sr->resourceName));
+        euca_strncpy(unused_sr->resourceName, resourceName, sizeof(unused_sr->resourceName));
         if (resourceType)
-            safe_strncpy(unused_sr->resourceType, resourceType, sizeof(unused_sr->resourceType));
+            euca_strncpy(unused_sr->resourceType, resourceType, sizeof(unused_sr->resourceType));
         if (resourceUuid)
-            safe_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
+            euca_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
         unused_sr->timestamp = time(NULL);
         sensor_state->used_resources++;
         logprintfl(EUCAINFO, "allocated new sensor resource %s\n", resourceName);
@@ -1110,7 +1111,7 @@ static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * s
     // fill out the new slot
     sensorMetric *sm = sr->metrics + sr->metricsLen;
     bzero(sm, sizeof(sensorMetric));
-    safe_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
+    euca_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
     sr->metricsLen++;
     logprintfl(EUCADEBUG, "allocated new sensor metric %s:%s\n", sr->resourceName, sm->metricName);
 
@@ -1185,7 +1186,7 @@ static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter *
     // fill out the new slot
     sensorDimension *sd = sc->dimensions + sc->dimensionsLen;
     bzero(sd, sizeof(sensorDimension));
-    safe_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
+    euca_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
     sc->dimensionsLen++;
     logprintfl(EUCADEBUG, "allocated new sensor dimension %s:%s\n", sensor_type2str(sc->type), sd->dimensionName);
 
@@ -1451,13 +1452,13 @@ int sensor_add_value(const char *instanceId,
                      }
                     }
     };
-    safe_strncpy(sr.resourceName, instanceId, sizeof(sr.resourceName));
+    euca_strncpy(sr.resourceName, instanceId, sizeof(sr.resourceName));
     sensorMetric *sm = sr.metrics;  // use array entry [0]
-    safe_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
+    euca_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
     sensorCounter *sc = sm->counters;   // use array entry [0]
     sc->type = counterType;
     sensorDimension *sd = sc->dimensions;   // use array entry [0]
-    safe_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
+    euca_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
     sensorValue *sv = sd->values;   // use array entry [0]
     sv->timestampMs = timestampMs;
     sv->value = value;
@@ -1675,7 +1676,7 @@ int sensor_set_resource_alias(const char *resourceName, const char *resourceAlia
     if (sr != NULL) {
         if (resourceAlias) {
             if (strcmp(sr->resourceAlias, resourceAlias) != 0) {
-                safe_strncpy(sr->resourceAlias, resourceAlias, sizeof(sr->resourceAlias));
+                euca_strncpy(sr->resourceAlias, resourceAlias, sizeof(sr->resourceAlias));
                 logprintfl(EUCADEBUG, "set alias for sensor resource %s to %s\n", resourceName, resourceAlias);
             }
         } else {
@@ -1848,7 +1849,7 @@ int sensor_set_dimension_alias(const char *resourceName, const char *metricName,
     boolean changed = FALSE;
     if (dimensionAlias) {
         if (strcmp(sd->dimensionAlias, dimensionAlias) != 0) {
-            safe_strncpy(sd->dimensionAlias, dimensionAlias, sizeof(sd->dimensionAlias));
+            euca_strncpy(sd->dimensionAlias, dimensionAlias, sizeof(sd->dimensionAlias));
             changed = TRUE;
         }
     } else {
@@ -2094,7 +2095,7 @@ int main(int argc, char **argv)
         getstat *gs = getstat_find(stats, NULL);
         if (gs != NULL) {
             char id[MAX_SENSOR_NAME_LEN];
-            safe_strncpy(id, gs->instanceId, sizeof(id));
+            euca_strncpy(id, gs->instanceId, sizeof(id));
             assert(sensor_refresh_resources(id, "", 1) == EUCA_OK);
         }
         if (i % 101 == 0 || i % 102 == 0) {

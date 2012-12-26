@@ -80,12 +80,17 @@
 #include <neethi_policy.h>
 #include <neethi_util.h>
 
-#include "axis2_stub_EucalyptusNC.h"
+#include <axis2_stub_EucalyptusNC.h>
+
 #include "client-marshal.h"
-#include "misc.h"
-#include "adb-helpers.h"
 #include "handlers.h"
-#include "sensor.h"
+
+#include <eucalyptus.h>
+#include <misc.h>
+#include <adb-helpers.h>
+#include <sensor.h>
+#include <euca_string.h>
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -314,9 +319,9 @@ static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_
     if (netconf != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
         ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
-        safe_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
-        safe_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
-        safe_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
+        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
+        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
+        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
     }
 
     int groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);
@@ -345,7 +350,7 @@ static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_
                                             expiryTime,
                                             groupNames, groupNamesSize);
 
-    safe_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
+    euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
 
@@ -358,10 +363,10 @@ static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_
     bzero(outInst->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
     for (i = 0; i < EUCA_MAX_VOLUMES && i < adb_instanceType_sizeof_volumes(instance, env); i++) {
         adb_volumeType_t *volume = adb_instanceType_get_volumes_at(instance, env, i);
-        safe_strncpy(outInst->volumes[i].volumeId, adb_volumeType_get_volumeId(volume, env), CHAR_BUFFER_SIZE);
-        safe_strncpy(outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
-        safe_strncpy(outInst->volumes[i].localDev, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
-        safe_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].volumeId, adb_volumeType_get_volumeId(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].localDev, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
+        euca_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
     }
 
     return outInst;

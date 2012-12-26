@@ -176,9 +176,7 @@ static boolean curl_initialized = FALSE;    //!< boolean to indicate if we have 
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef _UNIT_TEST
 int http_put(const char *file_path, const char *url, const char *login, const char *password);
-#endif /* ! _UNIT_TEST */
 
 char *url_encode(const char *unencoded);
 char *url_decode(const char *encoded);
@@ -195,10 +193,8 @@ int main(int argc, char **argv);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef _UNIT_TEST
 static size_t read_data(char *buffer, size_t size, size_t nitems, void *params);
 static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params);
-#endif /* ! _UNIT_TEST */
 static char hch_to_int(char ch);
 static char int_to_hch(char i);
 
@@ -214,7 +210,6 @@ static char int_to_hch(char i);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef _UNIT_TEST
 //!
 //! Process an HTTP put request to the given URL.
 //!
@@ -441,7 +436,6 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params)
 
     return (wrote);
 }
-#endif /* ! _UNIT_TEST */
 
 //!
 //! Converts hex character to integer

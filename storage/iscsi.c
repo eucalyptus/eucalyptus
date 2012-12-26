@@ -87,8 +87,10 @@
 #include "eucalyptus.h"
 #include <sys/types.h>
 #include <sys/wait.h>
-#include "misc.h"
-#include "ipc.h"
+
+#include <misc.h>
+#include <ipc.h>
+#include <euca_string.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -193,7 +195,7 @@ void init_iscsi(const char *euca_home)
         }
     }
 
-    safe_strncpy(home, tmp, sizeof(home));
+    euca_strncpy(home, tmp, sizeof(home));
     snprintf(connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
     snprintf(disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
     snprintf(get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);

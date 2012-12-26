@@ -89,13 +89,16 @@
 #include <dirent.h>
 #include <sys/wait.h>           // wait
 #include <pthread.h>
-#include "blobstore.h"
 #include <sys/types.h>          // gettid
-#include "diskutil.h"
 #include <regex.h>
-#include "misc.h"               // ensure_...
-#include "eucalyptus.h"         // euca user
-#include "ipc.h"
+
+#include <misc.h>               // ensure_...
+#include <eucalyptus.h>         // euca user
+#include <ipc.h>
+#include <euca_string.h>
+
+#include "blobstore.h"
+#include "diskutil.h"
 
 #ifdef _EUCA_BLOBS
 #include "map.h"
@@ -1082,7 +1085,7 @@ static int open_and_lock(const char *path, int flags, long long timeout_usec, mo
                 ERR(BLOBSTORE_ERROR_NOMEM, NULL);
                 return -1;
             }
-            safe_strncpy(path_lock->path, path, sizeof(path_lock->path));
+            euca_strncpy(path_lock->path, path, sizeof(path_lock->path));
             pthread_rwlock_init(&(path_lock->lock), NULL);
             pthread_mutex_init(&(path_lock->mutex), NULL);
             *next_ptr = path_lock;  // add at the end of LL
@@ -1409,7 +1412,7 @@ static int read_store_metadata(blobstore * bs)
     char *val;
     if ((val = get_val(buf, "id")) == NULL)
         return -1;
-    safe_strncpy(bs->id, val, sizeof(bs->id));
+    euca_strncpy(bs->id, val, sizeof(bs->id));
     EUCA_FREE(val);
 
     if ((val = get_val(buf, "limit")) == NULL)
@@ -1566,7 +1569,7 @@ blobstore *blobstore_open(const char *path, unsigned long long limit_blocks, uns
         ERR(BLOBSTORE_ERROR_NOMEM, NULL);
         goto out;
     }
-    safe_strncpy(bs->path, path, sizeof(bs->path)); //! @TODO canonicalize path
+    euca_strncpy(bs->path, path, sizeof(bs->path)); //! @TODO canonicalize path
     char meta_path[PATH_MAX];
     snprintf(meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);
 
@@ -1794,28 +1797,28 @@ static int set_blockblob_metadata_path(blockblob_path_t path_t, const blobstore 
     char name[32];
     switch (path_t) {
     case BLOCKBLOB_PATH_BLOCKS:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_BLOCKS], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_BLOCKS], sizeof(name));
         break;
     case BLOCKBLOB_PATH_LOCK:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOCK], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOCK], sizeof(name));
         break;
     case BLOCKBLOB_PATH_DM:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DM], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DM], sizeof(name));
         break;
     case BLOCKBLOB_PATH_DEPS:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DEPS], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_DEPS], sizeof(name));
         break;
     case BLOCKBLOB_PATH_LOOPBACK:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOOPBACK], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_LOOPBACK], sizeof(name));
         break;
     case BLOCKBLOB_PATH_SIG:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_SIG], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_SIG], sizeof(name));
         break;
     case BLOCKBLOB_PATH_REFS:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_REFS], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_REFS], sizeof(name));
         break;
     case BLOCKBLOB_PATH_HOLLOW:
-        safe_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_HOLLOW], sizeof(name));
+        euca_strncpy(name, blobstore_metadata_suffixes[BLOCKBLOB_PATH_HOLLOW], sizeof(name));
         break;
     default:
         ERR(BLOBSTORE_ERROR_INVAL, "invalid path_t");
@@ -2400,7 +2403,7 @@ static void set_device_path(blockblob * bb)
 
     if (dm_devs_size > 0) {     // .dm is there => set device_path to the device-mapper path
         snprintf(bb->device_path, sizeof(bb->device_path), DM_FORMAT, dm_devs[dm_devs_size - 1]);   // main device is the last one
-        safe_strncpy(bb->dm_name, dm_devs[dm_devs_size - 1], sizeof(bb->dm_name));
+        euca_strncpy(bb->dm_name, dm_devs[dm_devs_size - 1], sizeof(bb->dm_name));
         for (int i = 0; i < dm_devs_size; i++) {
             EUCA_FREE(dm_devs[i]);
         }
@@ -2410,7 +2413,7 @@ static void set_device_path(blockblob * bb)
         _err_off();             // do not care if loopback file does not exist
         read_blockblob_metadata_path(BLOCKBLOB_PATH_LOOPBACK, bb->store, bb->id, lo_dev, sizeof(lo_dev));
         _err_on();
-        safe_strncpy(bb->device_path, lo_dev, sizeof(bb->device_path));
+        euca_strncpy(bb->device_path, lo_dev, sizeof(bb->device_path));
     }
 }
 
@@ -2477,8 +2480,8 @@ static blockblob **walk_bs(blobstore * bs, const char *dir_path, blockblob ** ta
 
         // fill out the struct
         bb->store = bs;
-        safe_strncpy(bb->id, blob_id, sizeof(bb->id));
-        safe_strncpy(bb->blocks_path, entry_path, sizeof(bb->blocks_path));
+        euca_strncpy(bb->id, blob_id, sizeof(bb->id));
+        euca_strncpy(bb->blocks_path, entry_path, sizeof(bb->blocks_path));
         set_device_path(bb);    // read .dm and .loopback and set bb->device_path accordingly
         bb->size_bytes = sb.st_size;
         bb->blocks_allocated = sb.st_blocks;
@@ -2709,7 +2712,7 @@ unlock:
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to unlock the blobstore");
     }
 
-    safe_strncpy(meta->id, bs->id, sizeof(meta->id));
+    euca_strncpy(meta->id, bs->id, sizeof(meta->id));
     realpath(bs->path, meta->path);
     meta->revocation_policy = bs->revocation_policy;
     meta->snapshot_policy = bs->snapshot_policy;
@@ -2741,7 +2744,7 @@ static int get_stale_refs(const blockblob * bb, char ***refs)
     if (read_array_blockblob_metadata_path(BLOCKBLOB_PATH_REFS, bb->store, bb->id, &array, &array_size) != -1) {
         for (int i = 0; i < array_size; i++) {
             char ref[BLOBSTORE_MAX_PATH + MAX_DM_NAME + 1];
-            safe_strncpy(ref, array[i], sizeof(ref));
+            euca_strncpy(ref, array[i], sizeof(ref));
 
             char *store_path = strtok(array[i], " ");
             char *blob_id = strtok(NULL, " ");  // the remaining entries in array[i] are ignored
@@ -2985,7 +2988,7 @@ int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** result
             goto free;
         }
 
-        safe_strncpy(bm->id, abb->id, sizeof(bm->id));
+        euca_strncpy(bm->id, abb->id, sizeof(bm->id));
         bm->bs = bs;
         bm->size_bytes = abb->size_bytes;
         bm->in_use = abb->in_use;
@@ -3122,7 +3125,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
 
     bb->store = bs;
     if (id) {
-        safe_strncpy(bb->id, id, sizeof(bb->id));
+        euca_strncpy(bb->id, id, sizeof(bb->id));
     } else {
         gen_id(bb->id, sizeof(bb->id));
     }
@@ -4185,7 +4188,7 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
             }
             // append to the main dm table (we do this here even if we never end up using the device mapper because all segments were copied)
             snprintf(buf, sizeof(buf), "%lld %lld linear %s %lld\n", m->first_block_dst, m->len_blocks, bb->device_path, m->first_block_dst);
-            main_dm_table = strdupcat(main_dm_table, buf);
+            main_dm_table = euca_strdupcat(main_dm_table, buf);
             break;
 
         case BLOBSTORE_SNAPSHOT:{
@@ -4233,7 +4236,7 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
             // append to the main dm table
             snprintf(buf, sizeof(buf), "%lld %lld linear %s%s %lld\n", m->first_block_dst, m->len_blocks, dev[0] == 'e' ? DM_PATH : "", dev,
                      first_block_src);
-            main_dm_table = strdupcat(main_dm_table, buf);
+            main_dm_table = euca_strdupcat(main_dm_table, buf);
             mapped_or_snapshotted++;
             break;
 
@@ -4245,7 +4248,7 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
     }
 
     if (mapped_or_snapshotted) {    // we must use the device mapper
-        safe_strncpy(bb->dm_name, dm_base, sizeof(bb->dm_name));
+        euca_strncpy(bb->dm_name, dm_base, sizeof(bb->dm_name));
         dev_names[devices] = strdup(dm_base);
         dm_tables[devices] = main_dm_table;
         devices++;

@@ -99,11 +99,13 @@
 #include <sys/mman.h>           // mmap
 #include <pthread.h>
 
+#include <diskutil.h>
+#include <vnetwork.h>
+
 #include "misc.h"
 #include "euca_auth.h"
-#include "diskutil.h"
-#include "vnetwork.h"
 #include "log.h"
+#include "euca_string.h"
 
 #include "eucalyptus.h"
 
@@ -176,13 +178,10 @@ int check_block(const char *file);
 int check_file(const char *file);
 int check_path(const char *path);
 int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
-char *replace_string(char **stringp, char *source, char *destination);
-boolean sscanf_lines(char *lines, char *format, void *varp);
 char *fp2str(FILE * fp);
 char *system_output(char *shell_command);
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
 int get_conf_var(const char *path, const char *name, char **value);
-void free_char_list(char **value);
 char **from_var_to_char_list(const char *v);
 int hash_code(const char *s);
 int hash_code_bin(const char *buf, int buf_size);
@@ -198,8 +197,6 @@ int write2file(const char *path, char *str);
 char *file2strn(const char *path, const ssize_t limit);
 char *file2str(const char *path);
 char *file2str_seek(char *file, size_t size, int mode);
-char *str2str(const char *str, const char *begin, const char *end);
-long long str2longlong(const char *str, const char *begin, const char *end);
 int uint32compar(const void *ina, const void *inb);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
@@ -207,17 +204,14 @@ int maxint(int a, int b);
 int minint(int a, int b);
 int copy_file(const char *src, const char *dst);
 long long file_size(const char *file_path);
-char *strduplc(const char *s);
 char *xpath_content(const char *xml, const char *xpath);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
-char *strdupcat(char *original, char *new);
 int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec(void);
 long long time_ms(void);
 char *safe_mkdtemp(char *template);
 int safe_mkstemp(char *template);
-char *safe_strncpy(char *s1, const char *s2, size_t len);
 int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
 char parse_boolean(const char *s);
 int drop_privs(void);
@@ -313,7 +307,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
 
             for (j = 0; (locations[j] != NULL); j++) {
                 snprintf(lpath, sizeof(lpath), locations[j], euca);
-                if ((newpath = strdupcat(path, lpath)) == NULL) {
+                if ((newpath = euca_strdupcat(path, lpath)) == NULL) {
                     missing_helpers = -1;
                     goto cleanup;
                 }
@@ -829,116 +823,6 @@ int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned lo
     logprintfl(EUCADEBUG, "  of size %llu bytes with available %llu bytes\n", *fs_bytes_size, *fs_bytes_available);
 
     return (EUCA_OK);
-}
-
-//!
-//! given string *stringp, replace occurences of source with destination
-//! and return the new string in stringp
-//!
-//! @param[in,out] stringp
-//! @param[in]     source
-//! @param[in]     destination
-//!
-//! @return the newly formatted string
-//!
-//! @pre The stringp, source and destination pointers must not be NULL.
-//!
-//! @post On success the current string pointed by stringp is freed and replaced
-//!       by the new string.
-//!
-//! @note caller is reponsible to free the result
-//!
-char *replace_string(char **stringp, char *source, char *destination)
-{
-    int maxlen = 32768 * 2;
-    char *buf = NULL;
-    char *start = NULL;
-    char *substart = NULL;
-    char *tok = NULL;
-    char *new_string = NULL;
-
-    if ((stringp == NULL) || (source == NULL) || (destination == NULL))
-        return (NULL);
-
-    // Allocate some memory
-    buf = EUCA_ALLOC(maxlen, sizeof(char));
-    new_string = EUCA_ZALLOC(maxlen, sizeof(char));
-
-    if (!buf || !new_string) {
-        fprintf(stderr, "replace_string: out of memory\n");
-        EUCA_FREE(buf);
-        EUCA_FREE(new_string);
-        return (NULL);
-    }
-
-    start = *stringp;
-    substart = start;
-    tok = strstr(start, source);
-    while (tok != NULL) {
-        *tok = '\0';
-
-        snprintf(buf, maxlen, "%s%s%s", new_string, substart, destination);
-        strncpy(new_string, buf, maxlen);
-
-        tok += strlen(source);
-        substart = tok;
-        tok = strstr(substart, source);
-    }
-
-    snprintf(buf, maxlen, "%s%s", new_string, substart);
-    strncpy(new_string, buf, maxlen);
-
-    EUCA_FREE(buf);
-    EUCA_FREE(*stringp);
-    *stringp = new_string;
-    return (new_string);
-}
-
-//!
-//! do sscanf() on each line in lines[], returning upon first match
-//! returns TRUE if there was match and FALSE otherwise
-//!
-//! @param[in] lines
-//! @param[in] format
-//! @param[in] varp
-//!
-//! @return TRUE if we have a match, FALSE otherwise
-//!
-boolean sscanf_lines(char *lines, char *format, void *varp)
-{
-    char *copy = NULL;
-    char *start = NULL;
-    char *end = NULL;
-    boolean found = FALSE;
-    boolean newline = FALSE;
-
-    if (!lines || !format || !varp)
-        return (FALSE);
-
-    if ((copy = strdup(lines)) == NULL)
-        return (FALSE);
-
-    for (start = copy, found = FALSE; start && *start != '\0' && !found; start = end + 1) {
-        newline = FALSE;
-
-        for (end = start + 1; ((*end != '\n') && (*end != '\0')); end++) ;
-
-        if (*end == '\n') {
-            *end = '\0';
-            newline = TRUE;
-        }
-
-        if (sscanf(start, format, varp) == 1)
-            found = TRUE;
-
-        if (!newline) {
-            // so that start == '\0'
-            end--;
-        }
-    }
-
-    EUCA_FREE(copy);
-    return (found);
 }
 
 //!
@@ -1862,81 +1746,6 @@ char *file2str_seek(char *file, size_t size, int mode)
 }
 
 //!
-//! extract string from str bound by 'begin' and 'end'
-//!
-//! @param[in] str
-//! @param[in] begin
-//! @param[in] end
-//!
-//! @return the newly constructed string or NULL if any error occured.
-//!
-//! @note caller is responsible to free the returned memory
-//!
-char *str2str(const char *str, const char *begin, const char *end)
-{
-    int len = 0;
-    char *b = NULL;
-    char *e = NULL;
-    char *buf = NULL;
-
-    if (!str || !begin || !end || (strlen(str) < 3) || (strlen(begin) < 1) || (strlen(end) < 1)) {
-        logprintfl(EUCAERROR, "called with bad parameters\n");
-        return (NULL);
-    }
-
-    if ((b = strstr(str, begin)) == NULL) {
-        logprintfl(EUCAERROR, "beginning string '%s' not found\n", begin);
-        return (NULL);
-    }
-
-    if ((e = strstr(str, end)) == NULL) {
-        logprintfl(EUCAERROR, "end string '%s' not found\n", end);
-        return (NULL);
-    }
-
-    b += strlen(begin);         // b now points at the supposed content
-    len = e - b;
-    if (len < 0) {
-        logprintfl(EUCAERROR, "there is nothing between '%s' and '%s'\n", begin, end);
-        return (NULL);
-    }
-
-    if (len > (BUFSIZE - 1)) {
-        logprintfl(EUCAERROR, "string between '%s' and '%s' is too long\n", begin, end);
-        return (NULL);
-    }
-
-    if ((buf = EUCA_ALLOC(len + 1, sizeof(char))) != NULL) {
-        strncpy(buf, b, len);
-        buf[len] = '\0';
-    }
-
-    return (buf);
-}
-
-//!
-//! extract integer from str bound by 'begin' and 'end'
-//!
-//! @param[in] str
-//! @param[in] begin
-//! @param[in] end
-//!
-//! @return the integer value from the string and its parameters
-//!
-long long str2longlong(const char *str, const char *begin, const char *end)
-{
-    long long val = -1L;
-    char *buf = NULL;
-
-    if ((buf = str2str(str, begin, end)) != NULL) {
-        val = atoll(buf);
-        EUCA_FREE(buf);
-    }
-
-    return (val);
-}
-
-//!
 //!
 //!
 //! @param[in] ina
@@ -2146,29 +1955,6 @@ long long file_size(const char *file_path)
 }
 
 //!
-//! tolower for strings
-//!
-//! @param[in] s the string to convert to lower case
-//!
-//! @return a pointer to the lower care result
-//!
-//! @note result must be freed by the caller
-//!
-char *strduplc(const char *s)
-{
-    int i = 0;
-    char *lc = NULL;
-
-    if (s) {
-        lc = strdup(s);
-        for (i = 0; i < strlen(s); i++) {
-            lc[i] = tolower(lc[i]);
-        }
-    }
-    return lc;
-}
-
-//!
 //! given a null-terminated string in 'xml', finds the next complete <tag...>
 //! and returns its name in a newly allocated string (which must be freed by
 //! the caller) or returns NULL if no tag can be found or if the XML is not
@@ -2300,11 +2086,11 @@ static char *find_cont(const char *xml, char *xpath)
             stk_p++;
             if (stk_p == _STK_SIZE) // exceeding stack size, error
                 goto cleanup;
-            n_stk[stk_p] = strduplc(name);  // put a lower-case-only copy onto stack
+            n_stk[stk_p] = euca_strduptolower(name);    // put a lower-case-only copy onto stack
             c_stk[stk_p] = xml + xml_offset + tag_end + 1;
         } else {                // closing tag
             // get the name in all lower-case, for consistency with xpath
-            name_lc = strduplc(name);
+            name_lc = euca_strduptolower(name);
             EUCA_FREE(name);
             name = name_lc;
 
@@ -2379,7 +2165,7 @@ char *xpath_content(const char *xml, const char *xpath)
     if ((xml == NULL) || (xpath == NULL))
         return (NULL);
 
-    xpath_l = strduplc(xpath);  // lower-case copy of requested xpath
+    xpath_l = euca_strduptolower(xpath);    // lower-case copy of requested xpath
     if (xpath_l != NULL) {
         ret = find_cont(xml, xpath_l);
         EUCA_FREE(xpath_l);
@@ -2492,44 +2278,6 @@ int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path)
     }
 
     return (EUCA_OK);
-}
-
-//!
-//! returns a new string in which 'new' is appended to 'original'
-//! and frees 'original'
-//!
-//! @param[in] original
-//! @param[in] new
-//!
-//! @return a pointer to the newly allocated string
-//!
-char *strdupcat(char *original, char *new)
-{
-    int len = 0;
-    int olen = 0;
-    char *ret = NULL;
-
-    if (original) {
-        olen = strlen(original);
-        len += olen;
-    }
-
-    if (new) {
-        len += strlen(new);
-    }
-
-    if ((ret = EUCA_ZALLOC(len + 1, sizeof(char))) != NULL) {
-        if (original) {
-            strncat(ret, original, len);
-            EUCA_FREE(original);
-        }
-
-        if (new) {
-            strncat(ret, new, len - olen);
-        }
-    }
-
-    return (ret);
 }
 
 //!
@@ -2661,22 +2409,6 @@ int safe_mkstemp(char *template)
 }
 
 //!
-//! ensure the string is aways 0-terminated
-//!
-//! @param[in] s1
-//! @param[in] s2
-//! @param[in] len
-//!
-//! @return the number of character copied in s1
-//!
-char *safe_strncpy(char *s1, const char *s2, size_t len)
-{
-    char *ret = strncpy(s1, s2, len);
-    s1[len - 1] = '\0';
-    return (ret);
-}
-
-//!
 //! try to get UUID of the block device
 //!
 //! @param[in] dev_path
@@ -2704,7 +2436,7 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
         last_char = strchr(first_char, '"');
         if (last_char && ((last_char - first_char) > 0)) {
             *last_char = '\0';
-            safe_strncpy(uuid, first_char, uuid_size);
+            euca_strncpy(uuid, first_char, uuid_size);
             assert(0 == strcmp(uuid, first_char));
             ret = EUCA_OK;
         }
@@ -2724,7 +2456,7 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
 char parse_boolean(const char *s)
 {
     char val = '\0';
-    char *lc = strduplc(s);
+    char *lc = euca_strduptolower(s);
 
     if (!strcmp(lc, "y") || !strcmp(lc, "yes") || !strcmp(lc, "t") || !strcmp(lc, "true")) {
         val = 1;

@@ -103,6 +103,7 @@
 #include <hash.h>
 
 #include <fault.h>
+#include <euca_string.h>
 #include <eucalyptus.h>
 
 /*----------------------------------------------------------------------------*\
@@ -313,7 +314,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
         bzero(vnetconfig, sizeof(vnetConfig));
         // always need 'mode' set
         if (mode) {
-            safe_strncpy(vnetconfig->mode, mode, 32);
+            euca_strncpy(vnetconfig->mode, mode, 32);
         } else {
             logprintfl(EUCAERROR, "VNET_MODE is not set\n");
             return (EUCA_INVALID_ERROR);
@@ -409,23 +410,23 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
         }
 
         if (macPrefix)
-            safe_strncpy(vnetconfig->macPrefix, macPrefix, 6);
+            euca_strncpy(vnetconfig->macPrefix, macPrefix, 6);
         if (path)
-            safe_strncpy(vnetconfig->path, path, MAX_PATH);
+            euca_strncpy(vnetconfig->path, path, MAX_PATH);
         if (eucahome)
-            safe_strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
+            euca_strncpy(vnetconfig->eucahome, eucahome, MAX_PATH);
         if (pubInterface)
-            safe_strncpy(vnetconfig->pubInterface, pubInterface, 32);
+            euca_strncpy(vnetconfig->pubInterface, pubInterface, 32);
         if (bridgedev)
-            safe_strncpy(vnetconfig->bridgedev, bridgedev, 32);
+            euca_strncpy(vnetconfig->bridgedev, bridgedev, 32);
         if (daemon)
-            safe_strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
+            euca_strncpy(vnetconfig->dhcpdaemon, daemon, MAX_PATH);
         if (privInterface)
-            safe_strncpy(vnetconfig->privInterface, privInterface, 32);
+            euca_strncpy(vnetconfig->privInterface, privInterface, 32);
         if (dhcpuser)
-            safe_strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
+            euca_strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
         if (domainname) {
-            safe_strncpy(vnetconfig->euca_domainname, domainname, 256);
+            euca_strncpy(vnetconfig->euca_domainname, domainname, 256);
         } else {
             strncpy(vnetconfig->euca_domainname, "eucalyptus", strlen("eucalyptus") + 1);
         }
@@ -766,7 +767,7 @@ int vnetInitTunnels(vnetConfig * vnetconfig)
                     snprintf(file, MAX_PATH, EUCALYPTUS_DATA_DIR "/vtunall.conf.template", vnetconfig->eucahome);
                     template = file2str(file);
                     if (template) {
-                        replace_string(&template, "VPASS", pass);
+                        euca_strreplace(&template, "VPASS", pass);
                         vnetconfig->tunnels.tunpassMtime = time(NULL);
                         done = TRUE;
                     }
@@ -1643,10 +1644,10 @@ int vnetSetVlan(vnetConfig * vnetconfig, int vlan, char *uuid, char *user, char 
         return (EUCA_INVALID_ERROR);
     }
 
-    safe_strncpy(vnetconfig->users[vlan].userName, user, 48);
-    safe_strncpy(vnetconfig->users[vlan].netName, network, 64);
+    euca_strncpy(vnetconfig->users[vlan].userName, user, 48);
+    euca_strncpy(vnetconfig->users[vlan].netName, network, 64);
     if (uuid)
-        safe_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
+        euca_strncpy(vnetconfig->users[vlan].uuid, uuid, 48);
     return (EUCA_OK);
 }
 
@@ -2025,7 +2026,7 @@ int vnetAddDev(vnetConfig * vnetconfig, char *dev)
             return (EUCA_ERROR);
         }
         if (vnetconfig->etherdevs[i][0] == '\0') {
-            safe_strncpy(vnetconfig->etherdevs[i], dev, MAX_ETH_DEV_PATH);
+            euca_strncpy(vnetconfig->etherdevs[i], dev, MAX_ETH_DEV_PATH);
             return (EUCA_OK);
         }
     }
@@ -4165,6 +4166,7 @@ int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
 {
     struct ifaddrs *ifaddr = NULL;
     struct ifaddrs *ifa = NULL;
+    struct sockaddr_in *ifs = NULL;
     char host[NI_MAXHOST] = { 0 };
     int rc = 0;
     int count = 0;
@@ -4195,7 +4197,8 @@ int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
 
                     (*outips)[count - 1] = dot2hex(host);
 
-                    tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_netmask)->sin_addr;
+                    ifs = ((struct sockaddr_in *) ifa->ifa_netmask);
+                    tmpAddrPtr = &ifs->sin_addr;
                     if (inet_ntop(AF_INET, tmpAddrPtr, buf, 32)) {
                         (*outnms)[count - 1] = dot2hex(buf);
                     }
