@@ -3758,7 +3758,7 @@ LDFLAGS="`getconf LFS64_LDFLAGS` `getconf LFS_LDFLAGS` $LDFLAGS"
 LIBS="`getconf LFS64_LIBS` `getconf LFS_LIBS` $LIBS"
 CFLAGS+=" `getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
 
-CFLAGS="${CFLAGS} -Wall -Werror -fPIC -DHAVE_CONFIG_H -std=gnu99"
+CFLAGS="${CFLAGS} -Wall -Werror -fPIC -DHAVE_CONFIG_H -std=gnu99 -O3"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net"
 
 # Arguments checking
