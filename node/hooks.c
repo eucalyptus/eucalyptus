@@ -191,14 +191,15 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
 
     euca_strncpy(euca_path, euca_dir, sizeof(euca_path));
     if (check_directory(euca_path))
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
+
     euca_strncpy(hooks_path, hooks_dir, sizeof(hooks_path));
     if (check_directory(hooks_path))
-        return EUCA_ERROR;
-    logprintfl(EUCAINFO, "using hooks directory %s\n", hooks_path);
+        return (EUCA_ERROR);
 
+    logprintfl(EUCAINFO, "using hooks directory %s\n", hooks_path);
     initialized = TRUE;
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -211,52 +212,49 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
 //!
 int call_hooks(const char *event_name, const char *param1)
 {
+    int ret = 0;
+    DIR *dir = NULL;
+    char *entry_name = NULL;
+    char cmd[MAX_PATH] = "";
+    char entry_path[MAX_PATH] = "";
+    struct stat sb = { 0 };
+    struct dirent *dir_entry = NULL;
+
     assert(event_name);
     if (!initialized) {
         // return EUCA_OK if hooks were not initialized
-        return 0;
+        return (EUCA_OK);
     }
 
-    DIR *dir;
     if ((dir = opendir(hooks_path)) == NULL) {
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
     }
 
-    int ret = 0;
-    struct dirent *dir_entry;
     while ((dir_entry = readdir(dir)) != NULL) {
-        char *entry_name = dir_entry->d_name;
+        entry_name = dir_entry->d_name;
 
         if (!strcmp(".", entry_name) || !strcmp("..", entry_name))
             continue;           // ignore known unrelated files
 
         // get the path of the directory item
-        char entry_path[MAX_PATH];
         snprintf(entry_path, sizeof(entry_path), "%s/%s", hooks_path, entry_name);
-        struct stat sb;
         if (stat(entry_path, &sb) == -1)
             continue;           // ignore access errors
 
         // run the hook if...
         if ((S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode))    // looks like a file or symlink
             && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {  // is executable
-            char cmd[MAX_PATH];
             snprintf(cmd, sizeof(cmd), "%s %s %s %s", entry_path, event_name, euca_path, param1 ? param1 : "");
             ret = WEXITSTATUS(system(cmd));
             logprintfl(EUCATRACE, "executed hook [%s %s%s%s] which returned %d\n", entry_name, event_name, param1 ? " " : "", param1 ? param1 : "",
                        ret);
-            if (ret > 0 && ret < 100)
+            if ((ret > 0) && (ret < 100))
                 break;          // bail if any hook returns code [1-99] (100+ are reserved for future use)
         }
     }
     closedir(dir);
-
-    return ret;
+    return ((ret == 0) ? EUCA_OK : EUCA_ERROR);
 }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
-// code for unit-testing below, to be compiled into a stand-alone binary
-///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef __STANDALONE
 //!
@@ -270,31 +268,31 @@ int call_hooks(const char *event_name, const char *param1)
 int main(int argc, char **argv)
 {
     int status = 0;
+    char d[MAX_PATH] = "/tmp/euca-XXXXXX";
+    char h0[MAX_PATH] = "";
+    char h1[MAX_PATH] = "";
+    char h3[MAX_PATH] = "";
+    char h4[MAX_PATH] = "";
 
     assert(call_hooks("e1", NULL) != 0);
     assert(call_hooks("e1", "p1") != 0);
     assert(init_hooks("/tmp", "/foobar") != 0);
     assert(init_hooks("/foobar", "/tmp") != 0);
 
-    char d[MAX_PATH] = "/tmp/euca-XXXXXX";
     assert(mkdtemp(d) != NULL);
     assert(init_hooks("/tmp", d) == 0);
 
-    char h1[MAX_PATH];
     snprintf(h1, sizeof(h1), "%s/h1", d);
     write2file(h1, "#!/bin/bash\necho h1 -$1- -$2- -$3-\n");
     chmod(h1, S_IXUSR | S_IRUSR);
-    char h3[MAX_PATH];
     snprintf(h3, sizeof(h3), "%s/h3", d);
     write2file(h3, "#!/bin/bash\necho h3 -$1- -$2- -$3-\n");
     chmod(h3, 0);               // unreadable hook
-    char h4[MAX_PATH];
     snprintf(h4, sizeof(h4), "%s/h4", d);
     mkdir(h4, 0700);            // not a file
 
     assert(call_hooks("e1", NULL) == 0);
     assert(call_hooks("e1", "p1") == 0);
-    char h0[MAX_PATH];
     snprintf(h0, sizeof(h0), "%s/h0", d);
     write2file(h0, "#!/bin/bash\nexit 99;\n");
     chmod(h0, S_IXUSR | S_IRUSR);
@@ -307,6 +305,6 @@ int main(int argc, char **argv)
     assert(rmdir(d) == 0);
     printf("removed directory %s\n", d);
 
-    return status;
+    return (status);
 }
 #endif /* __STANDALONE */

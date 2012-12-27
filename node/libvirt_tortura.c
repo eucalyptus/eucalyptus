@@ -212,7 +212,6 @@ static virConnectPtr *check_hypervisor_conn(void)
         }
     }
     pthread_mutex_unlock(&check_mutex);
-
     return (&conn);
 }
 
@@ -434,4 +433,5 @@ int main(int argc, char **argv)
     }
 
     printf("waited for all competing threads\n");
+    return (0);
 }
