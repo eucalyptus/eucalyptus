@@ -383,7 +383,7 @@ long long euca_strtoll(const char *string, const char *begin, const char *end)
 //!
 //! Duplicate and convert a string to lower characters
 //!
-//! @param[in] str the string to duplicate and convert to lower case
+//! @param[in] string the string to duplicate and convert to lower case
 //!
 //! @return a pointer to the lower care result
 //!
