@@ -396,7 +396,7 @@ long long euca_strtoll(const char *string, const char *begin, const char *end)
 char *euca_strduptolower(const char *restrict string)
 {
     char *lc = NULL;
-    register int i = 0;
+    register size_t i = 0;
     register size_t len = 0;
 
     // Was str provided?

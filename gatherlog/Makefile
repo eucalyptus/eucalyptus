@@ -67,6 +67,7 @@ GLWSDL=$(WSDLPATH)/$(GLWSDLNAME)
 SERVICE_SO=libEucalyptusGL.so
 SERVICE_NAME=EucalyptusGL
 CLIENT=GLclient
+GFLAGS=$(patsubst -Werror,,$(CFLAGS))
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 #server client
 all: generated/stubs
@@ -87,12 +88,12 @@ generated/stubs: $(GLWSDL)
 	@echo Adding marshalling calls to server stubs
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated CFLAGS="$(CFLAGS) -Wno-unused-variable"
+	$(MAKE) -C generated CFLAGS="$(GFLAGS) -Wno-unused-variable"
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c -O $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 

@@ -70,6 +70,7 @@ SERVICE_SO=libEucalyptusCC.so
 SERVICE_SO_FAKE=libEucalyptusCCFake.so
 SERVICE_NAME=EucalyptusCC
 CLIENT=CCclient
+GFLAGS=$(patsubst -Werror,,$(CFLAGS))
 CLIENTKILLALL=euca_killall
 SHUTDOWNCC=shutdownCC
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
@@ -103,12 +104,12 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated CFLAGS="$(CFLAGS) -Wno-unused-variable"
+	$(MAKE) -C generated CFLAGS="$(GFLAGS) -Wno-unused-variable"
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c -O $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 ../node/client-marshal-fake.o:
 	make -C ../node fake

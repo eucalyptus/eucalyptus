@@ -1644,8 +1644,8 @@ char *file2str(const char *path)
     int bytes_total = 0;
     int to_read = 0;
     char *p = NULL;
-    int file_size = 0;
     char *content = NULL;
+    off_t file_size = 0;
     struct stat mystat = { 0 };
 
     if (stat(path, &mystat) < 0) {

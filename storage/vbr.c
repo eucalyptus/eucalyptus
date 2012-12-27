@@ -534,7 +534,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
                 return EUCA_ERROR;
             }
 
-            int letters_len = 3;    // e.g. "sda"
+            size_t letters_len = 3;    // e.g. "sda"
             if (t == 'x')
                 letters_len = 4;    // e.g., "xvda"
             if (t == 'f')
@@ -1479,7 +1479,7 @@ void art_free(artifact * a)
 //!
 void arts_free(artifact * array[], unsigned int array_len)
 {
-    int i = 0;
+    u_int i = 0;
     if (array) {
         for (i = 0; i < array_len; i++)
             ART_FREE(array[i]);
@@ -1568,15 +1568,19 @@ boolean tree_uses_cache(artifact * a)
 //!
 static int art_gen_id(char *buf, unsigned int buf_size, const char *first, const char *sig)
 {
-    char hash[48];
+    int bytesWritten = 0;
+    char hash[48] = "";
 
     if (hexjenkins(hash, sizeof(hash), sig) != EUCA_OK)
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
 
-    if (snprintf(buf, buf_size, "%s-%s", first, hash) >= buf_size)  // truncation
-        return EUCA_ERROR;
+    if((bytesWritten = snprintf(buf, buf_size, "%s-%s", first, hash)) < 0)
+        return (EUCA_ERROR);
 
-    return EUCA_OK;
+    if (((unsigned) bytesWritten) >= buf_size)  // truncation
+        return (EUCA_ERROR);
+
+    return (EUCA_OK);
 }
 
 //!

@@ -235,7 +235,7 @@ static void log_sensor_resources(const char *name, sensorResource ** srs, int sr
 #endif /* _UNIT_TEST */
 static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *resourceName, const char *resourceType, const char *resourceUuid);
 static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * sr, const char *metricName);
-static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const int counterType);
+static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const sensorCounterType counterType);
 static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter * sc, const char *dimensionName);
 
 #ifdef _UNIT_TEST
@@ -828,7 +828,7 @@ int sensor_get_num_resources(void)
 //!
 sensorCounterType sensor_str2type(const char *counterType)
 {
-    for (int i = 0; i < (sizeof(sensorCounterTypeName) / sizeof(char *)); i++) {
+    for (u_int i = 0; i < (sizeof(sensorCounterTypeName) / sizeof(char *)); i++) {
         if (strcmp(sensorCounterTypeName[i], counterType) == 0)
             return i;
     }
@@ -845,7 +845,7 @@ sensorCounterType sensor_str2type(const char *counterType)
 //!
 const char *sensor_type2str(sensorCounterType type)
 {
-    if ((type >= 0) && (type < (sizeof(sensorCounterTypeName) / sizeof(char *))))
+    if ((((signed) type) >= 0) && (type < (sizeof(sensorCounterTypeName) / sizeof(char *))))
         return (sensorCounterTypeName[type]);
     return ("[invalid]");
 }
@@ -1127,7 +1127,7 @@ static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * s
 //!
 //! @return a pointer to the sensor counter or NULL on failure
 //!
-static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const int counterType)
+static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const sensorCounterType counterType)
 {
     // sanity check
     if (sm->countersLen < 0 || sm->countersLen > MAX_SENSOR_COUNTERS) {

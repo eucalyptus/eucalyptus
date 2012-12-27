@@ -4628,15 +4628,17 @@ static int do_clone_stresstest(const char *base, const char *name, blobstore_for
                                blobstore_snapshot_t snapshot)
 {
     int errors = 0;
+    blobstore *bs1 = NULL;
+    blobstore *bs2 = NULL;
+
     printf("commencing cloning stress-test...\n");
 
-    blobstore *bs1 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_DM);
-    if (bs1 == NULL) {
+    if ((bs1 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_DM)) == NULL) {
         errors++;
         goto done;
     }
-    blobstore *bs2 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
-    if (bs2 == NULL) {
+
+    if ((bs2 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM)) == NULL) {
         errors++;
         goto done;
     }

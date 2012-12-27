@@ -271,7 +271,7 @@ size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsiz
         }
 
         // does the sequence header tell us truth about length?
-        if ((lim - p) <= (n - 1)) {
+        if (((signed)(lim - p)) <= ((signed)(n - 1))) {
             if ((flags & UTF8_IGNORE_ERROR) == 0)
                 return (0);
             n = 1;
@@ -396,7 +396,7 @@ size_t wchar_to_utf8(const wchar_t * in, size_t insize, char *out, size_t outsiz
         if (out == NULL)
             continue;
 
-        if ((lim - p) <= (n - 1))
+        if (((signed)(lim - p)) <= ((signed)(n - 1)))
             return (0);         // no space left
 
         /* make it work under different endians */
