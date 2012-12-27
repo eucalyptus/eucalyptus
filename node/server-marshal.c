@@ -556,7 +556,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
 
         groupNamesSize = adb_ncRunInstanceType_sizeof_groupNames(input, env);
         if ((groupNames = EUCA_ZALLOC(groupNamesSize, sizeof(char *))) == NULL) {
-            logprintfl(EUCAERROR, "[%s] out of memory\n", instanceId);
+            logprintfl(EUCAERROR, "[%s] out of memory. Cannot allocate %d groups.\n", instanceId, groupNamesSize);
             adb_ncRunInstanceResponseType_set_return(output, env, AXIS2_FALSE);
         } else {
             for (i = 0; i < groupNamesSize; i++) {
