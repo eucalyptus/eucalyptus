@@ -4197,7 +4197,7 @@ int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
 
                     (*outips)[count - 1] = dot2hex(host);
 
-                    ifs = ((struct sockaddr_in *) ifa->ifa_netmask);
+                    ifs = ((struct sockaddr_in *)ifa->ifa_netmask);
                     tmpAddrPtr = &ifs->sin_addr;
                     if (inet_ntop(AF_INET, tmpAddrPtr, buf, 32)) {
                         (*outnms)[count - 1] = dot2hex(buf);
