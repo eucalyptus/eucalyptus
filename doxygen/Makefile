@@ -77,6 +77,9 @@ nodedoc:
 clusterdoc:
 	@doxygen cluster.doxyfile > /dev/null;
 
+brokerdoc:
+	@doxygen vmware-broker.doxyfile > /dev/null;
+
 deploy:
 
 clean:
