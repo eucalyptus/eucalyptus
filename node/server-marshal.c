@@ -527,6 +527,10 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
 
     pthread_mutex_lock(&ncHandlerLock);
     {
+        adb_ncRunInstanceType_t *input = adb_ncRunInstance_get_ncRunInstance(ncRunInstance, env);
+        adb_ncRunInstanceResponse_t *response = adb_ncRunInstanceResponse_create(env);
+        adb_ncRunInstanceResponseType_t *output = adb_ncRunInstanceResponseType_create(env);
+
         // get operation-specific fields from input
         uuid = adb_ncRunInstanceType_get_uuid(input, env);
         instanceId = adb_ncRunInstanceType_get_instanceId(input, env);
