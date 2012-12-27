@@ -845,7 +845,7 @@ sensorCounterType sensor_str2type(const char *counterType)
 //!
 const char *sensor_type2str(sensorCounterType type)
 {
-    if ((((signed) type) >= 0) && (type < (sizeof(sensorCounterTypeName) / sizeof(char *))))
+    if ((((signed)type) >= 0) && (type < (sizeof(sensorCounterTypeName) / sizeof(char *))))
         return (sensorCounterTypeName[type]);
     return ("[invalid]");
 }

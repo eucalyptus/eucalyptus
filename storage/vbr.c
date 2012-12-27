@@ -534,7 +534,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
                 return EUCA_ERROR;
             }
 
-            size_t letters_len = 3;    // e.g. "sda"
+            size_t letters_len = 3; // e.g. "sda"
             if (t == 'x')
                 letters_len = 4;    // e.g., "xvda"
             if (t == 'f')
@@ -1574,10 +1574,10 @@ static int art_gen_id(char *buf, unsigned int buf_size, const char *first, const
     if (hexjenkins(hash, sizeof(hash), sig) != EUCA_OK)
         return (EUCA_ERROR);
 
-    if((bytesWritten = snprintf(buf, buf_size, "%s-%s", first, hash)) < 0)
+    if ((bytesWritten = snprintf(buf, buf_size, "%s-%s", first, hash)) < 0)
         return (EUCA_ERROR);
 
-    if (((unsigned) bytesWritten) >= buf_size)  // truncation
+    if (((unsigned)bytesWritten) >= buf_size)   // truncation
         return (EUCA_ERROR);
 
     return (EUCA_OK);
