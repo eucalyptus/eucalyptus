@@ -144,8 +144,8 @@ struct fakeconfig_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-fakeconfig *myconfig;           //!< fake configuration
-sem_t *fakelock;                //!< fake configuration lock
+fakeconfig *myconfig = NULL;    //!< fake configuration
+sem_t *fakelock = NULL;         //!< fake configuration lock
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -210,8 +210,6 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //!
 void saveNcStuff()
 {
-    int fd, i, done = 0;
-
     sem_post(fakelock);
 }
 
@@ -229,17 +227,21 @@ void saveNcStuff()
 //!
 int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode)
 {
-    int shd, rc, ret;
+    int shd = 0;
+    int rc = 0;
+    int ret = EUCA_OK;
+    int fd = 0;
+    char *tmpstr = NULL;
+    char path[MAX_PATH] = "";
+    struct stat mystat = { 0 };
 
     // create a lock and grab it
     *lock = sem_open(lockname, O_CREAT, 0644, 1);
     sem_wait(*lock);
-    ret = EUCA_OK;
 
     if (mode == SHARED_MEM) {
         // set up shared memory segment for config
-        shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644);
-        if (shd >= 0) {
+        if ((shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644)) >= 0) {
             // if this is the first process to create the config, init to 0
             rc = ftruncate(shd, bytes);
         } else {
@@ -255,21 +257,15 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
 
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
-        char *tmpstr, path[MAX_PATH];
-        struct stat mystat;
-        int fd;
-
-        tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
-        if (!tmpstr) {
+        if ((tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
             snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
         } else {
             snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
         }
 
-        fd = open(path, O_RDWR | O_CREAT, 0600);
-        if (fd < 0) {
+        if ((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) {
             fprintf(stderr, "ERROR: cannot open/create '%s' to set up mmapped buffer\n", path);
-            ret = 1;
+            ret = EUCA_ERROR;
         } else {
             mystat.st_size = 0;
             rc = fstat(fd, &mystat);
@@ -278,11 +274,11 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
                 rc = ftruncate(fd, bytes);
             }
 
-            *buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-            if (*buf == NULL) {
+            if ((*buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == NULL) {
                 fprintf(stderr, "ERROR: cannot mmap fd\n");
-                ret = 1;
+                ret = EUCA_ERROR;
             }
+
             close(fd);
         }
     }
@@ -295,8 +291,13 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
 //!
 void loadNcStuff()
 {
-    int fd, i, count = 0, done = 0, rc, j;
-    struct stat mystat;
+    int fd = 0;
+    int i = 0;
+    int j = 0;
+    int count = 0;
+    int done = 0;
+    int rc = 0;
+    struct stat mystat = { 0 };
 
     rc = setup_shared_buffer_fake((void **)&myconfig, "/eucalyptusCCfakeconfig", sizeof(fakeconfig), &fakelock, "/eucalyptusCCfakelock", SHARED_FILE);
     if (rc) {
@@ -326,7 +327,6 @@ void loadNcStuff()
         myconfig->current = time(NULL);
         for (i = 0; i < MAX_FAKE_INSTANCES; i++) {
             if (strlen(myconfig->global_instances[i].instanceId)) {
-
                 if (!strcmp(myconfig->global_instances[i].stateName, "Teardown") && ((time(NULL) - myconfig->global_instances[i].launchTime) > 300)) {
                     logprintfl(EUCADEBUG, "fakeNC: setup(): invalidating instance %s\n", myconfig->global_instances[i].instanceId);
                     bzero(&(myconfig->global_instances[i]), sizeof(ncInstance));
@@ -355,6 +355,9 @@ void loadNcStuff()
 //!
 ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
 {
+    char *uri = NULL;
+    char *p = NULL;
+    char *node_name = NULL;
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
     axis2_stub_t *stub = NULL;
@@ -382,16 +385,16 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         return NULL;
     }
 
-    char *uri = endpoint_uri;
+    uri = endpoint_uri;
 
     // extract node name from the endpoint
-    char *p = strstr(uri, "://");   // find "http[s]://..."
+    p = strstr(uri, "://");     // find "http[s]://..."
     if (p == NULL) {
         logprintfl(EUCAERROR, "fakeNC: ncStubCreate received invalid URI %s\n", uri);
         return NULL;
     }
 
-    char *node_name = strdup(p + 3);    // copy without the protocol prefix
+    node_name = strdup(p + 3);  // copy without the protocol prefix
     if (node_name == NULL) {
         logprintfl(EUCAERROR, "fakeNC: ncStubCreate is out of memory\n");
         return NULL;
@@ -427,7 +430,7 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     }
 
     EUCA_FREE(node_name);
-    return st;
+    return (st);
 }
 
 //!
@@ -477,8 +480,10 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
                       char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                       int groupNamesSize, ncInstance ** outInstPtr)
 {
-    ncInstance *instance;
-    int i, j, foundidx = -1;
+    int i = 0;
+    int j = 0;
+    int foundidx = -1;
+    ncInstance *instance = NULL;
 
     logprintfl(EUCADEBUG, "fakeNC: runInstance(): params: uuid=%s instanceId=%s reservationId=%s ownerId=%s accountId=%s platform=%s\n", SP(uuid),
                SP(instanceId), SP(reservationId), SP(ownerId), SP(accountId), SP(platform));
@@ -490,12 +495,8 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
 
     loadNcStuff();
 
-    instance = allocate_instance(uuid,
-                                 instanceId,
-                                 reservationId,
-                                 params,
-                                 instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId, netparams, keyName, userData, launchIndex,
-                                 platform, expiryTime, groupNames, groupNamesSize);
+    instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
+                                 netparams, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
     if (instance) {
         instance->launchTime = time(NULL);
         foundidx = -1;
@@ -504,6 +505,7 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
                 foundidx = i;
             }
         }
+
         memcpy(&(myconfig->global_instances[foundidx]), instance, sizeof(ncInstance));
         logprintfl(EUCADEBUG, "fakeNC: runInstance(): decrementing resource by %d/%d/%d\n", params->cores, params->mem, params->disk);
         myconfig->res.memorySizeAvailable -= params->mem;
@@ -534,7 +536,8 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
 //!
 int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState)
 {
-    int i, done = 0;
+    int i = 0;
+    int done = 0;
 
     logprintfl(EUCADEBUG, "fakeNC: terminateInstance(): params: instanceId=%s force=%d\n", SP(instanceId), force);
 
@@ -576,7 +579,8 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 //!
 int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp)
 {
-    int i, done = 0;
+    int i = 0;
+    int done = 0;
 
     logprintfl(EUCADEBUG, "fakeNC: assignAddress(): params: instanceId=%s publicIp=%s\n", SP(instanceId), SP(publicIp));
     if (!instanceId || !publicIp) {
@@ -625,7 +629,10 @@ int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta)
 //!
 int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen)
 {
-    int i, numinsts = 0;
+    int i = 0;
+    int numinsts = 0;
+    ncInstance *newinst = NULL;
+
     logprintfl(EUCADEBUG, "fakeNC: describeInstances(): params: instIdsLen=%d\n", instIdsLen);
 
     if (instIdsLen < 0) {
@@ -639,11 +646,11 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
     *outInsts = EUCA_ZALLOC(MAX_FAKE_INSTANCES, sizeof(ncInstance *));
     for (i = 0; i < MAX_FAKE_INSTANCES; i++) {
         if (strlen(myconfig->global_instances[i].instanceId)) {
-            ncInstance *newinst;
             newinst = EUCA_ZALLOC(1, sizeof(ncInstance));
             if (!strcmp(myconfig->global_instances[i].stateName, "Pending")) {
                 snprintf(myconfig->global_instances[i].stateName, 8, "Extant");
             }
+
             memcpy(newinst, &(myconfig->global_instances[i]), sizeof(ncInstance));
             (*outInsts)[numinsts] = newinst;
             logprintfl(EUCADEBUG, "fakeNC: describeInstances(): idx=%d numinsts=%d instanceId=%s stateName=%s\n", i, numinsts, newinst->instanceId,
@@ -779,7 +786,11 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
 //!
 int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev)
 {
-    int i, j, done = 0, vdone = 0, foundidx = -1;
+    int i = 0;
+    int j = 0;
+    int done = 0;
+    int vdone = 0;
+    int foundidx = -1;
 
     logprintfl(EUCADEBUG, "fakeNC:  attachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId),
                SP(remoteDev), SP(localDev));
@@ -834,7 +845,11 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 //!
 int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force)
 {
-    int i, j, done = 0, vdone = 0, foundidx = -1;
+    int i = 0;
+    int j = 0;
+    int done = 0;
+    int vdone = 0;
+    int foundidx = -1;
 
     logprintfl(EUCADEBUG, "fakeNC:  detachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId),
                SP(remoteDev), SP(localDev));
