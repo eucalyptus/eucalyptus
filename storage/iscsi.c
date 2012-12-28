@@ -74,7 +74,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -84,10 +83,11 @@
 #include <strings.h>
 #include <fcntl.h>              /* open */
 #include <signal.h>
-#include "eucalyptus.h"
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <eucalyptus.h>
+#include <config.h>
 #include <misc.h>
 #include <ipc.h>
 #include <euca_string.h>

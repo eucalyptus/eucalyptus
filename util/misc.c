@@ -99,6 +99,8 @@
 #include <sys/mman.h>           // mmap
 #include <pthread.h>
 
+#include "eucalyptus.h"
+
 #include <diskutil.h>
 #include <vnetwork.h>
 
@@ -106,8 +108,6 @@
 #include "euca_auth.h"
 #include "log.h"
 #include "euca_string.h"
-
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1621,7 +1621,7 @@ char *file2strn(const char *path, const ssize_t limit)
     }
 
     if (mystat.st_size > limit) {
-        logprintfl(EUCAERROR, "file %s exceeds the limit (%d) in file2strn()\n", path, limit);
+        logprintfl(EUCAERROR, "file %s exceeds the limit (%lu) in file2strn()\n", path, limit);
         return (NULL);
     }
 
@@ -2530,18 +2530,21 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     assert(stderr_str);
 
     if (pipe(stdoutfds) < 0) {
-        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, errorBuf, 256));
+        strerror_r(errno, errorBuf, 256);
+        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", errorBuf);
         return (-1);
     }
     if (pipe(stderrfds) < 0) {
-        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, errorBuf, 256));
+        strerror_r(errno, errorBuf, 256);
+        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", errorBuf);
         return (-1);
     }
 
     if ((child_pid = fork()) == 0) {
         close(stdoutfds[0]);
         if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
-            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, errorBuf, 256));
+            strerror_r(errno, errorBuf, 256);
+            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", errorBuf);
             exit(1);
         }
 
@@ -2549,7 +2552,8 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
         close(stderrfds[0]);
 
         if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
-            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, errorBuf, 256));
+            strerror_r(errno, errorBuf, 256);
+            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", errorBuf);
             exit(1);
         };
 
@@ -2603,7 +2607,8 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
                 }
             }
         } else if (retval < 0) {
-            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, errorBuf, 256));
+            strerror_r(errno, errorBuf, 256);
+            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", errorBuf);
             break;
         }
 

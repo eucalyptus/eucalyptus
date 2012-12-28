@@ -97,10 +97,10 @@
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
+#include <eucalyptus.h>
 #include <ipc.h>
 #include <misc.h>
 #include <backing.h>
-#include <eucalyptus.h>
 #include <vnetwork.h>
 #include <euca_auth.h>
 #include <vbr.h>

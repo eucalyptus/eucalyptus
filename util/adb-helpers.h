@@ -327,7 +327,7 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
                              SMALL_CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
                 params->virtualBootRecord[i].size = adb_virtualBootRecordType_get_size(vbr_type, env);
-                logprintfl(EUCATRACE, "             size: %d\n", params->virtualBootRecord[i].size);
+                logprintfl(EUCATRACE, "             size: %lld\n", params->virtualBootRecord[i].size);
                 euca_strncpy(params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 logprintfl(EUCATRACE, "           format: %s\n", params->virtualBootRecord[i].formatName);
                 euca_strncpy(params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
@@ -711,7 +711,7 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         num_values = sd->valuesLen;
                     } else {
                         if (num_values != sd->valuesLen) {
-                            logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen is not consistent across dimensions for %s:%s:%s)\n",
+                            logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d is not consistent across dimensions for %s:%s:%s)\n",
                                        sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
                         }
                     }

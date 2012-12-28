@@ -98,13 +98,13 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 
+#include <eucalyptus.h>
 #include <vnetwork.h>
 #include <misc.h>
 #include <hash.h>
 
 #include <fault.h>
 #include <euca_string.h>
-#include <eucalyptus.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -3709,7 +3709,7 @@ int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, 
 
     //! @todo CHUCK -> vnetSetPublicIP not set for param_check()
     if (param_check("vnetSetPublicIP", vnetconfig, ip, setval)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ip=%s, setval=%s\n", vnetconfig, SP(ip), setval);
+        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ip=%s, setval=%d\n", vnetconfig, SP(ip), setval);
         return (EUCA_INVALID_ERROR);
     }
 

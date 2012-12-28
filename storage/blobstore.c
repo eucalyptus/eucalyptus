@@ -92,8 +92,8 @@
 #include <sys/types.h>          // gettid
 #include <regex.h>
 
-#include <misc.h>               // ensure_...
 #include <eucalyptus.h>         // euca user
+#include <misc.h>               // ensure_...
 #include <ipc.h>
 #include <euca_string.h>
 
@@ -940,7 +940,7 @@ static int close_and_unlock(int fd)
                                    path_lock->path);
 
                     } else {
-                        logprintfl(EUCATRACE, "{%u} close_and_unlock: kept fd=%d path=%d open/refs=%d/%d\n", (unsigned int)pthread_self(), fd,
+                        logprintfl(EUCATRACE, "{%u} close_and_unlock: kept fd=%d path=%s open/refs=%d/%d\n", (unsigned int)pthread_self(), fd,
                                    path_lock->path, open_fds, path_lock->refs);
                     }
                     pthread_rwlock_unlock(&(path_lock->lock));  // give up the Posix lock
@@ -1206,13 +1206,12 @@ static int open_and_lock(const char *path, int flags, long long timeout_usec, mo
         struct flock l;
         fcntl(fd, F_GETLK, flock_whole_file(&l, l_type));
 
-        logprintfl(EUCATRACE, "{%u} open_and_lock: locked fd=%d path=%s flags=%d ino=%d mode=%0o [lock type=%d whence=%d start=%d length=%d]\n",
+        logprintfl(EUCATRACE, "{%u} open_and_lock: locked fd=%d path=%s flags=%d ino=%ld mode=%0o [lock type=%d whence=%d start=%ld length=%ld]\n",
                    (unsigned int)pthread_self(), fd, path, o_flags, s.st_ino, s.st_mode, l.l_type, l.l_whence, l.l_start, l.l_len);
     }
     return fd;
 
 error:
-
     // due to aproblem above (inability to open the file or
     // to acquire Posix locks within the deadline), the 
     // 'blobstore_filelock' struct will be removed from the 
@@ -1260,7 +1259,7 @@ error:
                 logprintfl(EUCATRACE, "{%u} open_and_lock: freed fd=%d path=%s\n", (unsigned int)pthread_self(), fd, path_lock->path);
 
             } else {
-                logprintfl(EUCATRACE, "{%u} open_and_lock: kept fd=%d path=%d open/refs=%d/%d\n", (unsigned int)pthread_self(), fd, path_lock->path,
+                logprintfl(EUCATRACE, "{%u} open_and_lock: kept fd=%d path=%s open/refs=%d/%d\n", (unsigned int)pthread_self(), fd, path_lock->path,
                            open_fds, path_lock->refs);
             }
 
@@ -1631,7 +1630,7 @@ write_metadata:
             ERR(BLOBSTORE_ERROR_INVAL, "'limit_blocks' does not match existing blobstore");
             goto free;
         } else {
-            logprintfl(EUCAINFO, "adjusting blobstore limit from %d to %d\n", bs->limit_blocks, limit_blocks);
+            logprintfl(EUCAINFO, "adjusting blobstore limit from %lld to %lld\n", bs->limit_blocks, limit_blocks);
             write_flags = BLOBSTORE_FLAG_RDWR;
             close_and_unlock(bs->fd);
             goto write_metadata;
@@ -2096,7 +2095,7 @@ static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blo
             break;
         }
 
-        logprintfl(EUCAEXTREME, "%s => [%d] READ LINE %s rdLen %d, n %d\n", __func__, fd, line, rdLen, n);
+        logprintfl(EUCAEXTREME, "%s => [%d] READ LINE %s rdLen %lu, n %ld\n", __func__, fd, line, rdLen, n);
 
         // Add one more entry to our metadata array
         if ((bigger_lines = EUCA_REALLOC(lines, (i + 1), sizeof(char *))) == NULL) {
@@ -2637,7 +2636,7 @@ static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long 
                     code = 'D';
                     deleted++;
                 }
-                logprintfl(EUCADEBUG, "LRU %d %08d: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id, (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'),  // o = open
+                logprintfl(EUCADEBUG, "LRU %d %08lld: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id, (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'),  // o = open
                            (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'),  // p = has parents
                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'),  // c = has children
                            (bb->in_use & BLOCKBLOB_STATUS_ABANDONED) ? ('a') : ('-'),   // a = was abandoned
@@ -3275,7 +3274,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
         if (bb->size_bytes == 0) {  // find out the size from the file size
             bb->size_bytes = sb.st_size;
         } else if (bb->size_bytes != sb.st_size) {  // verify the size specified by the user
-            logprintfl(EUCAERROR, "{%u} encountered a size mismatch when opening a blob (requested %lld, found %lld)\n", (unsigned int)pthread_self(),
+            logprintfl(EUCAERROR, "{%u} encountered a size mismatch when opening a blob (requested %lld, found %ld)\n", (unsigned int)pthread_self(),
                        bb->size_bytes, sb.st_size);
             ERR(BLOBSTORE_ERROR_SIGNATURE, "size of the existing blockblob does not match");
             goto clean;
@@ -3298,7 +3297,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
             int sig_size;
             if ((sig_size = read_blockblob_metadata_path(BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof(buf))) != strlen(sig)
                 || (strncmp(sig, buf, sig_size) != 0)) {
-                logprintfl(EUCAERROR, "{%u} encountered signature mismatch when opening a blob (requested size [%d], found [%d])\n",
+                logprintfl(EUCAERROR, "{%u} encountered signature mismatch when opening a blob (requested size [%ld], found [%d])\n",
                            (unsigned int)pthread_self(), strlen(sig), sig_size);
                 ERR(BLOBSTORE_ERROR_SIGNATURE, NULL);
                 goto clean;
@@ -3364,7 +3363,7 @@ free:
     EUCA_FREE(bb);
 
 out:
-    logprintfl(EUCATRACE, "{%u} blockblob_open: done with blob id=%s ret=%012lx\n", (unsigned int)pthread_self(), id, bb);
+    logprintfl(EUCATRACE, "{%u} blockblob_open: done with blob id=%s ret=%p\n", (unsigned int)pthread_self(), id, bb);
     if (bb == NULL) {
         logprintfl(EUCATRACE, "{%u} blockblob_open: errno=%d msg=%s\n", (unsigned int)pthread_self(), _blobstore_errno, blobstore_get_last_msg());
     }
@@ -3631,7 +3630,7 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
             if (fd >= 0) {
                 int rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]));
                 if (rbytes != strlen(dm_tables[i])) {   // if write error
-                    logprintfl(EUCAERROR, "{%u} error: dm_create_devices: write returned number of bytes != write buffer: %d/%d\n",
+                    logprintfl(EUCAERROR, "{%u} error: dm_create_devices: write returned number of bytes != write buffer: %d/%ld\n",
                                (unsigned int)pthread_self(), rbytes, strlen(dm_tables[i]));
                     unlink(tmpfile);
                     exit(1);

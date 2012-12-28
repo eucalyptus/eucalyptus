@@ -77,6 +77,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <neethi_policy.h>
 #include <neethi_util.h>
 
@@ -270,14 +271,14 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
             pStub->node_name = (axis2_char_t *) strdup(node_name);
             pStub->stub = stub;
             if (pStub->client_home == NULL || pStub->endpoint_uri == NULL || pStub->node_name == NULL) {
-                logprintfl(EUCAWARN, "out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)", __FILE__, __FUNCTION__, __LINE__,
+                logprintfl(EUCAWARN, "out of memory (%s:%s:%d client_home=%s endpoint_uri=%s node_name=%s)", __FILE__, __FUNCTION__, __LINE__,
                            pStub->client_home, pStub->endpoint_uri, pStub->node_name);
             }
         } else {
             logprintfl(EUCAWARN, "out of memory for 'st' (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
         }
     } else {
-        logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%u env=%u client_home=%s)\n", stub, env, client_home);
+        logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%p env=%p client_home=%s)\n", stub, env, client_home);
     }
 
     EUCA_FREE(node_name);

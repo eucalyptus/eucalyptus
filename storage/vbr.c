@@ -90,6 +90,7 @@
 #include <assert.h>
 #include <dirent.h>
 
+#include <eucalyptus.h>
 #include <misc.h>               // logprintfl, ensure_...
 #include <hash.h>
 #include <data.h>
@@ -550,14 +551,14 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
                     return EUCA_ERROR;
                 }
                 if (p < 0 || p > EUCA_MAX_PARTITIONS) {
-                    logprintfl(EUCAERROR, "unexpected partition or disk number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                    logprintfl(EUCAERROR, "unexpected partition or disk number '%lld' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
                     return EUCA_ERROR;
                 }
                 if (t == 'f') {
                     vbr->diskNumber = p;
                 } else {
                     if (p < 1) {
-                        logprintfl(EUCAERROR, "unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                        logprintfl(EUCAERROR, "unexpected partition number '%lld' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
                         return EUCA_ERROR;
                     }
                     vbr->partitionNumber = p;
@@ -603,13 +604,13 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     }
     if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP) {  //! @TODO should we allow ephemeral/swap that reside remotely?
         if (vbr->size < 1) {
-            logprintfl(EUCAERROR, "invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
+            logprintfl(EUCAERROR, "invalid size '%lld' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
             return EUCA_ERROR;
         }
     } else {
         //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { //! @TODO check for size!=-1
         if (vbr->format != NC_FORMAT_NONE) {
-            logprintfl(EUCAERROR, "invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName,
+            logprintfl(EUCAERROR, "invalid size '%lld' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName,
                        vbr->resourceLocation);
             return EUCA_ERROR;
         }
@@ -1151,7 +1152,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         } else if (check_path(dev_without_p) == 0) {
             mapper_dev = dev_without_p;
         } else {
-            logprintfl(EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, mapper_dev, strerror(errno));
+            logprintfl(EUCAERROR, "[%s] failed to stat partition device [%s]. errno=%d(%s)\n", a->instanceId, mapper_dev, errno, strerror(errno));
             goto cleanup;
         }
         logprintfl(EUCAINFO, "[%s] found partition device %s\n", a->instanceId, mapper_dev);
@@ -1180,15 +1181,15 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
         if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != EUCA_OK) {
-            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId);
             goto unmount;
         }
         if (blockblob_sync(mapper_dev, a->bb) != 0) {
-            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId);
             goto unmount;
         }
         if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != EUCA_OK) {
-            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId);
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
@@ -1458,7 +1459,7 @@ void art_free(artifact * a)
             for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
                 ART_FREE(a->deps[i]);
             }
-            logprintfl(EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes,
+            logprintfl(EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes,
                        a->vbr, a->may_be_cached, a->must_be_file);
             EUCA_FREE(a);
         }
@@ -1498,7 +1499,7 @@ void arts_free(artifact * array[], unsigned int array_len)
 //!
 static void art_print_tree(const char *prefix, artifact * a)
 {
-    logprintfl(EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%0x vbr=%0x\n", a->instanceId, prefix, a->seq, a->id,
+    logprintfl(EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%p vbr=%p\n", a->instanceId, prefix, a->seq, a->id,
                a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix[512];
@@ -1611,7 +1612,7 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
     static int seq = 0;
     a->seq = ++seq;             // not thread safe, but seq's are just for debugging
     euca_strncpy(a->instanceId, current_instanceId, sizeof(a->instanceId)); // for logging
-    logprintfl(EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr,
+    logprintfl(EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr,
                may_be_cached, must_be_file);
 
     if (id)

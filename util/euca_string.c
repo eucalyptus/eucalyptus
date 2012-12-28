@@ -87,8 +87,8 @@
 #include <limits.h>
 #include <wchar.h>
 
-#include "misc.h"
 #include "eucalyptus.h"
+#include "misc.h"
 #include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\

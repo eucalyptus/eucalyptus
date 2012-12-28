@@ -1355,7 +1355,7 @@ int doDetachVolume(ncMetadata * pMeta, char *volumeId, char *instanceId, char *r
     }
 
     logprintfl(EUCAINFO, "[%s][%s] detaching volume\n", SP(instanceId), SP(volumeId));
-    logprintfl(EUCADEBUG, "invoked: userId=%s, volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n",
+    logprintfl(EUCADEBUG, "invoked: volumeId=%s, instanceId=%s, remoteDev=%s, localDev=%s, force=%d\n",
                SP(volumeId), SP(instanceId), SP(remoteDev), SP(localDev), force);
     if (!volumeId || !instanceId || !remoteDev || !localDev) {
         logprintfl(EUCAERROR, "bad input params\n");
@@ -2117,7 +2117,7 @@ int refresh_resources(ncMetadata * pMeta, int timeout, int dolock)
 
                     if (resourceCacheStage->resources[i].state == RESWAKING
                         && ((time(NULL) - resourceCacheStage->resources[i].stateChange) < config->wakeThresh)) {
-                        logprintfl(EUCADEBUG, "resource still waking up (%d more seconds until marked as down)\n",
+                        logprintfl(EUCADEBUG, "resource still waking up (%ld more seconds until marked as down)\n",
                                    config->wakeThresh - (time(NULL) - resourceCacheStage->resources[i].stateChange));
                     } else {
                         logprintfl(EUCAERROR, "bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
@@ -2261,7 +2261,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
                     // if idle, power down
                     if (ncOutInstsLen == 0) {
-                        logprintfl(EUCADEBUG, "node %s idle since %d: (%d/%d) seconds\n", resourceCacheStage->resources[i].hostname,
+                        logprintfl(EUCADEBUG, "node %s idle since %ld: (%ld/%d) seconds\n", resourceCacheStage->resources[i].hostname,
                                    resourceCacheStage->resources[i].idleStart, time(NULL) - resourceCacheStage->resources[i].idleStart,
                                    config->idleThresh);
                         if (!resourceCacheStage->resources[i].idleStart) {
@@ -3522,7 +3522,7 @@ int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen)
         return (1);
     }
 
-    logprintfl(EUCAINFO, "rebooting %d instances%d\n", instIdsLen);
+    logprintfl(EUCAINFO, "rebooting %d instances\n", instIdsLen);
     logprintfl(EUCADEBUG, "invoked: instIdsLen=%d\n", instIdsLen);
 
     sem_mywait(RESCACHE);
@@ -4332,7 +4332,7 @@ int doBrokerPairing(void)
     }
 
     if (local_broker_down && is_ha_cc) {
-        logprintfl(EUCADEBUG, "detected CC in HA mode, and local broker is not ENABLED\n", local_broker_down, is_ha_cc);
+        logprintfl(EUCADEBUG, "detected CC in HA mode, and local broker is not ENABLED\n");
         ret++;
     }
     return (ret);
@@ -4730,7 +4730,7 @@ int init_thread(void)
 {
     int rc, i;
 
-    logprintfl(EUCADEBUG, "init=%d %08X %08X %08X %08X\n", init, config, vnetconfig, instanceCache, resourceCache);
+    logprintfl(EUCADEBUG, "init=%d %p %p %p %p\n", init, config, vnetconfig, instanceCache, resourceCache);
     if (thread_init) {
         // thread has already been initialized
     } else {
@@ -5294,7 +5294,7 @@ int init_config(void)
     } else {
         ncPollingFrequency = atoi(tmpstr);
         if (ncPollingFrequency < 6) {
-            logprintfl(EUCAWARN, "NC_POLLING_FREQUENCY set too low (%d seconds), resetting to minimum (6 seconds)\n", ncPollingFrequency);
+            logprintfl(EUCAWARN, "NC_POLLING_FREQUENCY set too low (%ld seconds), resetting to minimum (6 seconds)\n", ncPollingFrequency);
             ncPollingFrequency = 6;
         }
     }
@@ -5307,7 +5307,7 @@ int init_config(void)
     } else {
         clcPollingFrequency = atoi(tmpstr);
         if (clcPollingFrequency < 1) {
-            logprintfl(EUCAWARN, "CLC_POLLING_FREQUENCY set too low (%d seconds), resetting to default (6 seconds)\n", clcPollingFrequency);
+            logprintfl(EUCAWARN, "CLC_POLLING_FREQUENCY set too low (%ld seconds), resetting to default (6 seconds)\n", clcPollingFrequency);
             clcPollingFrequency = 6;
         }
     }
@@ -5329,7 +5329,7 @@ int init_config(void)
     } else {
         ncFanout = atoi(tmpstr);
         if (ncFanout < 1 || ncFanout > 32) {
-            logprintfl(EUCAWARN, "NC_FANOUT set out of bounds (min=%d max=%d) (current=%d), resetting to default (1 NC)\n", 1, 32, ncFanout);
+            logprintfl(EUCAWARN, "NC_FANOUT set out of bounds (min=%d max=%d) (current=%ld), resetting to default (1 NC)\n", 1, 32, ncFanout);
             ncFanout = 1;
         }
     }
@@ -5342,7 +5342,7 @@ int init_config(void)
     } else {
         instanceTimeout = atoi(tmpstr);
         if (instanceTimeout < 30) {
-            logprintfl(EUCAWARN, "INSTANCE_TIMEOUT set too low (%d seconds), resetting to minimum (30 seconds)\n", instanceTimeout);
+            logprintfl(EUCAWARN, "INSTANCE_TIMEOUT set too low (%ld seconds), resetting to minimum (30 seconds)\n", instanceTimeout);
             instanceTimeout = 30;
         }
     }
@@ -6432,7 +6432,7 @@ void print_ccInstance(char *tag, ccInstance * in)
     }
 
     logprintfl(EUCADEBUG,
-               "%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%d keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n",
+               "%s instanceId=%s reservationId=%s state=%s accountId=%s ownerId=%s ts=%ld keyName=%s ccnet={privateIp=%s publicIp=%s privateMac=%s vlan=%d networkIndex=%d} ccvm={cores=%d mem=%d disk=%d} ncHostIdx=%d serviceTag=%s userData=%s launchIndex=%s platform=%s bundleTaskStateName=%s, volumesSize=%d volumes={%s} groupNames={%s}\n",
                tag, in->instanceId, in->reservationId, in->state, in->accountId, in->ownerId, in->ts, in->keyName, in->ccnet.privateIp,
                in->ccnet.publicIp, in->ccnet.privateMac, in->ccnet.vlan, in->ccnet.networkIndex, in->ccvm.cores, in->ccvm.mem, in->ccvm.disk,
                in->ncHostIdx, in->serviceTag, in->userData, in->launchIndex, in->platform, in->bundleTaskStateName, in->volumesSize, volbuf,
@@ -6504,7 +6504,7 @@ void invalidate_instanceCache(void)
             free_instanceNetwork(instanceCache->instances[i].ccnet.privateMac, instanceCache->instances[i].ccnet.vlan, 0, 0);
         }
         if ((instanceCache->cacheState[i] == INSTVALID) && ((time(NULL) - instanceCache->lastseen[i]) > config->instanceTimeout)) {
-            logprintfl(EUCADEBUG, "invalidating instance '%s' (last seen %d seconds ago)\n", instanceCache->instances[i].instanceId,
+            logprintfl(EUCADEBUG, "invalidating instance '%s' (last seen %ld seconds ago)\n", instanceCache->instances[i].instanceId,
                        (time(NULL) - instanceCache->lastseen[i]));
             bzero(&(instanceCache->instances[i]), sizeof(ccInstance));
             instanceCache->lastseen[i] = 0;
@@ -7101,7 +7101,7 @@ int image_cache_invalidate(void)
                 snprintf(path, MAX_PATH, "%s/%s", proxyPath, dent.d_name);
                 rc = stat(path, &mystat);
                 if (!rc) {
-                    logprintfl(EUCADEBUG, "evaluating file: name=%s size=%d atime=%d'\n", dent.d_name, mystat.st_size / 1048576, mystat.st_atime);
+                    logprintfl(EUCADEBUG, "evaluating file: name=%s size=%ld atime=%ld'\n", dent.d_name, mystat.st_size / 1048576, mystat.st_atime);
                     if (mystat.st_atime < oldest) {
                         oldest = mystat.st_atime;
                         snprintf(oldestpath, MAX_PATH, "%s", path);
@@ -7113,7 +7113,7 @@ int image_cache_invalidate(void)
             rc = readdir_r(DH, &dent, &result);
         }
         closedir(DH);
-        logprintfl(EUCADEBUG, "summary: totalMBs=%d oldestAtime=%d oldestFile=%s\n", total_megs, oldest, oldestpath);
+        logprintfl(EUCADEBUG, "summary: totalMBs=%d oldestAtime=%ld oldestFile=%s\n", total_megs, oldest, oldestpath);
         if (total_megs > config->proxy_max_cache_size) {
             // start slowly deleting
             logprintfl(EUCAINFO, "invalidating cached image %s\n", oldestpath);

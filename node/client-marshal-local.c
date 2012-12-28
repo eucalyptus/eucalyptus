@@ -78,6 +78,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <eucalyptus.h>
 #define HANDLERS_FANOUT
 #include "handlers.h"
 #include "client-marshal.h"

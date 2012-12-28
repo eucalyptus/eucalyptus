@@ -89,9 +89,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <eucalyptus.h>
 #include <ipc.h>
 #include <misc.h>
-#include <eucalyptus.h>
 #include <euca_auth.h>
 #include <backing.h>
 #include <diskutil.h>
@@ -240,8 +240,7 @@ static int doInitialize(struct nc_state_t *nc)
 
     // we leave 256M to the host
     nc->mem_max -= 256;
-
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -253,20 +252,31 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static void *rebooting_thread(void *arg)
 {
-    virConnectPtr *conn;
-    ncInstance *instance = (ncInstance *) arg;
+#define REATTACH_RETRIES      3
+
+    int i = 0;
+    int err = 0;
+    int error = 0;
+    int rc = 0;
+    int log_level_for_devstring = EUCATRACE;
+    char *xml = NULL;
+    char *remoteDevStr = NULL;
+    char path[MAX_PATH] = "";
+    char lpath[MAX_PATH] = "";
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    ncVolume *volume = NULL;
+    ncInstance *instance = ((ncInstance *) arg);
+    virDomainPtr dom = NULL;
+    virConnectPtr *conn = NULL;
 
     logprintfl(EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
-    char *xml = file2str(instance->libvirtFilePath);
-    if (xml == NULL) {
+    if ((xml = file2str(instance->libvirtFilePath)) == NULL) {
         logprintfl(EUCAERROR, "[%s] cannot obtain instance XML file %s\n", instance->instanceId, instance->libvirtFilePath);
         return NULL;
     }
 
-    conn = check_hypervisor_conn();
-    if (!conn) {
+    if ((conn = check_hypervisor_conn()) == NULL) {
         logprintfl(EUCAERROR, "[%s] cannot restart instance %s, abandoning it\n", instance->instanceId, instance->instanceId);
         change_state(instance, SHUTOFF);
         EUCA_FREE(xml);
@@ -274,18 +284,23 @@ static void *rebooting_thread(void *arg)
     }
 
     sem_p(hyp_sem);
-    virDomainPtr dom = virDomainLookupByName(*conn, instance->instanceId);
+    {
+        dom = virDomainLookupByName(*conn, instance->instanceId);
+    }
     sem_v(hyp_sem);
+
     if (dom == NULL) {
         EUCA_FREE(xml);
         return NULL;
     }
 
     sem_p(hyp_sem);
-    // for KVM, must stop and restart the instance
-    logprintfl(EUCADEBUG, "[%s] destroying domain\n", instance->instanceId);
-    int error = virDomainDestroy(dom);  // @todo change to Shutdown? is this synchronous?
-    virDomainFree(dom);
+    {
+        // for KVM, must stop and restart the instance
+        logprintfl(EUCADEBUG, "[%s] destroying domain\n", instance->instanceId);
+        error = virDomainDestroy(dom);  // @todo change to Shutdown? is this synchronous?
+        virDomainFree(dom);
+    }
     sem_v(hyp_sem);
 
     if (error) {
@@ -302,24 +317,24 @@ static void *rebooting_thread(void *arg)
 
     // domain is now shut down, create a new one with the same XML
     sem_p(hyp_sem);
-    logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
-    dom = virDomainCreateLinux(*conn, xml, 0);
+    {
+        logprintfl(EUCAINFO, "[%s] rebooting\n", instance->instanceId);
+        dom = virDomainCreateLinux(*conn, xml, 0);
+    }
     sem_v(hyp_sem);
     EUCA_FREE(xml);
 
     euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
     sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
-    char *remoteDevStr = NULL;
     // re-attach each volume previously attached
-    for (int i = 0; i < EUCA_MAX_VOLUMES; ++i) {
-        ncVolume *volume = &instance->volumes[i];
+    for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
+        volume = &instance->volumes[i];
         if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
             continue;           // skip the entry unless attached or attaching
 
         logprintfl(EUCADEBUG, "[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
-        char *xml = NULL;
-        int rc = 0;
+
         // get credentials, decrypt them
         remoteDevStr = get_iscsi_target(volume->remoteDev);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
@@ -327,14 +342,11 @@ static void *rebooting_thread(void *arg)
             rc = 1;
         } else {
             // set the path
-            char path[MAX_PATH];
-            char lpath[MAX_PATH];
             snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
             snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
 
             // read in libvirt XML, which may have been modified by the hook above
-            xml = file2str(lpath);
-            if (xml == NULL) {
+            if ((xml = file2str(lpath)) == NULL) {
                 logprintfl(EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
                 rc = 1;
             }
@@ -344,13 +356,15 @@ static void *rebooting_thread(void *arg)
 
         if (!rc) {
             // zhill - wrap with retry in case libvirt is dumb.
-            int err = 0;
-#define REATTACH_RETRIES 3
-            for (int i = 1; i < REATTACH_RETRIES; i++) {
+            err = 0;
+            for (i = 1; i < REATTACH_RETRIES; i++) {
                 // protect libvirt calls because we've seen problems during concurrent libvirt invocations
                 sem_p(hyp_sem);
-                err = virDomainAttachDevice(dom, xml);
+                {
+                    err = virDomainAttachDevice(dom, xml);
+                }
                 sem_v(hyp_sem);
+
                 if (err) {
                     logprintfl(EUCAERROR, "[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, i,
                                REATTACH_RETRIES);
@@ -362,7 +376,8 @@ static void *rebooting_thread(void *arg)
                     break;
                 }
             }
-            int log_level_for_devstring = EUCATRACE;
+
+            log_level_for_devstring = EUCATRACE;
             if (err)
                 log_level_for_devstring = EUCADEBUG;
             logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
@@ -378,9 +393,13 @@ static void *rebooting_thread(void *arg)
     }
 
     sem_p(hyp_sem);
-    virDomainFree(dom);
+    {
+        virDomainFree(dom);
+    }
     sem_v(hyp_sem);
     return NULL;
+
+#undef REATTACH_RETRIES
 }
 
 //!
@@ -395,26 +414,31 @@ static void *rebooting_thread(void *arg)
 //!
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
+    pthread_t tcb = { 0 };
+    ncInstance *instance = NULL;
+
     sem_p(inst_sem);
-    ncInstance *instance = find_instance(&global_instances, instanceId);
+    {
+        instance = find_instance(&global_instances, instanceId);
+    }
     sem_v(inst_sem);
+
     if (instance == NULL) {
         logprintfl(EUCAERROR, "[%s] cannot find instance\n", instanceId);
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
     }
-
-    pthread_t tcb;
     // since shutdown/restart may take a while, we do them in a thread
     if (pthread_create(&tcb, NULL, rebooting_thread, (void *)instance)) {
         logprintfl(EUCAERROR, "[%s] failed to spawn a reboot thread\n", instanceId);
-        return EUCA_FATAL_ERROR;
-    }
-    if (pthread_detach(tcb)) {
-        logprintfl(EUCAERROR, "[%s] failed to detach the rebooting thread\n", instanceId);
-        return EUCA_FATAL_ERROR;
+        return (EUCA_FATAL_ERROR);
     }
 
-    return EUCA_OK;
+    if (pthread_detach(tcb)) {
+        logprintfl(EUCAERROR, "[%s] failed to detach the rebooting thread\n", instanceId);
+        return (EUCA_FATAL_ERROR);
+    }
+
+    return (EUCA_OK);
 }
 
 //!
@@ -429,21 +453,28 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 //!
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-    char *console_output = NULL, *console_append = NULL, *console_main = NULL;
-    char console_file[MAX_PATH], userId[48];
-    int rc, fd, ret, readsize;
-    struct stat statbuf;
+    int rc = 0;
+    int fd = 0;
+    int ret = EUCA_OK;
+    int readsize = 0;
+    char *console_output = NULL;
+    char *console_append = NULL;
+    char *console_main = NULL;
+    char console_file[MAX_PATH] = "";
+    char userId[48] = "";
     ncInstance *instance = NULL;
+    struct stat statbuf = { 0 };
 
     *consoleOutput = NULL;
     readsize = 64 * 1024;
 
     // find the instance record
     sem_p(inst_sem);
-    instance = find_instance(&global_instances, instanceId);
-    if (instance) {
-        snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
-        snprintf(userId, 48, "%s", instance->userId);
+    {
+        if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
+            snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
+            snprintf(userId, 48, "%s", instance->userId);
+        }
     }
     sem_v(inst_sem);
 
@@ -452,52 +483,49 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
         return (EUCA_NOT_FOUND_ERROR);
     }
     // read from console.append.log if it exists into dynamically allocated 4K console_append buffer
-    rc = stat(console_file, &statbuf);
-    if (rc >= 0) {
+    if ((rc = stat(console_file, &statbuf)) >= 0) {
         if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
             return (EUCA_ERROR);
         }
-        fd = open(console_file, O_RDONLY);
-        if (fd >= 0) {
-            console_append = EUCA_ZALLOC(4096, sizeof(char));
-            if (console_append) {
+
+        if ((fd = open(console_file, O_RDONLY)) >= 0) {
+            if ((console_append = EUCA_ZALLOC(4096, sizeof(char))) != NULL) {
                 rc = read(fd, console_append, (4096) - 1);
-                close(fd);
             }
+            close(fd);
         }
     }
 
     sem_p(inst_sem);
-    snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
+    {
+        snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
+    }
     sem_v(inst_sem);
 
     // read the last 64K from console.log or the whole file, if smaller, into dynamically allocated 64K console_main buffer
-    rc = stat(console_file, &statbuf);
-    if (rc >= 0) {
+    if ((rc = stat(console_file, &statbuf)) >= 0) {
         if (diskutil_ch(console_file, nc->admin_user_id, nc->admin_user_id, 0) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] failed to change ownership of %s\n", instanceId, console_file);
             EUCA_FREE(console_append);
             return (EUCA_ERROR);
         }
-        fd = open(console_file, O_RDONLY);
-        if (fd >= 0) {
-            rc = lseek(fd, (off_t) (-1 * readsize), SEEK_END);
-            if (rc < 0) {
-                rc = lseek(fd, (off_t) 0, SEEK_SET);
-                if (rc < 0) {
+
+        if ((fd = open(console_file, O_RDONLY)) >= 0) {
+            if ((rc = lseek(fd, (off_t) (-1 * readsize), SEEK_END)) < 0) {
+                if ((rc = lseek(fd, (off_t) 0, SEEK_SET)) < 0) {
                     logprintfl(EUCAERROR, "[%s] cannot seek to beginning of file\n", instanceId);
                     if (console_append)
-                        free(console_append);
+                        EUCA_FREE(console_append);
                     close(fd);
                     return (EUCA_ERROR);
                 }
             }
-            console_main = EUCA_ZALLOC(readsize, sizeof(char));
-            if (console_main) {
+
+            if ((console_main = EUCA_ZALLOC(readsize, sizeof(char))) != NULL) {
                 rc = read(fd, console_main, (readsize) - 1);
-                close(fd);
             }
+            close(fd);
         } else {
             logprintfl(EUCAERROR, "[%s] cannot open '%s' read-only\n", instanceId, console_file);
         }
@@ -507,14 +535,15 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 
     // concatenate console_append with console_main, base64-encode this, and put into dynamically allocated buffer consoleOutput
     ret = EUCA_ERROR;
-    console_output = EUCA_ZALLOC((readsize) + 4096, sizeof(char));
-    if (console_output) {
+    if ((console_output = EUCA_ZALLOC((readsize) + 4096, sizeof(char))) != NULL) {
         if (console_append) {
             strncat(console_output, console_append, 4096);
         }
+
         if (console_main) {
             strncat(console_output, console_main, readsize);
         }
+
         *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
         ret = EUCA_OK;
     }
@@ -522,6 +551,5 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     EUCA_FREE(console_append);
     EUCA_FREE(console_main);
     EUCA_FREE(console_output);
-
     return (ret);
 }

@@ -77,17 +77,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define HANDLERS_FANOUT
-#include "handlers.h"
-#include "client-marshal.h"
-
 #include <fcntl.h>              /* For O_* constants */
 #include <sys/stat.h>           /* For mode constants */
 #include <semaphore.h>
 #include <sys/mman.h>
 #include <sys/stat.h>           /* For mode constants */
 #include <fcntl.h>              /* For O_* constants */
+
+
+#include <eucalyptus.h>
+#define HANDLERS_FANOUT
+#include "handlers.h"
+#include "client-marshal.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

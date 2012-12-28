@@ -85,9 +85,9 @@
 #include <stdarg.h>
 #include <errno.h>
 
+#include <eucalyptus.h>
 #include <misc.h>               // logprintfl
 #include <ipc.h>                // sem
-#include <eucalyptus.h>
 #include <euca_string.h>
 
 #include "diskutil.h"

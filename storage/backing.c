@@ -87,9 +87,9 @@
 #include <assert.h>
 #include <dirent.h>
 
+#include <eucalyptus.h>
 #include <misc.h>               // logprintfl, ensure_...
 #include <data.h>               // ncInstance
-#include <eucalyptus.h>
 #include <handlers.h>           // nc_state
 #include <ipc.h>                // sem
 #include <euca_string.h>

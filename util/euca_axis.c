@@ -105,6 +105,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#include "eucalyptus.h"
 #include "oxs_axiom.h"
 #include "oxs_x509_cert.h"
 #include "oxs_key_mgr.h"
@@ -127,7 +128,6 @@
 #include "misc.h"               // check_file, logprintf
 #include "fault.h"              // log_eucafault
 #include "euca_axis.h"
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

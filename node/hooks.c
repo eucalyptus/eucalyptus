@@ -85,8 +85,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>           // WEXITSTATUS on Lucid
 
-#include <misc.h>
 #include <eucalyptus.h>
+#include <misc.h>
 #include <euca_string.h>
 
 #include "handlers.h"

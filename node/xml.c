@@ -95,6 +95,7 @@
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
 
+#include <eucalyptus.h>
 #include <eucalyptus-config.h>
 #include <backing.h>            // umask
 #include <data.h>

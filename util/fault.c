@@ -727,7 +727,7 @@ int init_eucafaults(const char *fileprefix)
             if (stat(faultdirs[i], &dirstat) != 0) {
                 logprintfl(EUCAINFO, "stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
             } else if (!S_ISDIR(dirstat.st_mode)) {
-                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory\n", faultdirs[i], strerror(errno));
+                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory. errno=%d(%s)\n", faultdirs[i], errno, strerror(errno));
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir(faultdirs[i], &namelist, &scandir_filter, alphasort);

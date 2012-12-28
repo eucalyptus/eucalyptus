@@ -90,9 +90,9 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 
+#include "eucalyptus.h"
 #include "euca_auth.h"
 #include "misc.h"               /* get_string_stats, logprintf */
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

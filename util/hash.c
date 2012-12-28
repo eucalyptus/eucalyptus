@@ -99,6 +99,7 @@
 #include <sys/mman.h>           // mmap
 #include <pthread.h>
 
+#include "eucalyptus.h"
 #include "misc.h"
 #include "hash.h"
 #include "euca_auth.h"          // base64_enc

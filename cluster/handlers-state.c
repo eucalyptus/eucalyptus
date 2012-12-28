@@ -853,7 +853,7 @@ int clean_network_state(void)
             if (vnetconfig->networks[i].active) {
                 rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
                 if (rc) {
-                    logprintfl(EUCADEBUG, "failed to tear down network %d\n");
+                    logprintfl(EUCADEBUG, "failed to tear down network rc=%d\n", rc);
                 }
             }
         }

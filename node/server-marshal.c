@@ -81,6 +81,7 @@
 #include <pthread.h>
 #include <axutil_utils_defines.h>
 
+#include <eucalyptus.h>
 #include <server-marshal.h>
 #include <misc.h>
 #include <data.h>
