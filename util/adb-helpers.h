@@ -711,7 +711,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         num_values = sd->valuesLen;
                     } else {
                         if (num_values != sd->valuesLen) {
-                            logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d is not consistent across dimensions for %s:%s:%s)\n",
+                            logprintfl(EUCAERROR,
+                                       "inconsistency in sensor database (valuesLen=%d is not consistent across dimensions for %s:%s:%s)\n",
                                        sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
                         }
                     }

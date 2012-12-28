@@ -84,7 +84,6 @@
 #include <sys/stat.h>           /* For mode constants */
 #include <fcntl.h>              /* For O_* constants */
 
-
 #include <eucalyptus.h>
 #define HANDLERS_FANOUT
 #include "handlers.h"
