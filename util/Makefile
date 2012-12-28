@@ -64,7 +64,6 @@ include ../Makedefs
 
 EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
-CC += -g
 all: utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap euca-generate-fault
 
 build: all
@@ -97,7 +96,7 @@ test_sensor: sensor.c sensor.h misc.o log.o ipc.o ../storage/diskutil.o
 	make -C ../storage
 
 %.o: %.c %.h
-	$(CC) -c -std=gnu99 $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $(DEBUGS) `xslt-config --cflags` $<
 
 indent:
 	@for idfile in *.[ch]; do \
