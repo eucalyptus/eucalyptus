@@ -190,7 +190,7 @@ extern char *program_invocation_short_name;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
- //! Defines the order of labels in fault log entries.
+//! Defines the order of labels in fault log entries.
 static char *fault_labels[] = { "condition",
     "cause",
     "initiator",

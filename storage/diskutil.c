@@ -230,7 +230,7 @@ long long round_down_sec(long long bytes);
 \*----------------------------------------------------------------------------*/
 
 static int try_stage_dir(const char *dir);
-static char *pruntf(boolean log_error, char *format, ...);
+static char *pruntf(boolean log_error, char *format, ...) __attribute__ ((__format__ (__printf__, 2, 3)));
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
