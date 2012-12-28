@@ -67,8 +67,6 @@
 
 int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, char **outAlog, axutil_env_t * env, axis2_stub_t * stub)
 {
-    char *outservice;
-
     adb_GetLogsResponse_t *out;
     adb_getLogsResponseType_t *response;
 
@@ -101,8 +99,6 @@ int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, 
 
 int gl_getKeys(char *service, char **outCCCert, char **outNCCert, axutil_env_t * env, axis2_stub_t * stub)
 {
-    char *outservice;
-
     adb_GetKeysResponse_t *out;
     adb_getKeysResponseType_t *response;
 

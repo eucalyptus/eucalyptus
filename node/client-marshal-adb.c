@@ -142,14 +142,14 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
             st->node_name = (axis2_char_t *) strdup(node_name);
             st->stub = stub;
             if (st->client_home == NULL || st->endpoint_uri == NULL || st->node_name == NULL) {
-                logprintfl(EUCAWARN, "out of memory (%s:%s:%d client_home=%u endpoint_uri=%u node_name=%u)", __FILE__, __FUNCTION__, __LINE__,
+                logprintfl(EUCAWARN, "out of memory (%s:%s:%d client_home=%p endpoint_uri=%p node_name=%p)", __FILE__, __FUNCTION__, __LINE__,
                            st->client_home, st->endpoint_uri, st->node_name);
             }
         } else {
             logprintfl(EUCAWARN, "out of memory for 'st' (%s:%s:%d)\n", __FILE__, __FUNCTION__, __LINE__);
         }
     } else {
-        logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%u env=%u client_home=%s)\n", stub, env, client_home);
+        logprintfl(EUCAERROR, "failed to create a stub for EucalyptusNC service (stub=%p env=%p client_home=%s)\n", stub, env, client_home);
     }
 
     free(node_name);

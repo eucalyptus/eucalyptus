@@ -160,7 +160,7 @@ int check_backing_store(bunchOfInstances ** global_instances)
 
 int stat_backing_store(const char *conf_instances_path, blobstore_meta * work_meta, blobstore_meta * cache_meta)
 {
-    char *path = conf_instances_path;
+    const char *path = conf_instances_path;
     if (path == NULL) {
         if (strlen(instances_path) < 1) {
             return ERROR;
@@ -289,7 +289,10 @@ static void set_path(char *path, unsigned int path_size, const ncInstance * inst
 
 static int stale_blob_examiner(const blockblob * bb)
 {
-    char work_path[MAX_PATH];
+    char *user_id = NULL;
+    char *inst_id = NULL;
+    char *file = NULL;
+    char work_path[MAX_PATH] = "";
 
     set_path(work_path, sizeof(work_path), NULL, NULL);
     int work_path_len = strlen(work_path);
@@ -302,9 +305,9 @@ static int stale_blob_examiner(const blockblob * bb)
     // parse the path past the work directory base
     safe_strncpy(work_path, bb->blocks_path, sizeof(work_path));
     s = work_path + work_path_len + 1;
-    char *user_id = strtok(s, "/");
-    char *inst_id = strtok(NULL, "/");
-    char *file = strtok(NULL, "/");
+    user_id = strtok(s, "/");
+    inst_id = strtok(NULL, "/");
+    file = strtok(NULL, "/");
 
     ncInstance *instance = find_instance(instances, inst_id);
     if (instance == NULL) {     // not found among running instances => stale
@@ -543,7 +546,6 @@ free:
 int destroy_instance_backing(ncInstance * instance, int do_destroy_files)
 {
     int ret = OK;
-    int total_prereqs = 0;
     char path[MAX_PATH];
     virtualMachine *vm = &(instance->params);
 

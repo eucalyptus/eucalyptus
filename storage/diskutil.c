@@ -123,7 +123,7 @@ static char *helpers[LASTHELPER] = {
 
 static char *helpers_path[LASTHELPER];
 static char stage_files_dir[EUCA_MAX_PATH] = "";
-static char *pruntf(boolean log_error, char *format, ...);
+static char *pruntf(boolean log_error, char *format, ...)  __attribute__ ((__format__(__printf__, 2, 3)));
 static int initialized = 0;
 static sem *loop_sem = NULL;    // semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
@@ -817,7 +817,6 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
 
 int diskutil_ch(const char *path, const char *user, const char *group, const int perms)
 {
-    int ret = OK;
     char *output;
 
     logprintfl(EUCADEBUG, "ch(own|mod) '%s' %s.%s %o\n", path, user ? user : "*", group ? group : "*", perms);
@@ -878,7 +877,7 @@ static char *pruntf(boolean log_error, char *format, ...)
 {
     va_list ap;
     FILE *IF = NULL;
-    char cmd[1024], *ptr;
+    char cmd[1024];
     size_t bytes = 0;
     int outsize = 1025, rc;
     char *output = NULL;

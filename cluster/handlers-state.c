@@ -98,7 +98,7 @@ extern vnetConfig *vnetconfig;
 
 int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen)
 {
-    int i, rc, ret = 0;
+    int i, rc;
     serviceStatusType *myStatus = NULL;
 
     rc = initialize(ccMeta);
@@ -196,7 +196,7 @@ int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int se
 
 int doStartService(ncMetadata * ccMeta)
 {
-    int i, rc, ret = 0;
+    int rc, ret = 0;
 
     rc = initialize(ccMeta);
     if (rc) {
@@ -228,7 +228,7 @@ int doStartService(ncMetadata * ccMeta)
 
 int doStopService(ncMetadata * ccMeta)
 {
-    int i, rc, ret = 0;
+    int rc, ret = 0;
 
     rc = initialize(ccMeta);
     if (rc) {
@@ -310,7 +310,7 @@ int doEnableService(ncMetadata * ccMeta)
 
 int doDisableService(ncMetadata * ccMeta)
 {
-    int i, rc, ret = 0;
+    int rc, ret = 0;
 
     rc = initialize(ccMeta);
     if (rc) {
@@ -341,7 +341,7 @@ int doDisableService(ncMetadata * ccMeta)
 
 int doShutdownService(ncMetadata * ccMeta)
 {
-    int i, rc, ret = 0;
+    int rc, ret = 0;
 
     rc = initialize(ccMeta);
     if (rc) {
@@ -467,7 +467,7 @@ int instIpSync(ccInstance * inst, void *in)
 
 int instNetParamsSet(ccInstance * inst, void *in)
 {
-    int rc, ret = 0, i;
+    int rc, ret = 0;
     char userToken[64], *cleanGroupName = NULL;
 
     if (!inst) {
@@ -535,7 +535,7 @@ int instNetParamsSet(ccInstance * inst, void *in)
 
 int instNetReassignAddrs(ccInstance * inst, void *in)
 {
-    int rc, ret = 0, i;
+    int rc, ret = 0;
 
     if (!inst) {
         return (1);
@@ -561,7 +561,6 @@ int clean_network_state(void)
 {
     int rc, i;
     char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH], *pidstr = NULL, *ipstr = NULL;
-    struct stat statbuf;
     vnetConfig *tmpvnetconfig;
 
     tmpvnetconfig = malloc(sizeof(vnetConfig));
@@ -613,7 +612,7 @@ int clean_network_state(void)
         if (vnetconfig->networks[i].active) {
             rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
             if (rc) {
-                logprintfl(EUCADEBUG, "failed to tear down network %d\n");
+                logprintfl(EUCADEBUG, "failed to tear down network\n");
             }
         }
     }

@@ -110,12 +110,7 @@ typedef enum _hypervisorCapabilityType {    // TODO: make bit field?
     HYPERVISOR_XEN_AND_HARDWARE
 } hypervisorCapabilityType;
 
-static char *hypervsorCapabilityTypeNames[] = {
-    "unknown",
-    "xen",
-    "hw",
-    "xen+hw"
-};
+extern const char *hypervsorCapabilityTypeNames[];
 
 typedef enum _livirtDevType {
     DEV_TYPE_DISK = 0,
@@ -123,11 +118,7 @@ typedef enum _livirtDevType {
     DEV_TYPE_CDROM
 } libvirtDevType;
 
-static char *libvirtDevTypeNames[] = {
-    "disk",
-    "floppy",
-    "cdrom"
-};
+extern const char *libvirtDevTypeNames[];
 
 typedef enum _libvirtBusType {
     BUS_TYPE_IDE = 0,
@@ -137,22 +128,14 @@ typedef enum _libvirtBusType {
     BUS_TYPES_TOTAL,
 } libvirtBusType;
 
-static char *libvirtBusTypeNames[] = {
-    "ide",
-    "scsi",
-    "virtio",
-    "xen"
-};
+extern const char *libvirtBusTypeNames[];
 
 typedef enum _libvirtSourceType {
     SOURCE_TYPE_FILE = 0,
     SOURCE_TYPE_BLOCK
 } libvirtSourceType;
 
-static char *libvirtSourceTypeNames[] = {
-    "file",
-    "block"
-};
+extern const char *libvirtSourceTypeNames[];
 
 typedef enum _libvirtNicType {
     NIC_TYPE_NONE,
@@ -161,12 +144,7 @@ typedef enum _libvirtNicType {
     NIC_TYPE_VIRTIO
 } libvirtNicType;
 
-static char *libvirtNicTypeNames[] = {
-    "none",
-    "e1000",
-    "rtl8139",
-    "virtio"
-};
+extern const char *libvirtNicTypeNames[];
 
 typedef enum _ncResourceType {
     NC_RESOURCE_IMAGE,
@@ -177,14 +155,7 @@ typedef enum _ncResourceType {
     NC_RESOURCE_EBS
 } ncResourceType;
 
-static char *ncResourceTypeName[] = {
-    "image",
-    "ramdisk",
-    "kernel",
-    "ephemeral",
-    "swap",
-    "ebs"
-};
+extern const char *ncResourceTypeName[];
 
 typedef enum _ncResourceLocationType {
     NC_LOCATION_URL,
@@ -370,7 +341,7 @@ ncInstance *allocate_instance(char *uuid,
                               char *instanceId,
                               char *reservationId,
                               virtualMachine * params,
-                              char *stateName,
+                              const char *stateName,
                               int stateCode,
                               char *userId,
                               char *ownerId,

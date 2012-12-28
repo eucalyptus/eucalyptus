@@ -254,28 +254,7 @@ typedef enum instance_states_t {    // these must match instance_sate_names[] be
     TOTAL_STATES
 } instance_states;
 
-static char *instance_state_names[] = {
-    "Unknown",
-    "Running",
-    "Waiting",
-    "Paused",
-    "Shutdown",
-    "Shutoff",
-    "Crashed",
-
-    "Staging",
-    "Booting",
-    "Canceled",
-
-    "Bundling-Shutdown",
-    "Bundling-Shutoff",
-    "CreateImage-Shutdown",
-    "CreateImage-Shutoff",
-
-    "Pending",
-    "Extant",
-    "Teardown"
-};
+extern const char *instance_state_names[];
 
 typedef enum bundling_progress_t {
     NOT_BUNDLING = 0,
@@ -285,13 +264,7 @@ typedef enum bundling_progress_t {
     BUNDLING_CANCELLED
 } bundling_progress;
 
-static char *bundling_progress_names[] = {
-    "none",
-    "bundling",
-    "succeeded",
-    "failed",
-    "cancelled"
-};
+extern const char *bundling_progress_names[];
 
 typedef enum createImage_progress_t {
     NOT_CREATEIMAGE = 0,
@@ -301,13 +274,7 @@ typedef enum createImage_progress_t {
     CREATEIMAGE_CANCELLED
 } createImage_progress;
 
-static char *createImage_progress_names[] = {
-    "none",
-    "creating",
-    "succeeded",
-    "failed",
-    "cancelled"
-};
+extern const char *createImage_progress_names[];
 
 #ifndef EUCA_FREE
 #define EUCA_FREE(_x)  \

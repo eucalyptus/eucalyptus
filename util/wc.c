@@ -133,7 +133,6 @@ wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
     size_t pref_len = wcslen(VAR_PREFIX);
     size_t suff_len = wcslen(VAR_SUFFIX);
 
-    int vars_subbed = 0;
     boolean malformed = FALSE;
     wchar_t *result = NULL;
     const wchar_t *remainder = s;
@@ -237,7 +236,6 @@ char *c_varsub(const char *s, const char_map * vars[])
     size_t pref_len = strlen(C_VAR_PREFIX);
     size_t suff_len = strlen(C_VAR_SUFFIX);
 
-    int vars_subbed = 0;
     boolean malformed = FALSE;
     char *result = NULL;
     const char *remainder = s;

@@ -141,7 +141,6 @@ int cc_getConsoleOutput(char *instId, axutil_env_t * env, axis2_stub_t * stub)
 
     adb_GetConsoleOutputResponse_t *tiOut;
     adb_getConsoleOutputResponseType_t *tirt;
-    int i;
     axis2_bool_t status;
     char *output;
 
@@ -281,7 +280,6 @@ int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t * env, ax
 
 int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min, int max, char *type, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
     adb_ConfigureNetwork_t *input;
     adb_ConfigureNetworkResponse_t *output;
     adb_configureNetworkType_t *cn;
@@ -357,7 +355,6 @@ int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min
 
 int cc_stopNetwork(int vlan, char *netName, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
     adb_StopNetwork_t *input;
     adb_StopNetworkResponse_t *output;
     adb_stopNetworkType_t *sn;
@@ -404,7 +401,6 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t * env, axis2_stub_t * s
 
 int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
     //  char meh[32];
     adb_AttachVolume_t *input;
     adb_AttachVolumeResponse_t *output;
@@ -455,8 +451,6 @@ int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
-    //  char meh[32];
     adb_DetachVolume_t *input;
     adb_DetachVolumeResponse_t *output;
     adb_detachVolumeType_t *sn;
@@ -623,8 +617,6 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
 
 int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
-    //  char meh[32];
     adb_AssignAddress_t *input;
     adb_AssignAddressResponse_t *output;
     adb_assignAddressType_t *sn;
@@ -672,8 +664,6 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * st
 
 int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
-    //  char meh[32];
     adb_UnassignAddress_t *input;
     adb_UnassignAddressResponse_t *output;
     adb_unassignAddressType_t *sn;
@@ -924,7 +914,6 @@ int cc_describeResources(axutil_env_t * env, axis2_stub_t * stub)
     adb_virtualMachineType_t *vm;
     int i;
     axis2_bool_t status;
-    adb_serviceInfoType_t *sit;
 
     drt = adb_describeResourcesType_create(env);
     //  adb_describeResourcesType_add_instanceTypes(drt, env, "1");
@@ -1069,7 +1058,6 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t * env, axi
             printf("operation fault '%s'\n", adb_describeInstancesResponseType_get_statusMessage(dirt, env));
         } else {
             for (i = 0; i < adb_describeInstancesResponseType_sizeof_instances(dirt, env); i++) {
-                char *amiId;
                 char *state;
                 char *reservationId;
                 char *ownerId, *accountId, *keyName;
@@ -1142,7 +1130,6 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t * env, axi
 int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, int num, int vlan, char *netName,
                     virtualMachine * vm_type, axutil_env_t * env, axis2_stub_t * stub)
 {
-    int i;
     adb_RunInstances_t *riIn;
     adb_runInstancesType_t *rit;
 
@@ -1438,7 +1425,6 @@ int cc_startService(axutil_env_t * env, axis2_stub_t * stub)
 
     adb_StartServiceResponse_t *adbresponse;
     adb_startServiceResponseType_t *adboutput;
-    int i;
     axis2_bool_t status;
 
     adbinput = adb_startServiceType_create(env);
@@ -1470,7 +1456,6 @@ int cc_stopService(axutil_env_t * env, axis2_stub_t * stub)
 
     adb_StopServiceResponse_t *adbresponse;
     adb_stopServiceResponseType_t *adboutput;
-    int i;
     axis2_bool_t status;
 
     adbinput = adb_stopServiceType_create(env);
@@ -1502,7 +1487,6 @@ int cc_enableService(axutil_env_t * env, axis2_stub_t * stub)
 
     adb_EnableServiceResponse_t *adbresponse;
     adb_enableServiceResponseType_t *adboutput;
-    int i;
     axis2_bool_t status;
 
     adbinput = adb_enableServiceType_create(env);
@@ -1534,7 +1518,6 @@ int cc_disableService(axutil_env_t * env, axis2_stub_t * stub)
 
     adb_DisableServiceResponse_t *adbresponse;
     adb_disableServiceResponseType_t *adboutput;
-    int i;
     axis2_bool_t status;
 
     adbinput = adb_disableServiceType_create(env);
@@ -1566,7 +1549,6 @@ int cc_shutdownService(axutil_env_t * env, axis2_stub_t * stub)
 
     adb_ShutdownServiceResponse_t *adbresponse;
     adb_shutdownServiceResponseType_t *adboutput;
-    int i;
     axis2_bool_t status;
 
     adbinput = adb_shutdownServiceType_create(env);

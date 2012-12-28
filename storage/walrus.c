@@ -300,7 +300,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         // the library. For now, we will serialize all curl operations, but in the future
         // an approach to parallelizing Walrus downloads is necessary (TODO)
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "wrote %lld byte(s) in %ld write(s)\n", params.total_wrote, params.total_calls);
+        logprintfl(EUCADEBUG, "wrote %lld byte(s) in %lld write(s)\n", params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
         if (do_compress) {

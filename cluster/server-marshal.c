@@ -79,7 +79,6 @@
 
 void adb_InitService(void)
 {
-    int rc;
     doInitCC();
 }
 
@@ -282,7 +281,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
     int rc;
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
-    char *instanceId = NULL, *bucketName = NULL, *filePrefix = NULL, *walrusURL = NULL, *userPublicKey = NULL;
+    char *instanceId = NULL;
     ncMetadata ccMeta;
 
     bit = adb_CancelBundleTask_get_CancelBundleTask(cancelBundleTask, env);
@@ -428,7 +427,7 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
     int rc, vlan;
     axis2_bool_t status = AXIS2_TRUE;
     char statusMessage[256];
-    char *userName = NULL, *netName = NULL, *accountId = NULL;
+    char *netName = NULL, *accountId = NULL;
     ncMetadata ccMeta;
 
     snt = adb_StopNetwork_get_StopNetwork(stopNetwork, env);
@@ -1016,8 +1015,6 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     virtualMachine *vms = NULL;
     adb_virtualMachineType_t *vm = NULL;
     ncMetadata ccMeta;
-    adb_serviceInfoType_t *sit = NULL;
-    int servicesLen = 0, urisLen = 0, j;
 
     drt = adb_DescribeResources_get_DescribeResources(describeResources, env);
 
@@ -1027,7 +1024,6 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     vms = malloc(sizeof(virtualMachine) * vmLen);
 
     for (i = 0; i < vmLen; i++) {
-        char *name;
         vm = adb_describeResourcesType_get_instanceTypes_at(drt, env, i);
         copy_vm_type_from_adb(&(vms[i]), vm, env);
     }
