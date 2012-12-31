@@ -124,7 +124,8 @@ public class SoapHandler extends MessageStackHandler {
             }
             final String faultCode = fault.getCode( ).getText( );
             faultReason = faultReason.replaceAll( faultCode, "" );
-            throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason );
+            final String faultDetail = fault.getDetail( ).getText( );
+            throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason, faultDetail );
           }
         }
       }

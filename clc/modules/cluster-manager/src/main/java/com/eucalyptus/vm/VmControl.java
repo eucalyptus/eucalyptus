@@ -324,21 +324,41 @@ public class VmControl {
   public RebootInstancesResponseType rebootInstances( final RebootInstancesType request ) throws EucalyptusCloudException {
     final RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     try {
-      final Context ctx = Contexts.lookup( );
-      final boolean result = Iterables.any( request.getInstancesSet( ), new Predicate<String>( ) {
+        ArrayList <String> instanceSet = request.getInstancesSet();
+        ArrayList <String> noAccess = new ArrayList<String>();
+        ArrayList <String> noSuchElement = new ArrayList<String>();
+        for( int i = 0; i < instanceSet.size(); i++) {
+          String currentInstance = instanceSet.get(i);
+          try {
+            final VmInstance v = VmInstances.lookup(  currentInstance );
+            if( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
+              noAccess.add( currentInstance );
+            }
+          } catch (NoSuchElementException nse) {
+            if( !( nse instanceof TerminatedInstanceException ) ) {
+              noSuchElement.add( currentInstance );
+            } else {
+              instanceSet.remove(i--);
+            }
+          }
+          if( ( i == instanceSet.size( ) - 1 ) && ( !noSuchElement.isEmpty( ) ) ) {
+            String outList = noSuchElement.toString();
+            throw new EucalyptusCloudException( "No such instance(s): " + outList.substring( 1, outList.length( ) - 1 ) );
+          } else if( ( i == instanceSet.size( ) - 1 ) && ( !noAccess.isEmpty( ) ) ) {
+            String outList = noAccess.toString( );
+            throw new EucalyptusCloudException( "Permission denied for vm(s): " + outList.substring( 1, outList.length( ) - 1 ) );
+          }
+        }
+        final boolean result = Iterables.all( instanceSet , new Predicate<String>( ) {
         @Override
         public boolean apply( final String instanceId ) {
           try {
             final VmInstance v = VmInstances.lookup( instanceId );
-            if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
               final Request<RebootInstancesType, RebootInstancesResponseType> req = AsyncRequests.newRequest( new RebootCallback( v.getInstanceId( ) ) );
               req.getRequest( ).regarding( request );
               ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
               req.dispatch( ccConfig );
               return true;
-            } else {
-              return false;
-            }
           } catch ( final NoSuchElementException e ) {
             return false;
           }

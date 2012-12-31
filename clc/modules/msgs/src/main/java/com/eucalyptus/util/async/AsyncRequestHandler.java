@@ -106,6 +106,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.TypeMappers;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.WebServices;
 import com.eucalyptus.ws.util.NioBootstrap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -353,8 +354,14 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   }
   
   private void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent e ) {
-    Logs.extreme( ).error( e, e.getCause( ) );
-    this.teardown( e.getCause( ) );
+    Throwable cause = e.getCause( );
+    Logs.extreme( ).error( e, cause );
+    if ( cause instanceof EucalyptusRemoteFault ) {//GRZE: treat this like a normal response, set the response and close the channel.
+      this.response.setException( cause );
+      e.getFuture( ).addListener( ChannelFutureListener.CLOSE );
+    } else {
+      this.teardown( cause );
+    }
   }
   
 }
