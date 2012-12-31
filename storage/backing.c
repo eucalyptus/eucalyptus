@@ -390,8 +390,7 @@ ncInstance *load_instance_struct(const char *instanceId)
     char checkpoint_path[MAX_PATH];
     set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
     if ((fd = open(checkpoint_path, O_RDONLY)) < 0 || read(fd, instance, meta_size) < meta_size) {
-        logprintfl(EUCAERROR, "failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path,
-                   strerror(errno));
+        logprintfl(EUCAERROR, "failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
         if (fd >= 0)
             close(fd);
         goto free;

@@ -723,7 +723,8 @@ release:
     }
 
     if (ret == OK)
-        logprintfl(EUCAINFO, "[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        logprintfl(EUCAINFO, "[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal,
+                   localDevReal);
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
     int log_level_for_devstring = EUCATRACE;
     if (ret != OK)
@@ -1601,7 +1602,7 @@ doDescribeSensors(struct nc_state_t *nc,
         rss[k] = malloc(sizeof(sensorResource));
         if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != OK) {
             logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
-            free (rss[k]);
+            free(rss[k]);
         } else {
             k++;
         }

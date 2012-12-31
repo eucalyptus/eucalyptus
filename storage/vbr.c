@@ -575,9 +575,9 @@ static void update_vbr_with_backing_info(artifact * a)
     virtualBootRecord *vbr = a->vbr;
 
     assert(a->bb);
-    if (!a->must_be_file && // not required to be a file
+    if (!a->must_be_file &&     // not required to be a file
         strlen(blockblob_get_dev(a->bb)) && // there is a block device
-        blockblob_get_file(a->bb)==NULL && // there is NO file access
+        blockblob_get_file(a->bb) == NULL &&    // there is NO file access
         (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) {  // without snapshots we can use files
         safe_strncpy(vbr->backingPath, blockblob_get_dev(a->bb), sizeof(vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
@@ -874,14 +874,13 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             goto unmount;
         }
         if (blockblob_sync(mapper_dev, a->bb) != 0) {
-            logprintfl (EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId, root_part);
             goto unmount;
         }
         if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != OK) {
             logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId, root_part);
             goto unmount;
         }
-
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
         sleep(1);               // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
         if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
@@ -1600,8 +1599,7 @@ vbr_alloc_tree(                 // creates a tree of artifacts for a given VBR (
                 } else if (partitions) {    // there were partitions and we saw them all
                     assert(disk_arts[0] == NULL);
                     if (vm->virtualBootRecordLen == EUCA_MAX_VBRS) {
-                        logprintfl(EUCAERROR, "[%s] out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j,
-                                   i);
+                        logprintfl(EUCAERROR, "[%s] out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
                         goto out;
                     }
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
@@ -1747,7 +1745,7 @@ find_or_create_artifact(        // finds and opens or creates artifact's blob ei
     }
 try_work:
     if (ret == BLOBSTORE_ERROR_SIGNATURE) {
-        logprintfl(EUCAWARN, "[%s] signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache); // TODO: maybe invalidate?
+        logprintfl(EUCAWARN, "[%s] signature mismatch on cached blob %03d|%s\n", a->instanceId, a->seq, id_cache);  // TODO: maybe invalidate?
     }
     logprintfl(EUCADEBUG, "[%s] checking work blobstore for %03d|%s (do_create=%d ret=%d)\n", a->instanceId, a->seq, id_cache, do_create, ret);
     return find_or_create_blob(flags, work_bs, id_work, size_bytes, a->sig, bbp);
@@ -1898,8 +1896,7 @@ art_implement_tree(             // traverse artifact tree and create/download/co
 create:
             ret = root->creator(root);  // create and open this artifact for exclusive use
             if (ret != OK) {
-                logprintfl(EUCAERROR, "[%s] failed to create artifact %s (error=%d, may retry) on try %d\n", root->instanceId, root->id, ret,
-                           tries);
+                logprintfl(EUCAERROR, "[%s] failed to create artifact %s (error=%d, may retry) on try %d\n", root->instanceId, root->id, ret, tries);
                 // delete the partially created artifact so we can retry with a clean slate
                 if (root->id_is_path) { // artifact is not a blob, but a file
                     unlink(root->id);   // attempt to delete, but it may not even exist

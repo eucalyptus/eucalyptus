@@ -726,7 +726,6 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
                 free(output);
             }
         }
-
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
         snprintf(cmd, sizeof(cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);

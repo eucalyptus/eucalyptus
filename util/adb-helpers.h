@@ -399,7 +399,6 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                            sm->metricName, sensor_type2str(sc->type));
                 return resource;
             }
-
             // First, sanity check the values. All dimensions must have same number of values.
             int num_values = 0;
             for (int d = 0; d < sc->dimensionsLen; d++) {
@@ -419,14 +418,14 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                 }
             }
 
-            if (num_values == 0) // no measurements to include
+            if (num_values == 0)    // no measurements to include
                 continue;
 
             // If requested history_size is smaller than the number of values in each array,
             // we need to select the batch of latest values of size history_size and adjust
             // the sequence number accordingly.
             int batch_size = num_values;
-            if (batch_size > history_size) { // have more values that the requested history
+            if (batch_size > history_size) {    // have more values that the requested history
                 batch_size = history_size;
             }
             int array_offset = num_values - batch_size; // index of first value in each dimension's array that we are using
@@ -454,8 +453,8 @@ static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axuti
                         if (v == (sd->valuesLen - 1)) { // last value
                             logprintfl(EUCATRACE, "sending sensor value [%d of %d] %s:%s:%s:%s %05lld %014lld %s %f\n",
                                        batch_size, num_values,
-                                       sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + v, sv->timestampMs,
-                                       sv->available ? "YES" : " NO", sv->available ? val : -1);
+                                       sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + v,
+                                       sv->timestampMs, sv->available ? "YES" : " NO", sv->available ? val : -1);
                         }
                     }
                     adb_metricDimensionsType_add_values(dimension, env, value);
