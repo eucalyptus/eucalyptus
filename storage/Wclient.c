@@ -83,9 +83,11 @@
 #include <fcntl.h>              /* open */
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "euca_auth.h"
-#include "eucalyptus.h"
-#include "misc.h"
+
+#include <euca_auth.h>
+#include <eucalyptus.h>
+#include <misc.h>
+#include <euca_string.h>
 #include "walrus.h"
 #include "http.h"
 
@@ -271,7 +273,7 @@ int main(int argc, char *argv[])
                 result = walrus_image_by_manifest_url(request, tmp_name, do_compress);
             }
         } else {
-            safe_strncpy(request, manifest, STRSIZE);
+            euca_strncpy(request, manifest, STRSIZE);
             if (strcmp(command, "GetObject") == 0) {
                 result = walrus_object_by_path(request, tmp_name, do_compress);
             } else {

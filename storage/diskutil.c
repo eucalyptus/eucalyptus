@@ -84,10 +84,13 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <errno.h>
-#include "misc.h"               // logprintfl
-#include "ipc.h"                // sem
+
+#include <eucalyptus.h>
+#include <misc.h>               // logprintfl
+#include <ipc.h>                // sem
+#include <euca_string.h>
+
 #include "diskutil.h"
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -227,7 +230,7 @@ long long round_down_sec(long long bytes);
 \*----------------------------------------------------------------------------*/
 
 static int try_stage_dir(const char *dir);
-static char *pruntf(boolean log_error, char *format, ...);
+static char *pruntf(boolean log_error, char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -263,7 +266,7 @@ static int try_stage_dir(const char *dir)
         snprintf(stage_file_path, sizeof(stage_file_path), "%s/stage1", dir);
         if (check_file(stage_file_path))
             return (EUCA_NOT_FOUND_ERROR);
-        safe_strncpy(stage_files_dir, dir, sizeof(stage_files_dir));
+        euca_strncpy(stage_files_dir, dir, sizeof(stage_files_dir));
         return (EUCA_OK);
     }
     return (EUCA_INVALID_ERROR);

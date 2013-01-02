@@ -88,9 +88,9 @@
 #include <strings.h>
 #include <assert.h>
 
+#include "eucalyptus.h"
 #include "misc.h"               /* logprintfl */
 #include "ipc.h"
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

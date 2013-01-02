@@ -166,7 +166,7 @@ int main(int argc, char **argv);
 //!
 int main(int argc, char **argv)
 {
-    int i = 0;
+    u_int i = 0;
     int rc = 0;
     uid_t uid = 0;
     char *source = NULL;

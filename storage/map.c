@@ -78,12 +78,13 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
-#include "map.h"
-#include "eucalyptus.h"
 
 #ifdef _TEST_MAP
 #include <assert.h>
 #endif /* _TEST_MAP */
+
+#include <eucalyptus.h>
+#include "map.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

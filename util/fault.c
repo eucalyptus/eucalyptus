@@ -96,11 +96,12 @@
 #include <libxml/tree.h>
 #include <eucalyptus-config.h>
 
-#include <eucalyptus.h>
-#include <misc.h>
-#include <fault.h>
-#include <wc.h>
-#include <utf8.h>
+#include "eucalyptus.h"
+#include "misc.h"
+#include "fault.h"
+#include "wc.h"
+#include "utf8.h"
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -189,7 +190,7 @@ extern char *program_invocation_short_name;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
- //! Defines the order of labels in fault log entries.
+//! Defines the order of labels in fault log entries.
 static char *fault_labels[] = { "condition",
     "cause",
     "initiator",
@@ -726,7 +727,7 @@ int init_eucafaults(const char *fileprefix)
             if (stat(faultdirs[i], &dirstat) != 0) {
                 logprintfl(EUCAINFO, "stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
             } else if (!S_ISDIR(dirstat.st_mode)) {
-                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory\n", faultdirs[i], strerror(errno));
+                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory. errno=%d(%s)\n", faultdirs[i], errno, strerror(errno));
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir(faultdirs[i], &namelist, &scandir_filter, alphasort);
@@ -983,8 +984,8 @@ boolean is_redundant_eucafault(const char *fault_id, const char_map ** vars)
     char *new = strdup(fault_id);
     for (int i = 0; vars && vars[i] != NULL; i++) {
         const char_map *v = vars[i];
-        new = strdupcat(new, v->key);
-        new = strdupcat(new, v->val);
+        new = euca_strdupcat(new, v->key);
+        new = euca_strdupcat(new, v->val);
     }
 
     //! see if it is already in our linked list (@TODO switch to a more efficient data structure)

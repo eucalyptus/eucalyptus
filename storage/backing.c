@@ -86,18 +86,21 @@
 #include <limits.h>
 #include <assert.h>
 #include <dirent.h>
-#include "misc.h"               // logprintfl, ensure_...
-#include "data.h"               // ncInstance
+
+#include <eucalyptus.h>
+#include <misc.h>               // logprintfl, ensure_...
+#include <data.h>               // ncInstance
+#include <handlers.h>           // nc_state
+#include <ipc.h>                // sem
+#include <euca_string.h>
+
 #include "diskutil.h"
-#include "eucalyptus.h"
 #include "blobstore.h"
 #include "walrus.h"
 #include "storage-windows.h"
-#include "handlers.h"           // nc_state
 #include "backing.h"
 #include "iscsi.h"
 #include "vbr.h"
-#include "ipc.h"                // sem
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -355,7 +358,7 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
         return (EUCA_INVALID_ERROR);
     }
     // Set our global instance_path variable with the content of conf_instance_path
-    safe_strncpy(instances_path, conf_instances_path, sizeof(instances_path));
+    euca_strncpy(instances_path, conf_instances_path, sizeof(instances_path));
     if (check_directory(instances_path)) {
         logprintfl(EUCAERROR, "INSTANCE_PATH (%s) does not exist!\n", instances_path);
         return (EUCA_ACCESS_ERROR);
@@ -553,7 +556,7 @@ static int stale_blob_examiner(const blockblob * bb)
         return (EUCA_OK);
     }
     // parse the path past the work directory base
-    safe_strncpy(work_path, bb->blocks_path, sizeof(work_path));
+    euca_strncpy(work_path, bb->blocks_path, sizeof(work_path));
     s = work_path + work_path_len + 1;
     user_id = strtok(s, "/");
     inst_id = strtok(NULL, "/");
@@ -651,7 +654,7 @@ ncInstance *load_instance_struct(const char *instanceId)
         return (NULL);
     }
     // We know the instance indentifier
-    safe_strncpy(instance->instanceId, instanceId, sizeof(instance->instanceId));
+    euca_strncpy(instance->instanceId, instanceId, sizeof(instance->instanceId));
 
     // we don't know userId, so we'll look for instanceId in every user's
     // directory (we're assuming that instanceIds are unique in the system)
@@ -665,7 +668,7 @@ ncInstance *load_instance_struct(const char *instanceId)
         snprintf(tmp_path, sizeof(tmp_path), "%s/%s/%s", user_paths, dir_entry->d_name, instance->instanceId);
         if (stat(tmp_path, &mystat) == 0) {
             // found it. Now save our user identifier
-            safe_strncpy(instance->userId, dir_entry->d_name, sizeof(instance->userId));
+            euca_strncpy(instance->userId, dir_entry->d_name, sizeof(instance->userId));
             break;
         }
     }

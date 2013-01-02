@@ -90,9 +90,11 @@
 #include <assert.h>
 #include <dirent.h>
 
-#include "misc.h"               // logprintfl, ensure_...
-#include "hash.h"
-#include "data.h"
+#include <eucalyptus.h>
+#include <misc.h>               // logprintfl, ensure_...
+#include <hash.h>
+#include <data.h>
+#include <euca_string.h>
 #include "vbr.h"
 #include "walrus.h"
 #include "blobstore.h"
@@ -355,13 +357,13 @@ int vbr_add_ascii(const char *spec_str, virtualMachine * vm_type)
         logprintfl(EUCAERROR, "invalid 'type' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
+    euca_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
 
     if (id_spec == NULL) {
         logprintfl(EUCAERROR, "invalid 'id' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->id, id_spec, sizeof(vbr->id));
+    euca_strncpy(vbr->id, id_spec, sizeof(vbr->id));
 
     if (size_spec == NULL) {
         logprintfl(EUCAERROR, "invalid 'size' specification in VBR '%s'\n", spec_str);
@@ -373,19 +375,19 @@ int vbr_add_ascii(const char *spec_str, virtualMachine * vm_type)
         logprintfl(EUCAERROR, "invalid 'format' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
+    euca_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
 
     if (dev_spec == NULL) {
         logprintfl(EUCAERROR, "invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
+    euca_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
 
     if (loc_spec == NULL) {
         logprintfl(EUCAERROR, "invalid 'resourceLocation' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
+    euca_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
 
     EUCA_FREE(spec_copy);
     return 0;
@@ -451,7 +453,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
         } else {
             vbr->locationType = NC_LOCATION_URL;
         }
-        safe_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
+        euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
     } else if (strcasestr(vbr->resourceLocation, "iqn://") == vbr->resourceLocation || strchr(vbr->resourceLocation, ',')) {    //! @TODO remove this transitionary iSCSI crutch?
         vbr->locationType = NC_LOCATION_IQN;
     } else if (strcasestr(vbr->resourceLocation, "aoe://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "/dev/") == vbr->resourceLocation) {   //! @TODO remove this transitionary AoE crutch
@@ -496,8 +498,8 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
         if (strstr(vbr->guestDeviceName, "/dev/") == vbr->guestDeviceName) {
             logprintfl(EUCAWARN, "trimming off invalid prefix '/dev/' from guestDeviceName '%s'\n", vbr->guestDeviceName);
             char buf[10];
-            safe_strncpy(buf, vbr->guestDeviceName + 5, sizeof(buf));
-            safe_strncpy(vbr->guestDeviceName, buf, sizeof(vbr->guestDeviceName));
+            euca_strncpy(buf, vbr->guestDeviceName + 5, sizeof(buf));
+            euca_strncpy(vbr->guestDeviceName, buf, sizeof(vbr->guestDeviceName));
         }
 
         if (strlen(vbr->guestDeviceName) < 3 || (vbr->guestDeviceName[0] == 'x' && strlen(vbr->guestDeviceName) < 4)) {
@@ -533,7 +535,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
                 return EUCA_ERROR;
             }
 
-            int letters_len = 3;    // e.g. "sda"
+            size_t letters_len = 3; // e.g. "sda"
             if (t == 'x')
                 letters_len = 4;    // e.g., "xvda"
             if (t == 'f')
@@ -549,14 +551,14 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
                     return EUCA_ERROR;
                 }
                 if (p < 0 || p > EUCA_MAX_PARTITIONS) {
-                    logprintfl(EUCAERROR, "unexpected partition or disk number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                    logprintfl(EUCAERROR, "unexpected partition or disk number '%lld' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
                     return EUCA_ERROR;
                 }
                 if (t == 'f') {
                     vbr->diskNumber = p;
                 } else {
                     if (p < 1) {
-                        logprintfl(EUCAERROR, "unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                        logprintfl(EUCAERROR, "unexpected partition number '%lld' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
                         return EUCA_ERROR;
                     }
                     vbr->partitionNumber = p;
@@ -602,13 +604,13 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     }
     if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP) {  //! @TODO should we allow ephemeral/swap that reside remotely?
         if (vbr->size < 1) {
-            logprintfl(EUCAERROR, "invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
+            logprintfl(EUCAERROR, "invalid size '%lld' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
             return EUCA_ERROR;
         }
     } else {
         //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { //! @TODO check for size!=-1
         if (vbr->format != NC_FORMAT_NONE) {
-            logprintfl(EUCAERROR, "invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName,
+            logprintfl(EUCAERROR, "invalid size '%lld' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName,
                        vbr->resourceLocation);
             return EUCA_ERROR;
         }
@@ -751,32 +753,32 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
 
             {                   // create root partition VBR
                 virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
-                safe_strncpy(vbr->resourceLocation, imageURL, sizeof(vbr->resourceLocation));
-                safe_strncpy(vbr->guestDeviceName, "sda1", sizeof(vbr->guestDeviceName));
-                safe_strncpy(vbr->id, imageId, sizeof(vbr->id));
-                safe_strncpy(vbr->typeName, "machine", sizeof(vbr->typeName));
+                euca_strncpy(vbr->resourceLocation, imageURL, sizeof(vbr->resourceLocation));
+                euca_strncpy(vbr->guestDeviceName, "sda1", sizeof(vbr->guestDeviceName));
+                euca_strncpy(vbr->id, imageId, sizeof(vbr->id));
+                euca_strncpy(vbr->typeName, "machine", sizeof(vbr->typeName));
                 vbr->size = -1;
-                safe_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
+                euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
             {                   // create ephemeral partition VBR
                 virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
-                safe_strncpy(vbr->resourceLocation, "none", sizeof(vbr->resourceLocation));
-                safe_strncpy(vbr->guestDeviceName, "sda2", sizeof(vbr->guestDeviceName));
-                safe_strncpy(vbr->id, "none", sizeof(vbr->id));
-                safe_strncpy(vbr->typeName, "ephemeral0", sizeof(vbr->typeName));
+                euca_strncpy(vbr->resourceLocation, "none", sizeof(vbr->resourceLocation));
+                euca_strncpy(vbr->guestDeviceName, "sda2", sizeof(vbr->guestDeviceName));
+                euca_strncpy(vbr->id, "none", sizeof(vbr->id));
+                euca_strncpy(vbr->typeName, "ephemeral0", sizeof(vbr->typeName));
                 vbr->size = 524288; // we cannot compute it here, so pick something
-                safe_strncpy(vbr->formatName, "ext2", sizeof(vbr->formatName));
+                euca_strncpy(vbr->formatName, "ext2", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
             {                   // create swap partition VBR
                 virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
-                safe_strncpy(vbr->resourceLocation, "none", sizeof(vbr->resourceLocation));
-                safe_strncpy(vbr->guestDeviceName, "sda3", sizeof(vbr->guestDeviceName));
-                safe_strncpy(vbr->id, "none", sizeof(vbr->id));
-                safe_strncpy(vbr->typeName, "swap", sizeof(vbr->typeName));
+                euca_strncpy(vbr->resourceLocation, "none", sizeof(vbr->resourceLocation));
+                euca_strncpy(vbr->guestDeviceName, "sda3", sizeof(vbr->guestDeviceName));
+                euca_strncpy(vbr->id, "none", sizeof(vbr->id));
+                euca_strncpy(vbr->typeName, "swap", sizeof(vbr->typeName));
                 vbr->size = 524288;
-                safe_strncpy(vbr->formatName, "swap", sizeof(vbr->formatName));
+                euca_strncpy(vbr->formatName, "swap", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
         }
@@ -792,12 +794,12 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 return EUCA_ERROR;
             }
             virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
-            safe_strncpy(vbr->resourceLocation, kernelURL, sizeof(vbr->resourceLocation));
-            safe_strncpy(vbr->guestDeviceName, "none", sizeof(vbr->guestDeviceName));
-            safe_strncpy(vbr->id, kernelId, sizeof(vbr->id));
-            safe_strncpy(vbr->typeName, "kernel", sizeof(vbr->typeName));
+            euca_strncpy(vbr->resourceLocation, kernelURL, sizeof(vbr->resourceLocation));
+            euca_strncpy(vbr->guestDeviceName, "none", sizeof(vbr->guestDeviceName));
+            euca_strncpy(vbr->id, kernelId, sizeof(vbr->id));
+            euca_strncpy(vbr->typeName, "kernel", sizeof(vbr->typeName));
             vbr->size = -1;
-            safe_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
+            euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
             params->virtualBootRecordLen++;
         }
     }
@@ -812,12 +814,12 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 return EUCA_ERROR;
             }
             virtualBootRecord *vbr = &(params->virtualBootRecord[i++]);
-            safe_strncpy(vbr->resourceLocation, ramdiskURL, sizeof(vbr->resourceLocation));
-            safe_strncpy(vbr->guestDeviceName, "none", sizeof(vbr->guestDeviceName));
-            safe_strncpy(vbr->id, ramdiskId, sizeof(vbr->id));
-            safe_strncpy(vbr->typeName, "ramdisk", sizeof(vbr->typeName));
+            euca_strncpy(vbr->resourceLocation, ramdiskURL, sizeof(vbr->resourceLocation));
+            euca_strncpy(vbr->guestDeviceName, "none", sizeof(vbr->guestDeviceName));
+            euca_strncpy(vbr->id, ramdiskId, sizeof(vbr->id));
+            euca_strncpy(vbr->typeName, "ramdisk", sizeof(vbr->typeName));
             vbr->size = -1;
-            safe_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
+            euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
             params->virtualBootRecordLen++;
         }
     }
@@ -845,11 +847,11 @@ static void update_vbr_with_backing_info(artifact * a)
         strlen(blockblob_get_dev(a->bb)) && // there is a block device
         blockblob_get_file(a->bb) == NULL &&    // there is NO file access
         (blobstore_snapshot_t) a->bb->store->snapshot_policy != BLOBSTORE_SNAPSHOT_NONE) {  // without snapshots we can use files
-        safe_strncpy(vbr->backingPath, blockblob_get_dev(a->bb), sizeof(vbr->backingPath));
+        euca_strncpy(vbr->backingPath, blockblob_get_dev(a->bb), sizeof(vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_BLOCK;
     } else {
         assert(blockblob_get_file(a->bb));
-        safe_strncpy(vbr->backingPath, blockblob_get_file(a->bb), sizeof(vbr->backingPath));
+        euca_strncpy(vbr->backingPath, blockblob_get_file(a->bb), sizeof(vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
     vbr->size = a->bb->size_bytes;
@@ -1150,7 +1152,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         } else if (check_path(dev_without_p) == 0) {
             mapper_dev = dev_without_p;
         } else {
-            logprintfl(EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, mapper_dev, strerror(errno));
+            logprintfl(EUCAERROR, "[%s] failed to stat partition device [%s]. errno=%d(%s)\n", a->instanceId, mapper_dev, errno, strerror(errno));
             goto cleanup;
         }
         logprintfl(EUCAINFO, "[%s] found partition device %s\n", a->instanceId, mapper_dev);
@@ -1179,15 +1181,15 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
         if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != EUCA_OK) {
-            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId);
             goto unmount;
         }
         if (blockblob_sync(mapper_dev, a->bb) != 0) {
-            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId);
             goto unmount;
         }
         if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != EUCA_OK) {
-            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId);
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
@@ -1246,7 +1248,7 @@ static int iqn_creator(artifact * a)
         return EUCA_ERROR;
     }
     // update VBR with device location
-    safe_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
+    euca_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
 
     return EUCA_OK;
@@ -1275,7 +1277,7 @@ static int aoe_creator(artifact * a)
         return EUCA_ERROR;
     }
     // update VBR with device location
-    safe_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
+    euca_strncpy(vbr->backingPath, dev, sizeof(vbr->backingPath));
     vbr->backingType = SOURCE_TYPE_BLOCK;
 
     return EUCA_OK;
@@ -1457,7 +1459,7 @@ void art_free(artifact * a)
             for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
                 ART_FREE(a->deps[i]);
             }
-            logprintfl(EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes,
+            logprintfl(EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes,
                        a->vbr, a->may_be_cached, a->must_be_file);
             EUCA_FREE(a);
         }
@@ -1478,7 +1480,7 @@ void art_free(artifact * a)
 //!
 void arts_free(artifact * array[], unsigned int array_len)
 {
-    int i = 0;
+    u_int i = 0;
     if (array) {
         for (i = 0; i < array_len; i++)
             ART_FREE(array[i]);
@@ -1497,7 +1499,7 @@ void arts_free(artifact * array[], unsigned int array_len)
 //!
 static void art_print_tree(const char *prefix, artifact * a)
 {
-    logprintfl(EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%0x vbr=%0x\n", a->instanceId, prefix, a->seq, a->id,
+    logprintfl(EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%p vbr=%p\n", a->instanceId, prefix, a->seq, a->id,
                a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix[512];
@@ -1567,15 +1569,19 @@ boolean tree_uses_cache(artifact * a)
 //!
 static int art_gen_id(char *buf, unsigned int buf_size, const char *first, const char *sig)
 {
-    char hash[48];
+    int bytesWritten = 0;
+    char hash[48] = "";
 
     if (hexjenkins(hash, sizeof(hash), sig) != EUCA_OK)
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
 
-    if (snprintf(buf, buf_size, "%s-%s", first, hash) >= buf_size)  // truncation
-        return EUCA_ERROR;
+    if ((bytesWritten = snprintf(buf, buf_size, "%s-%s", first, hash)) < 0)
+        return (EUCA_ERROR);
 
-    return EUCA_OK;
+    if (((unsigned)bytesWritten) >= buf_size)   // truncation
+        return (EUCA_ERROR);
+
+    return (EUCA_OK);
 }
 
 //!
@@ -1605,14 +1611,14 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
 
     static int seq = 0;
     a->seq = ++seq;             // not thread safe, but seq's are just for debugging
-    safe_strncpy(a->instanceId, current_instanceId, sizeof(a->instanceId)); // for logging
-    logprintfl(EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr,
+    euca_strncpy(a->instanceId, current_instanceId, sizeof(a->instanceId)); // for logging
+    logprintfl(EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr,
                may_be_cached, must_be_file);
 
     if (id)
-        safe_strncpy(a->id, id, sizeof(a->id));
+        euca_strncpy(a->id, id, sizeof(a->id));
     if (sig)
-        safe_strncpy(a->sig, sig, sizeof(a->sig));
+        euca_strncpy(a->sig, sig, sizeof(a->sig));
     a->size_bytes = size_bytes;
     a->may_be_cached = may_be_cached;
     a->must_be_file = must_be_file;
@@ -1725,7 +1731,7 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
                 goto u_out;
 
             // extract size from the digest
-            long long bb_size_bytes = str2longlong(blob_sig, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_sig, "<size>", "</size>");  // pull size from the digest
             if (bb_size_bytes < 1)
                 goto u_out;
             vbr->size = bb_size_bytes;  // record size in VBR now that we know it
@@ -1750,7 +1756,7 @@ u_out:
                 goto w_out;
             }
             // extract size from the digest
-            long long bb_size_bytes = str2longlong(blob_sig, "<size>", "</size>");  // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_sig, "<size>", "</size>");  // pull size from the digest
             if (bb_size_bytes < 1) {
                 logprintfl(EUCAERROR, "[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
                 goto w_out;
@@ -1819,9 +1825,9 @@ w_out:
 
         artifact *a2 = NULL;
         char art_id[48];
-        safe_strncpy(art_id, a->id, sizeof(art_id));
+        euca_strncpy(art_id, a->id, sizeof(art_id));
         char art_sig[ART_SIG_MAX];
-        safe_strncpy(art_sig, a->sig, sizeof(art_sig));
+        euca_strncpy(art_sig, a->sig, sizeof(art_sig));
 
         if (sshkey) {           // if SSH key is included, recalculate sig and ID
             if (strlen(sshkey) > sizeof(a->sshkey)) {
@@ -1847,7 +1853,7 @@ w_out:
         a2 = art_alloc(art_id, art_sig, a->size_bytes, !do_make_work_copy, must_be_file, FALSE, copy_creator, vbr);
         if (a2) {
             if (sshkey)
-                safe_strncpy(a2->sshkey, sshkey, sizeof(a2->sshkey));
+                euca_strncpy(a2->sshkey, sshkey, sizeof(a2->sshkey));
 
             if (art_add_dep(a2, a) == EUCA_OK) {
                 a = a2;
@@ -2005,7 +2011,7 @@ free:
 //!
 void art_set_instanceId(const char *instanceId)
 {
-    safe_strncpy(current_instanceId, instanceId, sizeof(current_instanceId));
+    euca_strncpy(current_instanceId, instanceId, sizeof(current_instanceId));
 }
 
 //!
@@ -2026,7 +2032,7 @@ void art_set_instanceId(const char *instanceId)
 artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean do_make_work_copy, const char *sshkey, const char *instanceId)
 {
     if (instanceId)
-        safe_strncpy(current_instanceId, instanceId, sizeof(current_instanceId));
+        euca_strncpy(current_instanceId, instanceId, sizeof(current_instanceId));
 
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord *prereq_vbrs[EUCA_MAX_VBRS];
@@ -2193,7 +2199,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
     if (work_prefix && strlen(work_prefix))
         snprintf(id_work, sizeof(id_work), "%s/%s", work_prefix, a->id);
     else
-        safe_strncpy(id_work, a->id, sizeof(id_work));
+        euca_strncpy(id_work, a->id, sizeof(id_work));
 
     // determine flags
     int flags = 0;
@@ -2525,9 +2531,9 @@ static void add_vbr(virtualMachine * vm,
     virtualBootRecord *vbr = vm->virtualBootRecord + vm->virtualBootRecordLen++;
     vbr->size = size;
     if (formatName)
-        safe_strncpy(vbr->formatName, formatName, sizeof(vbr->formatName));
+        euca_strncpy(vbr->formatName, formatName, sizeof(vbr->formatName));
     if (id)
-        safe_strncpy(vbr->id, id, sizeof(vbr->id));
+        euca_strncpy(vbr->id, id, sizeof(vbr->id));
     vbr->format = format;
     vbr->type = type;
     vbr->locationType = locationType;
@@ -2535,7 +2541,7 @@ static void add_vbr(virtualMachine * vm,
     vbr->partitionNumber = partitionNumber;
     vbr->guestDeviceBus = guestDeviceBus;
     if (preparedResourceLocation)
-        safe_strncpy(vbr->preparedResourceLocation, preparedResourceLocation, sizeof(vbr->preparedResourceLocation));
+        euca_strncpy(vbr->preparedResourceLocation, preparedResourceLocation, sizeof(vbr->preparedResourceLocation));
 }
 
 //!
@@ -2561,7 +2567,7 @@ static int provision_vm(const char *id, const char *sshkey, const char *eki, con
 {
     pthread_mutex_lock(&competitors_mutex);
     virtualMachine *vm = &(vm_slots[next_instances_slot]);  // we don't use vm_slots[] pointers in code
-    safe_strncpy(vm_ids[next_instances_slot], id, PATH_MAX);
+    euca_strncpy(vm_ids[next_instances_slot], id, PATH_MAX);
     next_instances_slot++;
     pthread_mutex_unlock(&competitors_mutex);
 
@@ -2572,7 +2578,7 @@ static int provision_vm(const char *id, const char *sshkey, const char *eki, con
     add_vbr(vm, VBR_SIZE, NC_FORMAT_EXT3, "ext3", "none", NC_RESOURCE_EPHEMERAL, NC_LOCATION_NONE, 0, 3, BUS_TYPE_SCSI, NULL);
     add_vbr(vm, VBR_SIZE, NC_FORMAT_SWAP, "swap", "none", NC_RESOURCE_SWAP, NC_LOCATION_NONE, 0, 2, BUS_TYPE_SCSI, NULL);
 
-    safe_strncpy(current_instanceId, strstr(id, "/") + 1, sizeof(current_instanceId));
+    euca_strncpy(current_instanceId, strstr(id, "/") + 1, sizeof(current_instanceId));
     artifact *sentinel = vbr_alloc_tree(vm, FALSE, do_make_work_copy, sshkey, id);
     if (sentinel == NULL) {
         printf("error: vbr_alloc_tree failed id=%s\n", id);

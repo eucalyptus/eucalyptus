@@ -212,7 +212,6 @@ static virConnectPtr *check_hypervisor_conn(void)
         }
     }
     pthread_mutex_unlock(&check_mutex);
-
     return (&conn);
 }
 
@@ -249,7 +248,7 @@ static void *tortura_thread(void *ptr)
     int error = 0;
     int num_doms = 0;
     int dom_ids[MAXDOMS] = { 0 };
-    long long tid = (*(long long *) ptr);
+    long long tid = (*(long long *)ptr);
     virDomainPtr dom[MAXDOMS] = { NULL };
     virDomainInfo info[MAXDOMS] = { 0 };
 
@@ -309,15 +308,15 @@ static void *tortura_thread(void *ptr)
 //!
 //!
 //!
-//! @param[in] ptr
+//! @param[in] arg
 //!
 //! @return Always returns NULL
 //!
-static void *startup_thread(void *ptr)
+static void *startup_thread(void *arg)
 {
     int fd = 0;
     int iter = 0;
-    long long tid = (*(long long *) ptr);
+    long long tid = (*(long long *)arg);
     virDomainPtr dom = NULL;
     char file_name[1024] = { 0 };
     char xml[4096] = { 0 };
@@ -350,7 +349,7 @@ static void *startup_thread(void *ptr)
         exit(1);
     }
 
-    if (lseek(fd, DUMMY_DISK_SIZE_BYTES, SEEK_SET) == ((off_t) -1)) {
+    if (lseek(fd, DUMMY_DISK_SIZE_BYTES, SEEK_SET) == ((off_t) - 1)) {
         printf("failed to seek in %s\n", DUMMY_DISK_FILE);
         perror("libvirt_tortura");
         exit(1);
@@ -434,4 +433,5 @@ int main(int argc, char **argv)
     }
 
     printf("waited for all competing threads\n");
+    return (0);
 }

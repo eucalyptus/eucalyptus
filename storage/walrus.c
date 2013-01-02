@@ -74,7 +74,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -91,9 +90,13 @@
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif /* HAVE_ZLIB_H */
-#include "euca_auth.h"
-#include "eucalyptus.h"
-#include "misc.h"
+
+#include <eucalyptus.h>
+#include <misc.h>
+#include <config.h>
+#include <euca_auth.h>
+#include <euca_string.h>
+
 #include "walrus.h"
 
 /*----------------------------------------------------------------------------*\
@@ -237,7 +240,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
 
     pthread_mutex_lock(&wreq_mutex);    /* lock for curl construction */
 
-    safe_strncpy(url, requested_url, BUFSIZE);
+    euca_strncpy(url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
     if (do_compress)
         snprintf(url, BUFSIZE, "%s%s", requested_url, "?IsCompressed=true");
@@ -410,7 +413,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         //! the library. For now, we will serialize all curl operations, but in the future
         //! an approach to parallelizing Walrus downloads is necessary
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "wrote %lld byte(s) in %ld write(s)\n", params.total_wrote, params.total_calls);
+        logprintfl(EUCADEBUG, "wrote %lld byte(s) in %lld write(s)\n", params.total_wrote, params.total_calls);
 
 #if defined(CAN_GZIP)
         if (do_compress) {

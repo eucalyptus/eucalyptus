@@ -430,7 +430,7 @@ int main(int argc, char *argv[])
     if (diff("/etc/passwd", "/etc/motd") == 0)
         EXIT();
 
-    if (strcmp(replace_string(sp, "old", "new"), "jolly new jolly new time..."))
+    if (strcmp(euca_strreplace(sp, "old", "new"), "jolly new jolly new time..."))
         EXIT();
 
     if (vrun("ls / /etc >/dev/null"))

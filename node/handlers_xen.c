@@ -89,13 +89,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "ipc.h"
-#include "misc.h"
+#include <eucalyptus.h>
+#include <ipc.h>
+#include <misc.h>
+#include <euca_auth.h>
+#include <backing.h>
+#include <sensor.h>
+#include <euca_string.h>
+
 #include "handlers.h"
-#include "eucalyptus.h"
-#include "euca_auth.h"
-#include "backing.h"
-#include "sensor.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -210,8 +212,8 @@ struct handlers xen_libvirt_handlers = {
 static int doInitialize(struct nc_state_t *nc)
 {
     char *s = NULL;
-    virNodeInfo ni;
-    long long dom0_min_mem;
+    virNodeInfo ni = { {0} };
+    long long dom0_min_mem = 0;
 
     // set up paths of Eucalyptus commands NC relies on
     snprintf(nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
@@ -224,19 +226,19 @@ static int doInitialize(struct nc_state_t *nc)
 
     // check connection is fresh
     if (!check_hypervisor_conn()) {
-        return EUCA_FATAL_ERROR;
+        return (EUCA_FATAL_ERROR);
     }
     // get resources
     if (virNodeGetInfo(nc->conn, &ni)) {
         logprintfl(EUCAFATAL, "failed to discover resources\n");
-        return EUCA_FATAL_ERROR;
+        return (EUCA_FATAL_ERROR);
     }
     // dom0-min-mem has to come from xend config file
     s = system_output(nc->get_info_cmd_path);
     if (get_value(s, "dom0-min-mem", &dom0_min_mem)) {
         logprintfl(EUCAFATAL, "did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
         EUCA_FREE(s);
-        return EUCA_FATAL_ERROR;
+        return (EUCA_FATAL_ERROR);
     }
     EUCA_FREE(s);
 
@@ -252,7 +254,7 @@ static int doInitialize(struct nc_state_t *nc)
     if (nc->config_max_cores)
         nc->cores_max = nc->config_max_cores;
 
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -266,37 +268,50 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
-    ncInstance *instance;
-    virConnectPtr *conn;
+    int err = 0;
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    ncInstance *instance = NULL;
+    virConnectPtr *conn = NULL;
+    virDomainPtr dom = NULL;
 
     sem_p(inst_sem);
-    instance = find_instance(&global_instances, instanceId);
+    {
+        instance = find_instance(&global_instances, instanceId);
+    }
     sem_v(inst_sem);
+
     if (instance == NULL)
-        return EUCA_NOT_FOUND_ERROR;
+        return (EUCA_NOT_FOUND_ERROR);
 
     /* reboot the Xen domain */
-    conn = check_hypervisor_conn();
-    if (conn) {
+    if ((conn = check_hypervisor_conn()) != NULL) {
         sem_p(hyp_sem);
-        virDomainPtr dom = virDomainLookupByName(*conn, instanceId);
+        {
+            dom = virDomainLookupByName(*conn, instanceId);
+        }
         sem_v(hyp_sem);
-        if (dom) {
 
+        if (dom) {
             // stop polling so values after reboot are not picked up until after we shift the metric
             sensor_suspend_polling();
 
             /* also protect 'reboot', just in case */
             sem_p(hyp_sem);
-            int err = virDomainReboot(dom, 0);
+            {
+                err = virDomainReboot(dom, 0);
+            }
             sem_v(hyp_sem);
+
             if (err == 0) {
                 logprintfl(EUCAINFO, "[%s] rebooting Xen domain for instance\n", instanceId);
             }
+
             sem_p(hyp_sem);
-            virDomainFree(dom); /* necessary? */
+            {
+                /* necessary? */
+                virDomainFree(dom);
+            }
             sem_v(hyp_sem);
 
             // Add a shift to values of three of the metrics: ones that
@@ -307,8 +322,8 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             sensor_shift_metric(instance->instanceId, "NetworkIn");
             sensor_shift_metric(instance->instanceId, "NetworkOut");
 
-			safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
-            sensor_refresh_resources(resourceName, resourceAlias, 1);  // refresh stats immediately to minimize loss
+            euca_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+            sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats immediately to minimize loss
             sensor_resume_polling();    // now that metrics have been shifted, resume polling
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
@@ -317,7 +332,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         }
     }
 
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -333,35 +348,47 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 //!
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-    char *console_output = NULL, *console_append = NULL, *console_main = NULL, *tmp = NULL;
-    char console_file[MAX_PATH], dest_file[MAX_PATH], cmd[MAX_PATH];
-    char userId[48];
-    int rc, fd, ret;
-    struct stat statbuf;
+    int rc = 0;
+    int fd = 0;
+    int ret = EUCA_OK;
+    int bufsize = 0;
+    int pid = 0;
+    int status = 0;
+    int count = 0;
+    char *console_output = NULL;
+    char *console_append = NULL;
+    char *console_main = NULL;
+    char *tmp = NULL;
+    char console_file[MAX_PATH] = "";
+    char dest_file[MAX_PATH] = "";
+    char cmd[MAX_PATH] = "";
+    char userId[48] = "";
+    fd_set rfds = { {0} };
     ncInstance *instance = NULL;
-
-    int bufsize, pid, status;
+    struct stat statbuf = { 0 };
+    struct timeval tv = { 0 };
 
     EUCA_FREE(*consoleOutput);
 
     // find the instance record
     sem_p(inst_sem);
-    instance = find_instance(&global_instances, instanceId);
-    if (instance) {
-        snprintf(userId, 48, "%s", instance->userId);
-        snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
+    {
+        instance = find_instance(&global_instances, instanceId);
+        if (instance) {
+            snprintf(userId, 48, "%s", instance->userId);
+            snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
+        }
     }
     sem_v(inst_sem);
+
     if (!instance) {
         logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
     }
-    rc = stat(console_file, &statbuf);
-    if (rc >= 0) {
-        fd = open(console_file, O_RDONLY);
-        if (fd >= 0) {
-            console_append = EUCA_ZALLOC(4096, sizeof(char));
-            if (console_append) {
+
+    if ((rc = stat(console_file, &statbuf)) >= 0) {
+        if ((fd = open(console_file, O_RDONLY)) >= 0) {
+            if ((console_append = EUCA_ZALLOC(4096, sizeof(char))) != NULL) {
                 rc = read(fd, console_append, (4096) - 1);
             }
             close(fd);
@@ -369,8 +396,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     }
 
     bufsize = sizeof(char) * 1024 * 64;
-    console_main = EUCA_ZALLOC(bufsize, sizeof(char));
-    if (!console_main) {
+    if ((console_main = EUCA_ZALLOC(bufsize, sizeof(char))) == NULL) {
         logprintfl(EUCAERROR, "[%s] out of memory!\n", instanceId);
         EUCA_FREE(console_append);
         return (EUCA_MEMORY_ERROR);
@@ -380,14 +406,12 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
         snprintf(console_file, MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
         snprintf(dest_file, MAX_PATH, "%s/console.log", instance->instancePath);
         snprintf(cmd, MAX_PATH, "%s cp %s %s", nc->rootwrap_cmd_path, console_file, dest_file);
-        rc = system(cmd);
-        if (!rc) {
+        if ((rc = system(cmd)) == 0) {
             // was able to copy xen guest console file, read it
             snprintf(cmd, MAX_PATH, "%s chown %s:%s %s", nc->rootwrap_cmd_path, nc->admin_user_id, nc->admin_user_id, dest_file);
-            rc = system(cmd);
-            if (!rc) {
-                tmp = file2str_seek(dest_file, bufsize, 1);
-                if (tmp) {
+            if ((rc = system(cmd)) == 0) {
+                ;
+                if ((tmp = file2str_seek(dest_file, bufsize, 1)) != NULL) {
                     snprintf(console_main, bufsize, "%s", tmp);
                     EUCA_FREE(tmp);
                 } else {
@@ -400,16 +424,10 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
             snprintf(console_main, bufsize, "NOT SUPPORTED");
         }
     } else {
-
         snprintf(console_file, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
 
-        pid = fork();
-        if (pid == 0) {
-            int fd;
-            fd = open(console_file, O_WRONLY | O_TRUNC | O_CREAT, 0644);
-            if (fd < 0) {
-                // error
-            } else {
+        if ((pid = fork()) == 0) {
+            if ((fd = open(console_file, O_WRONLY | O_TRUNC | O_CREAT, 0644)) >= 0) {
                 dup2(fd, 2);
                 dup2(2, 1);
                 close(0);
@@ -421,17 +439,12 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
             }
             exit(0);
         } else {
-            int count;
-            fd_set rfds;
-            struct timeval tv;
-            struct stat statbuf;
-
             count = 0;
             while (count < 10000 && stat(console_file, &statbuf) < 0) {
                 count++;
             }
-            fd = open(console_file, O_RDONLY);
-            if (fd < 0) {
+
+            if ((fd = open(console_file, O_RDONLY)) < 0) {
                 logprintfl(EUCAERROR, "[%s] could not open consoleOutput file %s for reading\n", instanceId, console_file);
             } else {
                 FD_ZERO(&rfds);
@@ -439,7 +452,6 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
                 tv.tv_sec = 0;
                 tv.tv_usec = 500000;
                 rc = select(1, &rfds, NULL, NULL, &tv);
-
                 count = 0;
                 rc = 1;
                 while (rc && count < 1000) {
@@ -456,14 +468,15 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     }
 
     ret = EUCA_ERROR;
-    console_output = EUCA_ZALLOC(((64 * 1024) + 4096), sizeof(char));
-    if (console_output) {
+    if ((console_output = EUCA_ZALLOC(((64 * 1024) + 4096), sizeof(char))) != NULL) {
         if (console_append) {
             strncat(console_output, console_append, 4096);
         }
+
         if (console_main) {
             strncat(console_output, console_main, 1024 * 64);
         }
+
         *consoleOutput = base64_enc((unsigned char *)console_output, strlen(console_output));
         ret = EUCA_OK;
     }
@@ -471,6 +484,5 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     EUCA_FREE(console_append);
     EUCA_FREE(console_main);
     EUCA_FREE(console_output);
-
     return (ret);
 }

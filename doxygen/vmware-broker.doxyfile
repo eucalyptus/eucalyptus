@@ -52,7 +52,7 @@ PROJECT_LOGO = ./html_includes/eucalyptus_logo.png
 # If a relative path is entered, it will be relative to the location
 # where doxygen was started. If left blank the current directory will be used.
 
-OUTPUT_DIRECTORY = ./eucalyptus
+OUTPUT_DIRECTORY = ./vmware-broker
 
 # If the CREATE_SUBDIRS tag is set to YES, then doxygen will create
 # 4096 sub-directories (in 2 levels) under the output directory of each output
@@ -661,7 +661,7 @@ WARN_LOGFILE =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT = extra_pages/doxygen.txt extra_pages/cluster_project.txt extra_pages/node_project.txt extra_pages/vmware_broker_project.txt extra_pages/readme.txt extra_pages/changelog.txt extra_pages/install.txt extra_pages/license.txt ../cluster ../node ../gatherlog ../../vmware-broker/src/main/native ../net ../storage ../util 
+INPUT = extra_pages/doxygen.txt extra_pages/vmware_broker_project.txt extra_pages/readme.txt extra_pages/changelog.txt extra_pages/install.txt extra_pages/license.txt ../../vmware-broker/src/main/native ../net ../storage ../util
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is

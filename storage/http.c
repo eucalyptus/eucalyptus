@@ -87,14 +87,14 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
+#include <eucalyptus.h>
+#include <log.h>
+
 #ifndef _UNIT_TEST
 // http_ functions aren't part of the unit test
-#include "config.h"
+#include <config.h>
 #include "http.h"
 #endif /* ! _UNIT_TEST */
-
-#include "util/log.h"
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -176,9 +176,7 @@ static boolean curl_initialized = FALSE;    //!< boolean to indicate if we have 
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef _UNIT_TEST
 int http_put(const char *file_path, const char *url, const char *login, const char *password);
-#endif /* ! _UNIT_TEST */
 
 char *url_encode(const char *unencoded);
 char *url_decode(const char *encoded);
@@ -195,10 +193,8 @@ int main(int argc, char **argv);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef _UNIT_TEST
 static size_t read_data(char *buffer, size_t size, size_t nitems, void *params);
 static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params);
-#endif /* ! _UNIT_TEST */
 static char hch_to_int(char ch);
 static char int_to_hch(char i);
 
@@ -214,7 +210,6 @@ static char int_to_hch(char i);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef _UNIT_TEST
 //!
 //! Process an HTTP put request to the given URL.
 //!
@@ -308,7 +303,7 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
         params.total_read = 0L;
         params.total_calls = 0L;
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "uploaded %ld bytes in %ld sends\n", params.total_read, params.total_calls);
+        logprintfl(EUCADEBUG, "uploaded %lld bytes in %lld sends\n", params.total_read, params.total_calls);
 
         if (result) {
             // curl error (connection or transfer failed)
@@ -404,7 +399,7 @@ static size_t read_data(char *buffer, size_t size, size_t nitems, void *params)
             bytes_read = ((struct read_request *)params)->total_read;
             bytes_file = ((struct read_request *)params)->file_size;
             percent = (int)((bytes_read * 100) / bytes_file);
-            logprintfl(EUCADEBUG, "upload progress %ld/%ld bytes (%d%%)\n", bytes_read, bytes_file, percent);
+            logprintfl(EUCADEBUG, "upload progress %lld/%lld bytes (%d%%)\n", bytes_read, bytes_file, percent);
         }
     }
 
@@ -441,7 +436,6 @@ static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params)
 
     return (wrote);
 }
-#endif /* ! _UNIT_TEST */
 
 //!
 //! Converts hex character to integer
@@ -653,7 +647,7 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         params.total_calls = 0L;
 
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
+        logprintfl(EUCADEBUG, "wrote %lld bytes in %lld writes\n", params.total_wrote, params.total_calls);
 
         if (result) {
             // curl error (connection or transfer failed)

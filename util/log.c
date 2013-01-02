@@ -95,6 +95,7 @@
 #include "log.h"
 #include "misc.h"               // TRUE/FALSE
 #include "ipc.h"                // semaphores
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -233,8 +234,8 @@ int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...);
-int logprintfl(int level, const char *format, ...);
+int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
 int logcat(int debug_level, const char *file_path);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 void log_dump_trace(char *buf, int buf_size);
@@ -442,7 +443,7 @@ int log_file_set(const char *file)
         return (EUCA_OK);
     }
 
-    safe_strncpy(log_file_path, file, EUCA_MAX_PATH);
+    euca_strncpy(log_file_path, file, EUCA_MAX_PATH);
     if (get_file(TRUE) == NULL) {
         return (EUCA_ERROR);
     }
@@ -460,10 +461,10 @@ int log_file_set(const char *file)
 int log_prefix_set(const char *log_spec)
 {
     // @todo eventually, enable empty prefix
-    if (log_spec == NULL || strlen(log_spec) == 0)
-        safe_strncpy(log_custom_prefix, USE_STANDARD_PREFIX, sizeof(log_custom_prefix));
+    if ((log_spec == NULL) || (strlen(log_spec) == 0))
+        euca_strncpy(log_custom_prefix, USE_STANDARD_PREFIX, sizeof(log_custom_prefix));
     else
-        safe_strncpy(log_custom_prefix, log_spec, sizeof(log_custom_prefix));
+        euca_strncpy(log_custom_prefix, log_spec, sizeof(log_custom_prefix));
     return (EUCA_OK);
 }
 
@@ -750,7 +751,7 @@ int logprintfl(int level, const char *format, ...)
 
         case 'L':{             // log-level
                 char l[6];
-                safe_strncpy(l, log_level_names[level], 6); // we want hard truncation
+                euca_strncpy(l, log_level_names[level], 6); // we want hard truncation
                 size = snprintf(s, left, "%5s", l);
                 break;
             }

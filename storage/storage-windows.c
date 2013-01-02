@@ -98,11 +98,11 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
+#include <eucalyptus.h>
+
 #include <storage-windows.h>
 #include <euca_auth.h>
 #include <misc.h>
-
-#include <eucalyptus.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

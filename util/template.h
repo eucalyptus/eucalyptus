@@ -63,12 +63,12 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_HTTP_H_
-#define _INCLUDE_HTTP_H_
+#ifndef _INCLUDE_TEMPLATE_H_
+#define _INCLUDE_TEMPLATE_H_
 
 //!
-//! @file storage/http.h
-//! Need to provide description
+//! @file util/template.h
+//! Template header file
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -113,12 +113,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -137,4 +131,4 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_HTTP_H_ */
+#endif /* ! _INCLUDE_TEMPLATE_H_ */

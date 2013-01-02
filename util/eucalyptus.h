@@ -288,6 +288,22 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! @{
+//! @name Defines various unsigned bytes size holders
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long long u64;
+//! @}
+
+//! @{
+//! @name Defines various signed bytes size holders
+typedef signed char s8;
+typedef signed short s16;
+typedef signed int s32;
+typedef signed long long s64;
+//! @}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                ENUMERATIONS                                |
@@ -372,6 +388,7 @@ enum euca_error_e {
     EUCA_ACCESS_ERROR = 13,     //!< Access permission denied
     EUCA_NO_SPACE_ERROR = 14,   //!< No more space available in list or memory space
     EUCA_TIMEOUT_ERROR = 15,    //!< Execution of an operation timed out
+    EUCA_SYSTEM_ERROR = 16,     //!< If any system execution has failed
     EUCA_LAST_ERROR,
 };
 

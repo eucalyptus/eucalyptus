@@ -67,6 +67,7 @@ GLWSDL=$(WSDLPATH)/$(GLWSDLNAME)
 SERVICE_SO=libEucalyptusGL.so
 SERVICE_NAME=EucalyptusGL
 CLIENT=GLclient
+GFLAGS=$(patsubst -Werror,,$(CFLAGS))
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 #server client
 all: generated/stubs
@@ -87,22 +88,22 @@ generated/stubs: $(GLWSDL)
 	@echo Adding marshalling calls to server stubs
 	../tools/add_marshalling.pl generated/axis2_skel_*.c
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated CFLAGS="$(CFLAGS) -Wno-unused-variable"
+	$(MAKE) -C generated CFLAGS="$(GFLAGS) -Wno-unused-variable"
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c -O $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CFLAGS) $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 
 $(SERVICE_SO): generated/stubs $(GENERATEDOBJS) gl-client-marshal-adb.o server-marshal.o handlers.o
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) $(LDFLAGS) ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO) -lssl -lcrypto
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(WSSECLIBS) $(LIBS) $(LDFLAGS) ../util/log.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o ./gl-client-marshal-adb.o -o $(SERVICE_SO) -lssl -lcrypto
 
 client: $(CLIENT)
 
 $(CLIENT): generated/stubs $(CLIENT).c gl-client-marshal-adb.c handlers.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o -DMODE=1 $(LIBS) $(LDFLAGS) -lssl -lcrypto
+	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) $(CLIENT).c gl-client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/ipc.o ../util/euca_auth.o -DMODE=1 $(LIBS) $(LDFLAGS) -lssl -lcrypto
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/

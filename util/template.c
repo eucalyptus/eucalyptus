@@ -63,12 +63,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef _INCLUDE_HTTP_H_
-#define _INCLUDE_HTTP_H_
-
 //!
-//! @file storage/http.h
-//! Need to provide description
+//! @file util/template.c
+//! Template source file
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -103,7 +100,21 @@
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                             EXPORTED VARIABLES                             |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -113,15 +124,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
+int euca_template(int in, char *out, char **inout);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                           STATIC INLINE PROTOTYPES                         |
+ |                              STATIC PROTOTYPES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
@@ -133,8 +140,28 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
- |                          STATIC INLINE IMPLEMENTATION                      |
+ |                               IMPLEMENTATION                               |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_HTTP_H_ */
+//!
+//! Function description.
+//!
+//! @param[in]     in an in parameter
+//! @param[out]    out an out parameter
+//! @param[in,out] inout an in/out parameter
+//!
+//! @return the return value description
+//!
+//! @see euca_strncpy(), euca_strdupcat()
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note Important note
+//!
+int euca_template(int in, char *out, char **inout)
+{
+    return (0);
+}

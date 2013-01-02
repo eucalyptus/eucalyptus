@@ -84,9 +84,9 @@
 #include <locale.h>             // setlocale
 #include <string.h>
 
+#include "eucalyptus.h"
 #include "misc.h"               // boolean
 #include "wc.h"
-#include "eucalyptus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

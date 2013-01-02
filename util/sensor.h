@@ -217,8 +217,7 @@ const char *sensor_type2str(sensorCounterType type);
 int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen);
 int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen);
 int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom);
-int sensor_add_value(const char *instanceId,
-                     const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
+int sensor_add_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
                      const long long timestampMs, const boolean available, const double value);
 int sensor_get_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, long long *sequenceNum,
                      long long *timestampMs, boolean * available, double *value, long long *intervalMs, int *valLen);

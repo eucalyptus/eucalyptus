@@ -155,8 +155,8 @@ int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...);
-int logprintfl(int level, const char *format, ...);
+int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
 int logcat(int debug_level, const char *file_path);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
