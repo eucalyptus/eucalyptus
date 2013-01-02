@@ -409,7 +409,7 @@ public class ClusterAllocator implements Runnable {
                                    .platform( platform )
                                    .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
                                    .userData( this.allocInfo.getRequest( ).getUserData( ) )
-                                   .vlan( exNet.getTag( ) )
+                                   .vlan( childToken.getExtantNetwork().getTag( ) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );
