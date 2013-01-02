@@ -1747,7 +1747,7 @@ int refresh_instances(ncMetadata * ccMeta, int timeout, int dolock)
 
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
-                            safe_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 64);
+                            safe_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);
                             {
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
@@ -5052,7 +5052,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
             (*numHosts)++;
             *res = realloc(*res, sizeof(ccResource) * *numHosts);
             bzero(&((*res)[*numHosts - 1]), sizeof(ccResource));
-            snprintf((*res)[*numHosts - 1].hostname, 128, "%s", hosts[i]);
+            snprintf((*res)[*numHosts - 1].hostname, 256, "%s", hosts[i]);
 
             ipbuf = host2ip(hosts[i]);
             if (ipbuf) {
@@ -5063,7 +5063,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
 
             (*res)[*numHosts - 1].ncPort = ncport;
             snprintf((*res)[*numHosts - 1].ncService, 128, "%s", ncservice);
-            snprintf((*res)[*numHosts - 1].ncURL, 128, "http://%s:%d/%s", hosts[i], ncport, ncservice);
+            snprintf((*res)[*numHosts - 1].ncURL, 384, "http://%s:%d/%s", hosts[i], ncport, ncservice);
             (*res)[*numHosts - 1].state = RESDOWN;
             (*res)[*numHosts - 1].lastState = RESDOWN;
             (*res)[*numHosts - 1].lockidx = NCCALL0 + lockmod;
@@ -5115,11 +5115,11 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 
     if (out != NULL) {
         if (ncURL)
-            safe_strncpy(out->ncURL, ncURL, 128);
+            safe_strncpy(out->ncURL, ncURL, 384);
         if (ncService)
             safe_strncpy(out->ncService, ncService, 128);
         if (hostname)
-            safe_strncpy(out->hostname, hostname, 128);
+            safe_strncpy(out->hostname, hostname, 256);
         if (mac)
             safe_strncpy(out->mac, mac, 24);
         if (ip)
@@ -5218,7 +5218,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
         out->ts = ts;
         out->ncHostIdx = ncHostIdx;
         if (serviceTag)
-            safe_strncpy(out->serviceTag, serviceTag, 64);
+            safe_strncpy(out->serviceTag, serviceTag, 384);
         if (userData)
             safe_strncpy(out->userData, userData, 16384);
         if (launchIndex)

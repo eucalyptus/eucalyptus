@@ -162,7 +162,7 @@ typedef struct instance_t {
     virtualMachine ccvm;
 
     int ncHostIdx;
-    char serviceTag[64];
+    char serviceTag[384];
     char uuid[48];
 
     char userData[16384];
@@ -195,10 +195,10 @@ enum { MONITOR = 0, SENSOR, NUM_THREADS };
 enum { CONFIGLOCK, CACHELOCK, VNETCONFIGLOCK };
 
 typedef struct resource_t {
-    char ncURL[128];
+    char ncURL[384];
     char ncService[128];
     int ncPort;
-    char hostname[128], mac[24], ip[24], iqn[128];
+    char hostname[256], mac[24], ip[24], iqn[128];
     int maxMemory, availMemory, maxDisk, availDisk, maxCores, availCores;
     // state information
     int state, lastState;
