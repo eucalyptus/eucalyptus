@@ -67,8 +67,8 @@
 #
 ### BEGIN INIT INFO
 # Provides:                   eucalyptus-cc
-# Required-Start:             $remote_fs $syslog 
-# Required-Stop:              $remote_fs $syslog 
+# Required-Start:             $remote_fs $syslog
+# Required-Stop:              $remote_fs $syslog
 # Default-Start:              2 3 4 5
 # Default-Stop:               0 1 6
 # Short-Description:          Eucalyptus cluster controller
@@ -81,6 +81,9 @@
 # Use the functions script for distributions that support it (e.g., RHEL)
 # This allows Eucalyptus to use correct localization settings
 [ -f /etc/init.d/functions ] && . /etc/init.d/functions
+
+# For fault reporting: $LOCALE can be set in /etc/sysconfig/i18n
+[ -n "$LOCALE" ] && export LOCALE || unset LOCALE
 
 LOCKFILE=/var/lock/subsys/eucalyptus-cc
 
@@ -278,18 +281,18 @@ do_fullclean() {
         fi
 
 	rm -f $EUCALYPTUS/var/lib/eucalyptus/CC/*
-	rm -f /dev/shm/*eucalyptusCC*    
+	rm -f /dev/shm/*eucalyptusCC*
 }
 
 do_stop() {
         pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid"
 
-        # let's be sure we are killing the right process                                                                                                                                                                                    
+        # let's be sure we are killing the right process
         if ! do_status ; then
                 rm -f $pidfile
                 return
         fi
-        # now kill the services                                                                                                                                                                                                             
+        # now kill the services
         pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-cc.pid $EUCALYPTUS/var/run/eucalyptus/httpd-dynserv.pid"
         pids=""
         sids=""
@@ -342,7 +345,7 @@ else
 	exit 1
 fi
 if [ "$EUCALYPTUS" = "not_configured" ]; then
-	echo "EUCALYPTUS not configured!" 
+	echo "EUCALYPTUS not configured!"
 	exit 1
 fi
 
@@ -368,7 +371,7 @@ else
 	for x in `/bin/ls $y 2> /dev/null`; do
 		# this is for system or source installed
 		if [ "`echo $x | cut -f 1 -d -`" = "axis2c" ]; then
-			if [ -e $y/$x/lib/libmod_axis2.so -a  
+			if [ -e $y/$x/lib/libmod_axis2.so -a
                              -e $y/$x/services/EucalyptusCC ]; then
 				export AXIS2C_HOME="$y/$x"
                                 break
@@ -410,7 +413,7 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
-	
+
 	# let's check there is no previous CC running
 	if do_status ; then
 		echo
@@ -427,7 +430,7 @@ case "$1" in
 	rm -f /dev/shm/*eucalyptusCC*
 	do_start
 	case "$?" in
-	0|1) 
+	0|1)
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
@@ -455,7 +458,7 @@ case "$1" in
 			echo -n "Starting $DESC: "
 		fi
 	fi
-	
+
 	# let's check there is no previous CC running
 	if do_status ; then
 		echo
@@ -473,7 +476,7 @@ case "$1" in
 	do_fullclean
 	do_start
 	case "$?" in
-	0|1) 
+	0|1)
 		if [ "$VERBOSE" != no ]; then
 			if [ "$WE_HAVE_LSB" = "Y" ]; then
 				log_end_msg 0
@@ -526,7 +529,7 @@ case "$1" in
 	else
 	    echo "WARNING: could not find $EUCALYPTUS/usr/lib/eucalyptus/shutdownCC, please check location of executable"
 	fi
-	
+
 	do_stop
 	do_fullclean
 	rm -f /dev/shm/*eucalyptusCC*
