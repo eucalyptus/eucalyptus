@@ -176,7 +176,6 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
         if (pid == 0) {
             axutil_env_t *env = NULL;
             axis2_char_t *client_home = NULL;
-            axis2_char_t endpoint_uri[256], *tmpstr;
             axis2_stub_t *stub = NULL;
             char *clog, *hlog, *alog, *nlog;
 
@@ -325,7 +324,6 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
         if (pid == 0) {
             axutil_env_t *env = NULL;
             axis2_char_t *client_home = NULL;
-            axis2_char_t endpoint_uri[256], *tmpstr;
             axis2_stub_t *stub = NULL;
             char *ccert, *ncert;
 

@@ -105,7 +105,7 @@ extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
 #endif
 
-static void error_handler(void *ctx, const char *fmt, ...);
+static void error_handler(void *ctx, const char *fmt, ...)  __attribute__ ((__format__(__printf__, 2, 3)));;
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   // process-global mutex
 
 // macros for making XML construction a bit more readable
@@ -134,11 +134,13 @@ static void init(struct nc_state_t *nc_state)
     pthread_mutex_unlock(&xml_mutex);
 }
 
+#if 0
 static void cleanup(void)
 {
     xsltCleanupGlobals();
     xmlCleanupParser();         // calls xmlCleanupGlobals()
 }
+#endif /* 0 */
 
 // verify that the path for kernel/ramdisk is reasonable
 static int path_check(const char *path, const char *name)   // TODO: further checking?
@@ -522,7 +524,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
     if (doc) {
         xmlXPathContextPtr context = xmlXPathNewContext(doc);
         if (context) {
-            xmlXPathObjectPtr result = xmlXPathEvalExpression(xpath, context);
+            xmlXPathObjectPtr result = xmlXPathEvalExpression(((const xmlChar *)xpath), context);
             if (result) {
                 if (!xmlXPathNodeSetIsEmpty(result->nodesetval)) {
                     xmlNodeSetPtr nodeset = result->nodesetval;

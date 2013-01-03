@@ -174,7 +174,7 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
         params.total_read = 0L;
         params.total_calls = 0L;
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "uploaded %ld bytes in %ld sends\n", params.total_read, params.total_calls);
+        logprintfl(EUCADEBUG, "uploaded %lld bytes in %lld sends\n", params.total_read, params.total_calls);
 
         if (result) {           // curl error (connection or transfer failed)
             logprintfl(EUCAERROR, "%s (%d)\n", error_msg, result);
@@ -243,7 +243,7 @@ static size_t read_data(char *buffer, size_t size, size_t nitems, void *params)
             long long bytes_read = ((struct read_request *)params)->total_read;
             long long bytes_file = ((struct read_request *)params)->file_size;
             int percent = (int)((bytes_read * 100) / bytes_file);
-            logprintfl(EUCADEBUG, "upload progress %ld/%ld bytes (%d%%)\n", bytes_read, bytes_file, percent);
+            logprintfl(EUCADEBUG, "upload progress %lld/%lld bytes (%d%%)\n", bytes_read, bytes_file, percent);
         }
     }
 
@@ -394,7 +394,7 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         params.total_calls = 0L;
 
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
+        logprintfl(EUCADEBUG, "wrote %lld bytes in %lld writes\n", params.total_wrote, params.total_calls);
 
         if (result) {           // curl error (connection or transfer failed)
             logprintfl(EUCAERROR, "%s (%d)\n", error_msg, result);

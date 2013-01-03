@@ -100,12 +100,12 @@ int euca_init_cert(void)
     snprintf(pk_file, FILENAME, EUCALYPTUS_KEYS_DIR "/node-pk.pem", euca_home);
 
 #define ERR "Error: required file %s not found by euca_init_cert(). Is $EUCALYPTUS set?\n"
-#define OK  "euca_init_cert(): using file %s\n"
+#define OK_MSG  "euca_init_cert(): using file %s\n"
 #define CHK_FILE(n) \
         if ((fd=open(n, O_RDONLY))<0) {\
                 logprintfl (EUCAERROR, ERR, n); return 1; \
         } else { \
-                close (fd); logprintfl (EUCAINFO, OK, n); \
+                close (fd); logprintfl (EUCAINFO, OK_MSG, n); \
         }
 
     int fd;

@@ -129,10 +129,10 @@ static int doInitialize(struct nc_state_t *nc)
 /* thread that does the actual reboot */
 static void *rebooting_thread(void *arg)
 {
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
     virConnectPtr *conn;
     ncInstance *instance = (ncInstance *) arg;
-    struct stat statbuf;
-    int rc = 0;
 
     logprintfl(EUCADEBUG, "[%s] spawning rebooting thread\n", instance->instanceId);
     char *xml = file2str(instance->libvirtFilePath);
@@ -183,7 +183,8 @@ static void *rebooting_thread(void *arg)
     sem_v(hyp_sem);
     free(xml);
 
-    sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats so we set base value accurately
+    safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
 
     char *remoteDevStr = NULL;
     // re-attach each volume previously attached

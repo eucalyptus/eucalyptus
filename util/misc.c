@@ -305,10 +305,15 @@ int param_check(char *func, ...)
             fail = 1;
         }
     } else if (!strcmp(func, "vnetAddHost")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        int d = va_arg(al, int);
+        vnetConfig *a = NULL;
+        char *b = NULL;
+        char *c = NULL;
+        int d = 0;
+
+        a = va_arg(al, vnetConfig *);
+        b = va_arg(al, char *);
+        c = va_arg(al, char *);
+        d = va_arg(al, int);
         if (!a || !b || (d < 0) || (d > NUMBER_OF_VLANS - 1)) {
             fail = 1;
         }
@@ -361,11 +366,17 @@ int param_check(char *func, ...)
             fail = 1;
         }
     } else if (!strcmp(func, "vnetInit")) {
-        vnetConfig *a = va_arg(al, vnetConfig *);
-        char *b = va_arg(al, char *);
-        char *c = va_arg(al, char *);
-        char *d = va_arg(al, char *);
-        int e = va_arg(al, int);
+        vnetConfig *a = NULL;
+        char *b = NULL;
+        char *c = NULL;
+        char *d = NULL;
+        int e = 0;
+
+        a = va_arg(al, vnetConfig *);
+        b = va_arg(al, char *);
+        c = va_arg(al, char *);
+        d = va_arg(al, char *);
+        e = va_arg(al, int);
         if (!a || !b || !c || d < 0) {
             fail = 1;
         }
@@ -1212,7 +1223,7 @@ char *file2strn(const char *path, const ssize_t limit)
         return NULL;
     }
     if (mystat.st_size > limit) {
-        logprintfl(EUCAERROR, "file %s exceeds the limit (%d) in file2strn()\n", path, limit);
+        logprintfl(EUCAERROR, "file %s exceeds the limit (%ld) in file2strn()\n", path, limit);
         return NULL;
     }
     return file2str(path);
@@ -1971,11 +1982,12 @@ char parse_boolean(const char *s)
 // become user 'eucalyptus'
 int drop_privs(void)
 {
+    int s = 0;
     struct passwd pwd;
     struct passwd *result;
     char buf[16384];            // man-page said this is enough
 
-    int s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
+    s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
     if (result == NULL)
         return ERROR;           // not found if s==0, check errno otherwise
 
@@ -1993,12 +2005,12 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 {
     int stdoutfds[2];
     int stderrfds[2];
-    int oldstdout, oldstderr;
     int child_pid;
     int maxfd;
     int rc;
     int status;
     int stdout_toread, stderr_toread;
+    char errorBuf[256] = "";
     time_t start_time, remaining_time;
 
     // force nonempty on all arguments to simplify the logic
@@ -2007,11 +2019,13 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     assert(stderr_str);
 
     if (pipe(stdoutfds) < 0) {
-        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", strerror_r(errno, NULL, 0));
+        strerror_r(errno, errorBuf, 256);
+        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", errorBuf);
         return -1;
     }
     if (pipe(stderrfds) < 0) {
-        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", strerror_r(errno, NULL, 0));
+        strerror_r(errno, errorBuf, 256);
+        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", errorBuf);
         return -1;
     }
 
@@ -2019,14 +2033,16 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
     if (child_pid == 0) {
         close(stdoutfds[0]);
         if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
-            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", strerror_r(errno, NULL, 0));
+            strerror_r(errno, errorBuf, 256);
+            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", errorBuf);
             exit(1);
         }
         close(stdoutfds[1]);
 
         close(stderrfds[0]);
         if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
-            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", strerror_r(errno, NULL, 0));
+            strerror_r(errno, errorBuf, 256);
+            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", errorBuf);
             exit(1);
         };
         close(stderrfds[1]);
@@ -2086,7 +2102,8 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
                 }
             }
         } else if (retval < 0) {
-            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", strerror_r(errno, NULL, 0));
+            strerror_r(errno, errorBuf, 256);
+            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", errorBuf);
             break;
         }
         if (time(NULL) - start_time > timeout) {

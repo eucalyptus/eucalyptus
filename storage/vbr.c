@@ -316,14 +316,14 @@ parse_rec(                      // parses the VBR as supplied by a client or use
                     return ERROR;
                 }
                 if (p < 0 || p > EUCA_MAX_PARTITIONS) {
-                    logprintfl(EUCAERROR, "unexpected partition or disk number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                    logprintfl(EUCAERROR, "unexpected partition or disk number '%lld' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
                     return ERROR;
                 }
                 if (t == 'f') {
                     vbr->diskNumber = p;
                 } else {
                     if (p < 1) {
-                        logprintfl(EUCAERROR, "unexpected partition number '%d' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
+                        logprintfl(EUCAERROR, "unexpected partition number '%lld' in guestDeviceName '%s'\n", p, vbr->guestDeviceName);
                         return ERROR;
                     }
                     vbr->partitionNumber = p;
@@ -369,13 +369,13 @@ parse_rec(                      // parses the VBR as supplied by a client or use
     }
     if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP) {  // TODO: should we allow ephemeral/swap that reside remotely?
         if (vbr->size < 1) {
-            logprintfl(EUCAERROR, "invalid size '%d' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
+            logprintfl(EUCAERROR, "invalid size '%lld' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
             return ERROR;
         }
     } else {
         //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { // TODO: check for size!=-1 
         if (vbr->format != NC_FORMAT_NONE) {
-            logprintfl(EUCAERROR, "invalid size '%d' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName,
+            logprintfl(EUCAERROR, "invalid size '%lld' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName,
                        vbr->resourceLocation);
             return ERROR;
         }
@@ -391,7 +391,7 @@ vbr_parse(                      // parses and verifies all VBR entries in the vi
 {
     virtualBootRecord *partitions[BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];    // for validating partitions
     bzero(partitions, sizeof(partitions));
-    for (int i = 0, j = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
+    for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
 
         if (strlen(vbr->typeName) == 0) {   // this must be the combined disk's VBR
@@ -841,7 +841,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         } else if (check_path(dev_without_p) == 0) {
             mapper_dev = dev_without_p;
         } else {
-            logprintfl(EUCAERROR, "[%s] failed to stat partition device [%s]\n", a->instanceId, mapper_dev, strerror(errno));
+            logprintfl(EUCAERROR, "[%s] failed to stat partition device [%s]. errno=%d(%s)\n", a->instanceId, mapper_dev, errno, strerror(errno));
             goto cleanup;
         }
         logprintfl(EUCAINFO, "[%s] found partition device %s\n", a->instanceId, mapper_dev);
@@ -870,15 +870,15 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
         if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != OK) {
-            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId);
             goto unmount;
         }
         if (blockblob_sync(mapper_dev, a->bb) != 0) {
-            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId);
             goto unmount;
         }
         if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != OK) {
-            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId, root_part);
+            logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId);
             goto unmount;
         }
         // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
@@ -1096,7 +1096,7 @@ void art_free(artifact * a)     // frees the artifact and all its dependencies
         for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
             art_free(a->deps[i]);
         }
-        logprintfl(EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes,
+        logprintfl(EUCATRACE, "[%s] freeing artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, a->seq, a->id, a->size_bytes,
                    a->vbr, a->may_be_cached, a->must_be_file);
         free(a);
     }
@@ -1111,7 +1111,7 @@ void arts_free(artifact * array[], unsigned int array_len)
 
 static void art_print_tree(const char *prefix, artifact * a)
 {
-    logprintfl(EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%0x vbr=%0x\n", a->instanceId, prefix, a->seq, a->id,
+    logprintfl(EUCADEBUG, "[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%p vbr=%p\n", a->instanceId, prefix, a->seq, a->id,
                a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix[512];
@@ -1168,7 +1168,7 @@ artifact *art_alloc(const char *id, const char *sig, long long size_bytes, boole
     static int seq = 0;
     a->seq = ++seq;             // not thread safe, but seq's are just for debugging
     safe_strncpy(a->instanceId, current_instanceId, sizeof(a->instanceId)); // for logging
-    logprintfl(EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%u cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr,
+    logprintfl(EUCADEBUG, "[%s] allocated artifact %03d|%s size=%lld vbr=%p cache=%d file=%d\n", a->instanceId, seq, id, size_bytes, vbr,
                may_be_cached, must_be_file);
 
     if (id)
@@ -1247,7 +1247,6 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
             // get the digest for size and signature
             char manifestURL[MAX_PATH];
             char *blob_sig = NULL;
-            int rc;
             snprintf(manifestURL, MAX_PATH, "%s.manifest.xml", vbr->preparedResourceLocation);
             blob_sig = url_get_digest(manifestURL);
             if (blob_sig == NULL)
@@ -2064,7 +2063,6 @@ static int cleanup_vms(void)    // cleans up all provisioned VMs
 
     pthread_mutex_lock(&competitors_mutex);
     for (int i = 0; i < provisioned_instances; i++) {
-        virtualMachine *vm = &(vm_slots[next_instances_slot - i - 1]);
         char *id = vm_ids[next_instances_slot - i - 1];
         char regex[PATH_MAX];
         snprintf(regex, sizeof(regex), "%s/.*", id);

@@ -114,25 +114,7 @@ typedef enum {                  // make sure these match up with _blobstore_erro
     BLOBSTORE_ERROR_UNKNOWN,
 } blobstore_error_t;
 
-static char *_blobstore_error_strings[] = { // make sure these match up with blobstore_error_t enums above
-    "success",
-    "general error",
-
-    // system errno equivalents
-    "no such entity",
-    "bad file descriptor",
-    "out of memory",
-    "permission denied",
-    "already exists",
-    "invalid parameters",
-    "no space left",
-    "timeout",
-    "too many files open",
-
-    // blobstore-specific errors
-    "wrong signature",
-    "unknown error"
-};
+extern const char *_blobstore_error_strings[]; // make sure these match up with blobstore_error_t enums above
 
 typedef enum {
     BLOBSTORE_REVOCATION_ANY,   // on create, defaults to NONE; on open, allows for whatever policy is in effect
@@ -208,9 +190,7 @@ typedef struct _blockmap {
     unsigned long long len_blocks;
 } blockmap;
 
-static char *blobstore_relation_type_name[] = {
-    "copy", "map", "snapshot"
-};
+extern const char *blobstore_relation_type_name[];
 
 typedef struct _blockblob_meta {
     char id[BLOBSTORE_MAX_PATH];    // ID of the blob (used as part of file/directory name)
