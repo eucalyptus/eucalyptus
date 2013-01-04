@@ -128,6 +128,10 @@
               "bVisible": false,
               "mDataProp": "instance_type",
             },
+            {
+              "bVisible": false,
+              "mDataProp": "ip_address",
+            },
           ]
         },
         text : {
@@ -804,7 +808,7 @@
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6)[0];
+      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 16)[0];
       var results = describe('eip');
       var addr = null;
       for(i in results){
