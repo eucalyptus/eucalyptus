@@ -133,6 +133,23 @@ sem *log_sem;                   // used by log.c
 bunchOfInstances *global_instances = NULL;
 bunchOfInstances *global_instances_copy = NULL;
 
+configEntry configKeysRestartNC[] = {
+    {"ENABLE_WS_SECURITY", "Y"},
+    {"EUCALYPTUS", "/"},
+    {"NC_PORT", "8775"},
+    {"NC_SERVICE", "axis2/services/EucalyptusNC"},
+    {NULL, NULL}
+};
+
+configEntry configKeysNoRestartNC[] = {
+    {"LOGLEVEL", "INFO"},
+    {"LOGROLLNUMBER", "10"},
+    {"LOGMAXSIZE", "104857600"},
+    {"LOGPREFIX", ""},
+    {"LOGFACILITY", ""},
+    {NULL, NULL}
+};
+
 // declarations of available handlers
 extern struct handlers xen_libvirt_handlers;
 extern struct handlers kvm_libvirt_handlers;
@@ -353,7 +370,7 @@ virConnectPtr *check_hypervisor_conn()
     boolean bail = FALSE;
     pid_t cpid = fork();
     if (cpid < 0) {             // fork error
-        logprintfl(EUCAERROR, "[%s] failed to fork to check hypervisor connection\n");
+        logprintfl(EUCAERROR, "failed to fork to check hypervisor connection\n");
         bail = TRUE;            // we are in big trouble if we cannot fork
     } else if (cpid == 0) {     // child process - checks on the connection
         virConnectPtr tmp_conn = virConnectOpen(nc_state.uri);
@@ -825,7 +842,7 @@ void *monitoring_thread(void *arg)
 void *startup_thread(void *arg)
 {
     ncInstance *instance = (ncInstance *) arg;
-    char *disk_path, *xml = NULL;
+    char *xml = NULL;
     char *brname = NULL;
     int error, i;
 
@@ -1252,7 +1269,7 @@ static void nc_signal_handler(int sig)
 static int init(void)
 {
     static int initialized = 0;
-    int do_warn = 0, i, j;
+    int do_warn = 0, i;
     char logFile[MAX_PATH], *bridge = NULL, *hypervisor = NULL, *s = NULL, *tmp = NULL, *pubinterface = NULL;
     struct stat mystat;
     struct handlers **h;
@@ -1499,7 +1516,7 @@ static int init(void)
         nc_state.cores_max = nc_state.config_max_cores;
         if (nc_state.cores_max > MAXINSTANCES_PER_NC) {
             nc_state.cores_max = MAXINSTANCES_PER_NC;
-            logprintfl(EUCAWARN, "ignoring excessive MAX_CORES value (leaving at %d)\n", nc_state.cores_max);
+            logprintfl(EUCAWARN, "ignoring excessive MAX_CORES value (leaving at %lld)\n", nc_state.cores_max);
         }
     }
     logprintfl(EUCAINFO, "physical memory available for instances: %lldMB\n", nc_state.mem_max);
@@ -1541,7 +1558,7 @@ static int init(void)
 
         // sanity check
         if (work_fs_avail_mb < MIN_BLOBSTORE_SIZE_MB) {
-            logprintfl(EUCAERROR, "insufficient available work space (%d MB) under %s/work\n", work_fs_avail_mb, instances_path);
+            logprintfl(EUCAERROR, "insufficient available work space (%lld MB) under %s/work\n", work_fs_avail_mb, instances_path);
             free(instances_path);
             return ERROR_FATAL;
         }
@@ -1576,11 +1593,11 @@ static int init(void)
         // above all, try to respect user-specified limits for work and cache
         if (conf_work_size_mb != -1) {
             if (conf_work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
-                logprintfl(EUCAWARN, "ignoring specified work size (%s=%d) that is below acceptable minimum (%d)\n", CONFIG_NC_WORK_SIZE,
+                logprintfl(EUCAWARN, "ignoring specified work size (%s=%lld) that is below acceptable minimum (%d)\n", CONFIG_NC_WORK_SIZE,
                            conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
             } else {
                 if (work_bs_size_mb != -1 && work_bs_size_mb != conf_work_size_mb) {
-                    logprintfl(EUCAWARN, "specified work size (%s=%d) differs from existing work size (%d), will try resizing\n", CONFIG_NC_WORK_SIZE,
+                    logprintfl(EUCAWARN, "specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n", CONFIG_NC_WORK_SIZE,
                                conf_work_size_mb, work_bs_size_mb);
                 }
                 work_size_mb = conf_work_size_mb;
@@ -1591,7 +1608,7 @@ static int init(void)
                 cache_size_mb = 0;  // so it won't be used
             } else {
                 if (cache_bs_size_mb != -1 && cache_bs_size_mb != conf_cache_size_mb) {
-                    logprintfl(EUCAWARN, "specified cache size (%s=%d) differs from existing cache size (%d), will try resizing\n",
+                    logprintfl(EUCAWARN, "specified cache size (%s=%lld) differs from existing cache size (%lld), will try resizing\n",
                                CONFIG_NC_CACHE_SIZE, conf_cache_size_mb, cache_bs_size_mb);
                 }
                 cache_size_mb = conf_cache_size_mb;

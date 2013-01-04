@@ -120,7 +120,6 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * meta, char *uuid, c
 {
     ncInstance *instance = NULL;
     *outInst = NULL;
-    pid_t pid;
     netConfig ncnet;
 
     memcpy(&ncnet, netparams, sizeof(netConfig));
@@ -286,8 +285,11 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * meta, char *i
 {
     ncInstance *instance;
     int err;
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
-    sensor_refresh_resources(instanceId, "", 1);    // refresh stats so latest instance measurements are captured before it disappears
+    safe_strncpy(resourceName[0], instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so latest instance measurements are captured before it disappears
 
     sem_p(inst_sem);
     err = find_and_terminate_instance(nc, meta, instanceId, force, &instance, 1);
@@ -463,7 +465,7 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * ccMeta)
 
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * ccMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan)
 {
-    int rc, ret, i, status;
+    int rc, ret;
     char *brname;
 
     rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
@@ -744,7 +746,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * meta, char *instan
     int is_iscsi_target = 0;
     int have_remote_device = 0;
     char *xml = NULL;
-
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char *tagBuf;
     char *localDevName;
     char localDevReal[32], localDevTag[256], remoteDevReal[32];
@@ -837,7 +840,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * meta, char *instan
         goto release;
     }
 
-    sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats so volume measurements are captured before it disappears
+    safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+    sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so volume measurements are captured before it disappears
 
     char path[MAX_PATH];
     char lpath[MAX_PATH];
@@ -932,9 +936,6 @@ static void change_createImage_state(ncInstance * instance, createImage_progress
 // helper for cleaning up
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result)
 {
-    char cmd[MAX_PATH];
-    char buf[MAX_PATH];
-    int rc;
     logprintfl(EUCAINFO, "[%s] createImage task result=%s\n", instance->instanceId, createImage_progress_names[result]);
     sem_p(inst_sem);
     change_createImage_state(instance, result);
@@ -971,8 +972,6 @@ static void *createImage_thread(void *arg)
 {
     struct createImage_params_t *params = (struct createImage_params_t *)arg;
     ncInstance *instance = params->instance;
-    char cmd[MAX_PATH];
-    char buf[MAX_PATH];
     int rc;
 
     logprintfl(EUCADEBUG, "[%s] spawning create-image thread\n", instance->instanceId);
@@ -1126,8 +1125,6 @@ static void unset_bundling_env(void) {
 
 static int restart_instance(ncInstance * instance)
 {
-    int error = -1;
-    pid_t pid = -1;
     pthread_attr_t *attr = NULL;
 
     // Reset a few fields to prevent future confusion

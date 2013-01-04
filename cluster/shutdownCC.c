@@ -78,9 +78,9 @@ int main(int argc, char **argv)
 {
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
-    axis2_char_t endpoint_uri[256], *tmpstr;
+    axis2_char_t endpoint_uri[256];
     axis2_stub_t *stub = NULL;
-    int rc, i, port, use_wssec;
+    int rc;
     char *euca_home, configFile[1024], policyFile[1024], logFile[1024];
 
     bzero(&mymeta, sizeof(ncMetadata));

@@ -70,6 +70,86 @@
 #include <assert.h>
 #include "data.h"
 
+const char *instance_state_names[] = {
+    "Unknown",
+    "Running",
+    "Waiting",
+    "Paused",
+    "Shutdown",
+    "Shutoff",
+    "Crashed",
+
+    "Staging",
+    "Booting",
+    "Canceled",
+
+    "Bundling-Shutdown",
+    "Bundling-Shutoff",
+    "CreateImage-Shutdown",
+    "CreateImage-Shutoff",
+
+    "Pending",
+    "Extant",
+    "Teardown"
+};
+
+const char *bundling_progress_names[] = {
+    "none",
+    "bundling",
+    "succeeded",
+    "failed",
+    "cancelled"
+};
+
+const char *createImage_progress_names[] = {
+    "none",
+    "creating",
+    "succeeded",
+    "failed",
+    "cancelled"
+};
+
+const char *hypervsorCapabilityTypeNames[] = {
+    "unknown",
+    "xen",
+    "hw",
+    "xen+hw"
+};
+
+const char *libvirtDevTypeNames[] = {
+    "disk",
+    "floppy",
+    "cdrom"
+};
+
+const char *libvirtBusTypeNames[] = {
+    "ide",
+    "scsi",
+    "virtio",
+    "xen"
+};
+
+const char *libvirtSourceTypeNames[] = {
+    "file",
+    "block"
+};
+
+const char *libvirtNicTypeNames[] = {
+    "none",
+    "e1000",
+    "rtl8139",
+    "virtio"
+};
+
+const char *ncResourceTypeName[] = {
+    "image",
+    "ramdisk",
+    "kernel",
+    "ephemeral",
+    "swap",
+    "ebs"
+};
+
 int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
 {
     if (out != NULL) {
@@ -137,7 +217,7 @@ void free_metadata(ncMetadata ** metap)
 ncInstance *allocate_instance(char *uuid,
                               char *instanceId, char *reservationId,
                               virtualMachine * params,
-                              char *stateName, int stateCode, char *userId, char *ownerId, char *accountId,
+                              const char *stateName, int stateCode, char *userId, char *ownerId, char *accountId,
                               netConfig * ncnet, char *keyName, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                               int groupNamesSize)
 {

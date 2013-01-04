@@ -90,6 +90,12 @@ static sem *hyp_sem = NULL;
 static int (*sensor_update_euca_config) (void) = NULL;
 static long long seq_num = 0L;
 
+const char *sensorCounterTypeName[] = {
+    "[unused]",
+    "summation",
+    "average"
+};
+
 typedef struct getstat_t {      // an internal struct for temporary storage of stats
     char instanceId[100];
     long long timestamp;
@@ -273,6 +279,7 @@ static void sensor_bottom_half(void)
 
     char resourceNames[MAX_SENSOR_RESOURCES][MAX_SENSOR_NAME_LEN];
     char resourceAliases[MAX_SENSOR_RESOURCES][MAX_SENSOR_NAME_LEN];
+
     for (int i = 0; i < MAX_SENSOR_RESOURCES; i++) {
         resourceNames[i][0] = '\0';
         resourceAliases[i][0] = '\0';
@@ -282,10 +289,10 @@ static void sensor_bottom_half(void)
         usleep(next_sleep_duration_usec);
 
         if (sensor_update_euca_config) {
-            logprintfl(EUCATRACE, "calling sensor_update_euca_config() after sleeping %lld usec\n", next_sleep_duration_usec);
+            logprintfl(EUCATRACE, "calling sensor_update_euca_config() after sleeping %u usec\n", next_sleep_duration_usec);
             sensor_update_euca_config();
         } else {
-            logprintfl(EUCATRACE, "NOT calling sensor_update_euca_config() after sleeping %lld usec\n", next_sleep_duration_usec);
+            logprintfl(EUCATRACE, "NOT calling sensor_update_euca_config() after sleeping %u usec\n", next_sleep_duration_usec);
         }
         boolean skip = FALSE;
         sem_p(state_sem);
@@ -331,7 +338,7 @@ static void *sensor_thread(void *arg)
 
 static void init_state(int resources_size)
 {
-    logprintfl(EUCADEBUG, "initializing sensor shared memory (%d KB)...\n",
+    logprintfl(EUCADEBUG, "initializing sensor shared memory (%ld KB)...\n",
                (sizeof(sensorResourceCache) + sizeof(sensorResource) * (resources_size - 1)) / 1024);
     sensor_state->max_resources = resources_size;
     sensor_state->collection_interval_time_ms = 0;
@@ -377,11 +384,11 @@ static int sensor_expire_cache_entries(void)
         time_t cache_timeout = sensor_state->collection_interval_time_ms / 1000 // expected time, in sec, between updates
             + sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;    // extra time for upstream to pick up last values before expiration
 
-        logprintfl(EUCATRACE, "resource %ss, timestamp %ds, poll interval %ds, timeout %ds, age %ds\n", sr->resourceName, sr->timestamp,
+        logprintfl(EUCATRACE, "resource %ss, timestamp %ds, poll interval %lds, timeout %lds, age %lds\n", sr->resourceName, sr->timestamp,
                    sensor_state->interval_polled, cache_timeout, timestamp_age);
 
         if (cache_timeout && (timestamp_age > cache_timeout)) {
-            logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %d seconds, timeout is %d seconds\n", sr->resourceName,
+            logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %ld seconds, timeout is %ld seconds\n", sr->resourceName,
                        timestamp_age, cache_timeout);
             sr->resourceName[0] = '\0'; // marks the slot as empty
             ret++;
@@ -621,7 +628,8 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
     return 0;
 }
 
-static void log_sensor_resources(const char *name, const sensorResource ** srs, int srsLen)
+#ifdef _UNIT_TEST
+static void log_sensor_resources(const char *name, sensorResource ** srs, int srsLen)
 {
     char buf[1024 * 1024];
     if (sensor_res2str(buf, sizeof(buf), srs, srsLen) != 0) {
@@ -630,6 +638,7 @@ static void log_sensor_resources(const char *name, const sensorResource ** srs, 
         logprintfl(EUCADEBUG, "sensor resources (%s) BEGIN\n%ssensor resources END\n", name, buf);
     }
 }
+#endif /* _UNIT_TEST */
 
 int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen)   // TODO3.2: move this into _UNIT_TEST
 {
@@ -860,7 +869,7 @@ static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter *
 // are already in the cache. So it is safe to call it many times
 // with the same data - all but the first invocations will have no
 // effect.
-int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_on_oom)
+int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return 1;
@@ -1159,7 +1168,7 @@ bail:
     return ret;
 }
 
-int sensor_get_instance_data(const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen)
+int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen)
 {
     int ret = 1;
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
@@ -1208,18 +1217,18 @@ bail:
         // seconds, or 1 below the current minimum NC_POLLING_FREQUENCY
         // value (which is a period rather than a frequency).
         if (this_interval <= 5) {
-            logprintfl(EUCATRACE, "NOT adjusting measured upstream polling interval from %d to %d (which is below threshold)\n",
+            logprintfl(EUCATRACE, "NOT adjusting measured upstream polling interval from %ld to %ld (which is below threshold)\n",
                        sensor_state->interval_polled, this_interval);
             sensor_state->last_polled = t;
         } else {
             if (this_interval == sensor_state->interval_polled) {
-                logprintfl(EUCATRACE, "maintaining measured upstream polling interval of %d\n", sensor_state->interval_polled);
+                logprintfl(EUCATRACE, "maintaining measured upstream polling interval of %ld\n", sensor_state->interval_polled);
             } else {
                 if (sensor_state->interval_polled) {
-                    logprintfl(EUCATRACE, "adjusting measured upstream polling interval from %d to %d\n", sensor_state->interval_polled,
+                    logprintfl(EUCATRACE, "adjusting measured upstream polling interval from %ld to %ld\n", sensor_state->interval_polled,
                                this_interval);
                 } else {
-                    logprintfl(EUCATRACE, "setting measured upstream polling interval to %d\n", this_interval);
+                    logprintfl(EUCATRACE, "setting measured upstream polling interval to %ld\n", this_interval);
                 }
                 sensor_state->interval_polled = this_interval;
             }
@@ -1334,7 +1343,7 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
             continue;
 
         for (int d = 0; d < sc->dimensionsLen; d++) {
-            sensorDimension *sd = sc->dimensions + d;
+            sensorDimension *sd = ((sensorDimension *)(sc->dimensions + d));
 
             if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
                 logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
@@ -1457,7 +1466,7 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
 // particular resource (useful for getting data between
 // poll events in bottom_half(), which may be spaced far
 // apart)
-int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], const char resourceAliases[][MAX_SENSOR_NAME_LEN], int size)
+int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return 1;

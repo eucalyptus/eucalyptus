@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
     char *password = NULL;
     int do_compress = 0;
     int ch;
+    int result = 0;
 
     while ((ch = getopt(argc, argv, "dh:m:f:zu:l:p:")) != -1) {
         switch (ch) {
@@ -198,7 +199,7 @@ int main(int argc, char *argv[])
 
         free(tmp_name);
     } else {                    // HttpPut
-        int result = http_put(file_name, url, login, password);
+        result = http_put(file_name, url, login, password);
     }
     return 0;
 }

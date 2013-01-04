@@ -553,7 +553,7 @@ static boolean initialize_faultlog(const char *fileprefix)
  * the registry was previously loaded, returns the number of previously
  * loaded faults as a negative number.
  */
-int init_eucafaults(char *fileprefix)
+int init_eucafaults(const char *fileprefix)
 {
     struct stat dirstat;
     static int faults_loaded = 0;
@@ -601,7 +601,7 @@ int init_eucafaults(char *fileprefix)
             if (stat(faultdirs[i], &dirstat) != 0) {
                 logprintfl(EUCAINFO, "stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
             } else if (!S_ISDIR(dirstat.st_mode)) {
-                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory\n", faultdirs[i], strerror(errno));
+                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory errno=%d(%s)\n", faultdirs[i], errno, strerror(errno));
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir(faultdirs[i], &namelist, &scandir_filter,

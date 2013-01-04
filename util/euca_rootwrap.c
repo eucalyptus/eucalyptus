@@ -68,7 +68,6 @@
 int main(int argc, char **argv)
 {
     char **newargv;
-    int i;
 
     if (argc <= 1) {
         exit(1);

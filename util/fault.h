@@ -48,7 +48,7 @@
  * the registry was previously loaded, returns the number of previously
  * loaded faults as a negative number.
  */
-extern int init_eucafaults(char *);
+extern int init_eucafaults(const char *);
 
 /*
  * Usage: log_eucafault_map (FAULT_ID, parameter_map)

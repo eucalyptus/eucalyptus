@@ -119,6 +119,43 @@ __thread const char *_log_curr_method = "";
 __thread const char *_log_curr_file = "";
 __thread int _log_curr_line = 0;
 
+const char *log_level_names[] = {
+    "ALL",
+    "EXTREME",
+    "TRACE",
+    "DEBUG",
+    "INFO",
+    "WARN",
+    "ERROR",
+    "FATAL",
+    "OFF"
+};
+
+/////////////////////// prefix format
+// %T = timestamp
+// %L = loglevel
+// %p = PID
+// %t = thread id (same as PID in CC)
+// %m = method
+// %F = file:line_no
+// %s = max rss size, in MB
+//
+// p,t,m,F may be followed by (-)NNN,
+//         '-' means left-justified
+//         and NNN is max field size
+/////////////////////////////////////
+const char *log_level_prefix[] = {
+    "",
+    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
+    "%T %L %t9 %m-24 |",        // TRACE
+    "%T %L %t9 %m-24 |",        // DEBUG
+    "%T %L |",                  // INFO
+    "%T %L |",                  // WARN
+    "%T %L |",                  // ERROR
+    "%T %L |",                  // FATAL
+    ""
+};
+
 // returns log level as integer given the name or
 // -1 if the name is not valid
 // (used for parsing the setting in the config file)
@@ -397,7 +434,7 @@ int logprintf(const char *format, ...)
     return log_line(buf);
 }
 
-static int print_field_truncated(char **log_spec, char *buf, int left, const char *field)
+static int print_field_truncated(const char **log_spec, char *buf, int left, const char *field)
 {
     boolean left_justify = FALSE;
     int in_field_len = strlen(field);
@@ -407,7 +444,7 @@ static int print_field_truncated(char **log_spec, char *buf, int left, const cha
     }
     // first, look ahead down s[] to see if we have length 
     // and alignment specified (leading '-' means left-justified)
-    char *nstart = (*log_spec) + 1;
+    const char *nstart = (*log_spec) + 1;
     if (*nstart == '-') {       // a leading zero
         left_justify = TRUE;
         nstart++;
@@ -456,7 +493,7 @@ int logprintfl(int level, const char *format, ...)
     char buf[LOGLINEBUF];
     int offset = 0;
     boolean custom_spec;
-    char *prefix_spec;
+    const char *prefix_spec;
     if (strcmp(log_custom_prefix, USE_STANDARD_PREFIX) == 0) {
         prefix_spec = log_level_prefix[log_level];
         custom_spec = FALSE;

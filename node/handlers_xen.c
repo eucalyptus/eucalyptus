@@ -143,6 +143,8 @@ static int doInitialize(struct nc_state_t *nc)
 
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *instanceId)
 {
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
     ncInstance *instance;
     virConnectPtr *conn;
 
@@ -181,7 +183,9 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * meta, char *inst
             sensor_shift_metric(instance->instanceId, "CPUUtilization");
             sensor_shift_metric(instance->instanceId, "NetworkIn");
             sensor_shift_metric(instance->instanceId, "NetworkOut");
-            sensor_refresh_resources(instance->instanceId, "", 1);  // refresh stats immediately to minimize loss
+
+            safe_strncpy(resourceName[0], instance->instanceId, MAX_SENSOR_NAME_LEN);
+            sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats immediately to minimize loss
             sensor_resume_polling();    // now that metrics have been shifted, resume polling
 
         } else {

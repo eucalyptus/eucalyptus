@@ -71,6 +71,7 @@ NCWSDL=$(WSDLPATH)/$(NCWSDLNAME)
 SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
+GFLAGS=$(patsubst -Werror,,$(CFLAGS))
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
 AXIOM_LIBS = -lrampart -laxis2_http_sender -laxis2_http_receiver -laxis2_http_common -laxis2_engine -laxis2_axiom -laxutil -lneethi
@@ -101,13 +102,13 @@ generated/stubs: $(NCWSDL)
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated
+	$(MAKE) -C generated CFLAGS="$(GFLAGS) -Wno-unused-variable"
 	cd ..
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) $(BUILD_ID) -c $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
+	$(CC) -c $(BUILD_ID) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 

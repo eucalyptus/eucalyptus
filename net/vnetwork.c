@@ -100,8 +100,8 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
              char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser,
              char *bridgedev, char *localIp, char *macPrefix)
 {
-    uint32_t nw = 0, nm = 0, unw = 0, unm = 0, dns = 0, bc = 0, rt = 0, rc = 0, slashnet = 0, *ips = NULL, *nms = NULL;
-    int vlan = 0, numaddrs = 1, len, i;
+    uint32_t nw = 0, nm = 0, unw = 0, unm = 0, dns = 0, bc = 0, rt = 0, rc = 0, slashnet = 0;
+    int vlan = 0, numaddrs = 1;
     char cmd[256];
 
     //  if (param_check("vnetInit", vnetconfig, mode, eucahome, path, role, pubInterface, numberofaddrs, network, netmask, broadcast, nameserver, router, daemon, bridgedev)) return(1);
@@ -924,7 +924,7 @@ int vnetSaveTablesToMemory(vnetConfig * vnetconfig)
 
 int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig)
 {
-    int rc, fd, ret = 0, wbytes;
+    int rc, fd, ret = 0;
     char *file, cmd[256];
     FILE *FH;
 
@@ -1064,7 +1064,7 @@ int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule)
 int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
                   char *protocol, int minPort, int maxPort)
 {
-    int i, rc, done, destVlan, srcVlan, slashnet;
+    int rc, destVlan, srcVlan, slashnet;
     char rule[1024], newrule[1024], srcNet[32], dstNet[32];
     char *tmp;
     char *hashChain = NULL, userNetString[MAX_PATH];
@@ -1361,7 +1361,7 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
 
 int vnetCountLocalIP(vnetConfig * vnetconfig)
 {
-    int count, i, ret;
+    int count, i;
 
     if (!vnetconfig) {
         return (0);
@@ -1378,7 +1378,7 @@ int vnetCountLocalIP(vnetConfig * vnetconfig)
 
 int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip)
 {
-    int i, done, ret;
+    int i, done;
 
     if (!vnetconfig) {
         return (1);
@@ -1590,7 +1590,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
     if (stat(file, &statbuf) == 0) {
         char rootwrap[MAX_PATH];
         char *tmpstr = NULL;
-        int tmppid = 0, tmpcount;
+        int tmppid = 0;
 
         snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
         snprintf(buf, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", vnetconfig->eucahome);
@@ -1664,7 +1664,6 @@ int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc)
 {
     int i, rc;
     char file[MAX_PATH], rootwrap[MAX_PATH];
-    char *pidstr;
     snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
 
     for (i = 0; i < NUMBER_OF_CCS; i++) {
@@ -1683,7 +1682,7 @@ int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc)
 
 int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
 {
-    int i, j, found, lastj, localIpId = -1, rc;
+    int i, found, rc;
     uint32_t tmpccs[NUMBER_OF_CCS];
 
     if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
@@ -1968,8 +1967,8 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
 
 int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
 {
-    int rc, i, slashnet;
-    char cmd[MAX_PATH], tundev[32], tunvlandev[32], *network = NULL;
+    int rc, i;
+    char cmd[MAX_PATH], tundev[32], tunvlandev[32];
 
     if (!vnetconfig) {
         logprintfl(EUCAERROR, "bad input params\n");
@@ -2140,7 +2139,6 @@ int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig)
 {
     int i, done, rc;
     char cmd[MAX_PATH], tundev[32], *remoteIp = NULL, pidfile[MAX_PATH], rootwrap[MAX_PATH];
-    time_t startTime;
 
     if (!vnetconfig->tunnels.tunneling || (vnetconfig->tunnels.localIpId == -1)) {
         return (0);
@@ -2475,7 +2473,7 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
 
 int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno)
 {
-    int i, done, rc;
+    int i, done;
 
     if (param_check("vnetGetPublicIP", vnetconfig, ip, allocated, addrdevno))
         return (1);
@@ -2502,7 +2500,7 @@ int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *alloca
 
 int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip)
 {
-    int i, rc, done;
+    int i;
     uint32_t theip;
 
     if (!vnetconfig || !ip)
@@ -2520,9 +2518,9 @@ int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip)
 
 int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
 {
-    int i, rc, done, slashnet, numips, j, found;
+    int i, done, slashnet, numips, j, found;
     uint32_t minip, theip;
-    char tmp[32], *ip, *ptr;
+    char *ip, *ptr;
 
     if (param_check("vnetAddPublicIP", vnetconfig, inip))
         return (1);
@@ -2733,7 +2731,7 @@ int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, 
 int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst)
 {
     int done, i, isallocated, pubidx, rc;
-    char *currdst = NULL, cmd[MAX_PATH];
+    char *currdst = NULL;
 
     // assign address if unassigned, unassign/reassign if assigned
     if (!uuid || !src) {
@@ -2913,8 +2911,7 @@ int instId2mac(vnetConfig * vnetconfig, char *instId, char *outmac)
 
 int ip2mac(vnetConfig * vnetconfig, char *ip, char **mac)
 {
-    char rc, i, j;
-    char cmd[MAX_PATH], rbuf[256], *tok, ipspace[25];
+    char rbuf[256], *tok, ipspace[25];
     FILE *FH = NULL;
 
     if (mac == NULL || ip == NULL) {
@@ -2954,7 +2951,7 @@ int ip2mac(vnetConfig * vnetconfig, char *ip, char **mac)
 
 int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip)
 {
-    int rc, i, j;
+    int rc, i;
     char cmd[MAX_PATH], rbuf[256], *tok, lowbuf[256], lowmac[256];
 
     FILE *FH = NULL;
@@ -3043,8 +3040,6 @@ int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len)
                 if (!rc) {
                     void *tmpAddrPtr;
                     char buf[32];
-                    char *dot;
-                    uint32_t ip, nm;
 
                     count++;
                     *outips = realloc(*outips, sizeof(uint32_t) * count);
@@ -3185,7 +3180,7 @@ int check_chain(vnetConfig * vnetconfig, char *userName, char *netName)
 
 int check_deviceup(char *dev)
 {
-    int rc, ret;
+    int ret;
     char rbuf[MAX_PATH];
     FILE *FH = NULL;
 
@@ -3318,7 +3313,6 @@ int check_bridge(char *brname)
 
 int check_tablerule(vnetConfig * vnetconfig, char *table, char *rule)
 {
-    int rc;
     char *out, *ptr, cmd[MAX_PATH];
 
     if (!table || !rule) {

@@ -64,11 +64,7 @@ typedef struct {
     double shift_value;         // amount that should be added to all values at this dimension
 } sensorDimension;
 
-static char *sensorCounterTypeName[] = {
-    "[unused]",
-    "summation",
-    "average"
-};
+extern const char *sensorCounterTypeName[];
 
 typedef struct {
     enum { SENSOR_UNUSED = 0, SENSOR_SUMMATION, SENSOR_AVERAGE } type;
@@ -123,12 +119,12 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
 int sensor_str2type(const char *counterType);
 const char *sensor_type2str(int type);
 int sensor_res2str(char *buf, int bufLen, sensorResource ** res, int resLen);
-int sensor_get_instance_data(const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** sr, int srLen);
+int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr, int srLen);
 int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen);  // TODO3.2: remove
 int sensor_add_value(const char *instanceId,
                      const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
                      const long long timestampMs, const boolean available, const double value);
-int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_on_oom);
-int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], const char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
+int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom);
+int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
 
 #endif

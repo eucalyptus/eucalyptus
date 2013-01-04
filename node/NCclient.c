@@ -421,7 +421,7 @@ int main(int argc, char **argv)
             CHECK_PARAM(kernel_id, "kernel ID and manifest path");
         }
 
-        char *privMac, *pubMac, *privIp;
+        char *privMac, *privIp;
         char *platform = NULL;
         int vlan = 3;
         privMac = strdup(mac_addr);
@@ -506,7 +506,7 @@ int main(int argc, char **argv)
         int rc = ncBundleRestartInstanceStub(stub, &meta, instance_id);
         printf("ncBundleRestartInstanceStub = %d\n", rc);
     } else if (!strcmp(command, "powerDown")) {
-        int rc = ncPowerDownStub(stub, &meta);
+        ncPowerDownStub(stub, &meta);
     } else if (!strcmp(command, "describeBundleTasks")) {
         char *instIds[4];
         int instIdsLen;
@@ -526,7 +526,7 @@ int main(int argc, char **argv)
             printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
         }
     } else if (!strcmp(command, "assignAddress")) {
-        int rc = ncAssignAddressStub(stub, &meta, instance_id, public_ip);
+        ncAssignAddressStub(stub, &meta, instance_id, public_ip);
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
 

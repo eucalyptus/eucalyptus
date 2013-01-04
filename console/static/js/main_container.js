@@ -49,7 +49,7 @@
          id: 'about-cloud',
          title: about_dialog_title,
          buttons: {
-           'cancel': { text: dialog_cancel_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
+           'cancel': { text: dialog_close_btn, focus:true, click: function() { $dialog.eucadialog("close"); } }
          },
          afterHelpFlipped : function() {
            $scrollable = thisObj._aboutDialog.find(".animated");

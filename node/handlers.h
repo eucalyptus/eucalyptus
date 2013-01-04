@@ -129,22 +129,9 @@ struct nc_state_t {
     char ncDeleteBundleCmd[MAX_PATH];
 };
 
-static configEntry configKeysRestartNC[] = {
-    {"ENABLE_WS_SECURITY", "Y"},
-    {"EUCALYPTUS", "/"},
-    {"NC_PORT", "8775"},
-    {"NC_SERVICE", "axis2/services/EucalyptusNC"},
-    {NULL, NULL}
-};
+extern configEntry configKeysRestartNC[];
 
-static configEntry configKeysNoRestartNC[] = {
-    {"LOGLEVEL", "INFO"},
-    {"LOGROLLNUMBER", "10"},
-    {"LOGMAXSIZE", "104857600"},
-    {"LOGPREFIX", ""},
-    {"LOGFACILITY", ""},
-    {NULL, NULL}
-};
+extern configEntry configKeysNoRestartNC[];
 
 struct handlers {
     char name[CHAR_BUFFER_SIZE];

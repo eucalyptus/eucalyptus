@@ -172,7 +172,7 @@ char *get_string_stats(const char *s);
 int daemonrun(char *cmd, char *pidfile);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
 int run(const char *arg1, ...);
-int vrun(const char *fmt, ...);
+int vrun(const char *fmt, ...) __attribute__ ((__format__(__printf__, 1, 2)));
 int cat(const char *file_name);
 int touch(const char *path);
 int diff(const char *path1, const char *path2);

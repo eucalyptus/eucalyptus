@@ -133,11 +133,11 @@ int decryptWindowsPassword(char *encpass, int encsize, char *pkfile, char **out)
 int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
 {
     char *sshkey_dec, *modbuf, *exponentbuf;
-    char *ptr, *tmp, hexstr[4], *enc64;
-    char *dec64, encpassword[512];
+    char *ptr, *tmp, hexstr[4];
+    char encpassword[512];
 
     uint32_t len, exponent;
-    int size, ilen, i, encsize = 0, rc;
+    int size, ilen, i, encsize = 0;
     RSA *r = NULL;
 
     if (!pass || !key || !out || !outsize) {
@@ -257,7 +257,7 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
 int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName)
 {
     int fd, rc, rbytes, count, encsize, i;
-    char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], fname[1024], password[16];
+    char *buf, *ptr, *tmp, *newpass, dest_path[1024], source_path[1024], password[16];
     char *encpassword;
     char *newInstName;
     FILE *FH;
@@ -373,7 +373,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
         free(buf);
 
     // encrypt password and write to console log for later retrieval
-    char tmpstr[512], enckey[2048];
+    char enckey[2048];
     char keyNameHolder1[512], keyNameHolder2[512];
     sscanf(keyName, "%s %s %s", keyNameHolder1, enckey, keyNameHolder2);
     rc = encryptWindowsPassword(password, enckey, &encpassword, &encsize);

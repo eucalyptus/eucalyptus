@@ -69,10 +69,9 @@ int main(int argc, char **argv)
 {
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
-    axis2_char_t endpoint_uri[256], *tmpstr;
+    axis2_char_t endpoint_uri[256];
     axis2_stub_t *stub = NULL;
-    int rc, i;
-    char *euca_home;
+    int rc;
 
     snprintf(endpoint_uri, 256, " http://%s/axis2/services/EucalyptusGL", argv[1]);
     //  env =  axutil_env_create_all("/tmp/GLclient.log", AXIS2_LOG_LEVEL_TRACE);

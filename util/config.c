@@ -108,7 +108,7 @@ int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
     }
 
     if (lastConfigMtime != configMtime) {
-        logprintfl(EUCADEBUG, "current mtime=%d, stored mtime=%d\n", configMtime, lastConfigMtime);
+        logprintfl(EUCADEBUG, "current mtime=%ld, stored mtime=%ld\n", configMtime, lastConfigMtime);
         lastConfigMtime = configMtime;
         return 1;
     }

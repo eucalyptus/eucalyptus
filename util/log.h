@@ -86,17 +86,7 @@ extern __thread int _log_curr_line;
 #define EUCAFATAL   (_EUCA_CONTEXT_SETTER, 7)
 #define EUCAOFF     8
 
-static char *log_level_names[] = {
-    "ALL",
-    "EXTREME",
-    "TRACE",
-    "DEBUG",
-    "INFO",
-    "WARN",
-    "ERROR",
-    "FATAL",
-    "OFF"
-};
+extern const char *log_level_names[];
 
 /////////////////////// prefix format
 // %T = timestamp
@@ -111,17 +101,7 @@ static char *log_level_names[] = {
 //         '-' means left-justified
 //         and NNN is max field size
 /////////////////////////////////////
-static char *log_level_prefix[] = {
-    "",
-    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
-    "%T %L %t9 %m-24 |",        // TRACE
-    "%T %L %t9 %m-24 |",        // DEBUG
-    "%T %L |",                  // INFO
-    "%T %L |",                  // WARN
-    "%T %L |",                  // ERROR
-    "%T %L |",                  // FATAL
-    ""
-};
+extern const char *log_level_prefix[];
 
 #ifdef DEBUG
 #define PRINTF(a) logprintf a
@@ -149,8 +129,8 @@ int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *log_facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(char *file, int in_loglevel, int in_logrollnumber);
-int logprintf(const char *format, ...);
-int logprintfl(int level, const char *format, ...);
+int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
 int logcat(int debug_level, const char *file_name);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
