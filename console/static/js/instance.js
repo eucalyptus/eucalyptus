@@ -87,8 +87,14 @@
             },
             { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, 
-            { "mDataProp": "public_dns_name" },
-            { "mDataProp": "private_dns_name" },
+            {
+	          "mDataProp": "public_dns_name",
+ 			  "sClass": "wrap-content"
+			},
+            {
+	          "mDataProp": "private_dns_name",
+ 			  "sClass": "wrap-content"
+			},
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
             { 
