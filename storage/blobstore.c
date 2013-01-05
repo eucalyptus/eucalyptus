@@ -2694,7 +2694,8 @@ int blobstore_stat(blobstore * bs, blobstore_meta * meta)
             //! @TODO look into recursive purging of unused references?
             meta->blocks_locked += abb_size_blocks;
         } else {
-            meta->blocks_unlocked += abb_size_blocks;   // these potentially can be purged, unless they are depended on by locked ones
+            // these potentially can be purged, unless they are depended on by locked ones
+            meta->blocks_unlocked += abb_size_blocks;
         }
         meta->blocks_allocated += abb->blocks_allocated;
         meta->num_blobs++;
@@ -2712,11 +2713,14 @@ unlock:
     }
 
     euca_strncpy(meta->id, bs->id, sizeof(meta->id));
-    realpath(bs->path, meta->path);
     meta->revocation_policy = bs->revocation_policy;
     meta->snapshot_policy = bs->snapshot_policy;
     meta->format = bs->format;
     meta->blocks_limit = bs->limit_blocks;
+    if(realpath(bs->path, meta->path) == NULL) {
+        logprintfl(EUCAERROR, "failed to resolve the blobstore path %s\n", bs->path);
+        ret = EUCA_ERROR;
+    }
 
     return ret;
 }
@@ -3156,12 +3160,18 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
     char lpath[PATH_MAX];
     set_blockblob_metadata_path(BLOCKBLOB_PATH_LOCK, bs, bb->id, lpath, sizeof(lpath));
     bb->fd_lock = open_and_lock(lpath, flags | BLOBSTORE_FLAG_RDWR, timeout_usec, BLOBSTORE_FILE_PERM); // blobs are always opened with exclusive write access
-    if (bb->fd_lock == -1) {    // failed to open/create and lock the blockblob
+    if (bb->fd_lock == -1) {
+        // failed to open/create and lock the blockblob
         goto clean;
     }
     char thread_id[512];
+    int thread_id_len = 0;
     snprintf(thread_id, sizeof(thread_id), "%d/%u", getpid(), (unsigned int)pthread_self());
-    write(bb->fd_lock, thread_id, strlen(thread_id));
+    thread_id_len = strlen(thread_id);
+    if (write(bb->fd_lock, thread_id, thread_id_len) != thread_id_len) {
+        // Fail to write our thread indentifier in the lock file.
+        goto clean;
+    }
 
     // convert BLOBSTORE_* flags into standard Posix open() flags and open/create the blocks file
     int o_flags = 0;
@@ -3334,7 +3344,9 @@ clean:
     {
         int saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
         if (bb->fd_lock != -1) {
-            ftruncate(bb->fd_lock, 0);
+            if (ftruncate(bb->fd_lock, 0) != 0) {
+                ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+            }
             close_and_unlock(bb->fd_lock);
         }
         if (bb->fd_blocks != -1) {
@@ -3434,7 +3446,9 @@ int blockblob_close(blockblob * bb)
         ret = loop_remove(bb->store, bb->id);
     }
     ret |= close(bb->fd_blocks);
-    ftruncate(bb->fd_lock, 0);
+    if(ftruncate(bb->fd_lock, 0) != 0) {
+        ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+    }
     ret |= close_and_unlock(bb->fd_lock);
     EUCA_FREE(bb);              // we free the blob regardless of whether closing succeeds or not
     return ret;
@@ -3908,12 +3922,16 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
         ret = delete_blob_state(bb, timeout_usec, do_force);    // do the bulk of the cleanup
 
         // close the open file descriptors
-        ftruncate(bb->fd_lock, 0);
+        if (ftruncate(bb->fd_lock, 0) != 0) {
+            ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+        }
+
         if (close_and_unlock(bb->fd_lock) == -1) {
             ret = -1;
         } else {
             bb->fd_lock = 0;    //! @TODO needed? maybe -1?
         }
+
         if (close(bb->fd_blocks) == -1) {
             ret = -1;
         } else {
@@ -5557,7 +5575,12 @@ int main(int argc, char **argv)
 {
     int errors = 0;
     char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
+
+    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("Fail to retrieve the current working directory.\n");
+        return(1);
+    }
+
     srandom(time(NULL));
 
     logfile(NULL, EUCATRACE, 4);
@@ -5586,7 +5609,8 @@ int main(int argc, char **argv)
         char buf[32];
         bzero(buf, sizeof(buf));
         snprintf(buf, sizeof(buf), "%lld\n", (long long)time(NULL));
-        write(fd, buf, strlen(buf));
+        if(write(fd, buf, strlen(buf)) != strlen(buf))
+            printf("---------> Fail to write %ld bytes to %s\n", strlen(buf), blockblob_get_file(bb));
         close(fd);
 
         printf("---------> sleeping while holding blob %s\n", id);

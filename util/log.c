@@ -886,27 +886,32 @@ int logcat(int debug_level, const char *file_path)
 //!
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other)
 {
-    double ts;
-    struct timeval tv;
-    char hostTagFull[256];
-    char hostName[256];
-    FILE *PH;
+    double ts = 0.0;
+    struct timeval tv = { 0 };
+    char hostTagFull[256] = "";
+    char hostName[256] = "";
+    FILE *PH = NULL;
 
-    if (!timelog)
-        return;
+    if (timelog) {
+        hostTagFull[0] = '\0';
+        PH = popen("hostname", "r");
+        if (PH) {
+            if(fscanf(PH, "%256s", hostName) == 1) {
+                snprintf(hostTagFull, 256, "%s/%s", hostName, hostTag);
+            }
+            else {
+                snprintf(hostTagFull, 256, "%s", hostTag);
+            }
 
-    hostTagFull[0] = '\0';
-    PH = popen("hostname", "r");
-    if (PH) {
-        fscanf(PH, "%256s", hostName);
-        pclose(PH);
+            pclose(PH);
 
-        snprintf(hostTagFull, 256, "%s/%s", hostName, hostTag);
+            snprintf(hostTagFull, 256, "%s/%s", hostName, hostTag);
 
-        gettimeofday(&tv, NULL);
-        ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
+            gettimeofday(&tv, NULL);
+            ts = (double)tv.tv_sec + ((double)tv.tv_usec / 1000000.0);
 
-        logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
+            logprintf("TIMELOG %s:%s:%s:%s:%f:%s\n", hostTagFull, userTag, cid, eventTag, ts, other);
+        }
     }
 }
 

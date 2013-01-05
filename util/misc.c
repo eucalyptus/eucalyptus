@@ -2059,6 +2059,7 @@ static char *find_cont(const char *xml, char *xpath)
 #define _STK_SIZE            64
 
     int i = 0;
+    int xpathLen = 0;
     int xml_offset = 0;
     int tag_start = 0;
     int tag_end = -1;
@@ -2102,10 +2103,12 @@ static char *find_cont(const char *xml, char *xpath)
             }
             // construct the xpath of the closing tag based on stack contents
             xpath_cur[0] = '\0';
-            for (i = 0; i <= stk_p; i++) {
-                if (i > 0)
-                    strncat(xpath_cur, "/", MAX_PATH);
-                strncat(xpath_cur, n_stk[i], MAX_PATH);
+            for (i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
+                if (i > 0) {
+                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur)));
+                }
+
+                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur)));
             }
 
             // pop the stack whether we have a match or not
