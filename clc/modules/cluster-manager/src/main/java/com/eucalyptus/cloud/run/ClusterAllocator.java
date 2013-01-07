@@ -391,13 +391,7 @@ public class ClusterAllocator implements Runnable {
     final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null
                                                                                                      ? this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( )
                                                                                                      : "linux"; // ASAP:FIXME:GRZE
-    ExtantNetwork exNet;
-    try {
-      exNet = this.allocInfo.getExtantNetwork( );
-    } catch ( final Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-      exNet = ExtantNetwork.bogus( this.allocInfo.getPrimaryNetwork( ) );
-    }
+    
 //TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION ); 
     final VmRunType run = VmRunType.builder( )
                                    .instanceId( childToken.getInstanceId( ) )
@@ -409,7 +403,7 @@ public class ClusterAllocator implements Runnable {
                                    .platform( platform )
                                    .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
                                    .userData( this.allocInfo.getRequest( ).getUserData( ) )
-                                   .vlan( exNet.getTag( ) )
+                                   .vlan( childToken.getExtantNetwork().getTag( ) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );
