@@ -1130,6 +1130,11 @@ table.display td {
   text-align: center;
 }
 
+td.wrap-content {
+  word-break: break-all;
+  word-wrap: break-word;	
+}
+
 table.display td.dataTables_empty {
   padding: 10px;
 }
