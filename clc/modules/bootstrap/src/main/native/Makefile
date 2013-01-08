@@ -74,7 +74,7 @@ OBJS =  eucalyptus-bootstrap.o eucalyptus-opts.o
 all: eucalyptus-cloud
 build: eucalyptus-cloud
 .c.o:
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 eucalyptus-cloud: eucalyptus-opts.h $(OBJS)
 	$(LDCMD) $(OBJS) -o eucalyptus-cloud $(LDFLAGS)

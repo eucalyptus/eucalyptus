@@ -67,7 +67,7 @@ all: vnetwork.o
 build: all
 
 .c.o:
-	$(CC) -c $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
 indent:
 	@for idfile in *.[ch]; do \
