@@ -29,6 +29,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.SubDirectory;
+
 import org.apache.log4j.Logger;
 import org.logicalcobwebs.proxool.ProxoolException;
 import org.logicalcobwebs.proxool.ProxoolFacade;
@@ -209,7 +211,11 @@ public class DBResourceCheck extends Thread {
 						if (dbPool.getMaximumConnections() - dbPool.getActiveConnections() < dbPool.getThreshold()) {
 							if (!this.alreadyFaulted.contains(dbPool)) {
 								Faults.forComponent(this.componentIdClass).havingId(OUT_OF_DB_CONNECTIONS_FAULT_ID)
-										.withVar("component", ComponentIds.lookup(componentIdClass).getFaultLogPrefix()).withVar("alias", dbPool.getAlias()).log();
+										.withVar("component", ComponentIds.lookup(componentIdClass).getFaultLogPrefix())
+										.withVar("alias", dbPool.getAlias())
+										.withVar("maxConnections", "" + dbPool.getMaximumConnections())
+										.withVar("activeConnections", "" + dbPool.getActiveConnections())
+								        .withVar("scriptsDir", SubDirectory.SCRIPTS.getFile().getAbsolutePath()).log();
 								this.alreadyFaulted.add(dbPool);
 							} else {
 								// fault has already been logged. do nothing
