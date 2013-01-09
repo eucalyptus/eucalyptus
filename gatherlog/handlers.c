@@ -273,7 +273,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
 
         EUCA_FREE(home);
     } else {
-        if(pipe(filedes) == 0) {
+        if (pipe(filedes) == 0) {
             pid = fork();
             if (pid == 0) {
                 close(filedes[0]);
@@ -427,7 +427,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
 
         EUCA_FREE(home);
     } else {
-        if(pipe(filedes) == 0) {
+        if (pipe(filedes) == 0) {
             pid = fork();
             if (pid == 0) {
                 close(filedes[0]);

@@ -2717,7 +2717,7 @@ unlock:
     meta->snapshot_policy = bs->snapshot_policy;
     meta->format = bs->format;
     meta->blocks_limit = bs->limit_blocks;
-    if(realpath(bs->path, meta->path) == NULL) {
+    if (realpath(bs->path, meta->path) == NULL) {
         logprintfl(EUCAERROR, "failed to resolve the blobstore path %s\n", bs->path);
         ret = EUCA_ERROR;
     }
@@ -3172,7 +3172,6 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
         // Fail to write our thread indentifier in the lock file.
         goto clean;
     }
-
     // convert BLOBSTORE_* flags into standard Posix open() flags and open/create the blocks file
     int o_flags = 0;
     if (flags & BLOBSTORE_FLAG_RDONLY) {
@@ -3446,7 +3445,7 @@ int blockblob_close(blockblob * bb)
         ret = loop_remove(bb->store, bb->id);
     }
     ret |= close(bb->fd_blocks);
-    if(ftruncate(bb->fd_lock, 0) != 0) {
+    if (ftruncate(bb->fd_lock, 0) != 0) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
     }
     ret |= close_and_unlock(bb->fd_lock);
@@ -5576,9 +5575,9 @@ int main(int argc, char **argv)
     int errors = 0;
     char cwd[1024];
 
-    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
         printf("Fail to retrieve the current working directory.\n");
-        return(1);
+        return (1);
     }
 
     srandom(time(NULL));
@@ -5609,7 +5608,7 @@ int main(int argc, char **argv)
         char buf[32];
         bzero(buf, sizeof(buf));
         snprintf(buf, sizeof(buf), "%lld\n", (long long)time(NULL));
-        if(write(fd, buf, strlen(buf)) != strlen(buf))
+        if (write(fd, buf, strlen(buf)) != strlen(buf))
             printf("---------> Fail to write %ld bytes to %s\n", strlen(buf), blockblob_get_file(bb));
         close(fd);
 

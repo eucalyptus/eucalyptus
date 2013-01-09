@@ -2775,9 +2775,9 @@ int main(int argc, char **argv)
     int warnings = 0;
     char cwd[1024];
 
-    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
         printf("Failed to retrieve the current working directory.\n");
-        return(1);
+        return (1);
     }
     srandom(time(NULL));
     blobstore_set_error_function(dummy_err_fn);
