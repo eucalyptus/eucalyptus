@@ -216,8 +216,6 @@ indent:
 	done
 
 clean:
-	@echo "GFLAGS: $(GFLAGS)"
-	@echo "CFLAGS: $(CFLAGS)"
 	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#* test_xml
 
 distclean:
