@@ -62,11 +62,8 @@
 
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmAddressMessage extends EucalyptusMessage{
   
@@ -108,7 +105,8 @@ public class ReleaseAddressResponseType extends VmAddressMessage { //** added 20
 public class DescribeAddressesType extends VmAddressMessage { //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "PublicIp")
   ArrayList<String> publicIpsSet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
   @HttpParameterMapping (parameter = "AllocationId")
   ArrayList<String> allocationIds = new ArrayList<String>();

@@ -669,3 +669,10 @@ public class ComponentMessageResponseType extends BaseMessage {
   def ComponentMessageResponseType() {
   }
 }
+
+public class Filter extends EucalyptusData {
+  String name;
+  @HttpParameterMapping (parameter = "Value")
+  ArrayList<String> valueSet = new ArrayList<String>( );
+}
+

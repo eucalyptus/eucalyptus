@@ -62,8 +62,6 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded;
 
@@ -152,7 +150,8 @@ public class DescribeImagesType extends VmImageMessage {
   ArrayList<String> imagesSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "Owner")
   ArrayList<String> ownersSet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 /** *******************************************************************************/

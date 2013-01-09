@@ -249,6 +249,38 @@ public class Entities {
                                                                     .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
+
+  /**
+   * Query items matching the given example restricted by the given criterion.
+   *
+   * <P>The caller must have an active transaction for the entity.</P>
+   *
+   * @param example The example object
+   * @param readOnly Use True if the results will not be modified
+   * @param criterion Additional restrictions for the query
+   * @param aliases Any aliases necessary for the given criterion
+   * @param <T> The entity type
+   * @return The result list
+   */
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example, 
+                                   final boolean readOnly, 
+                                   final org.hibernate.criterion.Criterion criterion,
+                                   final Map<String,String> aliases ) {
+    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
+        .createCriteria( example.getClass( ) )
+        .setReadOnly( readOnly )
+        .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+        .setCacheable( true )
+        .add( qbe )
+        .add( criterion );
+    for ( final Map.Entry<String,String> aliasEntry : aliases.entrySet() ) {
+      criteria.createAlias( aliasEntry.getKey(), aliasEntry.getValue() ); // inner join by default
+    }
+    final List<T> resultList = ( List<T> ) criteria.list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
   
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {

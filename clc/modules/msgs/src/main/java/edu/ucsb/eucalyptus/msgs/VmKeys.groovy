@@ -62,10 +62,9 @@
 
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.auth.policy.PolicyAction
 import com.eucalyptus.auth.policy.PolicyResourceType
-import com.eucalyptus.auth.policy.PolicySpec
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpEmbedded
 
 @PolicyResourceType( "keypair" )//GRZE:WHINE: this needs to be a string in order to avoid build-deps cycle
 public class VmKeyPairMessage extends EucalyptusMessage {
@@ -105,7 +104,8 @@ public class DescribeKeyPairsResponseType extends VmKeyPairMessage {
 public class DescribeKeyPairsType extends VmKeyPairMessage {
   @HttpParameterMapping (parameter = "KeyName")
   ArrayList<String> keySet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeKeyPairsResponseItemType extends EucalyptusData {

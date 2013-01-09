@@ -62,8 +62,6 @@
 
 package edu.ucsb.eucalyptus.msgs
 
-import java.security.Policy;
-import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
@@ -125,7 +123,8 @@ public class DescribeSecurityGroupsType extends VmSecurityMessage {
   ArrayList<String> securityGroupSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "GroupId")
   ArrayList<String> securityGroupIdSet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class SecurityGroupItemType extends EucalyptusData {
