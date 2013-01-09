@@ -73,6 +73,10 @@
        
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
+	     if ($.eucaData['u_session']['account'] === 'eucalyptus'){
+               thisObj.popupDialog(false, login_account_warning, function(){ ; });
+             }
+            
             $login.remove();
             eucalyptus.main($.eucaData);
    	    },
