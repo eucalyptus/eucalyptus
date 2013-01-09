@@ -62,9 +62,13 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.Collection;
 import java.util.Date;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.FetchType;
 import javax.persistence.Lob;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -105,8 +109,10 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   private String   localDevice;
   @Transient
   private FullName fullName;
-  
-  private Volume( ) {
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "volume" )
+  private Collection<VolumeTag> tags;
+
+  protected Volume( ) {
     super( );
   }
   

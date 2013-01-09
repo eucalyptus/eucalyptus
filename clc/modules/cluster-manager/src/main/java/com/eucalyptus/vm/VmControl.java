@@ -120,20 +120,14 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeletePlacementGroupType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribePlacementGroupsType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputResponseType;
 import edu.ucsb.eucalyptus.msgs.GetConsoleOutputType;
@@ -526,11 +520,6 @@ public class VmControl {
     return reply;
   }
   
-  public DescribeTagsResponseType describeTags( final DescribeTagsType request ) {
-    final DescribeTagsResponseType reply = request.getReply( );
-    return reply;
-  }
-  
   public DescribePlacementGroupsResponseType describePlacementGroups( final DescribePlacementGroupsType request ) {
     final DescribePlacementGroupsResponseType reply = request.getReply( );
     return reply;
@@ -540,19 +529,9 @@ public class VmControl {
     final DescribeInstanceAttributeResponseType reply = request.getReply( );
     return reply;
   }
-  
-  public DeleteTagsResponseType deleteTags( final DeleteTagsType request ) {
-    final DeleteTagsResponseType reply = request.getReply( );
-    return reply;
-  }
-  
+
   public DeletePlacementGroupResponseType deletePlacementGroup( final DeletePlacementGroupType request ) {
     final DeletePlacementGroupResponseType reply = request.getReply( );
-    return reply;
-  }
-  
-  public CreateTagsResponseType createTags( final CreateTagsType request ) {
-    final CreateTagsResponseType reply = request.getReply( );
     return reply;
   }
   

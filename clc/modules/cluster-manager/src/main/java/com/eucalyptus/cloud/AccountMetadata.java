@@ -68,7 +68,6 @@ import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.cloud.CloudMetadata.KeyPairMetadata;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.OwnerFullName;
@@ -151,6 +150,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
       : null );
   }
   
+  @Override
   public String getOwnerAccountName( ) {
     return this.ownerAccountName;
   }
@@ -177,7 +177,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
     this.uniqueName = createUniqueName( );
   }
   
-  private String createUniqueName( ) {
+  protected String createUniqueName( ) {
     return ( this.ownerAccountNumber != null && this.getDisplayName( ) != null )
       ? this.ownerAccountNumber + ":" + this.getDisplayName( )
       : null;

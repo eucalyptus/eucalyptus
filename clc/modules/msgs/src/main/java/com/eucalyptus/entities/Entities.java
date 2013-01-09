@@ -86,6 +86,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
@@ -563,6 +564,25 @@ public class Entities {
       LOG.error( deleteClass, e );
       throw Exceptions.toUndeclared( e );
     }
+  }
+
+  /**
+   * Count the matching entities for the given example.
+   * 
+   * @param example The example entity
+   * @return The number of matching entities
+   */
+  public static long count( final Object example ) {
+    final Example qbe = Example.create( example );
+    final Number count = (Number) getTransaction( example ).getTxState( ).getSession( )
+        .createCriteria( example.getClass( ) )
+        .setReadOnly( true )
+        .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+        .setCacheable( false )
+        .add( qbe )
+        .setProjection( Projections.rowCount() )
+        .uniqueResult( );
+    return count.longValue(); 
   }
 
   private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, CascadingTx>> {

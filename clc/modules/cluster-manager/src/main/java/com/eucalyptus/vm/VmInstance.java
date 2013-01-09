@@ -64,6 +64,7 @@ package com.eucalyptus.vm;
 
 import static com.eucalyptus.cloud.ImageMetadata.Platform;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -81,6 +82,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
@@ -206,6 +208,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private PrivateNetworkIndex  networkIndex;
+ 
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "instance" )
+  private Collection<VmInstanceTag> tags;
   
   @PreRemove
   void cleanUp( ) {
@@ -1308,7 +1313,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getInstanceUuid( ) {
     return this.getNaturalId( );
   }
-  
+
+  public static VmInstance named( final String instanceId ) {
+    return new VmInstance( null, instanceId );
+  }
+
   public static VmInstance named( final OwnerFullName ownerFullName, final String instanceId ) {
     return new VmInstance( ownerFullName, instanceId );
   }

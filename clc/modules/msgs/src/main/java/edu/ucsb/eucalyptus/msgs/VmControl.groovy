@@ -79,20 +79,6 @@ public class VmControlMessage extends EucalyptusMessage {
     super( userId );
   }
 }
-public class ResourceTagMessage extends EucalyptusMessage {
-  
-  public ResourceTagMessage( ) {
-    super( );
-  }
-  
-  public ResourceTagMessage( EucalyptusMessage msg ) {
-    super( msg );
-  }
-  
-  public ResourceTagMessage( String userId ) {
-    super( userId );
-  }
-}
 public class VmPlacementMessage extends EucalyptusMessage {
   
   public VmPlacementMessage( ) {
