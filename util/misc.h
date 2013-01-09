@@ -201,8 +201,18 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Macro to print a string that might be NULL. If NULL the string "UNSET" is returned.
 #define SP(_a)                                   (((_a) != NULL) ? (_a) : "UNSET")
+
 #define RANDALPHANUM()                           ((rand() % 2) ? (rand() % 26 + 97) : ((rand() % 2) ? (rand() % 26 + 65) : (rand() % 10 + 48)))
+
+//! @{
+//! @name Faster MIN and MAX macros
+#undef MIN
+#undef MAX
+#define MIN(_a, _b)                              ((_b) + (((_a) - (_b)) & -((_a) < (_b))))
+#define MAX(_a, _b)                              ((_a) - (((_a) - (_b)) & -((_a) < (_b))))
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
