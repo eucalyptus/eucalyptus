@@ -268,6 +268,7 @@
 
 //! @}
 
+#if 0
 //! @{
 //! @name return codes
 
@@ -279,6 +280,7 @@
 #define WRITER                                   3
 
 //! @}
+#endif /* 0 */
 
 #define MEGABYTE                                 1048576
 
