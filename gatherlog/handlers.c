@@ -273,69 +273,70 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
 
         EUCA_FREE(home);
     } else {
-        pipe(filedes);
-        pid = fork();
-        if (pid == 0) {
-            close(filedes[0]);
+        if (pipe(filedes) == 0) {
+            pid = fork();
+            if (pid == 0) {
+                close(filedes[0]);
 
-            env = axutil_env_create_all(NULL, 0);
-            if ((client_home = AXIS2_GETENV("AXIS2C_HOME")) == NULL) {
-                exit(1);
-            } else {
-                stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
-                clog = nlog = hlog = alog = NULL;
-                if ((rc = gl_getLogs("self", &clog, &nlog, &hlog, &alog, env, stub)) == EUCA_OK) {
-                    bzero(buf, bufsize);
-                    if (clog)
-                        snprintf(buf, bufsize, "%s", clog);
-                    rc = write(filedes[1], buf, bufsize);
+                env = axutil_env_create_all(NULL, 0);
+                if ((client_home = AXIS2_GETENV("AXIS2C_HOME")) == NULL) {
+                    exit(1);
+                } else {
+                    stub = axis2_stub_create_EucalyptusGL(env, client_home, service);
+                    clog = nlog = hlog = alog = NULL;
+                    if ((rc = gl_getLogs("self", &clog, &nlog, &hlog, &alog, env, stub)) == EUCA_OK) {
+                        bzero(buf, bufsize);
+                        if (clog)
+                            snprintf(buf, bufsize, "%s", clog);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (nlog)
-                        snprintf(buf, bufsize, "%s", nlog);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (nlog)
+                            snprintf(buf, bufsize, "%s", nlog);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (hlog)
-                        snprintf(buf, bufsize, "%s", hlog);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (hlog)
+                            snprintf(buf, bufsize, "%s", hlog);
+                        rc = write(filedes[1], buf, bufsize);
 
-                    bzero(buf, bufsize);
-                    if (alog)
-                        snprintf(buf, bufsize, "%s", alog);
-                    rc = write(filedes[1], buf, bufsize);
+                        bzero(buf, bufsize);
+                        if (alog)
+                            snprintf(buf, bufsize, "%s", alog);
+                        rc = write(filedes[1], buf, bufsize);
+                    }
                 }
-            }
-            close(filedes[1]);
-            exit(0);
-        } else {
-            close(filedes[1]);
+                close(filedes[1]);
+                exit(0);
+            } else {
+                close(filedes[1]);
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outCCLog = strdup(buf);
-            }
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outCCLog = strdup(buf);
+                }
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outNCLog = strdup(buf);
-            }
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outNCLog = strdup(buf);
+                }
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outHTTPDLog = strdup(buf);
-            }
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outHTTPDLog = strdup(buf);
+                }
 
-            bzero(buf, bufsize);
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc && buf[0] != '\0') {
-                *outAxis2Log = strdup(buf);
+                bzero(buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc && buf[0] != '\0') {
+                    *outAxis2Log = strdup(buf);
+                }
+                close(filedes[0]);
+                wait(&status);
             }
-            close(filedes[0]);
-            wait(&status);
         }
     }
 
@@ -426,51 +427,52 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
 
         EUCA_FREE(home);
     } else {
-        pipe(filedes);
-        pid = fork();
-        if (pid == 0) {
-            close(filedes[0]);
+        if (pipe(filedes) == 0) {
+            pid = fork();
+            if (pid == 0) {
+                close(filedes[0]);
 
-            env = axutil_env_create_all(NULL, 0);
-            if ((client_home = AXIS2_GETENV("AXIS2C_HOME")) == NULL) {
-                printf("ERROR: cannot retrieve AXIS2_HOME environment variable.\n");
-                exit(1);
-            } else {
-                if ((stub = axis2_stub_create_EucalyptusGL(env, client_home, service)) == NULL) {
-                    printf("ERROR: cannot retrieve AXIS2 stub.\n");
+                env = axutil_env_create_all(NULL, 0);
+                if ((client_home = AXIS2_GETENV("AXIS2C_HOME")) == NULL) {
+                    printf("ERROR: cannot retrieve AXIS2_HOME environment variable.\n");
                     exit(1);
+                } else {
+                    if ((stub = axis2_stub_create_EucalyptusGL(env, client_home, service)) == NULL) {
+                        printf("ERROR: cannot retrieve AXIS2 stub.\n");
+                        exit(1);
+                    }
+
+                    ccert = ncert = NULL;
+                    if ((rc = gl_getKeys("self", &ccert, &ncert, env, stub)) == EUCA_OK) {
+                        bzero(buf, bufsize);
+                        if (ccert)
+                            snprintf(buf, bufsize, "%s", ccert);
+                        rc = write(filedes[1], buf, bufsize);
+
+                        bzero(buf, bufsize);
+                        if (ncert)
+                            snprintf(buf, bufsize, "%s", ncert);
+                        rc = write(filedes[1], buf, bufsize);
+                    }
+                }
+                close(filedes[1]);
+                exit(0);
+            } else {
+                close(filedes[1]);
+
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc) {
+                    *outCCCert = strdup(buf);
                 }
 
-                ccert = ncert = NULL;
-                if ((rc = gl_getKeys("self", &ccert, &ncert, env, stub)) == EUCA_OK) {
-                    bzero(buf, bufsize);
-                    if (ccert)
-                        snprintf(buf, bufsize, "%s", ccert);
-                    rc = write(filedes[1], buf, bufsize);
-
-                    bzero(buf, bufsize);
-                    if (ncert)
-                        snprintf(buf, bufsize, "%s", ncert);
-                    rc = write(filedes[1], buf, bufsize);
+                rc = read(filedes[0], buf, bufsize - 1);
+                if (rc) {
+                    *outNCCert = strdup(buf);
                 }
-            }
-            close(filedes[1]);
-            exit(0);
-        } else {
-            close(filedes[1]);
 
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc) {
-                *outCCCert = strdup(buf);
+                close(filedes[0]);
+                wait(&status);
             }
-
-            rc = read(filedes[0], buf, bufsize - 1);
-            if (rc) {
-                *outNCCert = strdup(buf);
-            }
-
-            close(filedes[0]);
-            wait(&status);
         }
     }
 

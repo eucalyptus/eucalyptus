@@ -87,8 +87,14 @@
             },
             { "mDataProp": "image_id"},
             { "mDataProp": "placement" }, 
-            { "mDataProp": "public_dns_name" },
-            { "mDataProp": "private_dns_name" },
+            {
+	          "mDataProp": "public_dns_name",
+ 			  "sClass": "wrap-content"
+			},
+            {
+	          "mDataProp": "private_dns_name",
+ 			  "sClass": "wrap-content"
+			},
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
             { 
@@ -127,6 +133,10 @@
             {
               "bVisible": false,
               "mDataProp": "instance_type",
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "ip_address",
             },
           ]
         },
@@ -804,7 +814,7 @@
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6)[0];
+      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 16)[0];
       var results = describe('eip');
       var addr = null;
       for(i in results){

@@ -122,7 +122,11 @@ class GlobalSession(object):
     
     @property
     def admin_console_url(self):
-        return 'https://' + self.get_value('server', 'clchost') + ':8443'
+        port = self.get_value('server', 'clcwebport')
+        url = 'https://' + self.get_value('server', 'clchost')
+        if port != '443':
+            url += ':' + port
+        return url
 
     @property
     def help_url(self):

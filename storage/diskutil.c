@@ -1345,7 +1345,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         // create device.map file
         snprintf(device_map_path, sizeof(device_map_path), "%s/boot/grub/device.map", mnt_pt);
         snprintf(device_map_buf, sizeof(device_map_buf), "(hd0) %s\n", path);
-        if (diskutil_write2file(device_map_path, device_map_buf) != OK) {
+        if (diskutil_write2file(device_map_path, device_map_buf) != EUCA_OK) {
             logprintfl(EUCAWARN, "failed to create device.map file\n");
         } else {
             logprintfl(EUCAINFO, "wrote to '%s':\n", device_map_path);

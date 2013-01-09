@@ -1,20 +1,20 @@
-eucalyptus management console
+eucalyptus user console
 =============
 
-The Eucalyptus Management Console allows cloud users to do in a web browser what otherwise is done over the Eucalyptus API or command-line interface. 
+The Eucalyptus User Console allows cloud users to do in a web browser what otherwise is done over the Eucalyptus API or command-line interface. 
 The design goal is to build a tool that is elegant and easy to use. 
 The tool provides graphical access to the underlying API and CLI, but does not provide additional functionality of its own
 
-The management console consists of a web server implementation using Python Tornado and a rich Ajax client based on JQuery.
+The user console consists of a web server implementation using Python Tornado and a rich Ajax client based on JQuery.
 The server exposes various REST interfaces, which are roughly equivalent to EC2/S3 apis. 
 
 PREREQUISITE
 
-The management console works with Eucalyptus version 3.2 and later (earlier versions do not work). 
-This is due to the new authentication mechanism added in 3.2 to support the management console.
+The user console works with Eucalyptus version 3.2 and later (earlier versions do not work). 
+This is due to the new authentication mechanism added in 3.2 to support the user console.
 If you run the console in mock mode (see below), the Eucalyptus 3.2 is not required (Eucalyptus cloud is not required).
 
-The management console was tested with the following browsers:
+The user console was tested with the following browsers:
   - Firefox 15 (Recommended)
   - Google Chrome 22 (Recommended)
   - Safari 6
@@ -72,17 +72,11 @@ USING THE CONSOLE
 
 INTERNATIONALIZATION
 
-The management console is designed to support many different languages. Currently Russian and Korean are supported, in addition to English by default.
+The user console is designed to support many different languages. Currently Russian and Korean are supported, in addition to English by default.
 We expect the more languages would be added by the Eucalyptus community. 
 To add a language, follow these steps:
   - Go to 'static/custom/' and copy 'Messages.properties' file to a new file. The new file name should starts with 'Messages', followed by the language and country code, according to the convention defined in ISO 639 and ISO 3166. For example, for main-land Chinese use 'Messages_zh_CN.properties'. For Japanese, one can use 'Messages_ja_JP.properties'
   - Update 'language' option in server/console.ini to the new language. For example, 'language = zh_CN' for main-land Chinese.
   - After updating 'Messages_xx_YY.properties' during the translation, you can simply refresh your browser to see the change.
   - The console includes HTML help files stored under 'static/help'. You may want to translate the static HTML files as well to your language (If no such translation found, the console falls back to the English help). You should create a subdirectory named after the language&country code, under 'static/help', and store your translated help files.
-
-DISCLAIMER
-
-The Eucalyptus management console is in-progress and hasn't been released yet. 
-It is our plan to make it feature complete with Eucalyptus 3.2 release. 
-For answers to some of your questions, try here: https://github.com/eucalyptus/eucalyptus-ui/wiki/FAQ
 

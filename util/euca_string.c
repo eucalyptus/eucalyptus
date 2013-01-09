@@ -147,6 +147,7 @@ char *euca_strestr(const char *haystack, const char *begin, const char *end);
 long long euca_strtoll(const char *string, const char *begin, const char *end);
 char *euca_strduptolower(const char *restrict string);
 char *euca_strdupcat(char *restrict s1, const char *restrict s2);
+char *euca_strncat(char *restrict dest, const char *restrict src, size_t size);
 char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 
 /*----------------------------------------------------------------------------*\
@@ -454,6 +455,35 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2)
     }
 
     return (ret);
+}
+
+//!
+//! Appends src to dest and makes sure dest isn't going to be greater than n Characters. If dest
+//! reaches n characters, a NULL character will be added for the n-th character
+//!
+//! @param[in] dest the optional string to append to and free
+//! @param[in] src the optional string to append
+//! @param[in] size the number of character not to exceed in S1
+//!
+//! @return a pointer to the destination string
+//!
+//! @pre Both s1 and s2 fields should be provided.
+//!
+//! @post S1 will contain all or most character of S2 at the end of S1
+//!
+char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
+{
+    int len = 0;
+    char *to = NULL;
+
+    // Was dest provided?
+    if (dest) {
+        len = strlen(dest);
+        to = dest + len;
+        euca_strncpy(to, src, (size - len));
+    }
+
+    return (dest);
 }
 
 //!

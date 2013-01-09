@@ -168,12 +168,12 @@ int main(int argc, char **argv)
 {
     int rc = 0;
     char *euca_home = NULL;
-    char configFile[1024] = { 0 };
-    char policyFile[1024] = { 0 };
-    char logFile[1024] = { 0 };
+    char configFile[1024] = "";
+    char policyFile[1024] = "";
+    char logFile[1024] = "";
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
-    axis2_char_t endpoint_uri[256] = { 0 };
+    axis2_char_t endpoint_uri[256] = "";
     axis2_stub_t *stub = NULL;
 
     bzero(&mymeta, sizeof(ncMetadata));

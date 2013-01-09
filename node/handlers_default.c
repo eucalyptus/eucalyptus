@@ -830,7 +830,9 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
         }
 
         if (fd > 0) {
-            write(fd, xml, strlen(xml));
+            if (write(fd, xml, strlen(xml)) != strlen(xml)) {
+                logprintfl(EUCAERROR, "[%s] fail to write %ld bytes in temp file.\n", instanceId, strlen(xml));
+            }
             close(fd);
 
             char cmd[MAX_PATH];
