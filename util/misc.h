@@ -207,7 +207,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 #define RANDALPHANUM()                           ((rand() % 2) ? (rand() % 26 + 97) : ((rand() % 2) ? (rand() % 26 + 65) : (rand() % 10 + 48)))
 
 //! @{
-//! @name Faster MIN and MAX macros
+//! @name MIN and MAX macros
 #undef MIN
 #undef MAX
 #define MIN(_a, _b)                              (((_a) < (_b)) ? (_a) : (_b))
