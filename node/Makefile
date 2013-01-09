@@ -72,6 +72,7 @@ SERVICE_SO=libEucalyptusNC.so
 SERVICE_NAME=EucalyptusNC
 CLIENT=NCclient
 GFLAGS=$(patsubst -Werror,,$(CFLAGS))
+GPPFLAGS=$(patsubst -Werror,,$(CPPFLAGS))
 #WSDL2C=$(AXIS2C_HOME)/bin/tools/wsdl2c/WSDL2C.sh
 NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config --libs`
 AXIOM_LIBS = -lrampart -laxis2_http_sender -laxis2_http_receiver -laxis2_http_common -laxis2_engine -laxis2_axiom -laxutil -lneethi
@@ -102,13 +103,13 @@ generated/stubs: $(NCWSDL)
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated CFLAGS="$(GFLAGS) -Wno-unused-variable"
+	$(MAKE) -C generated CFLAGS="$(GPPFLAGS) $(GFLAGS) -Wno-unused-variable"
 	cd ..
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(BUILD_ID) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
+	$(CC) -c $(BUILD_ID) $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 server: $(SERVICE_SO)
 
@@ -164,30 +165,30 @@ client: $(CLIENT) $(CLIENT)_local
 fake: $(CLIENT)_fake
 
 $(CLIENT): generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CFLAGS) $(INCLUDES) generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o $(NC_LIBS)
+	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) generated/adb_*.o generated/axis2_stub_*.o $(AXIOM_LIBS) client-marshal-adb.o ../util/*.o $(AXIOM_LIBS) $(OPENSSL_LIBS) ../storage/diskutil.o ../net/*.o -lm $(CLIENT).c ../storage/http.o -lcurl ../storage/storage-windows.o $(NC_LIBS)
 
 $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
-	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
+	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o
 
 test: test.c ../util/log.o ../util/misc.o ../util/sensor.o ../util/data.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 test_hooks: hooks.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 test_xml: xml.c ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 test_xml2: xml.c ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
-	$(CC) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 libvirt_tortura: libvirt_tortura.c
-	$(CC) $(CFLAGS) $(INCLUDES) -o libvirt_tortura libvirt_tortura.c -lvirt
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o libvirt_tortura libvirt_tortura.c -lvirt
 
 deploy:
 	$(INSTALL) -d $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/
