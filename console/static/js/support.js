@@ -477,7 +477,7 @@ function errorAndLogout(errorCode){
     bError = true;
   }
 
-  $('html body').find(DOM_BINDING['hidden']).login('popupDialog', bError, errorMsg, function(){
+  $('html body').find(DOM_BINDING['hidden']).login('popupError', bError, errorMsg, function(){
     logout();
   });
 }
