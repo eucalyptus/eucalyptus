@@ -896,10 +896,9 @@ void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *oth
         hostTagFull[0] = '\0';
         PH = popen("hostname", "r");
         if (PH) {
-            if(fscanf(PH, "%256s", hostName) == 1) {
+            if (fscanf(PH, "%256s", hostName) == 1) {
                 snprintf(hostTagFull, 256, "%s/%s", hostName, hostTag);
-            }
-            else {
+            } else {
                 snprintf(hostTagFull, 256, "%s", hostTag);
             }
 

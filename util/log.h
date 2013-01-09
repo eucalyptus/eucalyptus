@@ -85,15 +85,17 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define EUCAALL     0
-#define EUCAEXTREME (_EUCA_CONTEXT_SETTER, 1)
-#define EUCATRACE   (_EUCA_CONTEXT_SETTER, 2)
-#define EUCADEBUG   (_EUCA_CONTEXT_SETTER, 3)
-#define EUCAINFO    (_EUCA_CONTEXT_SETTER, 4)
-#define EUCAWARN    (_EUCA_CONTEXT_SETTER, 5)
-#define EUCAERROR   (_EUCA_CONTEXT_SETTER, 6)
-#define EUCAFATAL   (_EUCA_CONTEXT_SETTER, 7)
-#define EUCAOFF     8
+#define _EUCA_CONTEXT_SETTER                     (_log_curr_method=__FUNCTION__, _log_curr_file=__FILE__, _log_curr_line=__LINE__)
+
+#define EUCAALL                                  0
+#define EUCAEXTREME                              (_EUCA_CONTEXT_SETTER, 1)
+#define EUCATRACE                                (_EUCA_CONTEXT_SETTER, 2)
+#define EUCADEBUG                                (_EUCA_CONTEXT_SETTER, 3)
+#define EUCAINFO                                 (_EUCA_CONTEXT_SETTER, 4)
+#define EUCAWARN                                 (_EUCA_CONTEXT_SETTER, 5)
+#define EUCAERROR                                (_EUCA_CONTEXT_SETTER, 6)
+#define EUCAFATAL                                (_EUCA_CONTEXT_SETTER, 7)
+#define EUCAOFF                                  8
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -179,8 +181,6 @@ void log_dump_trace(char *buf, int buf_size);
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#define _EUCA_CONTEXT_SETTER                     (_log_curr_method=__FUNCTION__, _log_curr_file=__FILE__, _log_curr_line=__LINE__)
 
 #ifdef DEBUG
 #define PRINTF(a)                                logprintf a

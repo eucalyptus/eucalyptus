@@ -483,7 +483,7 @@ char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
         euca_strncpy(to, src, (size - len));
     }
 
-    return(dest);
+    return (dest);
 }
 
 //!
