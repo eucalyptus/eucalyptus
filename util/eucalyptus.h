@@ -269,17 +269,15 @@
 //! @}
 
 #if 0
-//! @{
-//! @name return codes
-
+// DO NO USE.
+// Will be removed at the end of 3.3.
+// Use the euca_error_e enum instead.
 #define OK                                       0
 #define ERROR                                    1
 #define ERROR_FATAL                              1
 #define ERROR_RETRY                             -1
 #define READER                                   2
 #define WRITER                                   3
-
-//! @}
 #endif /* 0 */
 
 #define MEGABYTE                                 1048576
