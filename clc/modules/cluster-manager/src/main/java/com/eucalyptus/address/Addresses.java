@@ -83,6 +83,7 @@ import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
@@ -297,6 +298,35 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         } catch ( Exception ex ) {
           LOG.error( ex, ex );
         }
+      }
+    }
+  }
+  
+  public static class AddressFilterSupport extends FilterSupport<Address> {
+    public AddressFilterSupport() {
+      super( builderFor( Address.class )
+          .withConstantProperty( "domain", "standard" )
+          .withStringProperty( "instance-id", FilterFunctions.INSTANCE_ID )
+          .withStringProperty( "public-ip", FilterFunctions.PUBLIC_IP )
+          .withUnsupportedProperty( "allocation-id" )
+          .withUnsupportedProperty( "association-id" )
+          .withUnsupportedProperty( "network-interface-id" )
+          .withUnsupportedProperty( "network-interface-owner-id" )
+          .withUnsupportedProperty( "private-ip-address" ) );
+    }
+  }
+  
+  private enum FilterFunctions implements Function<Address,String> {
+    INSTANCE_ID {
+      @Override
+      public String apply( final Address address ) {
+        return address.getInstanceId();
+      }
+    },
+    PUBLIC_IP {
+      @Override
+      public String apply( final Address address ) {
+        return address.getDisplayName();
       }
     }
   }

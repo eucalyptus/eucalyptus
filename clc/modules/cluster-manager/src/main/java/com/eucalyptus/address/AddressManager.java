@@ -74,6 +74,7 @@ import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
@@ -81,6 +82,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.UnconditionalCallback;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.msgs.AddressInfoType;
 import edu.ucsb.eucalyptus.msgs.AllocateAddressResponseType;
@@ -130,10 +132,14 @@ public class AddressManager {
   public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
     DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
     Context ctx = Contexts.lookup( );
-    boolean isAdmin = ctx.hasAdministrativePrivileges( );
-    User requestUser = ctx.getUser( );
+    boolean isAdmin = ctx.hasAdministrativePrivileges();
+    User requestUser = ctx.getUser();
     String action = PolicySpec.requestToAction( request );
-    for ( Address address : Iterables.filter( Addresses.getInstance( ).listValues( ), CloudMetadatas.filterById( request.getPublicIpsSet( ) ) ) ) {
+    final Predicate<? super Address> filter = CloudMetadatas.filteringFor( Address.class )
+        .byId( request.getPublicIpsSet() )
+        .byPredicate( Filters.generate( request.getFilterSet(), Address.class ).asPredicate() )
+        .buildPredicate();
+    for ( Address address : Iterables.filter( Addresses.getInstance( ).listValues( ), filter ) ) {
       //TODO:GRZE:FIXME this is not going to last this way.
       Account addrAccount = null;
       String addrAccountNumber = address.getOwnerAccountNumber( );
@@ -154,7 +160,7 @@ public class AddressManager {
       }
     }
     if ( isAdmin ) {
-      for ( Address address : Iterables.filter( Addresses.getInstance( ).listDisabledValues( ), CloudMetadatas.filterById( request.getPublicIpsSet( ) ) ) ) {
+      for ( Address address : Iterables.filter( Addresses.getInstance( ).listDisabledValues( ), filter ) ) {
         reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName( ).getUserName( ) ) );
       }
     }
