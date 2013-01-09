@@ -64,16 +64,18 @@ package com.eucalyptus.network;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -139,32 +141,31 @@ public class NetworkGroupManager {
     final Context ctx = Contexts.lookup( );
     boolean showAll = request.getSecurityGroupSet( ).remove( "verbose" );
     NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-   
-    final List<String> groupNames = request.getSecurityGroupSet( );
-    final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
-      @Override
-      public boolean apply( final NetworkGroup arg0 ) {
-        return groupNames.isEmpty( ) || groupNames.contains( arg0.getDisplayName( ) );
-      }
-    };
-    
-    Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, RestrictedTypes.filterPrivileged( ) );
+
+    final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
+    final CloudMetadatas.FilterBuilder<NetworkGroup> filterBuilder = CloudMetadatas.filteringFor( NetworkGroup.class )
+        .byId( request.getSecurityGroupSet( ) )
+        .byPredicate( filter.asPredicate() );
+
     OwnerFullName ownerFn = AccountFullName.getInstance( ctx.getAccount( ) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       if ( showAll ) {
         ownerFn = null;
       }
-      netFilter = argListFilter;
+    } else {
+      filterBuilder.byPrivileges();
     }
-    
+
+    final Predicate<? super NetworkGroup> netFilter = filterBuilder.buildPredicate();
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null ) );
+      final List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null ), true, filter.asCriterion(), filter.getAliases() );
       final Iterable<NetworkGroup> matches = Iterables.filter( networks, netFilter );
       final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
-      Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
-      db.commit( );
+      Iterables.addAll( reply.getSecurityGroupInfo(), transformed );
     } catch ( final Exception ex ) {
+      LOG.error( ex, ex );
+    } finally {
       db.rollback( );
     }
     

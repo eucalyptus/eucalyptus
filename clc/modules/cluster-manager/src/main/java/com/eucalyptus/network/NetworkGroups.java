@@ -83,7 +83,6 @@ import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
-import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cloud.util.Reference;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -95,13 +94,14 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -341,7 +341,7 @@ public class NetworkGroups {
   static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
   
   public static synchronized void updateNetworkRangeConfiguration( ) {
-    final AtomicReference<NetworkRangeConfiguration> equalityCheck = new AtomicReference( null );
+    final AtomicReference<NetworkRangeConfiguration> equalityCheck = new AtomicReference<NetworkRangeConfiguration>( null );
     try {
       Transactions.each( new ClusterConfiguration( ), new Callback<ClusterConfiguration>( ) {
         
@@ -704,7 +704,6 @@ public class NetworkGroups {
       }
       return ruleList;
     }
-    
   }
   
   static List<NetworkRule> ipPermissionsAsNetworkRules( final List<IpPermissionType> ipPermissions ) {
@@ -714,5 +713,115 @@ public class NetworkGroups {
     }
     return ruleList;
   }
-  
+
+  public static class NetworkGroupFilterSupport extends FilterSupport<NetworkGroup> {
+    public NetworkGroupFilterSupport() {
+      super( builderFor( NetworkGroup.class )
+          .withStringProperty( "description", FilterFunctions.DESCRIPTION )
+          .withUnsupportedProperty( "group-id" ) //TODO:STEVE:Add when we have security group IDS (also persistent version below)
+          .withStringProperty( "group-name", FilterFunctions.NAME )
+          .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
+          .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
+          .withStringSetProperty( "ip-permission.group-name", FilterSetFunctions.PERMISSION_GROUP )
+          .withStringSetProperty( "ip-permission.protocol", FilterSetFunctions.PERMISSION_PROTOCOL )
+          .withStringSetProperty( "ip-permission.to-port", FilterSetFunctions.PERMISSION_TO_PORT )
+          .withStringSetProperty( "ip-permission.user-id", FilterSetFunctions.PERMISSION_ACCOUNT_ID )
+          .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
+          .withPersistenceAlias( "networkRules", "networkRules" )
+          .withPersistenceFilter( "description" )
+          .withPersistenceFilter( "group-name", "displayName" )
+          .withPersistenceFilter( "ip-permission.from-port", "networkRules.lowPort", PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction(NetworkRule.Protocol.class) )
+          .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" ) );
+    }
+  }
+
+  private enum FilterFunctions implements Function<NetworkGroup,String> {
+    ACCOUNT_ID {
+      @Override
+      public String apply( final NetworkGroup group ) {
+        return group.getOwnerAccountNumber();
+      }
+    },
+    DESCRIPTION {
+      @Override
+      public String apply( final NetworkGroup group ) {
+        return group.getDescription();
+      }
+    },
+    NAME {
+      @Override
+      public String apply( final NetworkGroup group ) {
+        return group.getDisplayName();
+      }
+    }
+  }
+
+  private enum FilterSetFunctions implements Function<NetworkGroup,Set<String>> {
+    PERMISSION_CIDR {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          result.addAll( rule.getIpRanges() );
+        }
+        return result;
+      }
+    },
+    PERMISSION_FROM_PORT {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          result.add( Integer.toString( rule.getLowPort() ) );
+        }
+        return result;
+      }
+    },
+    PERMISSION_GROUP {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getGroupName() != null ) result.add( peer.getGroupName() );
+          }
+        }
+        return result;
+      }
+    },
+    PERMISSION_PROTOCOL {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          if ( rule.getProtocol() != null ) result.add( rule.getProtocol().name() );
+        }
+        return result;
+      }
+    },
+    PERMISSION_TO_PORT {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          result.add( Integer.toString( rule.getHighPort() ) );
+        }
+        return result;
+      }
+    },
+    PERMISSION_ACCOUNT_ID {
+      @Override
+      public Set<String> apply( final NetworkGroup group ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final NetworkRule rule : group.getNetworkRules() ) {
+          for ( final NetworkPeer peer : rule.getNetworkPeers() ) {
+            if ( peer.getUserQueryKey() != null ) result.add( peer.getUserQueryKey() );
+          }
+        }
+        return result;
+      }
+    }
+  }
 }
