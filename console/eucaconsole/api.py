@@ -38,14 +38,95 @@ from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
+from boto.exception import S3ResponseError
 from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
+from .botowalrusinterface import BotoWalrusInterface
 from .botojsonencoder import BotoJsonEncoder
 from .cachingclcinterface import CachingClcInterface
+from .cachingwalrusinterface import CachingWalrusInterface
 from .mockclcinterface import MockClcInterface
 from .response import ClcError
 from .response import Response
+
+class StorageHandler(eucaconsole.BaseHandler):
+    ##
+    # This is the main entry point for API calls for S3(Walrus) from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.walrus):
+            if self.should_use_mock():
+                pass #self.user_session.walrus = MockClcInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                #try:
+                #    host = eucaconsole.config.get('test', 'ec2.endpoint')
+                #except ConfigParser.Error:
+                #    pass
+                self.user_session.walrus = BotoWalrusInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.walrus = CachingWalrusInterface(self.user_session.walrus, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Describe') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'DescribeBuckets':
+                self.user_session.walrus.get_all_buckets(self.callback)
+            elif action == 'DescribeObjects':
+                bucket = self.get_argument('Bucket')
+                self.user_session.walrus.get_all_objects(bucket, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+    # async calls end up back here so we can check error status and reply appropriately
+    def callback(self, response):
+        if response.error:
+            err = response.error
+            ret = '[]'
+            if isinstance(err, S3ResponseError):
+                ret = ClcError(err.status, err.reason, err.errors[0][1])
+                self.set_status(err.status);
+            elif issubclass(err.__class__, Exception):
+                if isinstance(err, socket.timeout):
+                    ret = ClcError(504, 'Timed out', None)
+                    self.set_status(504);
+                else:
+                    ret = ClcError(500, err.message, None)
+                    self.set_status(500);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.write(json.dumps(ret, cls=BotoJsonEncoder))
+            self.finish()
+            logging.exception(err)
+        else:
+            try:
+                try:
+                    if(eucaconsole.config.get('test','apidelay')):
+                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
+                except ConfigParser.NoOptionError:
+                    pass
+                ret = Response(response.data) # wrap all responses in an object for security purposes
+                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.write(data)
+                self.finish()
+            except Exception, err:
+                print err
 
 class ComputeHandler(eucaconsole.BaseHandler):
 

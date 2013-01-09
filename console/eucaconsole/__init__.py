@@ -50,6 +50,7 @@ using_ssl = False
 
 class UserSession(object):
     clc = None
+    walrus = None
     def __init__(self, account, username, session_token, access_key, secret_key):
         self.obj_account = account
         self.obj_username = username

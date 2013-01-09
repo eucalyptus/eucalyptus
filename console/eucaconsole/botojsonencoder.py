@@ -41,6 +41,7 @@ from boto.ec2.tag import Tag
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
 from boto.ec2.volume import AttachmentSet
+from boto.s3.bucket import Bucket
 from .response import ClcError
 from .response import Response
 from esapi.codecs.html_entity import HTMLEntityCodec
@@ -139,6 +140,10 @@ class BotoJsonEncoder(JSONEncoder):
         elif isinstance(obj, Tag):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = 'Tag'
+            return (values)
+        elif isinstance(obj, Bucket):
+            values = {'name':obj.name}
+            values['__obj_name__'] = 'Bucket'
             return (values)
         return super(BotoJsonEncoder, self).default(obj)
 

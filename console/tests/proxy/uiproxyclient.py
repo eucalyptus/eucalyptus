@@ -103,6 +103,23 @@ class UIProxyClient(object):
         except urllib2.URLError, err:
             print "Error! "+str(err.code)
 
+    def __make_request_walrus__(self, action, params):
+        url = 'http://%s:%s/s3?'%(self.host, self.port)
+        for param in params.keys():
+            if params[param]==None:
+                del params[param]
+        params['Action'] = action
+        params['_xsrf'] = self.xsrf
+        data = urllib.urlencode(params)
+        print "request : "+data
+        try:
+            req = urllib2.Request(url)
+            self.__check_logged_in__(req)
+            response = urllib2.urlopen(req, data)
+            return json.loads(response.read())
+        except urllib2.URLError, err:
+            print "Error! "+str(err.code)
+
     ##
     # Zone methods
     ##
@@ -434,3 +451,13 @@ class UIProxyClient(object):
             i += 1
         return self.__make_request__('DeleteTags', params)
 
+
+    ##
+    # Walrus methods
+    ##
+    def get_buckets(self):
+        return self.__make_request_walrus__('DescribeBuckets', {})
+
+    def get_objects(self, bucket):
+        params = {'Bucket': bucket}
+        return self.__make_request_walrus__('DescribeObjects', params)
