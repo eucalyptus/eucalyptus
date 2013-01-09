@@ -613,11 +613,11 @@ char *walrus_get_digest(const char *url)
 //! @param[in] url
 //! @param[in] old_digest_path
 //!
-//! @return 0 if same, -N if different, N if error
+//! @return 0 if same, -1 if different, EUCA_INVALID_ERROR if error
 //!
 int walrus_verify_digest(const char *url, const char *old_digest_path)
 {
-    int e = ERROR;
+    int e = EUCA_INVALID_ERROR;
 
     char *new_digest;
     char *old_digest = file2strn(old_digest_path, 2000000);
@@ -631,7 +631,7 @@ int walrus_verify_digest(const char *url, const char *old_digest_path)
         if (strcmp(new_digest, old_digest)) {
             e = -1;
         } else {
-            e = 0;
+            e = EUCA_OK;
         }
 
         EUCA_FREE(new_digest);

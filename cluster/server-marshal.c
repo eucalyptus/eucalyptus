@@ -1314,7 +1314,11 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     }
 
     if (rc) {
+<<<<<<< HEAD
         LOGERROR("doDescribeResources() failed %d\n", rc);
+=======
+        logprintfl(EUCAERROR, "doDescribeResources() failed %d\n", rc);
+>>>>>>> testing
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
