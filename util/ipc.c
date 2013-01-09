@@ -234,7 +234,7 @@ sem *sem_realloc(const int val, const char *name, int flags)
         if (s->flags & O_EXCL) {
             if (sem_unlink(name) == 0) {
                 /* clean up in case previous sem holder crashed */
-                logprintfl(EUCAINFO, "cleaning up old semaphore %s\n", name);
+                LOGINFO("cleaning up old semaphore %s\n", name);
             }
         }
 
@@ -312,7 +312,7 @@ int sem_prolaag(sem * s, boolean do_log)
     if (s) {
         if (do_log) {
             snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
-            logprintfl(EUCAEXTREME, "%s locking\n", ((s->name) ? (s->name) : (addr)));
+            LOGEXTREME("%s locking\n", ((s->name) ? (s->name) : (addr)));
         }
 
         if (s->usemutex) {
@@ -374,7 +374,7 @@ int sem_verhogen(sem * s, boolean do_log)
     if (s) {
         if (do_log) {
             snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
-            logprintfl(EUCAEXTREME, "%s unlocking\n", ((s->name) ? (s->name) : (addr)));
+            LOGEXTREME("%s unlocking\n", ((s->name) ? (s->name) : (addr)));
         }
 
         if (s->usemutex) {

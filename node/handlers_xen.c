@@ -230,13 +230,13 @@ static int doInitialize(struct nc_state_t *nc)
     }
     // get resources
     if (virNodeGetInfo(nc->conn, &ni)) {
-        logprintfl(EUCAFATAL, "failed to discover resources\n");
+        LOGFATAL("failed to discover resources\n");
         return (EUCA_FATAL_ERROR);
     }
     // dom0-min-mem has to come from xend config file
     s = system_output(nc->get_info_cmd_path);
     if (get_value(s, "dom0-min-mem", &dom0_min_mem)) {
-        logprintfl(EUCAFATAL, "did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
+        LOGFATAL("did not find dom0-min-mem in output from %s\n", nc->get_info_cmd_path);
         EUCA_FREE(s);
         return (EUCA_FATAL_ERROR);
     }
@@ -304,7 +304,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             sem_v(hyp_sem);
 
             if (err == 0) {
-                logprintfl(EUCAINFO, "[%s] rebooting Xen domain for instance\n", instanceId);
+                LOGINFO("[%s] rebooting Xen domain for instance\n", instanceId);
             }
 
             sem_p(hyp_sem);
@@ -327,7 +327,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
             sensor_resume_polling();    // now that metrics have been shifted, resume polling
         } else {
             if (instance->state != BOOTING && instance->state != STAGING) {
-                logprintfl(EUCAWARN, "[%s] domain to be rebooted not running on hypervisor\n", instanceId);
+                LOGWARN("[%s] domain to be rebooted not running on hypervisor\n", instanceId);
             }
         }
     }
@@ -382,7 +382,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     sem_v(inst_sem);
 
     if (!instance) {
-        logprintfl(EUCAERROR, "[%s] cannot locate instance\n", instanceId);
+        LOGERROR("[%s] cannot locate instance\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
     }
 
@@ -397,7 +397,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 
     bufsize = sizeof(char) * 1024 * 64;
     if ((console_main = EUCA_ZALLOC(bufsize, sizeof(char))) == NULL) {
-        logprintfl(EUCAERROR, "[%s] out of memory!\n", instanceId);
+        LOGERROR("[%s] out of memory!\n", instanceId);
         EUCA_FREE(console_append);
         return (EUCA_MEMORY_ERROR);
     }
@@ -445,7 +445,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
             }
 
             if ((fd = open(console_file, O_RDONLY)) < 0) {
-                logprintfl(EUCAERROR, "[%s] could not open consoleOutput file %s for reading\n", instanceId, console_file);
+                LOGERROR("[%s] could not open consoleOutput file %s for reading\n", instanceId, console_file);
             } else {
                 FD_ZERO(&rfds);
                 FD_SET(fd, &rfds);

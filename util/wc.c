@@ -398,7 +398,7 @@ wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
 
         if ((val = find_valn(vars, var_start + pref_len, var_len)) == NULL) {
             //! @todo print variable name
-            logprintfl(EUCAWARN, "failed to substitute variable\n");
+            LOGWARN("failed to substitute variable\n");
             EUCA_FREE(result);
             return (NULL);
         }
@@ -407,7 +407,7 @@ wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
             // there is text prior to the variable
             if ((result = wcappendn(result, remainder, var_start - remainder)) == NULL) {
                 //! @todo more specific error
-                logprintfl(EUCAERROR, "failed to append during variable substitution");
+                LOGERROR("failed to append during variable substitution");
                 break;
             }
         }
@@ -420,7 +420,7 @@ wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
 
     if (malformed) {
         //! @todo print the string
-        logprintfl(EUCAWARN, "malformed string used for substitution\n");
+        LOGWARN("malformed string used for substitution\n");
     }
 
     return (result);
@@ -547,10 +547,10 @@ char *c_varsub(const char *s, const char_map * vars[])
 
         if ((val = c_find_valn(vars, var_start + pref_len, var_len)) == NULL) {
             if ((missed_var = strndup(var_start + pref_len, var_len)) == NULL) {
-                logprintfl(EUCAWARN, "failed to substitute variable\n");
+                LOGWARN("failed to substitute variable\n");
                 continue;
             } else {
-                logprintfl(EUCAWARN, "substituted variable: %s%s%s\n", C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
+                LOGWARN("substituted variable: %s%s%s\n", C_VAR_PREFIX, missed_var, C_VAR_SUFFIX);
             }
 
             if ((vartok = (char *)EUCA_ALLOC(1, (strlen(C_VAR_PREFIX) + strlen(C_VAR_SUFFIX) + strlen(missed_var) + 1))) == NULL) {
@@ -563,7 +563,7 @@ char *c_varsub(const char *s, const char_map * vars[])
             if (var_start > remainder) {    // there is text prior to the variable
                 if ((result = c_wcappendn(result, remainder, var_start - remainder)) == NULL) {
                     //! @todo more specific error
-                    logprintfl(EUCAERROR, "failed to append during variable substitution");
+                    LOGERROR("failed to append during variable substitution");
                     EUCA_FREE(vartok);
                     EUCA_FREE(missed_var);
                     break;
@@ -581,7 +581,7 @@ char *c_varsub(const char *s, const char_map * vars[])
             // there is text prior to the variable
             if ((result = c_wcappendn(result, remainder, var_start - remainder)) == NULL) {
                 //! @todo more specific error
-                logprintfl(EUCAERROR, "failed to append during variable substitution");
+                LOGERROR("failed to append during variable substitution");
                 break;
             }
         }
@@ -593,7 +593,7 @@ char *c_varsub(const char *s, const char_map * vars[])
 
     if (malformed) {
         //! @todo print the string
-        logprintfl(EUCAWARN, "malformed string used for substitution\n");
+        LOGWARN("malformed string used for substitution\n");
     }
 
     return (result);

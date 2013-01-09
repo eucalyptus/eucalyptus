@@ -517,7 +517,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     if (instIdsLen > 0) {
         instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
         if (instIds == NULL) {
-            logprintfl(EUCAERROR, "out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
+            LOGERROR("out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
             goto reply;
         }
     }
@@ -531,7 +531,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     if (sensorIdsLen > 0) {
         sensorIds = EUCA_ZALLOC(sensorIdsLen, sizeof(char *));
         if (sensorIds == NULL) {
-            logprintfl(EUCAERROR, "out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
+            LOGERROR("out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
             goto reply;
         }
     }
@@ -551,7 +551,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
                                       &outResourcesLen);
         if (error) {
-            logprintfl(EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
+            LOGERROR("doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
                 for (int i = 0; i < outResourcesLen; i++) {
                     EUCA_FREE(outResources[i]);
@@ -559,7 +559,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
                 EUCA_FREE(outResources);
             }
         } else {
-            logprintfl(EUCATRACE, "marshalling results outResourcesLen=%d\n", outResourcesLen);
+            LOGTRACE("marshalling results outResourcesLen=%d\n", outResourcesLen);
 
             // set standard fields in output
             adb_describeSensorsResponseType_set_correlationId(output, env, meta.correlationId);
@@ -593,7 +593,7 @@ reply:
     adb_DescribeSensorsResponse_t *response = adb_DescribeSensorsResponse_create(env);
     adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
 
     return response;
 }
@@ -815,7 +815,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
         status = AXIS2_FALSE;
         outAddressesLen = 0;
     } else if (rc) {
-        logprintfl(EUCAERROR, "doDescribePublicAddresses() failed\n");
+        LOGERROR("doDescribePublicAddresses() failed\n");
         snprintf(statusMessage, 256, "ERROR");
         status = AXIS2_FALSE;
         outAddressesLen = 0;
@@ -1314,7 +1314,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     }
 
     if (rc) {
-        logprintfl(ERROR, "doDescribeResources() failed %d\n", rc);
+        LOGERROR("doDescribeResources() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {

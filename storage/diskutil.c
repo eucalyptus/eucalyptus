@@ -308,25 +308,25 @@ int diskutil_init(boolean require_grub)
             missing_handlers--;
 
         if (require_grub && grub_version == 0) {
-            logprintfl(EUCAERROR, "cannot find either grub 1 or grub 2\n");
+            LOGERROR("cannot find either grub 1 or grub 2\n");
             ret = EUCA_ERROR;
         } else if (grub_version == 1) {
             // grub 1 commands seem present, check for stage files, which we will be copying
             if (!try_stage_dir("/usr/lib/grub/x86_64-pc") || !try_stage_dir("/usr/lib/grub/i386-pc") || !try_stage_dir("/usr/lib/grub")
                 || !try_stage_dir("/boot/grub")) {
-                logprintfl(EUCAINFO, "found grub 1 stage files in %s\n", stage_files_dir);
+                LOGINFO("found grub 1 stage files in %s\n", stage_files_dir);
             } else if (require_grub) {
-                logprintfl(EUCAERROR, "failed to find grub 1 stage files (in /boot/grub et al)\n");
+                LOGERROR("failed to find grub 1 stage files (in /boot/grub et al)\n");
                 ret = EUCA_ERROR;
             }
         } else if (grub_version == 2) {
-            logprintfl(EUCAINFO, "detected grub 2\n");
+            LOGINFO("detected grub 2\n");
         }
         // flag missing handlers
         if (missing_handlers) {
             for (i = 0; i < LASTHELPER; i++) {
                 if (helpers_path[i] == NULL && i != GRUB && i != GRUB_SETUP && i != GRUB_INSTALL) {
-                    logprintfl(EUCAERROR, "missing a required handler: %s\n", helpers[i]);
+                    LOGERROR("missing a required handler: %s\n", helpers[i]);
                     ret = EUCA_ERROR;
                 }
             }
@@ -383,7 +383,7 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
 
         output = pruntf(TRUE, "%s %s if=/dev/zero of=%s bs=512 seek=%lld count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], path, seek, count);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot create disk file %s\n", path);
+            LOGERROR("cannot create disk file %s\n", path);
             return (EUCA_ERROR);
         }
 
@@ -391,7 +391,7 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "bad params: path=%s\n", SP(path));
+    LOGWARN("bad params: path=%s\n", SP(path));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -416,12 +416,12 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
     char *output = NULL;
 
     if (in && out) {
-        logprintfl(EUCAINFO, "copying data from '%s'\n", in);
-        logprintfl(EUCAINFO, "               to '%s' (blocks=%lld)\n", out, count);
+        LOGINFO("copying data from '%s'\n", in);
+        LOGINFO("               to '%s' (blocks=%lld)\n", out, count);
         output = pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot copy '%s'\n", in);
-            logprintfl(EUCAERROR, "                to '%s'\n", out);
+            LOGERROR("cannot copy '%s'\n", in);
+            LOGERROR("                to '%s'\n", out);
             return (EUCA_ERROR);
         }
 
@@ -429,7 +429,7 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "bad params: in=%s, out=%s\n", SP(in), SP(out));
+    LOGWARN("bad params: in=%s, out=%s\n", SP(in), SP(out));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -456,15 +456,15 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
     char *output = NULL;
 
     if (in && out) {
-        logprintfl(EUCAINFO, "copying data from '%s'\n", in);
-        logprintfl(EUCAINFO, "               to '%s'\n", out);
-        logprintfl(EUCAINFO, "               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
+        LOGINFO("copying data from '%s'\n", in);
+        LOGINFO("               to '%s'\n", out);
+        LOGINFO("               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
         output =
             pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in,
                    out, bs, count, seek, skip);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot copy '%s'\n", in);
-            logprintfl(EUCAERROR, "                to '%s'\n", out);
+            LOGERROR("cannot copy '%s'\n", in);
+            LOGERROR("                to '%s'\n", out);
             return (EUCA_ERROR);
         }
 
@@ -472,7 +472,7 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "bad params: in=%s, out=%s\n", SP(in), SP(out));
+    LOGWARN("bad params: in=%s, out=%s\n", SP(in), SP(out));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -497,7 +497,7 @@ int diskutil_mbr(const char *path, const char *type)
     if (path && type) {
         output = pruntf(TRUE, "LD_PRELOAD='' %s %s --script %s mklabel %s", helpers_path[ROOTWRAP], helpers_path[PARTED], path, type);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot create an MBR\n");
+            LOGERROR("cannot create an MBR\n");
             return (EUCA_ERROR);
         }
 
@@ -505,7 +505,7 @@ int diskutil_mbr(const char *path, const char *type)
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "bad params: path=%s, type=%s\n", SP(path), SP(type));
+    LOGWARN("bad params: path=%s, type=%s\n", SP(path), SP(type));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -535,7 +535,7 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
                         helpers_path[ROOTWRAP], helpers_path[PARTED], path, part_type, ((fs_type != NULL) ? (fs_type) : ("")), first_sector,
                         last_sector);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot add a partition\n");
+            LOGERROR("cannot add a partition\n");
             return (EUCA_ERROR);
         }
 
@@ -543,7 +543,7 @@ int diskutil_part(const char *path, char *part_type, const char *fs_type, const 
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "bad params: path=%s, part_type=%s\n", SP(path), SP(part_type));
+    LOGWARN("bad params: path=%s, part_type=%s\n", SP(path), SP(part_type));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -615,7 +615,7 @@ int diskutil_loop_check(const char *path, const char *lodev)
         return (ret);
     }
 
-    logprintfl(EUCAWARN, "bad params: path=%s, lodev=%s\n", SP(path), SP(lodev));
+    LOGWARN("bad params: path=%s, lodev=%s\n", SP(path), SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -672,8 +672,8 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
 
             if (found) {
                 do_log = ((i + 1) == LOOP_RETRIES); // log error on last try only
-                logprintfl(EUCADEBUG, "attaching file %s\n", path);
-                logprintfl(EUCADEBUG, "            to %s at offset %lld\n", lodev, offset);
+                LOGDEBUG("attaching file %s\n", path);
+                LOGDEBUG("            to %s at offset %lld\n", lodev, offset);
                 sem_p(loop_sem);
                 {
                     output = pruntf(do_log, "%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
@@ -681,7 +681,7 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
                 sem_v(loop_sem);
 
                 if (output == NULL) {
-                    logprintfl(EUCADEBUG, "cannot attach to loop device %s (will retry)\n", lodev);
+                    LOGDEBUG("cannot attach to loop device %s (will retry)\n", lodev);
                 } else {
                     EUCA_FREE(output);
                     done = TRUE;
@@ -694,14 +694,14 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
         }
 
         if (!done) {
-            logprintfl(EUCAERROR, "cannot find free loop device or attach to one\n");
+            LOGERROR("cannot find free loop device or attach to one\n");
             ret = EUCA_ERROR;
         }
 
         return (ret);
     }
 
-    logprintfl(EUCAWARN, "cannot attach to loop device. path=%s, lodev=%s\n", SP(path), SP(lodev));
+    LOGWARN("cannot attach to loop device. path=%s, lodev=%s\n", SP(path), SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -727,7 +727,7 @@ int diskutil_unloop(const char *lodev)
     boolean do_log = FALSE;
 
     if (lodev) {
-        logprintfl(EUCADEBUG, "detaching from loop device %s\n", lodev);
+        LOGDEBUG("detaching from loop device %s\n", lodev);
 
         // we retry because we have seen spurious errors from 'losetup -d' on Xen:
         //     ioctl: LOOP_CLR_FD: Device or resource bus
@@ -747,21 +747,21 @@ int diskutil_unloop(const char *lodev)
                 break;
             }
 
-            logprintfl(EUCADEBUG, "cannot detach loop device %s (will retry)\n", lodev);
+            LOGDEBUG("cannot detach loop device %s (will retry)\n", lodev);
             retried++;
             sleep(1);
         }
 
         if (ret == EUCA_ERROR) {
-            logprintfl(EUCAWARN, "cannot detach loop device\n");
+            LOGWARN("cannot detach loop device\n");
         } else if (retried) {
-            logprintfl(EUCAINFO, "succeeded to detach %s after %d retries\n", lodev, retried);
+            LOGINFO("succeeded to detach %s after %d retries\n", lodev, retried);
         }
 
         return (ret);
     }
 
-    logprintfl(EUCAWARN, "cannot detach loop device. lodev=%s\n", SP(lodev));
+    LOGWARN("cannot detach loop device. lodev=%s\n", SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -786,7 +786,7 @@ int diskutil_mkswap(const char *lodev, const long long size_bytes)
     if (lodev) {
         output = pruntf(TRUE, "%s %s %s %lld", helpers_path[ROOTWRAP], helpers_path[MKSWAP], lodev, size_bytes / 1024);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot format partition on '%s' as swap\n", lodev);
+            LOGERROR("cannot format partition on '%s' as swap\n", lodev);
             return (EUCA_ERROR);
         }
 
@@ -794,7 +794,7 @@ int diskutil_mkswap(const char *lodev, const long long size_bytes)
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "cannot format partition as swap. lodev=%s\n", SP(lodev));
+    LOGWARN("cannot format partition as swap. lodev=%s\n", SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -820,7 +820,7 @@ int diskutil_mkfs(const char *lodev, const long long size_bytes)
     if (lodev) {
         output = pruntf(TRUE, "%s %s -b %d %s %lld", helpers_path[ROOTWRAP], helpers_path[MKEXT3], block_size, lodev, size_bytes / block_size);
         if (!output) {
-            logprintfl(EUCAERROR, "cannot format partition on '%s' as ext3\n", lodev);
+            LOGERROR("cannot format partition on '%s' as ext3\n", lodev);
             return (EUCA_ERROR);
         }
 
@@ -828,7 +828,7 @@ int diskutil_mkfs(const char *lodev, const long long size_bytes)
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "cannot format partition as ext3. lodev=%s\n", SP(lodev));
+    LOGWARN("cannot format partition as ext3. lodev=%s\n", SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -857,7 +857,7 @@ int diskutil_tune(const char *lodev)
         sem_v(loop_sem);
 
         if (!output) {
-            logprintfl(EUCAERROR, "cannot tune file system on '%s'\n", lodev);
+            LOGERROR("cannot tune file system on '%s'\n", lodev);
             return (EUCA_ERROR);
         }
 
@@ -865,7 +865,7 @@ int diskutil_tune(const char *lodev)
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAWARN, "cannot tune file system. lodev=%s\n", SP(lodev));
+    LOGWARN("cannot tune file system. lodev=%s\n", SP(lodev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -901,7 +901,7 @@ int diskutil_sectors(const char *path, const int part, long long *first, long lo
         *last = 0L;
 
         if ((output = pruntf(TRUE, "%s %s", helpers_path[FILECMD], path)) == NULL) {
-            logprintfl(EUCAERROR, "failed to extract partition information for '%s'\n", path);
+            LOGERROR("failed to extract partition information for '%s'\n", path);
         } else {
             // parse the output, such as:
             // NAME: x86 boot sector;
@@ -942,7 +942,7 @@ int diskutil_sectors(const char *path, const int part, long long *first, long lo
         return (ret);
     }
 
-    logprintfl(EUCAERROR, "failed to extract partition information for '%s'\n", SP(path));
+    LOGERROR("failed to extract partition information for '%s'\n", SP(path));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -972,7 +972,7 @@ int diskutil_mount(const char *dev, const char *mnt_pt)
         sem_v(loop_sem);
 
         if (!output) {
-            logprintfl(EUCAERROR, "cannot mount device '%s' on '%s'\n", dev, mnt_pt);
+            LOGERROR("cannot mount device '%s' on '%s'\n", dev, mnt_pt);
             return (EUCA_ERROR);
         }
 
@@ -980,7 +980,7 @@ int diskutil_mount(const char *dev, const char *mnt_pt)
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAERROR, "cannot mount device '%s' on '%s'\n", SP(dev), SP(mnt_pt));
+    LOGERROR("cannot mount device '%s' on '%s'\n", SP(dev), SP(mnt_pt));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -1010,7 +1010,7 @@ int diskutil_umount(const char *dev)
         sem_v(loop_sem);
 
         if (!output) {
-            logprintfl(EUCAERROR, "cannot unmount device '%s'\n", dev);
+            LOGERROR("cannot unmount device '%s'\n", dev);
             return (EUCA_ERROR);
         }
 
@@ -1018,7 +1018,7 @@ int diskutil_umount(const char *dev)
         return (EUCA_OK);
     }
 
-    logprintfl(EUCAERROR, "cannot unmount device '%s'\n", SP(dev));
+    LOGERROR("cannot unmount device '%s'\n", SP(dev));
     return (EUCA_INVALID_ERROR);
 }
 
@@ -1046,18 +1046,18 @@ int diskutil_write2file(const char *file, const char *str)
 
     if (file && str) {
         if ((fd = safe_mkstemp(tmpfile)) < 0) {
-            logprintfl(EUCAERROR, "failed to create temporary directory\n");
+            LOGERROR("failed to create temporary directory\n");
             unlink(tmpfile);
             return (EUCA_PERMISSION_ERROR);
         }
 
         size = strlen(str);
         if (write(fd, str, size) != size) {
-            logprintfl(EUCAERROR, "failed to write to temporary directory\n");
+            LOGERROR("failed to write to temporary directory\n");
             ret = EUCA_ACCESS_ERROR;
         } else {
             if (diskutil_cp(tmpfile, file) != EUCA_OK) {
-                logprintfl(EUCAERROR, "failed to copy temp file (%s)\n", file);
+                LOGERROR("failed to copy temp file (%s)\n", file);
                 ret = EUCA_PERMISSION_ERROR;
             }
         }
@@ -1067,7 +1067,7 @@ int diskutil_write2file(const char *file, const char *str)
         return (ret);
     }
 
-    logprintfl(EUCAERROR, "failed to write to file. Bad params: file=%p, str=%p\n", file, str);
+    LOGERROR("failed to write to file. Bad params: file=%p, str=%p\n", file, str);
     return (EUCA_INVALID_ERROR);
 }
 
@@ -1129,10 +1129,10 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
     char menu_lst_path[EUCA_MAX_PATH] = { 0 };
 
     if (mnt_pt && kernel) {
-        logprintfl(EUCAINFO, "installing kernel and ramdisk\n");
+        LOGINFO("installing kernel and ramdisk\n");
         output = pruntf(TRUE, "%s %s -p %s/boot/grub/", helpers_path[ROOTWRAP], helpers_path[MKDIR], mnt_pt);
         if (!output) {
-            logprintfl(EUCAERROR, "failed to create grub directory\n");
+            LOGERROR("failed to create grub directory\n");
             return (EUCA_ERROR);
         }
         EUCA_FREE(output);
@@ -1140,7 +1140,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
         if (grub_version == 1) {
             output = pruntf(TRUE, "%s %s %s/*stage* %s/boot/grub", helpers_path[ROOTWRAP], helpers_path[CP], stage_files_dir, mnt_pt);
             if (!output) {
-                logprintfl(EUCAERROR, "failed to copy stage files into grub directory\n");
+                LOGERROR("failed to copy stage files into grub directory\n");
                 return (EUCA_ERROR);
             }
             EUCA_FREE(output);
@@ -1148,7 +1148,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
 
         output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], kernel, mnt_pt, kfile);
         if (!output) {
-            logprintfl(EUCAERROR, "failed to copy the kernel to boot directory\n");
+            LOGERROR("failed to copy the kernel to boot directory\n");
             return (EUCA_ERROR);
         }
         EUCA_FREE(output);
@@ -1156,7 +1156,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
         if (ramdisk) {
             output = pruntf(TRUE, "%s %s %s %s/boot/%s", helpers_path[ROOTWRAP], helpers_path[CP], ramdisk, mnt_pt, rfile);
             if (!output) {
-                logprintfl(EUCAERROR, "failed to copy the ramdisk to boot directory\n");
+                LOGERROR("failed to copy the ramdisk to boot directory\n");
                 return (EUCA_ERROR);
             }
             EUCA_FREE(output);
@@ -1209,7 +1209,7 @@ int diskutil_grub_files(const char *mnt_pt, const int part, const char *kernel, 
 int diskutil_grub_mbr(const char *path, const int part)
 {
     if (grub_version != 1) {
-        logprintfl(EUCAERROR, "grub 2 is not supported\n");
+        LOGERROR("grub 2 is not supported\n");
         return (EUCA_ERROR);
     }
     return diskutil_grub2_mbr(path, part, NULL);
@@ -1254,24 +1254,24 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
     boolean created_partition_softlink = FALSE;
 
     if (path == NULL) {
-        logprintfl(EUCAERROR, "invocation of diskutil_grub2_mbr unknown path\n");
+        LOGERROR("invocation of diskutil_grub2_mbr unknown path\n");
         return (EUCA_INVALID_ERROR);
     }
 
     if ((grub_version != 1) && (grub_version != 2)) {
-        logprintfl(EUCAERROR, "invocation of diskutil_grub2_mbr without grub found\n");
+        LOGERROR("invocation of diskutil_grub2_mbr without grub found\n");
         return (EUCA_INVALID_ERROR);
     }
 
     if ((mnt_pt == NULL) && (grub_version != 1)) {
-        logprintfl(EUCAERROR, "invocation of diskutil_grub2_mbr with grub 1 params\n");
+        LOGERROR("invocation of diskutil_grub2_mbr with grub 1 params\n");
         return (EUCA_INVALID_ERROR);
     }
 
-    logprintfl(EUCAINFO, "installing grub in MBR\n");
+    LOGINFO("installing grub in MBR\n");
     if (grub_version == 1) {
         if ((tfd = safe_mkstemp(tmp_file)) < 0) {
-            logprintfl(EUCAERROR, "mkstemp() failed: %s\n", strerror(errno));
+            LOGERROR("mkstemp() failed: %s\n", strerror(errno));
             return (EUCA_PERMISSION_ERROR);
         }
         // create a soft link of the first partition's device mapper entry in the
@@ -1280,7 +1280,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         snprintf(part_path, sizeof(EUCA_MAX_PATH), "%s1", path);
         if (check_path(part_path) != 0) {
             if ((output = pruntf(TRUE, "%s /bin/ln -s %sp1 %s", helpers_path[ROOTWRAP], path, part_path)) == NULL) {
-                logprintfl(EUCAINFO, "warning: failed to create partition device soft-link (%s)\n", part_path);
+                LOGINFO("warning: failed to create partition device soft-link (%s)\n", part_path);
             } else {
                 created_partition_softlink = TRUE;
                 EUCA_FREE(output);
@@ -1289,7 +1289,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         // we now invoke grub through euca_rootwrap because it may need to operate on
         // devices that are owned by root (e.g. /dev/mapper/euca-dsk-7E4E131B-fca1d769p1)
         snprintf(cmd, sizeof(cmd), "%s %s --batch >%s 2>&1", helpers_path[ROOTWRAP], helpers_path[GRUB], tmp_file);
-        logprintfl(EUCADEBUG, "running %s\n", cmd);
+        LOGDEBUG("running %s\n", cmd);
         errno = 0;
         if ((fp = popen(cmd, "w")) != NULL) {
             snprintf(s, sizeof(s), "device (hd0) %s\n", path);
@@ -1304,7 +1304,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         }
 
         if (rc) {
-            logprintfl(EUCAERROR, "failed to run grub 1 on disk '%s': %s\n", path, strerror(errno));
+            LOGERROR("failed to run grub 1 on disk '%s': %s\n", path, strerror(errno));
         } else {
             bzero(buf, sizeof(buf));
             saw_done = FALSE;
@@ -1318,14 +1318,14 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
                 if (read_bytes < 0) // possibly truncated output, ensure there is newline
                     buf[bytes_read++] = '\n';
                 buf[bytes_read] = '\0';
-                logprintfl(EUCADEBUG, "\t%s", buf); // log grub 1 prompts and our inputs
+                LOGDEBUG("\t%s", buf);  // log grub 1 prompts and our inputs
                 if (strstr(buf, "Done."))   // this indicates that grub 1 succeeded (the message has been there since 2000)
                     saw_done = TRUE;
             } while (read_bytes > 0);
             close(tfd);
 
             if (saw_done == FALSE) {
-                logprintfl(EUCAERROR, "failed to run grub 1 on disk '%s'\n", path);
+                LOGERROR("failed to run grub 1 on disk '%s'\n", path);
                 rc = 1;
             } else {
                 rc = 0;
@@ -1335,7 +1335,7 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         // try to remove the partition device soft link that may have been created above
         if (created_partition_softlink) {
             if ((output = pruntf(TRUE, "%s /bin/rm %s", helpers_path[ROOTWRAP], part_path)) == NULL) {
-                logprintfl(EUCAINFO, "warning: failed to remove partition device soft-link\n");
+                LOGINFO("warning: failed to remove partition device soft-link\n");
             } else {
                 EUCA_FREE(output);
             }
@@ -1346,16 +1346,16 @@ int diskutil_grub2_mbr(const char *path, const int part, const char *mnt_pt)
         snprintf(device_map_path, sizeof(device_map_path), "%s/boot/grub/device.map", mnt_pt);
         snprintf(device_map_buf, sizeof(device_map_buf), "(hd0) %s\n", path);
         if (diskutil_write2file(device_map_path, device_map_buf) != OK) {
-            logprintfl(EUCAWARN, "failed to create device.map file\n");
+            LOGWARN("failed to create device.map file\n");
         } else {
-            logprintfl(EUCAINFO, "wrote to '%s':\n", device_map_path);
-            logprintfl(EUCAINFO, "%s", device_map_buf);
+            LOGINFO("wrote to '%s':\n", device_map_path);
+            LOGINFO("%s", device_map_buf);
         }
 
         output =
             pruntf(TRUE, "%s %s --modules='part_msdos ext2' --root-directory=%s '(hd0)'", helpers_path[ROOTWRAP], helpers_path[GRUB_INSTALL], mnt_pt);
         if (!output) {
-            logprintfl(EUCAERROR, "failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
+            LOGERROR("failed to install grub 2 on disk '%s' mounted on '%s'\n", path, mnt_pt);
         } else {
             EUCA_FREE(output);
             rc = 0;
@@ -1390,7 +1390,7 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
 {
     char *output = NULL;
 
-    logprintfl(EUCADEBUG, "ch(own|mod) '%s' %s.%s %o\n", SP(path), ((user != NULL) ? user : "*"), ((group != NULL) ? group : "*"), perms);
+    LOGDEBUG("ch(own|mod) '%s' %s.%s %o\n", SP(path), ((user != NULL) ? user : "*"), ((group != NULL) ? group : "*"), perms);
 
     if (path) {
         if (user) {
@@ -1513,7 +1513,7 @@ static char *pruntf(boolean log_error, char *format, ...)
 
     IF = popen(cmd, "r");
     if (!IF) {
-        logprintfl(EUCAERROR, "cannot popen() cmd '%s' for read\n", cmd);
+        LOGERROR("cannot popen() cmd '%s' for read\n", cmd);
         va_end(ap);
         return (NULL);
     }
@@ -1530,7 +1530,7 @@ static char *pruntf(boolean log_error, char *format, ...)
     }
 
     if (output == NULL) {
-        logprintfl(EUCAERROR, "failed to allocate mem for output\n");
+        LOGERROR("failed to allocate mem for output\n");
         va_end(ap);
         pclose(IF);
         return (NULL);
@@ -1543,8 +1543,8 @@ static char *pruntf(boolean log_error, char *format, ...)
             rc = 0;
         } else {
             if (log_error) {
-                logprintfl(EUCAERROR, "bad return code from cmd '%s'\n", cmd);
-                logprintfl(EUCADEBUG, "%s\n", output);
+                LOGERROR("bad return code from cmd '%s'\n", cmd);
+                LOGDEBUG("%s\n", output);
             }
             EUCA_FREE(output);
         }

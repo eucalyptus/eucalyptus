@@ -141,12 +141,14 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#ifdef USE_OLD_LOG
 //! @{
 //! @name these are set by _EUCA_CONTEXT_SETTER, which is included in log-level macros, such as EUCAWARN
 __thread const char *_log_curr_method = "";
 __thread const char *_log_curr_file = "";
 __thread int _log_curr_line = 0;
 //! @}
+#endif /* USE_OLD_LOG */
 
 const char *log_level_names[] = {
     "ALL",
@@ -228,6 +230,7 @@ static int syslog_facility = -1;    //!< if not -1 then we are logging to a sysl
 
 int log_level_int(const char *level);
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
+int log_level_get(void);
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char *file);
 int log_prefix_set(const char *log_spec);
@@ -235,7 +238,11 @@ int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
 int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+#ifdef USE_OLD_LOG
 int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
+#else /* USE_OLD_LOG */
+int logprintfl(const char *func, const char *file, int line, int level, const char *format, ...) __attribute__ ((__format__(__printf__, 5, 6)));
+#endif /* USE_OLD_LOG */
 int logcat(int debug_level, const char *file_path);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 void log_dump_trace(char *buf, int buf_size);
@@ -410,6 +417,15 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
 }
 
 //!
+//! Getter to retrieve the currently configured log level
+//!
+//! @return the currently configured log level
+int log_level_get(void)
+{
+    return (log_level);
+}
+
+//!
 //! getter for logging parameters except file path
 //!
 //! @param[out] log_level_out holder for the log level
@@ -490,7 +506,7 @@ int log_facility_set(const char *facility, const char *component_name)
             }
         }
         if (!matched) {
-            logprintfl(EUCAERROR, "unrecognized log facility '%s' requested, ignoring\n", facility);
+            LOGERROR("unrecognized log facility '%s' requested, ignoring\n", facility);
             return -1;
         }
     }
@@ -501,7 +517,7 @@ int log_facility_set(const char *facility, const char *component_name)
             snprintf(log_name, sizeof(log_name) - 1, "euca-%s", component_name);
         closelog();             // in case it was open
         if (syslog_facility != -1) {
-            logprintfl(EUCAINFO, "opening syslog '%s' in facility '%s'\n", log_name, facility);
+            LOGINFO("opening syslog '%s' in facility '%s'\n", log_name, facility);
             openlog(log_name, syslog_options, syslog_facility);
         }
     }
@@ -697,7 +713,11 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 //!
 //! @todo Chuck to evaluate if we cannot standardize the error code returned.
 //!
+#ifdef USE_OLD_LOG
 int logprintfl(int level, const char *format, ...)
+#else /* USE_OLD_LOG */
+int logprintfl(const char *func, const char *file, int line, int level, const char *format, ...)
+#endif                          /* USE_OLD_LOG */
 {
     int offset = 0;
     boolean custom_spec = FALSE;
@@ -768,12 +788,20 @@ int logprintfl(int level, const char *format, ...)
                 break;
             }
         case 'm':              // method
+#ifdef USE_OLD_LOG
             size = print_field_truncated(&prefix_spec, s, left, _log_curr_method);
+#else /* USE_OLD_LOG */
+            size = print_field_truncated(&prefix_spec, s, left, func);
+#endif /* USE_OLD_LOG */
             break;
 
         case 'F':{             // file-and-line
                 char file_and_line[64];
+#ifdef USE_OLD_LOG
                 snprintf(file_and_line, sizeof(file_and_line), "%s:%d", _log_curr_file, _log_curr_line);
+#else /* USE_OLD_LOG */
+                snprintf(file_and_line, sizeof(file_and_line), "%s:%d", file, line);
+#endif /* USE_OLD_LOG */
                 size = print_field_truncated(&prefix_spec, s, left, file_and_line);
                 break;
             }
@@ -865,7 +893,7 @@ int logcat(int debug_level, const char *file_path)
             buf[l++] = '\n';
             buf[l] = '\0';
         }
-        logprintfl(debug_level, buf);
+        LOG(debug_level, buf);
         got += l;
     }
     fclose(fp);

@@ -197,7 +197,7 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
     if (check_directory(hooks_path))
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "using hooks directory %s\n", hooks_path);
+    LOGINFO("using hooks directory %s\n", hooks_path);
     initialized = TRUE;
     return (EUCA_OK);
 }
@@ -246,8 +246,7 @@ int call_hooks(const char *event_name, const char *param1)
             && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {  // is executable
             snprintf(cmd, sizeof(cmd), "%s %s %s %s", entry_path, event_name, euca_path, param1 ? param1 : "");
             ret = WEXITSTATUS(system(cmd));
-            logprintfl(EUCATRACE, "executed hook [%s %s%s%s] which returned %d\n", entry_name, event_name, param1 ? " " : "", param1 ? param1 : "",
-                       ret);
+            LOGTRACE("executed hook [%s %s%s%s] which returned %d\n", entry_name, event_name, param1 ? " " : "", param1 ? param1 : "", ret);
             if ((ret > 0) && (ret < 100))
                 break;          // bail if any hook returns code [1-99] (100+ are reserved for future use)
         }

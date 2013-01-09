@@ -216,7 +216,7 @@ static int stale_blob_examiner(const blockblob * bb);
 static void bs_errors(const char *msg)
 {
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
-    logprintfl(EUCATRACE, "blobstore: %s", msg);
+    LOGTRACE("blobstore: %s", msg);
 }
 
 //!
@@ -277,7 +277,7 @@ int check_backing_store(bunchOfInstances ** global_instances)
 
     if (work_bs) {
         if (blobstore_fsck(work_bs, stale_blob_examiner)) {
-            logprintfl(EUCAERROR, "work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            LOGERROR("work directory failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             //! @todo CHUCK -> Ok to close cache_bs and not set to NULL???
             BLOBSTORE_CLOSE(cache_bs);
             return (EUCA_ERROR);
@@ -287,7 +287,7 @@ int check_backing_store(bunchOfInstances ** global_instances)
     if (cache_bs) {
         if (blobstore_fsck(cache_bs, NULL)) {
             //! @TODO verify checksums?
-            logprintfl(EUCAERROR, "cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            LOGERROR("cache failed integrity check: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return (EUCA_ERROR);
         }
     }
@@ -350,17 +350,17 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
     unsigned long long work_limit_blocks = 0;
     blobstore_snapshot_t snapshot_policy = BLOBSTORE_SNAPSHOT_ANY;
 
-    logprintfl(EUCAINFO, "initializing backing store...\n");
+    LOGINFO("initializing backing store...\n");
 
     // Make sure we have a valid intance path passed to us
     if (conf_instances_path == NULL) {
-        logprintfl(EUCAERROR, "INSTANCE_PATH not specified\n");
+        LOGERROR("INSTANCE_PATH not specified\n");
         return (EUCA_INVALID_ERROR);
     }
     // Set our global instance_path variable with the content of conf_instance_path
     euca_strncpy(instances_path, conf_instances_path, sizeof(instances_path));
     if (check_directory(instances_path)) {
-        logprintfl(EUCAERROR, "INSTANCE_PATH (%s) does not exist!\n", instances_path);
+        LOGERROR("INSTANCE_PATH (%s) does not exist!\n", instances_path);
         return (EUCA_ACCESS_ERROR);
     }
     // Check if our cache path exist. If not it should get crated
@@ -385,7 +385,7 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
     // will use device mapper if available, which is faster than copying
     snapshot_policy = BLOBSTORE_SNAPSHOT_ANY;
     if (nc_state.disable_snapshots) {
-        logprintfl(EUCAINFO, "if allocating storage, will avoid using snapshots\n");
+        LOGINFO("if allocating storage, will avoid using snapshots\n");
         snapshot_policy = BLOBSTORE_SNAPSHOT_NONE;
     }
     // Set the backing store error callback function
@@ -397,22 +397,22 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
             blobstore_open(cache_path, cache_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU,
                            snapshot_policy);
         if (cache_bs == NULL) {
-            logprintfl(EUCAERROR, "failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+            LOGERROR("failed to open/create cache blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
             return (EUCA_PERMISSION_ERROR);
         }
     }
     // Lets open the work blobstore
     work_bs = blobstore_open(work_path, work_limit_blocks, BLOBSTORE_FLAG_CREAT, BLOBSTORE_FORMAT_FILES, BLOBSTORE_REVOCATION_NONE, snapshot_policy);
     if (work_bs == NULL) {
-        logprintfl(EUCAERROR, "failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
-        logprintfl(EUCAERROR, "%s\n", blobstore_get_last_trace());
+        LOGERROR("failed to open/create work blobstore: %s\n", blobstore_get_error_str(blobstore_get_error()));
+        LOGERROR("%s\n", blobstore_get_last_trace());
         BLOBSTORE_CLOSE(cache_bs);
         return (EUCA_PERMISSION_ERROR);
     }
     // set the initial value of the semaphore to the number of 
     // disk-intensive operations that can run in parallel on this node
     if (nc_state.concurrent_disk_ops && ((disk_sem = sem_alloc(nc_state.concurrent_disk_ops, "mutex")) == NULL)) {
-        logprintfl(EUCAERROR, "failed to create and initialize disk semaphore\n");
+        LOGERROR("failed to create and initialize disk semaphore\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -600,7 +600,7 @@ int save_instance_struct(const ncInstance * instance)
 
     // Make sure the given instance is valid
     if (instance == NULL) {
-        logprintfl(EUCAERROR, "internal error (NULL instance in save_instance_struct)\n");
+        LOGERROR("internal error (NULL instance in save_instance_struct)\n");
         return (EUCA_INVALID_ERROR);
     }
     // Figure out our path to the checkpoint file
@@ -608,12 +608,12 @@ int save_instance_struct(const ncInstance * instance)
 
     // Create and open our checkpoint file
     if ((fd = open(checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_PERM)) < 0) {
-        logprintfl(EUCADEBUG, "[%s] save_instance_struct: failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
+        LOGDEBUG("[%s] save_instance_struct: failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         return (EUCA_PERMISSION_ERROR);
     }
     // Store our instance in the file entirely.
     if (write(fd, ((char *)instance), sizeof(struct ncInstance_t)) != sizeof(struct ncInstance_t)) {
-        logprintfl(EUCADEBUG, "[%s] save_instance_struct: failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
+        LOGDEBUG("[%s] save_instance_struct: failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         close(fd);
         //! @TODO: unlink the file here?
         return (EUCA_IO_ERROR);
@@ -650,7 +650,7 @@ ncInstance *load_instance_struct(const char *instanceId)
 
     // Allocate memory for our instance
     if ((instance = EUCA_ZALLOC(1, meta_size)) == NULL) {
-        logprintfl(EUCAERROR, "out of memory (for instance struct)\n");
+        LOGERROR("out of memory (for instance struct)\n");
         return (NULL);
     }
     // We know the instance indentifier
@@ -660,7 +660,7 @@ ncInstance *load_instance_struct(const char *instanceId)
     // directory (we're assuming that instanceIds are unique in the system)
     set_path(user_paths, sizeof(user_paths), NULL, NULL);
     if ((insts_dir = opendir(user_paths)) == NULL) {
-        logprintfl(EUCAERROR, "failed to open %s\n", user_paths);
+        LOGERROR("failed to open %s\n", user_paths);
         goto free;
     }
     // Scan every path under the user path for one that conaints our instance
@@ -679,13 +679,13 @@ ncInstance *load_instance_struct(const char *instanceId)
 
     // Did we really find one?
     if (strlen(instance->userId) < 1) {
-        logprintfl(EUCAERROR, "didn't find instance %s\n", instance->instanceId);
+        LOGERROR("didn't find instance %s\n", instance->instanceId);
         goto free;
     }
     // Now open our checkpoint file and load it up
     set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
     if (((fd = open(checkpoint_path, O_RDONLY)) < 0) || (read(fd, instance, meta_size) < meta_size)) {
-        logprintfl(EUCAERROR, "failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
+        LOGERROR("failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
         if (fd >= 0)
             close(fd);
         goto free;
@@ -741,7 +741,7 @@ int create_instance_backing(ncInstance * instance)
     if (strstr(instance->platform, "windows")) {
         // generate the floppy file for windows instances
         if (makeWindowsFloppy(nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {
-            logprintfl(EUCAERROR, "[%s] could not create windows bootup script floppy\n", instance->instanceId);
+            LOGERROR("[%s] could not create windows bootup script floppy\n", instance->instanceId);
             goto out;
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
@@ -757,7 +757,7 @@ int create_instance_backing(ncInstance * instance)
                               (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
                               instance->instanceId);    // ID is for logging
     if (sentinel == NULL) {
-        logprintfl(EUCAERROR, "[%s] failed to prepare backing for instance\n", instance->instanceId);
+        LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
         goto out;
     }
 
@@ -769,7 +769,7 @@ int create_instance_backing(ncInstance * instance)
     sem_v(disk_sem);
 
     if (rc != EUCA_OK) {
-        logprintfl(EUCAERROR, "[%s] failed to implement backing for instance\n", instance->instanceId);
+        LOGERROR("[%s] failed to implement backing for instance\n", instance->instanceId);
         goto out;
     }
 
@@ -820,7 +820,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     set_id2(instance, "/.*", work_regex, sizeof(work_regex));
 
     if ((found = blobstore_search(work_bs, work_regex, &matches) <= 0)) {
-        logprintfl(EUCAERROR, "[%s] failed to find blob in %s %d\n", instance->instanceId, path, found);
+        LOGERROR("[%s] failed to find blob in %s %d\n", instance->instanceId, path, found);
         return (EUCA_NOT_FOUND_ERROR);
     }
 
@@ -836,7 +836,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     }
 
     if (!src_blob) {
-        logprintfl(EUCAERROR, "[%s] couldn't find the blob to clone from", instance->instanceId);
+        LOGERROR("[%s] couldn't find the blob to clone from", instance->instanceId);
         ret = EUCA_NOT_FOUND_ERROR;
         goto error;
     }
@@ -847,7 +847,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     // open destination blob 
     dest_blob = blockblob_open(work_bs, id, src_blob->size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, FIND_TIMEOUT_USEC);
     if (!dest_blob) {
-        logprintfl(EUCAERROR, "[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
+        LOGERROR("[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
         ret = EUCA_PERMISSION_ERROR;
         goto error;
     }
@@ -857,7 +857,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
 
     // copy blob (will 'dd' eventually)
     if (blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != EUCA_OK) {
-        logprintfl(EUCAERROR, "[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
+        LOGERROR("[%s] couldn't copy block blob for bundling (%s)", instance->instanceId, id);
         ret = EUCA_IO_ERROR;
         goto error;
     }
@@ -906,7 +906,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         vbr = &(vm->virtualBootRecord[i]);
         if (vbr->locationType == NC_LOCATION_IQN) {
             if (disconnect_iscsi_target(vbr->resourceLocation)) {
-                logprintfl(EUCAERROR, "[%s] failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
+                LOGERROR("[%s] failed to disconnect iSCSI target attached to %s\n", instance->instanceId, vbr->backingPath);
             }
         }
     }
@@ -921,14 +921,14 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     // VM is running and then chowns them to root after termination)
     set_path(path, sizeof(path), instance, "*");
     if (diskutil_ch(path, EUCALYPTUS_ADMIN, NULL, BACKING_FILE_PERM)) {
-        logprintfl(EUCAWARN, "[%s] failed to chown files before cleanup\n", instance->instanceId);
+        LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
     }
 
     if (do_destroy_files) {
         set_id2(instance, "/.*", work_regex, sizeof(work_regex));
 
         if (blobstore_delete_regex(work_bs, work_regex) == -1) {
-            logprintfl(EUCAERROR, "[%s] failed to remove some artifacts in %s\n", instance->instanceId, path);
+            LOGERROR("[%s] failed to remove some artifacts in %s\n", instance->instanceId, path);
         }
         // remove the known leftover files
         unlink(instance->xmlFilePath);
@@ -963,7 +963,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     // any new files, this last step will fail.
     set_path(path, sizeof(path), instance, NULL);
     if (rmdir(path) && do_destroy_files) {
-        logprintfl(EUCAWARN, "[%s] failed to remove backing directory %s\n", instance->instanceId, path);
+        LOGWARN("[%s] failed to remove backing directory %s\n", instance->instanceId, path);
     }
 
     return (ret);

@@ -1458,14 +1458,14 @@ int cc_describeSensors(int historySize, long long collectionIntervalTimeMs, char
         // do it
         output = axis2_stub_op_EucalyptusCC_DescribeSensors(pStub, env, input);
         if (!output) {
-            logprintfl(EUCAERROR, "DescribeSensors could not be invoked\n");
+            LOGERROR("DescribeSensors could not be invoked\n");
             status = -1;
 
         } else {
             response = adb_DescribeSensorsResponse_get_DescribeSensorsResponse(output, env);
 
             if (adb_describeSensorsResponseType_get_return(response, env) == AXIS2_FALSE) {
-                logprintfl(EUCAERROR, "DescribeSensors returned an error\n");
+                LOGERROR("DescribeSensors returned an error\n");
                 status = 1;
             }
 
@@ -1473,7 +1473,7 @@ int cc_describeSensors(int historySize, long long collectionIntervalTimeMs, char
             if (*outResourcesLen) {
                 *outResources = EUCA_ZALLOC((*outResourcesLen), sizeof(sensorResource *));
                 if (*outResources == NULL) {
-                    logprintfl(EUCAERROR, "out of memory\n");
+                    LOGERROR("out of memory\n");
                     *outResourcesLen = 0;
                     status = 2;
                 } else {

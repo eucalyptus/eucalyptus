@@ -269,7 +269,7 @@ static void cleanup(void)
 static int path_check(const char *path, const char *name)
 {
     if (strstr(path, "/dev/") == path) {
-        logprintfl(EUCAERROR, "internal error: path to %s points to a device %s\n", name, path);
+        LOGERROR("internal error: path to %s points to a device %s\n", name, path);
         return (EUCA_ERROR);
     }
     return (EUCA_OK);
@@ -292,9 +292,9 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
 
     chmod(path, BACKING_FILE_PERM); // ensure perms in case when XML file exists
     if ((ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1)) > 0) {
-        logprintfl(EUCADEBUG, "[%s] wrote %s XML to %s\n", instanceId, type, path);
+        LOGDEBUG("[%s] wrote %s XML to %s\n", instanceId, type, path);
     } else {
-        logprintfl(EUCAERROR, "[%s] failed to write %s XML to %s\n", instanceId, type, path);
+        LOGERROR("[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }
     umask(old_umask);
     return ((ret > 0) ? (EUCA_OK) : (EUCA_ERROR));
@@ -530,7 +530,7 @@ static void error_handler(void *ctx, const char *fmt, ...)
         if ((buf[i] == '\n') || (i == (sizeof(buf) - 1))) {
             size = 0;
             buf[i] = '\0';
-            logprintfl(EUCATRACE, "ERROR from XML2/XSLT {%s}\n", buf);
+            LOGTRACE("ERROR from XML2/XSLT {%s}\n", buf);
         }
 
         if (buf[i] == '\0') {
@@ -583,12 +583,12 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                 if (outputXmlPath != NULL) {
                     if ((fp = fopen(outputXmlPath, "w")) != NULL) {
                         if ((bytes = xsltSaveResultToFile(fp, res, cur)) == -1) {
-                            logprintfl(EUCAERROR, "failed to save XML document to %s\n", outputXmlPath);
+                            LOGERROR("failed to save XML document to %s\n", outputXmlPath);
                             err = EUCA_IO_ERROR;
                         }
                         fclose(fp);
                     } else {
-                        logprintfl(EUCAERROR, "failed to create file %s\n", outputXmlPath);
+                        LOGERROR("failed to create file %s\n", outputXmlPath);
                         err = EUCA_IO_ERROR;
                     }
                 }
@@ -604,29 +604,29 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                                     outputXmlBuffer[j++] = c;
                             }
                         } else {
-                            logprintfl(EUCAERROR, "XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
+                            LOGERROR("XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
                             err = EUCA_ERROR;
                         }
                         xmlFree(buf);
                     } else {
-                        logprintfl(EUCAERROR, "failed to save XML document to a string\n");
+                        LOGERROR("failed to save XML document to a string\n");
                         err = EUCA_ERROR;
                     }
                 }
             } else {
-                logprintfl(EUCAERROR, "failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
+                LOGERROR("failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
                 err = EUCA_ERROR;
             }
             if (res != NULL)
                 xmlFreeDoc(res);
             xmlFreeDoc(doc);
         } else {
-            logprintfl(EUCAERROR, "failed to parse XML document %s\n", inputXmlPath);
+            LOGERROR("failed to parse XML document %s\n", inputXmlPath);
             err = EUCA_ERROR;
         }
         xsltFreeStylesheet(cur);
     } else {
-        logprintfl(EUCAERROR, "failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
+        LOGERROR("failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
         err = EUCA_IO_ERROR;
     }
 
@@ -756,7 +756,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
 
     INIT();
 
-    logprintfl(EUCATRACE, "searching for '%s' in '%s'\n", xpath, xml_path);
+    LOGTRACE("searching for '%s' in '%s'\n", xpath, xml_path);
     pthread_mutex_lock(&xml_mutex);
     {
         if ((doc = xmlParseFile(xml_path)) != NULL) {
@@ -774,15 +774,15 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
                     }
                     xmlXPathFreeObject(result);
                 } else {
-                    logprintfl(EUCAERROR, "no results for '%s' in '%s'\n", xpath, xml_path);
+                    LOGERROR("no results for '%s' in '%s'\n", xpath, xml_path);
                 }
                 xmlXPathFreeContext(context);
             } else {
-                logprintfl(EUCAERROR, "failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
+                LOGERROR("failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
             }
             xmlFreeDoc(doc);
         } else {
-            logprintfl(EUCADEBUG, "failed to parse XML in '%s'\n", xml_path);
+            LOGDEBUG("failed to parse XML in '%s'\n", xml_path);
         }
     }
     pthread_mutex_unlock(&xml_mutex);
@@ -841,7 +841,7 @@ static void create_dummy_instance(const char *file)
     _ATTRIBUTE(disk1, "sourceType", "file");
 
     xmlSaveFormatFileEnc(file, doc, "UTF-8", 1);
-    logprintfl(EUCAINFO, "wrote XML to %s\n", file);
+    LOGINFO("wrote XML to %s\n", file);
     cat(file);
     xmlFreeDoc(doc);
 }
@@ -862,7 +862,7 @@ int main(int argc, char **argv)
     char xml_buf[2048] = "";
 
     if (argc != 2) {
-        logprintfl(EUCAERROR, "required parameters are <XSLT stylesheet path>\n");
+        LOGERROR("required parameters are <XSLT stylesheet path>\n");
         return (EUCA_ERROR);
     }
 
@@ -872,18 +872,18 @@ int main(int argc, char **argv)
 
     create_dummy_instance(in_path);
 
-    logprintfl(EUCAINFO, "parsing stylesheet %s\n", xslt_path);
+    LOGINFO("parsing stylesheet %s\n", xslt_path);
     if ((err = apply_xslt_stylesheet(xslt_path, in_path, out_path, NULL, 0)) != EUCA_OK)
         goto out;
 
-    logprintfl(EUCAINFO, "parsing stylesheet %s again\n", xslt_path);
+    LOGINFO("parsing stylesheet %s again\n", xslt_path);
     if ((err = apply_xslt_stylesheet(xslt_path, in_path, out_path, xml_buf, sizeof(xml_buf))) != EUCA_OK)
         goto out;
 
-    logprintfl(EUCAINFO, "wrote XML to %s\n", out_path);
+    LOGINFO("wrote XML to %s\n", out_path);
     if (strlen(xml_buf) < 1) {
         err = EUCA_ERROR;
-        logprintfl(EUCAERROR, "failed to see XML in buffer\n");
+        LOGERROR("failed to see XML in buffer\n");
         goto out;
     }
     cat(out_path);
@@ -913,19 +913,19 @@ int main(int argc, char **argv)
     char *inputXmlPath = NULL;
 
     if (argc != 3) {
-        logprintfl(EUCAERROR, "please, supply a path to an XML file and an Xpath\n");
+        LOGERROR("please, supply a path to an XML file and an Xpath\n");
         return (EUCA_ERROR);
     }
 
     inputXmlPath = argv[1];
     if ((devs = get_xpath_content(argv[1], argv[2])) != NULL) {
         for (j = 0; devs[j]; j++) {
-            logprintfl(EUCAINFO, "devs[%d] = '%s'\n", j, devs[j]);
+            LOGINFO("devs[%d] = '%s'\n", j, devs[j]);
             EUCA_FREE(devs[j]);
         }
         EUCA_FREE(devs);
     } else {
-        logprintfl(EUCAERROR, "devs[] are empty\n");
+        LOGERROR("devs[] are empty\n");
     }
 
     return (EUCA_OK);

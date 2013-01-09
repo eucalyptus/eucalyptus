@@ -594,14 +594,14 @@ int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile)
 
     svc_client = axis2_stub_get_svc_client(pStub, env);
     if (!svc_client) {
-        logprintfl(EUCAERROR, "could not get svc_client from stub\n");
+        LOGERROR("could not get svc_client from stub\n");
         return (EUCA_ERROR);
     }
     axis2_svc_client_engage_module(svc_client, env, "rampart");
 
     policy = neethi_util_create_policy_from_file(env, policyFile);
     if (!policy) {
-        logprintfl(EUCAERROR, "could not initialize policy file %s\n", policyFile);
+        LOGERROR("could not initialize policy file %s\n", policyFile);
         return (EUCA_ERROR);
     }
     status = axis2_svc_client_set_policy(svc_client, env, policy);

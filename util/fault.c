@@ -326,7 +326,7 @@ static char *str_trim_suffix(char *str, const char *suffix)
     if (str && suffix && str_end_cmp(str, suffix)) {
         trim = strlen(str) - strlen(suffix);
         *(str + trim) = '\0';
-        logprintfl(EUCATRACE, "returning: %s\n", str);
+        LOGTRACE("returning: %s\n", str);
     }
     return (str);
 }
@@ -379,19 +379,19 @@ static xmlNodePtr xmlFirstElementChild(xmlNodePtr parent)
 static boolean is_suppressed_eucafault(const char *fault_id)
 {
     if (fault_id == NULL) {
-        logprintfl(EUCAWARN, "called with NULL argument...ignoring.\n");
+        LOGWARN("called with NULL argument...ignoring.\n");
         return FALSE;
     }
     struct suppress_list *suppose = suppressed;
 
     while (suppose) {
         if (!strcmp(fault_id, suppose->id)) {
-            logprintfl(EUCATRACE, "returning TRUE for %s.\n", fault_id);
+            LOGTRACE("returning TRUE for %s.\n", fault_id);
             return TRUE;
         }
         suppose = suppose->next;
     }
-    logprintfl(EUCATRACE, "returning FALSE for %s.\n", fault_id);
+    LOGTRACE("returning FALSE for %s.\n", fault_id);
     return FALSE;
 }
 
@@ -413,7 +413,7 @@ static boolean is_suppressed_eucafault(const char *fault_id)
 static boolean check_eucafault_suppression(const char *fault_id, const char *fault_file)
 {
     if ((fault_id == NULL) && (fault_file == NULL)) {
-        logprintfl(EUCAWARN, "called with two NULL arguments...ignoring.\n");
+        LOGWARN("called with two NULL arguments...ignoring.\n");
         return FALSE;
     }
     if (fault_file == NULL) {
@@ -421,26 +421,26 @@ static boolean check_eucafault_suppression(const char *fault_id, const char *fau
         return (is_suppressed_eucafault(fault_id));
     } else if (fault_id != NULL) {
         if (is_suppressed_eucafault(fault_id)) {
-            logprintfl(EUCATRACE, "Detected already-suppressed fault id %s\n", fault_id);
+            LOGTRACE("Detected already-suppressed fault id %s\n", fault_id);
             return TRUE;
         }
         struct stat st;
 
         if (stat(fault_file, &st) != 0) {
-            logprintfl(EUCAWARN, "stat() problem with %s: %s\n", fault_file, strerror(errno));
+            LOGWARN("stat() problem with %s: %s\n", fault_file, strerror(errno));
             return FALSE;
         }
         if (st.st_size == 0) {
-            logprintfl(EUCAINFO, "Suppressing fault id %s.\n", fault_id);
+            LOGINFO("Suppressing fault id %s.\n", fault_id);
 
             struct suppress_list *new_supp = ((struct suppress_list *)EUCA_ZALLOC(1, sizeof(struct suppress_list)));
 
             if (new_supp == NULL) {
-                logprintfl(EUCAERROR, "struct malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
+                LOGERROR("struct malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
                 return FALSE;
             }
             if ((new_supp->id = (char *)strdup(fault_id)) == NULL) {
-                logprintfl(EUCAERROR, "string malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
+                LOGERROR("string malloc() failed in check_eucafault_suppression while adding suppressed fault %s.\n", fault_id);
                 EUCA_FREE(new_supp);
                 return FALSE;
             }
@@ -452,7 +452,7 @@ static boolean check_eucafault_suppression(const char *fault_id, const char *fau
             return FALSE;
         }
     }
-    logprintfl(EUCATRACE, "returning FALSE for %s, %s\n", SP(fault_id), SP(fault_file));
+    LOGTRACE("returning FALSE for %s, %s\n", SP(fault_id), SP(fault_file));
     return FALSE;
 }
 
@@ -473,36 +473,36 @@ static xmlDoc *read_eucafault(const char *faultdir, const char *fault_id)
     static int common_block_exists = 0;
 
     snprintf(fault_file, PATH_MAX, "%s/%s%s", faultdir, fault_id, XML_SUFFIX);
-    logprintfl(EUCATRACE, "Attempting to load file %s\n", fault_file);
+    LOGTRACE("Attempting to load file %s\n", fault_file);
 
     if (get_eucafault(fault_id, NULL) != NULL) {
-        logprintfl(EUCATRACE, "Looks like fault %s already exists.\n", fault_id);
+        LOGTRACE("Looks like fault %s already exists.\n", fault_id);
         return NULL;
     }
     if (check_eucafault_suppression(fault_id, fault_file)) {
-        logprintfl(EUCATRACE, "Looks like fault %s is being deliberately suppressed.\n", fault_id);
+        LOGTRACE("Looks like fault %s is being deliberately suppressed.\n", fault_id);
         return NULL;
     }
     my_doc = xmlParseFile(fault_file);
 
     if (my_doc == NULL) {
-        logprintfl(EUCAWARN, "Could not parse file %s\n", fault_file);
+        LOGWARN("Could not parse file %s\n", fault_file);
         return NULL;
     } else {
-        logprintfl(EUCATRACE, "Successfully parsed file %s\n", fault_file);
+        LOGTRACE("Successfully parsed file %s\n", fault_file);
     }
     if (get_eucafault(fault_id, my_doc) != NULL) {
-        logprintfl(EUCATRACE, "Found fault id %s in %s\n", fault_id, fault_file);
+        LOGTRACE("Found fault id %s in %s\n", fault_id, fault_file);
     } else if (get_common_block(my_doc) != NULL) {
-        logprintfl(EUCATRACE, "Found <%s> block in %s\n", COMMON_PREFIX, fault_file);
+        LOGTRACE("Found <%s> block in %s\n", COMMON_PREFIX, fault_file);
         if (common_block_exists++) {
-            logprintfl(EUCATRACE, "<%s> block already exists--skipping.\n", COMMON_PREFIX);
+            LOGTRACE("<%s> block already exists--skipping.\n", COMMON_PREFIX);
             xmlFreeDoc(my_doc);
             return NULL;
         }
     } else {
-        logprintfl(EUCAWARN, "Did not find fault id %s in %s -- found fault id %s instead. (Not adding fault.)\n", fault_id, fault_file,
-                   get_fault_id(xmlFirstElementChild(xmlDocGetRootElement(my_doc))));
+        LOGWARN("Did not find fault id %s in %s -- found fault id %s instead. (Not adding fault.)\n", fault_id, fault_file,
+                get_fault_id(xmlFirstElementChild(xmlDocGetRootElement(my_doc))));
         xmlFreeDoc(my_doc);
         return NULL;
     }
@@ -522,18 +522,18 @@ static xmlDoc *read_eucafault(const char *faultdir, const char *fault_id)
 static boolean add_eucafault(const xmlDoc * new_doc)
 {
     if (xmlDocGetRootElement(ef_doc) == NULL) {
-        logprintfl(EUCATRACE, "Creating new document.\n");
+        LOGTRACE("Creating new document.\n");
         ef_doc = xmlCopyDoc((xmlDoc *) new_doc, 1); /* 1 == recursive copy */
 
         if (ef_doc == NULL) {
-            logprintfl(EUCAERROR, "Problem creating fault registry.\n");
+            LOGERROR("Problem creating fault registry.\n");
             return FALSE;
         }
     } else {
-        logprintfl(EUCATRACE, "Appending to existing document.\n");
+        LOGTRACE("Appending to existing document.\n");
         if (xmlAddNextSibling(xmlFirstElementChild(xmlDocGetRootElement(ef_doc)), xmlFirstElementChild(xmlDocGetRootElement((xmlDoc *) new_doc))) ==
             NULL) {
-            logprintfl(EUCAERROR, "Problem adding fault to existing registry.\n");
+            LOGERROR("Problem adding fault to existing registry.\n");
             return FALSE;
         }
     }
@@ -585,7 +585,7 @@ static xmlNode *get_common_block(const xmlDoc * doc)
 
         if (node->type == XML_ELEMENT_NODE) {
             if (!strcasecmp((const char *)node->name, COMMON_PREFIX)) {
-                logprintfl(EUCATRACE, "Found <%s> block.\n", COMMON_PREFIX);
+                LOGTRACE("Found <%s> block.\n", COMMON_PREFIX);
                 return node;
             }
         }
@@ -655,12 +655,12 @@ static boolean initialize_faultlog(const char *fileprefix)
         }
         snprintf(faultlogpath, PATH_MAX, EUCALYPTUS_LOG_DIR "/%s" FAULT_LOGFILE_SUFFIX, euca_base, fileprefix);
     }
-    logprintfl(EUCATRACE, "Initializing faultlog using %s\n", faultlogpath);
+    LOGTRACE("Initializing faultlog using %s\n", faultlogpath);
     faultlog = fopen(faultlogpath, "a+");
 
     if (faultlog == NULL) {
-        logprintfl(EUCAERROR, "Cannot open fault log file %s: %s\n", faultlogpath, strerror(errno));
-        logprintfl(EUCAERROR, "Logging faults to the console...\n");
+        LOGERROR("Cannot open fault log file %s: %s\n", faultlogpath, strerror(errno));
+        LOGERROR("Logging faults to the console...\n");
         faultlog = STANDARD_FILESTREAM;
         return FALSE;
     } else {
@@ -689,7 +689,7 @@ int init_eucafaults(const char *fileprefix)
     pthread_mutex_lock(&fault_mutex);
 
     if (faults_loaded) {
-        logprintfl(EUCATRACE, "Attempt to reinitialize fault registry? Skipping...\n");
+        LOGTRACE("Attempt to reinitialize fault registry? Skipping...\n");
         pthread_mutex_unlock(&fault_mutex);
         return -faults_loaded;  // Negative return because already loaded.
     }
@@ -701,10 +701,10 @@ int init_eucafaults(const char *fileprefix)
     }
 
     initialize_faultlog(fileprefix);
-    logprintfl(EUCATRACE, "Initializing fault registry directories.\n");
+    LOGTRACE("Initializing fault registry directories.\n");
 
     if ((locale = getenv(LOCALIZATION_ENV_VAR)) == NULL) {
-        logprintfl(EUCADEBUG, "$%s not set, using default value of: %s\n", LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
+        LOGDEBUG("$%s not set, using default value of: %s\n", LOCALIZATION_ENV_VAR, DEFAULT_LOCALIZATION);
     }
     LIBXML_TEST_VERSION;
 
@@ -725,16 +725,16 @@ int init_eucafaults(const char *fileprefix)
     for (int i = 0; i < NUM_FAULTDIR_TYPES; i++) {
         if (faultdirs[i][0]) {
             if (stat(faultdirs[i], &dirstat) != 0) {
-                logprintfl(EUCAINFO, "stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
+                LOGINFO("stat() problem with %s: %s\n", faultdirs[i], strerror(errno));
             } else if (!S_ISDIR(dirstat.st_mode)) {
-                logprintfl(EUCAINFO, "stat() problem with %s: Not a directory. errno=%d(%s)\n", faultdirs[i], errno, strerror(errno));
+                LOGINFO("stat() problem with %s: Not a directory. errno=%d(%s)\n", faultdirs[i], errno, strerror(errno));
             } else {
                 struct dirent **namelist;
                 int numfaults = scandir(faultdirs[i], &namelist, &scandir_filter, alphasort);
                 if (numfaults == 0) {
-                    logprintfl(EUCADEBUG, "No faults found in %s\n", faultdirs[i]);
+                    LOGDEBUG("No faults found in %s\n", faultdirs[i]);
                 } else {
-                    logprintfl(EUCADEBUG, "Found %d %s files in %s\n", numfaults, XML_SUFFIX, faultdirs[i]);
+                    LOGDEBUG("Found %d %s files in %s\n", numfaults, XML_SUFFIX, faultdirs[i]);
                     while (numfaults--) {
                         xmlDoc *new_fault = read_eucafault(faultdirs[i], str_trim_suffix(namelist[numfaults]->d_name, XML_SUFFIX));
                         EUCA_FREE(namelist[numfaults]);
@@ -745,7 +745,7 @@ int init_eucafaults(const char *fileprefix)
                             }
                             xmlFreeDoc(new_fault);
                         } else {
-                            logprintfl(EUCATRACE, "Not adding new fault--mismatch or already exists...?\n");
+                            LOGTRACE("Not adding new fault--mismatch or already exists...?\n");
                         }
                     }
                     EUCA_FREE(namelist);
@@ -754,7 +754,7 @@ int init_eucafaults(const char *fileprefix)
         }
     }
     pthread_mutex_unlock(&fault_mutex);
-    logprintfl(EUCADEBUG, "Loaded %d eucafault descriptions into registry.\n", faults_loaded);
+    LOGDEBUG("Loaded %d eucafault descriptions into registry.\n", faults_loaded);
     return faults_loaded;
 }
 
@@ -778,7 +778,7 @@ static char *get_common_var(const char *var)
     xmlNode *c_node = NULL;
 
     if ((c_node = get_common_block(ef_doc)) == NULL) {
-        logprintfl(EUCAWARN, "Did not find <%s> block\n", COMMON_PREFIX);
+        LOGWARN("Did not find <%s> block\n", COMMON_PREFIX);
         return strdup(var);
     }
     for (xmlNode * node = xmlFirstElementChild(c_node); node; node = node->next) {
@@ -801,7 +801,7 @@ static char *get_common_var(const char *var)
         }
     }
     // If nothing useful is found, return original variable-name string.
-    logprintfl(EUCAWARN, "Did not find label '%s'\n", var);
+    LOGWARN("Did not find label '%s'\n", var);
     return strdup(var);
 }
 
@@ -822,7 +822,7 @@ static char *get_common_var(const char *var)
 static char *get_fault_var(const char *var, const xmlNode * f_node)
 {
     if ((f_node == NULL) || (var == NULL)) {
-        logprintfl(EUCAWARN, "called with one or more NULL arguments.\n");
+        LOGWARN("called with one or more NULL arguments.\n");
         return NULL;
     }
     // Just in case we're matching the top-level node.
@@ -861,7 +861,7 @@ static char *get_fault_var(const char *var, const xmlNode * f_node)
             return (char *)value;
         }
     }
-    logprintfl(EUCAWARN, "Did not find <%s> message in get_fault_var().\n", var);
+    LOGWARN("Did not find <%s> message in get_fault_var().\n", var);
     return NULL;
 }
 
@@ -882,7 +882,7 @@ static boolean format_eucafault(const char *fault_id, const char_map ** map)
     xmlNode *fault_node = get_eucafault(fault_id, NULL);
 
     if (fault_node == NULL) {
-        logprintfl(EUCAERROR, "Fault %s detected, could not find fault id in registry.\n", fault_id);
+        LOGERROR("Fault %s detected, could not find fault id in registry.\n", fault_id);
         return FALSE;
     }
     // Determine label alignment. (Only needs to be done once.)
@@ -1032,15 +1032,15 @@ boolean log_eucafault_map(const char *fault_id, const char_map ** map)
 {
     int load = init_eucafaults(NULL);
 
-    logprintfl(EUCATRACE, "init_eucafaults() returned %d\n", load);
+    LOGTRACE("init_eucafaults() returned %d\n", load);
 
     if (is_suppressed_eucafault(fault_id)) {
-        logprintfl(EUCADEBUG, "Fault %s detected, but it is being actively suppressed.\n", fault_id);
+        LOGDEBUG("Fault %s detected, but it is being actively suppressed.\n", fault_id);
         return (FALSE);
     }
 
     if (is_redundant_eucafault(fault_id, map)) {
-        logprintfl(EUCADEBUG, "Fault %s detected, but it has already been logged.\n", fault_id);
+        LOGDEBUG("Fault %s detected, but it has already been logged.\n", fault_id);
         return (FALSE);
     }
     return (format_eucafault(fault_id, map));
@@ -1069,7 +1069,7 @@ int log_eucafault(const char *fault_id, ...)
     int count = 0;
     int load = init_eucafaults(NULL);
 
-    logprintfl(EUCATRACE, "init_eucafaults() returned %d\n", load);
+    LOGTRACE("init_eucafaults() returned %d\n", load);
     va_start(argv, fault_id);
     {
         while ((token[count % 2] = va_arg(argv, char *)) != NULL) {
@@ -1081,11 +1081,11 @@ int log_eucafault(const char *fault_id, ...)
     va_end(argv);
 
     if (count % 2) {
-        logprintfl(EUCAWARN, "called with an odd (unmatched) number of substitution parameters: %d\n", count);
+        LOGWARN("called with an odd (unmatched) number of substitution parameters: %d\n", count);
     }
 
     if (!log_eucafault_map(fault_id, ((const char_map **)m))) {
-        logprintfl(EUCATRACE, "got FALSE from log_eucafault_map()\n");
+        LOGTRACE("got FALSE from log_eucafault_map()\n");
         count *= -1;
     }
 
@@ -1144,14 +1144,14 @@ int main(int argc, char **argv)
     // logfile.
     opt = init_eucafaults(NULL);
 
-    logprintfl(EUCADEBUG, "init_eucafaults() returned %d\n", opt);
+    LOGDEBUG("init_eucafaults() returned %d\n", opt);
 
     if (optind < argc) {
         char_map **m = c_varmap_alloc(NULL, "daemon", "Balrog");
         m = c_varmap_alloc(m, "hostIp", "127.0.0.1");
         m = c_varmap_alloc(m, "brokerIp", "127.0.0.2");
         m = c_varmap_alloc(m, "endpointIp", "127.0.0.3");
-        logprintfl(EUCATRACE, "argv[1st of %d]: %s\n", argc - optind, argv[optind]);
+        LOGTRACE("argv[1st of %d]: %s\n", argc - optind, argv[optind]);
         log_eucafault_map(argv[optind], (const char_map **)m);
         c_varmap_free(m);
 
@@ -1162,15 +1162,15 @@ int main(int argc, char **argv)
         opt =
             log_eucafault(argv[optind], "daemon", "Balrog", "hostIp", "127.0.0.1", "brokerIp", "127.0.0.2", "endpointIp", "127.0.0.3", "unmatched!",
                           NULL);
-        logprintfl(EUCADEBUG, "log_eucafault args returned: %d\n", opt);
+        LOGDEBUG("log_eucafault args returned: %d\n", opt);
 
         // This allows substitution-argument pairs for unit test to be
         // passed in on command line.
         m = NULL;
         for (opt = optind + 1; opt < argc; opt++) {
-            logprintfl(EUCATRACE, "argv[opt]: %s\n", argv[opt]);
+            LOGTRACE("argv[opt]: %s\n", argv[opt]);
             if ((opt - optind + 1) % 2) {
-                logprintfl(EUCATRACE, "...now have two, calling c_varmap_alloc()\n");
+                LOGTRACE("...now have two, calling c_varmap_alloc()\n");
                 m = c_varmap_alloc(m, argv[opt - 1], argv[opt]);
             }
         }
@@ -1234,31 +1234,31 @@ int main(int argc, char **argv)
     }
 
     if (argv[optind] == NULL) {
-        logprintfl(EUCAERROR, "no fault ID is specified (try -h for usage)\n");
+        LOGERROR("no fault ID is specified (try -h for usage)\n");
         return 1;
     }
     int ndigits = 0;
     for (char *c = argv[optind]; *c != '\0'; c++, ndigits++) {
         if (!isdigit(*c)) {
-            logprintfl(EUCAERROR, "invalid fault ID (must be a number)\n");
+            LOGERROR("invalid fault ID (must be a number)\n");
             return 1;
         }
     }
     if (ndigits < 4) {
-        logprintfl(EUCAERROR, "invalid fault ID (must be a 4-digit number)\n");
+        LOGERROR("invalid fault ID (must be a 4-digit number)\n");
         return 1;
     }
     int nfaults = init_eucafaults(component);
     if (nfaults < 1) {
-        logprintfl(EUCAERROR, "failed to locate fault information (is $EUCALYPTUS set?)\n");
+        LOGERROR("failed to locate fault information (is $EUCALYPTUS set?)\n");
         return 1;
     }
     // place variable-and-value pairs from command line into the map
     char_map **m = NULL;
     for (int opt = optind + 1; opt < argc; opt++) {
-        logprintfl(EUCADEBUG, "argv[opt]: %s\n", argv[opt]);
+        LOGDEBUG("argv[opt]: %s\n", argv[opt]);
         if ((opt - optind + 1) % 2) {
-            logprintfl(EUCADEBUG, "...now have two, calling c_varmap_alloc()\n");
+            LOGDEBUG("...now have two, calling c_varmap_alloc()\n");
             m = c_varmap_alloc(m, argv[opt - 1], argv[opt]);
         }
     }

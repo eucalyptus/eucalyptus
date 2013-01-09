@@ -301,7 +301,7 @@ void loadNcStuff()
 
     rc = setup_shared_buffer_fake((void **)&myconfig, "/eucalyptusCCfakeconfig", sizeof(fakeconfig), &fakelock, "/eucalyptusCCfakelock", SHARED_FILE);
     if (rc) {
-        logprintfl(EUCADEBUG, "fakeNC:  error setting up shared mem\n");
+        LOGDEBUG("fakeNC:  error setting up shared mem\n");
     }
     sem_wait(fakelock);
 
@@ -320,7 +320,7 @@ void loadNcStuff()
         myconfig->current = time(NULL);
     }
 
-    logprintfl(EUCADEBUG, "fakeNC: setup(): last=%d current=%d\n", myconfig->last, myconfig->current);
+    LOGDEBUG("fakeNC: setup(): last=%d current=%d\n", myconfig->last, myconfig->current);
     if ((myconfig->current - myconfig->last) > 30) {
         // do a refresh
         myconfig->last = time(NULL);
@@ -328,13 +328,13 @@ void loadNcStuff()
         for (i = 0; i < MAX_FAKE_INSTANCES; i++) {
             if (strlen(myconfig->global_instances[i].instanceId)) {
                 if (!strcmp(myconfig->global_instances[i].stateName, "Teardown") && ((time(NULL) - myconfig->global_instances[i].launchTime) > 300)) {
-                    logprintfl(EUCADEBUG, "fakeNC: setup(): invalidating instance %s\n", myconfig->global_instances[i].instanceId);
+                    LOGDEBUG("fakeNC: setup(): invalidating instance %s\n", myconfig->global_instances[i].instanceId);
                     bzero(&(myconfig->global_instances[i]), sizeof(ncInstance));
                 } else {
                     for (j = 0; j < EUCA_MAX_VOLUMES; j++) {
                         if (strlen(myconfig->global_instances[i].volumes[j].volumeId)
                             && strcmp(myconfig->global_instances[i].volumes[j].stateName, "attached")) {
-                            logprintfl(EUCADEBUG, "fakeNC: setup(): invalidating volume %s\n", myconfig->global_instances[i].volumes[j].volumeId);
+                            LOGDEBUG("fakeNC: setup(): invalidating volume %s\n", myconfig->global_instances[i].volumes[j].volumeId);
                             bzero(&(myconfig->global_instances[i].volumes[j]), sizeof(ncVolume));
                         }
                     }
@@ -376,12 +376,12 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     }
 
     if (client_home == NULL) {
-        logprintfl(EUCAERROR, "fakeNC: ERROR: cannot get AXIS2C_HOME");
+        LOGERROR("fakeNC: ERROR: cannot get AXIS2C_HOME");
         return NULL;
     }
 
     if (endpoint_uri == NULL) {
-        logprintfl(EUCAERROR, "fakeNC: ERROR: empty endpoint_url");
+        LOGERROR("fakeNC: ERROR: empty endpoint_url");
         return NULL;
     }
 
@@ -390,13 +390,13 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     // extract node name from the endpoint
     p = strstr(uri, "://");     // find "http[s]://..."
     if (p == NULL) {
-        logprintfl(EUCAERROR, "fakeNC: ncStubCreate received invalid URI %s\n", uri);
+        LOGERROR("fakeNC: ncStubCreate received invalid URI %s\n", uri);
         return NULL;
     }
 
     node_name = strdup(p + 3);  // copy without the protocol prefix
     if (node_name == NULL) {
-        logprintfl(EUCAERROR, "fakeNC: ncStubCreate is out of memory\n");
+        LOGERROR("fakeNC: ncStubCreate is out of memory\n");
         return NULL;
     }
 
@@ -406,12 +406,12 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     if ((p = strchr(node_name, '/')) != NULL)
         *p = '\0';              // if there is no port
 
-    logprintfl(EUCADEBUG, "fakeNC: DEBUG: requested URI %s\n", uri);
+    LOGDEBUG("fakeNC: DEBUG: requested URI %s\n", uri);
 
     // see if we should redirect to a local broker
     if (strstr(uri, "EucalyptusBroker")) {
         uri = "http://localhost:8773/services/EucalyptusBroker";
-        logprintfl(EUCADEBUG, "fakeNC: DEBUG: redirecting request to %s\n", uri);
+        LOGDEBUG("fakeNC: DEBUG: redirecting request to %s\n", uri);
     }
     //! @todo what if endpoint_uri, home, or env are NULL?
     stub = axis2_stub_create_EucalyptusNC(env, client_home, (axis2_char_t *) uri);
@@ -423,10 +423,10 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
         st->node_name = (axis2_char_t *) strdup(node_name);
         st->stub = stub;
         if (st->client_home == NULL || st->endpoint_uri == NULL) {
-            logprintfl(EUCAWARN, "fakeNC: WARNING: out of memory");
+            LOGWARN("fakeNC: WARNING: out of memory");
         }
     } else {
-        logprintfl(EUCAWARN, "fakeNC: WARNING: out of memory");
+        LOGWARN("fakeNC: WARNING: out of memory");
     }
 
     EUCA_FREE(node_name);
@@ -485,11 +485,11 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
     int foundidx = -1;
     ncInstance *instance = NULL;
 
-    logprintfl(EUCADEBUG, "fakeNC: runInstance(): params: uuid=%s instanceId=%s reservationId=%s ownerId=%s accountId=%s platform=%s\n", SP(uuid),
-               SP(instanceId), SP(reservationId), SP(ownerId), SP(accountId), SP(platform));
+    LOGDEBUG("fakeNC: runInstance(): params: uuid=%s instanceId=%s reservationId=%s ownerId=%s accountId=%s platform=%s\n", SP(uuid),
+             SP(instanceId), SP(reservationId), SP(ownerId), SP(accountId), SP(platform));
 
     if (!uuid || !instanceId || !reservationId || !ownerId || !accountId || !platform || !pMeta || !netparams) {
-        logprintfl(EUCAERROR, "fakeNC: runInstance(): bad input params\n");
+        LOGERROR("fakeNC: runInstance(): bad input params\n");
         return (EUCA_ERROR);
     }
 
@@ -507,15 +507,15 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
         }
 
         memcpy(&(myconfig->global_instances[foundidx]), instance, sizeof(ncInstance));
-        logprintfl(EUCADEBUG, "fakeNC: runInstance(): decrementing resource by %d/%d/%d\n", params->cores, params->mem, params->disk);
+        LOGDEBUG("fakeNC: runInstance(): decrementing resource by %d/%d/%d\n", params->cores, params->mem, params->disk);
         myconfig->res.memorySizeAvailable -= params->mem;
         myconfig->res.numberOfCoresAvailable -= params->cores;
         myconfig->res.diskSizeAvailable -= params->disk;
 
         *outInstPtr = instance;
-        logprintfl(EUCADEBUG, "fakeNC: runInstance(): allocated and stored instance\n");
+        LOGDEBUG("fakeNC: runInstance(): allocated and stored instance\n");
     } else {
-        logprintfl(EUCAERROR, "fakeNC: runInstance(): failed to allocate instance\n");
+        LOGERROR("fakeNC: runInstance(): failed to allocate instance\n");
     }
 
     saveNcStuff();
@@ -539,10 +539,10 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
     int i = 0;
     int done = 0;
 
-    logprintfl(EUCADEBUG, "fakeNC: terminateInstance(): params: instanceId=%s force=%d\n", SP(instanceId), force);
+    LOGDEBUG("fakeNC: terminateInstance(): params: instanceId=%s force=%d\n", SP(instanceId), force);
 
     if (!instanceId) {
-        logprintfl(EUCAERROR, "fakeNC: termianteInstance(): bad input params\n");
+        LOGERROR("fakeNC: termianteInstance(): bad input params\n");
         return (EUCA_ERROR);
     }
 
@@ -550,7 +550,7 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
-            logprintfl(EUCADEBUG, "fakeNC: terminateInstance():\tsetting stateName for instance %s at idx %d\n", instanceId, i);
+            LOGDEBUG("fakeNC: terminateInstance():\tsetting stateName for instance %s at idx %d\n", instanceId, i);
             snprintf(myconfig->global_instances[i].stateName, 10, "Teardown");
             myconfig->res.memorySizeAvailable += myconfig->global_instances[i].params.mem;
             myconfig->res.numberOfCoresAvailable += myconfig->global_instances[i].params.cores;
@@ -582,9 +582,9 @@ int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, ch
     int i = 0;
     int done = 0;
 
-    logprintfl(EUCADEBUG, "fakeNC: assignAddress(): params: instanceId=%s publicIp=%s\n", SP(instanceId), SP(publicIp));
+    LOGDEBUG("fakeNC: assignAddress(): params: instanceId=%s publicIp=%s\n", SP(instanceId), SP(publicIp));
     if (!instanceId || !publicIp) {
-        logprintfl(EUCADEBUG, "fakeNC: assignAddress(): bad input params\n");
+        LOGDEBUG("fakeNC: assignAddress(): bad input params\n");
         return (EUCA_ERROR);
     }
 
@@ -592,7 +592,7 @@ int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, ch
 
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
-            logprintfl(EUCADEBUG, "fakeNC: assignAddress()\tsetting publicIp at idx %d\n", i);
+            LOGDEBUG("fakeNC: assignAddress()\tsetting publicIp at idx %d\n", i);
             snprintf(myconfig->global_instances[i].ncnet.publicIp, 24, "%s", publicIp);
             done++;
         }
@@ -633,10 +633,10 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
     int numinsts = 0;
     ncInstance *newinst = NULL;
 
-    logprintfl(EUCADEBUG, "fakeNC: describeInstances(): params: instIdsLen=%d\n", instIdsLen);
+    LOGDEBUG("fakeNC: describeInstances(): params: instIdsLen=%d\n", instIdsLen);
 
     if (instIdsLen < 0) {
-        logprintfl(EUCAERROR, "fakeNC: describeInstances(): bad input params\n");
+        LOGERROR("fakeNC: describeInstances(): bad input params\n");
         return (EUCA_ERROR);
     }
 
@@ -653,8 +653,8 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
 
             memcpy(newinst, &(myconfig->global_instances[i]), sizeof(ncInstance));
             (*outInsts)[numinsts] = newinst;
-            logprintfl(EUCADEBUG, "fakeNC: describeInstances(): idx=%d numinsts=%d instanceId=%s stateName=%s\n", i, numinsts, newinst->instanceId,
-                       newinst->stateName);
+            LOGDEBUG("fakeNC: describeInstances(): idx=%d numinsts=%d instanceId=%s stateName=%s\n", i, numinsts, newinst->instanceId,
+                     newinst->stateName);
             numinsts++;
         }
     }
@@ -752,7 +752,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
         // not initialized?
         res = allocate_resource("OK", "iqn.1993-08.org.debian:01:736a4e92c588", 1024000, 1024000, 30000000, 30000000, 4096, 4096, "none");
         if (!res) {
-            logprintfl(EUCAERROR, "fakeNC: describeResource(): failed to allocate fake resource\n");
+            LOGERROR("fakeNC: describeResource(): failed to allocate fake resource\n");
             ret = EUCA_ERROR;
         } else {
             memcpy(&(myconfig->res), res, sizeof(ncResource));
@@ -792,10 +792,10 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
     int vdone = 0;
     int foundidx = -1;
 
-    logprintfl(EUCADEBUG, "fakeNC:  attachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId),
-               SP(remoteDev), SP(localDev));
+    LOGDEBUG("fakeNC:  attachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId),
+             SP(remoteDev), SP(localDev));
     if (!instanceId || !volumeId || !remoteDev || !localDev) {
-        logprintfl(EUCADEBUG, "fakeNC:  attachVolume(): bad input params\n");
+        LOGDEBUG("fakeNC:  attachVolume(): bad input params\n");
         return (EUCA_ERROR);
     }
 
@@ -803,7 +803,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
-            logprintfl(EUCADEBUG, "fakeNC: \tsetting volume info at idx %d\n", i);
+            LOGDEBUG("fakeNC: \tsetting volume info at idx %d\n", i);
             vdone = 0;
             for (j = 0; j < EUCA_MAX_VOLUMES; j++) {
                 if (!strlen(myconfig->global_instances[i].volumes[j].volumeId)) {
@@ -815,7 +815,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
                 }
             }
             if (!vdone && foundidx >= 0) {
-                logprintfl(EUCADEBUG, "fakeNC: \tfake attaching volume at idx %d\n", foundidx);
+                LOGDEBUG("fakeNC: \tfake attaching volume at idx %d\n", foundidx);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].volumeId, CHAR_BUFFER_SIZE, "%s", volumeId);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].remoteDev, CHAR_BUFFER_SIZE, "%s", remoteDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].localDev, CHAR_BUFFER_SIZE, "%s", localDev);
@@ -851,10 +851,10 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
     int vdone = 0;
     int foundidx = -1;
 
-    logprintfl(EUCADEBUG, "fakeNC:  detachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId),
-               SP(remoteDev), SP(localDev));
+    LOGDEBUG("fakeNC:  detachVolume(): params: instanceId=%s volumeId=%s remoteDev=%s localDev=%s\n", SP(instanceId), SP(volumeId),
+             SP(remoteDev), SP(localDev));
     if (!instanceId || !volumeId || !remoteDev || !localDev) {
-        logprintfl(EUCADEBUG, "fakeNC:  detachVolume(): bad input params\n");
+        LOGDEBUG("fakeNC:  detachVolume(): bad input params\n");
         return (EUCA_ERROR);
     }
 
@@ -862,7 +862,7 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
-            logprintfl(EUCADEBUG, "fakeNC: \tsetting volume info at idx %d\n", i);
+            LOGDEBUG("fakeNC: \tsetting volume info at idx %d\n", i);
             vdone = 0;
             for (j = 0; j < EUCA_MAX_VOLUMES; j++) {
                 if (!strcmp(myconfig->global_instances[i].volumes[j].volumeId, volumeId)) {
@@ -870,7 +870,7 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
                 }
             }
             if (foundidx >= 0) {
-                logprintfl(EUCADEBUG, "fakeNC: \tfake detaching volume at idx %d\n", foundidx);
+                LOGDEBUG("fakeNC: \tfake detaching volume at idx %d\n", foundidx);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].stateName, CHAR_BUFFER_SIZE, "%s", "detached");
             }
             done++;

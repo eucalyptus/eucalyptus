@@ -201,7 +201,7 @@ int hash_b64enc_string(const char *in, char **out)
         return (EUCA_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "in=%s\n", in);
+    LOGDEBUG("in=%s\n", in);
 
     *out = NULL;
     bzero(hash, 17);

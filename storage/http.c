@@ -251,33 +251,33 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
     }
 
     if (!file_path && !url) {
-        logprintfl(EUCAERROR, "invalid params: file_path=%s, url=%s\n", SP(file_path), SP(url));
+        LOGERROR("invalid params: file_path=%s, url=%s\n", SP(file_path), SP(url));
         return (EUCA_INVALID_ERROR);
     }
 
     if (stat64(file_path, &mystat)) {
-        logprintfl(EUCAERROR, "failed to stat %s\n", file_path);
+        LOGERROR("failed to stat %s\n", file_path);
         return (EUCA_ACCESS_ERROR);
     }
 
     if (!S_ISREG(mystat.st_mode)) {
-        logprintfl(EUCAERROR, "%s is not a regular file\n", file_path);
+        LOGERROR("%s is not a regular file\n", file_path);
         return (EUCA_ERROR);
     }
 
     if ((fp = fopen64(file_path, "r")) == NULL) {
-        logprintfl(EUCAERROR, "failed to open %s for reading\n", file_path);
+        LOGERROR("failed to open %s for reading\n", file_path);
         return (EUCA_ACCESS_ERROR);
     }
 
     if ((curl = curl_easy_init()) == NULL) {
-        logprintfl(EUCAERROR, "could not initialize libcurl\n");
+        LOGERROR("could not initialize libcurl\n");
         fclose(fp);
         return (EUCA_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "uploading %s\n", file_path);
-    logprintfl(EUCADEBUG, "       to %s\n", url);
+    LOGDEBUG("uploading %s\n", file_path);
+    LOGDEBUG("       to %s\n", url);
 
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -303,45 +303,44 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
         params.total_read = 0L;
         params.total_calls = 0L;
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "uploaded %lld bytes in %lld sends\n", params.total_read, params.total_calls);
+        LOGDEBUG("uploaded %lld bytes in %lld sends\n", params.total_read, params.total_calls);
 
         if (result) {
             // curl error (connection or transfer failed)
-            logprintfl(EUCAERROR, "%s (%d)\n", error_msg, result);
+            LOGERROR("%s (%d)\n", error_msg, result);
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
             //! @TODO pull out response message, too?
             switch (httpcode) {
             case 200L:
                 // all good
-                logprintfl(EUCADEBUG, "file updated sucessfully\n");
+                LOGDEBUG("file updated sucessfully\n");
                 code = EUCA_OK;
                 break;
             case 201L:
                 // all good, created
-                logprintfl(EUCADEBUG, "file created sucessfully\n");
+                LOGDEBUG("file created sucessfully\n");
                 code = EUCA_OK;
                 break;
             case 408L:
                 // timeout, retry
-                logprintfl(EUCAWARN, "server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
+                LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
                 code = EUCA_TIMEOUT_ERROR;
                 break;
             case 500L:
                 // internal server error (could be a fluke, so we'll retry)
-                logprintfl(EUCAWARN, "server responded with HTTP code %ld (transient?) for %s\n", httpcode, url);
+                LOGWARN("server responded with HTTP code %ld (transient?) for %s\n", httpcode, url);
                 break;
             default:
                 // some kind of error, will not retry
-                logprintfl(EUCAERROR, "server responded with HTTP code %ld for %s\n", httpcode, url);
+                LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
                 retries = 0;
                 break;
             }
         }
 
         if ((code != EUCA_OK) && (retries > 0)) {
-            logprintfl(EUCAERROR, "upload retry %d of %d will commence in %d seconds for %s\n", TOTAL_RETRIES - retries + 1, TOTAL_RETRIES,
-                       timeout, url);
+            LOGERROR("upload retry %d of %d will commence in %d seconds for %s\n", TOTAL_RETRIES - retries + 1, TOTAL_RETRIES, timeout, url);
             sleep(timeout);
             fseek(fp, 0L, SEEK_SET);
             timeout <<= 1;
@@ -399,7 +398,7 @@ static size_t read_data(char *buffer, size_t size, size_t nitems, void *params)
             bytes_read = ((struct read_request *)params)->total_read;
             bytes_file = ((struct read_request *)params)->file_size;
             percent = (int)((bytes_read * 100) / bytes_file);
-            logprintfl(EUCADEBUG, "upload progress %lld/%lld bytes (%d%%)\n", bytes_read, bytes_file, percent);
+            LOGDEBUG("upload progress %lld/%lld bytes (%d%%)\n", bytes_read, bytes_file, percent);
         }
     }
 
@@ -596,26 +595,26 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
     struct write_request params = { 0 };
 
     if (!url || !outfile) {
-        logprintfl(EUCAERROR, "invalid params: outfile=%s, url=%s\n", SP(outfile), SP(url));
+        LOGERROR("invalid params: outfile=%s, url=%s\n", SP(outfile), SP(url));
         return (EUCA_INVALID_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "downloading %s\n", outfile);
-    logprintfl(EUCADEBUG, "from %s\n", url);
+    LOGDEBUG("downloading %s\n", outfile);
+    LOGDEBUG("from %s\n", url);
 
     /* isolate the PATH in the URL as it will be needed for signing */
     if (strncasecmp(url, "http://", 7) != 0) {
-        logprintfl(EUCAERROR, "URL must start with http://...\n");
+        LOGERROR("URL must start with http://...\n");
         return (EUCA_INVALID_ERROR);
     }
 
     if ((fp = fopen64(outfile, "w")) == NULL) {
-        logprintfl(EUCAERROR, "failed to open %s for writing\n", outfile);
+        LOGERROR("failed to open %s for writing\n", outfile);
         return (EUCA_ACCESS_ERROR);
     }
 
     if ((curl = curl_easy_init()) == NULL) {
-        logprintfl(EUCAERROR, "could not initialize libcurl\n");
+        LOGERROR("could not initialize libcurl\n");
         fclose(fp);
         return (EUCA_ERROR);
     }
@@ -638,7 +637,7 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, total_timeout);
     }
 
-    logprintfl(EUCADEBUG, "writing %s output to %s\n", "GET", outfile);
+    LOGDEBUG("writing %s output to %s\n", "GET", outfile);
 
     retries = total_retries;
     timeout = first_timeout;
@@ -647,38 +646,38 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         params.total_calls = 0L;
 
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "wrote %lld bytes in %lld writes\n", params.total_wrote, params.total_calls);
+        LOGDEBUG("wrote %lld bytes in %lld writes\n", params.total_wrote, params.total_calls);
 
         if (result) {
             // curl error (connection or transfer failed)
-            logprintfl(EUCAERROR, "%s (%d)\n", error_msg, result);
+            LOGERROR("%s (%d)\n", error_msg, result);
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
             //! @TODO pull out response message, too
             switch (httpcode) {
             case 200L:
                 // all good
-                logprintfl(EUCADEBUG, "saved image in %s\n", outfile);
+                LOGDEBUG("saved image in %s\n", outfile);
                 code = EUCA_OK;
                 break;
             case 408L:
                 // timeout, retry
-                logprintfl(EUCAWARN, "server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
+                LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
                 code = EUCA_TIMEOUT_ERROR;
                 break;
             case 404L:
-                logprintfl(EUCAWARN, "server responded with HTTP code %ld (file not found) for %s\n", httpcode, url);
+                LOGWARN("server responded with HTTP code %ld (file not found) for %s\n", httpcode, url);
                 break;
             default:
                 // some kind of error
-                logprintfl(EUCAERROR, "server responded with HTTP code %ld for %s\n", httpcode, url);
+                LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
                 retries = 0;
                 break;
             }
         }
 
         if ((code != EUCA_OK) && (retries > 0)) {
-            logprintfl(EUCAERROR, "download retry %d of %d will commence in %d sec for %s\n", retries, total_retries, timeout, url);
+            LOGERROR("download retry %d of %d will commence in %d sec for %s\n", retries, total_retries, timeout, url);
             sleep(timeout);
             fseek(fp, 0L, SEEK_SET);
             timeout <<= 1;
@@ -689,7 +688,7 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
     fclose(fp);
 
     if (code != EUCA_OK) {
-        logprintfl(EUCAWARN, "removing %s\n", outfile);
+        LOGWARN("removing %s\n", outfile);
         remove(outfile);
     }
     curl_easy_cleanup(curl);
