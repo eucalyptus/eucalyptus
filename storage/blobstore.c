@@ -4679,7 +4679,6 @@ static int do_clone_stresstest(const char *base, const char *name, blobstore_for
     for (int i = 0; i < STRESS_BLOBS * 3; i++) {    // run over the array a few times
         int j = i % (STRESS_BLOBS / 2); // modify pairs from array
         int k = j + (STRESS_BLOBS / 2);
-#define MIN(a,b) a>b?b:a
         long long max_delta = MIN(bbs1_sizes[j] - STRESS_MIN_BB, bbs1_sizes[k] - STRESS_MIN_BB);
         long long delta = max_delta * (((double)random() / RAND_MAX) - 0.5);
         bbs1_sizes[j] -= delta;

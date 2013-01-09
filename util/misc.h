@@ -210,8 +210,12 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 //! @name Faster MIN and MAX macros
 #undef MIN
 #undef MAX
+#define MIN(_a, _b)                              (((_a) < (_b)) ? (_a) : (_b))
+#define MAX(_a, _b)                              (((_a) > (_b)) ? (_a) : (_b))
+#if 0
 #define MIN(_a, _b)                              ((_b) + (((_a) - (_b)) & -((_a) < (_b))))
 #define MAX(_a, _b)                              ((_a) - (((_a) - (_b)) & -((_a) < (_b))))
+#endif /* 0 */
 //! @}
 
 /*----------------------------------------------------------------------------*\

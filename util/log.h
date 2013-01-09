@@ -202,21 +202,21 @@ void log_dump_trace(char *buf, int buf_size);
 \*----------------------------------------------------------------------------*/
 
 #ifdef DEBUG
-#define PRINTF(a)                                logprintf a
+#define PRINTF(a, args...)                       logprintf(a, ## args)
 #else /* DEBUG */
-#define PRINTF(a)
+#define PRINTF(a, args...)
 #endif /* DEBUG */
 
 #ifdef DEBUG1
-#define PRINTF1(a)                               logprintf a
+#define PRINTF1(a, args...)                      logprintf(a, ## args)
 #else /* DEBUG1 */
-#define PRINTF1(a)
+#define PRINTF1(a, args...)
 #endif /* DEBUG1 */
 
 #ifdef DEBUGXML
-#define PRINTF_XML(a)                            logprintf a
+#define PRINTF_XML(a, args...)                   logprintf(a, ## args)
 #else /* DEBUGXML */
-#define PRINTF_XML(a)
+#define PRINTF_XML(a, args...)
 #endif /* DEBUGXML */
 
 #ifdef USE_OLD_LOG
