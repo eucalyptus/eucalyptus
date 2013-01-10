@@ -290,6 +290,22 @@
 #define _attribute_wur_                          __attribute__ ((__warn_unused_result__))
 #endif /* ! _attribute_wur_ */
 
+#ifndef _attribute_noreturn_
+#define _attribute_noreturn_                     __attribute__ ((noreturn))
+#endif /* ! _attribute_noreturn_ */
+
+#ifndef _attribute_packed_
+#define _attribute_packed_                       __attribute__ ((packed))
+#endif /* ! _attribute_packed_ */
+
+#ifndef _attribute_nonnull_
+#define _attribute_nonnull_                      __attribute__ ((nonnull))
+#endif /* ! _attribute_nonnull_ */
+
+#ifndef __attribute_nonnull__
+#define __attribute_nonnull__(params)            __attribute__ ((nonnull params))
+#endif /* ! _attribute_nonnull_ */
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
