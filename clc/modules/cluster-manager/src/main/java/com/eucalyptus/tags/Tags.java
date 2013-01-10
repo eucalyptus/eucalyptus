@@ -27,6 +27,7 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 
 /**
  * Utility functions for Tag
@@ -102,10 +103,16 @@ public class Tags {
 
   private static Tag lookup( final Tag example ) throws NoSuchMetadataException {
     try {
-      return Transactions.find( example );
+      final List<Tag> result = Transactions.filter( example,
+          Predicates.compose( Predicates.equalTo( example.getResourceId() ), Tags.resourceId() ) );
+      if ( result.size() == 1 ) {
+        return result.get( 0 );
+      }
     } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find tag: " + example.getKey() + " for " + example.getOwner(), e );
     }
+
+    throw new NoSuchMetadataException( "Failed to find unique tag: " + example.getKey() + " for " + example.getOwner() );
   }
 
   private enum TagFunctions implements Function<Tag,String> {

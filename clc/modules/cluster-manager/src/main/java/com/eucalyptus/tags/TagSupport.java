@@ -20,6 +20,7 @@
 package com.eucalyptus.tags;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
@@ -29,10 +30,11 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 
@@ -85,7 +87,7 @@ public abstract class TagSupport {
   public static TagSupport fromResource( @Nonnull final CloudMetadata metadata ) {
     return supportByClass.get( subclassFor( metadata.getClass() ) );
   }
-  
+
   public static TagSupport fromIdentifier( @Nonnull final String id ) {
     return supportByIdentifierPrefix.get( Iterables.getFirst( idSplitter.split( id ), "" ) );
   }
@@ -107,7 +109,15 @@ public abstract class TagSupport {
 
     @Override
     public Class apply( final Class instanceClass ) {
-      return Iterators.find( Iterators.<Class<?>>forArray( instanceClass.getInterfaces() ), Classes.subclassOf( CloudMetadata.class ) );
+      final List<Class<?>> interfaces = Lists.newArrayList();
+      for ( final Class clazz : Classes.interfaceAncestors().apply( instanceClass ) ) {
+        interfaces.add( clazz );
+      }
+      Collections.reverse( interfaces );
+      return Iterables.find( interfaces,
+          Predicates.and(
+              Predicates.not( Predicates.<Class<?>>equalTo( CloudMetadata.class ) ),
+              Classes.subclassOf( CloudMetadata.class ) ) );
     }
   }
 }
