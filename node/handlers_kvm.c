@@ -258,7 +258,7 @@ static void *rebooting_thread(void *arg)
     int err = 0;
     int error = 0;
     int rc = 0;
-    int log_level_for_devstring = EUCATRACE;
+    int log_level_for_devstring = EUCA_LOG_TRACE;
     char *xml = NULL;
     char *remoteDevStr = NULL;
     char path[MAX_PATH] = "";
@@ -375,10 +375,10 @@ static void *rebooting_thread(void *arg)
                 }
             }
 
-            log_level_for_devstring = EUCATRACE;
+            log_level_for_devstring = EUCA_LOG_TRACE;
             if (err)
-                log_level_for_devstring = EUCADEBUG;
-            LOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
+                log_level_for_devstring = EUCA_LOG_DEBUG;
+            EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instance->instanceId, volume->volumeId, volume->remoteDev);
         }
 
         EUCA_FREE(xml);

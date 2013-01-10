@@ -717,9 +717,9 @@ static void err(blobstore_error_t error, const char *custom_msg, const int src_l
     log_dump_trace(_blobstore_last_trace, sizeof(_blobstore_last_trace));
 
     if (_do_print_errors) {
-        myprintf(EUCAERROR, "error: %s\n", _blobstore_last_msg);
+        myprintf(EUCA_LOG_ERROR, "error: %s\n", _blobstore_last_msg);
         if (_do_print_trace)
-            myprintf(EUCAERROR, "%s", _blobstore_last_trace);
+            myprintf(EUCA_LOG_ERROR, "%s", _blobstore_last_trace);
     }
     _blobstore_errno = error;
 }
@@ -3528,7 +3528,7 @@ static int dm_delete_device(const char *dev_name)
     snprintf(cmd, sizeof(cmd), "%s %s remove %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_name);
 
 try_again:
-    myprintf(EUCAINFO, "removing device %s (retries=%d)\n", dev_name, retries);
+    myprintf(EUCA_LOG_INFO, "removing device %s (retries=%d)\n", dev_name, retries);
     int status = system(cmd);
     if (status == -1 || WEXITSTATUS(status) != 0) {
         if (retries--) {
@@ -3627,7 +3627,7 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
     int i;
 
     for (i = 0; i < size; i++) {    // create devices one by one
-        myprintf(EUCAINFO, "creating device %s\n", dev_names[i]);
+        myprintf(EUCA_LOG_INFO, "creating device %s\n", dev_names[i]);
 
         pid_t cpid = fork();
         if (cpid < 0) {         // fork error
@@ -3674,9 +3674,9 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
             }
             if (WEXITSTATUS(status) != 0) {
                 ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to set up device mapper table with 'dmsetup'");
-                myprintf(EUCAINFO, "{%u} command: %s %s create %s\n", (unsigned int)pthread_self(), helpers_path[ROOTWRAP], helpers_path[DMSETUP],
-                         dev_names[i]);
-                myprintf(EUCAINFO, "{%u} input: %s", (unsigned int)pthread_self(), dm_tables[i]);
+                myprintf(EUCA_LOG_INFO, "{%u} command: %s %s create %s\n", (unsigned int)pthread_self(), helpers_path[ROOTWRAP],
+                         helpers_path[DMSETUP], dev_names[i]);
+                myprintf(EUCA_LOG_INFO, "{%u} input: %s", (unsigned int)pthread_self(), dm_tables[i]);
                 goto cleanup;
             }
 
@@ -5580,7 +5580,7 @@ int main(int argc, char **argv)
 
     srandom(time(NULL));
 
-    logfile(NULL, EUCATRACE, 4);
+    logfile(NULL, EUCA_LOG_TRACE, 4);
     blobstore_set_error_function(dummy_err_fn);
 
     // if an argument is specified, it is treated as a blob name to create 
@@ -5995,9 +5995,9 @@ int main(int argc, char *argv[])
         usage(NULL);
 
     if (show_debug)
-        logfile(NULL, EUCADEBUG, 4);
+        logfile(NULL, EUCA_LOG_DEBUG, 4);
     else
-        logfile(NULL, EUCAWARN, 4);
+        logfile(NULL, EUCA_LOG_WARN, 4);
 
     if (work_path == NULL || cache_path == NULL) {
         // use $EUCALYPTUS env var if available

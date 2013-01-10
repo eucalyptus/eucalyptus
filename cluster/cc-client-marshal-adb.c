@@ -76,15 +76,18 @@
 
 #include <stdio.h>
 #include <time.h>
-#include <misc.h>
-#include <data.h>
-#include <cc-client-marshal.h>
-#include "axis2_stub_EucalyptusCC.h"
-#include <euca_auth.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "adb-helpers.h"
-#include "sensor.h"
+
+#include <eucalyptus.h>
+#include <misc.h>
+#include <data.h>
+#include <euca_auth.h>
+#include <sensor.h>
+
+#include "cc-client-marshal.h"
+#include "axis2_stub_EucalyptusCC.h"
+#include <adb-helpers.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

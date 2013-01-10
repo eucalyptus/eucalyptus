@@ -79,6 +79,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include <eucalyptus.h>
 #include <misc.h>
 #include <data.h>
 #include <euca_string.h>

@@ -77,6 +77,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#include "eucalyptus.h"
 #include "sensor.h"
 #include "euca_string.h"
 
@@ -125,23 +126,19 @@
 // Date / Time convertion helpers
 static inline time_t datetime_to_unix(axutil_date_time_t * dt, const axutil_env_t * env);
 static inline long long datetime_to_unixms(axutil_date_time_t * dt, const axutil_env_t * env);
-static inline axutil_date_time_t *unixms_to_datetime(const axutil_env_t * env, long long timestampMs) __attribute__ ((__warn_unused_result__));
+static inline axutil_date_time_t *unixms_to_datetime(const axutil_env_t * env, long long timestampMs) _attribute_wur_;
 
 // ADB to and to ADB convertion helpers
 static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMachineType_t * vm_type, const axutil_env_t * env);
-static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t * env, virtualMachine * params)
-    __attribute__ ((__warn_unused_result__));
-static inline adb_serviceInfoType_t *copy_service_info_type_to_adb(const axutil_env_t * env, serviceInfoType * input)
-    __attribute__ ((__warn_unused_result__));
+static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t * env, virtualMachine * params) _attribute_wur_;
+static inline adb_serviceInfoType_t *copy_service_info_type_to_adb(const axutil_env_t * env, serviceInfoType * input) _attribute_wur_;
 static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_serviceInfoType_t * sit, const axutil_env_t * env);
 static inline int copy_sensor_value_from_adb(sensorValue * sv, adb_metricDimensionsValuesType_t * value, axutil_env_t * env);
 static inline int copy_sensor_dimension_from_adb(sensorDimension * sd, adb_metricDimensionsType_t * dimension, axutil_env_t * env);
 static inline int copy_sensor_counter_from_adb(sensorCounter * sc, adb_metricCounterType_t * counter, axutil_env_t * env);
 static inline int copy_sensor_metric_from_adb(sensorMetric * sm, adb_metricsResourceType_t * metric, axutil_env_t * env);
-static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceType_t * resource, axutil_env_t * env)
-    __attribute__ ((__warn_unused_result__));
-static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size)
-    __attribute__ ((__warn_unused_result__));
+static inline sensorResource *copy_sensor_resource_from_adb(adb_sensorsResourceType_t * resource, axutil_env_t * env) _attribute_wur_;
+static inline adb_sensorsResourceType_t *copy_sensor_resource_to_adb(const axutil_env_t * env, const sensorResource * sr, int history_size) _attribute_wur_;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -334,17 +334,17 @@ int get_value(char *s, const char *name, long long *valp)
 //!
 void libvirt_err_handler(void *userData, virErrorPtr error)
 {
-    int log_level = EUCAERROR;
+    int log_level = EUCA_LOG_ERROR;
 
     if (error == NULL) {
         LOGERROR("libvirt error handler was given a NULL pointer\n");
     } else {
         if (error->code == VIR_ERR_NO_DOMAIN) {
             // report "domain not found" errors as warnings, since they are expected when instance is being terminated
-            log_level = EUCAWARN;
+            log_level = EUCA_LOG_WARN;
         }
 
-        LOG(log_level, "libvirt: %s (code=%d)\n", error->message, error->code);
+        EUCALOG(log_level, "libvirt: %s (code=%d)\n", error->message, error->code);
     }
 }
 

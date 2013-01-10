@@ -88,6 +88,7 @@
 #include <signal.h>
 #include <math.h>
 
+#include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"
 
 #include <server-marshal.h>
@@ -109,7 +110,6 @@
 #include <handlers-state.h>
 #include <fault.h>
 #include <euca_string.h>
-#include <eucalyptus.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

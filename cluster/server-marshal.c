@@ -79,11 +79,13 @@
 #include <string.h>
 #include <pthread.h>
 
-#include <server-marshal.h>
-#include <handlers.h>
+#include <eucalyptus.h>
 #include <misc.h>
 #include <vnetwork.h>
-#include "adb-helpers.h"
+
+#include "handlers.h"
+#include "server-marshal.h"
+#include <adb-helpers.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -893,9 +895,8 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doAssignAddress(&ccMeta, uuid, src, dst);
-        if (rc) {
-            logprintf("ERROR: doAssignAddress() returned FAIL\n");
+        if ((rc = doAssignAddress(&ccMeta, uuid, src, dst)) != EUCA_OK) {
+            logprintf("doAssignAddress() returned FAIL\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }

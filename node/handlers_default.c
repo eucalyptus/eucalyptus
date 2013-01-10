@@ -492,8 +492,7 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
             if (err == 0) {
                 if (destroy) {
                     LOGINFO("[%s] destroying instance\n", instanceId);
-                }
-                else {
+                } else {
                     LOGINFO("[%s] shutting down instance\n", instanceId);
                 }
             }
@@ -1062,10 +1061,10 @@ release:
         LOGINFO("[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     }
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
-    int log_level_for_devstring = EUCATRACE;
+    int log_level_for_devstring = EUCA_LOG_TRACE;
     if (ret != EUCA_OK)
-        log_level_for_devstring = EUCADEBUG;
-    LOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
+        log_level_for_devstring = EUCA_LOG_DEBUG;
+    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     EUCA_FREE(xml);
 
@@ -1259,10 +1258,10 @@ release:
     if (ret == EUCA_OK)
         LOGINFO("[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
-    int log_level_for_devstring = EUCATRACE;
+    int log_level_for_devstring = EUCA_LOG_TRACE;
     if (ret != EUCA_OK)
-        log_level_for_devstring = EUCADEBUG;
-    LOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
+        log_level_for_devstring = EUCA_LOG_DEBUG;
+    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     EUCA_FREE(xml);
 

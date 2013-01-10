@@ -78,6 +78,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <eucalyptus.h>
+
 #include <neethi_policy.h>
 #include <neethi_util.h>
 
@@ -86,7 +88,6 @@
 #include "client-marshal.h"
 #include "handlers.h"
 
-#include <eucalyptus.h>
 #include <misc.h>
 #include <adb-helpers.h>
 #include <sensor.h>

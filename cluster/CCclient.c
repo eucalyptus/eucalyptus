@@ -76,13 +76,14 @@
 
 #include <stdio.h>
 #include <time.h>
+
+#include <eucalyptus.h>
 #include <misc.h>
 #include <euca_axis.h>
 #include <data.h>
-#include <cc-client-marshal.h>
 #include <sensor.h>
 
-#include <eucalyptus.h>
+#include "cc-client-marshal.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

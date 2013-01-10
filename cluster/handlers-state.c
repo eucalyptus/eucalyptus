@@ -87,6 +87,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
+#include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"
 
 #include <server-marshal.h>

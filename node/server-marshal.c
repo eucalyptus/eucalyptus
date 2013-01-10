@@ -79,18 +79,20 @@
 #include <string.h>
 #include <time.h>
 #include <pthread.h>
-#include <axutil_utils_defines.h>
 
 #include <eucalyptus.h>
-#include <server-marshal.h>
+
+#include <axutil_utils_defines.h>
+
 #include <misc.h>
 #include <data.h>
-#include <adb-helpers.h>
 
 #include <windows-bundle.h>
 
 #define HANDLERS_FANOUT
 #include "handlers.h"
+#include "server-marshal.h"
+#include <adb-helpers.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

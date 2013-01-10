@@ -182,7 +182,7 @@ static void cleanup(void);
 static int path_check(const char *path, const char *name);
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
 
-static void error_handler(void *ctx, const char *fmt, ...) __attribute__ ((__format__(__printf__, 2, 3)));;
+static void error_handler(void *ctx, const char *fmt, ...) _attribute_format_(2, 3);
 static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
                                  int outputXmlBufferSize);
 

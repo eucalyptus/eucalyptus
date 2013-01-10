@@ -77,11 +77,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
-#include "misc.h"
-#include "eucalyptus.h"
-#include "diskutil.h"
+
+#include <eucalyptus.h>
+#include <misc.h>
+#include <diskutil.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

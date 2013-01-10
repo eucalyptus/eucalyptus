@@ -141,15 +141,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifdef USE_OLD_LOG
-//! @{
-//! @name these are set by _EUCA_CONTEXT_SETTER, which is included in log-level macros, such as EUCAWARN
-__thread const char *_log_curr_method = "";
-__thread const char *_log_curr_file = "";
-__thread int _log_curr_line = 0;
-//! @}
-#endif /* USE_OLD_LOG */
-
 const char *log_level_names[] = {
     "ALL",
     "EXTREME",
@@ -237,12 +228,8 @@ int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
-#ifdef USE_OLD_LOG
-int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
-#else /* USE_OLD_LOG */
-int logprintfl(const char *func, const char *file, int line, int level, const char *format, ...) __attribute__ ((__format__(__printf__, 5, 6)));
-#endif /* USE_OLD_LOG */
+int logprintf(const char *format, ...)  _attribute_format_(1, 2);
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_ (5, 6);
 int logcat(int debug_level, const char *file_path);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 void log_dump_trace(char *buf, int buf_size);
@@ -282,7 +269,7 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 int log_level_int(const char *level)
 {
     int l = 0;
-    for (l = 0; l <= EUCAOFF; l++) {
+    for (l = 0; l <= EUCA_LOG_OFF; l++) {
         if (!strcmp(level, log_level_names[l])) {
             return (l);
         }
@@ -395,7 +382,7 @@ static void release_file(void)
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in)
 {
     // update the log level
-    if (log_level_in >= EUCAALL && log_level_in <= EUCAOFF) {
+    if (log_level_in >= EUCA_LOG_ALL && log_level_in <= EUCA_LOG_OFF) {
         log_level = log_level_in;
     } else {
         log_level = DEFAULT_LOG_LEVEL;
@@ -703,6 +690,9 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 //! Main log-printing function, which will dump a line into a log, with a prefix appropriate for
 //! the log level, given that the log level is above the threshold.
 //!
+//! @param[in] func the caller function name (i.e. __FUNCTION__)
+//! @param[in] file the file in which the caller function reside (i.e. __FILE__)
+//! @param[in] line the line at which this function was called (i.e. __LINE__)
 //! @param[in] level the log level for this message
 //! @param[in] format the format string of the message
 //! @param[in] ... the variable argument part of the format
@@ -713,11 +703,7 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 //!
 //! @todo Chuck to evaluate if we cannot standardize the error code returned.
 //!
-#ifdef USE_OLD_LOG
-int logprintfl(int level, const char *format, ...)
-#else /* USE_OLD_LOG */
-int logprintfl(const char *func, const char *file, int line, int level, const char *format, ...)
-#endif                          /* USE_OLD_LOG */
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...)
 {
     int offset = 0;
     boolean custom_spec = FALSE;
@@ -727,7 +713,7 @@ int logprintfl(const char *func, const char *file, int line, int level, const ch
     // return if level is invalid or below the threshold
     if (level < log_level) {
         return 0;
-    } else if (level < 0 || level > EUCAOFF) {
+    } else if (level < 0 || level > EUCA_LOG_OFF) {
         return -1;              // unexpected log level
     }
 
@@ -788,20 +774,12 @@ int logprintfl(const char *func, const char *file, int line, int level, const ch
                 break;
             }
         case 'm':              // method
-#ifdef USE_OLD_LOG
-            size = print_field_truncated(&prefix_spec, s, left, _log_curr_method);
-#else /* USE_OLD_LOG */
             size = print_field_truncated(&prefix_spec, s, left, func);
-#endif /* USE_OLD_LOG */
             break;
 
         case 'F':{             // file-and-line
                 char file_and_line[64];
-#ifdef USE_OLD_LOG
-                snprintf(file_and_line, sizeof(file_and_line), "%s:%d", _log_curr_file, _log_curr_line);
-#else /* USE_OLD_LOG */
                 snprintf(file_and_line, sizeof(file_and_line), "%s:%d", file, line);
-#endif /* USE_OLD_LOG */
                 size = print_field_truncated(&prefix_spec, s, left, file_and_line);
                 break;
             }
@@ -853,11 +831,11 @@ int logprintfl(const char *func, const char *file, int line, int level, const ch
     if (syslog_facility != -1) {
         // log to syslog, at the appropriate level
         int l = LOG_DEBUG;      // euca DEBUG, TRACE, and EXTREME use syslog's DEBUG
-        if (level == EUCAERROR)
+        if (level == EUCA_LOG_ERROR)
             l = LOG_ERR;
-        else if (level == EUCAWARN)
+        else if (level == EUCA_LOG_WARN)
             l = LOG_WARNING;
-        else if (level == EUCAINFO)
+        else if (level == EUCA_LOG_INFO)
             l = LOG_INFO;
         if (custom_spec)
             syslog(l, buf);
@@ -893,7 +871,7 @@ int logcat(int debug_level, const char *file_path)
             buf[l++] = '\n';
             buf[l] = '\0';
         }
-        LOG(debug_level, buf);
+        EUCALOG(debug_level, buf);
         got += l;
     }
     fclose(fp);

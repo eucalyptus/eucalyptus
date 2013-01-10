@@ -160,7 +160,7 @@ int hash_code_bin(const char *buf, int buf_size);
 char *get_string_stats(const char *s);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
 int daemonrun(char *incmd, char *pidfile);
-int vrun(const char *fmt, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+int vrun(const char *fmt, ...) _attribute_format_(1, 2);
 int cat(const char *file_name);
 int touch(const char *path);
 int diff(const char *path1, const char *path2);

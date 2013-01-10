@@ -1215,7 +1215,7 @@ static void usage(const char *argv0)
 int main(int argc, char **argv)
 {
     drop_privs();               // become 'eucalyptus' so log file is created with the right privs
-    log_params_set(EUCAWARN, 0, 0); // set log level
+    log_params_set(EUCA_LOG_WARN, 0, 0); // set log level
     log_prefix_set("%L");       // only print log level
     log_file_set(NULL);         // log output goes to STANDARD_FILESTREAM
 

@@ -85,30 +85,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifdef USE_OLD_LOG
-#define _EUCA_CONTEXT_SETTER                     (_log_curr_method=__FUNCTION__, _log_curr_file=__FILE__, _log_curr_line=__LINE__)
-
-#define EUCAALL                                  0
-#define EUCAEXTREME                              (_EUCA_CONTEXT_SETTER, 1)
-#define EUCATRACE                                (_EUCA_CONTEXT_SETTER, 2)
-#define EUCADEBUG                                (_EUCA_CONTEXT_SETTER, 3)
-#define EUCAINFO                                 (_EUCA_CONTEXT_SETTER, 4)
-#define EUCAWARN                                 (_EUCA_CONTEXT_SETTER, 5)
-#define EUCAERROR                                (_EUCA_CONTEXT_SETTER, 6)
-#define EUCAFATAL                                (_EUCA_CONTEXT_SETTER, 7)
-#define EUCAOFF                                  8
-#else /* USE_OLD_LOG */
-#define EUCAALL                                  0
-#define EUCAEXTREME                              1
-#define EUCATRACE                                2
-#define EUCADEBUG                                3
-#define EUCAINFO                                 4
-#define EUCAWARN                                 5
-#define EUCAERROR                                6
-#define EUCAFATAL                                7
-#define EUCAOFF                                  8
-#endif /* USE_OLD_LOG */
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -121,6 +97,19 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Defines the various Eucalyptus logging levels available
+typedef enum log_level_e {
+    EUCA_LOG_ALL = 0,
+    EUCA_LOG_EXTREME,
+    EUCA_LOG_TRACE,
+    EUCA_LOG_DEBUG,
+    EUCA_LOG_INFO,
+    EUCA_LOG_WARN,
+    EUCA_LOG_ERROR,
+    EUCA_LOG_FATAL,
+    EUCA_LOG_OFF,
+} log_level_e;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
@@ -132,12 +121,6 @@
  |                             EXPORTED VARIABLES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#ifdef USE_OLD_LOG
-extern __thread const char *_log_curr_method;
-extern __thread const char *_log_curr_file;
-extern __thread int _log_curr_line;
-#endif /* USE_OLD_LOG */
 
 extern const char *log_level_names[];
 
@@ -172,12 +155,8 @@ int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
-#ifdef USE_OLD_LOG
-int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
-#else /* USE_OLD_LOG */
-int logprintfl(const char *func, const char *file, int line, int level, const char *format, ...) __attribute__ ((__format__(__printf__, 5, 6)));
-#endif /* USE_OLD_LOG */
+int logprintf(const char *format, ...) _attribute_format_(1, 2);
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_ (5, 6);
 int logcat(int debug_level, const char *file_path);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
@@ -219,47 +198,39 @@ void log_dump_trace(char *buf, int buf_size);
 #define PRINTF_XML(a, args...)
 #endif /* DEBUGXML */
 
-#ifdef USE_OLD_LOG
 //! @{
 //! @name Various log level logging macros
-#define LOGEXTREME(_format, args...)             logprintfl(EUCAEXTREME, _format, ## args)
-#define LOGTRACE(_format, args...)               logprintfl(EUCATRACE, _format, ## args)
-#define LOGDEBUG(_format, args...)               logprintfl(EUCADEBUG, _format, ## args)
-#define LOGINFO(_format, args...)                logprintfl(EUCAINFO, _format, ## args)
-#define LOGWARN(_format, args...)                logprintfl(EUCAWARN, _format, ## args)
-#define LOGERROR(_format, args...)               logprintfl(EUCAERROR, _format, ## args)
-#define LOGFATAL(_format, args...)               logprintfl(EUCAFATAL, _format, ## args)
-//! @}
-#else /* USE_OLD_LOG */
-//! @{
-//! @name Various log level logging macros
-#define LOG(_level, _format, args...)                                              \
+
+#define EUCALOG(_level, _format, args...)                                          \
 {                                                                                  \
     if ((_level) >= log_level_get()) {                                             \
         logprintfl(__FUNCTION__, __FILE__, __LINE__, (_level), _format, ## args);  \
     }                                                                              \
 }
 
-#define LOGEXTREME(_format, args...)             LOG(EUCAEXTREME, _format, ## args)
-#define LOGTRACE(_format, args...)               LOG(EUCATRACE, _format, ## args)
-#define LOGDEBUG(_format, args...)               LOG(EUCADEBUG, _format, ## args)
-#define LOGINFO(_format, args...)                LOG(EUCAINFO, _format, ## args)
-#define LOGWARN(_format, args...)                LOG(EUCAWARN, _format, ## args)
-#define LOGERROR(_format, args...)               LOG(EUCAERROR, _format, ## args)
-#define LOGFATAL(_format, args...)               LOG(EUCAFATAL, _format, ## args)
+#define LOGEXTREME(_format, args...)             EUCALOG(EUCA_LOG_EXTREME, _format, ## args)
+#define LOGTRACE(_format, args...)               EUCALOG(EUCA_LOG_TRACE, _format, ## args)
+#define LOGDEBUG(_format, args...)               EUCALOG(EUCA_LOG_DEBUG, _format, ## args)
+#define LOGINFO(_format, args...)                EUCALOG(EUCA_LOG_INFO, _format, ## args)
+#define LOGWARN(_format, args...)                EUCALOG(EUCA_LOG_WARN, _format, ## args)
+#define LOGERROR(_format, args...)               EUCALOG(EUCA_LOG_ERROR, _format, ## args)
+#define LOGFATAL(_format, args...)               EUCALOG(EUCA_LOG_FATAL, _format, ## args)
+
 //! @}
 
 //! @{
 //! @name Various log level logging macros that adds a new line character
-#define LOGEXTREMENL(_format, args...)           logprintfl(EUCAEXTREME, _format "\n", ## args)
-#define LOGTRACENL(_format, args...)             logprintfl(EUCATRACE, _format "\n", ## args)
-#define LOGDEBUGNL(_format, args...)             logprintfl(EUCADEBUG, _format "\n", ## args)
-#define LOGINFONL(_format, args...)              logprintfl(EUCAINFO, _format "\n", ## args)
-#define LOGWARNNL(_format, args...)              logprintfl(EUCAWARN, _format "\n", ## args)
-#define LOGERRORNL(_format, args...)             logprintfl(EUCAERROR, _format "\n", ## args)
-#define LOGFATALNL(_format, args...)             logprintfl(EUCAFATAL, _format "\n", ## args)
+
+#define EUCALOGNL(_level, _format, args...)      EUCALOG((_level), _format "\n", ## args);
+#define LOGEXTREMENL(_format, args...)           EUCALOGNL(EUCA_LOG_EXTREME, _format, ## args)
+#define LOGTRACENL(_format, args...)             EUCALOGNL(EUCA_LOG_TRACE, _format, ## args)
+#define LOGDEBUGNL(_format, args...)             EUCALOGNL(EUCA_LOG_DEBUG, _format, ## args)
+#define LOGINFONL(_format, args...)              EUCALOGNL(EUCA_LOG_INFO, _format, ## args)
+#define LOGWARNNL(_format, args...)              EUCALOGNL(EUCA_LOG_WARN, _format, ## args)
+#define LOGERRORNL(_format, args...)             EUCALOGNL(EUCA_LOG_ERROR, _format, ## args)
+#define LOGFATALNL(_format, args...)             EUCALOGNL(EUCA_LOG_FATAL, _format, ## args)
+
 //! @}
-#endif /* USE_NEW_LOG */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -78,8 +78,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <server-marshal.h>
 #include <eucalyptus.h>
+#include <server-marshal.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

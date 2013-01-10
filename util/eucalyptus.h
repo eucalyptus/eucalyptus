@@ -282,6 +282,14 @@
 
 #define MEGABYTE                                 1048576
 
+#ifndef _attribute_format_
+#define _attribute_format_(index, first)         __attribute__ ((format (printf, index, first)))
+#endif /* ! _attribute_format_ */
+
+#ifndef _attribute_wur_
+#define _attribute_wur_                          __attribute__ ((__warn_unused_result__))
+#endif /* ! _attribute_wur_ */
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
