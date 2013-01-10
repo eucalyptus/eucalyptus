@@ -32,10 +32,15 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Junction;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.base.CharMatcher;
@@ -58,6 +63,9 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
   private static final ConcurrentMap<Class<? extends CloudMetadata>,FilterSupport> supportByClass = Maps.newConcurrentMap();
 
   private final Class<RT> resourceClass;
+  private Class<? extends Tag> tagClass;
+  private final String tagFieldName;
+  private final String resourceFieldName;
   private final Map<String,Function<? super String,Predicate<? super RT>>> predicateFunctions;
   private final Map<String,String> aliases;
   private final Map<String,PersistenceFilter> persistenceFilters;
@@ -70,6 +78,9 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
    */
   protected FilterSupport( @Nonnull final Builder<RT> builder ) {
     this.resourceClass = builder.resourceClass;
+    this.tagClass = builder.tagClass;
+    this.tagFieldName = builder.tagFieldName;
+    this.resourceFieldName = builder.resourceFieldName;
     this.predicateFunctions = builder.buildPredicateFunctions();
     this.aliases = builder.buildAliases();
     this.persistenceFilters = builder.buildPersistenceFilters();
@@ -97,9 +108,41 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
         Maps.newHashMap();
     private final Map<String,String> aliases = Maps.newHashMap();
     private final Map<String,PersistenceFilter> persistenceFilters = Maps.newHashMap();
+    private Class<? extends Tag> tagClass;
+    private String tagFieldName; // usually "tags"
+    private String resourceFieldName;
 
     private Builder( Class<RT> resourceClass ) {
       this.resourceClass = resourceClass;
+    }
+
+    /**
+     * Enable tag filtering for the resource.
+     *
+     * @param tagClass The TagSupport subclass
+     * @param resourceFieldName The field name linking back to the resource from the tag
+     * @param tagFieldName The name of the tag collection field in the resource class.
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withTagFiltering( final Class<? extends Tag> tagClass,
+                                         final String resourceFieldName,
+                                         final String tagFieldName  ) {
+      this.tagClass = tagClass;
+      this.resourceFieldName = resourceFieldName;
+      this.tagFieldName = tagFieldName;
+      return this;
+    }
+
+    /**
+     * Enable tag filtering for the resource.
+     *
+     * @param tagClass The TagSupport subclass
+     * @param resourceFieldName The field name linking back to the resource from the tag
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withTagFiltering( final Class<? extends Tag> tagClass,
+                                         final String resourceFieldName ) {
+      return withTagFiltering( tagClass, resourceFieldName, "tags" );
     }
 
     /**
@@ -417,6 +460,33 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     return resourceClass;
   }
 
+  @Nullable
+  public Class<? extends Tag> getTagClass() {
+    return tagClass;
+  }
+
+  @Nullable
+  public String getTagFieldName() {
+    return tagFieldName;
+  }
+
+  @Nullable
+  public String getResourceFieldName() {
+    return resourceFieldName;
+  }
+
+  /**
+   * Generate a Filter for the given filters.
+   *
+   * @param filters The map of filter names to (multiple) values
+   * @return The filter representation
+   */
+  public Filter generate( final Map<String, Set<String>> filters ) {
+    final Context ctx = Contexts.lookup();
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    return generate( filters, requestAccountId );
+  }
+
   /**
    * Generate a Filter for the given filters.
    *
@@ -424,10 +494,11 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
    * @return The filter representation
    * TODO:STEVE: Should throw something here for an invalid filter?
    */
-  public Filter generate( final Map<String, Set<String>> filters ) {
+  public Filter generate( final Map<String, Set<String>> filters,
+                          final String accountId ) {
     // Construct collection filter
     final List<Predicate<Object>> and = Lists.newArrayList();
-    for ( final Map.Entry<String,Set<String>> filter : filters.entrySet() ) {
+    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), tagPredicate() ) ) {
       final List<Predicate<Object>> or = Lists.newArrayList();
       for ( final String value : filter.getValue() ) {
         final Function<? super String,Predicate<? super RT>> predicateFunction = predicateFunctions.get( filter.getKey() );
@@ -442,7 +513,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     // Construct database filter and aliases
     final Junction conjunction = Restrictions.conjunction();
     final Map<String,String> aliases = Maps.newHashMap();
-    for ( final Map.Entry<String,Set<String>> filter : filters.entrySet() ) {
+    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), tagPredicate() ) ) {
       final Junction disjunction = Restrictions.disjunction();
       for ( final String value : filter.getValue() ) {
         final PersistenceFilter persistenceFilter = persistenceFilters.get( filter.getKey() );
@@ -450,7 +521,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
           final Object persistentValue = persistenceFilter.value( value );
           if ( persistentValue != null ) {
             for ( final String alias : persistenceFilter.getAliases() ) aliases.put( alias, this.aliases.get( alias ) );
-            disjunction.add( buildRestriction( persistenceFilter, persistentValue ) );
+            disjunction.add( buildRestriction( persistenceFilter.getProperty(), persistentValue ) );
           } else {
             disjunction.add( Restrictions.not( Restrictions.conjunction() ) ); // always false
           }
@@ -458,6 +529,26 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
       }
       conjunction.add( disjunction );
     }
+
+    // Construct database filter and aliases for tags
+    boolean tagPresent = false;
+    final Junction tagConjunction = Restrictions.conjunction();
+    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), Predicates.not( tagPredicate() ) ) ) {
+      tagPresent = true;
+      final Junction disjunction = Restrictions.disjunction();
+      final String filterName = filter.getKey();
+      for ( final String value : filter.getValue() ) {
+        if ( "tag-key".equals( filterName ) ) {
+          disjunction.add( buildTagRestriction( value, null, true ) );
+        } else if ( "tag-value".equals( filterName ) ) {
+          disjunction.add( buildTagRestriction( null, value, true ) );
+        } else {
+          disjunction.add( buildTagRestriction( filterName.substring(4), value, false ) );
+        }
+      }
+      tagConjunction.add( disjunction );
+    }
+    if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagConjunction ) );
 
     return new Filter( aliases, conjunction, Predicates.and( and ) );
   }
@@ -565,6 +656,30 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     };
   }
 
+  private boolean isTagFilter( final String filter ) {
+    return isTagFilteringEnabled() && (
+          filter.startsWith("tag:") ||
+          "tag-key".equals( filter ) ||
+          "tag-value".equals( filter )
+        );
+  }
+
+  private boolean isTagFilteringEnabled() {
+    return tagFieldName != null;
+  }
+
+  private Predicate<Map.Entry<String,?>> tagPredicate() {
+    return isTagFilteringEnabled() ?
+        Predicates.<Map.Entry<String,?>>alwaysFalse() :
+        new Predicate<Map.Entry<String,?>>() {
+          @Override
+          public boolean apply( final Map.Entry<String, ?> stringEntry ) {
+            return isTagFilter( stringEntry.getKey() );
+          }
+        };
+  }
+
+
   private static <T> Predicate<Set<T>> resourceValueMatcher( final String filterPattern,
                                                              final PersistenceFilter.Type type ) {
     final Object value = type.valueFunction().apply( filterPattern );
@@ -651,12 +766,12 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
    *
    * Translation of wildcards for direct DB filtering must support literal values from each grammar.
    */
-  private Criterion buildRestriction( final PersistenceFilter persistenceFilter, final Object persistentValue ) {
+  private Criterion buildRestriction( final String property, final Object persistentValue ) {
     final Object valueObject;
     if ( persistentValue instanceof String ) {
       final StringBuilder likeValueBuilder = new StringBuilder();
       if ( translateWildcards( persistentValue.toString(), likeValueBuilder, "_", "%", SyntaxEscape.Like ) ) {
-        return Restrictions.like( persistenceFilter.getProperty(), likeValueBuilder.toString() );
+        return Restrictions.like( property, likeValueBuilder.toString() );
       }
 
       // even if no regex, may contain \ escapes that must be removed
@@ -665,11 +780,45 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
       valueObject = persistentValue;
     }
 
-    return Restrictions.eq( persistenceFilter.getProperty(), valueObject );
+    return Restrictions.eq( property, valueObject );
   }
 
   Map<String, PersistenceFilter> getPersistenceFilters() {
     return persistenceFilters;
+  }
+
+  /**
+   * Build a criterion that uses a sub-select to match the given tag restrictions
+   */
+  private Criterion tagCriterion( final String accountId,
+                                  final Criterion criterion ) {
+    final DetachedCriteria criteria = DetachedCriteria.forClass( tagClass )
+        .add( Restrictions.eq( "ownerAccountNumber", accountId ) )
+        .add( criterion )
+        .setProjection( Projections.property( resourceFieldName ) );
+    return Property.forName( tagFieldName ).in( criteria );
+  }
+
+  /**
+   * Build a restriction for a tag key and/or value.
+   */
+  private Criterion buildTagRestriction( @Nullable final String key,
+                                         @Nullable final String value,
+                                         final boolean keyWildcards ) {
+
+    final Junction criteria = Restrictions.conjunction();
+
+    if ( key != null  ) {
+      criteria.add( keyWildcards ?
+          buildRestriction( "displayName", key ) :
+          Restrictions.eq( "displayName", key ) );
+    }
+
+    if ( value != null  ) {
+      criteria.add( buildRestriction( "value", value ) );
+    }
+
+    return criteria;
   }
 
   /**
@@ -752,7 +901,6 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
 
     return escaped;
   }
-
 
   /**
    * An instance of PersistenceFilter is created for each property.

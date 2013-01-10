@@ -120,6 +120,23 @@ class FilterSupportTest {
     void assertValid( final FilterSupport<RT> filterSupport ) {
       assertValidFilters( filterSupport )
       assertValidKeys( filterSupport )
+      assertValidTagConfig( filterSupport )
+    }
+
+    /**
+     * Verifies fields used in hibernate queries exist as expected.
+     */
+    void assertValidTagConfig( final FilterSupport<RT> filterSupport ) {
+      if ( filterSupport.tagFieldName ) {
+        assertNotNull( "Resource class tags field", ReflectionUtils.findField( filterSupport.resourceClass, filterSupport.tagFieldName, Collection.class ) )
+      }
+
+      if ( filterSupport.tagClass ) {
+        assertNotNull( "Tag class account field", ReflectionUtils.findField( filterSupport.tagClass, "ownerAccountNumber", String.class ) )
+        assertNotNull( "Tag class name field", ReflectionUtils.findField( filterSupport.tagClass, "displayName", String.class ) )
+        assertNotNull( "Tag class value field", ReflectionUtils.findField( filterSupport.tagClass, "value", String.class ) )
+        assertNotNull( "Tag class resource field", ReflectionUtils.findField( filterSupport.tagClass, filterSupport.resourceFieldName, filterSupport.resourceClass ) )
+      }
     }
 
     void assertMatch( FilterSupport filterSupport,
