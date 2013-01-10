@@ -107,6 +107,7 @@ import groovy.sql.GroovyRowResult;
 import groovy.sql.Sql;
 
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.upgrade.AbstractUpgradeScript;
@@ -156,6 +157,18 @@ import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.auth.policy.condition.ConditionOpDiscovery;
 import com.eucalyptus.auth.policy.key.KeyDiscovery;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+
+// Preserve stopped instance data through upgrade
+import com.eucalyptus.images.DeviceMapping;
+import com.eucalyptus.vm.VmInstance;
+import com.eucalyptus.vm.VmNetworkConfig;
+import com.eucalyptus.vm.VmPlacement;
+import com.eucalyptus.vm.VmBootRecord;
+import com.eucalyptus.vm.VmRuntimeState;
+import com.eucalyptus.vm.VmVolumeState;
+import com.eucalyptus.vm.VmVolumeAttachment;
+import com.eucalyptus.images.Emis;
+import com.eucalyptus.network.PrivateNetworkIndex;
 
 class upgrade_30_31 extends AbstractUpgradeScript {
     static final List<String> FROM_VERSION = ["3.0.0", "3.0.1", "3.0.2"];
@@ -249,6 +262,8 @@ class upgrade_30_31 extends AbstractUpgradeScript {
         for (String entityKey : entityKeys) {
             upgradeEntity(entityKey);
         }
+
+        upgradeStoppedInstances();
 
         deletePhantoms();
 
@@ -753,6 +768,129 @@ class upgrade_30_31 extends AbstractUpgradeScript {
             ii.setDeviceMappings(deviceMappings);
         }
         dbGen.commit();
+    }
+
+    private void upgradeStoppedInstances() {
+        def conn = connMap['eucalyptus_cloud'];
+        conn.rows("""select * from metadata_instances where metadata_state='STOPPED'""").each { instance ->
+            // First commit the Instance metadata
+            EntityWrapper<VmInstance> db = EntityWrapper.get(VmInstance.class);
+            VmInstance.Builder vmbuilder = new VmInstance.Builder( );
+            initMetaClass(vmbuilder, vmbuilder.class);
+            User user = Accounts.lookupUserById( instance.metadata_user_id );
+            UserFullName ufn = new UserFullName(user);
+
+            String emi = conn.firstRow("""select * from metadata_images where id=?""", instance.machineImage_id).metadata_display_name;
+            def vmt = conn.firstRow("""select * from cloud_vm_types where id=?""", instance.vmType_id);
+            def bootset = Emis.recreateBootableSet( emi, null, null);
+
+            // TODO: networks are not being merged into the transaction properly
+            EntityWrapper <VmType> dbVMT  = EntityWrapper.get(VmType.class);
+
+            vmbuilder = vmbuilder.owner(ufn)
+                                 .withIds( instance.metadata_vm_instance_id, instance.metadata_vm_reservation_id )
+                                 .bootRecord( bootset,
+                                              instance.metadata_vm_user_data,
+                                              SshKeyPair.withPublicKey( ufn, instance.metadata_vm_sshkey ),
+                                              dbVMT.getUnique(new VmType(vmt.metadata_vm_type_name)))
+                                 .addressing( instance.metadata_vm_private_addressing )
+                                 .networking( new ArrayList<NetworkGroup>(), PrivateNetworkIndex.bogus( ) )
+                                 .expiresOn( instance.metadata_vm_expiration );
+
+            Field placement = VmInstance.Builder.class.getDeclaredField("vmPlacement");
+            placement.setAccessible(true);
+            placement.set(vmbuilder, new VmPlacement( instance.metadata_vm_cluster_name ,
+                                                      instance.metadata_vm_partition_name ));
+
+            VmInstance vmInst = vmbuilder.build( instance.metadata_vm_launch_index );
+            initMetaClass(vmInst, vmInst.class);
+
+            Field networkGroups = VmInstance.class.getDeclaredField("networkGroups");
+            networkGroups.setAccessible(true);
+            db.recast(NetworkGroup.class);
+            Set<NetworkGroup> groups = Sets.newHashSet();
+            conn.rows("""select g.metadata_display_name
+                           from metadata_instances_metadata_network_group ig,metadata_network_group g
+                          where ig.networkGroups_id=g.id
+                            and ig.metadata_instances_id=?""", instance.id).each {
+                NetworkGroup newGroup = db.getUnique(new NetworkGroup( ufn, it.metadata_display_name ));
+                groups.add(newGroup);
+            }
+            networkGroups.set(vmInst, groups);
+            db.recast(VmInstance.class);
+
+            Field bootRecord = VmInstance.class.getDeclaredField("bootRecord");
+            bootRecord.setAccessible(true);
+            VmBootRecord vmbr = bootRecord.get(vmInst);
+            Field pVol = vmbr.class.getDeclaredField("persistentVolumes");
+            pVol.setAccessible(true);
+            Set<VmVolumeAttachment> volSet = Sets.newHashSet( );
+            conn.rows("""select * from metadata_instances_persistent_volumes
+                          where VmInstance_id=?""", instance.id).each { volume ->
+                def vol = new VmVolumeAttachment(vmInst,
+                                             volume.metadata_vm_volume_id,
+                                             volume.metadata_vm_volume_device,
+                                             volume.metadata_vm_volume_remove_device,
+                                             volume.metadata_vm_volume_status,
+                                             volume.metadata_vm_volume_attach_time,
+                                             volume.metadata_vm_vol_delete_on_terminate);
+                volSet.add(vol);
+            }
+            pVol.set(vmbr, volSet);
+            bootRecord.set(vmInst, vmbr);
+
+            vmInst.updateBlockBytes(instance.metadata_vm_block_bytes);
+            vmInst.updateNetworkBytes(instance.metadata_vm_network_bytes);
+            vmInst.setState(VmInstance.VmState.valueOf(instance.metadata_state));
+            vmInst.setLastState(VmInstance.VmState.valueOf(instance.metadata_last_state));
+
+            VmNetworkConfig vmnc = new VmNetworkConfig(vmInst);
+            initMetaClass(vmnc, vmnc.class);
+            vmnc.setMacAddress(instance.metadata_vm_mac_address);
+            vmnc.setPrivateAddress(instance.metadata_vm_private_address);
+            vmnc.setPublicAddress(instance.metadata_vm_public_address);
+            vmnc.setPrivateDnsName(instance.metadata_vm_private_dns);
+            vmnc.setPublicDnsName(instance.metadata_vm_public_dns);
+            vmInst.setNetworkConfig(vmnc);
+
+            VmRuntimeState vmrs = new VmRuntimeState(vmInst);
+            initMetaClass(vmrs, vmrs.class);
+            vmrs.setServiceTag(instance.metadata_vm_service_tag);
+            vmrs.setPasswordData(instance.metadata_vm_password_data);
+            vmrs.setReason(VmInstance.Reason.valueOf(instance.metadata_vm_reason));
+            vmrs.setPending(instance.metadata_vm_pending);
+
+            Set<String> reasonDetails = Sets.newHashSet( );
+            conn.rows("""select * from metadata_instances_state_reasons
+                         where VmInstance_id=?""", instance.id).each { reason ->
+                reasonDetails.add(reason.reasonDetails);
+            }
+            vmrs.setReasonDetails(reasonDetails);
+
+            Field rs = vmInst.class.getDeclaredField("runtimeState");
+            rs.setAccessible(true);
+            rs.set(vmInst, vmrs);
+
+            // Next, attached volumes
+            Field vs = vmInst.class.getDeclaredField("transientVolumeState");
+            vs.setAccessible(true);
+            VmVolumeState vmVolSt = new VmVolumeState(vmInst);
+            conn.rows("""select * from metadata_instances_volume_attachments
+                          where VmInstance_id=?""", instance.id).each { volume ->
+                def vol = new VmVolumeAttachment(vmInst,
+                                             volume.metadata_vm_volume_id,
+                                             volume.metadata_vm_volume_device,
+                                             volume.metadata_vm_volume_remove_device,
+                                             volume.metadata_vm_volume_status,
+                                             volume.metadata_vm_volume_attach_time,
+                                             volume.metadata_vm_vol_delete_on_terminate);
+                vmVolSt.addVolumeAttachment(vol);
+            }
+            vs.set(vmInst, vmVolSt);
+
+            db.add(vmInst);
+            db.commit();
+        }
     }
 
     private void upgradeMisc() {
