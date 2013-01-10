@@ -3147,26 +3147,29 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
     char cmd[MAX_PATH], oldfile[MAX_PATH];
     struct stat statbuf;
     int rc = 0, ret;
-    char *newpath = "/etc/eucalyptus/iptables-preload";
+    char newpath[MAX_PATH];
+
 
     ret = 0;
-    snprintf(oldfile, MAX_PATH, "%s/iptables-preload", vnetconfig->path);
+    snprintf(newpath, PATH_MAX, EUCALYPTUS_CONF_DIR "/%s", vnetconfig->eucahome, "iptables-preload");
     if (stat(newpath, &statbuf) != 0) {
+        snprintf(oldfile, MAX_PATH, "%s/iptables-preload", vnetconfig->path);
         if (stat(oldfile, &statbuf) == 0) {
             snprintf(cmd, MAX_PATH, "cp  %s %s", oldfile, newpath);
             rc = system(cmd);
             ret = WEXITSTATUS(rc);
             if (stat(newpath, &statbuf) == 0) {
-                logprintfl(EUCADEBUG ,"copied %s to %s (err %x)\n",oldfile,
+                logprintfl(EUCAINFO ,"copied %s to %s (err %x)\n",oldfile,
                         newpath,rc);
             }else {
-                logprintfl(EUCADEBUG ,"copied %s to %s (err %x) failed\n",
+                logprintfl(EUCAINFO ,"copied %s to %s (err %x) failed\n",
                         oldfile, newpath,rc);
                 snprintf(cmd, MAX_PATH, 
                             EUCALYPTUS_ROOTWRAP " iptables-restore < %s",   
                             vnetconfig->eucahome, oldfile);
                 rc = system(cmd);
                 ret = WEXITSTATUS(rc);
+                return (ret);
             }
         }
     } 
