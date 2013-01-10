@@ -22,9 +22,12 @@ package com.eucalyptus.tags;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.cloud.CloudMetadata;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 /**
  * Methods for working with {@link Filter}s
@@ -57,11 +60,20 @@ public class Filters {
     final ImmutableMap.Builder<String,Set<String>> filterMapBuilder = ImmutableMap.builder();
 
     for ( final edu.ucsb.eucalyptus.msgs.Filter filter : filters ) {
-      final Set<String> values = ImmutableSet.copyOf( filter.getValueSet() );
+      final Set<String> values = ImmutableSet.copyOf(
+          Iterables.transform( filter.getValueSet(), NullToEmptyString.INSTANCE ) );
       filterMapBuilder.put( filter.getName(), values );
     }
 
     return filterMapBuilder.build();
   }
 
+  private enum NullToEmptyString implements Function<String,String> {
+    INSTANCE;
+
+    @Override
+    public String apply( final String text ) {
+      return text == null ? "" : text;
+    }
+  }
 }

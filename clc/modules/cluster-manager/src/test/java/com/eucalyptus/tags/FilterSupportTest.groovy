@@ -34,6 +34,7 @@ import javax.persistence.ManyToOne
 import javax.persistence.ElementCollection
 import javax.persistence.Embedded
 import com.eucalyptus.crypto.util.Timestamps
+import com.google.common.base.Functions
 
 /**
  * Unit tests for filter support
@@ -112,8 +113,8 @@ class FilterSupportTest {
           } as ReflectionUtils.FieldCallback )
           assertTrue( "Property not found " + propName + " in " + property.property, found )
         }
-        if ( !( targetType instanceof Class<String> ) ) {
-          assertNotNull( "Property missing type or conversion function " + property.property + " (see FilterSupport.PersistenceFilter.Type)", property.valueFunction )
+        if ( !String.class.equals( targetType ) ) {
+          assertNotSame( "Property missing type or conversion function " + property.property + " for " + targetType + " (see FilterSupport.PersistenceFilter.Type)", Functions.identity(), property.valueFunction )
         }
       }
     }

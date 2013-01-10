@@ -688,8 +688,15 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
         new Predicate<Set<T>>() {
       @SuppressWarnings( "SuspiciousMethodCalls" )
       @Override
-      public boolean apply( final Set<T> values ) {
-        return values.contains( value );
+      public boolean apply( final Set<T> resourceValues ) {
+        boolean match = false;
+        for ( final T resourceValue : resourceValues ) {
+          if ( type.matches( value, resourceValue ) ) {
+            match = true;
+            break;
+          }
+        }
+        return match;
       }
     };
   }
@@ -951,6 +958,14 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
             }
           };
         }
+        @Override
+        boolean matches( final Object targetValue, final Object resourceValue ) {
+          boolean match = false;
+          if ( resourceValue instanceof Date && targetValue instanceof Date ) {
+            match = (((Date) resourceValue).getTime()/1000L) == (((Date) targetValue).getTime()/1000L); //TODO:STEVE: match to second only?
+          }
+          return match;
+        }
       },
       Boolean {
         @Override
@@ -971,6 +986,11 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
       };
 
       public abstract Function<String,?> valueFunction();
+
+      boolean matches( final Object targetValue,
+                       final Object resourceValue  ) {
+        return targetValue.equals( resourceValue );
+      }
     }
 
     @Nonnull private final String property;
