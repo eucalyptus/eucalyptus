@@ -144,7 +144,7 @@ class FilterSupportTest {
                       String filterKey,
                       String filterValue,
                       RT target ) {
-      Filter filter = filterSupport.generate( [ (filterKey) : [ filterValue ] as Set ] )
+      Filter filter = filterSupport.generate( [ (filterKey) : [ filterValue ] as Set ], "000000000" )
       assertEquals( "Match asserton for " + filterKey, expectedMatch, filter.asPredicate().apply( target ) )
     }
   }
