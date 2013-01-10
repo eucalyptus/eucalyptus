@@ -498,7 +498,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
                           final String accountId ) {
     // Construct collection filter
     final List<Predicate<Object>> and = Lists.newArrayList();
-    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), tagPredicate() ) ) {
+    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), Predicates.not( isTagFilter() ) ) ) {
       final List<Predicate<Object>> or = Lists.newArrayList();
       for ( final String value : filter.getValue() ) {
         final Function<? super String,Predicate<? super RT>> predicateFunction = predicateFunctions.get( filter.getKey() );
@@ -513,7 +513,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     // Construct database filter and aliases
     final Junction conjunction = Restrictions.conjunction();
     final Map<String,String> aliases = Maps.newHashMap();
-    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), tagPredicate() ) ) {
+    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), Predicates.not( isTagFilter() ) ) ) {
       final Junction disjunction = Restrictions.disjunction();
       for ( final String value : filter.getValue() ) {
         final PersistenceFilter persistenceFilter = persistenceFilters.get( filter.getKey() );
@@ -533,7 +533,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     // Construct database filter and aliases for tags
     boolean tagPresent = false;
     final Junction tagConjunction = Restrictions.conjunction();
-    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), Predicates.not( tagPredicate() ) ) ) {
+    for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), isTagFilter() ) ) {
       tagPresent = true;
       final Junction disjunction = Restrictions.disjunction();
       final String filterName = filter.getKey();
@@ -668,8 +668,8 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     return tagFieldName != null;
   }
 
-  private Predicate<Map.Entry<String,?>> tagPredicate() {
-    return isTagFilteringEnabled() ?
+  private Predicate<Map.Entry<String,?>> isTagFilter() {
+    return !isTagFilteringEnabled() ?
         Predicates.<Map.Entry<String,?>>alwaysFalse() :
         new Predicate<Map.Entry<String,?>>() {
           @Override

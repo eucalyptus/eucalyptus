@@ -93,6 +93,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -302,4 +303,9 @@ public class Snapshots {
     return Transactions.findAll( Snapshot.named( null, null ) );
   }
 
+  public static class SnapshotFilterSupport extends FilterSupport<Snapshot> {
+    public SnapshotFilterSupport() {
+      super( builderFor( Snapshot.class ).withTagFiltering( SnapshotTag.class, "snapshot" ) );
+    }
+  }
 }
