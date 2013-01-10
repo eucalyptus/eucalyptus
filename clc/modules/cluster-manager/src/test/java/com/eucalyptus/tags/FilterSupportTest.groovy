@@ -33,6 +33,7 @@ import javax.persistence.ManyToMany
 import javax.persistence.ManyToOne
 import javax.persistence.ElementCollection
 import javax.persistence.Embedded
+import com.eucalyptus.crypto.util.Timestamps
 
 /**
  * Unit tests for filter support
@@ -146,6 +147,10 @@ class FilterSupportTest {
                       RT target ) {
       Filter filter = filterSupport.generate( [ (filterKey) : [ filterValue ] as Set ], "000000000" )
       assertEquals( "Match asserton for " + filterKey, expectedMatch, filter.asPredicate().apply( target ) )
+    }
+
+    Date date( String isoDateText ) {
+      Timestamps.parseTimestamp( isoDateText ).getTime();
     }
   }
 }

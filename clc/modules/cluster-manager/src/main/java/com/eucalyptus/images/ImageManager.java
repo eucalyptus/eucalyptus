@@ -92,13 +92,14 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -137,12 +138,21 @@ public class ImageManager {
     if ( ownersSet.remove( Images.SELF ) ) {
       ownersSet.add( requestAccountId );
     }
-    Predicate<ImageInfo> rangeFilter = Predicates.and( CloudMetadatas.filterById( request.getImagesSet( ) ),
-                                                       CloudMetadatas.filterByOwningAccount( request.getOwnersSet( ) ),
-                                                       Images.filterExecutableBy( request.getExecutableBySet( ) ) );
-    Predicate<ImageInfo> privilegesFilter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
-    Predicate<ImageInfo> filter = Predicates.and( privilegesFilter, rangeFilter );
-    List<ImageDetails> imageDetailsList = Transactions.filteredTransform( new ImageInfo( ), filter, Images.TO_IMAGE_DETAILS );
+    final Filter filter = Filters.generate( request.getFilterSet(), ImageInfo.class );
+    final Predicate<? super ImageInfo> requestedAndAccessible = CloudMetadatas.filteringFor( ImageInfo.class )
+        .byId( request.getImagesSet() )
+        .byOwningAccount( request.getOwnersSet() )
+        .byPredicate( Images.filterExecutableBy( request.getExecutableBySet() ) )
+        .byPredicate( filter.asPredicate() )
+        .byPredicate( Images.FilterPermissions.INSTANCE )
+        .byPrivilegesWithoutOwner()
+        .buildPredicate();
+    final List<ImageDetails> imageDetailsList = Transactions.filteredTransform(
+        new ImageInfo(),
+        filter.asCriterion(),
+        filter.getAliases(),
+        requestedAndAccessible,
+        Images.TO_IMAGE_DETAILS );
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;

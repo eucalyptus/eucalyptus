@@ -125,6 +125,11 @@ public class CloudMetadatas {
       return this;
     }
 
+    public FilterBuilder<T> byPrivilegesWithoutOwner() {
+      predicates.add( RestrictedTypes.filterPrivilegedWithoutOwner() );
+      return this;
+    }
+
     public FilterBuilder<T> byOwningAccount( final Collection<String> requestedIdentifiers ) {
       predicates.add( filterByOwningAccount( requestedIdentifiers ) );
       return this;
