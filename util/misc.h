@@ -84,6 +84,8 @@
 #include <linux/limits.h>
 #include <stdint.h>             // uint32_t
 
+#include <eucalyptus.h>
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
