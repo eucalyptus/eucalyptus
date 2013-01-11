@@ -22,7 +22,6 @@ package com.eucalyptus.tags;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import com.eucalyptus.cloud.CloudMetadata;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -42,7 +41,7 @@ public class Filters {
    */
   @Nonnull
   public static Filter generate( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
-                                 final Class<? extends CloudMetadata> resourceType ) {
+                                 final Class<?> resourceType ) {
     final Filter filter;
 
     final FilterSupport support = FilterSupport.forResource( resourceType );

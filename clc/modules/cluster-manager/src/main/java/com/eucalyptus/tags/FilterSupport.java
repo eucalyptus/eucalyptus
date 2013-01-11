@@ -38,11 +38,9 @@ import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.login.AuthenticationException;
-import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.Timestamps;
-import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -58,9 +56,9 @@ import com.google.common.collect.Sets;
 /**
  * Filter support class overridden for each resource that supports filtering.
  */
-public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadata> {
+public abstract class FilterSupport<RT> {
 
-  private static final ConcurrentMap<Class<? extends CloudMetadata>,FilterSupport> supportByClass = Maps.newConcurrentMap();
+  private static final ConcurrentMap<Class<?>,FilterSupport> supportByClass = Maps.newConcurrentMap();
 
   private final Class<RT> resourceClass;
   private Class<? extends Tag> tagClass;
@@ -93,7 +91,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
    * @param <RT> The resource type
    * @return The builder to use
    */
-  protected static <RT extends AbstractPersistent & CloudMetadata> Builder<RT> builderFor( final Class<RT> resourceClass ) {
+  protected static <RT> Builder<RT> builderFor( final Class<RT> resourceClass ) {
     return new Builder<RT>( resourceClass );
   }
 
@@ -102,7 +100,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
    *
    * @param <RT> The resource type
    */
-  protected static class Builder<RT extends AbstractPersistent & CloudMetadata> {
+  protected static class Builder<RT> {
     private final Class<RT> resourceClass;
     private final Map<String,Function<? super String,Predicate<? super RT>>> predicateFunctions =
         Maps.newHashMap();
@@ -553,7 +551,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
   }
 
-  public static FilterSupport forResource( @Nonnull final Class<? extends CloudMetadata> metadataClass ) {
+  public static FilterSupport forResource( @Nonnull final Class<?> metadataClass ) {
     return supportByClass.get( metadataClass );
   }
 
@@ -631,7 +629,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
 
   @SuppressWarnings( "unchecked" )
   static void registerFilterSupport( @Nonnull final FilterSupport filterSupport ) {
-    supportByClass.put( (Class<? extends CloudMetadata>) filterSupport.getResourceClass(), filterSupport );
+    supportByClass.put( (Class<?>) filterSupport.getResourceClass(), filterSupport );
   }
 
   private Predicate<Object> typedPredicate( final Predicate<? super RT> predicate ) {

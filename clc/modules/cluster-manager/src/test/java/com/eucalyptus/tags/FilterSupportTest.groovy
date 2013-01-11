@@ -23,8 +23,6 @@ import static org.junit.Assert.*
 import org.junit.Test
 import org.springframework.util.ReflectionUtils
 import java.lang.reflect.Field
-import com.eucalyptus.entities.AbstractPersistent
-import com.eucalyptus.cloud.CloudMetadata
 import com.google.common.base.CharMatcher
 import com.eucalyptus.system.Ats
 import javax.persistence.OneToMany
@@ -80,7 +78,7 @@ class FilterSupportTest {
     result.toString()
   }
 
-  static abstract class InstanceTest<RT extends AbstractPersistent & CloudMetadata> {
+  static abstract class InstanceTest<RT> {
     void assertValidKeys( final FilterSupport<RT> filterSupport ) {
       CharMatcher upperMatcher = CharMatcher.JAVA_UPPER_CASE;
       CharMatcher spaceMatcher = CharMatcher.WHITESPACE;
