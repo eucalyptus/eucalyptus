@@ -890,9 +890,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             rc = ncCancelBundleTaskStub(ncs, localmeta, instanceId);
         } else if (!strcmp(ncOp, "ncModifyNode")) {
             char *stateName = va_arg(al, char *);
-            logprintfl(EUCAWARN, "\tModifyNode not implemented yet\n");
-            rc = 1;
-            // rc = ncModifyNodeStub(ncs, localmeta, stateName);
+            rc = ncModifyNodeStub(ncs, localmeta, stateName);
         } else {
             LOGWARN("\tncOps=%s ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
             rc = 1;
@@ -3850,15 +3848,12 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 
     done = 0;
     for (i = 0; i < MAXNODES && !done; i++) {
-        //        if (resourceCacheLocal.cacheState[i] == RESVALID) {
-        //            logprintfl(EUCADEBUG, "valid resource %s\n", resourceCacheLocal.resources[i].hostname);
-            if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
-                // found it
-                start = i;
-                stop = start + 1;
-                done++;
-            }
-            //}
+        if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
+            // found it
+            start = i;
+            stop = start + 1;
+            done++;
+        }
     }
     if (! done) {
         logprintfl(EUCAERROR, "node requested for modification (%s) cannot be found\n", SP(nodeName));

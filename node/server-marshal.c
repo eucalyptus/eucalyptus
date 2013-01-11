@@ -193,7 +193,7 @@ void adb_InitService(void)
 }
 
 //!
-//! Handles the reception of the assign address request.
+//! Unmarshals, executes, responds to the assign address request.
 //!
 //! @param[in] ncAssignAddress a pointer to the assign address request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -248,7 +248,7 @@ adb_ncAssignAddressResponse_t *ncAssignAddressMarshal(adb_ncAssignAddress_t * nc
 }
 
 //!
-//! Handles the reception of the power down request.
+//! Unmarshals, executes, responds to the power down request.
 //!
 //! @param[in] ncPowerDown a pointer to the NC power down request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -290,7 +290,7 @@ adb_ncPowerDownResponse_t *ncPowerDownMarshal(adb_ncPowerDown_t * ncPowerDown, c
 }
 
 //!
-//! Handles the reception of the start network request.
+//! Unmarshals, executes, responds to the start network request.
 //!
 //! @param[in] ncStartNetwork a pointer to the start nerwork request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -358,7 +358,7 @@ adb_ncStartNetworkResponse_t *ncStartNetworkMarshal(adb_ncStartNetwork_t * ncSta
 }
 
 //!
-//! Handles the reception of the describe resource request.
+//! Unmarshals, executes, responds to the describe resource request.
 //!
 //! @param[in] ncDescribeResource a pointer to the describe resource request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -488,7 +488,7 @@ static void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env
 }
 
 //!
-//! Handles the reception of the run instance request.
+//! Unmarshals, executes, responds to the run instance request.
 //!
 //! @param[in] ncRunInstance a pointer to the run instance request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -603,7 +603,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
 }
 
 //!
-//! Handles the reception of the describe instance request.
+//! Unmarshals, executes, responds to the describe instance request.
 //!
 //! @param[in] ncDescribeInstances a pointer to the describe instance request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -676,7 +676,7 @@ adb_ncDescribeInstancesResponse_t *ncDescribeInstancesMarshal(adb_ncDescribeInst
 }
 
 //!
-//! Handles the reception of the reboot instance request.
+//! Unmarshals, executes, responds to the reboot instance request.
 //!
 //! @param[in] ncRebootInstance a pointer to the reboot instance request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -725,7 +725,7 @@ adb_ncRebootInstanceResponse_t *ncRebootInstanceMarshal(adb_ncRebootInstance_t *
 }
 
 //!
-//! Handles the reception of the get console output request.
+//! Unmarshals, executes, responds to the get console output request.
 //!
 //! @param[in] ncGetConsoleOutput a pointer to the get console output request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -777,7 +777,7 @@ adb_ncGetConsoleOutputResponse_t *ncGetConsoleOutputMarshal(adb_ncGetConsoleOutp
 }
 
 //!
-//! Handles the reception of the terminate instance request.
+//! Unmarshals, executes, responds to the terminate instance request.
 //!
 //! @param[in] ncTerminateInstance a pointer to the terminate instance request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -848,7 +848,7 @@ adb_ncTerminateInstanceResponse_t *ncTerminateInstanceMarshal(adb_ncTerminateIns
 }
 
 //!
-//! Handles the reception of the attach volume request.
+//! Unmarshals, executes, responds to the attach volume request.
 //!
 //! @param[in] ncAttachVolume a pointer to the attach volume request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -905,7 +905,7 @@ adb_ncAttachVolumeResponse_t *ncAttachVolumeMarshal(adb_ncAttachVolume_t * ncAtt
 }
 
 //!
-//! Handles the reception of the detach volume request.
+//! Unmarshals, executes, responds to the detach volume request.
 //!
 //! @param[in] ncDetachVolume a pointer to the detach volume request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -968,7 +968,7 @@ adb_ncDetachVolumeResponse_t *ncDetachVolumeMarshal(adb_ncDetachVolume_t * ncDet
 }
 
 //!
-//! Handles the reception of the create image request.
+//! Unmarshals, executes, responds to the create image request.
 //!
 //! @param[in] ncCreateImage a pointer to the create image request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1022,7 +1022,7 @@ adb_ncCreateImageResponse_t *ncCreateImageMarshal(adb_ncCreateImage_t * ncCreate
 }
 
 //!
-//! Handles the reception of the bundle instance request.
+//! Unmarshals, executes, responds to the bundle instance request.
 //!
 //! @param[in] ncBundleInstance a pointer to the bundle instance request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1094,7 +1094,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
 }
 
 //!
-//! Handles the reception of the bundle restart instance request.
+//! Unmarshals, executes, responds to the bundle restart instance request.
 //!
 //! @param[in] ncBundleRestartInstance a pointer to the bundle restart instance request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1151,7 +1151,7 @@ adb_ncBundleRestartInstanceResponse_t *ncBundleRestartInstanceMarshal(adb_ncBund
 }
 
 //!
-//! Handles the reception of the cancel bundle task request.
+//! Unmarshals, executes, responds to the cancel bundle task request.
 //!
 //! @param[in] ncCancelBundleTask a pointer to the cancel bundle task request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1211,7 +1211,7 @@ adb_ncCancelBundleTaskResponse_t *ncCancelBundleTaskMarshal(adb_ncCancelBundleTa
 }
 
 //!
-//! Handles the reception of the describe bundle task request.
+//! Unmarshals, executes, responds to the describe bundle task request.
 //!
 //! @param[in] ncDescribeBundleTasks a pointer to the describe bundle task request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1292,7 +1292,7 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
 }
 
 //!
-//! Handles the reception of the describe sensors request.
+//! Unmarshals, executes, responds to the describe sensors request.
 //!
 //! @param[in] ncDescribeSensors a pointer to the describe sensors request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1396,6 +1396,130 @@ reply:
         adb_ncDescribeSensorsResponse_set_ncDescribeSensorsResponse(response, env, output);
     }
     pthread_mutex_unlock(&ncHandlerLock);
+    return (response);
+}
+
+//!
+//! Unmarshals, executes, responds to the node modification request.
+//!
+//! @param[in] ncModifyNode a pointer to the node modification request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNode, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    ncMetadata meta = { 0 };
+    axis2_char_t *correlationId = NULL;
+    axis2_char_t *userId = NULL;
+    axis2_char_t *stateName = NULL;
+    adb_ncModifyNodeType_t *input = NULL;
+    adb_ncModifyNodeResponse_t *response = NULL;
+    adb_ncModifyNodeResponseType_t *output = NULL;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncModifyNode_get_ncModifyNode(ncModifyNode, env);
+        response = adb_ncModifyNodeResponse_create(env);
+        output = adb_ncModifyNodeResponseType_create(env);
+
+        // get standard fields from input
+        correlationId = adb_ncModifyNodeType_get_correlationId(input, env);
+        userId = adb_ncModifyNodeType_get_userId(input, env);
+
+        // get operation-specific fields from input
+        stateName = adb_ncModifyNodeType_get_stateName(input, env);
+
+        eventlog("NC", userId, correlationId, "ModifyNode", "begin");
+
+        // do it
+        meta.correlationId = correlationId;
+        meta.userId = userId;
+
+        error = doModifyNode (&meta, stateName);
+        if (error != EUCA_OK) {
+            logprintfl (EUCAERROR, "failed error=%d\n", error);
+            adb_ncModifyNodeResponseType_set_return(output, env, AXIS2_FALSE);
+        } else {
+            // set standard fields in output
+            adb_ncModifyNodeResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncModifyNodeResponseType_set_correlationId(output, env, correlationId);
+            adb_ncModifyNodeResponseType_set_userId(output, env, userId);
+            // set operation-specific fields in output
+        }
+
+        // set response to output
+        adb_ncModifyNodeResponse_set_ncModifyNodeResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+
+    eventlog("NC", userId, correlationId, "ModifyNode", "end");
+    return (response);
+}
+
+//!
+//! Unmarshals, executes, responds to the instance migration request.
+//!
+//! @param[in] ncMigrateInstance a pointer to the instance migration request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_t * ncMigrateInstance, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    ncMetadata meta = { 0 };
+    axis2_char_t *correlationId = NULL;
+    axis2_char_t *userId = NULL;
+    axis2_char_t *instanceId = NULL;
+    axis2_char_t *sourceNodeName = NULL;
+    axis2_char_t *destNodeName = NULL;
+    axis2_char_t *credentials = NULL;
+    adb_ncMigrateInstanceType_t *input = NULL;
+    adb_ncMigrateInstanceResponse_t *response = NULL;
+    adb_ncMigrateInstanceResponseType_t *output = NULL;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncMigrateInstance_get_ncMigrateInstance(ncMigrateInstance, env);
+        response = adb_ncMigrateInstanceResponse_create(env);
+        output = adb_ncMigrateInstanceResponseType_create(env);
+
+        // get standard fields from input
+        correlationId = adb_ncMigrateInstanceType_get_correlationId(input, env);
+        userId = adb_ncMigrateInstanceType_get_userId(input, env);
+
+        // get operation-specific fields from input
+        instanceId = adb_ncMigrateInstanceType_get_instanceId(input, env);
+        sourceNodeName = adb_ncMigrateInstanceType_get_sourceNodeName(input, env);
+        destNodeName = adb_ncMigrateInstanceType_get_destNodeName(input, env);
+        credentials = adb_ncMigrateInstanceType_get_credentials(input, env);
+
+        eventlog("NC", userId, correlationId, "MigrateInstance", "begin");
+
+        // do it
+        meta.correlationId = correlationId;
+        meta.userId = userId;
+
+        error = doMigrateInstance (&meta, instanceId, sourceNodeName, destNodeName, credentials);
+        if (error != EUCA_OK) {
+            logprintfl (EUCAERROR, "failed error=%d\n", error);
+            adb_ncMigrateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+        } else {
+            // set standard fields in output
+            adb_ncMigrateInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncMigrateInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncMigrateInstanceResponseType_set_userId(output, env, userId);
+            // set operation-specific fields in output
+        }
+
+        // set response to output
+        adb_ncMigrateInstanceResponse_set_ncMigrateInstanceResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+
+    eventlog("NC", userId, correlationId, "MigrateInstance", "end");
     return (response);
 }
 
