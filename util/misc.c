@@ -65,7 +65,7 @@
 
 //!
 //! @file util/misc.c
-//! Need to provide description
+//! Implements a variety of utility tools
 //!
 
 /*----------------------------------------------------------------------------*\
