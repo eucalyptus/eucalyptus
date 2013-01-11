@@ -67,11 +67,9 @@ public class ReportingAccountCrud
 			return;
 		} else if (oldAccount!=null) {
 			updateInDb(account);
-			ReportingAccountDao.getInstance().putCache(account);
 		} else {
 			try {
 				addToDb(account);
-				ReportingAccountDao.getInstance().putCache(account);
 			} catch (RuntimeException e) {
 				LOG.error(e);
 			}
