@@ -221,6 +221,8 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
                                  int *outBundleTasksLen);
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+static int doModifyNode(struct nc_state_t * nc, ncMetadata * pMeta, char * stateName);
+static int doMigrateInstance(struct nc_state_t * nc, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -249,6 +251,8 @@ struct handlers default_libvirt_handlers = {
     .doCancelBundleTask = doCancelBundleTask,
     .doDescribeBundleTasks = doDescribeBundleTasks,
     .doDescribeSensors = doDescribeSensors,
+    .doModifyNode = doModifyNode,
+    .doMigrateInstance = doMigrateInstance
 };
 
 /*----------------------------------------------------------------------------*\
@@ -1920,7 +1924,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
 //!
 //! @param[in]  nc a pointer to the NC state structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  historySize teh size of the data history to retrieve
+//! @param[in]  historySize the size of the data history to retrieve
 //! @param[in]  collectionIntervalTimeMs the data collection interval in milliseconds
 //! @param[in]  instIds the list of instance identifiers string
 //! @param[in]  instIdsLen the number of instance identifiers in the instIds list
@@ -1992,4 +1996,30 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 
     logprintfl(EUCADEBUG, "found %d resource(s)\n", k);
     return EUCA_OK;
+}
+
+//!
+//! Handles the node modification request.
+//!
+//! @param[in]  nc a pointer to the NC state structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+//!
+static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stateName)
+{
+    logprintfl(EUCAINFO, "node state change to %s\n", stateName);
+    return EUCA_OK;
+}
+
+//!
+//! Handles the instance migration request.
+//!
+//! @param[in]  nc a pointer to the NC state structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+//!
+static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+{
+    logprintfl(EUCAERROR, "[%s] no default for %s!\n", instanceId, __func__);
+    return (EUCA_UNSUPPORTED_ERROR);   
 }
