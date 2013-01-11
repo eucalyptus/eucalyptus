@@ -992,8 +992,6 @@ int get_conf_var(const char *path, const char *name, char **value)
         return -1;
     }
 
-    EUCA_FREE(*value);
-
     if ((f = fopen(path, "r")) == NULL) {
         return (-1);
     }
