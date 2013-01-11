@@ -1446,7 +1446,7 @@ adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNod
             adb_ncModifyNodeResponseType_set_return(output, env, AXIS2_TRUE);
             adb_ncModifyNodeResponseType_set_correlationId(output, env, correlationId);
             adb_ncModifyNodeResponseType_set_userId(output, env, userId);
-            // set operation-specific fields in output
+            // no operation-specific fields in output
         }
 
         // set response to output
@@ -1511,7 +1511,7 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
             adb_ncMigrateInstanceResponseType_set_return(output, env, AXIS2_TRUE);
             adb_ncMigrateInstanceResponseType_set_correlationId(output, env, correlationId);
             adb_ncMigrateInstanceResponseType_set_userId(output, env, userId);
-            // set operation-specific fields in output
+            // no operation-specific fields in output
         }
 
         // set response to output
