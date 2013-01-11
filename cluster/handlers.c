@@ -3887,9 +3887,16 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 //!
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
 {
+<<<<<<< HEAD
     int i, rc, ret = 0, timeout;
     int src_index = -1, dst_index = -1;
     ccResourceCache resourceCacheLocal;
+=======
+    int i, rc, start = 0, stop = 0, ret = 0, done = 0, timeout;
+    time_t op_start;
+    ccResourceCache resourceCacheLocal;
+    op_start = time(NULL);
+>>>>>>> 178ecb9... first-cut evac WSDLs, minimal modifyNode pass-through in CC (returns error now)
 
     rc = initialize(pMeta);
     if (rc || ccIsEnabled()) {
@@ -3906,6 +3913,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
 
+<<<<<<< HEAD
     for (i = 0; i < resourceCacheLocal.numResources && (src_index == -1 || dst_index == -1); i++) {
         if (resourceCacheLocal.resources[i].state != RESASLEEP) {
             if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
@@ -3980,6 +3988,35 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
 
  out:
+=======
+    done = 0;
+    for (i = 0; i < MAXNODES && !done; i++) {
+        //        if (resourceCacheLocal.cacheState[i] == RESVALID) {
+        //            logprintfl(EUCADEBUG, "valid resource %s\n", resourceCacheLocal.resources[i].hostname);
+            if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
+                // found it
+                start = i;
+                stop = start + 1;
+                done++;
+            }
+            //}
+    }
+    if (! done) {
+        logprintfl(EUCAERROR, "node requested for modification (%s) cannot be found\n", SP(nodeName));
+    }
+
+    for (i = start; i < stop; i++) {
+        timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncModifyNode",
+                          stateName); // no need to pass nodeName as ncClientCall sets that up for all NC requests
+        if (rc) {
+            ret = 1;
+        } else {
+            ret = 0;
+            done++;
+        }
+    }
+>>>>>>> 178ecb9... first-cut evac WSDLs, minimal modifyNode pass-through in CC (returns error now)
 
     logprintfl(EUCATRACE, "done\n");
 
