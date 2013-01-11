@@ -3151,7 +3151,7 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
 
 
     ret = 0;
-    snprintf(newpath, PATH_MAX, EUCALYPTUS_CONF_DIR "/%s", vnetconfig->eucahome, "iptables-preload");
+    snprintf(newpath, MAX_PATH, EUCALYPTUS_CONF_DIR "/%s", vnetconfig->eucahome, "iptables-preload");
     if (stat(newpath, &statbuf) != 0) {
         snprintf(oldfile, MAX_PATH, "%s/iptables-preload", vnetconfig->path);
         if (stat(oldfile, &statbuf) == 0) {
