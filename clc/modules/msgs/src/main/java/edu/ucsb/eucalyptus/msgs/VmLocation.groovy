@@ -82,6 +82,10 @@ public class CloudTopologyMessage extends EucalyptusMessage{
 /** *******************************************************************************/
 public class EvacuateNodeType extends CloudTopologyMessage {
   String host;
+
+  public String getServiceTag( ) {
+    return "http://" + host + ":8775/services/axis2/EucalyptusNC";//construct bullshit service tag
+  }
 }
 public class EvacuateNodeResponseType extends CloudTopologyMessage {}
 /** *******************************************************************************/
