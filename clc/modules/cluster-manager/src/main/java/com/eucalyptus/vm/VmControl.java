@@ -68,6 +68,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
@@ -119,6 +120,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreatePlacementGroupType;
@@ -394,23 +396,18 @@ public class VmControl {
   
   public DescribeBundleTasksResponseType describeBundleTasks( final DescribeBundleTasksType request ) throws EucalyptusCloudException {
     final DescribeBundleTasksResponseType reply = request.getReply( );
-    
+
+    final Filter filter = Filters.generate( request.getFilterSet(), VmBundleTask.class );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicate<VmInstance> filter = Predicates.and( VmInstance.Filters.BUNDLING, RestrictedTypes.filterPrivileged( ) );
-      if ( request.getBundleIds( ).isEmpty( ) ) {
-        for ( final VmInstance v : VmInstances.list( filter ) ) {
-          reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-        }
-      } else {
-        for ( final String bundleId : request.getBundleIds( ) ) {
-          try {
-            final VmInstance v = VmInstances.lookupByBundleId( bundleId );
-            if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-              reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
-            }
-          } catch ( final NoSuchElementException e ) {}
-        }
+      final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
+          .byId( toInstanceIds( request.getBundleIds( ) ) )
+          .byPredicate( Predicates.compose( filter.asPredicate(), VmInstances.bundleTask() ) )
+          .byPredicate( VmInstance.Filters.BUNDLING )
+          .byPrivileges()
+          .buildPredicate();
+      for ( final VmInstance v : VmInstances.list( null, filter.asCriterion(), filter.getAliases(), requestedAndAccessible ) ) {
+        reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
       }
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -682,5 +679,12 @@ public class VmControl {
                                                                                            .getSimpleName( ), request, e.getMessage( ) ) );
     }
   }
-  
+
+  private static Set<String> toInstanceIds( final Iterable<String> ids ) {
+    final Set<String> result = Sets.newHashSet();
+    if ( ids != null ) for ( final String id : ids ) {
+      result.add( id.replace( "bun-", "i-" ) );
+    }
+    return result;
+  }
 }

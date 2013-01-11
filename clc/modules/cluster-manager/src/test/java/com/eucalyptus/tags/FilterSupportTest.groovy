@@ -90,10 +90,15 @@ class FilterSupportTest {
       }
     }
 
-    void assertValidFilters( final FilterSupport<RT> filterSupport  ) {
+    void assertValidFilters( final FilterSupport<RT> filterSupport ) {
+      assertValidFilters( filterSupport, filterSupport.resourceClass )
+    }
+
+    void assertValidFilters( final FilterSupport<RT> filterSupport,
+                             final Class target ) {
       filterSupport.getPersistenceFilters().values().each { property ->
         String[] propPath = property.property.split( "\\." )
-        Class targetType = filterSupport.resourceClass;
+        Class targetType = target;
         propPath.each { propName ->
           boolean found = false;
           ReflectionUtils.doWithFields( targetType, { Field field ->
@@ -109,7 +114,7 @@ class FilterSupportTest {
               found = true
             }
           } as ReflectionUtils.FieldCallback )
-          assertTrue( "Property not found " + propName + " in " + property.property, found )
+          assertTrue( "Property not found " + propName + " on " + targetType, found )
         }
         if ( !String.class.equals( targetType ) ) {
           assertNotSame( "Property missing type or conversion function " + property.property + " for " + targetType + " (see FilterSupport.PersistenceFilter.Type)", Functions.identity(), property.valueFunction )
