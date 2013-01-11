@@ -2812,6 +2812,55 @@ int doMigrateInstance(ncMetadata * pMeta, ncInstance * instance, char * sourceNo
 }
 
 //!
+//! Handles the modify node request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+
+int doModifyNode(ncMetadata * pMeta, char * stateName)
+{
+   int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    logprintfl(EUCADEBUG, "invoked (stateName=%s)\n", stateName);
+
+    if (nc_state.H->doModifyNode) {
+        ret = nc_state.H->doModifyNode(&nc_state, pMeta, stateName);
+    } else {
+        ret = nc_state.D->doModifyNode(&nc_state, pMeta, stateName);
+    }
+
+    return ret;
+}
+
+//!
+//! Handles the instance migration request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+
+int doMigrateInstance(ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+{
+   int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    logprintfl(EUCADEBUG, "invoked (instId=%s sourceNodeName=%s destNodeName=%s credentials=%s)\n",
+               instanceId, sourceNodeName, destNodeName, (credentials==NULL)?("unavailable"):("present"));
+    
+    if (nc_state.H->doMigrateInstance) {
+        ret = nc_state.H->doMigrateInstance(&nc_state, pMeta, instanceId, sourceNodeName, destNodeName, credentials);
+    } else {
+        ret = nc_state.D->doMigrateInstance(&nc_state, pMeta, instanceId, sourceNodeName, destNodeName, credentials);
+    }
+
+    return ret;
+}
+
+//!
 //! Finds an instance in the global instance list
 //!
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
