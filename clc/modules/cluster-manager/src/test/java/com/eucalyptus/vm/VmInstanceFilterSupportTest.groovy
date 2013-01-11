@@ -25,7 +25,7 @@ import com.eucalyptus.tags.FilterSupportTest
 /**
  * Unit tests for instance filter support
  */
-class VmInstanceFilterSupport extends FilterSupportTest.InstanceTest<VmInstance> {
+class VmInstanceFilterSupportTest extends FilterSupportTest.InstanceTest<VmInstance> {
 
   @Test
   void testFilteringSupport() {
