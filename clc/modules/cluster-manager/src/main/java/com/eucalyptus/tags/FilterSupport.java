@@ -550,7 +550,7 @@ public abstract class FilterSupport<RT extends AbstractPersistent & CloudMetadat
     }
     if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagConjunction ) );
 
-    return new Filter( aliases, conjunction, Predicates.and( and ) );
+    return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
   }
 
   public static FilterSupport forResource( @Nonnull final Class<? extends CloudMetadata> metadataClass ) {

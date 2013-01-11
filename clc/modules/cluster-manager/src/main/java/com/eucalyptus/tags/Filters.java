@@ -22,7 +22,6 @@ package com.eucalyptus.tags;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;

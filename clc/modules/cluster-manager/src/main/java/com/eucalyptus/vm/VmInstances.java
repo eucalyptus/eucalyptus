@@ -75,8 +75,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
@@ -112,6 +115,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
@@ -129,6 +133,8 @@ import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -654,30 +660,56 @@ public class VmInstances {
     return list( null );
   }
   
-  public static List<VmInstance> list( Predicate<VmInstance> predicate ) {
+  public static List<VmInstance> list( @Nullable Predicate<? super VmInstance> predicate ) {
     return list( null, null, predicate );
   }
   
-  public static List<VmInstance> list( OwnerFullName ownerFullName, Predicate<VmInstance> predicate ) {
+  public static List<VmInstance> list( @Nullable OwnerFullName ownerFullName,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
     return list( ownerFullName, null, predicate );
   }
-  
-  public static List<VmInstance> list( String instanceId, Predicate<VmInstance> predicate ) {
+
+  public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
+                                       final Criterion criterion,
+                                       final Map<String,String> aliases,
+                                       @Nullable final Predicate<? super VmInstance> predicate ) {
+    return list( new Supplier<List<VmInstance>>() {
+      @Override
+      public List<VmInstance> get() {
+        return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases );
+      }
+    }, predicate );
+  }
+
+  public static List<VmInstance> list( @Nullable String instanceId,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
     return list( null, instanceId, predicate );
   }
   
-  public static List<VmInstance> list( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
+  public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
+                                       @Nullable final String instanceId,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
+    return list( new Supplier<List<VmInstance>>() {
+      @Override
+      public List<VmInstance> get() {
+        return Entities.query( VmInstance.named( ownerFullName, instanceId ) );
+      }
+    }, predicate );
+  }
+
+  private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
+                                        @Nullable Predicate<? super VmInstance> predicate ) {
     predicate = checkPredicate( predicate );
-    List<VmInstance> ret = listPersistent( ownerFullName, instanceId, predicate );
+    List<VmInstance> ret = listPersistent( instancesSupplier, predicate );
     ret.addAll( Collections2.filter( terminateCache.values( ), predicate ) );
     return ret;
   }
-  
-  private static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
-    predicate = checkPredicate( predicate );
+
+  private static List<VmInstance> listPersistent( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
+                                                  @Nonnull Predicate<? super VmInstance> predicate ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final Iterable<VmInstance> vms = Iterables.filter( Entities.query( VmInstance.named( ownerFullName, instanceId ) ), predicate );
+      final Iterable<VmInstance> vms = Iterables.filter( instancesSupplier.get(), predicate );
       db.commit( );
       return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
@@ -688,17 +720,10 @@ public class VmInstances {
     }
   }
   
-  private static Predicate<VmInstance> checkPredicate( Predicate<VmInstance> predicate ) {
-    if ( predicate == null ) {
-      predicate = new Predicate<VmInstance>( ) {
-        
-        @Override
-        public boolean apply( VmInstance input ) {
-          return true;
-        }
-      };
-    }
-    return predicate;
+  private static <T> Predicate<T> checkPredicate( Predicate<T> predicate ) {
+    return predicate == null ?
+        Predicates.<T>alwaysTrue() :
+        predicate;
   }
   
   public static boolean contains( final String name ) {
@@ -852,4 +877,9 @@ public class VmInstances {
     }
   }
 
+  public static class VmInstanceFilterSupport extends FilterSupport<VmInstance> {
+    public VmInstanceFilterSupport() {
+      super( builderFor( VmInstance.class ).withTagFiltering( VmInstanceTag.class, "instance" ) );
+    }
+  }
 }

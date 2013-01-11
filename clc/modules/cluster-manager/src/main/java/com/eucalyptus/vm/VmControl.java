@@ -99,6 +99,8 @@ import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -193,13 +195,19 @@ public class VmControl {
     boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
     final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
-    final Map<String, ReservationInfoType> reservations = Maps.newHashMap( );
-    Predicate<VmInstance> filter = CloudMetadatas.filterPrivilegesById( msg.getInstancesSet( ) );
+    final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
+    final Filter filter = Filters.generate( msg.getFilterSet(), VmInstance.class );
+    final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
+        .byId( msg.getInstancesSet( ) )
+        .byPredicate( filter.asPredicate() )
+        .byPredicate( filter.isFilteringOnTags() ? Predicates.not( VmState.TERMINATED ) : Predicates.<VmInstance>alwaysTrue() ) // terminated instances have no tags
+        .byPrivileges()
+        .buildPredicate();
     OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      for ( final VmInstance vm : VmInstances.list( ownerFullName, filter ) ) {
+      for ( final VmInstance vm : VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible ) ) {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
