@@ -187,8 +187,10 @@ void usage(void)
             "\t\tattachVolume\t\t[-i -V -R -L]\n"
             "\t\tdetachVolume\t\t[-i -V -R -L]\n"
             "\t\tbundleInstance\t\t[-i]\n"
-            "\t\tbundleRestartInstance\t\t[-i]\n"
+            "\t\tbundleRestartInstance\t[-i]\n"
             "\t\tdescribeSensors\n"
+            "\t\tmodifyNode\t\t[-s]\n"
+            "\t\tmigrateInstance\t\t[-i -M]\n"
             "\toptions:\n"
             "\t\t-d \t\t- print debug output\n"
             "\t\t-l \t\t- local invocation => do not use WSSEC\n"
@@ -214,7 +216,9 @@ void usage(void)
             "\t\t-L [device] \t- local/target device (e.g. hda)\n"
             "\t\t-F \t\t- force VolumeDetach\n"
             "\t\t-U [string] \t- user data to store with instance\n" "\t\t-I [string] \t- launch index to store with instance\n"
-            "\t\t-G [str:str: ] \t- group names to store with instance\n");
+            "\t\t-G [str:str: ] \t- group names to store with instance\n"
+            "\t\t-s [stateName] \t- name of state for NC to enter {REGULAR|EVACUATE}\n"
+            "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
 
     exit(1);
 }
@@ -316,6 +320,10 @@ int main(int argc, char **argv)
     char *launch_index = NULL;
     char **group_names = NULL;
     int group_names_size = 0;
+    char * state_name = NULL;
+    char * src_node_name = NULL;
+    char * dst_node_name = NULL;
+    char * migration_creds = NULL;
     char *timestamp_str = NULL;
     char *command = NULL;
     int local = 0;
@@ -323,7 +331,7 @@ int main(int argc, char **argv)
     int ch = 0;
     int rc = 0;
 
-    while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:")) != -1) {
+    while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:")) != -1) {
         switch (ch) {
         case 'c':
             count = atoi(optarg);
@@ -414,6 +422,18 @@ int main(int argc, char **argv)
                     group_names[i] = strtok(NULL, ":");
                 break;
             }
+        case 's':
+            state_name = optarg;
+            break;
+        case 'M':
+            src_node_name = strtok(optarg, ":");
+            dst_node_name = strtok(NULL, ":");
+            migration_creds = strtok(NULL, ":");
+            if (src_node_name == NULL || dst_node_name == NULL) {
+                fprintf(stderr, "ERROR: could not parse migration [src:dst:cr] paramters (try -h)\n");
+                exit(1);
+            }
+            break;
         case 'v':
             if (add_vbr(optarg, &params)) {
                 fprintf(stderr, "ERROR: could not parse the virtual boot record (try -h)\n");
@@ -733,6 +753,29 @@ int main(int argc, char **argv)
         char buf[102400];
         sensor_res2str(buf, sizeof(buf), res, resSize);
         printf("resources: %d\n%s\n", resSize, buf);
+
+    /***********************************************************/
+    } else if (!strcmp(command, "modifyNode")) {
+        CHECK_PARAM(state_name, "state name");
+
+        rc = ncModifyNodeStub(stub, &meta, state_name);
+        if (rc != 0) {
+            printf("ncModifyNode() failed: error=%d\n", rc);
+            exit(1);
+        }
+
+    /***********************************************************/
+    } else if (!strcmp(command, "migrateInstance")) {
+        CHECK_PARAM(instance_id, "instance ID");
+        CHECK_PARAM(src_node_name, "source node name");
+        CHECK_PARAM(dst_node_name, "destination node name");
+        // migration creds can be NULL
+
+        rc = ncMigrateInstanceStub(stub, &meta, instance_id, src_node_name, dst_node_name, migration_creds);
+        if (rc != 0) {
+            printf("ncMigrateInstance() failed: error=%d\n", rc);
+            exit(1);
+        }
 
     /***********************************************************/
     } else if (!strcmp(command, "_convertTimestamp")) {
