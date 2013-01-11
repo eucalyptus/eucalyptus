@@ -182,10 +182,15 @@ public class TagManager {
     final Context context = Contexts.lookup();
     
     //TODO:STEVE: Cloud admin can list all tags?
+    final Filter filter = Filters.generate( request.getFilterSet(), Tag.class );
     final Ordering<Tag> ordering = Ordering.natural().onResultOf( Tags.resourceId() )
         .compound( Ordering.natural().onResultOf( Tags.key() ) )
         .compound( Ordering.natural().onResultOf( Tags.value() ) );
-    for ( final Tag tag : ordering.sortedCopy( Tags.list( context.getUserFullName().asAccountFullName() ) ) ) {
+    for ( final Tag tag : ordering.sortedCopy( Tags.list(
+        context.getUserFullName().asAccountFullName(),
+        filter.asPredicate(),
+        filter.asCriterion(),
+        filter.getAliases() ) ) ) {
       if ( Permissions.isAuthorized( 
           PolicySpec.VENDOR_EC2,
           tag.getResourceType(),

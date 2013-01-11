@@ -232,7 +232,15 @@ public class Transactions {
     Function<T, T> f = Functions.identity( );
     return filteredTransform( search, condition, f );
   }
-  
+
+  public static <T> List<T> filter( final T search,
+                                    final Predicate<? super T> condition,
+                                    final Criterion criterion,
+                                    final Map<String,String> aliases ) throws TransactionException {
+    Function<T, T> f = Functions.identity( );
+    return filteredTransform( search, criterion, aliases, condition, f );
+  }
+
   public static <S, T> List<S> transform( T search, Function<T, S> f ) throws TransactionException {
     Predicate<T> p = Predicates.alwaysTrue( );
     return filteredTransform( search, p, f );

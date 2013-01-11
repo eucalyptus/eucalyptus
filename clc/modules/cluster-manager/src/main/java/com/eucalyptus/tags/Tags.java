@@ -20,13 +20,16 @@
 package com.eucalyptus.tags;
 
 import java.util.List;
+import java.util.Map;
 import javax.persistence.EntityTransaction;
+import org.hibernate.criterion.Criterion;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
 /**
@@ -44,6 +47,27 @@ public class Tags {
   public static List<Tag> list( final OwnerFullName ownerFullName ) throws NoSuchMetadataException {
     try {
       return Transactions.findAll( Tag.withOwner(ownerFullName) );
+    } catch ( Exception e ) {
+      throw new NoSuchMetadataException( "Failed to find tags for " + ownerFullName, e );
+    }
+  }
+
+  /**
+   * List tags for the given owner.
+   *
+   * @param ownerFullName The tag owner
+   * @param filter Predicate to restrict the results
+   * @param criterion The database criterion to restrict the results
+   * @param aliases Aliases for the database criterion
+   * @return The list of tags.
+   * @throws NoSuchMetadataException If an error occurs
+   */
+  public static List<Tag> list( final OwnerFullName ownerFullName,
+                                final Predicate<? super Tag> filter,
+                                final Criterion criterion,
+                                final Map<String,String> aliases ) throws NoSuchMetadataException {
+    try {
+      return Transactions.filter( Tag.withOwner(ownerFullName), filter, criterion, aliases );
     } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find tags for " + ownerFullName, e );
     }
@@ -115,11 +139,30 @@ public class Tags {
     throw new NoSuchMetadataException( "Failed to find unique tag: " + example.getKey() + " for " + example.getOwner() );
   }
 
+  public static class TagFilterSupport extends FilterSupport<Tag> {
+    public TagFilterSupport() {
+      super( builderFor( Tag.class )
+          .withStringProperty( "key", TagFunctions.KEY )
+          .withStringProperty( "resource-id", TagFunctions.RESOURCE_ID )
+          .withStringProperty( "resource-type", TagFunctions.RESOURCE_TYPE )
+          .withStringProperty( "value", TagFunctions.VALUE )
+          .withPersistenceFilter( "key", "displayName" )
+          .withPersistenceFilter( "value" )
+      );
+    }
+  }
+
   private enum TagFunctions implements Function<Tag,String> {
     KEY {
       @Override
       public String apply(final Tag tag ) {
         return tag.getKey();
+      }
+    },
+    RESOURCE_TYPE {
+      @Override
+      public String apply(final Tag tag ) {
+        return tag.getResourceType();
       }
     },
     RESOURCE_ID {
