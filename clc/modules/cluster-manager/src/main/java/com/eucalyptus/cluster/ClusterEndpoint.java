@@ -80,6 +80,8 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
@@ -87,6 +89,7 @@ import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -102,6 +105,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
+import edu.ucsb.eucalyptus.msgs.EvacuateNodeResponseType;
+import edu.ucsb.eucalyptus.msgs.EvacuateNodeType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
@@ -130,6 +135,23 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance( );
   }
   
+  public EvacuateNodeResponseType evacuateNode( EvacuateNodeType request ) {
+    EvacuateNodeResponseType reply = request.getReply( );
+    String host = request.getHost( );
+    String serviceTag = "http://" + host + ":8775/services/axis2/EucalyptusNC";//construct bullshit service tag
+    for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) { 
+      if ( Clusters.lookup( c ).getNodeMap( ).containsKey( serviceTag ) )  {
+        try {
+          AsyncRequests.sendSync( c, request );
+          return reply.markWinning( );
+        } catch ( Exception ex ) {
+          LOG.error( ex , ex );
+        }
+      }
+    }
+    return reply.markFailed( );
+  }
+
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) throws EucalyptusCloudException {
     final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
     final List<String> args = request.getAvailabilityZoneSet( );
