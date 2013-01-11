@@ -133,12 +133,26 @@ public class ClusterEndpoint implements Startable {
   
   public EvacuateNodeResponseType evacuateNode( EvacuateNodeType request ) {
     EvacuateNodeResponseType reply = request.getReply( );
-    String host = request.getHost( );
-    String serviceTag = "http://" + host + ":8775/services/axis2/EucalyptusNC";//construct bullshit service tag
+    String serviceTag = request.getServiceTag( );
     for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) { 
       if ( Clusters.lookup( c ).getNodeMap( ).containsKey( serviceTag ) )  {
         try {
+          //0. gate this cluster
+          //1. describe resources
+          //2. describe nodes
+          //3. find all vms running on NC@serviceTag 
+          //4. authorize all NCs to attach volumes which are attached to vms from #3
+          //5. send the operation down
           AsyncRequests.sendSync( c, request );
+          //5.a. when the above returns that means that:
+          // - the request has been accepted and can be executed
+          // - the other state interrogating operations (DescribeResources) will reflect the resources committed to the evacuation.
+          //6. describe resources
+          //7. wait to determine migration schedule
+          //8. wait for migration to complete
+          //8.a. migration schedule will say where vms from #3 are moving
+          //9. authorize volume attachments only for the NCs which now host the vms from #3
+          //10. ungate the cluster
           return reply.markWinning( );
         } catch ( Exception ex ) {
           LOG.error( ex , ex );
