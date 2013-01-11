@@ -100,7 +100,6 @@
 
 //! @}
 
-
 #ifndef MAX_PATH
 #define MAX_PATH                                 4096
 #endif /* ! MAX_PATH */
