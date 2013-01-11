@@ -557,6 +557,9 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     return (ret);
 }
 
+//!                                                                                                                                                                              
+//! TODO: doxygen
+//!
 static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
 {
     logprintfl(EUCAERROR, "[%s] method %s NOT IMPLEMENTED YET on KVM\n", instanceId, __func__);

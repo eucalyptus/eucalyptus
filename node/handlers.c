@@ -277,6 +277,8 @@ int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bu
 int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+int doModifyNode(ncMetadata * pMeta, char * stateName);
+int doMigrateInstance(ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials);
 ncInstance *find_global_instance(const char *instanceId);
 
 /*----------------------------------------------------------------------------*\
@@ -305,7 +307,7 @@ static int init(void);
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Utilitarian functions used in the lower level handlers. This scans teh string buffer
+//! Utilitarian functions used in the lower level handlers. This scans the string buffer
 //! 's' for a matching parameter 'name' to fill in the 'valp' value.
 //!
 //! @param[in]  s a non NULL string buffer
@@ -2748,7 +2750,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 //! Handles the describe sensors request.
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  historySize teh size of the data history to retrieve
+//! @param[in]  historySize the size of the data history to retrieve
 //! @param[in]  collectionIntervalTimeMs the data collection interval in milliseconds
 //! @param[in]  instIds the list of instance identifiers string
 //! @param[in]  instIdsLen the number of instance identifiers in the instIds list
@@ -2775,6 +2777,55 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
     } else {
         ret = nc_state.D->doDescribeSensors(&nc_state, pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen,
                                             outResources, outResourcesLen);
+    }
+
+    return ret;
+}
+
+//!
+//! Handles the modify node request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+
+int doModifyNode(ncMetadata * pMeta, char * stateName)
+{
+   int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    logprintfl(EUCADEBUG, "invoked (stateName=%s)\n", stateName);
+
+    if (nc_state.H->doModifyNode) {
+        ret = nc_state.H->doModifyNode(&nc_state, pMeta, stateName);
+    } else {
+        ret = nc_state.D->doModifyNode(&nc_state, pMeta, stateName);
+    }
+
+    return ret;
+}
+
+//!
+//! Handles the instance migration request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+
+int doMigrateInstance(ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+{
+   int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    logprintfl(EUCADEBUG, "invoked (instId=%s sourceNodeName=%s destNodeName=%s credentials=%s)\n",
+               instanceId, sourceNodeName, destNodeName, (credentials==NULL)?("unavailable"):("present"));
+    
+    if (nc_state.H->doMigrateInstance) {
+        ret = nc_state.H->doMigrateInstance(&nc_state, pMeta, instanceId, sourceNodeName, destNodeName, credentials);
+    } else {
+        ret = nc_state.D->doMigrateInstance(&nc_state, pMeta, instanceId, sourceNodeName, destNodeName, credentials);
     }
 
     return ret;
