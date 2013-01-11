@@ -153,13 +153,9 @@ import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
-import com.google.common.collect.Table;
-import com.google.common.collect.Tables;
 import edu.ucsb.eucalyptus.cloud.NodeInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
@@ -542,11 +538,21 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         LOG.debug( "Clearing error logs for: " + t );
         t.clearExceptions( );
       }
-    };
-  };
-  
+    }
+  }
+
+  /**
+   * Constructor for test use
+   */
+  protected Cluster( final ClusterConfiguration configuration, final Void nothing ) {
+    this.configuration = configuration;
+    this.state = null;
+    this.nodeState = null;
+    this.nodeMap = null;
+    this.stateMachine = null;
+  }
+
   public Cluster( final ClusterConfiguration configuration ) {
-    super( );
     this.configuration = configuration;
     this.state = new ClusterState( configuration.getName( ) );
     this.nodeState = new ResourceState( configuration.getName( ) );

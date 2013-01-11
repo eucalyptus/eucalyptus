@@ -73,6 +73,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -129,9 +130,10 @@ public class ClusterEndpoint implements Startable {
   }
   
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
-    DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
-    List<String> args = request.getAvailabilityZoneSet( );
-    
+    final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
+    final List<String> args = request.getAvailabilityZoneSet( );
+    final Filter filter = Filters.generate( request.getFilterSet(), Cluster.class );
+
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       for ( String keyword : describeKeywords.keySet( ) ) {
         if ( args.remove( keyword ) ) {
@@ -144,33 +146,36 @@ public class ClusterEndpoint implements Startable {
         args.remove( keyword );
       }
     }
-    
+
+    final List<Cluster> clusters;
     if ( args.isEmpty( ) ) {
-      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
-      }
+      clusters = Clusters.getInstance( ).listValues( );
     } else {
+      clusters = Lists.newArrayList();
       for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
         try {
-          Cluster c = Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+          clusters.add( Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
             @Override
             public boolean apply( Cluster input ) {
               return partitionName.equals( input.getConfiguration( ).getPartition( ) );
             }
-          } );
-          reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
+          } ) );
         } catch ( NoSuchElementException e ) {
           try {
-            Cluster c = Clusters.getInstance( ).lookup( partitionName );
-            reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
+            clusters.add( Clusters.getInstance( ).lookup( partitionName ) );
           } catch ( NoSuchElementException ex ) {}
         }
       }
     }
+
+    for ( final Cluster c : Iterables.filter( clusters, filter.asPredicate() ) ) {
+      reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c ) );
+    }
+
     return reply;
   }
   
-  private List<ClusterInfoType> getDescriptionEntry( Cluster c, List<String> args ) {
+  private List<ClusterInfoType> getDescriptionEntry( Cluster c ) {
     List<ClusterInfoType> ret = Lists.newArrayList( );
     String clusterName = c.getName( );
     ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), c.getConfiguration( ).getHostName( ) + " "
@@ -360,6 +365,16 @@ public class ClusterEndpoint implements Startable {
       super( builderFor( Region.class )
           .withStringProperty( "endpoint", RegionFunctions.ENDPOINT_URL )
           .withStringProperty( "region-name", RegionFunctions.REGION_NAME ) );
+    }
+  }
+
+  public static class AvailabilityZoneFilterSupport extends FilterSupport<Cluster> {
+    public AvailabilityZoneFilterSupport() {
+      super( builderFor( Cluster.class )
+          .withUnsupportedProperty( "message" )
+          .withUnsupportedProperty( "region-name" )
+          .withUnsupportedProperty( "state" )
+          .withStringProperty( "zone-name", CloudMetadatas.toDisplayName() ) );
     }
   }
 }
