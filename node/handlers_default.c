@@ -1993,7 +1993,7 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 //!
 static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stateName)
 {
-    logprintfl(EUCAINFO, "node state change to %s\n", stateName);
+    LOGINFO("node state change to %s\n", stateName);
     return EUCA_OK;
 }
 
@@ -2006,6 +2006,6 @@ static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stat
 //!
 static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
 {
-    logprintfl(EUCAERROR, "[%s] no default for %s!\n", instance->instanceId, __func__);
+    LOGERROR("[%s] no default for %s!\n", instance->instanceId, __func__);
     return (EUCA_UNSUPPORTED_ERROR);   
 }

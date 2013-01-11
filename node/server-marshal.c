@@ -415,6 +415,77 @@ adb_ncDescribeResourceResponse_t *ncDescribeResourceMarshal(adb_ncDescribeResour
 }
 
 //!
+//! Helper function used by RunInstance and DescribeInstances
+//!
+//! @param[in]  instance a pointer to the instance type structure we are converting
+//! @param[in]  env pointer to the AXIS2 environment structure
+//! @param[out] outInst a pointer to the resulting instance
+//!
+static void copy_instance_to_adb(adb_instanceType_t * instance, const axutil_env_t * env, ncInstance * outInst)
+{
+    int i = 0;
+    adb_volumeType_t *volume = NULL;
+    axutil_date_time_t *dt = NULL;
+    adb_netConfigType_t *netconf = NULL;
+
+    // NOTE: the order of set operations reflects the order in the WSDL
+
+    // passed into runInstances
+    adb_instanceType_set_uuid(instance, env, outInst->uuid);
+    adb_instanceType_set_reservationId(instance, env, outInst->reservationId);
+    adb_instanceType_set_instanceId(instance, env, outInst->instanceId);
+    adb_instanceType_set_imageId(instance, env, outInst->imageId);
+    adb_instanceType_set_kernelId(instance, env, outInst->kernelId);
+    adb_instanceType_set_ramdiskId(instance, env, outInst->ramdiskId);
+    adb_instanceType_set_userId(instance, env, outInst->userId);
+    adb_instanceType_set_ownerId(instance, env, outInst->ownerId);
+    adb_instanceType_set_accountId(instance, env, outInst->accountId);
+    adb_instanceType_set_keyName(instance, env, outInst->keyName);
+    adb_instanceType_set_instanceType(instance, env, copy_vm_type_to_adb(env, &(outInst->params)));
+
+    netconf = adb_netConfigType_create(env);
+    adb_netConfigType_set_privateMacAddress(netconf, env, outInst->ncnet.privateMac);
+    adb_netConfigType_set_privateIp(netconf, env, outInst->ncnet.privateIp);
+    adb_netConfigType_set_publicIp(netconf, env, outInst->ncnet.publicIp);
+    adb_netConfigType_set_vlan(netconf, env, outInst->ncnet.vlan);
+    adb_netConfigType_set_networkIndex(netconf, env, outInst->ncnet.networkIndex);
+    adb_instanceType_set_netParams(instance, env, netconf);
+
+    // reported by NC
+    adb_instanceType_set_stateName(instance, env, outInst->stateName);
+    adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
+    adb_instanceType_set_createImageStateName(instance, env, outInst->createImageTaskStateName);
+
+    dt = axutil_date_time_create_with_offset(env, outInst->launchTime - time(NULL));
+    adb_instanceType_set_launchTime(instance, env, dt);
+    adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);
+    adb_instanceType_set_netbytes(instance, env, outInst->netbytes);
+
+    // passed into RunInstances for safekeeping by NC
+    adb_instanceType_set_userData(instance, env, outInst->userData);
+    adb_instanceType_set_launchIndex(instance, env, outInst->launchIndex);
+    adb_instanceType_set_platform(instance, env, outInst->platform);
+
+    for (i = 0; i < outInst->groupNamesSize; i++) {
+        adb_instanceType_add_groupNames(instance, env, outInst->groupNames[i]);
+    }
+
+    // updated by NC upon Attach/DetachVolume
+    for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
+        if (strlen(outInst->volumes[i].volumeId) == 0)
+            continue;
+        volume = adb_volumeType_create(env);
+        adb_volumeType_set_volumeId(volume, env, outInst->volumes[i].volumeId);
+        adb_volumeType_set_remoteDev(volume, env, outInst->volumes[i].remoteDev);
+        adb_volumeType_set_localDev(volume, env, outInst->volumes[i].localDev);
+        adb_volumeType_set_state(volume, env, outInst->volumes[i].stateName);
+        adb_instanceType_add_volumes(instance, env, volume);
+    }
+
+    // NOTE: serviceTag seen in the WSDL is unused in NC, used by CC
+}
+
+//!
 //! Unmarshals, executes, responds to the run instance request.
 //!
 //! @param[in] ncRunInstance a pointer to the run instance request parameters
