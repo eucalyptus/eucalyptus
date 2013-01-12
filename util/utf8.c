@@ -220,7 +220,7 @@ static int __utf8_forbitten(u_char octet)
 //!       2. If UTF8_IGNORE_ERROR or UTF8_SKIP_BOM flag is set, sizes may vary when `out' is NULL
 //!          and not NULL. It's because of special UTF-8 sequences which may result in forbitten
 //!          (by RFC3629) UNICODE characters.  So, the caller must check return value every time
-//!          and not prepare buffer in advance (\0 terminate) but after calling this function.
+//!          and not prepare buffer in advance (null terminate) but after calling this function.
 //!
 size_t utf8_to_wchar(const char *in, size_t insize, wchar_t * out, size_t outsize, int flags)
 {

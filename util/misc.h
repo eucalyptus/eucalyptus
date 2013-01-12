@@ -95,8 +95,8 @@
 //! @{
 //! @name Definition of the boolean values TRUE and FALSE
 
-#define TRUE                                     1 //! Defines the "TRUE" boolean value
-#define FALSE                                    0 //! Defines the "FALSE" boolean value
+#define TRUE                                     1 //!< Defines the "TRUE" boolean value
+#define FALSE                                    0 //!< Defines the "FALSE" boolean value
 
 //! @}
 
@@ -110,7 +110,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef unsigned char                            boolean;  //! @todo move this somewhere more global?
+typedef unsigned char                            boolean;  //!< @todo move this somewhere more global?
 
 #include "log.h"                // so everyone picks up the logging functions
 
