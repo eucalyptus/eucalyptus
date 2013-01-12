@@ -87,6 +87,9 @@ clean:
 	@\rm -f node.doxyfile*;
 	@\rm -f cluster.doxyfile*;
 	@\rm -f eucalyptus.doxyfile*;
+	@\rm -rf node;
+	@\rm -rf cluster;
+	@\rm -rf eucalyptus;
 
 distclean:
 
