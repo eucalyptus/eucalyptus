@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -59,9 +62,6 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
-
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 //!
 //! @file cluster/handlers.c
@@ -896,8 +896,10 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             rc = ncBundleRestartInstanceStub(ncs, localmeta, instanceId);
         } else if (!strcmp(ncOp, "ncCancelBundleTask")) {
             char *instanceId = va_arg(al, char *);
-
             rc = ncCancelBundleTaskStub(ncs, localmeta, instanceId);
+        } else if (!strcmp(ncOp, "ncModifyNode")) {
+            char *stateName = va_arg(al, char *);
+            rc = ncModifyNodeStub(ncs, localmeta, stateName);
         } else {
             LOGWARN("\tncOps=%s ppid=%d operation '%s' not found\n", ncOp, getppid(), ncOp);
             rc = 1;
@@ -3842,6 +3844,73 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
     LOGTRACE("returning (outResourcesLen=%d)\n", *outResourcesLen);
 
     return 0;
+}
+
+//!
+//! Implements the CC logic of modifying state of a node controller
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] nodeName the IP of the NC to effect
+//! @param[in] stateName the state for the NC 
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
+{
+    int i, rc, start = 0, stop = 0, ret = 0, done = 0, timeout;
+    time_t op_start;
+    ccResourceCache resourceCacheLocal;
+    op_start = time(NULL);
+
+    rc = initialize(pMeta);
+    if (rc || ccIsEnabled()) {
+        return (1);
+    }
+
+    if (!nodeName || !stateName) {
+        logprintfl(EUCAERROR, "bad input params\n");
+        return (1);
+    }
+    logprintfl(EUCAINFO, "modifying node %s with state=%s\n", SP(nodeName), SP(stateName));
+
+    sem_mywait(RESCACHE);
+    memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+
+    done = 0;
+    for (i = 0; i < MAXNODES && !done; i++) {
+        if (!strcmp(resourceCacheLocal.resources[i].hostname, nodeName)) {
+            // found it
+            start = i;
+            stop = start + 1;
+            done++;
+        }
+    }
+    if (! done) {
+        logprintfl(EUCAERROR, "node requested for modification (%s) cannot be found\n", SP(nodeName));
+    }
+
+    for (i = start; i < stop; i++) {
+        timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, i);
+        rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[i].lockidx, resourceCacheLocal.resources[i].ncURL, "ncModifyNode",
+                          stateName); // no need to pass nodeName as ncClientCall sets that up for all NC requests
+        if (rc) {
+            ret = 1;
+        } else {
+            ret = 0;
+            done++;
+        }
+    }
+
+    logprintfl(EUCATRACE, "done\n");
+
+    shawn();
+
+    return (ret);
 }
 
 //!

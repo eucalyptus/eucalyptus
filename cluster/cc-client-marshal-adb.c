@@ -193,7 +193,7 @@ int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub);
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Handles the kill all instances request
+//! Marshalls and invokes the kill all instances request
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -260,7 +260,7 @@ int cc_killallInstances(axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the get console output request
+//! Marshalls and invokes the get console output request
 //!
 //! @param[in] instId instance identifier string
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -318,7 +318,7 @@ int cc_getConsoleOutput(char *instId, axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the reboot instance request
+//! Marshalls and invokes the reboot instance request
 //!
 //! @param[in] instIds list of instance identifiers
 //! @param[in] instIdsLen number of instance identifiers in the instIds list
@@ -368,7 +368,7 @@ int cc_rebootInstances(char **instIds, int instIdsLen, axutil_env_t * env, axis2
 }
 
 //!
-//! Handles the terminate instance request
+//! Marshalls and invokes the terminate instance request
 //!
 //! @param[in] instIds list of instance identifiers
 //! @param[in] instIdsLen number of instance identifiers in the list
@@ -419,7 +419,7 @@ int cc_terminateInstances(char **instIds, int instIdsLen, axutil_env_t * env, ax
 }
 
 //!
-//! Handles the configure network request.
+//! Marshalls and invokes the configure network request.
 //!
 //! @param[in] sourceNet
 //! @param[in] destName
@@ -491,7 +491,7 @@ int cc_configureNetwork(char *sourceNet, char *destName, char *protocol, int min
 }
 
 //!
-//! Handles the stop network request
+//! Marshalls and invokes the stop network request
 //!
 //! @param[in] vlan the Virtual LAN (VLAN) identifier
 //! @param[in] netName
@@ -531,7 +531,7 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t * env, axis2_stub_t * p
 }
 
 //!
-//! Handles the attach volume request.
+//! Marshalls and invokes the attach volume request.
 //!
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
@@ -576,7 +576,7 @@ int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 }
 
 //!
-//! Handles the detach volume request.
+//! Marshalls and invokes the detach volume request.
 //!
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
@@ -623,7 +623,7 @@ int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *loc
 }
 
 //!
-//! Handles the create image request.
+//! Marshalls and invokes the create image request.
 //!
 //! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
@@ -668,7 +668,7 @@ int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env
 }
 
 //!
-//! Handles the bundle instance request.
+//! Marshalls and invokes the bundle instance request.
 //!
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] bucketName the name of the bucket to store the bundle
@@ -731,7 +731,7 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
 }
 
 //!
-//! Handles the bundle restart instance request.
+//! Marshalls and invokes the bundle restart instance request.
 //! Once the bundling is completed, we need to synchronize with CLC prior
 //! restarting the instance. Once the CLC detects the bundling activity
 //! has completed, it'll send the restart request.
@@ -786,7 +786,7 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
 }
 
 //!
-//! Handles the address assignment request
+//! Marshalls and invokes the address assignment request
 //!
 //! @param[in] src
 //! @param[in] dst
@@ -827,7 +827,7 @@ int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pS
 }
 
 //!
-//! Handles the address unassignment request.
+//! Marshalls and invokes the address unassignment request.
 //!
 //! @param[in] src
 //! @param[in] dst
@@ -867,7 +867,7 @@ int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * 
 }
 
 //!
-//! Handles the describe public addresses request
+//! Marshalls and invokes the describe public addresses request
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -916,7 +916,7 @@ int cc_describePublicAddresses(axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the start network request
+//! Marshalls and invokes the start network request
 //!
 //! @param[in] vlan the Virtual LAN (VLAN) identifier
 //! @param[in] netName
@@ -965,7 +965,7 @@ int cc_startNetwork(int vlan, char *netName, char **ccs, int ccsLen, axutil_env_
 }
 
 //!
-//! Handles the describe networks request
+//! Marshalls and invokes the describe networks request
 //!
 //! @param[in] nameserver
 //! @param[in] ccs
@@ -1039,7 +1039,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
 }
 
 //!
-//! Handles the describe resources request.
+//! Marshalls and invokes the describe resources request.
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -1116,7 +1116,7 @@ int cc_describeResources(axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the describe instances request.
+//! Marshalls and invokes the describe instances request.
 //!
 //! @param[in] instIds list of instance identifiers
 //! @param[in] instIdsLen number of instance identifiers in the instIds list
@@ -1233,7 +1233,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t * env, axi
 }
 
 //!
-//! Handles the run instance request.
+//! Marshalls and invokes the run instance request.
 //!
 //! @param[in] amiId
 //! @param[in] amiURL
@@ -1352,7 +1352,7 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
 
 #if 0
 //!
-//! Handles the register image request.
+//! Marshalls and invokes the register image request.
 //!
 //! @param[in] imageloc image location
 //! @param[in] env pointer to the AXIS2 environment structure
@@ -1411,7 +1411,7 @@ int cc_registerImage(char *imageloc, axutil_env_t * env, axis2_stub_t * pStub)
 #endif /* 0 */
 
 //!
-//! Handles the describes sensor request
+//! Marshalls and invokes the describes sensor request
 //!
 //! @param[in]  historySize
 //! @param[in]  collectionIntervalTimeMs
@@ -1493,7 +1493,7 @@ int cc_describeSensors(int historySize, long long collectionIntervalTimeMs, char
 }
 
 //!
-//! Handles the describe services request.
+//! Marshalls and invokes the describe services request.
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -1558,7 +1558,7 @@ int cc_describeServices(axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the start service request.
+//! Marshalls and invokes the start service request.
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -1600,7 +1600,7 @@ int cc_startService(axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the stop service request.
+//! Marshalls and invokes the stop service request.
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -1642,7 +1642,7 @@ int cc_stopService(axutil_env_t * env, axis2_stub_t * pStub)
 }
 
 //!
-//! Handles the enable service request
+//! Marshalls and invokes the enable service request
 //!
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -1765,4 +1765,45 @@ int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub)
         }
     }
     return (!status);
+}
+
+//!
+//! Marshalls and invokes the node controller modification request
+//!
+//! @param[in] nodeName the IP of the Node Controller to affect
+//! @param[in] stateName the state to transition the NC into
+//! @param[in] env pointer to the AXIS2 environment structure
+//! @param[in] pStub a pointer to the AXIS2 stub structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stub_t * pStub)
+{
+    adb_ModifyNode_t *input = NULL;
+    adb_ModifyNodeResponse_t *output = NULL;
+    adb_modifyNodeType_t *sn = NULL;
+    adb_modifyNodeResponseType_t *snrt = NULL;
+
+    sn = adb_modifyNodeType_create(env);
+    input = adb_ModifyNode_create(env);
+
+    EUCA_MESSAGE_MARSHAL(modifyNodeType, sn, (&mymeta));
+
+    adb_modifyNodeType_set_nodeName(sn, env, nodeName);
+    adb_modifyNodeType_set_stateName(sn, env, stateName);
+
+    adb_ModifyNode_set_ModifyNode(input, env, sn);
+
+    output = axis2_stub_op_EucalyptusCC_ModifyNode(pStub, env, input);
+    if (!output) {
+        printf("ERROR: modifyNode returned NULL\n");
+        return (1);
+    }
+    snrt = adb_ModifyNodeResponse_get_ModifyNodeResponse(output, env);
+    printf("modifyNode returned status %d\n", adb_modifyNodeResponseType_get_return(snrt, env));
+    return (0);
 }

@@ -276,6 +276,22 @@ public class DescribeSensorsType extends CloudClusterMessage {
     }
 }
 
+public class ModifyNode extends CloudClusterMessage {
+    String stateName;
+    String nodeName;
+    ModifyNode(){}
+   
+    ModifyNode (String nodeName, String stateName ) {
+      this.nodeName = nodeName;
+      this.stateName = stateName;
+    }
+}
+
+public class ModifyNodeResponse extends CloudClusterMessage {
+    ModifyNodeResponse(){}
+      
+}
+
 public class DescribeSensorsResponse extends CloudClusterMessage {
     
     ArrayList<SensorsResourceType> sensorsResources = new ArrayList<SensorsResourceType>();

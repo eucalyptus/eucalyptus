@@ -379,7 +379,7 @@ static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_
 }
 
 //!
-//! Handles the Run instance request
+//! Marshals the Run instance request
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -485,7 +485,7 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
 }
 
 //!
-//! Handles the get console output request.
+//! Marshals the get console output request.
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -541,7 +541,7 @@ int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId,
 }
 
 //!
-//! Handles the reboot instance request.
+//! Marshals the reboot instance request.
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -594,7 +594,7 @@ int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 }
 
 //!
-//! Handles the Terminate instance request
+//! Marshals the Terminate instance request
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -658,7 +658,7 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, in
 }
 
 //!
-//! Handles the client describe instance request.
+//! Marshals the client describe instance request.
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -798,7 +798,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
 }
 
 //!
-//! Handles the client assign address request.
+//! Marshals the client assign address request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -852,7 +852,7 @@ int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, ch
 }
 
 //!
-//! Handles the client power down rquest
+//! Marshals the client power down rquest
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -901,7 +901,7 @@ int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta)
 }
 
 //!
-//! Handles the start network request.
+//! Marshals the start network request.
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -967,7 +967,7 @@ int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **pe
 }
 
 //!
-//! Handles the client attach volume request.
+//! Marshals the client attach volume request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -1024,7 +1024,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 }
 
 //!
-//! Handles the client detach volume request.
+//! Marshals the client detach volume request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -1089,7 +1089,7 @@ int ncDetachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
 }
 
 //!
-//! Handles the client bundle instance request.
+//! Marshals the client bundle instance request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -1153,7 +1153,7 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
 }
 
 //!
-//! Handles the client restart instance request once bundling has completed.
+//! Marshals the client restart instance request once bundling has completed.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -1203,7 +1203,7 @@ int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instan
 }
 
 //!
-//! Handles the client cancel bundle task request.
+//! Marshals the client cancel bundle task request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -1254,7 +1254,7 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 }
 
 //!
-//! Handles the client describe bundles task request
+//! Marshals the client describe bundles task request
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -1320,7 +1320,7 @@ int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds
 }
 
 //!
-//! Handles the client create image request.
+//! Marshals the client create image request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
@@ -1375,7 +1375,7 @@ int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char
 }
 
 //!
-//! Handles the client describe sensor request.
+//! Marshals the client describe sensor request.
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
@@ -1456,9 +1456,132 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
     return (status);
 }
 
+//!
+//! Marshals the node controller modification request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  stateName the next state for the node controller
+//!
+//! @return 0 for success, non-zero for error
+//!
+//! @see ncModifyNode()
+//!
+int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncModifyNode_t *input = NULL;
+    adb_ncModifyNodeType_t *request = NULL;
+    adb_ncModifyNodeResponse_t *output = NULL;
+    adb_ncModifyNodeResponseType_t *response = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncModifyNode_create (env);
+    request = adb_ncModifyNodeType_create (env);
+
+    // set standard input fields
+    adb_ncModifyNodeType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+      if (pMeta->correlationId) { pMeta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncModifyNodeType, request, pMeta);
+    }
+
+    // set op-specific input fields
+    adb_ncModifyNodeType_set_stateName(request, env, stateName);
+    adb_ncModifyNode_set_ncModifyNode(input, env, request);
+
+    // do it
+    if ((output = axis2_stub_op_EucalyptusNC_ncModifyNode (stub, env, input)) == NULL) {
+        logprintfl (EUCAERROR, NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_ncModifyNodeResponse_get_ncModifyNodeResponse (output, env);
+        if ( adb_ncModifyNodeResponseType_get_return(response, env) == AXIS2_FALSE ) {
+            logprintfl (EUCAERROR, "returned an error\n");
+            status = 1;
+        }
+        // no output other than success/failure
+    }
+
+    return (status);
+}
+
+//!
+//! Marshals the instance migration request, with different behavior on source and destination.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId the ID of the instance to migrate to destination
+//! @param[in]  sourceNodeName IP of the source Node Controller
+//! @param[in]  destNodeName IP of the destination Node Controller
+//! @param[in]  credentials credentials that enable the migration
+//!
+//! @return 0 for success, non-zero for error
+//!
+//! @see ncMigrateInstance()
+//!
+int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncMigrateInstance_t *input = NULL;
+    adb_ncMigrateInstanceType_t *request = NULL;
+    adb_ncMigrateInstanceResponse_t *output = NULL;
+    adb_ncMigrateInstanceResponseType_t *response = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncMigrateInstance_create (env);
+    request = adb_ncMigrateInstanceType_create (env);
+
+    // set standard input fields
+    adb_ncMigrateInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+      if (pMeta->correlationId) { pMeta->correlationId = NULL; }
+      EUCA_MESSAGE_MARSHAL(ncMigrateInstanceType, request, pMeta);
+    }
+
+    // set op-specific input fields
+    adb_ncMigrateInstanceType_set_instanceId(request, env, instanceId);
+    adb_ncMigrateInstanceType_set_sourceNodeName(request, env, sourceNodeName);
+    adb_ncMigrateInstanceType_set_destNodeName(request, env, destNodeName);
+    if (credentials != NULL)
+        adb_ncMigrateInstanceType_set_credentials(request, env, credentials);
+    adb_ncMigrateInstance_set_ncMigrateInstance(input, env, request);
+
+    // do it
+    if ((output = axis2_stub_op_EucalyptusNC_ncMigrateInstance (stub, env, input)) == NULL) {
+        logprintfl (EUCAERROR, NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_ncMigrateInstanceResponse_get_ncMigrateInstanceResponse (output, env);
+        if ( adb_ncMigrateInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+            logprintfl (EUCAERROR, "returned an error\n");
+            status = 1;
+        }
+        // no output other than success/failure
+    }
+
+    return (status);
+}
+
 /*************************
  a template for future ops
  *************************
+//!
+//! Marshals the OPERATION request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return 0 for success, non-zero for error
+//!
+//! @see ncOPERATION()
+//!
 int ncOPERATIONStub (ncStub *pStub, ncMetadata *pMeta, ...)
 {
     int status = 0;

@@ -484,6 +484,12 @@ int main(int argc, char **argv)
             }
             sensor_res2str(buf, sizeof(buf), res, resSize);
             printf("resources: %d\n%s\n", resSize, buf);
+        } else if (!strcmp(argv[2], "modifyNode")) {
+            rc = cc_modifyNode(argv[3], argv[4],  env, stub);
+            if (rc != 0) {
+                printf("cc_modifyNode() failed: error=%d\n", rc);
+                exit(1);
+            }
         } else {
             printf("unrecognized operation '%s'\n", argv[2]);
             exit(1);

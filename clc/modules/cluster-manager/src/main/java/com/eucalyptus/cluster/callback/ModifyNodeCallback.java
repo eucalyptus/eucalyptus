@@ -32,17 +32,16 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.reporting.event.ModifyNodeEvent;
 
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.BroadcastCallback;
 
-import edu.ucsb.eucalyptus.msgs.ModifyNodeType;
-import edu.ussb.eucalyptus.msgs.ModifyNodeResponseType;
+import edu.ucsb.eucalyptus.msgs.ModifyNode;
+import edu.ucsb.eucalyptus.msgs.ModifyNodeResponse;
 
 
 public class ModifyNodeCallback extends
-    BroadcastCallback<ModifyNodeType, ModifyNodeResponse> {
+    BroadcastCallback<ModifyNode, ModifyNodeResponse> {
 
   private static final Logger LOG = Logger.getLogger( ModifyNodeCallback.class );
   private final String stateName;
@@ -54,8 +53,8 @@ public class ModifyNodeCallback extends
     this.stateName = stateName;
     this.nodeName = nodeName;
     
-    final ModifyNodeType msg =
-        new ModifyNodeType( this.stateName, this.nodeName);
+    final ModifyNode msg =
+        new ModifyNode( this.stateName, this.nodeName);
 
     try {
       msg.setUser( Accounts.lookupSystemAdmin() );
@@ -67,11 +66,11 @@ public class ModifyNodeCallback extends
   }
 
   @Override
-  public void initialize( final ModifyNodeType msg ) {
+  public void initialize( final ModifyNode msg ) {
   }
 
   @Override
-  public BroadcastCallback<ModifyNodeType, ModifyNodeResponse> newInstance() {
+  public BroadcastCallback<ModifyNode, ModifyNodeResponse> newInstance() {
     return new ModifyNodeCallback( stateName,  nodeName);
   }
 
@@ -84,7 +83,7 @@ public class ModifyNodeCallback extends
   }
 
   @Override
-  public void fire( final ModifyNodeResponseType msg ) {
+  public void fire( final ModifyNodeResponse msg ) {
     try {
      
         LOG.debug(msg);
