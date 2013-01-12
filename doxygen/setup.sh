@@ -79,7 +79,7 @@ EucaSettings=$(printf "$EucaSettings\nDOT_PATH               = $dotpath ");
 ProjectSpec="";
 ToEvaluate="";
 if [ ${version:0:3} == "1.8" ]; then
-	layoutfile="html_includes/layoutFileName.xml";
+	layoutfile="html_includes/layoutFileName_1_8.xml";
 	
 	ProjectSpec=$(printf "PROJECT_BRIEF          = a4 ");
 	ProjectSpec=$(printf "$ProjectSpec\nPROJECT_LOGO           = ./html_includes/eucalyptus_logo.png ");

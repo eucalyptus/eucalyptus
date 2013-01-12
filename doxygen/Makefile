@@ -73,6 +73,7 @@ doc: eucadoc
 
 eucadoc: setup
 	@doxygen eucalyptus.doxyfile > /dev/null;
+	
 
 nodedoc: setup
 	@doxygen node.doxyfile > /dev/null;
@@ -83,6 +84,9 @@ clusterdoc: setup
 deploy:
 
 clean:
+	@\rm -f node.doxyfile*;
+	@\rm -f cluster.doxyfile*;
+	@\rm -f eucalyptus.doxyfile*;
 
 distclean:
 
