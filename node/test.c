@@ -63,16 +63,105 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/test.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
-#include "misc.h"
-#include "data.h"
+#include <eucalyptus.h>
+#include <misc.h>
+#include <data.h>
+#include <euca_string.h>
 
-const char *euca_this_component_name = "nc";
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void test_command(char *command);
+int main(int argc, char **argv);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Execute a system command.
+//!
+//! @param[in] command the system command to execute
+//!
 void test_command(char *command)
 {
     char *result = system_output(command);
@@ -85,9 +174,17 @@ void test_command(char *command)
         result[max - 1] = 0;
     }
     printf("--->%s executed\noutput=[%s]\n\n", command, result);
-    free(result);
+    EUCA_FREE(result);
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return Always return 0
+//!
 int main(int argc, char **argv)
 {
     printf("=====> testing misc.c\n");
@@ -101,19 +198,19 @@ int main(int argc, char **argv)
         int i = 0;
         long long ll = 0;
 
-        sscanf_lines("a1\na\na2\n", "a%d", &i);
+        euca_lscanf("a1\na\na2\n", "a%d", &i);
         assert(i == 1);
-        sscanf_lines("a\nab3\na   4\na5", "a %d", &i);
+        euca_lscanf("a\nab3\na   4\na5", "a %d", &i);
         assert(i == 4);
-        sscanf_lines("", "%d", &i);
-        sscanf_lines("\n\n\n", "%d", &i);
-        sscanf_lines("abcdefg6", "g%d", &i);
+        euca_lscanf("", "%d", &i);
+        euca_lscanf("\n\n\n", "%d", &i);
+        euca_lscanf("abcdefg6", "g%d", &i);
         assert(i != 6);
-        sscanf_lines("abcdefg", "ab%cdefg", &c);
+        euca_lscanf("abcdefg", "ab%cdefg", &c);
         assert(c == 'c');
-        sscanf_lines("a\na    7\na\n", "a %ld", &l);
+        euca_lscanf("a\na    7\na\n", "a %ld", &l);
         assert(l == 7L);
-        sscanf_lines("a\n8a\na9\n", "a %lld", &ll);
+        euca_lscanf("a\n8a\na9\n", "a %lld", &ll);
         assert(ll == 9L);
     }
 
@@ -142,7 +239,7 @@ int main(int argc, char **argv)
         bag = NULL;
 
         n = remove_instance(&bag, NULL);
-        assert(n != 0);
+        assert(n != EUCA_OK);
         bag = NULL;
 
         for (i = 0; i < INSTS; i++) {
@@ -151,14 +248,14 @@ int main(int argc, char **argv)
             inst = Insts[i] = allocate_instance("the-uuid", id, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
             assert(inst != NULL);
             n = add_instance(&bag, inst);
-            assert(n == 0);
+            assert(n == EUCA_OK);
         }
         n = total_instances(&bag);
         assert(n == INSTS);
         n = remove_instance(&bag, Insts[0]);
-        assert(n == 0);
+        assert(n == EUCA_OK);
         n = remove_instance(&bag, Insts[INSTS - 1]);
-        assert(n == 0);
+        assert(n == EUCA_OK);
         n = total_instances(&bag);
         assert(n == INSTS - 2);
 

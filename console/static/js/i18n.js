@@ -27,7 +27,6 @@
       mode:'both',
       language: args.language, 
       callback: function() {
-        // when jsrender is used, the variables should be propped to make it available as $.i18n.map 
         ;
       }
     });

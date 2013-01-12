@@ -63,29 +63,119 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/NCclient.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <unistd.h>             /* getopt */
-#include "data.h"
-#include "client-marshal.h"
-#include "misc.h"
-#include "euca_axis.h"
-#include "sensor.h"
-#include "adb-helpers.h"
 
-#define NC_ENDPOINT "/axis2/services/EucalyptusNC"
-#define WALRUS_ENDPOINT "/services/Walrus"
-#define DEFAULT_WALRUS_HOSTPORT "localhost:8773"
-#define DEFAULT_NC_HOSTPORT "localhost:8775"
-#define DEFAULT_MAC_ADDR "aa:bb:cc:dd:ee:ff"
-#define DEFAULT_PUBLIC_IP "10.1.2.3"
-#define BUFSIZE 1024
-char debug = 0;
+#include <data.h>
+
+#include "client-marshal.h"
+
+#include <misc.h>
+#include <euca_axis.h>
+#include <sensor.h>
+#include <eucalyptus.h>
+#include <adb-helpers.h>
+#include <euca_string.h>
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define NC_ENDPOINT                 "/axis2/services/EucalyptusNC"
+#define WALRUS_ENDPOINT             "/services/Walrus"
+#define DEFAULT_WALRUS_HOSTPORT     "localhost:8773"
+#define DEFAULT_NC_HOSTPORT         "localhost:8775"
+#define DEFAULT_MAC_ADDR            "aa:bb:cc:dd:ee:ff"
+#define DEFAULT_PUBLIC_IP           "10.1.2.3"
+#define BUFSIZE                     1024
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+boolean debug = FALSE;          //!< Enables debug mode if set to TRUE
 
 #ifndef NO_COMP
-const char *euca_this_component_name = "nc";
-const char *euca_client_component_name = "user";
-#endif
+const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
+const char *euca_client_component_name = "user";    //!< The client component name
+#endif /* ! NO_COMP */
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define CHECK_PARAM(par, name) if (par==NULL) { fprintf (stderr, "ERROR: no %s specified (try -h)\n", name); exit (1); }
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Prints the command help to stderr
+//!
 void usage(void)
 {
     fprintf(stderr, "usage: NCclient [command] [options]\n"
@@ -129,16 +219,20 @@ void usage(void)
     exit(1);
 }
 
-#define CHECK_PARAM(par, name) if (par==NULL) { fprintf (stderr, "ERROR: no %s specified (try -h)\n", name); exit (1); }
-
-// parse spec_str (-v parameter) into a VBR record and add 
-// it to the vm_type->virtualBootRecord[virtualBootRecordLen]
-// return 0 if OK, return 1 on error
+//!
+//! parse spec_str (-v parameter) into a VBR record and add it to the
+//! vm_type->virtualBootRecord[virtualBootRecordLen]
+//!
+//! @param[in] spec_str
+//! @param[in] vm_type
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int add_vbr(const char *spec_str, virtualMachine * vm_type)
 {
     if (vm_type->virtualBootRecordLen == EUCA_MAX_VBRS) {
         fprintf(stderr, "ERROR: too many -v parameters\n");
-        return 1;
+        return EUCA_ERROR;
     }
     virtualBootRecord *vbr = &(vm_type->virtualBootRecord[vm_type->virtualBootRecordLen++]);
 
@@ -153,12 +247,12 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
         fprintf(stderr, "ERROR: invalid 'type' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
+    euca_strncpy(vbr->typeName, type_spec, sizeof(vbr->typeName));
     if (id_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'id' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->id, id_spec, sizeof(vbr->id));
+    euca_strncpy(vbr->id, id_spec, sizeof(vbr->id));
     if (size_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'size' specification in VBR '%s'\n", spec_str);
         goto out_error;
@@ -168,27 +262,35 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
         fprintf(stderr, "ERROR: invalid 'format' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
+    euca_strncpy(vbr->formatName, format_spec, sizeof(vbr->formatName));
     if (dev_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'guestDeviceName' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
+    euca_strncpy(vbr->guestDeviceName, dev_spec, sizeof(vbr->guestDeviceName));
     if (loc_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'resourceLocation' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    safe_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
+    euca_strncpy(vbr->resourceLocation, spec_str + (loc_spec - spec_copy), sizeof(vbr->resourceLocation));
 
-    free(spec_copy);
-    return 0;
+    EUCA_FREE(spec_copy);
+    return EUCA_OK;
 
 out_error:
     vm_type->virtualBootRecordLen--;
-    free(spec_copy);
-    return 1;
+    EUCA_FREE(spec_copy);
+    return EUCA_ERROR;
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return Always return 0 or exit(1) on failure
+//!
 int main(int argc, char **argv)
 {
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
@@ -218,7 +320,8 @@ int main(int argc, char **argv)
     char *command = NULL;
     int local = 0;
     int count = 1;
-    int ch;
+    int ch = 0;
+    int rc = 0;
 
     while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:")) != -1) {
         switch (ch) {
@@ -301,7 +404,7 @@ int main(int argc, char **argv)
                 for (i = 0; optarg[i]; i++)
                     if (optarg[i] == ':')
                         group_names_size++;
-                group_names = malloc(sizeof(char *) * group_names_size);
+                group_names = EUCA_ZALLOC(group_names_size, sizeof(char *));
                 if (group_names == NULL) {
                     fprintf(stderr, "ERROR: out of memory for group_names[]\n");
                     exit(1);
@@ -322,6 +425,7 @@ int main(int argc, char **argv)
             break;
         case 'h':
             usage();            // will exit
+            break;
         case '?':
         default:
             fprintf(stderr, "ERROR: unknown parameter (try -h)\n");
@@ -344,7 +448,7 @@ int main(int argc, char **argv)
     ncStub *stub;
     char configFile[1024], policyFile[1024];
     char *euca_home;
-    int rc, use_wssec;
+    int use_wssec;
     char *tmpstr;
 
     euca_home = getenv("EUCALYPTUS");
@@ -355,7 +459,7 @@ int main(int argc, char **argv)
     snprintf(policyFile, 1024, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", euca_home);
     rc = get_conf_var(configFile, "ENABLE_WS_SECURITY", &tmpstr);
     if (rc != 1) {
-        /* Default to enabled */
+/* Default to enabled */
         use_wssec = 1;
     } else {
         if (!strcmp(tmpstr, "Y")) {
@@ -378,9 +482,9 @@ int main(int argc, char **argv)
     char walrus_url[BUFSIZE];
     snprintf(walrus_url, BUFSIZE, "http://%s%s", walrus_hostport, WALRUS_ENDPOINT);
     serviceInfoType *si = &(meta.services[meta.servicesLen++]);
-    safe_strncpy(si->type, "walrus", sizeof(si->type));
-    safe_strncpy(si->name, "walrus", sizeof(si->name));
-    safe_strncpy(si->uris[0], walrus_url, sizeof(si->uris[0]));
+    euca_strncpy(si->type, "walrus", sizeof(si->type));
+    euca_strncpy(si->name, "walrus", sizeof(si->name));
+    euca_strncpy(si->uris[0], walrus_url, sizeof(si->uris[0]));
     si->urisLen = 1;
 
     if (use_wssec && !local) {
@@ -421,7 +525,7 @@ int main(int argc, char **argv)
             CHECK_PARAM(kernel_id, "kernel ID and manifest path");
         }
 
-        char *privMac, *pubMac, *privIp;
+        char *privMac, *privIp;
         char *platform = NULL;
         int vlan = 3;
         privMac = strdup(mac_addr);
@@ -430,7 +534,7 @@ int main(int argc, char **argv)
         privIp = strdup("10.0.0.202");
         srand(time(NULL));
 
-        /* generate random IDs if they weren't specified */
+/* generate random IDs if they weren't specified */
 #define C rand()%26 + 97
 
         while (count--) {
@@ -468,23 +572,16 @@ int main(int argc, char **argv)
             snprintf(netparams.privateIp, 24, "%s", privIp);
             snprintf(netparams.privateMac, 24, "%s", privMac);
 
-            int rc = ncRunInstanceStub(stub, &meta,
-                                       uuid, iid, rid,
-                                       &params,
-                                       image_id, image_url,
-                                       kernel_id, kernel_url,
-                                       ramdisk_id, ramdisk_url,
-                                       "eucalyptusUser", "eucalyptusAccount",
-                                       "",  /* key */
-                                       &netparams,
-                                       //                                       privMac, privIp, vlan, 
-                                       user_data, launch_index, platform, 0, group_names, group_names_size, /* CC stuff */
-                                       &outInst);
+            rc = ncRunInstanceStub(stub, &meta, uuid, iid, rid, &params, image_id, image_url, kernel_id, kernel_url, ramdisk_id, ramdisk_url, "eucalyptusUser", "eucalyptusAccount", "",    /* key */
+                                   &netparams,
+                                   //                                       privMac, privIp, vlan,
+                                   user_data, launch_index, platform, 0, group_names, group_names_size, /* CC stuff */
+                                   &outInst);
             if (rc != 0) {
                 printf("ncRunInstance() failed: instanceId=%s error=%d\n", instance_id, rc);
                 exit(1);
             }
-            // count device mappings
+// count device mappings
             int i, count = 0;
             for (i = 0; i < EUCA_MAX_VBRS; i++) {
                 if (strlen(outInst->params.virtualBootRecord[i].typeName) > 0)
@@ -494,26 +591,25 @@ int main(int argc, char **argv)
                    count, outInst->params.virtualBootRecordLen);
         }
 
-        /***********************************************************/
+    /***********************************************************/
     } else if (!strcmp(command, "bundleInstance")) {
         CHECK_PARAM(instance_id, "instance id");
-        int rc =
-            ncBundleInstanceStub(stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
+        rc = ncBundleInstanceStub(stub, &meta, instance_id, "bucket-foo", "prefix-foo", "s3-url-foo", "user-key-foo", "s3policy-foo", "s3policy-sig");
         printf("ncBundleInstanceStub = %d\n", rc);
 
     } else if (!strcmp(command, "bundleRestartInstance")) {
         CHECK_PARAM(instance_id, "instance id");
-        int rc = ncBundleRestartInstanceStub(stub, &meta, instance_id);
+        rc = ncBundleRestartInstanceStub(stub, &meta, instance_id);
         printf("ncBundleRestartInstanceStub = %d\n", rc);
     } else if (!strcmp(command, "powerDown")) {
-        int rc = ncPowerDownStub(stub, &meta);
+        rc = ncPowerDownStub(stub, &meta);
     } else if (!strcmp(command, "describeBundleTasks")) {
         char *instIds[4];
         int instIdsLen;
-        instIds[0] = malloc(sizeof(char) * 32);
-        instIds[1] = malloc(sizeof(char) * 32);
-        instIds[2] = malloc(sizeof(char) * 32);
-        instIds[3] = malloc(sizeof(char) * 32);
+        instIds[0] = EUCA_ZALLOC(32, sizeof(char));
+        instIds[1] = EUCA_ZALLOC(32, sizeof(char));
+        instIds[2] = EUCA_ZALLOC(32, sizeof(char));
+        instIds[3] = EUCA_ZALLOC(32, sizeof(char));
         snprintf(instIds[0], 32, "i-12345675");
         snprintf(instIds[1], 32, "i-12345674");
         snprintf(instIds[2], 32, "i-12345673");
@@ -526,24 +622,24 @@ int main(int argc, char **argv)
             printf("BUNDLE %d: %s %s\n", i, outBundleTasks[i]->instanceId, outBundleTasks[i]->state);
         }
     } else if (!strcmp(command, "assignAddress")) {
-        int rc = ncAssignAddressStub(stub, &meta, instance_id, public_ip);
+        rc = ncAssignAddressStub(stub, &meta, instance_id, public_ip);
     } else if (!strcmp(command, "terminateInstance")) {
         CHECK_PARAM(instance_id, "instance ID");
 
         int shutdownState, previousState;
-        int rc = ncTerminateInstanceStub(stub, &meta, instance_id, 0, &shutdownState, &previousState);
+        rc = ncTerminateInstanceStub(stub, &meta, instance_id, 0, &shutdownState, &previousState);
         if (rc != 0) {
             printf("ncTerminateInstance() failed: error=%d\n", rc);
             exit(1);
         }
         printf("shutdownState=%d, previousState=%d\n", shutdownState, previousState);
 
-        /***********************************************************/
+    /***********************************************************/
     } else if (!strcmp(command, "describeInstances")) {
-        /* TODO: pull out of argv[] requested instanceIDs */
+        //! @TODO pull out of argv[] requested instanceIDs */
         ncInstance **outInsts;
         int outInstsLen, i;
-        int rc = ncDescribeInstancesStub(stub, &meta, NULL, 0, &outInsts, &outInstsLen);
+        rc = ncDescribeInstancesStub(stub, &meta, NULL, 0, &outInsts, &outInstsLen);
         if (rc != 0) {
             printf("ncDescribeInstances() failed: error=%d\n", rc);
             exit(1);
@@ -580,14 +676,14 @@ int main(int argc, char **argv)
                 free_instance(&(outInsts[i]));
             }
         }
-        /* TODO: fix free(outInsts); */
+        //! @TODO: fix free(outInsts);
 
     /***********************************************************/
     } else if (!strcmp(command, "describeResource")) {
         char *type = NULL;
         ncResource *outRes;
 
-        int rc = ncDescribeResourceStub(stub, &meta, type, &outRes);
+        rc = ncDescribeResourceStub(stub, &meta, type, &outRes);
         if (rc != 0) {
             printf("ncDescribeResource() failed: error=%d\n", rc);
             exit(1);
@@ -604,7 +700,7 @@ int main(int argc, char **argv)
         CHECK_PARAM(remote_dev, "remote dev");
         CHECK_PARAM(local_dev, "local dev");
 
-        int rc = ncAttachVolumeStub(stub, &meta, instance_id, volume_id, remote_dev, local_dev);
+        rc = ncAttachVolumeStub(stub, &meta, instance_id, volume_id, remote_dev, local_dev);
         if (rc != 0) {
             printf("ncAttachVolume() failed: error=%d\n", rc);
             exit(1);
@@ -617,7 +713,7 @@ int main(int argc, char **argv)
         CHECK_PARAM(remote_dev, "remote dev");
         CHECK_PARAM(local_dev, "local dev");
 
-        int rc = ncDetachVolumeStub(stub, &meta, instance_id, volume_id, remote_dev, local_dev, force);
+        rc = ncDetachVolumeStub(stub, &meta, instance_id, volume_id, remote_dev, local_dev, force);
         if (rc != 0) {
             printf("ncDetachVolume() failed: error=%d\n", rc);
             exit(1);
@@ -629,7 +725,7 @@ int main(int argc, char **argv)
         sensorResource **res;
         int resSize;
 
-        int rc = ncDescribeSensorsStub(stub, &meta, 20, 5000, NULL, 0, NULL, 0, &res, &resSize);
+        rc = ncDescribeSensorsStub(stub, &meta, 20, 5000, NULL, 0, NULL, 0, &res, &resSize);
         if (rc != 0) {
             printf("ncDescribeSensors() failed: error=%d\n", rc);
             exit(1);

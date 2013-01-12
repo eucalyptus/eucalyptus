@@ -106,7 +106,10 @@ if( !Array.prototype.indexOf ) {
 }
 
 function addEllipsis(input, maxLen){
-  if (input == undefined || input.length < maxLen)
+  if (input == undefined)
+    return input;
+  input = DefaultEncoder().encodeForHTML(input);
+  if (input.length < maxLen)
     return input;
   input = input.substring(0, maxLen);
   i = input.lastIndexOf(" ");
@@ -559,7 +562,6 @@ function sortArray(array, comperator){
     var idx2 = 0;
     while(idx1 < arr1.length  || idx2 < arr2.length){
       if(idx1 < arr1.length && idx2 < arr2.length){
-       // if(arr1[idx1] < arr2[idx2])
         if(comperator(arr1[idx1], arr2[idx2]))
           merged.push(arr1[idx1++]);
         else

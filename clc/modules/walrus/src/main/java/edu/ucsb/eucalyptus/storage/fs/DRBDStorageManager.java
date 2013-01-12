@@ -312,6 +312,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 				if(isPrimary()) {
 					makeSecondary();
 				}
+				throw new EucalyptusCloudException("Unable to mount primary: " + e);
 			}
 		}
 		//verify state

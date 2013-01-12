@@ -378,7 +378,7 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
     } else if ( APPLY_USER_SUBJECT.equals( subject ) ) {
       doApplyUser( values.get( 0 ), values.get( 1 ), values.get( 2 ), values.get( 3 ) );
     } else if ( PASSWORD_RESET_SUBJECT.equals( subject ) ) {
-      doResetPassword( values.get( 0 ), values.get( 1 ), values.get( 2 ) );
+      doResetPassword( values.get( 1 ), values.get( 0 ), values.get( 2 ) );
     }
   }
 

@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file storage/http.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>             // close, stat
@@ -73,247 +87,451 @@
 #include <curl/curl.h>
 #include <curl/easy.h>
 
-#ifndef _UNIT_TEST              // http_ functions aren't part of the unit test
-#include "config.h"
-#include "eucalyptus.h"
-#include "misc.h"
+#include <eucalyptus.h>
+#include <log.h>
+
+#ifndef _UNIT_TEST
+// http_ functions aren't part of the unit test
+#include <config.h>
 #include "http.h"
+#endif /* ! _UNIT_TEST */
 
-#define TOTAL_RETRIES 3         /* download is retried in case of connection problems */
-#define FIRST_TIMEOUT 4         /* in seconds, goes in powers of two afterwards */
-#define STRSIZE 245             /* for short strings: files, hosts, URLs */
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-static size_t read_data(char *bufptr, size_t size, size_t nitems, void *userp);
+#ifndef _UNIT_TEST
+#define TOTAL_RETRIES                              3    //!< download is retried in case of connection problems
+#define FIRST_TIMEOUT                              4    //!< in seconds, goes in powers of two afterwards
+#define STRSIZE                                  245    //!< for short strings: files, hosts, URLs
+#endif /* ! _UNIT_TEST */
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#ifndef _UNIT_TEST
 struct read_request {
-    FILE *fp;                   /* input file pointer to be used by curl READERs */
-    long long total_read;       /* bytes written during the operation */
-    long long total_calls;      /* write calls made during the operation */
-    time_t timestamp;           // timestamp for periodically printing progress messages
-    long long file_size;        // file size in bytes, to print in progress messages
+    FILE *fp;                   //!< input file pointer to be used by curl READERs
+    long long total_read;       //!< bytes written during the operation
+    long long total_calls;      //!< write calls made during the operation
+    time_t timestamp;           //!< timestamp for periodically printing progress messages
+    long long file_size;        //!< file size in bytes, to print in progress messages
 };
 
 struct write_request {
-    FILE *fp;                   /* output file pointer to be used by curl WRITERs */
-    long long total_wrote;      /* bytes written during the operation */
-    long long total_calls;      /* write calls made during the operation */
+    FILE *fp;                   //!< output file pointer to be used by curl WRITERs
+    long long total_wrote;      //!< bytes written during the operation
+    long long total_calls;      //!< write calls made during the operation
 #if defined (CAN_GZIP)
-    z_stream strm;              /* stream struct used by zlib */
-    int ret;                    /* return value of last inflate() call */
-#endif
+    z_stream strm;              //!< stream struct used by zlib
+    int ret;                    //!< return value of last inflate() call
+#endif                          /* CAN_GZIP */
 };
+#endif /* ! _UNIT_TEST */
 
-static int curl_initialized = 0;
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#ifndef _UNIT_TEST
+static boolean curl_initialized = FALSE;    //!< boolean to indicate if we have already initialize libcurl
+#endif /* ! _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int http_put(const char *file_path, const char *url, const char *login, const char *password);
+
+char *url_encode(const char *unencoded);
+char *url_decode(const char *encoded);
+int http_get(const char *url, const char *outfile);
+int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
+
+#ifdef _UNIT_TEST
+int main(int argc, char **argv);
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static size_t read_data(char *buffer, size_t size, size_t nitems, void *params);
+static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params);
+static char hch_to_int(char ch);
+static char int_to_hch(char i);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Process an HTTP put request to the given URL.
+//!
+//! @param[in] file_path path to the input file to be used by curl READERs
+//! @param[in] url the request URL
+//! @param[in] login the login for the request (optional)
+//! @param[in] password the passwor for the request (optional)
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: on failure.
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!         \li EUCA_ACCESS_ERROR: if we fail to access file_path file
+//!         \li EUCA_TIMEOUT_ERROR: if the execution timed out
+//!
+//! @pre Both file_path and url parameters must not be NULL
+//!
+//! @post On success, the put request has been processed successfully
+//!
+//! @note On execution failure, the operation will be re-attempted up to TOTA_RETRIES times. Each
+//!       time we retrie, the timeout value will double.
+//!
 int http_put(const char *file_path, const char *url, const char *login, const char *password)
 {
-    int code = ERROR;
+    int code = EUCA_ERROR;
+    int retries = TOTAL_RETRIES;
+    int timeout = FIRST_TIMEOUT;
+    long httpcode = 0L;
+    FILE *fp = NULL;
+    char error_msg[CURL_ERROR_SIZE] = { 0 };
+    char userpwd[STRSIZE] = { 0 };
+    struct stat64 mystat = { 0 };
+    struct read_request params = { 0 };
+    CURL *curl = NULL;
+    CURLcode result = CURLE_OK;
 
-    if (curl_initialized != 1) {
+    if (!curl_initialized) {
         curl_global_init(CURL_GLOBAL_SSL);
-        curl_initialized = 1;
+        curl_initialized = TRUE;
     }
 
-    struct stat64 mystat;
+    if (!file_path && !url) {
+        LOGERROR("invalid params: file_path=%s, url=%s\n", SP(file_path), SP(url));
+        return (EUCA_INVALID_ERROR);
+    }
+
     if (stat64(file_path, &mystat)) {
-        logprintfl(EUCAERROR, "http_put(): failed to stat %s\n", file_path);
-        return code;
+        LOGERROR("failed to stat %s\n", file_path);
+        return (EUCA_ACCESS_ERROR);
     }
+
     if (!S_ISREG(mystat.st_mode)) {
-        logprintfl(EUCAERROR, "http_put(): %s is not a regular file\n", file_path);
-        return code;
+        LOGERROR("%s is not a regular file\n", file_path);
+        return (EUCA_ERROR);
     }
 
-    FILE *fp = fopen64(file_path, "r");
-    if (fp == NULL) {
-        logprintfl(EUCAERROR, "http_put(): failed to open %s for reading\n", file_path);
-        return code;
+    if ((fp = fopen64(file_path, "r")) == NULL) {
+        LOGERROR("failed to open %s for reading\n", file_path);
+        return (EUCA_ACCESS_ERROR);
     }
 
-    CURL *curl;
-    CURLcode result;
-    curl = curl_easy_init();
-    if (curl == NULL) {
-        logprintfl(EUCAERROR, "http_put(): could not initialize libcurl\n");
+    if ((curl = curl_easy_init()) == NULL) {
+        LOGERROR("could not initialize libcurl\n");
         fclose(fp);
-        return code;
+        return (EUCA_ERROR);
     }
 
-    logprintfl(EUCAINFO, "http_put(): uploading %s\n", file_path);
-    logprintfl(EUCAINFO, "            to %s\n", url);
+    LOGDEBUG("uploading %s\n", file_path);
+    LOGDEBUG("       to %s\n", url);
 
-    char error_msg[CURL_ERROR_SIZE];
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-    curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t) mystat.st_size);
-    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); // TODO: make this optional?
+    curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, ((curl_off_t) mystat.st_size));
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L); //! @TODO: make this optional?
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 360L);  // must have at least a 360 baud modem
     curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, 10L);    // abort if below speed limit for this many seconds
 
-    if (login != NULL && password != NULL) {
-        char userpwd[STRSIZE];
+    if ((login != NULL) && (password != NULL)) {
         snprintf(userpwd, STRSIZE, "%s:%s", login, password);
         curl_easy_setopt(curl, CURLOPT_USERPWD, userpwd);
     }
 
-    struct read_request params;
     params.fp = fp;
     params.timestamp = time(NULL);
-    params.file_size = (long long)mystat.st_size;
+    params.file_size = ((long long)mystat.st_size);
     curl_easy_setopt(curl, CURLOPT_READDATA, &params);
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_data);
 
-    int retries = TOTAL_RETRIES;
-    int timeout = FIRST_TIMEOUT;
     do {
         params.total_read = 0L;
         params.total_calls = 0L;
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "http_put(): uploaded %ld bytes in %ld sends\n", params.total_read, params.total_calls);
+        LOGDEBUG("uploaded %lld bytes in %lld sends\n", params.total_read, params.total_calls);
 
-        if (result) {           // curl error (connection or transfer failed)
-            logprintfl(EUCAERROR, "http_put(): %s (%d)\n", error_msg, result);
-
+        if (result) {
+            // curl error (connection or transfer failed)
+            LOGERROR("%s (%d)\n", error_msg, result);
         } else {
-            long httpcode;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
-            // TODO: pull out response message, too?
-
+            //! @TODO pull out response message, too?
             switch (httpcode) {
-            case 200L:         // all good
-                logprintfl(EUCAINFO, "http_put(): file updated sucessfully\n");
-                code = OK;
+            case 200L:
+                // all good
+                LOGDEBUG("file updated sucessfully\n");
+                code = EUCA_OK;
                 break;
-            case 201L:         // all good, created
-                logprintfl(EUCAINFO, "http_put(): file created sucessfully\n");
-                code = OK;
+            case 201L:
+                // all good, created
+                LOGDEBUG("file created sucessfully\n");
+                code = EUCA_OK;
                 break;
-            case 408L:         // timeout, retry
-                logprintfl(EUCAWARN, "http_put(): server responded with HTTP code %ld (timeout)\n", httpcode);
+            case 408L:
+                // timeout, retry
+                LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
+                code = EUCA_TIMEOUT_ERROR;
                 break;
-            case 500L:         // internal server error (could be a fluke, so we'll retry)
-                logprintfl(EUCAWARN, "http_put(): server responded with HTTP code %ld (transient?)\n", httpcode);
+            case 500L:
+                // internal server error (could be a fluke, so we'll retry)
+                LOGWARN("server responded with HTTP code %ld (transient?) for %s\n", httpcode, url);
                 break;
-            default:           // some kind of error, will not retry
-                logprintfl(EUCAERROR, "http_put(): server responded with HTTP code %ld\n", httpcode);
+            default:
+                // some kind of error, will not retry
+                LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
                 retries = 0;
+                break;
             }
         }
 
-        if (code != OK && retries > 0) {
-            logprintfl(EUCAERROR, "            upload retry %d of %d will commence in %d seconds\n", TOTAL_RETRIES - retries + 1, TOTAL_RETRIES,
-                       timeout);
+        if ((code != EUCA_OK) && (retries > 0)) {
+            LOGERROR("upload retry %d of %d will commence in %d seconds for %s\n", TOTAL_RETRIES - retries + 1, TOTAL_RETRIES, timeout, url);
             sleep(timeout);
             fseek(fp, 0L, SEEK_SET);
             timeout <<= 1;
         }
 
         retries--;
-    } while (code != OK && retries > 0);
+    } while ((code != EUCA_OK) && (retries > 0));
     fclose(fp);
 
     curl_easy_cleanup(curl);
-    return code;
+    return (code);
 }
 
-/* libcurl read handler */
+//!
+//! Libcurl read callback handler
+//!
+//! @param[out] buffer the string buffer we write to when reading data
+//! @param[in]  size the size of each members for fread()
+//! @param[in]  nitems the number of items passed to fread()
+//! @param[in]  params a transparent pointer to the libcurl read_request structure.
+//!
+//! @return The number of bytes read on success or -1 on error.
+//!
+//! @pre Both buffer and params must not be NULL.
+//!
+//! @post On success, the data is read and contained into our buffer parameter. If buffer or params is NULL,
+//!       than a SIGABORT signal will be thrown.
+//!
 static size_t read_data(char *buffer, size_t size, size_t nitems, void *params)
 {
+    int items_read = -1;
+    int percent = 0;
+    FILE *fp = NULL;
+    time_t prev = 0;
+    time_t now = 0;
+    long long bytes_read = 0;
+    long long bytes_file = 0;
+
+    assert(buffer != NULL);
     assert(params != NULL);
 
-    FILE *fp = ((struct read_request *)params)->fp;
-    int items_read = 0;
+    fp = ((struct read_request *)params)->fp;
     do {
-        items_read += fread(buffer, size, nitems - items_read, fp);
-    } while (items_read != nitems && !feof(fp));
+        items_read += fread(buffer, size, (nitems - items_read), fp);
+    } while ((items_read != nitems) && !feof(fp));
 
-    ((struct read_request *)params)->total_read += items_read * size;
+    ((struct read_request *)params)->total_read += (items_read * size);
     ((struct read_request *)params)->total_calls++;
 
     if (((struct read_request *)params)->total_calls % 50 == 0) {
-        time_t prev = ((struct read_request *)params)->timestamp;
-        time_t now = time(NULL);
+        prev = ((struct read_request *)params)->timestamp;
+        now = time(NULL);
         if ((now - prev) > 10) {
             ((struct read_request *)params)->timestamp = now;
-            long long bytes_read = ((struct read_request *)params)->total_read;
-            long long bytes_file = ((struct read_request *)params)->file_size;
-            int percent = (int)((bytes_read * 100) / bytes_file);
-            logprintfl(EUCADEBUG, "http_put(): upload progress %ld/%ld bytes (%d%%)\n", bytes_read, bytes_file, percent);
+            bytes_read = ((struct read_request *)params)->total_read;
+            bytes_file = ((struct read_request *)params)->file_size;
+            percent = (int)((bytes_read * 100) / bytes_file);
+            LOGDEBUG("upload progress %lld/%lld bytes (%d%%)\n", bytes_read, bytes_file, percent);
         }
     }
 
-    return items_read;
+    return (items_read);
 }
 
-/* libcurl write handler */
+//!
+//! libcurl write handler
+//!
+//! @param[in] buffer the string buffer we write into when reading.
+//! @param[in] size the size of each members for fread()
+//! @param[in] nmemb the number of items passed to fread()
+//! @param[in] params a transparent pointer to the libcurl read_request structure.
+//!
+//! @return The number of bytes written or -1 on failture.
+//!
+//! @pre Both params and buffer parameters must not be NULL.
+//!
+//! @post On success, we wrote our buffer content to the file descriptor. If buffer or params is NULL,
+//!       than a SIGABORT signal will be thrown.
+//!
 static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params)
 {
+    FILE *fp = NULL;
+    int wrote = -1;
+
+    assert(buffer != NULL);
     assert(params != NULL);
-    FILE *fp = ((struct write_request *)params)->fp;
-    int wrote = fwrite(buffer, size, nmemb, fp);
+
+    fp = ((struct write_request *)params)->fp;
+    wrote = fwrite(buffer, size, nmemb, fp);
     ((struct write_request *)params)->total_wrote += wrote;
     ((struct write_request *)params)->total_calls++;
 
-    return wrote;
+    return (wrote);
 }
 
-#endif
-
-// converts hex character to integer
+//!
+//! Converts hex character to integer
+//!
+//! @param[in] ch the character to convert
+//!
+//! @return The converted value
+//!
 static char hch_to_int(char ch)
 {
-    return isdigit(ch) ? (ch - '0') : (10 + tolower(ch) - 'a');
+    return (isdigit(ch) ? (ch - '0') : (10 + tolower(ch) - 'a'));
 }
 
-// converts integer to hex character
+//!
+//! Converts integer to hex character
+//!
+//! @param[in] i the byte to convert
+//!
+//! @return the converted value
+//!
 static char int_to_hch(char i)
 {
     static char hex[] = "0123456789ABCDEF";
-    return hex[i & 15];
+    return (hex[i & 15]);
 }
 
-// converts a string to url-encoded string (which must be freed)
+//!
+//! Converts a string to url-encoded string (which must be freed)
+//!
+//! @param[in] unencoded the URL string to encode
+//!
+//! @return The encoded string on success or NULL on failure.
+//!
+//! @pre The unencoded parameter must not be NULL
+//!
+//! @note Caller is responsible to free the returned memory
+//!
 char *url_encode(const char *unencoded)
 {
-    char *encoded = malloc(strlen(unencoded) * 3 + 1);
-    if (encoded == NULL)
-        return NULL;
+    char *pe = NULL;
+    char *encoded = NULL;
+    const char *pu = NULL;
 
-    const char *pu = unencoded;
-    char *pe = encoded;
+    if (!unencoded)
+        return (NULL);
+
+    if ((encoded = EUCA_ALLOC(((strlen(unencoded) * 3) + 1), sizeof(char))) == NULL)
+        return (NULL);
+
+    pu = unencoded;
+    pe = encoded;
     while (*pu) {
-        if (isalnum(*pu)
-            || *pu == '-' || *pu == '_' || *pu == '.' || *pu == '~')
+        if (isalnum(*pu) || (*pu == '-') || (*pu == '_') || (*pu == '.') || (*pu == '~'))
             *pe++ = *pu;
         else if (*pu == ' ')
             *pe++ = '+';
         else {
             *pe++ = '%';
-            *pe++ = int_to_hch(*pu >> 4);
-            *pe++ = int_to_hch(*pu & 15);
+            *pe++ = int_to_hch((*pu) >> 4);
+            *pe++ = int_to_hch((*pu) & 15);
         }
         pu++;
     }
     *pe = '\0';
 
-    return encoded;
+    return (encoded);
 }
 
-// converts a url-encoded string to regular (which must be freed)
+//!
+//! Converts a url-encoded string to regular (which must be freed)
+//!
+//! @param[in] encoded the URL string to decode
+//!
+//! @return The unencoded string on success or NULL on failure.
+//!
+//! @pre The encoded parameter must not be NULL
+//!
+//! @note Caller is responsible to free the returned memory
+//!
 char *url_decode(const char *encoded)
 {
-    char *unencoded = malloc(strlen(encoded) + 1);
-    if (unencoded == NULL)
-        return NULL;
+    char *pu = NULL;
+    char *unencoded = NULL;
+    const char *pe = NULL;
 
-    const char *pe = encoded;
-    char *pu = unencoded;
+    if (!encoded)
+        return (NULL);
+
+    if ((unencoded = EUCA_ALLOC((strlen(encoded) + 1), sizeof(char))) == NULL)
+        return (NULL);
+
+    pe = encoded;
+    pu = unencoded;
     while (*pe) {
         if (*pe == '%') {
             if (pe[1] && pe[2]) {
-                *pu++ = hch_to_int(pe[1]) << 4 | hch_to_int(pe[2]);
+                *pu++ = ((hch_to_int(pe[1]) << 4) | hch_to_int(pe[2]));
                 pe += 2;
             }
         } else if (*pe == '+') {
@@ -325,51 +543,88 @@ char *url_decode(const char *encoded)
     }
     *pu = '\0';
 
-    return unencoded;
+    return (unencoded);
 }
 
+//!
+//! Process an HTTP get request to the given URL.
+//!
+//! @param[in] url the request URL
+//! @param[in] outfile path to the input file to be used by curl WRITERs
+//!
+//! @return The result of http_get_timeout()
+//!
+//! @see http_get_timeout()
+//!
 int http_get(const char *url, const char *outfile)
 {
     return (http_get_timeout(url, outfile, TOTAL_RETRIES, FIRST_TIMEOUT, 0, 0));
 }
 
+//!
+//! Process an HTTP get request to the given URL with a given timeout.
+//!
+//! @param[in] url the request URL
+//! @param[in] outfile path to the input file to be used by curl WRITERs
+//! @param[in] total_retries number of retries to execute the get operation
+//! @param[in] first_timeout number of seconds to wait between attemps. Each attemp will multiply the value by 2.
+//! @param[in] connect_timeout the libcurl connect timeout (libcurl option CURLOPT_CONNECTTIMEOUT)
+//! @param[in] total_timeout the libcurl total timeout value (libcurl option CURLOPT_TIMEOUT)
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_ERROR: on failure
+//!         \li EUCA_INVALID_ERROR: if any parameter does not meet the preconditions
+//!         \li EUCA_TIMEOUT_ERROR: if the operation timed out
+//!         \li EUCA_ACCESS_ERROR: if we fail to access the outfile.
+//!
+//! @pre \li Both url and outfile parameters must not be NULL.
+//!      \li The url parameter must start with "http://"
+//!
+//! @post On success, the get request has been processed successfully
+//!
 int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout)
 {
-    int code = ERROR;
+    int code = EUCA_ERROR;
+    int retries = 0;
+    int timeout = 0;
+    long httpcode = 0L;
+    char error_msg[CURL_ERROR_SIZE] = { 0 };
+    FILE *fp = NULL;
+    CURL *curl = NULL;
+    CURLcode result = CURLE_OK;
+    struct write_request params = { 0 };
 
-    logprintfl(EUCAINFO, "http_get(): downloading %s\n", outfile);
-    logprintfl(EUCAINFO, "            from %s\n", url);
+    if (!url || !outfile) {
+        LOGERROR("invalid params: outfile=%s, url=%s\n", SP(outfile), SP(url));
+        return (EUCA_INVALID_ERROR);
+    }
+
+    LOGDEBUG("downloading %s\n", outfile);
+    LOGDEBUG("from %s\n", url);
 
     /* isolate the PATH in the URL as it will be needed for signing */
     if (strncasecmp(url, "http://", 7) != 0) {
-        logprintfl(EUCAERROR, "http_get(): URL must start with http://...\n");
-        return code;
+        LOGERROR("URL must start with http://...\n");
+        return (EUCA_INVALID_ERROR);
     }
 
-    FILE *fp = fopen64(outfile, "w");
-    if (fp == NULL) {
-        logprintfl(EUCAERROR, "http_get(): failed to open %s for writing\n", outfile);
-        return code;
+    if ((fp = fopen64(outfile, "w")) == NULL) {
+        LOGERROR("failed to open %s for writing\n", outfile);
+        return (EUCA_ACCESS_ERROR);
     }
 
-    CURL *curl;
-    CURLcode result;
-    curl = curl_easy_init();
-    if (curl == NULL) {
-        logprintfl(EUCAERROR, "http_get(): could not initialize libcurl\n");
+    if ((curl = curl_easy_init()) == NULL) {
+        LOGERROR("could not initialize libcurl\n");
         fclose(fp);
-        return code;
+        return (EUCA_ERROR);
     }
 
-    char error_msg[CURL_ERROR_SIZE];
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_msg);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    //  curl_easy_setopt (curl, CURLOPT_HEADERFUNCTION, write_header);
 
     curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
 
     /* set up the default write function, but possibly override it below, if compression is desired and possible */
-    struct write_request params;
     params.fp = fp;
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &params);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
@@ -377,75 +632,94 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
     if (connect_timeout > 0) {
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, connect_timeout);
     }
+
     if (total_timeout > 0) {
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, total_timeout);
     }
-    //  curl_easy_setopt (curl, CURLOPT_HTTPHEADER, headers); /* register headers */
 
-    logprintfl(EUCADEBUG, "http_get(): writing %s output to %s\n", "GET", outfile);
+    LOGDEBUG("writing %s output to %s\n", "GET", outfile);
 
-    int retries = total_retries;
-    int timeout = first_timeout;
+    retries = total_retries;
+    timeout = first_timeout;
     do {
         params.total_wrote = 0L;
         params.total_calls = 0L;
 
         result = curl_easy_perform(curl);   /* do it */
-        logprintfl(EUCADEBUG, "http_get(): wrote %ld bytes in %ld writes\n", params.total_wrote, params.total_calls);
+        LOGDEBUG("wrote %lld bytes in %lld writes\n", params.total_wrote, params.total_calls);
 
-        if (result) {           // curl error (connection or transfer failed)
-            logprintfl(EUCAERROR, "http_get(): %s (%d)\n", error_msg, result);
-
+        if (result) {
+            // curl error (connection or transfer failed)
+            LOGERROR("%s (%d)\n", error_msg, result);
         } else {
-            long httpcode;
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcode);
-            /* TODO: pull out response message, too */
-
+            //! @TODO pull out response message, too
             switch (httpcode) {
-            case 200L:         /* all good */
-                logprintfl(EUCAINFO, "http_get(): saved image in %s\n", outfile);
-                code = OK;
+            case 200L:
+                // all good
+                LOGDEBUG("saved image in %s\n", outfile);
+                code = EUCA_OK;
                 break;
-            case 408L:         /* timeout, retry */
-                logprintfl(EUCAWARN, "http_get(): server responded with HTTP code %ld (timeout)\n", httpcode);
-                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+            case 408L:
+                // timeout, retry
+                LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
+                code = EUCA_TIMEOUT_ERROR;
                 break;
             case 404L:
-                logprintfl(EUCAWARN, "http_get(): server responded with HTTP code %ld (file not found)\n", httpcode);
+                LOGWARN("server responded with HTTP code %ld (file not found) for %s\n", httpcode, url);
                 break;
-            default:           /* some kind of error */
-                logprintfl(EUCAERROR, "http_get(): server responded with HTTP code %ld\n", httpcode);
-                //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
+            default:
+                // some kind of error
+                LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
                 retries = 0;
+                break;
             }
         }
 
-        if (code != OK && retries > 0) {
-            logprintfl(EUCAERROR, "                  download retry %d of %d will commence in %d seconds\n", retries, total_retries, timeout);
+        if ((code != EUCA_OK) && (retries > 0)) {
+            LOGERROR("download retry %d of %d will commence in %d sec for %s\n", retries, total_retries, timeout, url);
             sleep(timeout);
             fseek(fp, 0L, SEEK_SET);
             timeout <<= 1;
         }
 
         retries--;
-    } while (code != OK && retries > 0);
+    } while ((code != EUCA_OK) && (retries > 0));
     fclose(fp);
 
-    if (code != OK) {
-        logprintfl(EUCAINFO, "http_get(): due to error, removing %s\n", outfile);
+    if (code != EUCA_OK) {
+        LOGWARN("removing %s\n", outfile);
         remove(outfile);
     }
-    //  curl_slist_free_all (headers);
     curl_easy_cleanup(curl);
-    return code;
+    return (code);
 }
 
 #ifdef _UNIT_TEST
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK
+//!
 int main(int argc, char **argv)
 {
-#define _T(_S) { char * e = url_encode (_S); char * u = url_decode (e); printf ("orig: %s\nenco: %s\ndeco: %s\n\n", _S, e, u); free (e); free (u); }
+#define _T(_S)                                                \
+{                                                             \
+	char *__e = url_encode (_S);                              \
+	char *__u = url_decode (__e);                             \
+	printf("orig: %s\nenco: %s\ndeco: %s\n\n", _S, __e, __u); \
+	EUCA_FREE(__e);                                           \
+	EUCA_FREE(__u);                                           \
+}
+
     _T("hello world");
     _T("~`!1@2#3$4%5^6&7*8(9)0_-+={[}]|\\:;\"'<,>.?/");
     _T("[datastore1 (1)] windows 2003 enterprise/windows 2003 enterprise.vmx");
+    return (EUCA_OK);
+
+#undef _T
 }
-#endif
+#endif /* _UNIT_TEST */

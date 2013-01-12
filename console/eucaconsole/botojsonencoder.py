@@ -37,6 +37,7 @@ from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
+from boto.ec2.tag import Tag
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
 from boto.ec2.volume import AttachmentSet
@@ -75,17 +76,18 @@ class BotoJsonEncoder(JSONEncoder):
         'progress',
         'ip_protocol',
         'fingerprint',
-        'output',
     ];
     
     def __sanitize_and_copy__(self, dict):
         try:
             ret = copy.copy(dict)
-            for key in ret.keys():
-                if key in self.FIELD_WHITELIST:
-                    continue
-                if isinstance(ret[key], basestring):
-                    ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
+            # Don't sanitize. We're doing this in the browser now!
+            # Leave this code in for now... 
+            #for key in ret.keys():
+            #    if key in self.FIELD_WHITELIST:
+            #        continue
+            #    if isinstance(ret[key], basestring):
+            #        ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
             return ret
         except Exception, e:
             logging.error(e)
@@ -133,6 +135,10 @@ class BotoJsonEncoder(JSONEncoder):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['connection'] = None
             values['__obj_name__'] = 'BlockDeviceType'
+            return (values)
+        elif isinstance(obj, Tag):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'Tag'
             return (values)
         return super(BotoJsonEncoder, self).default(obj)
 

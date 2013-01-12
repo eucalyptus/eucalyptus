@@ -35,6 +35,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.eucalyptus.records.Logs;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
@@ -105,7 +106,7 @@ public class MemoryCheck {
 					double ogPeakRatio = ((double) usage.getUsed()) / ((double) peak.getUsed());
 					double ogLastRatio = ((double) gc.getUsed()) / ((double) usage.getUsed());
 					double ogLastPeakRatio = ((double) gc.getUsed()) / ((double) peak.getUsed());
-					LOG.debug("Memory info: ogLastMaxRatio = " + ogLastMaxRatio + ", ogPeakRatio = " + ogLastRatio + ", ogLastRatio = " + ogLastMaxRatio + ", ogLastPeakRatio = " + ogLastPeakRatio + ", " + cmsInfo); 
+					Logs.extreme().debug("Memory info: ogLastMaxRatio = " + ogLastMaxRatio + ", ogPeakRatio = " + ogLastRatio + ", ogLastRatio = " + ogLastMaxRatio + ", ogLastPeakRatio = " + ogLastPeakRatio + ", " + cmsInfo);
 					if (ogLastMaxRatio > ratio) {
 						if (!alreadyFaulted) {
 							Faults.forComponent(Eucalyptus.class).havingId(OUT_OF_MEMORY_FAULT_ID).withVar("component", Eucalyptus.INSTANCE.getFaultLogPrefix()).log();

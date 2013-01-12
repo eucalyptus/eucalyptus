@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,18 +63,118 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file cluster/server-marshal-state.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 
-#include <server-marshal-state.h>
-#include <handlers.h>
+#include <eucalyptus.h>
+#include "server-marshal-state.h"
+
+#include "handlers.h"
 #include <misc.h>
 #include <vnetwork.h>
-#include "adb-helpers.h"
-#include <handlers-state.h>
+#include <adb-helpers.h>
+#include "handlers-state.h"
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t * describeServices, const axutil_env_t * env);
+adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startService, const axutil_env_t * env);
+adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, const axutil_env_t * env);
+adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableService, const axutil_env_t * env);
+adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disableService, const axutil_env_t * env);
+adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * shutdownService, const axutil_env_t * env);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in] describeServices
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t * describeServices, const axutil_env_t * env)
 {
     adb_DescribeServicesResponse_t *ret = NULL;
@@ -97,7 +200,7 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
     //  localDev = adb_describeServicesType_get_localDev(adbinput, env);
     serviceIdsLen = adb_describeServicesType_sizeof_serviceIds(adbinput, env);
-    serviceIds = malloc(sizeof(serviceInfoType) * serviceIdsLen);
+    serviceIds = EUCA_ZALLOC(serviceIdsLen, sizeof(serviceInfoType));
     for (i = 0; i < serviceIdsLen; i++) {
         copy_service_info_type_from_adb(&(serviceIds[i]), adb_describeServicesType_get_serviceIds_at(adbinput, env, i), env);
     }
@@ -125,10 +228,8 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
 
         adb_describeServicesResponseType_add_serviceStatuses(adbresp, env, stt);
     }
-    if (outStatuses)
-        free(outStatuses);
-    if (serviceIds)
-        free(serviceIds);
+    EUCA_FREE(outStatuses);
+    EUCA_FREE(serviceIds);
 
     adb_describeServicesResponseType_set_return(adbresp, env, status);
     if (status == AXIS2_FALSE) {
@@ -141,6 +242,18 @@ adb_DescribeServicesResponse_t *DescribeServicesMarshal(adb_DescribeServices_t *
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] startService
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startService, const axutil_env_t * env)
 {
     adb_StartServiceResponse_t *ret = NULL;
@@ -184,6 +297,18 @@ adb_StartServiceResponse_t *StartServiceMarshal(adb_StartService_t * startServic
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] stopService
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, const axutil_env_t * env)
 {
     adb_StopServiceResponse_t *ret = NULL;
@@ -227,6 +352,18 @@ adb_StopServiceResponse_t *StopServiceMarshal(adb_StopService_t * stopService, c
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] enableService
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableService, const axutil_env_t * env)
 {
     adb_EnableServiceResponse_t *ret = NULL;
@@ -270,6 +407,18 @@ adb_EnableServiceResponse_t *EnableServiceMarshal(adb_EnableService_t * enableSe
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] disableService
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disableService, const axutil_env_t * env)
 {
     adb_DisableServiceResponse_t *ret = NULL;
@@ -313,6 +462,18 @@ adb_DisableServiceResponse_t *DisableServiceMarshal(adb_DisableService_t * disab
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] shutdownService
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 adb_ShutdownServiceResponse_t *ShutdownServiceMarshal(adb_ShutdownService_t * shutdownService, const axutil_env_t * env)
 {
     adb_ShutdownServiceResponse_t *ret = NULL;

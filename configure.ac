@@ -52,7 +52,7 @@ LIBS="`getconf LFS64_LIBS` `getconf LFS_LIBS` $LIBS"
 CFLAGS="`getconf LFS64_CFLAGS` `getconf LFS_CFLAGS`"
 
 # compile options
-CFLAGS="${CFLAGS} -Wall -Wno-unused-variable -fPIC -DHAVE_CONFIG_H -std=gnu99"
+CFLAGS="${CFLAGS} -Wall -fPIC -DHAVE_CONFIG_H -std=gnu99"
 INCLUDES="${INCLUDES} -I. -I.. -Igenerated -I${TOP}/storage -I${TOP}/node -I${TOP}/util -I${TOP}/net"
 
 # Arguments checking

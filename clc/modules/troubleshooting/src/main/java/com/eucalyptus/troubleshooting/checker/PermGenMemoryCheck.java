@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import com.eucalyptus.records.Logs;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentId;
@@ -94,7 +95,7 @@ public class PermGenMemoryCheck {
 					noPermGenBeans = false;
 					
 					double actualRatio = ((double) bean.getUsage().getUsed()) / ((double) bean.getUsage().getMax());
-					LOG.debug("Perm-gen memory usage ratio = " + actualRatio);
+					Logs.extreme().debug("Perm-gen memory usage ratio = " + actualRatio);
 					if (actualRatio > ratio) {
 						if (!alreadyFaulted) {
 							Faults.forComponent(Eucalyptus.class).havingId(OUT_OF_PERM_GEN_MEMORY_FAULT_ID).withVar("component", Eucalyptus.INSTANCE.getFaultLogPrefix()).log();

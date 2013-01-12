@@ -70,13 +70,14 @@ SERVICE_SO=libEucalyptusCC.so
 SERVICE_SO_FAKE=libEucalyptusCCFake.so
 SERVICE_NAME=EucalyptusCC
 CLIENT=CCclient
+GFLAGS=$(patsubst -Werror,,$(CFLAGS))
 CLIENTKILLALL=euca_killall
 SHUTDOWNCC=shutdownCC
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o ../util/sensor.o
 NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o
 SCLIBS=../storage/storage-windows.o ../storage/walrus.o ../storage/http.o
-VNLIBS=../net/vnetwork.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../storage/diskutil.o ../util/hash.o
+VNLIBS=../net/vnetwork.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/hash.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ../util/config.o ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
 
@@ -103,7 +104,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Compiling the stubs
 	patch --directory=generated -p1 <axis2_svc_generated.patch
 	@cp ../tools/Makefile.gen generated/Makefile
-	$(MAKE) -C generated
+	$(MAKE) -C generated CFLAGS="$(GFLAGS) -Wno-unused-variable"
 	@echo "this is a cute little makefile marker" >generated/stubs
 	@echo Stubs generated.
 
@@ -142,13 +143,13 @@ client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)
 
 $(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
 
-	$(CC) -o $(SHUTDOWNCC) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
+	$(CC) -o $(SHUTDOWNCC) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
 $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
-	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
+	$(CC) -o $(CLIENT)_full $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
 $(CLIENTKILLALL): generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
-	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
+	$(CC) -o $(CLIENTKILLALL) $(CFLAGS) $(INCLUDES) $(CLIENT).c cc-client-marshal-adb.c -DMODE=0 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
 fakedeploy:
 	$(INSTALL) $(SERVICE_SO_FAKE) $(DESTDIR)$(AXIS2C_SERVICES)/$(SERVICE_NAME)/$(SERVICE_SO)

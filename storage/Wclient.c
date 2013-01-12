@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file storage/Wclient.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -72,22 +83,111 @@
 #include <fcntl.h>              /* open */
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "euca_auth.h"
-#include "eucalyptus.h"
-#include "misc.h"
+
+#include <euca_auth.h>
+#include <eucalyptus.h>
+#include <misc.h>
+#include <euca_string.h>
 #include "walrus.h"
 #include "http.h"
 
-#define BUFSIZE 262144          /* should be big enough for CERT and the signature */
-#define STRSIZE 1024            /* for short strings: files, hosts, URLs */
-#define WALRUS_ENDPOINT "/services/Walrus"
-#define DEFAULT_HOST_PORT "localhost:8773"
-#define DEFAULT_COMMAND "GetObject"
-#define USAGE { fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject|HttpPut] -h [host:port] -u [URL] -m [manifest] -f [in|out file] -l [login] -p [password] [-z]\n"); exit (1); }
-char debug = 1;
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+#define BUFSIZE                                  262144 //!< should be big enough for CERT and the signature
+#define STRSIZE                                    1024 //!< for short strings: files, hosts, URLs
+
+#define WALRUS_ENDPOINT                          "/services/Walrus"
+#define DEFAULT_HOST_PORT                        "localhost:8773"
+#define DEFAULT_COMMAND                          "GetObject"
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+boolean debug = FALSE;
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define USAGE()                                                                                                                                                      \
+{                                                                                                                                                                    \
+	fprintf (stderr, "Usage: Wclient [GetDecryptedImage|GetObject|HttpPut] -h [host:port] -u [URL] -m [manifest] -f [in|out file] -l [login] -p [password] [-z]\n"); \
+	exit (1);                                                                                                                                                        \
+}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+ //!
+ //! Main entry point of the application
+ //!
+ //! @param[in] argc the number of parameter passed on the command line
+ //! @param[in] argv the list of arguments
+ //!
+ //! @return EUCA_OK
+ //!
 int main(int argc, char *argv[])
 {
+    int ch = 0;
+    int result = 0;
+    int tmp_fd = -1;
+    char *tmp_name = NULL;
     char *command = DEFAULT_COMMAND;
     char *hostport = NULL;
     char *manifest = NULL;
@@ -95,8 +195,9 @@ int main(int argc, char *argv[])
     char *url = NULL;
     char *login = NULL;
     char *password = NULL;
-    int do_compress = 0;
-    int ch;
+    char request[STRSIZE] = { 0 };
+    boolean do_compress = FALSE;
+    boolean do_get = FALSE;
 
     while ((ch = getopt(argc, argv, "dh:m:f:zu:l:p:")) != -1) {
         switch (ch) {
@@ -107,7 +208,7 @@ int main(int argc, char *argv[])
             manifest = optarg;
             break;
         case 'd':
-            debug = 1;
+            debug = TRUE;
             break;
         case 'f':
             file_name = optarg;
@@ -122,11 +223,12 @@ int main(int argc, char *argv[])
             password = optarg;
             break;
         case 'z':
-            do_compress = 1;
+            do_compress = TRUE;
             break;
         case '?':
         default:
-            USAGE;
+            USAGE();
+            break;
         }
     }
     argc -= optind;
@@ -136,36 +238,33 @@ int main(int argc, char *argv[])
         command = argv[0];
     }
 
-    int do_get;
     if (strcmp(command, "GetDecryptedImage") == 0 || strcmp(command, "GetObject") == 0) {
         if (manifest == NULL) {
             fprintf(stderr, "Error: manifest must be specified\n");
-            USAGE;
+            USAGE();
         }
-        do_get = 1;
+        do_get = TRUE;
     } else if (strcmp(command, "HttpPut") == 0) {
         if (url == NULL || file_name == NULL) {
             fprintf(stderr, "Error: URL and input file must be specified\n");
-            USAGE;
+            USAGE();
         }
-        do_get = 0;
+        do_get = FALSE;
     } else {
         fprintf(stderr, "Error: unknown command [%s]\n", command);
-        USAGE;
+        USAGE();
     }
 
     if (do_get) {
         /* use a temporary file for network data */
-        char *tmp_name = strdup("walrus-download-XXXXXX");
-        int tmp_fd = safe_mkstemp(tmp_name);
+        tmp_name = strdup("walrus-download-XXXXXX");
+        tmp_fd = safe_mkstemp(tmp_name);
         if (tmp_fd < 0) {
             fprintf(stderr, "Error: failed to create a temporary file\n");
-            USAGE;
+            USAGE();
         }
         close(tmp_fd);
 
-        int result;
-        char request[STRSIZE];
         if (hostport) {
             snprintf(request, STRSIZE, "http://%s%s/%s", hostport, WALRUS_ENDPOINT, manifest);
             if (strcmp(command, "GetObject") == 0) {
@@ -174,7 +273,7 @@ int main(int argc, char *argv[])
                 result = walrus_image_by_manifest_url(request, tmp_name, do_compress);
             }
         } else {
-            safe_strncpy(request, manifest, STRSIZE);
+            euca_strncpy(request, manifest, STRSIZE);
             if (strcmp(command, "GetObject") == 0) {
                 result = walrus_object_by_path(request, tmp_name, do_compress);
             } else {
@@ -196,9 +295,9 @@ int main(int argc, char *argv[])
             }
         }
 
-        free(tmp_name);
+        EUCA_FREE(tmp_name);
     } else {                    // HttpPut
-        int result = http_put(file_name, url, login, password);
+        result = http_put(file_name, url, login, password);
     }
-    return 0;
+    return (EUCA_OK);
 }

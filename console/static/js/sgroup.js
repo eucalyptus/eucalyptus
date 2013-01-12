@@ -315,7 +315,7 @@
               }
               // need to remove rules flagged for deletion, then add new ones to avoid conflicts
               $edit_dialog.eucadialog("close");
-              var name = thisObj.editDialog.find('#sgroups-hidden-name').html();
+              var name = thisObj.editDialog.find('#sgroups-hidden-name').text();
               var fromPort = new Array();
               var toPort = new Array();
               var protocol = new Array();
@@ -534,7 +534,7 @@
         var type = asText(dialog.find('#sgroup-type').val());
         var allow_ip = asText(dialog.find('#allow-ip').val());
         var allow_group = asText(dialog.find('#allow-group').val());
-        dialog.find('#sgroup-ports-error').html("");
+        dialog.find('#sgroup-ports-error').text("");
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
             enable = false;
@@ -544,14 +544,14 @@
             var port_list = ports.split('-');
             if (/^\d{1,5}$/.test(port_list[0]) == false) {
               if (noWarn == false) {
-                dialog.find('#sgroup-ports-error').html(sgroup_error_from_port);
+                dialog.find('#sgroup-ports-error').text(sgroup_error_from_port);
               }
               valid = false;
             }
             else if (ports.indexOf('-') > -1) {  // we should have 2 numbers
               if (ports.length == 1 || /^\d{1,5}$/.test(port_list[1]) == false) {
                 if (noWarn == false) {
-                  dialog.find('#sgroup-ports-error').html(sgroup_error_to_port);
+                  dialog.find('#sgroup-ports-error').text(sgroup_error_to_port);
                 }
                 valid = false;
               }
@@ -575,10 +575,10 @@
                 valid = false;
               }
               else if (/^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\/([0-9]|[1-3][0-9])$/.test(allow_ip))
-                dialog.find('#allow-ip-error').html("");
+                dialog.find('#allow-ip-error').text("");
               else {
                 if (noWarn == false) {
-                  dialog.find('#allow-ip-error').html(sgroup_error_address_range);
+                  dialog.find('#allow-ip-error').text(sgroup_error_address_range);
                 }
                 valid = false;
               }
@@ -686,10 +686,10 @@
                     if (this.rulesList[rule].user) {
                         msg += this.rulesList[rule].user+"/";
                     }
-                    msg += this.rulesList[rule].group
+                    msg += DefaultEncoder().encodeForHTML(this.rulesList[rule].group)
                 }
                 else {
-                    msg += this.rulesList[rule].ipaddr;
+                    msg += DefaultEncoder().encodeForHTML(this.rulesList[rule].ipaddr);
                 }
                 msg += "</li>";
                 i += 1;
@@ -927,10 +927,10 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').attr('title', firstRow.name).text(addEllipsis(firstRow.name, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').html(addEllipsis(firstRow.name, 70)));
       thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').attr('title', firstRow.description).html(addEllipsis(firstRow.description, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').html(addEllipsis(firstRow.description, 70)));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
@@ -1020,7 +1020,7 @@
                   $('<div>').addClass('expanded-value').text(portOrType)),
                 $('<li>').append( 
                   $('<div>').addClass('expanded-title').text(sgroup_table_expanded_source),
-                  $('<div>').addClass('expanded-value').html(src).text()))));
+                  $('<div>').addClass('expanded-value').text(src)))));
         });
       }
       return $('<div>').append($wrapper);

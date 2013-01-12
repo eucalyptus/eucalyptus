@@ -223,7 +223,7 @@ public class VmRuntimeState {
         this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       } else {//if ( VmState.STOPPING.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.STOPPED );
-        this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
+        this.getVmInstance( ).updateAddresses( "" , "" );
       }
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )

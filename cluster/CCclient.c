@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,35 +63,145 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file cluster/CCclient.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <time.h>
+
+#include <eucalyptus.h>
 #include <misc.h>
 #include <euca_axis.h>
 #include <data.h>
-#include <cc-client-marshal.h>
 #include <sensor.h>
 
-#include <eucalyptus.h>
+#include "cc-client-marshal.h"
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #ifndef MODE
-#define MODE 0
-#endif
+#define MODE                                     0
+#endif /* ! MODE */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #ifndef NO_COMP
 const char *euca_this_component_name = "cc";
 const char *euca_client_component_name = "clc";
-#endif
+#endif /* ! NO_COMP */
 
-ncMetadata mymeta;
+ncMetadata mymeta = { 0 };
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK
+//!
 int main(int argc, char **argv)
 {
+    int rc = 0;
+    int i = 0;
+    int port = 0;
+    int use_wssec = 0;
+    int ccsLen = 0;
+    int resSize = 0;
+    char **ccs = NULL;
+    char *nameserver = NULL;
+    char *euca_home = NULL;
+    char buf[40960] = { 0 };
+    char configFile[1024] = { 0 };
+    char policyFile[1024] = { 0 };
+    char *instIds[256] = { 0 };
+    char *amiId = NULL;
+    char *amiURL = NULL;
+    char *kernelId = NULL;
+    char *kernelURL = NULL;
+    char *ramdiskId = NULL;
+    char *ramdiskURL = NULL;
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
-    axis2_char_t endpoint_uri[256], *tmpstr;
+    axis2_char_t endpoint_uri[256] = { 0 };
+    axis2_char_t *tmpstr = NULL;
     axis2_stub_t *stub = NULL;
-    int rc, i, port, use_wssec;
-    char *euca_home, configFile[1024], policyFile[1024];
+    virtualMachine params = { 64, 1, 64, "m1.small" };
+    sensorResource **res;
+
+    bzero(&mymeta, sizeof(ncMetadata));
 
     mymeta.userId = strdup("admin");
     mymeta.correlationId = strdup("1234abcd");
@@ -145,7 +258,6 @@ int main(int argc, char **argv)
     } else {
         snprintf(endpoint_uri, 256, "http://%s/axis2/services/EucalyptusCC", argv[1]);
     }
-    //env =  axutil_env_create_all(NULL, 0);
     env = axutil_env_create_all("/tmp/fofo", AXIS2_LOG_LEVEL_TRACE);
 
     client_home = AXIS2_GETENV("AXIS2C_HOME");
@@ -170,17 +282,7 @@ int main(int argc, char **argv)
             exit(1);
         }
     } else {
-        /*
-           if (!strcmp(argv[2], "registerImage")) {
-           rc = cc_registerImage(argv[3], env, stub);
-           if (rc != 0) {
-           printf("cc_registerImage() failed: in:%s out:%d\n", argv[3], rc);
-           exit(1);
-           }
-           }
-         */
         if (!strcmp(argv[2], "runInstances")) {
-            char *amiId = NULL, *amiURL = NULL, *kernelId = NULL, *kernelURL = NULL, *ramdiskId = NULL, *ramdiskURL = NULL;
             if (argv[3])
                 amiId = argv[3];
             if (argv[4])
@@ -193,8 +295,6 @@ int main(int argc, char **argv)
                 ramdiskId = argv[10];
             if (argv[11])
                 ramdiskURL = argv[11];
-
-            virtualMachine params = { 64, 1, 64, "m1.small" };
 
             rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env,
                                  stub);
@@ -251,7 +351,6 @@ int main(int argc, char **argv)
                 exit(1);
             }
         } else if (!strcmp(argv[2], "rebootInstances")) {
-            char *instIds[256];
             if (argv[3] != NULL) {
                 instIds[0] = strdup(argv[3]);
             }
@@ -261,7 +360,6 @@ int main(int argc, char **argv)
                 exit(1);
             }
         } else if (!strcmp(argv[2], "terminateInstances")) {
-            char *instIds[256];
             i = 3;
             while (argv[i] != NULL) {
                 instIds[i - 3] = strdup(argv[i]);
@@ -281,9 +379,7 @@ int main(int argc, char **argv)
                 exit(1);
             }
         } else if (!strcmp(argv[2], "startNetwork")) {
-            char **ccs;
-            int ccsLen = 0, i;
-            ccs = malloc(sizeof(char *) * 32);
+            ccs = EUCA_ALLOC(32, sizeof(char *));
             for (i = 0; i < 32; i++) {
                 if (argv[i + 5]) {
                     ccs[i] = strdup(argv[i + 5]);
@@ -298,9 +394,7 @@ int main(int argc, char **argv)
                 exit(1);
             }
         } else if (!strcmp(argv[2], "describeNetworks")) {
-            char **ccs, *nameserver;
-            int ccsLen = 0, i;
-            ccs = malloc(sizeof(char *) * 32);
+            ccs = EUCA_ALLOC(32, sizeof(char *));
             for (i = 0; i < 32; i++) {
                 if (argv[i + 3]) {
                     ccs[i] = strdup(argv[i + 3]);
@@ -383,15 +477,11 @@ int main(int argc, char **argv)
                 exit(1);
             }
         } else if (!strcmp(argv[2], "describeSensors")) {
-            sensorResource **res;
-            int resSize;
-
             rc = cc_describeSensors(10, 5000, NULL, 0, NULL, 0, &res, &resSize, env, stub);
             if (rc != 0) {
                 printf("cc_describeSensors() failed: error=%d\n", rc);
                 exit(1);
             }
-            char buf[40960];
             sensor_res2str(buf, sizeof(buf), res, resSize);
             printf("resources: %d\n%s\n", resSize, buf);
         } else {
@@ -400,5 +490,5 @@ int main(int argc, char **argv)
         }
     }
 
-    exit(0);
+    return (EUCA_OK);
 }

@@ -95,6 +95,9 @@ fi
 # This allows Eucalyptus to use correct localization settings
 [ -f /etc/init.d/functions ] && . /etc/init.d/functions
 
+# For fault reporting: $LOCALE can be set in /etc/sysconfig/i18n
+[ -n "$LOCALE" ] && export LOCALE || unset LOCALE
+
 # if we have lsb functions let's source them
 WE_HAVE_LSB="N"
 if [ -e /lib/lsb/init-functions ]; then
@@ -187,7 +190,7 @@ check_java_version() {
     elif [ -z "$PATCH" ] || [ $PATCH -lt 20 ]; then
         echo "ERROR: JVM 1.6.0 patch 20 or newer is required" >&2
         exit 1
-    fi  
+    fi
 }
 
 do_upgrade() {
@@ -203,6 +206,9 @@ do_upgrade() {
 
         # Remove old unpacked webapp area
         rm -rf $EUCALYPTUS/var/run/eucalyptus/webapp
+
+        # Remove old class cache
+        rm -rf $EUCALYPTUS/var/run/eucalyptus/classcache
 
         # Java version check: older than 1.6.0_22 is bad
         check_java_version

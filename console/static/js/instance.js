@@ -86,9 +86,15 @@
                },
             },
             { "mDataProp": "image_id"},
-            { "mDataProp": "placement" }, // TODO: placement==zone?
-            { "mDataProp": "public_dns_name" },
-            { "mDataProp": "private_dns_name" },
+            { "mDataProp": "placement" }, 
+            {
+	          "mDataProp": "public_dns_name",
+ 			  "sClass": "wrap-content"
+			},
+            {
+	          "mDataProp": "private_dns_name",
+ 			  "sClass": "wrap-content"
+			},
             { "mDataProp": "key_name" },
             { "mDataProp": "group_name" },
             { 
@@ -127,6 +133,10 @@
             {
               "bVisible": false,
               "mDataProp": "instance_type",
+            },
+            {
+              "bVisible": false,
+              "mDataProp": "ip_address",
             },
           ]
         },
@@ -804,7 +814,7 @@
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6)[0];
+      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 16)[0];
       var results = describe('eip');
       var addr = null;
       for(i in results){
@@ -929,7 +939,6 @@
       var $header = thisObj.launchMoreDialog.find('#launch-more-summary-header');
       $header.children().detach();
       $header.append($('<span>').html(instance.image_id));
-      //$.i18n.prop('instance_dialog_launch_more_summary', instance.image_id)));
 
       $header = thisObj.launchMoreDialog.find('#launch-wizard-advanced-header');
       $header.children().detach();
@@ -1097,7 +1106,6 @@
     },
 /**** Public Methods ****/
     close: function() {
-    //  this.tableWrapper.eucatable('close'); // shouldn't reference eucatable b/c flippy help changes the this.element dom
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },

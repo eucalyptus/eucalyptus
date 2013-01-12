@@ -388,7 +388,7 @@ public class Images {
     }
   }
   
-  public static void deregisterImage( String imageId ) throws ConstraintViolationException, NoSuchImageException {
+  public static void deregisterImage( String imageId ) throws NoSuchImageException, InstanceNotTerminatedException {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
@@ -404,8 +404,7 @@ public class Images {
       
     } catch ( ConstraintViolationException cve ) {
       db.rollback( );
-      // Need to add message that the image is associated with running instances.
-      throw cve;
+      throw new InstanceNotTerminatedException("To deregister " + imageId + " all associated instances must be in the terminated state.");
     } catch ( EucalyptusCloudException e ) {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );

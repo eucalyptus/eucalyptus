@@ -62,6 +62,7 @@
 
 package com.eucalyptus.util.async;
 
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -129,9 +130,31 @@ public class AsyncRequests {
       }
     }
   }
+
+
+  /**
+   * Calls {@link AsyncRequest#dispatch(String) dispatch} safely.
+   *
+   * <P>This method guarantees that either the success or failure methods of
+   * the requests callback will be invoked.</P>
+   *
+   * @param request The request to dispatch
+   * @param clusterOrPartition The cluster or partition to dispatch to
+   * @deprecated
+   * @see AsyncRequest#dispatch(String)
+   */
+  @Deprecated
+  public static void dispatchSafely( final Request<?,?> request, final String clusterOrPartition ) {
+    try {
+      request.dispatch( clusterOrPartition );
+    } catch ( NoSuchElementException e ) {
+      // request not dispatched, invoke failure handler
+      request.getCallback().fireException( e );
+    }
+  }  
   
   public static <A extends BaseMessage, B extends BaseMessage> Request<A, B> newRequest( final RemoteCallback<A, B> msgCallback ) {
-    return new AsyncRequest( msgCallback ) {
+    return new AsyncRequest<A,B>( msgCallback ) {
       {
         setRequest( msgCallback.getRequest( ) );
       }
