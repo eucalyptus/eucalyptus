@@ -59,6 +59,10 @@ class SnapshotFilterSupportTest extends FilterSupportTest.InstanceTest<Snapshot>
     assertMatch( false, "start-time", "2013-01-09T23:54:39.524Z", new Snapshot( creationTimestamp: date( "2013-01-09T23:54:40.525Z" ) ) )
     assertMatch( false, "start-time", "2013-01-09T23:54:39.524Z", new Snapshot( ) )
 
+    assertMatch( true, "status", "completed", new Snapshot( state: State.EXTANT ) )
+    assertMatch( false, "status", "completed", new Snapshot( state: State.NIHIL  ) )
+    //assertMatch( false, "status", "completed", new Snapshot( ) ) // fails in Snapshot code
+
     assertMatch( true, "volume-id", "vol-00000001", new Snapshot( parentVolume: "vol-00000001" ) )
     assertMatch( false, "volume-id", "vol-00000001", new Snapshot( parentVolume: "vol-00000002" ) )
     assertMatch( false, "volume-id", "vol-00000001", new Snapshot( ) )

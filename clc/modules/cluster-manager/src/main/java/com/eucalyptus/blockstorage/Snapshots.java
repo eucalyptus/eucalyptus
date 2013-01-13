@@ -314,6 +314,7 @@ public class Snapshots {
           .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
           .withStringProperty( "progress", FilterFunctions.PROGRESS )
           .withStringProperty( "snapshot-id", CloudMetadatas.toDisplayName() )
+          .withStringProperty( "status", FilterFunctions.STATUS )
           .withDateProperty( "start-time", FilterDateFunctions.START_TIME )
           .withStringProperty( "volume-id", FilterFunctions.VOLUME_ID )
           .withStringProperty( "volume-size", FilterFunctions.VOLUME_SIZE  )
@@ -352,6 +353,12 @@ public class Snapshots {
       @Override
       public String apply( final Snapshot snapshot ) {
         return snapshot.getProgress();
+      }
+    },
+    STATUS {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.mapState();
       }
     },
     VOLUME_ID {

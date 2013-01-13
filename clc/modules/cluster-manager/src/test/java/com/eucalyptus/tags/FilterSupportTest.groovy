@@ -154,7 +154,7 @@ class FilterSupportTest {
     }
 
     Date date( String isoDateText ) {
-      Timestamps.parseTimestamp( isoDateText ).getTime();
+      Timestamps.parseTimestamp( isoDateText, Timestamps.Type.ISO_8601 );
     }
   }
 }
