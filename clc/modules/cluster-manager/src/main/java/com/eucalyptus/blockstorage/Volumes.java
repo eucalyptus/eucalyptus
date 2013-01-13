@@ -70,6 +70,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Date;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -103,6 +104,7 @@ import com.eucalyptus.util.RestrictedTypes.UsageMetricFunction;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
+import com.eucalyptus.tags.FilterSupport;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
@@ -452,5 +454,125 @@ public class Volumes {
       LOG.error(e, e);
     }
   }
+  
+  public static class VolumeFilterSupport extends FilterSupport<Volume>{
+	  public VolumeFilterSupport(){
+		  super( builderFor(Volume.class)
+				  .withTagFiltering( VolumeTag.class, "volume" ) 
+				  .withDateProperty("attachment.attach-time", FilterDateFunctions.ATTACHMENT_ATTACH_TIME)
+				  .withBooleanProperty("attachment.delete-on-termination", FilterBooleanFunctions.ATTACHMENT_DELETE_ON_TERMINATION)
+				  .withStringProperty("attachment.device", FilterStringFunctions.ATTACHMENT_DEVICE)
+				  .withStringProperty("attachment.instance-id", FilterStringFunctions.ATTACHMENT_INSTANCE_ID)
+				  .withStringProperty("attachment.status", FilterStringFunctions.ATTACHMENT_STATUS)
+				  .withStringProperty("availability-zone", FilterStringFunctions.AVAILABILITY_ZONE)
+				  .withDateProperty("create-time", FilterDateFunctions.CREATE_TIME)
+				  .withStringProperty("size", FilterStringFunctions.SIZE)
+				  .withStringProperty("snapshot-id", FilterStringFunctions.SNAPSHOT_ID)
+				  .withStringProperty("status", FilterStringFunctions.STATUS)
+				  .withStringProperty("volume-id", FilterStringFunctions.VOLUME_ID)
+				  .withStringProperty("volume-type", FilterStringFunctions.VOLUME_TYPE)
+		  );
+	  }
+  }
 
+  private enum FilterStringFunctions implements Function<Volume,String> {
+	  ATTACHMENT_DEVICE {
+		  @Override
+		  public String apply(final Volume vol){
+			return vol.getLocalDevice();  
+		  }
+	  },
+	  ATTACHMENT_INSTANCE_ID {
+		  @Override
+		  public String apply(final Volume vol){
+			  try{
+				  VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment( vol.getDisplayName() );
+				  return attachment.getVmInstance().getInstanceId();
+			  }catch (final Throwable e) {
+				  return null;
+			  }
+		  }
+	  },
+	  ATTACHMENT_STATUS {
+		  @Override
+		  public String apply(final Volume vol){
+			 try{
+				 VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment(vol.getDisplayName());
+				 return attachment.getStatus();
+			 }catch (final Throwable e){
+				 return null;
+			 }
+		  }
+	  },
+	  AVAILABILITY_ZONE {
+		  @Override
+		  public String apply(final Volume vol){
+			  return vol.getPartition();
+		  }
+	  },
+	  SIZE {
+		  @Override
+		  public String apply(final Volume vol){
+			  return vol.getSize().toString();
+		  }
+	  },
+	  SNAPSHOT_ID {
+		  @Override
+		  public String apply(final Volume vol){
+			  return vol.getParentSnapshot();
+		  }
+	  },
+	  STATUS {
+		  @Override
+		  public String apply(final Volume vol){
+			return vol.mapState();  
+		  }
+	  },
+	  VOLUME_ID {
+		  @Override
+		  public String apply (final Volume vol){
+			  return vol.getDisplayName();
+		  }
+	  },
+	  VOLUME_TYPE {
+		  @Override
+		  public String apply (final Volume vol){
+			  return "standard"; /* TODO: we don't support  IOPS volume */
+		  }
+		 
+	  }
+  }
+  
+  private enum FilterDateFunctions implements Function<Volume, Date>{
+	  ATTACHMENT_ATTACH_TIME {
+		  @Override
+		  public Date apply(final Volume vol){
+			  try{
+				  VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment(vol.getDisplayName());
+				  return attachment.getAttachTime();
+			  }catch(final Throwable e){
+				  return null;
+			  }
+		  }
+	  },
+	  CREATE_TIME {
+		  @Override
+		  public Date apply(final Volume vol){
+			  return vol.getCreationTimestamp();
+		  }
+	  }
+  }
+  private enum FilterBooleanFunctions implements Function<Volume, Boolean> {
+	  ATTACHMENT_DELETE_ON_TERMINATION {
+		@Override
+		public Boolean apply(final Volume vol){
+			 try{
+				 VmVolumeAttachment attachment = VmInstances.lookupVolumeAttachment(vol.getDisplayName());
+				 return attachment.getDeleteOnTerminate();
+			 }catch (final Throwable e){
+				 return false;
+			 }
+		}
+	  }
+  }
 }

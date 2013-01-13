@@ -62,6 +62,7 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -69,6 +70,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.Nodes;
@@ -90,6 +92,8 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.VolumeEvent;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -99,7 +103,9 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import edu.ucsb.eucalyptus.msgs.AttachStorageVolumeResponseType;
@@ -245,34 +251,29 @@ public class VolumeManager {
   public DescribeVolumesResponseType DescribeVolumes( DescribeVolumesType request ) throws Exception {
     final DescribeVolumesResponseType reply = ( DescribeVolumesResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );
+
     final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
     final AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( );
     final Set<String> volumeIds = Sets.newHashSet( );
     if ( !request.getVolumeSet( ).isEmpty( ) ) {
       volumeIds.addAll( request.getVolumeSet( ) );
     }
+    final Filter filter = Filters.generate( request.getFilterSet(), Volume.class );
+    final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
+	     .byId(volumeIds )
+         .byPredicate( filter.asPredicate() )
+	     .byPrivileges()
+         .buildPredicate();
+    
     final Function<Set<String>, Set<String>> lookupVolumeIds = new Function<Set<String>, Set<String>>( ) {
       public Set<String> apply( final Set<String> input ) {
-        Set<String> res = Sets.newHashSet( );
-        if ( input.isEmpty( ) ) {
-          for ( Volume foundVol : Collections2.filter( Entities.query( Volume.named( ownerFullName, null ) ), RestrictedTypes.filterPrivileged( ) ) ) {
+    	  final List<Volume> volumes = Entities.query( Volume.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
+          Set<String> res = Sets.newHashSet( );
+          for ( final Volume foundVol : Iterables.filter(volumes, requestedAndAccessible )) {
             res.add( foundVol.getDisplayName( ) );
           }
-        } else {
-          for ( String s : input ) {
-            try {
-              Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, s ) );
-              if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
-                res.add( foundVol.getDisplayName( ) );
-              }
-            } catch ( NoSuchElementException ex ) {
-            } catch ( TransactionException ex ) {
-            throw Exceptions.toUndeclared( ex );
-          }
-        }
+          return res;
       }
-      return res;
-    }
     };
     Set<String> allowedVolumeIds = Entities.asTransaction( Volume.class, lookupVolumeIds ).apply( volumeIds );
     final Function<String, Volume> lookupVolume = new Function<String, Volume>( ) {
