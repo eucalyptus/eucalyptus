@@ -86,6 +86,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -129,7 +130,7 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance( );
   }
   
-  public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
+  public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) throws EucalyptusCloudException {
     final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
     final List<String> args = request.getAvailabilityZoneSet( );
     final Filter filter = Filters.generate( request.getFilterSet(), Cluster.class );
@@ -289,7 +290,7 @@ public class ClusterEndpoint implements Startable {
                                                                                }
                                                                              };
   
-  public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
+  public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) throws EucalyptusCloudException {//TODO:GRZE:URGENT fix the behaviour here.
     final DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
     for ( final Class<? extends ComponentId> componentIdClass : ImmutableList.of(Eucalyptus.class, Walrus.class) ) {
       try {

@@ -478,8 +478,9 @@ public abstract class FilterSupport<RT> {
    *
    * @param filters The map of filter names to (multiple) values
    * @return The filter representation
+   * @throws InvalidFilterException If a filter is invalid
    */
-  public Filter generate( final Map<String, Set<String>> filters ) {
+  public Filter generate( final Map<String, Set<String>> filters ) throws InvalidFilterException  {
     final Context ctx = Contexts.lookup();
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     return generate( filters, requestAccountId );
@@ -490,19 +491,20 @@ public abstract class FilterSupport<RT> {
    *
    * @param filters The map of filter names to (multiple) values
    * @return The filter representation
-   * TODO:STEVE: Should throw something here for an invalid filter?
+   * @throws InvalidFilterException If a filter is invalid
    */
   public Filter generate( final Map<String, Set<String>> filters,
-                          final String accountId ) {
+                          final String accountId ) throws InvalidFilterException {
     // Construct collection filter
     final List<Predicate<Object>> and = Lists.newArrayList();
     for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), Predicates.not( isTagFilter() ) ) ) {
       final List<Predicate<Object>> or = Lists.newArrayList();
       for ( final String value : filter.getValue() ) {
         final Function<? super String,Predicate<? super RT>> predicateFunction = predicateFunctions.get( filter.getKey() );
-        final Predicate<? super RT> valuePredicate = predicateFunction == null ?
-            null :
-            predicateFunction.apply( value );
+        if ( predicateFunction == null ) {
+          throw InvalidFilterException.forName( filter.getKey() );
+        }
+        final Predicate<? super RT> valuePredicate = predicateFunction.apply( value );
         or.add( typedPredicate( valuePredicate ) );
       }
       and.add( Predicates.or( or ) );

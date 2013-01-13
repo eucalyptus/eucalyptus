@@ -38,10 +38,11 @@ public class Filters {
    * @param filters The filter items
    * @param resourceType The resource class to be filtered
    * @return The filter
+   * @throws InvalidFilterException If a filter is invalid
    */
   @Nonnull
   public static Filter generate( final Iterable<edu.ucsb.eucalyptus.msgs.Filter> filters,
-                                 final Class<?> resourceType ) {
+                                 final Class<?> resourceType ) throws InvalidFilterException {
     final Filter filter;
 
     final FilterSupport support = FilterSupport.forResource( resourceType );
