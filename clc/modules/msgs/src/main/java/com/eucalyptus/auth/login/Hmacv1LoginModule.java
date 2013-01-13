@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.login;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -75,7 +76,9 @@ import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.crypto.util.SecurityParameter;
 import com.google.common.base.Strings;
+import com.google.common.collect.Ordering;
 
 public class Hmacv1LoginModule extends HmacLoginModuleSupport {
   private static Logger LOG = Logger.getLogger( Hmacv1LoginModule.class );
@@ -104,12 +107,18 @@ public class Hmacv1LoginModule extends HmacLoginModuleSupport {
     return true;
   }
 
-  private String makeSubjectString( final Map<String, String> parameters ) throws UnsupportedEncodingException {
+  private String makeSubjectString( final Map<String, List<String>> parameters ) throws UnsupportedEncodingException {
     String paramString = "";
     Set<String> sortedKeys = new TreeSet<String>( String.CASE_INSENSITIVE_ORDER );
     sortedKeys.addAll( parameters.keySet( ) );
-    for ( String key : sortedKeys )
-      paramString = paramString.concat( key ).concat( Strings.nullToEmpty( parameters.get(key) ).replaceAll("\\+", " ") );
+    sortedKeys.remove( SecurityParameter.Signature.parameter() );
+    for ( final String key : sortedKeys ) {
+      if ( parameters.get(key).isEmpty() ) {
+        paramString = paramString.concat( key ).replaceAll( "\\+", " " );
+      } else for ( final String value : Ordering.natural().sortedCopy(parameters.get(key)) ) {
+        paramString = paramString.concat( key ).concat( Strings.nullToEmpty( value ).replaceAll("\\+", " ") );
+      }
+    }
     try {
       return new String(URLCodec.decodeUrl( paramString.getBytes() ) );
     } catch ( DecoderException e ) {

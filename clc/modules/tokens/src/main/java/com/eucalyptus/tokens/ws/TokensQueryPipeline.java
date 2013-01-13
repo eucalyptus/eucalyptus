@@ -43,8 +43,10 @@ import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.NioServerHandler;
 import com.eucalyptus.ws.server.QueryPipeline;
@@ -114,7 +116,10 @@ public class TokensQueryPipeline extends QueryPipeline {
 
       if ( event.getMessage( ) instanceof MappingHttpRequest) {
         final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-        usePasswordAuth = !httpRequest.getParameters().containsKey( RequiredQueryParams.SignatureVersion.toString() );
+        usePasswordAuth =
+            !httpRequest.getParameters().containsKey( RequiredQueryParams.SignatureVersion.toString() ) &&
+            !httpRequest.getParameters().containsKey( SecurityParameter.X_Amz_Algorithm.parameter() ) &&
+            !SecurityHeader.Value.AWS4_HMAC_SHA256.matches( httpRequest.getHeader( HttpHeaders.Names.AUTHORIZATION ) ) ;
       }
 
       final ChannelPipeline stagePipeline = Channels.pipeline();

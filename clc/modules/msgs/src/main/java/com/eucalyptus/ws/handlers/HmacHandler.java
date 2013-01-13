@@ -62,20 +62,22 @@
 
 package com.eucalyptus.ws.handlers;
 
+import java.util.List;
 import java.util.Map;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.ws.protocol.RequiredQueryParams;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.ws.util.HmacUtils;
+import com.google.common.base.Function;
+import com.google.common.collect.Maps;
 
 @ChannelPipelineCoverage( "one" )
 public class HmacHandler extends MessageStackHandler {
@@ -97,38 +99,59 @@ public class HmacHandler extends MessageStackHandler {
   @SuppressWarnings( "deprecation" )
   public void incomingMessage( MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-      Map<String, String> parameters = httpRequest.getParameters( );
-      ByteArrayOutputStream bos = new ByteArrayOutputStream( );
+      final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+      final Map<String,String> parameters = httpRequest.getParameters();
+      final ByteArrayOutputStream bos = new ByteArrayOutputStream( );
       httpRequest.getContent( ).readBytes( bos, httpRequest.getContent( ).readableBytes( ) );
-      String blah = bos.toString( );
+      final String body = bos.toString();
       bos.close( );
-      if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.toString( ) ) && !internal ) {
-        throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
-      } else if ( internal ) {
-        // YE TODO: can we just pick any active secret key of admin?
-        parameters.put( SecurityParameter.AWSAccessKeyId.toString( ), Accounts.getFirstActiveAccessKeyId( Accounts.lookupSystemAdmin( ) ) );
+      final Function<String,List<String>> headerLookup = SignatureHandlerUtils.headerLookup( httpRequest );
+      final Function<String,List<String>> parameterLookup = SignatureHandlerUtils.parameterLookup( httpRequest );
+      final HmacUtils.SignatureVariant variant = HmacUtils.detectSignatureVariant( headerLookup, parameterLookup );
+      final Map<String,List<String>> headers = Maps.newHashMap();
+      for ( final String header : httpRequest.getHeaderNames() ) {
+        headers.put( header.toLowerCase(), httpRequest.getHeaders( header ) );
       }
-      if ( !parameters.containsKey( SecurityParameter.Signature.toString( ) ) ) {
-        throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.Signature );
+      if ( variant.getVersion().value() <= 2 ) {
+          if ( !parameters.containsKey( SecurityParameter.AWSAccessKeyId.parameter() ) ) {
+            if ( internal ) {
+              parameters.put( SecurityParameter.AWSAccessKeyId.parameter(), Accounts.getFirstActiveAccessKeyId( Accounts.lookupSystemAdmin( ) ) );
+            } else {
+              throw new AuthenticationException( "Missing required parameter: " + SecurityParameter.AWSAccessKeyId );
+            }
+          }
       }
-      if ( !allowTemporaryCredentials && parameters.containsKey( SecurityParameter.SecurityToken.toString( ) ) ) {
+      final HmacCredentials credentials = new HmacCredentials( 
+          httpRequest.getCorrelationId(), 
+          variant,
+          processParametersForVariant( httpRequest, variant ),
+          headers,
+          httpRequest.getMethod( ).getName( ),
+          httpRequest.getServicePath(),
+          body );
+
+      if ( !allowTemporaryCredentials && credentials.getParameters().containsKey( SecurityParameter.SecurityToken.parameter() ) ) {
         throw new AuthenticationException( "Temporary credentials forbidden for service" );
       }
-      // :: note we remove the sig :://
-      String sig = parameters.remove( SecurityParameter.Signature.toString( ) );
-      String sigVersion = parameters.get( RequiredQueryParams.SignatureVersion.toString( ) );
-      String sigMethod = parameters.get( SecurityParameter.SignatureMethod.toString( ) );
-      String verb = httpRequest.getMethod( ).getName( );
-      sigMethod = ( ( sigMethod == null ) ? "HMACSHA1" : sigMethod );
-      Hmac hmac = Hmac.valueOf( "HmacSHA" + sigMethod.substring( 7 ) );
-      String headerHost = httpRequest.getHeader( "Host" );
-      String servicePath = httpRequest.getServicePath( );
-      SecurityContext.getLoginContext( new HmacCredentials( httpRequest.getCorrelationId( ), sig, parameters, verb, servicePath, headerHost, Integer.valueOf( sigVersion ), hmac ) ).login( );
-      parameters.remove( RequiredQueryParams.SignatureVersion.toString( ) );
-      parameters.remove( SecurityParameter.SignatureMethod.toString( ) );
-      parameters.remove( SecurityParameter.AWSAccessKeyId.toString( ) );
-      parameters.remove( SecurityParameter.SecurityToken.toString( ) );
+
+      SecurityContext.getLoginContext( credentials ).login( );
+
+      parameters.keySet().removeAll( variant.getParametersToRemove() );
+      parameters.remove( SecurityParameter.SecurityToken.parameter() );
     }
+  }
+
+  private Map<String,List<String>> processParametersForVariant( final MappingHttpRequest httpRequest,
+                                                                final HmacUtils.SignatureVariant variant ) {
+    Map<String,String> result = httpRequest.getParameters();
+    if ( variant.getVersion().value() > 2 ) {
+      result = Maps.newHashMap();
+      for ( final Map.Entry<String,String> entry : httpRequest.getParameters().entrySet() ) {
+        if ( httpRequest.isQueryParameter( entry.getKey() ) ) {
+          result.put( entry.getKey(), entry.getValue() );
+        }
+      }
+    }
+    return Maps.transformValues( result, CollectionUtils.<String>listUnit() );
   }
 }

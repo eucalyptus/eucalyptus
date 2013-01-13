@@ -949,7 +949,7 @@ public abstract class FilterSupport<RT> {
             @Override
             public java.util.Date apply( final String textValue ) {
               try {
-                return Timestamps.parseTimestamp( textValue ).getTime();
+                return Timestamps.parseIso8601Timestamp( textValue );
               } catch ( AuthenticationException e ) {
                 return null;
               }

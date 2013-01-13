@@ -63,18 +63,18 @@
 package com.eucalyptus.auth.login;
 
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.TreeSet;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
-import com.google.common.base.Strings;
+import com.eucalyptus.crypto.util.SecurityParameter;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
 public class Hmacv2LoginModule extends HmacLoginModuleSupport {
   private static Logger LOG = Logger.getLogger( Hmacv2LoginModule.class );
@@ -116,8 +116,7 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     return true;
   }
 
-  private String makeSubjectString( String httpMethod, String host, String path, final Map<String, String> parameters ) throws UnsupportedEncodingException {
-    URLCodec codec = new URLCodec();
+  private String makeSubjectString( String httpMethod, String host, String path, final Map<String, List<String>> parameters ) throws UnsupportedEncodingException {
     parameters.remove("");
     StringBuilder sb = new StringBuilder( );
     sb.append( httpMethod );
@@ -128,15 +127,17 @@ public class Hmacv2LoginModule extends HmacLoginModuleSupport {
     sb.append( "\n" );
     String prefix = sb.toString( );
     sb = new StringBuilder( );
-    NavigableSet<String> sortedKeys = new TreeSet<String>( );
-    sortedKeys.addAll( parameters.keySet( ) );
-    String firstKey = sortedKeys.pollFirst( );
-    if( firstKey != null ) { 
-      sb.append( codec.encode( firstKey ,"UTF-8" ) ).append( "=" ).append( codec.encode( Strings.nullToEmpty( parameters.get( firstKey ) ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
-    } 
-    while ( ( firstKey = sortedKeys.pollFirst( ) ) != null ) {
-      sb.append( "&" ).append( codec.encode( firstKey, "UTF-8" ) ).append( "=" ).append( codec.encode( Strings.nullToEmpty( parameters.get( firstKey ) ), "UTF-8" ).replaceAll( "\\+", "%20" ) );
+    boolean addedParam = false;
+    for ( final String paramName : Ordering.natural().sortedCopy( parameters.keySet( ) ) ) {
+      if ( SecurityParameter.Signature.parameter().equals( paramName ) ) continue;
+      List<String> paramValues = parameters.get( paramName );
+      if ( paramValues.isEmpty() ) paramValues = Lists.newArrayList( "" );
+      for ( final String value : Ordering.natural().sortedCopy( paramValues ) ) {
+        sb.append( urlencode( paramName ) ).append( "=" ).append( urlencode( value ) ).append( "&" );
+        addedParam = true;
+      }
     }
+    if (addedParam) sb.setLength( sb.length() - 1 );
     String subject = prefix + sb.toString( );
     LOG.trace( "VERSION2: " + subject );
     return subject;
