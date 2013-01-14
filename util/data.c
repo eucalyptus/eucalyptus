@@ -488,6 +488,21 @@ ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId,
     return (inst);
 }
 
+//! @TODO finish doxygen
+ncInstance *clone_instance(const ncInstance *old_instance)
+{
+    ncInstance *new_instance;
+    
+    // zeroed out for cleaner-looking checkpoints and strings that are empty unless set
+    if ((new_instance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL)
+        return (NULL);   
+
+    //! @TODO do not just copy everything
+    memcpy (new_instance, old_instance, sizeof(ncInstance));
+
+    return new_instance;
+}
+
 //!
 //! Frees an allocated instance structure.
 //!
