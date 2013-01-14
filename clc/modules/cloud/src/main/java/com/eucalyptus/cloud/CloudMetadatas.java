@@ -82,10 +82,16 @@ public class CloudMetadatas {
   }
   
   public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
-    return new Predicate<T>( ) {
+    return filterByProperty( requestedIdentifiers, toDisplayName() );
+  } 
+   
+  public static <T extends CloudMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
+	                                                                           final Function<? super T,String> extractor ) {
+
+   return new Predicate<T>( ) {
       @Override
       public boolean apply( T input ) {
-        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
+        return requestedValues == null || requestedValues.isEmpty( ) || requestedValues.contains( extractor.apply( input ) );
       }
     };
   }
@@ -120,6 +126,21 @@ public class CloudMetadatas {
       return this;
     }
 
+    public <T extends CloudMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
+                     final Function<? super T,String> extractor ) {
+       return new Predicate<T>( ) {
+         @Override
+         public boolean apply( T input ) {
+           return requestedValues == null || requestedValues.isEmpty() || requestedValues.contains( extractor.apply(input) );
+         }
+       };
+     }
+
+    public FilterBuilder<T> byProperty(final Collection<String> requestedValues, final Function<? super T, String> extractor) {
+      predicates.add(filterByProperty(requestedValues, extractor));
+      return this;
+
+    }
     public FilterBuilder<T> byPrivileges() {
       predicates.add( RestrictedTypes.filterPrivileged() );
       return this;

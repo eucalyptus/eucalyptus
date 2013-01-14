@@ -89,6 +89,7 @@ import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.util.FullName;
@@ -114,6 +115,9 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     AWAITING_PEER,
     ACTIVE
   }
+  
+  @Column( name = "metadata_network_group_id")
+  private String 	   groupId;
   
   @Column( name = "metadata_network_group_description" )
   private String           description;
@@ -143,6 +147,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this( ownerFullName, groupName );
     checkParam( groupDescription, notNullValue() );
     this.description = groupDescription;
+    this.groupId = Crypto.generateId( Integer.toHexString(groupName.hashCode()), "sg" );
   }
   
   public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
@@ -153,11 +158,21 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return new NetworkGroup( naturalId );
   }
   
+  public static NetworkGroup withGroupId( final OwnerFullName ownerFullName, final String groupId ) {
+      return networkGroupWithGroupId(ownerFullName, groupId);
+  }
+  
   /**
    * @param naturalId
    */
   private NetworkGroup( final String naturalId ) {
     this.setNaturalId( naturalId );
+  }
+  
+  private static NetworkGroup networkGroupWithGroupId( final OwnerFullName ownerFullName, final String groupId ) {
+      NetworkGroup findGroupWithId = new NetworkGroup(ownerFullName);
+      findGroupWithId.setGroupId(groupId);
+      return findGroupWithId;
   }
   
   @PreRemove
@@ -181,12 +196,20 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     return this.description;
   }
   
+  public String getGroupId( ) {
+    return this.groupId;
+  }
+  
   protected void setDescription( final String description ) {
     this.description = description;
   }
   
   public Set<NetworkRule> getNetworkRules( ) {
     return this.networkRules;
+  }
+  
+  private void setGroupId( final String groupId ){
+     this.groupId = groupId;
   }
   
   private void setNetworkRules( final Set<NetworkRule> networkRules ) {

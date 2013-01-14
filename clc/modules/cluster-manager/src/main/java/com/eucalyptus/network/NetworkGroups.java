@@ -490,6 +490,19 @@ public class NetworkGroups {
     }
   }
   
+  public static NetworkGroup lookupByGroupId( final OwnerFullName ownerFullName, final String groupId ) throws NoSuchMetadataException {
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        NetworkGroup entity = Entities.uniqueResult( NetworkGroup.withGroupId(ownerFullName, groupId) );
+        db.commit( );
+        return entity;
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        db.rollback( );
+        throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
+      }
+    }
+  
   public static NetworkGroup lookup( final OwnerFullName ownerFullName, final String groupName ) throws MetadataException {
     if ( defaultNetworkName( ).equals( groupName ) ) {
       createDefault( ownerFullName );

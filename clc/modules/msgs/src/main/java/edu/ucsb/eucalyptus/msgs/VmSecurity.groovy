@@ -88,6 +88,7 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
   String groupUserId;
   String groupName;
+  String groupId;
   @HttpEmbedded
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
@@ -103,6 +104,7 @@ public class DeleteSecurityGroupResponseType extends VmSecurityMessage {
 }
 public class DeleteSecurityGroupType extends VmSecurityMessage {
   String groupName;
+  String groupId;
 }
 /** *******************************************************************************/
 public class RevokeSecurityGroupIngressResponseType extends VmSecurityMessage {
@@ -111,6 +113,7 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
   String groupUserId;
   String groupName;
+  String groupId;
   @HttpEmbedded
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
@@ -131,6 +134,7 @@ public class SecurityGroupItemType extends EucalyptusData {
   String accountId;
   String groupName;
   String groupDescription;
+  String groupId;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
   public SecurityGroupItemType( ) {
     super( );
