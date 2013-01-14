@@ -159,7 +159,7 @@
           <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
-    <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
     

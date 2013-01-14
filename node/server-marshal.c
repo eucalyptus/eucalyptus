@@ -1399,6 +1399,7 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
     ncMetadata meta = { 0 };
     axis2_char_t *correlationId = NULL;
     axis2_char_t *userId = NULL;
+    axis2_char_t *nodeName = NULL;
     adb_instanceType_t *instance_adb = NULL;
     axis2_char_t *sourceNodeName = NULL;
     axis2_char_t *destNodeName = NULL;
@@ -1416,6 +1417,7 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
         // get standard fields from input
         correlationId = adb_ncMigrateInstanceType_get_correlationId(input, env);
         userId = adb_ncMigrateInstanceType_get_userId(input, env);
+        nodeName = adb_ncMigrateInstanceType_get_nodeName(input, env);
 
         // get operation-specific fields from input
         instance_adb = adb_ncMigrateInstanceType_get_instance(input, env);
@@ -1429,6 +1431,7 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
+        meta.nodeName = nodeName;
 
         error = doMigrateInstance (&meta, instance, sourceNodeName, destNodeName, credentials);
         if (error != EUCA_OK) {
