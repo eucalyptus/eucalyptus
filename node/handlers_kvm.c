@@ -587,7 +587,19 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
 
         char duri [1024];
         snprintf (duri, sizeof(duri), "qemu+ssh://%s/system", destNodeName);
-        int rc = virDomainMigrateToURI(dom, duri, VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, NULL, 0);
+        virConnectPtr dconn = NULL;
+        dconn = virConnectOpen(duri);
+        if (dconn==NULL) {
+            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
+            goto failed_src;
+        }
+
+        int rc = virDomainMigrate(dom, 
+                                  dconn, 
+                                  VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
+                                  NULL, 
+                                  NULL, 
+                                  0L);
         if (rc != 0) {
             logprintfl(EUCAERROR, "[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
             goto failed_src;
