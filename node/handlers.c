@@ -74,16 +74,16 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS      64   //!< so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS      64      //!< so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU               /* strnlen */
-#include <string.h>             /* strlen, strcpy */
+#define __USE_GNU                      /* strnlen */
+#include <string.h>                    /* strlen, strcpy */
 #include <time.h>
-#include <limits.h>             /* INT_MAX */
+#include <limits.h>                    /* INT_MAX */
 #include <sys/unistd.h>
-#include <sys/types.h>          /* fork */
-#include <sys/wait.h>           /* waitpid */
+#include <sys/types.h>                 /* fork */
+#include <sys/wait.h>                  /* waitpid */
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -91,13 +91,13 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #ifndef __DARWIN_UNIX03
-#include <sys/vfs.h>            /* statfs */
+#include <sys/vfs.h>                   /* statfs */
 #endif /* ! __DARWIN_UNIX03 */
-#include <signal.h>             /* SIGINT */
+#include <signal.h>                    /* SIGINT */
 #include <linux/limits.h>
-#include <pwd.h>                /* getpwuid_r */
+#include <pwd.h>                       /* getpwuid_r */
 #ifndef MAX_PATH
-#define MAX_PATH               4096 //!< Max path string length
+#define MAX_PATH               4096    //!< Max path string length
 #endif /*  ! MAX_PATH */
 
 #include <eucalyptus.h>
@@ -182,12 +182,12 @@ const char *euca_client_component_name = "cc";  //!< Name of this component's cl
 #endif /* NO_COMP */
 
 /* used by lower level handlers */
-sem *hyp_sem = NULL;            //!< semaphore for serializing domain creation
-sem *inst_sem = NULL;           //!< guarding access to global instance structs
-sem *inst_copy_sem = NULL;      //!< guarding access to global instance structs
-sem *addkey_sem = NULL;         //!< guarding access to global instance structs
-sem *loop_sem = NULL;           //!< created in diskutils.c for serializing 'losetup' invocations
-sem *log_sem = NULL;            //!< used by log.c
+sem *hyp_sem = NULL;                   //!< semaphore for serializing domain creation
+sem *inst_sem = NULL;                  //!< guarding access to global instance structs
+sem *inst_copy_sem = NULL;             //!< guarding access to global instance structs
+sem *addkey_sem = NULL;                //!< guarding access to global instance structs
+sem *loop_sem = NULL;                  //!< created in diskutils.c for serializing 'losetup' invocations
+sem *log_sem = NULL;                   //!< used by log.c
 
 bunchOfInstances *global_instances = NULL;  //!< pointer to the instance list
 bunchOfInstances *global_instances_copy = NULL; //!< pointer to the copied instance list
@@ -198,7 +198,7 @@ const int default_bundling_cleanup_threshold = 60 * 60 * 2; //!< after this many
 const int default_createImage_cleanup_threshold = 60 * 60 * 2;  //!< after this many seconds any CREATEIMAGE domains will be cleaned up
 const int default_teardown_state_duration = 180;    //!< after this many seconds in TEARDOWN state (no resources), we'll forget about the instance
 
-struct nc_state_t nc_state = { 0 }; //!< Global NC state structure
+struct nc_state_t nc_state = { 0 };    //!< Global NC state structure
 
 configEntry configKeysRestartNC[] = {
     {"ENABLE_WS_SECURITY", "Y"},
@@ -260,8 +260,7 @@ int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
 int doPowerDown(ncMetadata * pMeta);
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
-                  netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  ncInstance ** outInst);
+                  netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance ** outInst);
 int doTerminateInstance(ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
 int doRebootInstance(ncMetadata * pMeta, char *instanceId);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
@@ -269,8 +268,7 @@ int doDescribeResource(ncMetadata * pMeta, char *resourceType, ncResource ** out
 int doStartNetwork(ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 int doAttachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
 int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy,
-                     char *S3PolicySig);
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int doBundleRestartInstance(ncMetadata * pMeta, char *instanceId);
 int doCancelBundleTask(ncMetadata * pMeta, char *instanceId);
 int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
@@ -489,8 +487,7 @@ void print_running_domains(void)
     {
         for (head = global_instances; head; head = head->next) {
             instance = head->instance;
-            if (instance->state == STAGING || instance->state == BOOTING || instance->state == RUNNING || instance->state == BLOCKED
-                || instance->state == PAUSED) {
+            if (instance->state == STAGING || instance->state == BOOTING || instance->state == RUNNING || instance->state == BLOCKED || instance->state == PAUSED) {
                 strcat(buf, " ");
                 strcat(buf, instance->instanceId);
             }
@@ -566,15 +563,15 @@ virConnectPtr *check_hypervisor_conn()
     // Success in the child process does not guarantee success in the parent process, but
     // hopefully it will flag certain bad conditions and will allow the parent to avoid them.
 
-    if ((cpid = fork()) < 0) {  // fork error
+    if ((cpid = fork()) < 0) {         // fork error
         LOGERROR("failed to fork to check hypervisor connection\n");
-        bail = TRUE;            // we are in big trouble if we cannot fork
-    } else if (cpid == 0) {     // child process - checks on the connection
+        bail = TRUE;                   // we are in big trouble if we cannot fork
+    } else if (cpid == 0) {            // child process - checks on the connection
         if ((tmp_conn = virConnectOpen(nc_state.uri)) == NULL)
             exit(1);
         virConnectClose(tmp_conn);
         exit(0);
-    } else {                    // parent process - waits for the child, kills it if necessary
+    } else {                           // parent process - waits for the child, kills it if necessary
         if ((rc = timewait(cpid, &status, LIBVIRT_TIMEOUT_SEC)) < 0) {
             LOGERROR("failed to wait for forked process: %s\n", strerror(errno));
             bail = TRUE;
@@ -586,13 +583,13 @@ virConnectPtr *check_hypervisor_conn()
             bail = TRUE;
         }
         // terminate the child, if any
-        kill(cpid, SIGKILL);    // should be able to do
-        kill(cpid, 9);          // may not be able to do
+        kill(cpid, SIGKILL);           // should be able to do
+        kill(cpid, 9);                 // may not be able to do
     }
 
     if (bail) {
         sem_v(hyp_sem);
-        return NULL;            // better fail the operation than block the whole NC
+        return NULL;                   // better fail the operation than block the whole NC
     }
     LOGTRACE("process check for libvirt succeeded\n");
 
@@ -616,9 +613,9 @@ virConnectPtr *check_hypervisor_conn()
 
             ts.tv_sec += LIBVIRT_TIMEOUT_SEC;
             if ((rc = pthread_timedjoin_np(thread, NULL, &ts)) == 0)
-                break;          // all is well
+                break;                 // all is well
 
-            if (rc != ETIMEDOUT) {  // error other than timeout
+            if (rc != ETIMEDOUT) {     // error other than timeout
                 LOGERROR("failed to wait for libvirt refreshing thread (rc=%d)\n", rc);
                 bail = TRUE;
                 break;
@@ -655,7 +652,7 @@ void change_state(ncInstance * instance, instance_states state)
     int old_state = instance->state;
 
     instance->state = ((int)state);
-    switch (state) {            /* mapping from NC's internal states into external ones */
+    switch (state) {                   /* mapping from NC's internal states into external ones */
     case STAGING:
     case CANCELED:
         instance->stateCode = PENDING;
@@ -690,8 +687,7 @@ void change_state(ncInstance * instance, instance_states state)
     euca_strncpy(instance->stateName, instance_state_names[instance->stateCode], CHAR_BUFFER_SIZE);
     if (old_state != state) {
         LOGDEBUG("[%s] state change for instance: %s -> %s (%s)\n",
-                 instance->instanceId, instance_state_names[old_state], instance_state_names[instance->state],
-                 instance_state_names[instance->stateCode]);
+                 instance->instanceId, instance_state_names[old_state], instance_state_names[instance->state], instance_state_names[instance->stateCode]);
     }
 }
 
@@ -752,7 +748,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     }
     sem_v(hyp_sem);
 
-    if (dom == NULL) {          // hypervisor doesn't know about it
+    if (dom == NULL) {                 // hypervisor doesn't know about it
         if (old_state == BUNDLING_SHUTDOWN) {
             LOGINFO("[%s] detected disappearance of bundled domain\n", instance->instanceId);
             change_state(instance, BUNDLING_SHUTOFF);
@@ -980,8 +976,7 @@ void *monitoring_thread(void *arg)
                 instance->state != SHUTOFF &&
                 instance->state != SHUTDOWN &&
                 instance->state != BUNDLING_SHUTDOWN &&
-                instance->state != BUNDLING_SHUTOFF && instance->state != CREATEIMAGE_SHUTDOWN && instance->state != CREATEIMAGE_SHUTOFF
-                && instance->state != TEARDOWN) {
+                instance->state != BUNDLING_SHUTOFF && instance->state != CREATEIMAGE_SHUTDOWN && instance->state != CREATEIMAGE_SHUTOFF && instance->state != TEARDOWN) {
 
                 if (FP && !strcmp(instance->stateName, "Extant")) {
                     //! @TODO is this still being used?
@@ -999,13 +994,13 @@ void *monitoring_thread(void *arg)
                     remove_instance(&global_instances, instance);
                     LOGINFO("[%s] forgetting about instance\n", instance->instanceId);
                     free_instance(&instance);
-                    break;      // need to get out since the list changed
+                    break;             // need to get out since the list changed
                 }
                 continue;
             }
             // time out logic for STAGING or BOOTING or BUNDLING instances
             if (instance->state == STAGING && (now - instance->launchTime) < nc_state.staging_cleanup_threshold)
-                continue;       // hasn't been long enough, spare it
+                continue;              // hasn't been long enough, spare it
 
             if (instance->state == BOOTING && (now - instance->bootTime) < nc_state.booting_cleanup_threshold)
                 continue;
@@ -1061,7 +1056,7 @@ void *monitoring_thread(void *arg)
             rename(nfile, nfilefinal);
         }
 
-        copy_instances();       // copy global_instances to global_instances_copy
+        copy_instances();              // copy global_instances to global_instances_copy
         sem_v(inst_sem);
 
         if (head) {
@@ -1187,7 +1182,7 @@ void *startup_thread(void *arg)
         goto shutoff;
     }
 
-    if (instance->state == TEARDOWN) {  // timed out in STAGING
+    if (instance->state == TEARDOWN) { // timed out in STAGING
         goto free;
     }
 
@@ -1203,7 +1198,7 @@ void *startup_thread(void *arg)
 
     xml = file2str(instance->libvirtFilePath);
 
-    save_instance_struct(instance); // to enable NC recovery
+    save_instance_struct(instance);    // to enable NC recovery
     sensor_add_resource(instance->instanceId, "instance", instance->uuid);
     sensor_set_resource_alias(instance->instanceId, instance->ncnet.privateIp);
     update_disk_aliases(instance);
@@ -1241,11 +1236,11 @@ void *startup_thread(void *arg)
         // #7  0x00007f359f0be70d in clone () from /lib/libc.so.6
         // #8  0x0000000000000000 in ?? ()
 
-        if ((cpid = fork()) < 0) {  // fork error
+        if ((cpid = fork()) < 0) {     // fork error
             LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
-        } else if (cpid == 0) { // child process - creates the domain
+        } else if (cpid == 0) {        // child process - creates the domain
             if ((dom = virDomainCreateLinux(nc_state.conn, xml, 0)) != NULL) {
-                virDomainFree(dom); // To be safe. Docs are not clear on whether the handle exists outside the process.
+                virDomainFree(dom);    // To be safe. Docs are not clear on whether the handle exists outside the process.
                 exit(0);
             } else {
                 exit(1);
@@ -1267,8 +1262,8 @@ void *startup_thread(void *arg)
             }
 
             if (try_killing) {
-                kill(cpid, SIGKILL);    // should be able to do
-                kill(cpid, 9);  // may not be able to do?
+                kill(cpid, SIGKILL);   // should be able to do
+                kill(cpid, 9);         // may not be able to do?
             }
         }
 
@@ -1300,7 +1295,7 @@ void *startup_thread(void *arg)
     sem_v(inst_sem);
     goto free;
 
-shutoff:                       // escape point for error conditions
+shutoff:                              // escape point for error conditions
     change_state(instance, SHUTOFF);
 
 free:
@@ -1406,7 +1401,7 @@ void *restart_thread(void *arg)
 
                 if (tryKilling) {
                     kill(cpid, SIGKILL);    // should be able to do
-                    kill(cpid, 9);  // may not be able to do?
+                    kill(cpid, 9);     // may not be able to do?
                 }
             }
         }
@@ -1443,7 +1438,7 @@ void *restart_thread(void *arg)
     sem_v(inst_sem);
     goto done;
 
-shutoff:                       // escape point for error conditions
+shutoff:                              // escape point for error conditions
     change_state(instance, SHUTOFF);
 
 done:
@@ -1567,7 +1562,7 @@ void adopt_instances()
 
     sem_p(inst_sem);
     {
-        copy_instances();       // copy global_instances to global_instances_copy
+        copy_instances();              // copy global_instances to global_instances_copy
     }
     sem_v(inst_sem);
 }
@@ -1645,7 +1640,7 @@ static int init(void)
 
     // determine home ($EUCALYPTUS)
     if ((tmp = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
-        nc_state.home[0] = '\0';    // empty string means '/'
+        nc_state.home[0] = '\0';       // empty string means '/'
         do_warn = 1;
     } else {
         strncpy(nc_state.home, tmp, MAX_PATH - 1);
@@ -1712,7 +1707,7 @@ static int init(void)
         }
     }
 
-    {                           // initialize hooks if their directory looks ok
+    {                                  // initialize hooks if their directory looks ok
         char dir[MAX_PATH];
         snprintf(dir, sizeof(dir), EUCALYPTUS_NC_HOOKS_DIR, nc_state.home);
         // if 'dir' does not exist, init_hooks() will silently fail,
@@ -1750,7 +1745,7 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
     // check on dependencies (3rd-party programs that NC invokes)
-    if (diskutil_init(FALSE)) { // NC does not need GRUB for now
+    if (diskutil_init(FALSE)) {        // NC does not need GRUB for now
         LOGFATAL("failed to find all required dependencies\n");
         return (EUCA_FATAL_ERROR);
     }
@@ -1911,7 +1906,7 @@ static int init(void)
         long long conf_work_overhead_mb;
         GET_VAR_INT(conf_work_overhead_mb, CONFIG_NC_OVERHEAD_SIZE, PER_INSTANCE_BUFFER_MB);
 
-        {                       // accommodate legacy MAX_DISK setting by converting it
+        {                              // accommodate legacy MAX_DISK setting by converting it
             int max_disk_gb;
             GET_VAR_INT(max_disk_gb, CONFIG_MAX_DISK, -1);
             if (max_disk_gb != -1) {
@@ -1935,12 +1930,10 @@ static int init(void)
         // above all, try to respect user-specified limits for work and cache
         if (conf_work_size_mb != -1) {
             if (conf_work_size_mb < MIN_BLOBSTORE_SIZE_MB) {
-                LOGWARN("ignoring specified work size (%s=%lld) that is below acceptable minimum (%d)\n", CONFIG_NC_WORK_SIZE,
-                        conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
+                LOGWARN("ignoring specified work size (%s=%lld) that is below acceptable minimum (%d)\n", CONFIG_NC_WORK_SIZE, conf_work_size_mb, MIN_BLOBSTORE_SIZE_MB);
             } else {
                 if (work_bs_size_mb != -1 && work_bs_size_mb != conf_work_size_mb) {
-                    LOGWARN("specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n",
-                            CONFIG_NC_WORK_SIZE, conf_work_size_mb, work_bs_size_mb);
+                    LOGWARN("specified work size (%s=%lld) differs from existing work size (%lld), will try resizing\n", CONFIG_NC_WORK_SIZE, conf_work_size_mb, work_bs_size_mb);
                 }
                 work_size_mb = conf_work_size_mb;
             }
@@ -1948,7 +1941,7 @@ static int init(void)
 
         if (conf_cache_size_mb != -1) { // respect user-specified limit
             if (conf_cache_size_mb < MIN_BLOBSTORE_SIZE_MB) {
-                cache_size_mb = 0;  // so it won't be used
+                cache_size_mb = 0;     // so it won't be used
             } else {
                 if (cache_bs_size_mb != -1 && cache_bs_size_mb != conf_cache_size_mb) {
                     LOGWARN("specified cache size (%s=%lld) differs from existing cache size (%lld), will try resizing\n",
@@ -1981,7 +1974,7 @@ static int init(void)
             if ((cache_size_mb + work_size_mb - cache_bs_allocated_mb - work_bs_allocated_mb) > work_fs_avail_mb) {
                 LOGWARN("sum of work and cache sizes exceeds available disk space\n");
             }
-        } else {                // cache and work are on different file systems
+        } else {                       // cache and work are on different file systems
             if (work_size_mb == -1) {
                 work_size_mb = (long long)((double)work_fs_avail_mb - (double)(work_fs_avail_mb) * FS_BUFFER_PERCENT);
             }
@@ -2019,21 +2012,17 @@ static int init(void)
         LOGINFO("disk space for instances: %s/work\n", instances_path);
         LOGINFO("                          %06lldMB limit (%.1f%% of the file system) - %lldMB overhead = %lldMB = %lldGB\n",
                 work_size_mb, ((double)work_size_mb / (double)work_fs_size_mb) * 100.0, overhead_mb, disk_max_mb, nc_state.disk_max);
-        LOGINFO("                          %06lldMB reserved for use (%.1f%% of limit)\n", work_bs_reserved_mb,
-                ((double)work_bs_reserved_mb / (double)work_size_mb) * 100.0);
+        LOGINFO("                          %06lldMB reserved for use (%.1f%% of limit)\n", work_bs_reserved_mb, ((double)work_bs_reserved_mb / (double)work_size_mb) * 100.0);
         LOGINFO("                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n",
-                work_bs_allocated_mb, ((double)work_bs_allocated_mb / (double)work_size_mb) * 100.0,
-                ((double)work_bs_allocated_mb / (double)work_fs_size_mb) * 100.0);
+                work_bs_allocated_mb, ((double)work_bs_allocated_mb / (double)work_size_mb) * 100.0, ((double)work_bs_allocated_mb / (double)work_fs_size_mb) * 100.0);
 
         if (cache_size_mb) {
             LOGINFO("    disk space for cache: %s/cache\n", instances_path);
-            LOGINFO("                          %06lldMB limit (%.1f%% of the file system)\n", cache_size_mb,
-                    ((double)cache_size_mb / (double)cache_fs_size_mb) * 100.0);
+            LOGINFO("                          %06lldMB limit (%.1f%% of the file system)\n", cache_size_mb, ((double)cache_size_mb / (double)cache_fs_size_mb) * 100.0);
             LOGINFO("                          %06lldMB reserved for use (%.1f%% of limit)\n", cache_bs_reserved_mb,
                     ((double)cache_bs_reserved_mb / (double)cache_size_mb) * 100.0);
             LOGINFO("                          %06lldMB allocated for use (%.1f%% of limit, %.1f%% of the file system)\n",
-                    cache_bs_allocated_mb, ((double)cache_bs_allocated_mb / (double)cache_size_mb) * 100.0,
-                    ((double)cache_bs_allocated_mb / (double)cache_fs_size_mb) * 100.0);
+                    cache_bs_allocated_mb, ((double)cache_bs_allocated_mb / (double)cache_size_mb) * 100.0, ((double)cache_bs_allocated_mb / (double)cache_fs_size_mb) * 100.0);
         } else {
             LOGWARN("disk cache will not be used\n");
         }
@@ -2129,7 +2118,7 @@ static int init(void)
         snprintf(nc_state.ncDeleteBundleCmd, MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE);  // default value
     }
 
-    {                           // find and set iqn
+    {                                  // find and set iqn
         snprintf(nc_state.iqn, CHAR_BUFFER_SIZE, "UNSET");
         char *ptr = NULL, *iqn = NULL, *tmp = NULL, cmd[MAX_PATH];
         snprintf(cmd, MAX_PATH, "%s cat /etc/iscsi/initiatorname.iscsi", nc_state.rootwrap_cmd_path);
@@ -2147,7 +2136,7 @@ static int init(void)
         }
     }
 
-    {                           // start the monitoring thread
+    {                                  // start the monitoring thread
         pthread_t tcb;
         if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
             LOGFATAL("failed to spawn a monitoring thread\n");
@@ -2207,7 +2196,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
     if (init())
         return (EUCA_ERROR);
 
-    LOGTRACE("invoked\n");      // response will be at INFO, so this is TRACE
+    LOGTRACE("invoked\n");             // response will be at INFO, so this is TRACE
 
     if (nc_state.H->doDescribeInstances)
         ret = nc_state.H->doDescribeInstances(&nc_state, pMeta, instIds, instIdsLen, outInsts, outInstsLen);
@@ -2251,8 +2240,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
         LOGDEBUG("[%s] %s pub=%s priv=%s mac=%s vlan=%d net=%d plat=%s vols=%s\n",
                  instance->instanceId,
                  instance->stateName,
-                 instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan,
-                 instance->ncnet.networkIndex, instance->platform, vols_str);
+                 instance->ncnet.publicIp, instance->ncnet.privateIp, instance->ncnet.privateMac, instance->ncnet.vlan, instance->ncnet.networkIndex, instance->platform, vols_str);
     }
 
     // allocate enough memory
@@ -2393,8 +2381,7 @@ int doPowerDown(ncMetadata * pMeta)
 //!
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
-                  netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
-                  ncInstance ** outInst)
+                  netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance ** outInst)
 {
     int ret = EUCA_OK;
 
@@ -2408,12 +2395,10 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
 
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
-                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames,
-                                        groupNamesSize, outInst);
+                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
     } else {
         ret = nc_state.D->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
-                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames,
-                                        groupNamesSize, outInst);
+                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
     }
 
     return ret;
@@ -2623,8 +2608,7 @@ int doDetachVolume(ncMetadata * pMeta, char *instanceId, char *volumeId, char *r
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doBundleInstance() handler call.
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy,
-                     char *S3PolicySig)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     int ret = EUCA_OK;
 
@@ -2768,11 +2752,9 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
     LOGDEBUG("invoked (instIdsLen=%d sensorIdsLen=%d)\n", instIdsLen, sensorIdsLen);
 
     if (nc_state.H->doDescribeSensors) {
-        ret = nc_state.H->doDescribeSensors(&nc_state, pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen,
-                                            outResources, outResourcesLen);
+        ret = nc_state.H->doDescribeSensors(&nc_state, pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     } else {
-        ret = nc_state.D->doDescribeSensors(&nc_state, pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen,
-                                            outResources, outResourcesLen);
+        ret = nc_state.D->doDescribeSensors(&nc_state, pMeta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, outResources, outResourcesLen);
     }
 
     return ret;

@@ -92,7 +92,7 @@
 
 #include "eucalyptus.h"
 #include "euca_auth.h"
-#include "misc.h"               /* get_string_stats, logprintf */
+#include "misc.h"                      /* get_string_stats, logprintf */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -140,9 +140,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean initialized = FALSE; //!< Boolean to make sure we have initialized this module
+static boolean initialized = FALSE;    //!< Boolean to make sure we have initialized this module
 static char cert_file[FILENAME] = { 0 };    //!< Certificate file name
-static char pk_file[FILENAME] = { 0 };  //!< Private key file name
+static char pk_file[FILENAME] = { 0 }; //!< Private key file name
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -275,7 +275,7 @@ char *euca_get_cert(unsigned char options)
                 if (cert_str[got - 1] == '\t' || cert_str[got - 1] == '\n')
                     got--;
                 if (cert_str[got - 1] == '\n')
-                    got--;      /* because of indenting */
+                    got--;             /* because of indenting */
             }
             cert_str[got] = '\0';
         }
@@ -322,7 +322,7 @@ char *base64_enc(unsigned char *in, int size)
                 }
             }
         }
-        BIO_free_all(bio64);    /* frees both bio64 and biomem */
+        BIO_free_all(bio64);           /* frees both bio64 and biomem */
     }
     return (out_str);
 }

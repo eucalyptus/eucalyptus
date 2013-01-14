@@ -125,8 +125,8 @@
 #include <axis2_client.h>
 #include <axis2_stub.h>
 
-#include "misc.h"               // check_file, logprintf
-#include "fault.h"              // log_eucafault
+#include "misc.h"                      // check_file, logprintf
+#include "fault.h"                     // log_eucafault
 #include "euca_axis.h"
 
 /*----------------------------------------------------------------------------*\
@@ -182,8 +182,7 @@
 axis2_status_t __euca_authenticate(const axutil_env_t * env, axis2_msg_ctx_t * out_msg_ctx, axis2_op_ctx_t * op_ctx);
 axis2_status_t verify_references(axiom_node_t * sig_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axiom_soap_envelope_t * envelope,
                                  rampart_context_t * rampart_context);
-int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems,
-                rampart_context_t * rampart_context);
+int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems, rampart_context_t * rampart_context);
 int verify_addr_hdr_elem_loc(axiom_node_t * signed_node, const axutil_env_t * env, axis2_char_t * ref);
 
 int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);
@@ -224,8 +223,7 @@ static void throw_fault(void);
 static void throw_fault(void)
 {
     init_eucafaults(euca_this_component_name);
-    log_eucafault("1009", "sender", euca_client_component_name, "receiver", euca_this_component_name, "keys_dir",
-                  "$EUCALYPTUS/var/lib/eucalyptus/keys/", NULL);
+    log_eucafault("1009", "sender", euca_client_component_name, "receiver", euca_this_component_name, "keys_dir", "$EUCALYPTUS/var/lib/eucalyptus/keys/", NULL);
 }
 
 //!
@@ -240,7 +238,7 @@ static void throw_fault(void)
 axis2_status_t __euca_authenticate(const axutil_env_t * env, axis2_msg_ctx_t * out_msg_ctx, axis2_op_ctx_t * op_ctx)
 {
     // First get the message context before doing anything dumb w/ a NULL pointer
-    axis2_msg_ctx_t *msg_ctx = NULL;    //<--- incoming msg context, it is NULL, see?
+    axis2_msg_ctx_t *msg_ctx = NULL;   //<--- incoming msg context, it is NULL, see?
     msg_ctx = axis2_op_ctx_get_msg_ctx(op_ctx, env, AXIS2_WSDL_MESSAGE_LABEL_IN);
 
     // Print everything from the security results, just for testing now
@@ -477,8 +475,7 @@ axis2_status_t verify_references(axiom_node_t * sig_node, const axutil_env_t * e
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
-int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems,
-                rampart_context_t * rampart_context)
+int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems, rampart_context_t * rampart_context)
 {
     if (!axutil_strcmp(OXS_NODE_BODY, axiom_util_get_localname(signed_node, env))) {
         AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "[euca-rampart] node %s is Body", ref);

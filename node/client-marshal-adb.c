@@ -168,8 +168,7 @@ int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, c
                          char *userPublicKey, char *S3Policy, char *S3PolicySig);
 int ncBundleRestartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                              int *outBundleTasksLen);
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 int ncCreateImageStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen,
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
@@ -238,23 +237,23 @@ ncStub *ncStubCreate(char *endpoint_uri, char *logfile, char *homedir)
     uri = endpoint_uri;
 
     // extract node name from the endpoint
-    p = strstr(uri, "://");     // find "http[s]://..."
+    p = strstr(uri, "://");            // find "http[s]://..."
     if (p == NULL) {
         LOGERROR("received invalid URI %s\n", uri);
         return NULL;
     }
 
-    node_name = strdup(p + 3);  // copy without the protocol prefix
+    node_name = strdup(p + 3);         // copy without the protocol prefix
     if (node_name == NULL) {
         LOGERROR("is out of memory\n");
         return NULL;
     }
 
     if ((p = strchr(node_name, ':')) != NULL)
-        *p = '\0';              // cut off the port
+        *p = '\0';                     // cut off the port
 
     if ((p = strchr(node_name, '/')) != NULL)
-        *p = '\0';              // if there is no port
+        *p = '\0';                     // if there is no port
 
     // see if we should redirect to a local broker
     if (strstr(uri, "EucalyptusBroker")) {
@@ -650,8 +649,8 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instId, in
             status = 1;
         }
         //! @todo fix the state char->int conversion
-        *shutdownState = 0;     //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
-        *previousState = 0;     //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
+        *shutdownState = 0;            //strdup(adb_ncTerminateInstanceResponseType_get_shutdownState(response, env));
+        *previousState = 0;            //strdup(adb_ncTerminateInstanceResponseType_get_previousState(response, env));
     }
 
     return (status);
@@ -1265,8 +1264,7 @@ int ncCancelBundleTaskStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! @return Always return EUCA_OK
 //!
-int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                              int *outBundleTasksLen)
+int ncDescribeBundleTasksStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
 {
     int i = 0;
     int status = 0;

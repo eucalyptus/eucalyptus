@@ -77,7 +77,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "ipc.h"                // sem
+#include "ipc.h"                       // sem
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -156,7 +156,7 @@ int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
 int logprintf(const char *format, ...) _attribute_format_(1, 2);
-int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_ (5, 6);
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_(5, 6);
 int logcat(int debug_level, const char *file_path);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);

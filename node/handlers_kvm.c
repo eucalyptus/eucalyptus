@@ -76,16 +76,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU               /* strnlen */
-#include <string.h>             /* strlen, strcpy */
+#define __USE_GNU                      /* strnlen */
+#include <string.h>                    /* strlen, strcpy */
 #include <time.h>
-#include <sys/types.h>          /* fork */
-#include <sys/wait.h>           /* waitpid */
+#include <sys/types.h>                 /* fork */
+#include <sys/wait.h>                  /* waitpid */
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
-#include <signal.h>             /* SIGINT */
+#include <signal.h>                    /* SIGINT */
 #include <sys/stat.h>
 #include <fcntl.h>
 
@@ -298,7 +298,7 @@ static void *rebooting_thread(void *arg)
     {
         // for KVM, must stop and restart the instance
         LOGDEBUG("[%s] destroying domain\n", instance->instanceId);
-        error = virDomainDestroy(dom);  // @todo change to Shutdown? is this synchronous?
+        error = virDomainDestroy(dom); // @todo change to Shutdown? is this synchronous?
         virDomainFree(dom);
     }
     sem_v(hyp_sem);
@@ -331,7 +331,7 @@ static void *rebooting_thread(void *arg)
     for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
         volume = &instance->volumes[i];
         if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
-            continue;           // skip the entry unless attached or attaching
+            continue;                  // skip the entry unless attached or attaching
 
         LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, i, volume->stateName);
 
@@ -368,7 +368,7 @@ static void *rebooting_thread(void *arg)
                 if (err) {
                     LOGERROR("[%s][%s] failed to reattach volume (attempt %d of %d)\n", instance->instanceId, volume->volumeId, i, REATTACH_RETRIES);
                     LOGDEBUG("[%s][%s] error from virDomainAttachDevice: %d xml: %s\n", instance->instanceId, volume->volumeId, err, xml);
-                    sleep(3);   // sleep a bit and retry
+                    sleep(3);          // sleep a bit and retry
                 } else {
                     LOGINFO("[%s][%s] volume reattached as '%s'\n", instance->instanceId, volume->volumeId, volume->localDevReal);
                     break;

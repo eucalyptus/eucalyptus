@@ -74,7 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +90,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
-#include <math.h>               /* log2 */
+#include <math.h>                      /* log2 */
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -144,7 +144,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-char *iptablesCache = NULL;     //!< contains the IP tables cache
+char *iptablesCache = NULL;            //!< contains the IP tables cache
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1772,8 +1772,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     uint32_t inip = 0;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
-        LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac),
-                 SP(outpubip), SP(outprivip));
+        LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -1885,8 +1884,7 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     }
 
     for (i = start; i <= stop; i++) {
-        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0
-            && vnetconfig->networks[vlan].addrs[i].active == 0) {
+        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
             hex2mac(vnetconfig->networks[vlan].addrs[i].mac, &newmac);
             strncpy(mac, newmac, strlen(newmac));
             EUCA_FREE(newmac);
@@ -2095,8 +2093,7 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
         return (EUCA_ACCESS_ERROR);
     }
 
-    fprintf(fp,
-            "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
+    fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
 
     fprintf(fp, "shared-network euca {\n");
     for (i = 0; i < vnetconfig->max_vlan; i++) {

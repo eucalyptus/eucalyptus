@@ -79,10 +79,10 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h>             // ssize_t
-#include <sys/types.h>          // mode_t
+#include <unistd.h>                    // ssize_t
+#include <sys/types.h>                 // mode_t
 #include <linux/limits.h>
-#include <stdint.h>             // uint32_t
+#include <stdint.h>                    // uint32_t
 
 #include <eucalyptus.h>
 
@@ -95,8 +95,8 @@
 //! @{
 //! @name Definition of the boolean values TRUE and FALSE
 
-#define TRUE                                     1 //!< Defines the "TRUE" boolean value
-#define FALSE                                    0 //!< Defines the "FALSE" boolean value
+#define TRUE                                     1  //!< Defines the "TRUE" boolean value
+#define FALSE                                    0  //!< Defines the "FALSE" boolean value
 
 //! @}
 
@@ -110,9 +110,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef unsigned char                            boolean;  //!< @todo move this somewhere more global?
+typedef unsigned char boolean;         //!< @todo move this somewhere more global?
 
-#include "log.h"                // so everyone picks up the logging functions
+#include "log.h"                       // so everyone picks up the logging functions
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

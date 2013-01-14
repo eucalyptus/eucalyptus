@@ -75,7 +75,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -83,13 +83,13 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <fcntl.h>              /* For O_* */
+#include <fcntl.h>                     /* For O_* */
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
 #include "eucalyptus.h"
-#include "misc.h"               /* logprintfl */
+#include "misc.h"                      /* logprintfl */
 #include "ipc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -246,8 +246,8 @@ sem *sem_realloc(const int val, const char *name, int flags)
         s->name = strdup(name);
     } else {
         /* SYS V IPC semaphores */
-        s->sysv = semget(IPC_PRIVATE,   /* private to process & children */
-                         1,     /* only need one */
+        s->sysv = semget(IPC_PRIVATE,  /* private to process & children */
+                         1,            /* only need one */
                          (IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR) /* user-only */ );
         if (s->sysv < 0) {
             EUCA_FREE(s);

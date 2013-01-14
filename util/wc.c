@@ -77,15 +77,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <ctype.h>              // isspace
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
-#include <errno.h>              // errno
-#include <locale.h>             // setlocale
+#include <errno.h>                     // errno
+#include <locale.h>                    // setlocale
 #include <string.h>
 
 #include "eucalyptus.h"
-#include "misc.h"               // boolean
+#include "misc.h"                      // boolean
 #include "wc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -454,7 +454,7 @@ wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * 
         if ((map[i] = EUCA_ALLOC(1, sizeof(wchar_map))) != NULL) {
             map[i]->key = wcsdup(key);
             map[i]->val = wcsdup(val);
-            map[i + 1] = NULL;  // NULL terminator
+            map[i + 1] = NULL;         // NULL terminator
         }
     }
 
@@ -480,7 +480,7 @@ void varmap_free(wchar_map ** map)
             i++;
         }
 
-        EUCA_FREE(map[i]);      // NULL terminator
+        EUCA_FREE(map[i]);             // NULL terminator
         EUCA_FREE(map);
     }
 }
@@ -627,7 +627,7 @@ char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val)
         if ((map[i] = EUCA_ALLOC(1, sizeof(char_map))) != NULL) {
             map[i]->key = strdup(key);
             map[i]->val = strdup(val);
-            map[i + 1] = NULL;  // NULL terminator
+            map[i + 1] = NULL;         // NULL terminator
         }
     }
 
@@ -653,7 +653,7 @@ void c_varmap_free(char_map ** map)
             i++;
         }
 
-        EUCA_FREE(map[i]);      // NULL terminator
+        EUCA_FREE(map[i]);             // NULL terminator
         EUCA_FREE(map);
     }
 }

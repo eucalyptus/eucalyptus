@@ -131,8 +131,7 @@
 axis2_status_t __euca_authenticate(const axutil_env_t * env, axis2_msg_ctx_t * out_msg_ctx, axis2_op_ctx_t * op_ctx);
 axis2_status_t verify_references(axiom_node_t * sig_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axiom_soap_envelope_t * envelope,
                                  rampart_context_t * rampart_context);
-int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems,
-                rampart_context_t * rampart_context);
+int verify_node(axiom_node_t * signed_node, const axutil_env_t * env, axis2_msg_ctx_t * msg_ctx, axis2_char_t * ref, short *signed_elems, rampart_context_t * rampart_context);
 int verify_addr_hdr_elem_loc(axiom_node_t * signed_node, const axutil_env_t * env, axis2_char_t * ref);
 
 int InitWSSEC(axutil_env_t * env, axis2_stub_t * pStub, char *policyFile);

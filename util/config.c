@@ -341,8 +341,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
 
         if (configNoRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n",
-                        configKeysNoRestart[i].key, SP(old), SP(new));
+                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", configKeysNoRestart[i].key, SP(old), SP(new));
                 ret++;
                 EUCA_FREE(configValuesNoRestart[i]);
                 configValuesNoRestart[i] = new;
@@ -374,7 +373,7 @@ void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log
     long l = 0;
     char *s = configFileValue("LOGLEVEL");
 
-    assert(s != NULL);          // configFileValue should return default
+    assert(s != NULL);                 // configFileValue should return default
 
     *log_level_out = log_level_int(s);
 

@@ -135,9 +135,9 @@ typedef enum {
 
 //! Sensor value structure
 typedef struct {
-    long long timestampMs;      //!< in milliseconds
-    double value;               //!< measurement
-    char available;             //!< if '1' then value is valid, otherwise it is not
+    long long timestampMs;             //!< in milliseconds
+    double value;                      //!< measurement
+    char available;                    //!< if '1' then value is valid, otherwise it is not
 } sensorValue;
 
 //! Sensor dimension structure
@@ -145,36 +145,36 @@ typedef struct {
     char dimensionName[MAX_SENSOR_NAME_LEN];    //!< e.g. "default", "root", "vol-123ABC"
     char dimensionAlias[MAX_SENSOR_NAME_LEN];   //!< e.g. "sda1", "vda", "sdc"
     sensorValue values[MAX_SENSOR_VALUES];  //!< array of values (not pointers, to simplify shared-memory region use)
-    int valuesLen;              //!< size of the array
-    int firstValueIndex;        //!< index into values[] of the first value (one that matches sequenceNum)
-    double shift_value;         // amount that should be added to all values at this dimension
+    int valuesLen;                     //!< size of the array
+    int firstValueIndex;               //!< index into values[] of the first value (one that matches sequenceNum)
+    double shift_value;                // amount that should be added to all values at this dimension
 } sensorDimension;
 
 //! Sensor counter structure
 typedef struct {
     sensorCounterType type;
-    long long collectionIntervalMs; //!< the spacing of values, based on sensor's configuration
-    long long sequenceNum;      //!< starts with 0 when sensor is reset and monotonically increases
+    long long collectionIntervalMs;    //!< the spacing of values, based on sensor's configuration
+    long long sequenceNum;             //!< starts with 0 when sensor is reset and monotonically increases
     sensorDimension dimensions[MAX_SENSOR_DIMENSIONS];  //!< array of values (not pointers, to simplify shared-memory region use)
-    int dimensionsLen;          //!< size of the array
+    int dimensionsLen;                 //!< size of the array
 } sensorCounter;
 
 //! Sensor metric structure
 typedef struct {
     char metricName[MAX_SENSOR_NAME_LEN];   //!< e.g. "CPUUtilization"
     sensorCounter counters[MAX_SENSOR_COUNTERS];    //!< array of values (not pointers, to simplify shared-memory region use)
-    int countersLen;            //!< size of the array
+    int countersLen;                   //!< size of the array
 } sensorMetric;
 
 //! Sensor resource structure
 typedef struct {
     char resourceName[MAX_SENSOR_NAME_LEN]; //!< e.g. "i-1234567"
     char resourceAlias[MAX_SENSOR_NAME_LEN];    //!< e.g. "123.45.67.89" (its private IP address)
-    char resourceType[10];      //!< e.g. "instance"
-    char resourceUuid[64];      //!< e.g. "550e8400-e29b-41d4-a716-446655443210"
+    char resourceType[10];             //!< e.g. "instance"
+    char resourceUuid[64];             //!< e.g. "550e8400-e29b-41d4-a716-446655443210"
     sensorMetric metrics[MAX_SENSOR_METRICS];   //!< array of values (not pointers, to simplify shared-memory region use)
-    int metricsLen;             //!< size of the array
-    int timestamp;              // timestamp for last receipt of metrics
+    int metricsLen;                    //!< size of the array
+    int timestamp;                     // timestamp for last receipt of metrics
 } sensorResource;
 
 //! Sensor resource cache structure
@@ -187,7 +187,7 @@ typedef struct {
     int used_resources;
     time_t last_polled;
     time_t interval_polled;
-    sensorResource resources[1];    //!< if struct should be allocated with extra space after it for additional cache elements
+    sensorResource resources[1];       //!< if struct should be allocated with extra space after it for additional cache elements
 } sensorResourceCache;
 
 /*----------------------------------------------------------------------------*\
@@ -226,8 +226,7 @@ int sensor_add_resource(const char *resourceName, const char *resourceType, cons
 int sensor_set_resource_alias(const char *resourceName, const char *resourceAlias);
 int sensor_remove_resource(const char *resourceName);
 int sensor_shift_metric(const char *resourceName, const char *metricName);
-int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName,
-                               const char *dimensionAlias);
+int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName, const char *dimensionAlias);
 int sensor_set_volume(const char *instanceId, const char *volumeId, const char *guestDev);
 int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
 int sensor_validate_resources(sensorResource ** srs, int srsLen);

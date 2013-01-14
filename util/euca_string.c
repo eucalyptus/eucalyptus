@@ -74,16 +74,16 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>             // strlen, strcpy
-#include <ctype.h>              // isspace
+#include <string.h>                    // strlen, strcpy
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <sys/errno.h>          // errno
+#include <sys/errno.h>                 // errno
 #include <limits.h>
 #include <wchar.h>
 

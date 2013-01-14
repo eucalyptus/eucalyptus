@@ -77,11 +77,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>             /* close */
+#include <unistd.h>                    /* close */
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h>              /* open */
+#include <fcntl.h>                     /* open */
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <pthread.h>
@@ -141,13 +141,13 @@
 
 //! Defines the WALRUS request structure
 struct request {
-    int fd;                     //!< output file descriptor to be used by curl WRITERs
-    long long total_wrote;      //!< bytes written during the operation
-    long long total_calls;      //!< write calls made during the operation
+    int fd;                            //!< output file descriptor to be used by curl WRITERs
+    long long total_wrote;             //!< bytes written during the operation
+    long long total_calls;             //!< write calls made during the operation
 #if defined (CAN_GZIP)
-    z_stream strm;              //!< stream struct used by zlib
-    int ret;                    //!< return value of last inflate() call
-#endif                          /* CAN_GZIP */
+    z_stream strm;                     //!< stream struct used by zlib
+    int ret;                           //!< return value of last inflate() call
+#endif                                 /* CAN_GZIP */
 };
 
 /*----------------------------------------------------------------------------*\
@@ -238,7 +238,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     int code = EUCA_ERROR;
     char url[BUFSIZE];
 
-    pthread_mutex_lock(&wreq_mutex);    /* lock for curl construction */
+    pthread_mutex_lock(&wreq_mutex);   /* lock for curl construction */
 
     euca_strncpy(url, requested_url, BUFSIZE);
 #if defined(CAN_GZIP)
@@ -305,7 +305,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         close(fd);
         LOGERROR("invalid HTTP verb %s in Walrus request\n", verb);
         pthread_mutex_unlock(&wreq_mutex);
-        return EUCA_ERROR;      //! @todo dealloc structs before returning!
+        return EUCA_ERROR;             //! @todo dealloc structs before returning!
     }
 
     if (connect_timeout > 0) {
@@ -327,7 +327,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     }
 #endif /* CAN_GZIP */
 
-    struct curl_slist *headers = NULL;  /* beginning of a DLL with headers */
+    struct curl_slist *headers = NULL; /* beginning of a DLL with headers */
     headers = curl_slist_append(headers, "Authorization: Euca");
 
     char op_hdr[STRSIZE];
@@ -347,12 +347,12 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     char *newline = strchr(date_str, '\n');
     if (newline != NULL) {
         *newline = '\0';
-    }                           // remove newline that terminates asctime() output
+    }                                  // remove newline that terminates asctime() output
     char date_hdr[STRSIZE];
     snprintf(date_hdr, STRSIZE, "Date: %s", date_str);
     headers = curl_slist_append(headers, date_hdr);
 
-    char *cert_str = euca_get_cert(0);  /* read the cloud-wide cert */
+    char *cert_str = euca_get_cert(0); /* read the cloud-wide cert */
     if (cert_str == NULL) {
         close(fd);
         pthread_mutex_unlock(&wreq_mutex);
@@ -424,7 +424,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         }
 #endif /* CAN_GZIP */
 
-        if (result) {           // curl error (connection or transfer failed)
+        if (result) {                  // curl error (connection or transfer failed)
             LOGERROR("curl error: %s (%d)\n", error_msg, result);
 
         } else {
@@ -433,15 +433,15 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
             //! @todo pull out response message, too
 
             switch (httpcode) {
-            case 200L:         /* all good */
+            case 200L:                /* all good */
                 LOGINFO("downloaded %s\n", outfile);
                 code = EUCA_OK;
                 break;
-            case 408L:         /* timeout, retry */
+            case 408L:                /* timeout, retry */
                 LOGWARN("server responded with HTTP code %ld (timeout) for %s\n", httpcode, url);
                 //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
                 break;
-            default:           /* some kind of error */
+            default:                  /* some kind of error */
                 LOGERROR("server responded with HTTP code %ld for %s\n", httpcode, url);
                 //logcat (EUCADEBUG, outfile); /* dump the error from outfile into the log */
                 retries = 0;
@@ -593,7 +593,7 @@ char *walrus_get_digest(const char *url)
     if (tmp_fd < 0) {
         LOGERROR("failed to create a digest file %s\n", digest_path);
     } else {
-        close(tmp_fd);          // walrus_ routine will reopen the file
+        close(tmp_fd);                 // walrus_ routine will reopen the file
 
         // download a fresh digest
         if (walrus_object_by_url(url, digest_path, 0) != 0) {
@@ -756,7 +756,7 @@ static size_t write_data_zlib(void *buffer, size_t size, size_t nmemb, void *par
         ((struct request *)params)->ret = ret = inflate(strm, Z_NO_FLUSH);
         switch (ret) {
         case Z_NEED_DICT:
-            ret = Z_DATA_ERROR; // ok to fall through
+            ret = Z_DATA_ERROR;        // ok to fall through
         case Z_DATA_ERROR:
         case Z_MEM_ERROR:
         case Z_STREAM_ERROR:

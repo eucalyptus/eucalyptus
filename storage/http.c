@@ -76,14 +76,14 @@
 
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>             // close, stat
+#include <unistd.h>                    // close, stat
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h>              // open
-#include <ctype.h>              // tolower, isdigit
-#include <sys/types.h>          // stat
-#include <sys/stat.h>           // stat
+#include <fcntl.h>                     // open
+#include <ctype.h>                     // tolower, isdigit
+#include <sys/types.h>                 // stat
+#include <sys/stat.h>                  // stat
 #include <curl/curl.h>
 #include <curl/easy.h>
 
@@ -128,21 +128,21 @@
 
 #ifndef _UNIT_TEST
 struct read_request {
-    FILE *fp;                   //!< input file pointer to be used by curl READERs
-    long long total_read;       //!< bytes written during the operation
-    long long total_calls;      //!< write calls made during the operation
-    time_t timestamp;           //!< timestamp for periodically printing progress messages
-    long long file_size;        //!< file size in bytes, to print in progress messages
+    FILE *fp;                          //!< input file pointer to be used by curl READERs
+    long long total_read;              //!< bytes written during the operation
+    long long total_calls;             //!< write calls made during the operation
+    time_t timestamp;                  //!< timestamp for periodically printing progress messages
+    long long file_size;               //!< file size in bytes, to print in progress messages
 };
 
 struct write_request {
-    FILE *fp;                   //!< output file pointer to be used by curl WRITERs
-    long long total_wrote;      //!< bytes written during the operation
-    long long total_calls;      //!< write calls made during the operation
+    FILE *fp;                          //!< output file pointer to be used by curl WRITERs
+    long long total_wrote;             //!< bytes written during the operation
+    long long total_calls;             //!< write calls made during the operation
 #if defined (CAN_GZIP)
-    z_stream strm;              //!< stream struct used by zlib
-    int ret;                    //!< return value of last inflate() call
-#endif                          /* CAN_GZIP */
+    z_stream strm;                     //!< stream struct used by zlib
+    int ret;                           //!< return value of last inflate() call
+#endif                                 /* CAN_GZIP */
 };
 #endif /* ! _UNIT_TEST */
 

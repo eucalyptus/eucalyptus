@@ -368,9 +368,9 @@ typedef enum instance_states_t {
 
     //! @{
     //! @name the only three states reported to CLC
-    PENDING,                    //!< staging in data, starting to boot, failed to boot
-    EXTANT,                     //!< guest OS booting, running, shutting down, cleaning up state
-    TEARDOWN,                   //!< a marker for a terminated domain, one not taking up resources
+    PENDING,                           //!< staging in data, starting to boot, failed to boot
+    EXTANT,                            //!< guest OS booting, running, shutting down, cleaning up state
+    TEARDOWN,                          //!< a marker for a terminated domain, one not taking up resources
     //! @}
 
     TOTAL_STATES
@@ -396,23 +396,23 @@ typedef enum createImage_progress_t {
 
 //! Various Eucalyptus standard error code.
 enum euca_error_e {
-    EUCA_OK = 0,                //!< Operation successful
-    EUCA_ERROR = 1,             //!< Generic operation error code
-    EUCA_FATAL_ERROR = 2,       //!< Generic operation unrecoverable error code
-    EUCA_NOT_FOUND_ERROR = 3,   //!< Searched item not found
-    EUCA_MEMORY_ERROR = 4,      //!< Out of memory error
-    EUCA_IO_ERROR = 5,          //!< Input/Output error
-    EUCA_HYPERVISOR_ERROR = 6,  //!< Error caused by the Hypervisor.
-    EUCA_THREAD_ERROR = 7,      //!< Failure to initialize or start a thread.
-    EUCA_DUPLICATE_ERROR = 8,   //!< Duplicate entry error
-    EUCA_INVALID_ERROR = 9,     //!< Invalid argument error
-    EUCA_OVERFLOW_ERROR = 10,   //!< Variable overflow error
-    EUCA_UNSUPPORTED_ERROR = 11,    //!< Operation unsupported error
-    EUCA_PERMISSION_ERROR = 12, //!< Operation not permitted error
-    EUCA_ACCESS_ERROR = 13,     //!< Access permission denied
-    EUCA_NO_SPACE_ERROR = 14,   //!< No more space available in list or memory space
-    EUCA_TIMEOUT_ERROR = 15,    //!< Execution of an operation timed out
-    EUCA_SYSTEM_ERROR = 16,     //!< If any system execution has failed
+    EUCA_OK = 0,                       //!< Operation successful
+    EUCA_ERROR = 1,                    //!< Generic operation error code
+    EUCA_FATAL_ERROR = 2,              //!< Generic operation unrecoverable error code
+    EUCA_NOT_FOUND_ERROR = 3,          //!< Searched item not found
+    EUCA_MEMORY_ERROR = 4,             //!< Out of memory error
+    EUCA_IO_ERROR = 5,                 //!< Input/Output error
+    EUCA_HYPERVISOR_ERROR = 6,         //!< Error caused by the Hypervisor.
+    EUCA_THREAD_ERROR = 7,             //!< Failure to initialize or start a thread.
+    EUCA_DUPLICATE_ERROR = 8,          //!< Duplicate entry error
+    EUCA_INVALID_ERROR = 9,            //!< Invalid argument error
+    EUCA_OVERFLOW_ERROR = 10,          //!< Variable overflow error
+    EUCA_UNSUPPORTED_ERROR = 11,       //!< Operation unsupported error
+    EUCA_PERMISSION_ERROR = 12,        //!< Operation not permitted error
+    EUCA_ACCESS_ERROR = 13,            //!< Access permission denied
+    EUCA_NO_SPACE_ERROR = 14,          //!< No more space available in list or memory space
+    EUCA_TIMEOUT_ERROR = 15,           //!< Execution of an operation timed out
+    EUCA_SYSTEM_ERROR = 16,            //!< If any system execution has failed
     EUCA_LAST_ERROR,
 };
 
