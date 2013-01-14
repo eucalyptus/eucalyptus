@@ -81,7 +81,7 @@
 	<xs:sequence>
 	  <xs:element minOccurs="0" name="resourceLocation" type="xs:string"/>
 	  <xs:element minOccurs="0" name="guestDeviceName" type="xs:string"/>
-	  <xs:element minOccurs="0" name="size" type="xs:int"/>
+	  <xs:element minOccurs="0" name="size" type="xs:long"/>
 	  <xs:element minOccurs="0" name="format" type="xs:string"/>
 	  <xs:element minOccurs="0" name="id" type="xs:string"/>
 	  <xs:element minOccurs="0" name="type" type="xs:string"/>
