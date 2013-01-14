@@ -517,6 +517,9 @@
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	    <xs:element minOccurs="0" name="migrationStateName" type="xs:string" />
+	    <xs:element minOccurs="0" name="migrationSource" type="xs:string" />
+	    <xs:element minOccurs="0" name="migrationDestination" type="xs:string" />
 
         <!-- passed into RunInstances for safekeeping by NC -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
