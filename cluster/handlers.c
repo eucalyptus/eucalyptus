@@ -3936,7 +3936,9 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     sem_mywait(INSTCACHE);
     if (instanceCache->numInsts) {
         for (i = 0; i < MAXINSTANCES_PER_CC; i++) {
-            if (instanceCache->cacheState[i] == INSTVALID && instanceCache->instances[i].ncHostIdx == src_index) {
+            if (instanceCache->cacheState[i] == INSTVALID 
+                && instanceCache->instances[i].ncHostIdx == src_index
+                && (!strcmp(instanceCache->instances[i].state, "Extant"))) {
                 memcpy(&cc_instance, &(instanceCache->instances[i]), sizeof(ccInstance));
                 found_instance = 1;
                 break;
