@@ -232,6 +232,7 @@ typedef struct serviceStatusType_t {
 typedef struct ncMetadata_t {
     char *correlationId;               //!< Request Correlation Identifier
     char *userId;                      //!< User identifier
+    char *nodeName;                    //!< Name/IP of the node the request is bound for (optional)
     int epoch;                         //!< Request timestamp in EPOCH format
     serviceInfoType services[16];      //!< List of services available
     serviceInfoType disabledServices[16];   //!< List of disabled services

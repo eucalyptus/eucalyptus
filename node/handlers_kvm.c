@@ -560,6 +560,17 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //!
 static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
 {
-    logprintfl(EUCAERROR, "[%s] method %s NOT IMPLEMENTED YET on KVM\n", instance->instanceId, __func__);
-    return (EUCA_UNSUPPORTED_ERROR);
+    int ret = EUCA_OK;
+
+    if (!strcmp(pMeta->nodeName, sourceNodeName)) {
+        logprintfl(EUCAINFO, "source of migration initating\n");
+
+    } else if (!strcmp(pMeta->nodeName, destNodeName)) {
+        logprintfl(EUCAINFO, "destination of migration initating\n");
+
+    } else {
+        logprintfl(EUCAERROR, "unexpected migration request (node %s is neither source nor destination)\n");
+        ret = EUCA_ERROR;
+    }
+    return ret;
 }
