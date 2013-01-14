@@ -613,11 +613,11 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         logprintfl(EUCAINFO, "destination of migration initating\n");
 
         int error;
-
+        
         if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
             goto failed_dest;
         }
-
+        
         /*
         // set up networking
         char *brname = NULL;
@@ -638,6 +638,22 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
             goto failed_dest;
         }
         
+        ncInstance *new_instance = clone_instance(instance);
+        if (new_instance == NULL) {
+            logprintfl(EUCAERROR, "[%s] could not allocate instance struct\n", instance->instanceId);
+            goto failed_dest;
+        }
+        change_state(new_instance, PAUSED);
+        
+        sem_p(inst_sem);
+        error = add_instance(&global_instances, new_instance);
+        copy_instances();
+        sem_v(inst_sem);
+        if (error) {
+            logprintfl(EUCAERROR, "[%s] could not save instance struct\n", new_instance->instanceId);
+            goto failed_dest;
+        }
+
         goto out;
     failed_dest:
         ret = EUCA_ERROR;

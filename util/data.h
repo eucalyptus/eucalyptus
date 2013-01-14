@@ -449,6 +449,7 @@ void free_metadata(ncMetadata ** pMeta);
 ncInstance *allocate_instance(char *uuid, char *instanceId, char *reservationId, virtualMachine * params, const char *stateName, int stateCode,
                               char *userId, char *ownerId, char *accountId, netConfig * ncnet, char *keyName, char *userData, char *launchIndex,
                               char *platform, int expiryTime, char **groupNames, int groupNamesSize);
+ncInstance *clone_instance(const ncInstance *old_instance);
 void free_instance(ncInstance ** instp);
 int add_instance(bunchOfInstances ** headp, ncInstance * instance);
 int remove_instance(bunchOfInstances ** headp, ncInstance * instance);
