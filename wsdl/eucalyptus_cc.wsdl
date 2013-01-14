@@ -102,6 +102,9 @@
 	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	  <xs:element minOccurs="0" name="migrationStateName" type="xs:string" />
+	  <xs:element minOccurs="0" name="migrationSource" type="xs:string" />
+	  <xs:element minOccurs="0" name="migrationDestination" type="xs:string" />
 	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="groupNames" type="xs:string"/>
@@ -232,7 +235,7 @@
           <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
-    <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
     	</xs:sequence>
       </xs:complexType>
 
