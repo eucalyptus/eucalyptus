@@ -179,8 +179,6 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_env_t * env);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -299,82 +297,6 @@ int ncStubDestroy(ncStub * pStub)
     EUCA_FREE(pStub->node_name);
     EUCA_FREE(pStub);
     return (EUCA_OK);
-}
-
-//!
-//! Converts an ADB instance to NC instance
-//!
-//! @param[in] instance a pointer to the ADB instance to convert to NC instance
-//! @param[in] env pointer to the AXIS2 environment structure
-//!
-//! @return a pointer to the instance created from the ADB instance
-//!
-static ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, axutil_env_t * env)
-{
-    int i = 0;
-    int groupNamesSize = 0;
-    int expiryTime = 0;
-    char *groupNames[EUCA_MAX_GROUPS] = { NULL };
-    netConfig ncnet = { 0 };
-    ncInstance *outInst = NULL;
-    virtualMachine params = { 0 };
-    axutil_date_time_t *dt = NULL;
-    adb_virtualMachineType_t *vm_type = NULL;
-    adb_netConfigType_t *netconf = NULL;
-
-    vm_type = adb_instanceType_get_instanceType(instance, env);
-    copy_vm_type_from_adb(&params, vm_type, env);
-    bzero(&ncnet, sizeof(netConfig));
-    if ((netconf = adb_instanceType_get_netParams(instance, env)) != NULL) {
-        ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
-        ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
-        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
-        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
-        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
-    }
-
-    groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);
-    for (i = 0; ((i < EUCA_MAX_GROUPS) && (i < groupNamesSize)); i++) {
-        groupNames[i] = adb_instanceType_get_groupNames_at(instance, env, i);
-    }
-
-    dt = adb_instanceType_get_expiryTime(instance, env);
-    expiryTime = datetime_to_unix(dt, env);
-
-    outInst = allocate_instance((char *)adb_instanceType_get_uuid(instance, env),
-                                (char *)adb_instanceType_get_instanceId(instance, env),
-                                (char *)adb_instanceType_get_reservationId(instance, env),
-                                &params,
-                                (char *)adb_instanceType_get_stateName(instance, env),
-                                0,
-                                (char *)adb_instanceType_get_userId(instance, env),
-                                (char *)adb_instanceType_get_ownerId(instance, env),
-                                (char *)adb_instanceType_get_accountId(instance, env),
-                                &ncnet,
-                                (char *)adb_instanceType_get_keyName(instance, env),
-                                (char *)adb_instanceType_get_userData(instance, env),
-                                (char *)adb_instanceType_get_launchIndex(instance, env),
-                                (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize);
-
-    euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
-    outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
-    outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
-
-    if ((dt = adb_instanceType_get_launchTime(instance, env)) != NULL) {
-        outInst->launchTime = datetime_to_unix(dt, env);
-        axutil_date_time_free(dt, env);
-    }
-
-    bzero(outInst->volumes, sizeof(ncVolume) * EUCA_MAX_VOLUMES);
-    for (i = 0; ((i < EUCA_MAX_VOLUMES) && (i < adb_instanceType_sizeof_volumes(instance, env))); i++) {
-        adb_volumeType_t *volume = adb_instanceType_get_volumes_at(instance, env, i);
-        euca_strncpy(outInst->volumes[i].volumeId, adb_volumeType_get_volumeId(volume, env), CHAR_BUFFER_SIZE);
-        euca_strncpy(outInst->volumes[i].remoteDev, adb_volumeType_get_remoteDev(volume, env), CHAR_BUFFER_SIZE);
-        euca_strncpy(outInst->volumes[i].localDev, adb_volumeType_get_localDev(volume, env), CHAR_BUFFER_SIZE);
-        euca_strncpy(outInst->volumes[i].stateName, adb_volumeType_get_state(volume, env), CHAR_BUFFER_SIZE);
-    }
-
-    return (outInst);
 }
 
 //!
@@ -1512,7 +1434,7 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instanceId the ID of the instance to migrate to destination
+//! @param[in]  instance metadata for the instance to migrate to destination
 //! @param[in]  sourceNodeName IP of the source Node Controller
 //! @param[in]  destNodeName IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
@@ -1521,7 +1443,7 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 //!
 //! @see ncMigrateInstance()
 //!
-int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1544,7 +1466,9 @@ int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, char * instanceId, 
     }
 
     // set op-specific input fields
-    adb_ncMigrateInstanceType_set_instanceId(request, env, instanceId);
+    adb_instanceType_t *instance_adb = adb_instanceType_create(env);
+    copy_instance_to_adb(instance_adb, env, instance);
+    adb_ncMigrateInstanceType_set_instance(request, env, instance_adb);
     adb_ncMigrateInstanceType_set_sourceNodeName(request, env, sourceNodeName);
     adb_ncMigrateInstanceType_set_destNodeName(request, env, destNodeName);
     if (credentials != NULL)

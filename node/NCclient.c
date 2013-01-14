@@ -771,7 +771,10 @@ int main(int argc, char **argv)
         CHECK_PARAM(dst_node_name, "destination node name");
         // migration creds can be NULL
 
-        rc = ncMigrateInstanceStub(stub, &meta, instance_id, src_node_name, dst_node_name, migration_creds);
+        ncInstance instance;
+        bzero(&instance, sizeof(ncInstance));
+        strncpy(instance.instanceId, instance_id, sizeof(instance.instanceId));
+        rc = ncMigrateInstanceStub(stub, &meta, &instance, src_node_name, dst_node_name, migration_creds);
         if (rc != 0) {
             printf("ncMigrateInstance() failed: error=%d\n", rc);
             exit(1);

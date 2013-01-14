@@ -933,14 +933,14 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
 //!
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instanceId the ID of the instance to migrate to destination
+//! @param[in]  instance metadata for the instance to migrate to destination
 //! @param[in]  sourceNodeName IP of the source Node Controller
 //! @param[in]  destNodeName IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
 //!
 //! @return Always returns EUCA_OK
 //!
-int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
 {
     return (EUCA_OK);
 }

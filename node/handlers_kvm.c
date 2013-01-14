@@ -169,7 +169,7 @@ static int doInitialize(struct nc_state_t *nc);
 static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials);
+static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -558,8 +558,8 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //!                                                                                                                                                                              
 //! TODO: doxygen
 //!
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
+static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
 {
-    logprintfl(EUCAERROR, "[%s] method %s NOT IMPLEMENTED YET on KVM\n", instanceId, __func__);
+    logprintfl(EUCAERROR, "[%s] method %s NOT IMPLEMENTED YET on KVM\n", instance->instanceId, __func__);
     return (EUCA_UNSUPPORTED_ERROR);
 }
