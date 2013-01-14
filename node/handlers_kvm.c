@@ -568,9 +568,41 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
     } else if (!strcmp(pMeta->nodeName, destNodeName)) {
         logprintfl(EUCAINFO, "destination of migration initating\n");
 
+        int error;
+
+        if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
+            goto failed;
+        }
+
+        /*
+        // set up networking
+        char *brname = NULL;
+        if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
+            logprintfl(EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
+            EUCA_FREE(brname);
+            goto failed;
+        }
+        */
+
+        // TODO: move stuff in startup_thread() into a function?
+
+        instance->combinePartitions = nc->convert_to_disk;
+        if ((error = create_instance_backing(instance))) {
+            logprintfl(EUCAERROR, "[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
+            goto failed;
+        }
+        
+        goto out;
+
+    failed:
+        ret = EUCA_ERROR;
+
     } else {
         logprintfl(EUCAERROR, "unexpected migration request (node %s is neither source nor destination)\n");
         ret = EUCA_ERROR;
     }
+
+ out:
+
     return ret;
 }

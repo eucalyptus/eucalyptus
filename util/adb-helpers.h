@@ -882,6 +882,9 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
     adb_virtualMachineType_t *vm_type = NULL;
     adb_netConfigType_t *netconf = NULL;
 
+    bzero(&ncnet, sizeof(ncnet));
+    bzero(&params, sizeof(params));
+
     vm_type = adb_instanceType_get_instanceType(instance, env);
     copy_vm_type_from_adb(&params, vm_type, env);
     bzero(&ncnet, sizeof(netConfig));

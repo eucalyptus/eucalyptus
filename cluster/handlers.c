@@ -2767,6 +2767,7 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
     euca_strncpy(dst->instanceId, src->instanceId, 16);
     euca_strncpy(dst->reservationId, src->reservationId, 16);
     euca_strncpy(dst->accountId, src->accountId, 48);
+    euca_strncpy(dst->userId, src->ownerId, 48); //! @TODO: is this right?
     euca_strncpy(dst->ownerId, src->ownerId, 48);
     euca_strncpy(dst->imageId, src->amiId, 16);
     euca_strncpy(dst->kernelId, src->kernelId, 16);
