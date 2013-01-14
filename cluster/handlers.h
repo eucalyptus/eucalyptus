@@ -384,7 +384,8 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 int powerUp(ccResource * res);
 int powerDown(ncMetadata * pMeta, ccResource * node);
 void print_netConfig(char *prestr, netConfig * in);
-int ccInstance_to_ncInstance(ccInstance * dst, ncInstance * src);
+int ncInstance_to_ccInstance(ccInstance * dst, ncInstance * src);
+int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src);
 int schedule_instance(virtualMachine * vm, char *targetNode, int *outresid);
 int schedule_instance_roundrobin(virtualMachine * vm, int *outresid);
 int schedule_instance_explicit(virtualMachine * vm, char *targetNode, int *outresid);
