@@ -639,7 +639,9 @@ public class NetworkGroups {
       final EntityTransaction db = Entities.get( NetworkGroup.class );
       try {
         final NetworkGroup netGroup = Entities.merge( input );
-        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ), netGroup.getDisplayName( ),
+        final SecurityGroupItemType groupInfo = new SecurityGroupItemType( netGroup.getOwnerAccountNumber( ),
+                                                                           netGroup.getGroupId( ),
+                                                                           netGroup.getDisplayName( ),
                                                                            netGroup.getDescription( ) );
         final Iterable<IpPermissionType> ipPerms = Iterables.transform( netGroup.getNetworkRules( ),
                                                                         TypeMappers.lookup( NetworkRule.class, IpPermissionType.class ) );

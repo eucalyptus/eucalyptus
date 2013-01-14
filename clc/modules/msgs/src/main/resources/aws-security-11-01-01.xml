@@ -77,7 +77,8 @@
   <mapping name="CreateSecurityGroupResponse" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" get-method="get_return" set-method="set_return" />
+      <value name="groupId" field="groupId" />
+      <value name="return" get-method="get_return" set-method="set_return" />
   </mapping>
 
   <mapping name="CreateSecurityGroup" class="edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
@@ -124,6 +125,7 @@
 
   <mapping class="edu.ucsb.eucalyptus.msgs.SecurityGroupItemType" abstract="true">
     <value name="ownerId" field="accountId" />
+    <value name="groupId" field="groupId" />
     <value name="groupName" field="groupName" />
     <value name="groupDescription" field="groupDescription" />
     <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">

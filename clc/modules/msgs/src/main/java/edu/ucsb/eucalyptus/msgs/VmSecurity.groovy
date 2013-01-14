@@ -94,6 +94,7 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
 }
 /** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
+  String groupId;
 }
 public class CreateSecurityGroupType extends VmSecurityMessage {
   String groupName;
@@ -139,9 +140,10 @@ public class SecurityGroupItemType extends EucalyptusData {
   public SecurityGroupItemType( ) {
     super( );
   }
-  public SecurityGroupItemType( String accountId, String groupName, String groupDescription ) {
+  public SecurityGroupItemType( String accountId, String groupId, String groupName, String groupDescription ) {
     super( );
     this.accountId = accountId;
+    this.groupId = groupId;
     this.groupName = groupName;
     this.groupDescription = groupDescription;
   }
