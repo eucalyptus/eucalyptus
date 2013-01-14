@@ -458,7 +458,7 @@ public class Volumes {
   public static class VolumeFilterSupport extends FilterSupport<Volume>{
 	  public VolumeFilterSupport(){
 		  super( builderFor(Volume.class)
-				  .withTagFiltering( VolumeTag.class, "volume" ) 
+				  .withTagFiltering( VolumeTag.class, "volume" )
 				  .withDateProperty("attachment.attach-time", FilterDateFunctions.ATTACHMENT_ATTACH_TIME)
 				  .withBooleanProperty("attachment.delete-on-termination", FilterBooleanFunctions.ATTACHMENT_DELETE_ON_TERMINATION)
 				  .withStringProperty("attachment.device", FilterStringFunctions.ATTACHMENT_DEVICE)
@@ -470,8 +470,12 @@ public class Volumes {
 				  .withStringProperty("snapshot-id", FilterStringFunctions.SNAPSHOT_ID)
 				  .withStringProperty("status", FilterStringFunctions.STATUS)
 				  .withStringProperty("volume-id", FilterStringFunctions.VOLUME_ID)
-				  .withStringProperty("volume-type", FilterStringFunctions.VOLUME_TYPE)
-		  );
+				  .withConstantProperty("volume-type", "standard")
+				  .withPersistenceFilter( "availability-zone", "partition" )
+				   //.withPersistenceFilter( "create-time", "creationTimestamp", PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+				  .withPersistenceFilter( "size", "size", PersistenceFilter.Type.Integer )
+				  .withPersistenceFilter( "snapshot-id", "parentSnapshot" )
+				  .withPersistenceFilter( "volume-id", "displayName" ) );
 	  }
   }
 
@@ -479,7 +483,7 @@ public class Volumes {
 	  ATTACHMENT_DEVICE {
 		  @Override
 		  public String apply(final Volume vol){
-			return vol.getLocalDevice();  
+			return vol.getLocalDevice();
 		  }
 	  },
 	  ATTACHMENT_INSTANCE_ID {
@@ -525,7 +529,7 @@ public class Volumes {
 	  STATUS {
 		  @Override
 		  public String apply(final Volume vol){
-			return vol.mapState();  
+			return vol.mapState();
 		  }
 	  },
 	  VOLUME_ID {
@@ -534,15 +538,8 @@ public class Volumes {
 			  return vol.getDisplayName();
 		  }
 	  },
-	  VOLUME_TYPE {
-		  @Override
-		  public String apply (final Volume vol){
-			  return "standard"; /* TODO: we don't support  IOPS volume */
-		  }
-		 
-	  }
   }
-  
+
   private enum FilterDateFunctions implements Function<Volume, Date>{
 	  ATTACHMENT_ATTACH_TIME {
 		  @Override
