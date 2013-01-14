@@ -64,6 +64,7 @@ package com.eucalyptus.network;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import javax.persistence.CascadeType;
@@ -132,7 +133,10 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;
-  
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "networkGroup" )
+  private Collection<NetworkGroupTag> tags;
+
   NetworkGroup( ) {}
   
   NetworkGroup( final OwnerFullName ownerFullName ) {
