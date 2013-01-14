@@ -101,6 +101,7 @@
 
 #include "handlers.h"
 #include "xml.h"
+#include "vbr.h" // vbr_parse
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -565,13 +566,44 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
     if (!strcmp(pMeta->nodeName, sourceNodeName)) {
         logprintfl(EUCAINFO, "source of migration initating\n");
 
+        virDomainPtr dom = NULL;
+        virConnectPtr *conn = NULL;
+        
+        if ((conn = check_hypervisor_conn()) == NULL) {
+            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
+            goto failed_src;
+        }
+        
+        sem_p(hyp_sem);
+        {
+            dom = virDomainLookupByName(*conn, instance->instanceId);
+        }
+        sem_v(hyp_sem);
+        
+        if (dom == NULL) {
+            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
+            goto failed_src;
+        }
+
+        char duri [1024];
+        snprintf (duri, sizeof(duri), "qemu+ssh://%s/system", destNodeName);
+        int rc = virDomainMigrateToURI(dom, duri, VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, NULL, 0);
+        if (rc != 0) {
+            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
+            goto failed_src;
+        }
+
+        goto out;
+    failed_src:
+        ret = EUCA_ERROR;
+
     } else if (!strcmp(pMeta->nodeName, destNodeName)) {
         logprintfl(EUCAINFO, "destination of migration initating\n");
 
         int error;
 
         if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
-            goto failed;
+            goto failed_dest;
         }
 
         /*
@@ -587,18 +619,19 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         // TODO: move stuff in startup_thread() into a function?
 
         instance->combinePartitions = nc->convert_to_disk;
+        instance->do_inject_key = nc->do_inject_key;
+
         if ((error = create_instance_backing(instance))) {
             logprintfl(EUCAERROR, "[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
-            goto failed;
+            goto failed_dest;
         }
         
         goto out;
-
-    failed:
+    failed_dest:
         ret = EUCA_ERROR;
 
     } else {
-        logprintfl(EUCAERROR, "unexpected migration request (node %s is neither source nor destination)\n");
+        logprintfl(EUCAERROR, "unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
         ret = EUCA_ERROR;
     }
 
