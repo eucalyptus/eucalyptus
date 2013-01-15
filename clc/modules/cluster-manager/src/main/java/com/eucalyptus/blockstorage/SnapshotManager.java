@@ -68,6 +68,7 @@ import static com.eucalyptus.images.Images.inState;
 import static com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -98,6 +99,9 @@ import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.tags.Tag;
+import com.eucalyptus.tags.TagSupport;
+import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -120,6 +124,7 @@ import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ModifySnapshotAttributeType;
 import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetSnapshotAttributeType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 public class SnapshotManager {
   
@@ -240,15 +245,22 @@ public class SnapshotManager {
     final Filter filter = Filters.generate( request.getFilterSet(), Snapshot.class );
     final EntityTransaction db = Entities.get( Snapshot.class );
     try {
-      final List<Snapshot> snapshots = Entities.query( Snapshot.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
+      final List<Snapshot> unfilteredSnapshots =
+          Entities.query( Snapshot.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
       final Predicate<? super Snapshot> requestedAndAccessible = CloudMetadatas.filteringFor(Snapshot.class)
           .byId( request.getSnapshotSet() )
           .byPredicate( filter.asPredicate() )
           .byPrivileges()
           .buildPredicate();
-      for ( final Snapshot snap : Iterables.filter( snapshots, requestedAndAccessible ) ) {
+
+      final Iterable<Snapshot> snapshots = Iterables.filter( unfilteredSnapshots, requestedAndAccessible );
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Snapshot.class )
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ),
+              Iterables.transform( snapshots, CloudMetadatas.toDisplayName() ) );
+      for ( final Snapshot snap : snapshots ) {
         try {
           final edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+          Tags.addFromTags( snapReply.getTagSet(), ResourceTag.class, tagsMap.get( snapReply.getSnapshotId() ) );
           snapReply.setVolumeId( snap.getParentVolume( ) );
           snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
           reply.getSnapshotSet( ).add( snapReply );

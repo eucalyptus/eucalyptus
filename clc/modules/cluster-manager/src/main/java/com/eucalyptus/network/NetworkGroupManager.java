@@ -64,6 +64,7 @@ package com.eucalyptus.network;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.persistence.EntityTransaction;
@@ -80,11 +81,15 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.tags.Tag;
+import com.eucalyptus.tags.TagSupport;
+import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -100,6 +105,7 @@ import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
@@ -188,6 +194,13 @@ public class NetworkGroupManager {
           filter.getAliases(),
           requestedAndAccessible,
           TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
+
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ),
+              Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
+      for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
+        Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
+      }
 
       Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
 
@@ -308,6 +321,15 @@ public class NetworkGroupManager {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw ex;
+    }
+  }
+
+  private enum SecurityGroupItemToGroupId implements Function<SecurityGroupItemType, String> {
+    INSTANCE {
+      @Override
+      public String apply( SecurityGroupItemType securityGroupItemType ) {
+        return securityGroupItemType.getGroupId();
+      }
     }
   }
 }

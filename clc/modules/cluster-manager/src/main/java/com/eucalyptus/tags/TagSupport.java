@@ -21,11 +21,20 @@ package com.eucalyptus.tags;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.log4j.Logger;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Property;
+import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.OwnerFullName;
@@ -37,29 +46,41 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 
 /**
  * Support functionality for each resource that supports tagging
  */
 public abstract class TagSupport {
-
+  private static final Logger log = Logger.getLogger( TagSupport.class );
   private static final ConcurrentMap<String,TagSupport> supportByIdentifierPrefix = Maps.newConcurrentMap();
   private static final ConcurrentMap<Class<? extends CloudMetadata>,TagSupport> supportByClass = Maps.newConcurrentMap();
   private static final Splitter idSplitter = Splitter.on( '-' ).limit( 2 );
   private static final ConcurrentMap<Class,Class> metadataClassMap = new MapMaker().makeComputingMap( MetadataSubclass.INSTANCE );
-  
+
+  private final Class<? extends AbstractPersistent> resourceClass;
   private final Class<? extends CloudMetadata> cloudMetadataClass;
   private final Set<String> identifierPrefixes;
+  private final String resourceClassIdField;
+  private final String tagClassResourceField;
 
-  protected TagSupport( @Nonnull final Class<? extends CloudMetadata> cloudMetadataClass,
-                        @Nonnull final Set<String> identifierPrefixes ) {
-    this.cloudMetadataClass = cloudMetadataClass;
+  protected <T extends AbstractPersistent & CloudMetadata> TagSupport( @Nonnull final Class<T> resourceClass,
+                                                                       @Nonnull final Set<String> identifierPrefixes,
+                                                                       @Nonnull final String resourceClassIdField,
+                                                                       @Nonnull final  String tagClassResourceField ) {
+
+    this.resourceClass = resourceClass;
+    this.cloudMetadataClass = subclassFor( resourceClass );
     this.identifierPrefixes = ImmutableSet.copyOf( identifierPrefixes );
+    this.resourceClassIdField = resourceClassIdField;
+    this.tagClassResourceField = tagClassResourceField;
   }
 
-  protected TagSupport( @Nonnull final Class<? extends CloudMetadata> cloudMetadataClass,
-                        @Nonnull final String identifierPrefix ) {
-    this( cloudMetadataClass, Collections.singleton( identifierPrefix ) );
+  protected <T extends AbstractPersistent & CloudMetadata> TagSupport( @Nonnull final Class<T> resourceClass,
+                                                                       @Nonnull final String identifierPrefix,
+                                                                       @Nonnull final String resourceClassIdField,
+                                                                       @Nonnull final  String tagClassResourceField ) {
+    this( resourceClass, Collections.singleton( identifierPrefix ), resourceClassIdField, tagClassResourceField );
   }
 
   public abstract Tag createOrUpdate( CloudMetadata metadata, 
@@ -72,7 +93,48 @@ public abstract class TagSupport {
                                @Nullable String key,
                                @Nullable String value );
 
+  public abstract Tag example( @Nonnull OwnerFullName ownerFullName );
+
+  protected  <T extends Tag> T example( @Nonnull T tag,
+                                        @Nonnull OwnerFullName ownerFullName ) {
+    tag.setOwner( ownerFullName );
+    return tag;
+  }
+
   public abstract CloudMetadata lookup( String identifier ) throws TransactionException;
+
+  /**
+   * Get the tags for the given resources, grouped by ID and ordered for display.
+   * 
+   * @param owner The account for the tags
+   * @param identifiers The resource identifiers for the tags
+   * @return The tag map with an entry for each requested resource
+   */
+  public Map<String,List<Tag>> getResourceTagMap( final OwnerFullName owner,
+                                                  final Iterable<String> identifiers ) {
+    final Map<String,List<Tag>> tagMap = Maps.newHashMap();
+    for ( final String id : identifiers ) {
+      tagMap.put( id, Lists.<Tag>newArrayList() );
+    }
+    final Tag example = example( owner );
+    final DetachedCriteria detachedCriteria = DetachedCriteria.forClass( resourceClass )
+        .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( identifiers ) ) )
+        .setProjection( Projections.id() );
+    final Criterion idRestriction = Property.forName( tagClassResourceField ).in( detachedCriteria );
+    try {
+      final List<Tag> tags = Tags.list( example, Predicates.alwaysTrue(), idRestriction, Collections.<String,String>emptyMap()  );
+      for ( final Tag tag : tags ) {
+        tagMap.get( tag.getResourceId() ).add( tag );
+      }
+    } catch ( NoSuchMetadataException e ) {
+      log.error( e, e );
+    }
+    Ordering<Tag> order = Ordering.natural().onResultOf( Tags.key() );
+    for ( final String id : identifiers ) {
+      Collections.sort( tagMap.get( id ), order );
+    }
+    return tagMap;
+  }
 
   @Nonnull
   public Class<? extends CloudMetadata> getCloudMetadataClass() {
@@ -82,6 +144,10 @@ public abstract class TagSupport {
   @Nonnull
   public Set<String> getIdentifierPrefixes() {
     return identifierPrefixes;
+  }
+
+  public static TagSupport forResourceClass( @Nonnull final Class<? extends CloudMetadata> metadataClass ) {
+    return supportByClass.get( subclassFor( metadataClass ) );
   }
 
   public static TagSupport fromResource( @Nonnull final CloudMetadata metadata ) {
@@ -102,6 +168,18 @@ public abstract class TagSupport {
   @SuppressWarnings( "unchecked" )
   private static Class<? extends CloudMetadata> subclassFor( Class<? extends CloudMetadata> metadataInstance ) {
     return metadataClassMap.get( metadataInstance );  
+  }
+
+  Class<? extends AbstractPersistent> getResourceClass() {
+    return resourceClass;
+  }
+
+  String getResourceClassIdField() {
+    return resourceClassIdField;
+  }
+
+  String getTagClassResourceField() {
+    return tagClassResourceField;
   }
 
   private enum MetadataSubclass implements Function<Class,Class> {

@@ -71,6 +71,11 @@
     <value name="ownerId" field="ownerId" usage="required" />
     <value name="volumeSize" field="volumeSize" usage="required" />
     <value name="description" field="description" usage="optional" />
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
+      </collection>
+    </structure>
   </mapping>
 
   <mapping name="CreateSnapshot" class="edu.ucsb.eucalyptus.msgs.CreateSnapshotType" ordered="false"

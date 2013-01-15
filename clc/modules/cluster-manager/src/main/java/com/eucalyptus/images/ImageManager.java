@@ -63,8 +63,8 @@
 package com.eucalyptus.images;
 
 import java.util.Iterator;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import javax.xml.xpath.XPath;
@@ -76,6 +76,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -94,14 +95,17 @@ import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.tags.Tag;
+import com.eucalyptus.tags.TagSupport;
+import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -123,6 +127,7 @@ import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetImageAttributeType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 public class ImageManager {
   
@@ -153,6 +158,14 @@ public class ImageManager {
         filter.getAliases(),
         requestedAndAccessible,
         Images.TO_IMAGE_DETAILS );
+
+    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( ImageInfo.class )
+        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
+            Iterables.transform( imageDetailsList, ImageDetailsToImageId.INSTANCE ) );
+    for ( final ImageDetails details : imageDetailsList ) {
+      Tags.addFromTags( details.getTagSet(), ResourceTag.class, tagsMap.get( details.getImageId() ) );
+    }
+
     reply.getImagesSet( ).addAll( imageDetailsList );
     ImageUtil.cleanDeregistered( );
     return reply;
@@ -467,4 +480,12 @@ public class ImageManager {
     return reply;
   }
   
+  private enum ImageDetailsToImageId implements Function<ImageDetails, String> {
+    INSTANCE {
+      @Override
+      public String apply( ImageDetails imageDetails ) {
+        return imageDetails.getImageId();
+      }
+    }
+  }
 }
