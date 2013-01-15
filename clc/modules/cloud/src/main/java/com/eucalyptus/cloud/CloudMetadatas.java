@@ -86,8 +86,7 @@ public class CloudMetadatas {
   } 
    
   public static <T extends CloudMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
-	                                                                           final Function<? super T,String> extractor ) {
-
+                                                                         final Function<? super T,String> extractor ) {
    return new Predicate<T>( ) {
       @Override
       public boolean apply( T input ) {
