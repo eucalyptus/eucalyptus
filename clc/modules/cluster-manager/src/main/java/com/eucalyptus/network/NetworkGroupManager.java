@@ -62,23 +62,30 @@
 
 package com.eucalyptus.network;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.cloud.CloudMetadatas.FilterBuilder;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -116,7 +123,8 @@ public class NetworkGroupManager {
           }
         }
       };
-      RestrictedTypes.allocateUnitlessResource( allocator );
+      final NetworkGroup group = RestrictedTypes.allocateUnitlessResource( allocator );
+      reply.setGroupId( group.getGroupId() );
       return reply;
     } catch ( final Exception ex ) {
       throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + Exceptions.causeString( ex ), ex );
@@ -126,49 +134,73 @@ public class NetworkGroupManager {
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
-    if ( !RestrictedTypes.filterPrivileged( ).apply( NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) ) ) ) {
-      throw new EucalyptusCloudException( "Not authorized to delete network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
+    
+    String lookUpGroup = request.getGroupName() != null ? request.getGroupName() : request.getGroupId();
+    AccountFullName lookUpGroupAccount = ctx.getUserFullName( ).asAccountFullName( );
+    
+    NetworkGroup group;
+    try {
+        group = NetworkGroups.lookup( lookUpGroupAccount , lookUpGroup );
+    } catch (MetadataException ex ) {
+	  try {
+	  group = NetworkGroups.lookupByGroupId(lookUpGroupAccount, lookUpGroup);
+	  } catch ( NoSuchMetadataException ex1 ) {
+	      throw ex1;
+	  }
+    } 
+    
+    if ( !RestrictedTypes.filterPrivileged( ).apply(group) ) {
+      throw new EucalyptusCloudException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ) );
     }
-    NetworkGroups.delete( ctx.getUserFullName( ), request.getGroupName( ) );
+    NetworkGroups.delete( ctx.getUserFullName( ), group.getDisplayName());
     reply.set_return( true );
     return reply;
   }
   
+  private enum GetGroupId implements Function<NetworkGroup, String> {
+    EXTRACT_GROUP_ID;
+      
+      public String apply(NetworkGroup networkGroup) {
+        return networkGroup.getGroupId();
+      }
+    }
+
   public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException {
-    final DescribeSecurityGroupsResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    boolean showAll = request.getSecurityGroupSet( ).remove( "verbose" );
-    NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-   
-    final List<String> groupNames = request.getSecurityGroupSet( );
-    final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
-      @Override
-      public boolean apply( final NetworkGroup arg0 ) {
-        return groupNames.isEmpty( ) || groupNames.contains( arg0.getDisplayName( ) );
+      final DescribeSecurityGroupsResponseType reply = request.getReply( );
+      final Context ctx = Contexts.lookup( );
+      boolean showAll = request.getSecurityGroupSet( ).remove( "verbose" );
+      NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
+     
+      final List<String> groupNames = request.getSecurityGroupSet( );
+      final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
+        @Override
+        public boolean apply( final NetworkGroup arg0 ) {
+          return groupNames.isEmpty( ) || groupNames.contains( arg0.getDisplayName( ) ) || groupNames.contains(arg0.getGroupId( ) );
+       
+        }
+      };
+      
+      Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, RestrictedTypes.filterPrivileged( ) );
+      OwnerFullName ownerFn = AccountFullName.getInstance( ctx.getAccount( ) );
+      if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
+        if ( showAll ) {
+          ownerFn = null;
+        }
+        netFilter = argListFilter;
       }
-    };
-    
-    Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, RestrictedTypes.filterPrivileged( ) );
-    OwnerFullName ownerFn = AccountFullName.getInstance( ctx.getAccount( ) );
-    if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
-      if ( showAll ) {
-        ownerFn = null;
+      
+      final EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        final List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null ) );
+        final Iterable<NetworkGroup> matches = Iterables.filter( networks, netFilter );
+        final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
+        Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
+        db.commit( );
+      } catch ( final Exception ex ) {
+        db.rollback( );
       }
-      netFilter = argListFilter;
-    }
-    
-    final EntityTransaction db = Entities.get( NetworkGroup.class );
-    try {
-      final List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null ) );
-      final Iterable<NetworkGroup> matches = Iterables.filter( networks, netFilter );
-      final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
-      Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
-      db.commit( );
-    } catch ( final Exception ex ) {
-      db.rollback( );
-    }
-    
-    return reply;
+      
+      return reply;
   }
   
   public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException, MetadataException {
@@ -181,12 +213,26 @@ public class NetworkGroupManager {
       
       EntityTransaction db = Entities.get( NetworkGroup.class );
       
-      try {      
-	 
-	    final List<NetworkGroup> networkGroupList = NetworkGroups
+      try {     
+	  String lookUpGroup = request.getGroupName() != null ? request.getGroupName() : request.getGroupId();
+	      AccountFullName lookUpGroupAccount = ctx.getUserFullName( ).asAccountFullName( );
+	      String groupName; 
+	      
+	      try {
+	          groupName = NetworkGroups.lookup( lookUpGroupAccount , lookUpGroup ).getDisplayName();
+	      } catch (MetadataException ex ) {
+		  try {
+		  groupName = NetworkGroups.lookupByGroupId(lookUpGroupAccount, lookUpGroup).getDisplayName();
+		  } catch ( NoSuchMetadataException ex1 ) {
+		      throw ex1;
+		  }
+	      }
+	      
+	     final List<NetworkGroup> networkGroupList = NetworkGroups
 		    .lookupAll(ctx.getUserFullName().asAccountFullName(),
-			    request.getGroupName());
-
+			    groupName);
+	     
+	     
 	    for (NetworkGroup networkGroup : networkGroupList) {
 
 		if (RestrictedTypes.filterPrivileged().apply(networkGroup)) {
@@ -223,9 +269,23 @@ public class NetworkGroupManager {
     
     EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final NetworkGroup ruleGroup = NetworkGroups.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getGroupName( ) );
+    
+      String lookUpGroup = request.getGroupName() != null ? request.getGroupName() : request.getGroupId();
+      AccountFullName lookUpGroupAccount = ctx.getUserFullName( ).asAccountFullName( );
+      NetworkGroup ruleGroup; 
+      
+      try {
+          ruleGroup = NetworkGroups.lookup( lookUpGroupAccount , lookUpGroup );
+      } catch (MetadataException ex ) {
+	  try {
+	  ruleGroup = NetworkGroups.lookupByGroupId(lookUpGroupAccount, lookUpGroup);
+	  } catch ( NoSuchMetadataException ex1 ) {
+	      throw ex1;
+	  }
+      }
+      
       if ( !RestrictedTypes.filterPrivileged( ).apply( ruleGroup ) ) {
-        throw new EucalyptusCloudException( "Not authorized to authorize network group " + request.getGroupName( ) + " for " + ctx.getUser( ) );
+        throw new EucalyptusCloudException( "Not authorized to authorize network group " + ruleGroup.getDisplayName() + " for " + ctx.getUser( ) );
       }
       final List<NetworkRule> ruleList = Lists.newArrayList( );
       for ( final IpPermissionType ipPerm : request.getIpPermissions( ) ) {

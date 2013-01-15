@@ -425,6 +425,7 @@ public class PolicySpec {
   public static final String EC2_RESOURCE_VOLUME = "volume";
   public static final String EC2_RESOURCE_SNAPSHOT = "snapshot";
   public static final String EC2_RESOURCE_VMTYPE = "vmtype";
+  public static final String EC2_RESOURCE_TAG = "tag";
   
   public static final Set<String> EC2_RESOURCES = new ImmutableSet.Builder<String>()
     .add( EC2_RESOURCE_IMAGE )
@@ -470,6 +471,10 @@ public class PolicySpec {
     } else {
       return bucketName + "/" + objectKey;
     }
+  }
+  
+  public static String describeAction( final String vendor, final String resource ) {
+    return "describe" + resource + "s";
   }
   
 }

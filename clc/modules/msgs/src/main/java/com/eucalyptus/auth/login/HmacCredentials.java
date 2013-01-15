@@ -62,30 +62,46 @@
 
 package com.eucalyptus.auth.login;
 
+import static com.eucalyptus.ws.util.HmacUtils.headerLookup;
+import static com.eucalyptus.ws.util.HmacUtils.parameterLookup;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.crypto.util.SecurityParameter;
+import com.eucalyptus.ws.util.HmacUtils;
+import com.google.common.base.Function;
+import com.google.common.base.Objects;
+import com.google.common.collect.Iterables;
 
 public class HmacCredentials extends WrappedCredentials<String> {
-  private Hmac    signatureMethod;
-  private Integer signatureVersion;
-  private String  queryId;
-  private String  signature;
-  private String  verb;
-  private String  servicePath;
-  private String  headerHost;
-  private String  headerPort;
-  private final Map<String,String> parameters;
-  public HmacCredentials( String correlationId, String signature, Map<String,String> parameters, String verb, String servicePath, String headerHost, Integer signatureVersion, Hmac hmacType ) {
-    super( correlationId, signature );
+  private final HmacUtils.SignatureVariant variant;    
+  private final String verb;
+  private final String servicePath;
+  private final Map<String,List<String>> parameters;
+  private final Map<String, List<String>> headers;
+  private final String body;
+  private String headerHost;
+  private String headerPort;
+  private String queryId;
+  private Hmac signatureMethod;
+
+  public HmacCredentials( final String correlationId,
+                          final HmacUtils.SignatureVariant variant,
+                          final Map<String,List<String>> parameters,
+                          final Map<String,List<String>> headers,
+                          final String verb,
+                          final String servicePath,
+                          final String body ) throws AuthenticationException {
+    super( correlationId, variant.getSignature( headerLookup(headers), parameterLookup( parameters ) ) );
+    final Function<String,List<String>> headerLookup = headerLookup( headers );
+    final Function<String,List<String>> parameterLookup = parameterLookup( parameters );
+    this.variant = variant;
     this.parameters = parameters;
-    this.queryId = this.parameters.get( SecurityParameter.AWSAccessKeyId.toString( ) );
-    this.signature = signature;
-    this.signatureVersion = signatureVersion;
-    this.signatureMethod = hmacType;
+    this.headers = headers;
     this.verb = verb;
     this.servicePath = servicePath;
-    this.headerHost = headerHost;
+    this.body = body;
+    this.headerHost = Iterables.getFirst( Objects.firstNonNull( headers.get("host"), Collections.<String>emptyList() ), null );
     this.headerPort = ""+8773;
     if ( headerHost != null && headerHost.contains( ":" ) ) {
       String[] hostTokens = this.headerHost.split( ":" );
@@ -94,10 +110,16 @@ public class HmacCredentials extends WrappedCredentials<String> {
         this.headerPort = hostTokens[1];
       }
     }
+    this.queryId = variant.getAccessKeyId( headerLookup, parameterLookup );
+    this.signatureMethod = variant.getSignatureMethod( headerLookup, parameterLookup );
   }
-    
+
+  public HmacUtils.SignatureVariant getVariant() {
+    return variant;
+  }
+  
   public Integer getSignatureVersion( ) {
-    return this.signatureVersion;
+    return variant.getVersion().value();
   }
   
   public String getQueryId( ) {
@@ -109,7 +131,7 @@ public class HmacCredentials extends WrappedCredentials<String> {
   }
 
   public String getSignature( ) {
-    return this.signature;
+    return getLoginData( );
   }
 
   public String getVerb( ) {
@@ -132,8 +154,20 @@ public class HmacCredentials extends WrappedCredentials<String> {
     return this.signatureMethod;
   }
 
-  public Map<String, String> getParameters( ) {
+  public void setSignatureMethod( final Hmac hmac ) {
+    this.signatureMethod = hmac;
+  }
+
+  public Map<String, List<String>> getParameters( ) {
     return this.parameters;
+  }
+
+  public String getBody() {
+    return body;
+  }
+
+  public Map<String, List<String>> getHeaders() {
+    return headers;
   }
 
   public static final class QueryIdCredential {

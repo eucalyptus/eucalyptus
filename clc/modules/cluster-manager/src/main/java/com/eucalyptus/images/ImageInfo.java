@@ -64,6 +64,7 @@ package com.eucalyptus.images;
 
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -78,6 +79,7 @@ import javax.persistence.ElementCollection;
 import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
@@ -165,7 +167,10 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   @Column( name = "metadata_image_size_bytes", nullable = false )
   private Long                       imageSizeBytes;
-  
+
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "image" )
+  private Collection<ImageInfoTag> tags;
+
   @Transient
   private FullName                   fullName;
   

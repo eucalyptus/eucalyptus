@@ -69,6 +69,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import org.apache.log4j.Logger;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
@@ -77,8 +78,10 @@ import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseData;
@@ -339,18 +342,27 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         // :: build the parameter map and call populate object recursively :://
         if ( annoteEmbedded.multiple( ) ) {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
-          final Map<String,String> subParams = Maps.newConcurrentMap( );
-          for ( final String k : keys ) {
-        	if ( k.contains( paramFieldPair.getKey( )) ) {
-              //theList.add( params.remove(k) );
+          final Map<String,Map<String,String>> subParamMaps = new TreeMap<String,Map<String,String>>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
+          for ( final String k : keys ) {            
+            if ( k.startsWith( paramFieldPair.getKey( ) + "." ) ) {
               final String currentValue = params.remove( k );
-              final String newKey = k.replaceAll( paramFieldPair.getKey( ) + "\\.\\d\\." , "" );
-              subParams.put( newKey, currentValue );
+              final String setKey = k.replaceAll( paramFieldPair.getKey( ) + "\\.(\\d+)\\..*", "$1" );
+              final String subKey = k.replaceAll( paramFieldPair.getKey( ) + "\\.\\d+\\." , "" );
+              Map<String,String> subMap = subParamMaps.get( setKey );
+              if ( subMap == null ) {
+                subParamMaps.put( setKey, subMap = Maps.newHashMap() );  
+              }
+
+              subMap.put( subKey, currentValue );
             }
           }
           
-          failedMappings.addAll( this.populateEmbedded( genericType, subParams, theList ) );
-        } else failedMappings.addAll( this.populateEmbedded( genericType, params, theList ) );
+          for ( final Map<String,String> subParams : subParamMaps.values() ) {
+            failedMappings.addAll( this.populateEmbedded( genericType, subParams, theList ) );
+          }
+        } else {
+          failedMappings.addAll( this.populateEmbedded( genericType, params, theList ) );
+        }
       }
     } catch ( final Exception e1 ) {
       LOG.debug( "FAILED HERE : ", e1 );
@@ -390,4 +402,18 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     return fieldMap;
   }
   
+  private enum FunctionToInteger implements Function<String,Integer> {
+    INSTANCE {
+      @Override
+      public Integer apply(final String parameterIndex ) {
+        Integer result = Integer.MAX_VALUE;
+        try {
+          result = Integer.valueOf( parameterIndex );
+        } catch ( NumberFormatException nfe ) {
+          // use default
+        }
+        return result;
+      }
+    }
+  }
 }

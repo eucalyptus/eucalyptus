@@ -86,6 +86,7 @@ import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.ejb.EntityManagerFactoryImpl;
 import org.hibernate.exception.ConstraintViolationException;
@@ -246,6 +247,38 @@ public class Entities {
                                                                     .setCacheable( true )
                                                                     .add( qbe )
                                                                     .list( );
+    return Lists.newArrayList( Sets.newHashSet( resultList ) );
+  }
+
+  /**
+   * Query items matching the given example restricted by the given criterion.
+   *
+   * <P>The caller must have an active transaction for the entity.</P>
+   *
+   * @param example The example object
+   * @param readOnly Use True if the results will not be modified
+   * @param criterion Additional restrictions for the query
+   * @param aliases Any aliases necessary for the given criterion
+   * @param <T> The entity type
+   * @return The result list
+   */
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public static <T> List<T> query( final T example, 
+                                   final boolean readOnly, 
+                                   final org.hibernate.criterion.Criterion criterion,
+                                   final Map<String,String> aliases ) {
+    final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
+    final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
+        .createCriteria( example.getClass( ) )
+        .setReadOnly( readOnly )
+        .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+        .setCacheable( true )
+        .add( qbe )
+        .add( criterion );
+    for ( final Map.Entry<String,String> aliasEntry : aliases.entrySet() ) {
+      criteria.createAlias( aliasEntry.getKey(), aliasEntry.getValue() ); // inner join by default
+    }
+    final List<T> resultList = ( List<T> ) criteria.list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
   
@@ -563,6 +596,25 @@ public class Entities {
       LOG.error( deleteClass, e );
       throw Exceptions.toUndeclared( e );
     }
+  }
+
+  /**
+   * Count the matching entities for the given example.
+   * 
+   * @param example The example entity
+   * @return The number of matching entities
+   */
+  public static long count( final Object example ) {
+    final Example qbe = Example.create( example );
+    final Number count = (Number) getTransaction( example ).getTxState( ).getSession( )
+        .createCriteria( example.getClass( ) )
+        .setReadOnly( true )
+        .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+        .setCacheable( false )
+        .add( qbe )
+        .setProjection( Projections.rowCount() )
+        .uniqueResult( );
+    return count.longValue(); 
   }
 
   private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, CascadingTx>> {

@@ -73,7 +73,6 @@ import com.eucalyptus.util.RestrictedType;
  * specific types which should /not/ be references.
  * 
  * @see PolicyResourceType
- * @see PolicyResourceType#NO_VALUE_SPECIFED
  * @see PolicyVendor
  **/
 @PolicyVendor( "ec2" )
@@ -109,4 +108,7 @@ public interface CloudMetadata extends RestrictedType {
     public abstract Integer getDisk( );
     
   }
+
+  @PolicyResourceType( "tag" )
+  public interface TagMetadata extends CloudMetadata {}
 }

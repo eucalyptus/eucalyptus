@@ -76,6 +76,7 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;
@@ -95,6 +96,8 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -227,29 +230,34 @@ public class SnapshotManager {
     return reply;
   }
   
-  public DescribeSnapshotsResponseType describe( DescribeSnapshotsType request ) throws EucalyptusCloudException {
-    DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
-    boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
-    AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ? null : AccountFullName.getInstance( ctx.getAccount( ) );
-    EntityTransaction db = Entities.get( Snapshot.class );
+  public DescribeSnapshotsResponseType describe( final DescribeSnapshotsType request ) throws EucalyptusCloudException {
+    final DescribeSnapshotsResponseType reply = ( DescribeSnapshotsResponseType ) request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
+    final AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ?
+        null :
+        AccountFullName.getInstance( ctx.getAccount( ) );
+    final Filter filter = Filters.generate( request.getFilterSet(), Snapshot.class );
+    final EntityTransaction db = Entities.get( Snapshot.class );
     try {
-      List<Snapshot> snapshots = Entities.query( Snapshot.named( ownerFullName, null ) );
-      for ( Snapshot snap : Iterables.filter( snapshots, RestrictedTypes.filterPrivileged( ) ) ) {
-        if ( request.getSnapshotSet( ).isEmpty( ) || request.getSnapshotSet( ).contains( snap.getDisplayName( ) ) ) {
-          try {
-            edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
-            snapReply.setVolumeId( snap.getParentVolume( ) );
-            snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
-            reply.getSnapshotSet( ).add( snapReply );
-          } catch ( NoSuchElementException e ) {
-            LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
-            LOG.debug( e, e );
-          }
+      final List<Snapshot> snapshots = Entities.query( Snapshot.named( ownerFullName, null ), true, filter.asCriterion(), filter.getAliases() );
+      final Predicate<? super Snapshot> requestedAndAccessible = CloudMetadatas.filteringFor(Snapshot.class)
+          .byId( request.getSnapshotSet() )
+          .byPredicate( filter.asPredicate() )
+          .byPrivileges()
+          .buildPredicate();
+      for ( final Snapshot snap : Iterables.filter( snapshots, requestedAndAccessible ) ) {
+        try {
+          final edu.ucsb.eucalyptus.msgs.Snapshot snapReply = snap.morph( new edu.ucsb.eucalyptus.msgs.Snapshot( ) );
+          snapReply.setVolumeId( snap.getParentVolume( ) );
+          snapReply.setOwnerId( snap.getOwnerAccountNumber( ) );
+          reply.getSnapshotSet( ).add( snapReply );
+        } catch ( NoSuchElementException e ) {
+          LOG.warn( "Error getting snapshot information from the Storage Controller: " + e );
+          LOG.debug( e, e );
         }
       }
-      db.rollback( );
-    } catch ( Exception e ) {
+    } finally {
       db.rollback( );
     }
     return reply;

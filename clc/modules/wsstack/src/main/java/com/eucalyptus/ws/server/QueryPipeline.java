@@ -34,6 +34,7 @@ import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -79,6 +80,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
       MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
       if ( httpRequest.getMethod( ).equals( HttpMethod.POST ) ) {
         Map<String,String> parameters = new HashMap<String,String>( httpRequest.getParameters( ) );
+        Set<String> nonQueryParameters = Sets.newHashSet();
         ChannelBuffer buffer = httpRequest.getContent( );
         buffer.markReaderIndex( );
         byte[] read = new byte[buffer.readableBytes( )];
@@ -96,6 +98,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
             if( rhs != null ) rhs = new URLCodec().decode(rhs);
           } catch ( DecoderException e ) {}
           parameters.put( lhs, rhs );
+          nonQueryParameters.add( lhs );
         }
         for ( RequiredQueryParams p : requiredQueryParams ) {
           if ( !parameters.containsKey( p.toString( ) ) ) {
@@ -103,6 +106,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
           }
         }
         httpRequest.getParameters( ).putAll( parameters );
+        httpRequest.addNonQueryParameterKeys( nonQueryParameters );
       } else {
         for ( RequiredQueryParams p : requiredQueryParams ) {
           if ( !httpRequest.getParameters( ).containsKey( p.toString( ) ) ) {

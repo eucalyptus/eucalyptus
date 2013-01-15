@@ -62,6 +62,8 @@
 
 package com.eucalyptus.crypto.util;
 
+import javax.annotation.Nonnull;
+
 public enum SecurityParameter {
   AWSAccessKeyId,
   Timestamp,
@@ -72,5 +74,33 @@ public enum SecurityParameter {
   Date,
   Content_MD5,
   Content_Type,
-  SecurityToken
+  SecurityToken,
+  X_Amz_Date( true ),
+  X_Amz_Algorithm( true ),
+  X_Amz_Credential( true ),
+  X_Amz_Signature( true ),
+  X_Amz_SignedHeaders( true );
+
+  private final String parameter;
+
+  private SecurityParameter() {
+    this(false);
+  }
+  
+  private SecurityParameter( final boolean dashName ) {
+    this.parameter = dashName ? name().replace('_','-') : name();  
+  }
+
+  /**
+   * Get the name for this parameter.
+   * 
+   * <p>Where possible {@link #name} and {@link #parameter} will return the
+   * same value.</p>
+   * 
+   * @return The parameter name.
+   */
+  @Nonnull
+  public String parameter() {
+    return parameter;
+  }
 }

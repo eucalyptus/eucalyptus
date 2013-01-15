@@ -62,16 +62,18 @@
 
 package com.eucalyptus.auth.ws;
 
+import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
 
 @ComponentPart(Euare.class)
 public class EuareQueryPipeline extends QueryPipeline {
 
   public EuareQueryPipeline( ) {
-    super("euare-query-pipeline", "/services/Euare", false);
+    super("euare-query-pipeline", "/services/Euare", false, EnumSet.of( RequiredQueryParams.Version ));
   }
 
 

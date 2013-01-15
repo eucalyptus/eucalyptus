@@ -128,6 +128,10 @@
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
         </filtering-router>
         <filtering-router>
+          <outbound-endpoint ref="TagsWS" />
+          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ResourceTagMessage" />
+        </filtering-router>
+        <filtering-router>
           <outbound-endpoint ref="ShortBusWS" />
           <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
         </filtering-router>

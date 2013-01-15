@@ -64,7 +64,6 @@ package com.eucalyptus.cluster;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +73,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;
@@ -83,11 +83,15 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.FilterSupport;
+import com.eucalyptus.tags.Filters;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -126,10 +130,11 @@ public class ClusterEndpoint implements Startable {
     Clusters.getInstance( );
   }
   
-  public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) {
-    DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
-    List<String> args = request.getAvailabilityZoneSet( );
-    
+  public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) throws EucalyptusCloudException {
+    final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
+    final List<String> args = request.getAvailabilityZoneSet( );
+    final Filter filter = Filters.generate( request.getFilterSet(), Cluster.class );
+
     if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
       for ( String keyword : describeKeywords.keySet( ) ) {
         if ( args.remove( keyword ) ) {
@@ -142,33 +147,36 @@ public class ClusterEndpoint implements Startable {
         args.remove( keyword );
       }
     }
-    
+
+    final List<Cluster> clusters;
     if ( args.isEmpty( ) ) {
-      for ( Cluster c : Clusters.getInstance( ).listValues( ) ) {
-        reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
-      }
+      clusters = Clusters.getInstance( ).listValues( );
     } else {
+      clusters = Lists.newArrayList();
       for ( final String partitionName : request.getAvailabilityZoneSet( ) ) {
         try {
-          Cluster c = Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
+          clusters.add( Iterables.find( Clusters.getInstance( ).listValues( ), new Predicate<Cluster>( ) {
             @Override
             public boolean apply( Cluster input ) {
               return partitionName.equals( input.getConfiguration( ).getPartition( ) );
             }
-          } );
-          reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
+          } ) );
         } catch ( NoSuchElementException e ) {
           try {
-            Cluster c = Clusters.getInstance( ).lookup( partitionName );
-            reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c, args ) );
+            clusters.add( Clusters.getInstance( ).lookup( partitionName ) );
           } catch ( NoSuchElementException ex ) {}
         }
       }
     }
+
+    for ( final Cluster c : Iterables.filter( clusters, filter.asPredicate() ) ) {
+      reply.getAvailabilityZoneInfo( ).addAll( this.getDescriptionEntry( c ) );
+    }
+
     return reply;
   }
   
-  private List<ClusterInfoType> getDescriptionEntry( Cluster c, List<String> args ) {
+  private List<ClusterInfoType> getDescriptionEntry( Cluster c ) {
     List<ClusterInfoType> ret = Lists.newArrayList( );
     String clusterName = c.getName( );
     ret.add( new ClusterInfoType( c.getConfiguration( ).getPartition( ), c.getConfiguration( ).getHostName( ) + " "
@@ -282,23 +290,92 @@ public class ClusterEndpoint implements Startable {
                                                                                }
                                                                              };
   
-  public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) {//TODO:GRZE:URGENT fix the behaviour here.
+  public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) throws EucalyptusCloudException {//TODO:GRZE:URGENT fix the behaviour here.
     final DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
-    final Collection<String> regions = Objects.firstNonNull(request.getRegions(), Collections.<String>emptyList());
     for ( final Class<? extends ComponentId> componentIdClass : ImmutableList.of(Eucalyptus.class, Walrus.class) ) {
       try {
         final Component component = Components.lookup( componentIdClass );
-        final String region = component.getComponentId( ).name();        
-        if ( regions.isEmpty() || regions.contains( region ) ) { 
-          final NavigableSet<ServiceConfiguration> configs = component.services( );
-          if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
-            reply.getRegionInfo( ).add( new RegionInfoType( region, ServiceUris.remotePublicify( configs.first( ) ).toASCIIString( ) ) );
-          }
+        final String region = component.getComponentId( ).name();
+        final List<Region> regions = Lists.newArrayList();
+        final NavigableSet<ServiceConfiguration> configs = component.services( );
+        if ( !configs.isEmpty( ) && Component.State.ENABLED.equals( configs.first( ).lookupState( ) ) ) {
+          regions.add( new Region( region, ServiceUris.remotePublicify( configs.first() ).toASCIIString() ) );
+        }
+
+        final Filter filter = Filters.generate( request.getFilterSet(), Region.class );
+        final Predicate<Object> requested = Predicates.and(
+            filterByName( request.getRegions() ),
+            filter.asPredicate() );
+        for ( final Region item : Iterables.filter( regions, requested ) ) {
+          reply.getRegionInfo( ).add( new RegionInfoType( item.getDisplayName(), item.getEndpointUrl() ) );
         }
       } catch ( NoSuchElementException ex ) {
         LOG.error( ex, ex );
       }
     }
     return reply;
+  }
+
+  /**
+   * This should be Predicate<Region> but JDK6 can't handle the resulting Predicate<? super Region>
+   */
+  private static Predicate<Object> filterByName( final Collection<String> requestedIdentifiers ) {
+    return new Predicate<Object>( ) {
+      @Override
+      public boolean apply( Object region ) {
+        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( ((Region)region).getDisplayName() );
+      }
+    };
+  }
+
+  protected static class Region {
+    private final String displayName;
+    private final String endpointUrl;
+
+    protected Region( final String displayName, final String endpointUrl ) {
+      this.displayName = displayName;
+      this.endpointUrl = endpointUrl;
+    }
+
+    public String getDisplayName() {
+      return displayName;
+    }
+
+    public String getEndpointUrl() {
+      return endpointUrl;
+    }
+  }
+
+  private enum RegionFunctions implements Function<Region,String> {
+    REGION_NAME {
+      @Override
+      public String apply( final Region region ) {
+        return region.getDisplayName();
+      }
+    },
+    ENDPOINT_URL {
+      @Override
+      public String apply( final Region region ) {
+        return region.getEndpointUrl();
+      }
+    }
+  }
+
+  public static class RegionFilterSupport extends FilterSupport<Region> {
+    public RegionFilterSupport() {
+      super( builderFor( Region.class )
+          .withStringProperty( "endpoint", RegionFunctions.ENDPOINT_URL )
+          .withStringProperty( "region-name", RegionFunctions.REGION_NAME ) );
+    }
+  }
+
+  public static class AvailabilityZoneFilterSupport extends FilterSupport<Cluster> {
+    public AvailabilityZoneFilterSupport() {
+      super( builderFor( Cluster.class )
+          .withUnsupportedProperty( "message" )
+          .withUnsupportedProperty( "region-name" )
+          .withUnsupportedProperty( "state" )
+          .withStringProperty( "zone-name", CloudMetadatas.toDisplayName() ) );
+    }
   }
 }

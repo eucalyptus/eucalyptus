@@ -62,10 +62,14 @@
 
 package com.eucalyptus.blockstorage;
 
+import java.util.Collection;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
@@ -111,8 +115,10 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
   private String   progress;
   @Column( name =  "metadata_snapshot_description", updatable = false )
   private String   description;
-  
-  private Snapshot( ) {
+  @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "snapshot" )
+  private Collection<SnapshotTag> tags;
+
+  protected Snapshot( ) {
     super( );
   }
   

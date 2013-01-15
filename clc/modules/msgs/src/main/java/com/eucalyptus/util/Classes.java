@@ -70,6 +70,7 @@ import java.lang.reflect.Type;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions.ErrorMessages;
 import com.google.common.base.Function;
@@ -124,6 +125,15 @@ public class Classes {
   
   public static Function<Object, String> canonicalNameFunction( ) {
     return ClassNameToCanonicalName.INSTANCE;
+  }
+
+  public static Predicate<Class<?>> subclassOf( final Class<?> target ) {
+    return new Predicate<Class<?>>() {
+      @Override
+      public boolean apply( final Class<?> value ) {
+        return value != null && target.isAssignableFrom( value );
+      }
+    };  
   }
   
   @ErrorMessages( Classes.class )
