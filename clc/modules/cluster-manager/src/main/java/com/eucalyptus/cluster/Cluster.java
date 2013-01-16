@@ -64,7 +64,10 @@ package com.eucalyptus.cluster;
 
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -153,6 +156,7 @@ import com.eucalyptus.vm.VmTypes;
 import com.eucalyptus.ws.WebServicesException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Iterables;
@@ -170,6 +174,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private static Logger                                  LOG            = Logger.getLogger( Cluster.class );
   private final StateMachine<Cluster, State, Transition> stateMachine;
   private final ClusterConfiguration                     configuration;
+//TODO:GRZE: sigh.  This stuff needs to be addressed by (1) move to Nodes.java for nodeMap, (2) handling it like any other registered service.
   private final ConcurrentNavigableMap<String, NodeInfo> nodeMap;
   private final BlockingQueue<Throwable>                 pendingErrors  = new LinkedBlockingDeque<Throwable>( );
   private final ClusterState                             state;
@@ -769,7 +774,25 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public NodeInfo getNode( final String serviceTag ) {
-    return this.nodeMap.get( serviceTag );
+    if ( this.nodeMap.containsKey( serviceTag ) ) {
+      return this.nodeMap.get( serviceTag );
+    } else {
+      try {
+        URI tag = new URI( serviceTag );
+        String host = tag.getHost( );
+        InetAddress addr = InetAddress.getByName( host );
+        String hostAddr = addr.getHostAddress( );
+        String altTag = serviceTag.replace( host, hostAddr );
+        if ( this.nodeMap.containsKey( altTag ) ) {
+          return this.nodeMap.get( altTag );
+        } else {
+          return null;//TODO:GRZE: sigh.
+        }
+      } catch ( Exception ex ) {
+        return null;//TODO:GRZE: sigh.
+      }
+      
+    }
   }
   
   public void updateNodeInfo( final ArrayList<String> serviceTags ) {
