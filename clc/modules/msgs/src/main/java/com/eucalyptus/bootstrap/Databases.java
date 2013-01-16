@@ -154,6 +154,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -214,8 +215,8 @@ public class Databases {
     public static final String DB_LOCK_FILE = "DB_LOCK_FILE";
 
     public void delete( ) {
-      SubDirectory.DB.getChildFile("data",this.getLockName()).delete();
-      LOG.info( "The " + this.getLockName( ) + " file was deleted" );
+      this.getLockFile( ).delete();
+      LOG.debug( "The " + this.getLockFile( ).getAbsolutePath( ) + " file was deleted" );
     }
 
     protected String getLockName() {
@@ -230,13 +231,18 @@ public class Databases {
       return SubDirectory.DB.getChildFile( "data", this.getLockName() );
     }
 
+    public void create( String reason ) {
+      LOG.error( this.getLockName( ) + ": Caused by: " + reason );
+      this.create( );
+    }
+
     public void create( ) {
       try {
         if ( getLockFile( ).createNewFile( ) ) {
-          LOG.debug( "The " + this.getLockName( ) + " file was created." );
+          LOG.debug( this.getLockName( ) + ": The " + this.getLockFile( ).getAbsolutePath( ) + " file was created." );
         }
       } catch ( IOException e ) {
-        LOG.debug("Unable to create the " + this.getLockName( ) + " file: " + e.getMessage());
+        LOG.debug("Unable to create the " + this.getLockFile( ).getAbsolutePath( ) + " file: " + e.getMessage());
       }
     }
 
