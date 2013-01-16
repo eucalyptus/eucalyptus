@@ -83,7 +83,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>           // WEXITSTATUS on Lucid
+#include <sys/wait.h>                  // WEXITSTATUS on Lucid
 
 #include <eucalyptus.h>
 #include <misc.h>
@@ -140,7 +140,7 @@ const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean initialized = FALSE; //!< To check wether or not the hooks were initialized
+static boolean initialized = FALSE;    //!< To check wether or not the hooks were initialized
 static char euca_path[MAX_PATH] = { 0 };    //!< eucalyptus path
 static char hooks_path[MAX_PATH] = { 0 };   //!< hook path
 
@@ -197,7 +197,7 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
     if (check_directory(hooks_path))
         return (EUCA_ERROR);
 
-    logprintfl(EUCAINFO, "using hooks directory %s\n", hooks_path);
+    LOGINFO("using hooks directory %s\n", hooks_path);
     initialized = TRUE;
     return (EUCA_OK);
 }
@@ -234,22 +234,21 @@ int call_hooks(const char *event_name, const char *param1)
         entry_name = dir_entry->d_name;
 
         if (!strcmp(".", entry_name) || !strcmp("..", entry_name))
-            continue;           // ignore known unrelated files
+            continue;                  // ignore known unrelated files
 
         // get the path of the directory item
         snprintf(entry_path, sizeof(entry_path), "%s/%s", hooks_path, entry_name);
         if (stat(entry_path, &sb) == -1)
-            continue;           // ignore access errors
+            continue;                  // ignore access errors
 
         // run the hook if...
         if ((S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode))    // looks like a file or symlink
             && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {  // is executable
             snprintf(cmd, sizeof(cmd), "%s %s %s %s", entry_path, event_name, euca_path, param1 ? param1 : "");
             ret = WEXITSTATUS(system(cmd));
-            logprintfl(EUCATRACE, "executed hook [%s %s%s%s] which returned %d\n", entry_name, event_name, param1 ? " " : "", param1 ? param1 : "",
-                       ret);
+            LOGTRACE("executed hook [%s %s%s%s] which returned %d\n", entry_name, event_name, param1 ? " " : "", param1 ? param1 : "", ret);
             if ((ret > 0) && (ret < 100))
-                break;          // bail if any hook returns code [1-99] (100+ are reserved for future use)
+                break;                 // bail if any hook returns code [1-99] (100+ are reserved for future use)
         }
     }
     closedir(dir);
@@ -287,9 +286,9 @@ int main(int argc, char **argv)
     chmod(h1, S_IXUSR | S_IRUSR);
     snprintf(h3, sizeof(h3), "%s/h3", d);
     write2file(h3, "#!/bin/bash\necho h3 -$1- -$2- -$3-\n");
-    chmod(h3, 0);               // unreadable hook
+    chmod(h3, 0);                      // unreadable hook
     snprintf(h4, sizeof(h4), "%s/h4", d);
-    mkdir(h4, 0700);            // not a file
+    mkdir(h4, 0700);                   // not a file
 
     assert(call_hooks("e1", NULL) == 0);
     assert(call_hooks("e1", "p1") == 0);

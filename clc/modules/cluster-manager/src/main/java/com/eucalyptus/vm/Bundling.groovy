@@ -68,7 +68,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.vm.VmBundleTask.BundleState;
+import com.eucalyptus.vm.VmBundleTask.BundleState
+import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmBundleMessage extends EucalyptusMessage {
   
@@ -125,7 +126,8 @@ public class BundleTaskState extends EucalyptusData {
 public class DescribeBundleTasksType extends VmBundleMessage {
   @HttpParameterMapping (parameter = "BundleId")
   ArrayList<String> bundleIds = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeBundleTasksResponseType extends VmBundleMessage {

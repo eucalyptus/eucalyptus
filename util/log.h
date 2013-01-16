@@ -77,25 +77,13 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#include "ipc.h"                // sem
+#include "ipc.h"                       // sem
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#define _EUCA_CONTEXT_SETTER                     (_log_curr_method=__FUNCTION__, _log_curr_file=__FILE__, _log_curr_line=__LINE__)
-
-#define EUCAALL                                  0
-#define EUCAEXTREME                              (_EUCA_CONTEXT_SETTER, 1)
-#define EUCATRACE                                (_EUCA_CONTEXT_SETTER, 2)
-#define EUCADEBUG                                (_EUCA_CONTEXT_SETTER, 3)
-#define EUCAINFO                                 (_EUCA_CONTEXT_SETTER, 4)
-#define EUCAWARN                                 (_EUCA_CONTEXT_SETTER, 5)
-#define EUCAERROR                                (_EUCA_CONTEXT_SETTER, 6)
-#define EUCAFATAL                                (_EUCA_CONTEXT_SETTER, 7)
-#define EUCAOFF                                  8
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -109,6 +97,19 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Defines the various Eucalyptus logging levels available
+typedef enum log_level_e {
+    EUCA_LOG_ALL = 0,
+    EUCA_LOG_EXTREME,
+    EUCA_LOG_TRACE,
+    EUCA_LOG_DEBUG,
+    EUCA_LOG_INFO,
+    EUCA_LOG_WARN,
+    EUCA_LOG_ERROR,
+    EUCA_LOG_FATAL,
+    EUCA_LOG_OFF,
+} log_level_e;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                 STRUCTURES                                 |
@@ -120,10 +121,6 @@
  |                             EXPORTED VARIABLES                             |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-extern __thread const char *_log_curr_method;
-extern __thread const char *_log_curr_file;
-extern __thread int _log_curr_line;
 
 extern const char *log_level_names[];
 
@@ -141,7 +138,7 @@ extern const char *log_level_names[];
 //!         '-' means left-justified
 //!         and NNN is max field size
 //!
-const extern char *log_level_prefix[];
+extern const char *log_level_prefix[];
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -151,14 +148,15 @@ const extern char *log_level_prefix[];
 
 int log_level_int(const char *level);
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
+int log_level_get(void);
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char *file);
 int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
-int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
+int logprintf(const char *format, ...) _attribute_format_(1, 2);
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_(5, 6);
 int logcat(int debug_level, const char *file_path);
 
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
@@ -183,22 +181,56 @@ void log_dump_trace(char *buf, int buf_size);
 \*----------------------------------------------------------------------------*/
 
 #ifdef DEBUG
-#define PRINTF(a)                                logprintf a
+#define PRINTF(a, args...)                       logprintf(a, ## args)
 #else /* DEBUG */
-#define PRINTF(a)
+#define PRINTF(a, args...)
 #endif /* DEBUG */
 
 #ifdef DEBUG1
-#define PRINTF1(a)                               logprintf a
+#define PRINTF1(a, args...)                      logprintf(a, ## args)
 #else /* DEBUG1 */
-#define PRINTF1(a)
+#define PRINTF1(a, args...)
 #endif /* DEBUG1 */
 
 #ifdef DEBUGXML
-#define PRINTF_XML(a)                             logprintf a
+#define PRINTF_XML(a, args...)                   logprintf(a, ## args)
 #else /* DEBUGXML */
-#define PRINTF_XML(a)
+#define PRINTF_XML(a, args...)
 #endif /* DEBUGXML */
+
+//! @{
+//! @name Various log level logging macros
+
+#define EUCALOG(_level, _format, args...)                                          \
+{                                                                                  \
+    if ((_level) >= log_level_get()) {                                             \
+        logprintfl(__FUNCTION__, __FILE__, __LINE__, (_level), _format, ## args);  \
+    }                                                                              \
+}
+
+#define LOGEXTREME(_format, args...)             EUCALOG(EUCA_LOG_EXTREME, _format, ## args)
+#define LOGTRACE(_format, args...)               EUCALOG(EUCA_LOG_TRACE, _format, ## args)
+#define LOGDEBUG(_format, args...)               EUCALOG(EUCA_LOG_DEBUG, _format, ## args)
+#define LOGINFO(_format, args...)                EUCALOG(EUCA_LOG_INFO, _format, ## args)
+#define LOGWARN(_format, args...)                EUCALOG(EUCA_LOG_WARN, _format, ## args)
+#define LOGERROR(_format, args...)               EUCALOG(EUCA_LOG_ERROR, _format, ## args)
+#define LOGFATAL(_format, args...)               EUCALOG(EUCA_LOG_FATAL, _format, ## args)
+
+//! @}
+
+//! @{
+//! @name Various log level logging macros that adds a new line character
+
+#define EUCALOGNL(_level, _format, args...)      EUCALOG((_level), _format "\n", ## args);
+#define LOGEXTREMENL(_format, args...)           EUCALOGNL(EUCA_LOG_EXTREME, _format, ## args)
+#define LOGTRACENL(_format, args...)             EUCALOGNL(EUCA_LOG_TRACE, _format, ## args)
+#define LOGDEBUGNL(_format, args...)             EUCALOGNL(EUCA_LOG_DEBUG, _format, ## args)
+#define LOGINFONL(_format, args...)              EUCALOGNL(EUCA_LOG_INFO, _format, ## args)
+#define LOGWARNNL(_format, args...)              EUCALOGNL(EUCA_LOG_WARN, _format, ## args)
+#define LOGERRORNL(_format, args...)             EUCALOGNL(EUCA_LOG_ERROR, _format, ## args)
+#define LOGFATALNL(_format, args...)             EUCALOGNL(EUCA_LOG_FATAL, _format, ## args)
+
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -63,13 +63,20 @@
 package com.eucalyptus.auth.login;
 
 import java.net.URLDecoder;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.codec.net.URLCodec;
 import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.SecurityParameter;
+import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
 
 /**
  * Support class for HMAC login modules
@@ -77,6 +84,7 @@ import com.google.common.base.Strings;
 abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
 
   private final int signatureVersion;
+  private final URLCodec codec = new URLCodec();
 
   protected HmacLoginModuleSupport( final int signatureVersion ) {
     this.signatureVersion = signatureVersion;
@@ -92,27 +100,36 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   }
 
   protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
-    final String token = credentials.getParameters().get( SecurityParameter.SecurityToken.toString() );
-    final AccessKey key =  AccessKeys.lookupAccessKey( credentials.getQueryId( ), token );
+    return lookupAccessKey( credentials.getQueryId( ), credentials.getParameters() );
+  }
+
+  protected AccessKey lookupAccessKey( final String accessKeyId, final Map<String,List<String>> parameters ) throws AuthException {
+    final String token = Iterables.getFirst( Objects.firstNonNull( parameters.get( SecurityParameter.SecurityToken.parameter() ), Collections.<String>emptyList()), null);
+    final AccessKey key =  AccessKeys.lookupAccessKey( accessKeyId, token );
     if ( !key.isActive() ) throw new AuthException( "Invalid access key or token" );
     return key;
   }
-
+  
   protected void checkForReplay( final String signature ) throws AuthenticationException {
     SecurityContext.enqueueSignature( normalize(signature) );
   }
 
-  protected static String urldecode( final String text ) {
+  protected String urldecode( final String text ) {
     return URLDecoder.decode( text );
   }
+  
+  protected String urlencode( final String text ) {
+    final byte[] textBytes = Strings.nullToEmpty( text ).getBytes( Charsets.UTF_8 );
+    return new String( codec.encode( textBytes ), Charsets.US_ASCII ).replace( "+", "%20" );    
+  }
 
-  protected static String sanitize( final String b64text ) {
+  protected String sanitize( final String b64text ) {
     // There should only be trailing =, it is not clear why
     // we replace = at other locations in B64 data
     return b64text.replace( "=", "" );
   }
 
-  protected static String normalize( final String signature ) {
+  protected String normalize( final String signature ) {
     final String urldecoded = urldecode( signature );
     final String decoded = urldecoded.replace( ' ', '+' ); // url decoding could remove valid b64 characters
     final String sanitized = sanitize( decoded );

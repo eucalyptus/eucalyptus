@@ -74,25 +74,25 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU
-#include <string.h>             /* strlen, strcpy */
+#include <string.h>                    /* strlen, strcpy */
 #include <time.h>
-#include <limits.h>             /* INT_MAX */
-#include <sys/types.h>          /* fork */
-#include <sys/wait.h>           /* waitpid */
+#include <limits.h>                    /* INT_MAX */
+#include <sys/types.h>                 /* fork */
+#include <sys/wait.h>                  /* waitpid */
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <sys/vfs.h>            /* statfs */
-#include <signal.h>             /* SIGINT */
+#include <sys/vfs.h>                   /* statfs */
+#include <signal.h>                    /* SIGINT */
 #include <linux/limits.h>
-#include <pwd.h>                /* getpwuid_r */
+#include <pwd.h>                       /* getpwuid_r */
 #include <libvirt/libvirt.h>
 
 /*----------------------------------------------------------------------------*\
@@ -337,8 +337,7 @@ static void *startup_thread(void *arg)
         "  <on_crash>destroy</on_crash>"
         "  <vcpu>1</vcpu>"
         "  <memory>52428</memory>"
-        "  <devices>"
-        "    <disk device='disk'>" "      <source file='%s'/>" "      <target bus='virtio' dev='vda'/>" "    </disk>" "  </devices>" "</domain>";
+        "  <devices>" "    <disk device='disk'>" "      <source file='%s'/>" "      <target bus='virtio' dev='vda'/>" "    </disk>" "  </devices>" "</domain>";
 
     snprintf(file_name, sizeof(file_name), "%s/%s-%lld", get_current_dir_name(), DUMMY_DISK_FILE, tid);
 

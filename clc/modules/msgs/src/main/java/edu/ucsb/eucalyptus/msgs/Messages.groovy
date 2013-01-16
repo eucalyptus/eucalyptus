@@ -62,9 +62,6 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.lang.Double;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ComponentId.ComponentMessage
@@ -388,11 +385,11 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   protected void setSwap( String deviceName, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "swap", format : "swap" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, type : "swap", format : "swap" ) );
   }
   
   public void setEphemeral( Integer index, String deviceName, Long sizeBytes, String formatName ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, , type : "ephemeral", format : formatName ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( guestDeviceName : deviceName, size : sizeBytes/1024l, type : "ephemeral", format : formatName ) );
   }
   
   public VirtualBootRecord lookupRoot( ) throws NoSuchElementException {
@@ -672,3 +669,10 @@ public class ComponentMessageResponseType extends BaseMessage {
   def ComponentMessageResponseType() {
   }
 }
+
+public class Filter extends EucalyptusData {
+  String name;
+  @HttpParameterMapping (parameter = "Value")
+  ArrayList<String> valueSet = new ArrayList<String>( );
+}
+

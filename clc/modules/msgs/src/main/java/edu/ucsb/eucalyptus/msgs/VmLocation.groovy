@@ -62,7 +62,8 @@
 
 package edu.ucsb.eucalyptus.msgs
 
-import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpEmbedded;
 
 public class CloudTopologyMessage extends EucalyptusMessage{
   
@@ -83,7 +84,8 @@ public class DescribeAvailabilityZonesType extends CloudTopologyMessage {
   //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "ZoneName")
   ArrayList<String> availabilityZoneSet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeAvailabilityZonesResponseType extends CloudTopologyMessage {
@@ -95,12 +97,13 @@ public class DescribeRegionsType extends CloudTopologyMessage {
   //** added 2008-12-01  **/
   @HttpParameterMapping (parameter = "RegionName")
   ArrayList<String> regions = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeRegionsResponseType extends CloudTopologyMessage {
   //** added 2008-12-01  **/
-  ArrayList<RegionInfoType> regionInfo = new ArrayList<ClusterInfoType>();
+  ArrayList<RegionInfoType> regionInfo = new ArrayList<RegionInfoType>();
 }
 /** *******************************************************************************/
 public class ClusterInfoType extends EucalyptusData {

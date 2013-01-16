@@ -74,7 +74,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +90,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <ifaddrs.h>
-#include <math.h>               /* log2 */
+#include <math.h>                      /* log2 */
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -144,7 +144,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-char *iptablesCache = NULL;     //!< contains the IP tables cache
+char *iptablesCache = NULL;            //!< contains the IP tables cache
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -306,7 +306,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
     char *ipbuf = NULL;
 
     if (vnetconfig == NULL) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig:%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig:%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -316,11 +316,11 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
         if (mode) {
             euca_strncpy(vnetconfig->mode, mode, 32);
         } else {
-            logprintfl(EUCAERROR, "VNET_MODE is not set\n");
+            LOGERROR("VNET_MODE is not set\n");
             return (EUCA_INVALID_ERROR);
         }
         if (role != CLC && role != NC) {
-            logprintfl(EUCAERROR, "bad role specified\n");
+            LOGERROR("bad role specified\n");
             return (EUCA_INVALID_ERROR);
         }
         //check mode specific parameters
@@ -328,30 +328,29 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
             if (role == CLC) {
             } else if (role == NC) {
                 if (!bridgedev || check_bridge(bridgedev)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
+                    LOGERROR("cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
                     return (EUCA_ERROR);
                 }
             }
         } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
+                    LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
                     return (EUCA_ERROR);
                 }
                 if (!privInterface || check_device(privInterface)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
+                    LOGERROR("cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
                     return (EUCA_ERROR);
                 }
                 if (!network || !netmask || !broadcast || !nameserver || !router) {
-                    logprintfl(EUCAERROR,
-                               "cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_DNS(%s), VNET_ROUTER(%s)), please check parameters\n",
-                               SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
+                    LOGERROR("cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_BROADCAST(%s), VNET_DNS(%s), VNET_ROUTER(%s)), "
+                             "please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
                     return (EUCA_ERROR);
                 }
             } else if (role == NC) {
                 if (!strcmp(mode, "STATIC-DYNMAC")) {
                     if (!pubInterface || check_device(pubInterface)) {
-                        logprintfl(EUCAERROR, "cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
+                        LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
                         return (EUCA_ERROR);
                     }
                 }
@@ -359,53 +358,51 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
         } else if (!strcmp(mode, "MANAGED-NOVLAN")) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
+                    LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
                     return (EUCA_ERROR);
                 }
                 if (!pubInterface || check_device(pubInterface)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_PUBINTERFACE (%s), please check parameter and device name\n", SP(pubInterface));
+                    LOGERROR("cannot verify VNET_PUBINTERFACE (%s), please check parameter and device name\n", SP(pubInterface));
                     return (EUCA_ERROR);
                 }
                 if (!privInterface || check_device(privInterface)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
+                    LOGERROR("cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
                     return (EUCA_ERROR);
                 }
                 if (!network || !netmask || !nameserver) {
-                    logprintfl(EUCAERROR,
-                               "cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s), please check parameters\n",
-                               SP(network), SP(netmask), SP(nameserver));
+                    LOGERROR("cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s), please check parameters\n",
+                             SP(network), SP(netmask), SP(nameserver));
                     return (EUCA_ERROR);
                 }
             } else if (role == NC) {
                 if (!bridgedev || check_bridge(bridgedev)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
+                    LOGERROR("cannot verify VNET_BRIDGE(%s), please check parameters and bridge device\n", SP(bridgedev));
                     return (EUCA_ERROR);
                 }
             }
         } else if (!strcmp(mode, "MANAGED")) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
+                    LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
                     return (EUCA_ERROR);
                 }
                 if (!pubInterface || check_device(pubInterface)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_PUBINTERFACE (%s), please check parameter and device name\n", SP(pubInterface));
+                    LOGERROR("cannot verify VNET_PUBINTERFACE (%s), please check parameter and device name\n", SP(pubInterface));
                     return (EUCA_ERROR);
                 }
                 if (!privInterface || check_device(privInterface)) {
-                    logprintfl(EUCAERROR, "cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
+                    LOGERROR("cannot verify VNET_PRIVINTERFACE (%s), please check parameter and device name\n", SP(privInterface));
                     return (EUCA_ERROR);
                 }
                 if (!network || !netmask || !nameserver) {
-                    logprintfl(EUCAERROR,
-                               "cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s)), please check parameters\n",
-                               SP(network), SP(netmask), SP(nameserver));
+                    LOGERROR("cannot verify network settings (VNET_SUBNET(%s), VNET_NETMASK(%s), VNET_DNS(%s)), please check parameters\n",
+                             SP(network), SP(netmask), SP(nameserver));
                     return (EUCA_ERROR);
                 }
             } else if (role == NC) {
             }
         } else {
-            logprintfl(EUCAERROR, "invalid networking mode %s, please check VNET_MODE parameter\n", SP(mode));
+            LOGERROR("invalid networking mode %s, please check VNET_MODE parameter\n", SP(mode));
             return (EUCA_INVALID_ERROR);
         }
 
@@ -448,14 +445,13 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
         if (numberofaddrs) {
             numberofaddrs_i = atoi(numberofaddrs);
             if (numberofaddrs_i > NUMBER_OF_HOSTS_PER_VLAN) {
-                logprintfl(EUCAWARN, "specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to maximum.\n",
-                           NUMBER_OF_HOSTS_PER_VLAN);
+                LOGWARN("specified ADDRSPERNET exceeds maximum addresses per network (%d), setting to maximum.\n", NUMBER_OF_HOSTS_PER_VLAN);
                 vnetconfig->numaddrs = NUMBER_OF_HOSTS_PER_VLAN;
                 log_eucafault("1001", "component", "CC", NULL);
             } else if (numberofaddrs_i <= NUMBER_OF_CCS) {
                 //! @fixme Why is NUMBER_OF_CCS not hard-coded here, but the absolute minimum setting of 16 is?
                 //! (Note: this 16 also appears hard-coded in the non-power-of-2 case.)
-                logprintfl(EUCAWARN, "specified ADDRSPERNET lower than absolute minimum (16), setting to minimum.\n");
+                LOGWARN("specified ADDRSPERNET lower than absolute minimum (16), setting to minimum.\n");
                 vnetconfig->numaddrs = 16;
                 log_eucafault("1001", "component", "CC", NULL);
             } else if (numberofaddrs_i && (!(numberofaddrs_i & (numberofaddrs_i - 1)))) {
@@ -470,7 +466,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 // Not a power of 2, so reduce to next power of 2 (but not below 16).
                 //! @fixme Use real address here!
                 vnetconfig->numaddrs = bits < 16 ? 16 : bits;
-                logprintfl(EUCAWARN, "specified ADDRSPERNET not a power of 2, setting to next lower power of 2 (%d).\n", vnetconfig->numaddrs);
+                LOGWARN("specified ADDRSPERNET not a power of 2, setting to next lower power of 2 (%d).\n", vnetconfig->numaddrs);
                 log_eucafault("1001", "component", "CC", NULL);
             }
         }
@@ -506,18 +502,16 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
             if (!strcmp(mode, "MANAGED") || !strcmp(mode, "MANAGED-NOVLAN")) {
                 // do some parameter checking
                 if ((numaddrs + 1) < 4) {
-                    logprintfl(EUCAERROR, "NUMADDRS must be >= 4, instances will not start with current value of '%d'\n", numaddrs + 1);
+                    LOGERROR("NUMADDRS must be >= 4, instances will not start with current value of '%d'\n", numaddrs + 1);
                 }
                 // check to make sure our specified range is big enough for all VLANs
                 if ((0xFFFFFFFF - nm) < (NUMBER_OF_VLANS * (numaddrs + 1))) {
                     // not big enough
                     vnetconfig->max_vlan = (0xFFFFFFFF - nm) / (numaddrs + 1);
-                    logprintfl(EUCAWARN, "private network is not large enough to support all vlans, restricting to max vlan '%d'\n",
-                               vnetconfig->max_vlan);
+                    LOGWARN("private network is not large enough to support all vlans, restricting to max vlan '%d'\n", vnetconfig->max_vlan);
                     if (vnetconfig->max_vlan < 2) {
-                        logprintfl(EUCAWARN,
-                                   "Instances will not run with current max vlan '%d'.  Either increase the size of your private subnet (VNET_SUBNET/VNET_NETMASK) or decrease the number of addrs per group (VNET_ADDRSPERNET).\n",
-                                   vnetconfig->max_vlan);
+                        LOGWARN("Instances will not run with current max vlan '%d'.  Either increase the size of your private subnet "
+                                "(VNET_SUBNET/VNET_NETMASK) or decrease the number of addrs per group (VNET_ADDRSPERNET).\n", vnetconfig->max_vlan);
                     }
                 } else {
                     vnetconfig->max_vlan = NUMBER_OF_VLANS;
@@ -527,10 +521,10 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " iptables -L -n", vnetconfig->eucahome);
                 rc = system(cmd);
 
-                logprintfl(EUCADEBUG, "flushing 'filter' table\n");
+                LOGDEBUG("flushing 'filter' table\n");
                 rc = vnetApplySingleTableRule(vnetconfig, "filter", "-F");
 
-                logprintfl(EUCADEBUG, "flushing 'nat' table\n");
+                LOGDEBUG("flushing 'nat' table\n");
                 rc = vnetApplySingleTableRule(vnetconfig, "nat", "-F");
 
                 if (path) {
@@ -596,8 +590,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 6");
                 rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
                 if (rc) {
-                    logprintfl(EUCAWARN,
-                               "could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");
+                    LOGWARN("could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");
                 }
             }
 
@@ -607,39 +600,39 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                    snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " ebtables -F FORWARD", vnetconfig->eucahome);
                    rc = system(cmd);
                    if (rc) {
-                   logprintfl(EUCAWARN, "could not flush ebtables FORWARD rules\n");
+                   LOGWARN("could not flush ebtables FORWARD rules\n");
                    }
 
                    snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " ebtables -P FORWARD DROP", vnetconfig->eucahome);
                    rc = system(cmd);
                    if (rc) {
-                   logprintfl(EUCAWARN, "could set default ebtables FORWARD policy to DROP\n");
+                   LOGWARN("could set default ebtables FORWARD policy to DROP\n");
                    }
 
                    // forward non-VM traffic
                    snprintf(cmd, 256, "-A FORWARD -i %s -j ACCEPT", vnetconfig->pubInterface);
                    rc = vnetApplySingleEBTableRule(vnetconfig, "filter", cmd);
                    if (rc) {
-                   logprintfl(EUCAWARN, "could set up default ebtables rule '%s'\n", cmd);
+                   LOGWARN("could set up default ebtables rule '%s'\n", cmd);
                    }
 
                    // allow VM DHCP traffic
                    snprintf(cmd, 256, "-A FORWARD -p IPv4 -d Broadcast -i ! %s --ip-proto udp --ip-dport 67:68 -j ACCEPT", vnetconfig->pubInterface);
                    rc = vnetApplySingleEBTableRule(vnetconfig, "filter", cmd);
                    if (rc) {
-                   logprintfl(EUCAWARN, "could set up default ebtables rule '%s'\n", cmd);
+                   LOGWARN("could set up default ebtables rule '%s'\n", cmd);
                    }
                  */
             }
         }
-        logprintfl(EUCAINFO, " VNET Configuration: eucahome=%s,\n", SP(vnetconfig->eucahome));
-        logprintfl(EUCAINFO, "                     path=%s,\n", SP(vnetconfig->path));
-        logprintfl(EUCAINFO, "                     dhcpdaemon=%s,\n", SP(vnetconfig->dhcpdaemon));
-        logprintfl(EUCAINFO, "                     dhcpuser=%s,\n", SP(vnetconfig->dhcpuser));
-        logprintfl(EUCAINFO, "                     pubInterface=%s,\n", SP(vnetconfig->pubInterface));
-        logprintfl(EUCAINFO, "                     privInterface=%s,\n", SP(vnetconfig->privInterface));
-        logprintfl(EUCAINFO, "                     bridgedev=%s,\n", SP(vnetconfig->bridgedev));
-        logprintfl(EUCAINFO, "                     networkMode=%s\n", SP(vnetconfig->mode));
+        LOGINFO(" VNET Configuration: eucahome=%s,\n", SP(vnetconfig->eucahome));
+        LOGINFO("                     path=%s,\n", SP(vnetconfig->path));
+        LOGINFO("                     dhcpdaemon=%s,\n", SP(vnetconfig->dhcpdaemon));
+        LOGINFO("                     dhcpuser=%s,\n", SP(vnetconfig->dhcpuser));
+        LOGINFO("                     pubInterface=%s,\n", SP(vnetconfig->pubInterface));
+        LOGINFO("                     privInterface=%s,\n", SP(vnetconfig->privInterface));
+        LOGINFO("                     bridgedev=%s,\n", SP(vnetconfig->bridgedev));
+        LOGINFO("                     networkMode=%s\n", SP(vnetconfig->mode));
     }
     return (EUCA_OK);
 }
@@ -660,7 +653,7 @@ int vnetSetMetadataRedirect(vnetConfig * vnetconfig)
     char *ipbuf = NULL;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -673,7 +666,7 @@ int vnetSetMetadataRedirect(vnetConfig * vnetconfig)
         EUCA_FREE(ipbuf);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     } else {
-        logprintfl(EUCAWARN, "cloudIp is not yet set, not installing redirect rule\n");
+        LOGWARN("cloudIp is not yet set, not installing redirect rule\n");
     }
 
     return (EUCA_OK);
@@ -695,7 +688,7 @@ int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig)
     char *ipbuf = NULL;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -709,7 +702,7 @@ int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig)
             EUCA_FREE(ipbuf);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     } else {
-        logprintfl(EUCAWARN, "cloudIp is not yet set, not installing redirect rule\n");
+        LOGWARN("cloudIp is not yet set, not installing redirect rule\n");
     }
 
     return (EUCA_OK);
@@ -737,7 +730,7 @@ int vnetInitTunnels(vnetConfig * vnetconfig)
     boolean done = FALSE;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -745,20 +738,20 @@ int vnetInitTunnels(vnetConfig * vnetconfig)
     if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
         if (vnetCountLocalIP(vnetconfig) <= 0) {
             // localIp not set, no tunneling
-            logprintfl(EUCAWARN, "VNET_LOCALIP not set, tunneling is disabled\n");
+            LOGWARN("VNET_LOCALIP not set, tunneling is disabled\n");
             return (EUCA_OK);
         } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->privInterface)) {
-            logprintfl(EUCAWARN, "in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
+            LOGWARN("in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
             return (EUCA_OK);
         } else {
             ret = EUCA_OK;
             snprintf(file, MAX_PATH, EUCALYPTUS_KEYS_DIR "/vtunpass", vnetconfig->eucahome);
             if (check_file(file)) {
-                logprintfl(EUCAWARN, "cannot locate tunnel password file '%s', tunneling disabled\n", file);
+                LOGWARN("cannot locate tunnel password file '%s', tunneling disabled\n", file);
                 ret = EUCA_ERROR;
             } else if (!check_file_newer_than(file, vnetconfig->tunnels.tunpassMtime)) {
                 ret = EUCA_ERROR;
-                logprintfl(EUCADEBUG, "tunnel password file has changed, reading new value\n");
+                LOGDEBUG("tunnel password file has changed, reading new value\n");
                 pass = file2str(file);
                 if (pass) {
                     newl = strchr(pass, '\n');
@@ -779,13 +772,13 @@ int vnetInitTunnels(vnetConfig * vnetconfig)
                     rc = write2file(file, template);
                     if (rc) {
                         // error
-                        logprintfl(EUCAERROR, "cannot write vtun config file '%s', tunneling disabled\n", file);
+                        LOGERROR("cannot write vtun config file '%s', tunneling disabled\n", file);
                     } else {
                         vnetconfig->tunnels.tunneling = 1;
                         ret = EUCA_OK;
                     }
                 } else {
-                    logprintfl(EUCAERROR, "cannot set up tunnel configuration file, tunneling is disabled\n");
+                    LOGERROR("cannot set up tunnel configuration file, tunneling is disabled\n");
                 }
                 if (template)
                     EUCA_FREE(template);
@@ -830,12 +823,12 @@ int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx)
     boolean done = FALSE;
 
     if (param_check("vnetAddHost", vnetconfig, mac, ip, vlan)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, mac=%s, ip=%s, idx=%d\n", vnetconfig, SP(mac), SP(ip), idx);
+        LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, idx=%d\n", vnetconfig, SP(mac), SP(ip), idx);
         return (EUCA_INVALID_ERROR);
     }
 
     if (!vnetconfig->enabled) {
-        logprintfl(EUCADEBUG, "network support is not enabled\n");
+        LOGDEBUG("network support is not enabled\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -846,7 +839,7 @@ int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx)
         start = idx;
         stop = idx;
     } else {
-        logprintfl(EUCAERROR, "index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
+        LOGERROR("index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -861,7 +854,7 @@ int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx)
 
     if (done) {
         // duplicate IP found
-        logprintfl(EUCAWARN, "attempting to add duplicate macmap entry, ignoring\n");
+        LOGWARN("attempting to add duplicate macmap entry, ignoring\n");
     } else if (found) {
         //    strncpy(vnetconfig->networks[vlan].addrs[found].mac, mac, 24);
         mac2hex(mac, vnetconfig->networks[vlan].addrs[found].mac);
@@ -870,7 +863,7 @@ int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx)
         } else {
             newip = hex2dot(vnetconfig->networks[vlan].nw + found);
             if (!newip) {
-                logprintfl(EUCAWARN, "Out of memory\n");
+                LOGWARN("Out of memory\n");
             } else {
                 vnetconfig->networks[vlan].addrs[found].ip = dot2hex(newip);
                 EUCA_FREE(newip);
@@ -878,7 +871,7 @@ int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx)
         }
         vnetconfig->networks[vlan].numhosts++;
     } else {
-        logprintfl(EUCAERROR, "failed to add host %s on vlan %d\n", mac, vlan);
+        LOGERROR("failed to add host %s on vlan %d\n", mac, vlan);
         return (EUCA_ERROR);
     }
     return (EUCA_OK);
@@ -907,12 +900,12 @@ int vnetDelHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan)
     int i = 0;
 
     if (param_check("vnetDelHost", vnetconfig, mac, ip, vlan)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
+        LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
         return (EUCA_INVALID_ERROR);
     }
 
     if (!vnetconfig->enabled) {
-        logprintfl(EUCADEBUG, "network support is not enabled\n");
+        LOGDEBUG("network support is not enabled\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -958,12 +951,12 @@ int vnetRefreshHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     boolean done = FALSE;
 
     if ((vnetconfig == NULL) || ((mac == NULL) && (ip == NULL)) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d, idx=%d\n", vnetconfig, SP(mac), SP(ip), vlan, idx);
+        LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d, idx=%d\n", vnetconfig, SP(mac), SP(ip), vlan, idx);
         return (EUCA_INVALID_ERROR);
     }
 
     if (!vnetconfig->enabled) {
-        logprintfl(EUCADEBUG, "network support is not enabled\n");
+        LOGDEBUG("network support is not enabled\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -974,7 +967,7 @@ int vnetRefreshHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
         start = idx;
         stop = idx;
     } else {
-        logprintfl(EUCAERROR, "index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
+        LOGERROR("index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -1032,12 +1025,12 @@ int vnetEnableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan)
     int i = 0;
 
     if (param_check("vnetEnableHost", vnetconfig, mac, ip, vlan)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
+        LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
         return (EUCA_INVALID_ERROR);
     }
 
     if (!vnetconfig->enabled) {
-        logprintfl(EUCADEBUG, "network support is not enabled\n");
+        LOGDEBUG("network support is not enabled\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -1074,12 +1067,12 @@ int vnetDisableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan)
     int i = 0;
 
     if ((vnetconfig == NULL) || ((mac == NULL) && (ip == NULL)) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
+        LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
         return (EUCA_INVALID_ERROR);
     }
 
     if (!vnetconfig->enabled) {
-        logprintfl(EUCADEBUG, "network support is not enabled\n");
+        LOGDEBUG("network support is not enabled\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -1115,47 +1108,47 @@ int vnetDeleteChain(vnetConfig * vnetconfig, char *userName, char *netName)
     char userNetString[MAX_PATH] = { 0 };
 
     if (param_check("vnetDeleteChain", vnetconfig, userName, netName)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
+        LOGERROR("bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
     rc = hash_b64enc_string(userNetString, &hashChain);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot hash user/net string (userNetString=%s)\n", userNetString);
+        LOGERROR("cannot hash user/net string (userNetString=%s)\n", userNetString);
         return (EUCA_ERROR);
     }
 
     rc = check_chain(vnetconfig, userName, netName);
-    logprintfl(EUCADEBUG, "params: userName=%s, netName=%s, rc=%d\n", SP(userName), SP(netName), rc);
+    LOGDEBUG("params: userName=%s, netName=%s, rc=%d\n", SP(userName), SP(netName), rc);
     if (!rc) {
         snprintf(cmd, 256, "-D FORWARD -j %s", hashChain);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "'%s' failed; cannot remove link to chain %s\n", cmd, hashChain);
+            LOGERROR("'%s' failed; cannot remove link to chain %s\n", cmd, hashChain);
         }
         runcount = 0;
         while (!rc && runcount < 10) {
-            logprintfl(EUCADEBUG, "duplicate rule found, removing others: %d/%d\n", runcount, 10);
+            LOGDEBUG("duplicate rule found, removing others: %d/%d\n", runcount, 10);
             rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
             runcount++;
         }
 
-        logprintfl(EUCADEBUG, "vnetDeleteChain(): flushing 'filter' table\n");
+        LOGDEBUG("vnetDeleteChain(): flushing 'filter' table\n");
         snprintf(cmd, 256, "-F %s", hashChain);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "'%s' failed; cannot flush chain %s\n", cmd, hashChain);
+            LOGERROR("'%s' failed; cannot flush chain %s\n", cmd, hashChain);
         }
 
         snprintf(cmd, 256, "-X %s", hashChain);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "'%s' failed; cannot remove chain %s\n", cmd, hashChain);
+            LOGERROR("'%s' failed; cannot remove chain %s\n", cmd, hashChain);
         }
         runcount = 0;
         while (!rc && runcount < 10) {
-            logprintfl(EUCADEBUG, "duplicate rule found, removing others: %d/%d\n", runcount, 10);
+            LOGDEBUG("duplicate rule found, removing others: %d/%d\n", runcount, 10);
             rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
             runcount++;
         }
@@ -1188,14 +1181,14 @@ int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName)
     char userNetString[MAX_PATH] = { 0 };
 
     if (param_check("vnetCreateChain", vnetconfig, userName, netName)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
+        LOGERROR("bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
     rc = hash_b64enc_string(userNetString, &hashChain);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot hash user/net string (userNetString=%s)\n", userNetString);
+        LOGERROR("cannot hash user/net string (userNetString=%s)\n", userNetString);
         return (EUCA_ERROR);
     }
 
@@ -1206,7 +1199,7 @@ int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName)
         snprintf(cmd, 256, "-N %s", hashChain);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "'%s' failed; cannot create chain %s\n", cmd, hashChain);
+            LOGERROR("'%s' failed; cannot create chain %s\n", cmd, hashChain);
             ret = EUCA_ERROR;
         }
     }
@@ -1223,7 +1216,7 @@ int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName)
         snprintf(cmd, 256, "-A FORWARD -j %s", hashChain);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "'%s' failed; cannot link to chain %s\n", cmd, hashChain);
+            LOGERROR("'%s' failed; cannot link to chain %s\n", cmd, hashChain);
             ret = EUCA_ERROR;
         }
     }
@@ -1255,7 +1248,7 @@ int vnetSaveTablesToMemory(vnetConfig * vnetconfig)
     char cmd[256] = { 0 };
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -1275,7 +1268,7 @@ int vnetSaveTablesToMemory(vnetConfig * vnetconfig)
     snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " iptables-save > %s", vnetconfig->eucahome, file);
     rc = system(cmd);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot save iptables state '%s'\n", cmd);
+        LOGERROR("cannot save iptables state '%s'\n", cmd);
         ret = EUCA_ERROR;
     } else {
         fd = open(file, O_RDONLY);
@@ -1323,7 +1316,7 @@ int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig)
     FILE *FH = NULL;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     } else if (vnetconfig->iptables[0] == '\0') {
         // nothing to do
@@ -1355,7 +1348,7 @@ int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig)
     snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " iptables-restore < %s", vnetconfig->eucahome, file);
     rc = system(cmd);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot restore iptables state from memory '%s'\n", cmd);
+        LOGERROR("cannot restore iptables state from memory '%s'\n", cmd);
         ret = EUCA_ERROR;
     }
 
@@ -1386,18 +1379,18 @@ int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName)
     int ret = EUCA_ERROR;
 
     if ((vnetconfig == NULL) || (userName == NULL) || (netName == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
+        LOGERROR("bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
     rc = hash_b64enc_string(userNetString, &hashChain);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot hash user/net string (userNetString=%s)\n", userNetString);
+        LOGERROR("cannot hash user/net string (userNetString=%s)\n", userNetString);
         return (EUCA_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "vnetFlushTable(): flushing 'filter' table\n");
+    LOGDEBUG("vnetFlushTable(): flushing 'filter' table\n");
     if ((userName && netName) && !check_chain(vnetconfig, userName, netName)) {
         snprintf(cmd, 256, "-F %s", hashChain);
         ret = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
@@ -1426,11 +1419,11 @@ int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule)
     int rc = 0;
 
     if (!rule || !table || !vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
+        LOGERROR("bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
         return (EUCA_INVALID_ERROR);
     }
     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ebtables -t %s %s\n", vnetconfig->eucahome, table, rule);
-    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+    LOGDEBUG("running cmd '%s'\n", cmd);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc)
@@ -1464,11 +1457,11 @@ int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule)
     FILE *FH = NULL;
 
     if (!rule || !table || !vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
+        LOGERROR("bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
         return (EUCA_INVALID_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "applying single table (%s) rule (%s)\n", table, rule);
+    LOGDEBUG("applying single table (%s) rule (%s)\n", table, rule);
 
     file = strdup("/tmp/euca-ipt-XXXXXX");
     if (!file) {
@@ -1541,22 +1534,21 @@ int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char 
     char userNetString[MAX_PATH] = { 0 };
 
     if (param_check("vnetTableRule", vnetconfig, type, destUserName, destName, sourceNet, sourceUserName, sourceNetName)) {
-        logprintfl(EUCAERROR,
-                   "bad input params: vnetconfig=%p, type=%s, destUserName=%s, destName=%s, sourceNet=%s, sourceUserName=%p, sourceNetName=%p\n",
-                   vnetconfig, SP(type), SP(destUserName), SP(destName), SP(sourceNet), sourceUserName, sourceNetName);
+        LOGERROR("bad input params: vnetconfig=%p, type=%s, destUserName=%s, destName=%s, sourceNet=%s, sourceUserName=%p, sourceNetName=%p\n",
+                 vnetconfig, SP(type), SP(destUserName), SP(destName), SP(sourceNet), sourceUserName, sourceNetName);
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(userNetString, MAX_PATH, "%s%s", destUserName, destName);
     rc = hash_b64enc_string(userNetString, &hashChain);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot hash user/net string (userNetString=%s)\n", userNetString);
+        LOGERROR("cannot hash user/net string (userNetString=%s)\n", userNetString);
         return (EUCA_ERROR);
     }
 
     destVlan = vnetGetVlan(vnetconfig, destUserName, destName);
     if (destVlan < 0) {
-        logprintfl(EUCAERROR, "no vlans associated with active network %s/%s\n", destUserName, destName);
+        LOGERROR("no vlans associated with active network %s/%s\n", destUserName, destName);
         EUCA_FREE(hashChain);
         return (EUCA_ERROR);
     }
@@ -1569,7 +1561,7 @@ int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char 
     if (sourceNetName) {
         srcVlan = vnetGetVlan(vnetconfig, sourceUserName, sourceNetName);
         if (srcVlan < 0) {
-            logprintfl(EUCAWARN, "cannot locate active source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
+            LOGWARN("cannot locate active source vlan for network %s/%s, skipping\n", sourceUserName, sourceNetName);
             EUCA_FREE(hashChain);
             return (EUCA_OK);
         } else {
@@ -1614,10 +1606,10 @@ int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char 
     if (!strcmp(type, "firewall-close")) {
         // this means that the network should already be flushed and empty (default policy == drop)
     } else {
-        logprintfl(EUCAINFO, "applying iptables rule: %s\n", rule);
+        LOGINFO("applying iptables rule: %s\n", rule);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", rule);
         if (rc) {
-            logprintfl(EUCAERROR, "iptables rule application failed: %d\n", rc);
+            LOGERROR("iptables rule application failed: %d\n", rc);
             return (EUCA_ERROR);
         }
     }
@@ -1640,7 +1632,7 @@ int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char 
 int vnetSetVlan(vnetConfig * vnetconfig, int vlan, char *uuid, char *user, char *network)
 {
     if (param_check("vnetSetVlan", vnetconfig, vlan, user, network)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, vlan=%d, user=%p, network=%p\n", vnetconfig, vlan, user, network);
+        LOGERROR("bad input params: vnetconfig=%p, vlan=%d, user=%p, network=%p\n", vnetconfig, vlan, user, network);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -1668,7 +1660,7 @@ int vnetGetVlan(vnetConfig * vnetconfig, char *user, char *network)
     int i = 0;
 
     if (!vnetconfig || !user || !network) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, user=%p, network=%p\n", vnetconfig, user, network);
+        LOGERROR("bad input params: vnetconfig=%p, user=%p, network=%p\n", vnetconfig, user, network);
         return (-1);
     }
 
@@ -1710,19 +1702,19 @@ int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, 
     int slashnet = 0;
 
     if (!vnetconfig || !outusers || !outnets || !len) {
-        logprintfl(EUCAERROR, "bad input parameters: vnetconfig=%p, outusers=%p, outnets=%p, len=%p\n", vnetconfig, outusers, outnets, len);
+        LOGERROR("bad input parameters: vnetconfig=%p, outusers=%p, outnets=%p, len=%p\n", vnetconfig, outusers, outnets, len);
         return (EUCA_INVALID_ERROR);
     }
 
     *outusers = EUCA_ALLOC(vnetconfig->max_vlan, sizeof(char *));
     if (!*outusers) {
-        logprintfl(EUCAFATAL, "out of memory!\n");
+        LOGFATAL("out of memory!\n");
         return (EUCA_MEMORY_ERROR);
     }
 
     *outnets = EUCA_ALLOC(vnetconfig->max_vlan, sizeof(char *));
     if (!*outnets) {
-        logprintfl(EUCAFATAL, "out of memory!\n");
+        LOGFATAL("out of memory!\n");
         EUCA_FREE(*outusers);
         return (EUCA_MEMORY_ERROR);
     }
@@ -1733,7 +1725,7 @@ int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, 
             snprintf(userNetString, MAX_PATH, "%s%s", vnetconfig->users[i].userName, vnetconfig->users[i].netName);
             rc = hash_b64enc_string(userNetString, &chain);
             if (rc) {
-                logprintfl(EUCAERROR, "cannot hash user/net string (userNetString=%s)\n", userNetString);
+                LOGERROR("cannot hash user/net string (userNetString=%s)\n", userNetString);
             } else {
                 net = hex2dot(vnetconfig->networks[i].nw);
                 slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[i].nm)) + 1);
@@ -1780,8 +1772,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     uint32_t inip = 0;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac),
-                   SP(outpubip), SP(outprivip));
+        LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -1811,7 +1802,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         if (!strlen(outmac)) {
             rc = instId2mac(vnetconfig, instId, outmac);
             if (rc) {
-                logprintfl(EUCAERROR, "unable to convert instanceId (%s) to mac address\n", instId);
+                LOGERROR("unable to convert instanceId (%s) to mac address\n", instId);
                 return (EUCA_ERROR);
             }
         }
@@ -1820,7 +1811,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         if (!strlen(outmac)) {
             rc = instId2mac(vnetconfig, instId, outmac);
             if (rc) {
-                logprintfl(EUCAERROR, "unable to convert instanceId (%s) to mac address\n", instId);
+                LOGERROR("unable to convert instanceId (%s) to mac address\n", instId);
                 return (EUCA_ERROR);
             }
         }
@@ -1872,12 +1863,12 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
     char *newmac = NULL;
 
     if (param_check("vnetGetNextHost", vnetconfig, mac, ip, vlan)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
+        LOGERROR("bad input params: vnetconfig=%p, mac=%s, ip=%s, vlan=%d\n", vnetconfig, SP(mac), SP(ip), vlan);
         return (EUCA_INVALID_ERROR);
     }
 
     if (!vnetconfig->enabled) {
-        logprintfl(EUCADEBUG, "network support is not enabled\n");
+        LOGDEBUG("network support is not enabled\n");
         return (EUCA_PERMISSION_ERROR);
     }
 
@@ -1888,13 +1879,12 @@ int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int 
         start = idx;
         stop = idx;
     } else {
-        logprintfl(EUCAERROR, "index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
+        LOGERROR("index out of bounds: idx=%d, min=%d max=%d\n", idx, vnetconfig->addrIndexMin, vnetconfig->addrIndexMax);
         return (EUCA_INVALID_ERROR);
     }
 
     for (i = start; i <= stop; i++) {
-        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0
-            && vnetconfig->networks[vlan].addrs[i].active == 0) {
+        if (maczero(vnetconfig->networks[vlan].addrs[i].mac) && vnetconfig->networks[vlan].addrs[i].ip != 0 && vnetconfig->networks[vlan].addrs[i].active == 0) {
             hex2mac(vnetconfig->networks[vlan].addrs[i].mac, &newmac);
             strncpy(mac, newmac, strlen(newmac));
             EUCA_FREE(newmac);
@@ -1952,7 +1942,7 @@ int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip)
     int i = 0;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
     // local address? (127.0.0.0/8)
@@ -1984,7 +1974,7 @@ int vnetAddLocalIP(vnetConfig * vnetconfig, uint32_t ip)
     int i = 0;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2018,7 +2008,7 @@ int vnetAddDev(vnetConfig * vnetconfig, char *dev)
     int i = 0;
 
     if (param_check("vnetAddDev", vnetconfig, dev))
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
+        LOGERROR("bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
     return (EUCA_INVALID_ERROR);
 
     for (i = 0; i < vnetconfig->max_vlan; i++) {
@@ -2049,7 +2039,7 @@ int vnetDelDev(vnetConfig * vnetconfig, char *dev)
     int i = 0;
 
     if (param_check("vnetDelDev", vnetconfig, dev)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
+        LOGERROR("bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2091,7 +2081,7 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
     char nameservers[1024] = { 0 };
 
     if (param_check("vnetGenerateDHCP", vnetconfig) || (numHosts == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, numHosts=%p\n", vnetconfig, numHosts);
+        LOGERROR("bad input params: vnetconfig=%p, numHosts=%p\n", vnetconfig, numHosts);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2103,8 +2093,7 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
         return (EUCA_ACCESS_ERROR);
     }
 
-    fprintf(fp,
-            "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
+    fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
 
     fprintf(fp, "shared-network euca {\n");
     for (i = 0; i < vnetconfig->max_vlan; i++) {
@@ -2180,7 +2169,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
     int numHosts = 0;
 
     if (param_check("vnetKickDHCP", vnetconfig)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2190,7 +2179,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
 
     rc = vnetGenerateDHCP(vnetconfig, &numHosts);
     if (rc) {
-        logprintfl(EUCAERROR, "failed to (re)create DHCP config (%s/euca-dhcp.conf)\n", vnetconfig->path);
+        LOGERROR("failed to (re)create DHCP config (%s/euca-dhcp.conf)\n", vnetconfig->path);
         return (rc);
     } else if (numHosts <= 0) {
         // nothing to do
@@ -2202,7 +2191,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
             strncat(dstring, " ", MAX_PATH - 1);
 
             if ((MAX_PATH - strlen(dstring) - 1) < MAX_ETH_DEV_PATH) {
-                logprintfl(EUCAERROR, "not enough buffer length left to copy ethernet dev name\n");
+                LOGERROR("not enough buffer length left to copy ethernet dev name\n");
                 return (EUCA_NO_SPACE_ERROR);
             }
             strncat(dstring, vnetconfig->etherdevs[i], MAX_ETH_DEV_PATH);
@@ -2233,7 +2222,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
 
         rc = safekillfile(buf, vnetconfig->dhcpdaemon, 9, rootwrap);
         if (rc) {
-            logprintfl(EUCAWARN, "failed to kill previous dhcp daemon\n");
+            LOGWARN("failed to kill previous dhcp daemon\n");
         }
         usleep(250000);
     }
@@ -2246,25 +2235,25 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
     if (rc != -1) {
         close(rc);
     } else {
-        logprintfl(EUCAWARN, "not creating/opening %s\n", buf);
+        LOGWARN("not creating/opening %s\n", buf);
     }
 
     if (strncmp(vnetconfig->dhcpuser, "root", 32) && strncmp(vnetconfig->path, "/", MAX_PATH) && strstr(vnetconfig->path, "eucalyptus/net")) {
         snprintf(buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " chgrp -R %s %s", vnetconfig->eucahome, vnetconfig->dhcpuser, vnetconfig->path);
-        logprintfl(EUCADEBUG, "executing: %s\n", buf);
+        LOGDEBUG("executing: %s\n", buf);
         rc = system(buf);
 
         snprintf(buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " chmod -R 0775 %s", vnetconfig->eucahome, vnetconfig->path);
-        logprintfl(EUCADEBUG, "executing: %s\n", buf);
+        LOGDEBUG("executing: %s\n", buf);
         rc = system(buf);
     }
 
     snprintf(buf, MAX_PATH, EUCALYPTUS_ROOTWRAP " %s -cf %s/euca-dhcp.conf -lf %s/euca-dhcp.leases -pf %s/euca-dhcp.pid -tf %s/euca-dhcp.trace %s",
              vnetconfig->eucahome, vnetconfig->dhcpdaemon, vnetconfig->path, vnetconfig->path, vnetconfig->path, vnetconfig->path, dstring);
-    logprintfl(EUCADEBUG, "executing: %s\n", buf);
+    LOGDEBUG("executing: %s\n", buf);
     // cannot use 'daemonrun()' here, dhcpd3 is too picky about FDs and signal handlers...
     rc = system(buf);
-    logprintfl(EUCATRACE, "RC from cmd: %d\n", rc);
+    LOGTRACE("RC from cmd: %d\n", rc);
 
     return (rc);
 }
@@ -2286,7 +2275,7 @@ int vnetAddCCS(vnetConfig * vnetconfig, uint32_t cc)
     int i = 0;
 
     if (vnetconfig == NULL) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2319,7 +2308,7 @@ int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc)
     char rootwrap[MAX_PATH] = { 0 };
 
     if (vnetconfig == NULL) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2359,23 +2348,23 @@ int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
     uint32_t tmpccs[NUMBER_OF_CCS] = { 0 };
 
     if ((vnetconfig == NULL) || (ccs == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ccs=%p\n", vnetconfig, ccs);
+        LOGERROR("bad input params: vnetconfig=%p, ccs=%p\n", vnetconfig, ccs);
         return (EUCA_INVALID_ERROR);
     }
 
     if (ccsLen < 0 || ccsLen > NUMBER_OF_CCS) {
-        logprintfl(EUCAERROR, "specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
+        LOGERROR("specified number of cluster controllers out of bounds (in=%d, min=%d, max=%d)\n", ccsLen, 0, NUMBER_OF_CCS);
         return (EUCA_INVALID_ERROR);
     }
 
     bzero(tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
     found = FALSE;
     for (i = 0; i < ccsLen; i++) {
-        logprintfl(EUCADEBUG, "input CC%d=%s\n", i, ccs[i]);
+        LOGDEBUG("input CC%d=%s\n", i, ccs[i]);
         tmpccs[i] = dot2hex(ccs[i]);
         rc = vnetCheckLocalIP(vnetconfig, tmpccs[i]);
         if (!rc && !found) {
-            logprintfl(EUCADEBUG, "local IP found in input list of CCs, setting localIpId: %d\n", i);
+            LOGDEBUG("local IP found in input list of CCs, setting localIpId: %d\n", i);
             vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
             vnetconfig->tunnels.localIpId = i;
             found = TRUE;
@@ -2384,16 +2373,16 @@ int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen)
 
     if (memcmp(tmpccs, vnetconfig->tunnels.ccs, sizeof(uint32_t) * NUMBER_OF_CCS)) {
         // internal list is different from new list, teardown and re-construct tunnels
-        logprintfl(EUCAINFO, "list of CCs has changed, initiating re-construction of tunnels\n");
+        LOGINFO("list of CCs has changed, initiating re-construction of tunnels\n");
         rc = vnetTeardownTunnels(vnetconfig);
         if (rc) {
-            logprintfl(EUCAERROR, "unable to teardown tunnels\n");
+            LOGERROR("unable to teardown tunnels\n");
         }
         memcpy(vnetconfig->tunnels.ccs, tmpccs, sizeof(uint32_t) * NUMBER_OF_CCS);
     }
 
     if (!found) {
-        logprintfl(EUCADEBUG, "local IP not found in input list of CCs, setting localIpId: %d\n", -1);
+        LOGDEBUG("local IP not found in input list of CCs, setting localIpId: %d\n", -1);
         vnetconfig->tunnels.localIpIdLast = vnetconfig->tunnels.localIpId;
         vnetconfig->tunnels.localIpId = -1;
     }
@@ -2437,7 +2426,7 @@ int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, 
             snprintf(rule, MAX_PATH, "-A %s\n", rules[i]);
             rc = vnetApplySingleEBTableRule(vnetconfig, "filter", rule);
             if (rc) {
-                logprintfl(EUCAERROR, "could not apply ebtables rule '%s'\n", rule);
+                LOGERROR("could not apply ebtables rule '%s'\n", rule);
                 done = TRUE;
                 ret = EUCA_ERROR;
             }
@@ -2525,20 +2514,19 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
     // check input params...
     if (!vnetconfig || !outbrname) {
         if (!vnetconfig) {
-            logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+            LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
             return (EUCA_INVALID_ERROR);
         } else {
             return (EUCA_OK);
         }
     }
 
-    logprintfl(EUCADEBUG, "params: vnetconfig=%p, vlan=%d, uuid=%s, userName=%s, netName=%s\n", vnetconfig, vlan, SP(uuid), SP(userName),
-               SP(netName));
+    LOGDEBUG("params: vnetconfig=%p, vlan=%d, uuid=%s, userName=%s, netName=%s\n", vnetconfig, vlan, SP(uuid), SP(userName), SP(netName));
 
     *outbrname = NULL;
 
     if (vlan < 0 || vlan > vnetconfig->max_vlan) {
-        logprintfl(EUCAERROR, "supplied vlan '%d' is out of range (%d - %d), cannot start network\n", vlan, 0, vnetconfig->max_vlan);
+        LOGERROR("supplied vlan '%d' is out of range (%d - %d), cannot start network\n", vlan, 0, vnetconfig->max_vlan);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2552,7 +2540,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
                 rc = system(cmd);
                 if (rc != 0) {
                     // failed to create vlan tagged device
-                    logprintfl(EUCAERROR, "cannot create new vlan device %s.%d\n", vnetconfig->privInterface, vlan);
+                    LOGERROR("cannot create new vlan device %s.%d\n", vnetconfig->privInterface, vlan);
                     return (EUCA_ERROR);
                 }
             }
@@ -2564,7 +2552,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl addbr %s", vnetconfig->eucahome, newbrname);
                 rc = system(cmd);
                 if (rc) {
-                    logprintfl(EUCAERROR, "could not create new bridge %s\n", newbrname);
+                    LOGERROR("could not create new bridge %s\n", newbrname);
                     return (EUCA_ERROR);
                 }
             }
@@ -2616,7 +2604,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, vnetconfig->privInterface, vlan);
                 rc = system(cmd);
                 if (rc) {
-                    logprintfl(EUCAERROR, "could not tag %s with vlan %d\n", vnetconfig->privInterface, vlan);
+                    LOGERROR("could not tag %s with vlan %d\n", vnetconfig->privInterface, vlan);
                     return (EUCA_ERROR);
                 }
             }
@@ -2628,7 +2616,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl addbr %s", vnetconfig->eucahome, newbrname);
                 rc = system(cmd);
                 if (rc) {
-                    logprintfl(EUCAERROR, "could not create new bridge %s\n", newbrname);
+                    LOGERROR("could not create new bridge %s\n", newbrname);
                     return (EUCA_ERROR);
                 }
                 // DAN temporary
@@ -2636,19 +2624,19 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl stp %s off", vnetconfig->eucahome, newbrname);
                 rc = system(cmd);
                 if (rc) {
-                    logprintfl(EUCAWARN, "could not enable stp on bridge %s\n", newbrname);
+                    LOGWARN("could not enable stp on bridge %s\n", newbrname);
                 }
 
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl setfd %s 2", vnetconfig->eucahome, newbrname);
                 rc = system(cmd);
                 if (rc) {
-                    logprintfl(EUCAWARN, "could not set fd time to 2 on bridge %s\n", newbrname);
+                    LOGWARN("could not set fd time to 2 on bridge %s\n", newbrname);
                 }
 
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl sethello %s 2", vnetconfig->eucahome, newbrname);
                 rc = system(cmd);
                 if (rc) {
-                    logprintfl(EUCAWARN, "could not set hello time to 2 on bridge %s\n", newbrname);
+                    LOGWARN("could not set hello time to 2 on bridge %s\n", newbrname);
                 }
             }
 
@@ -2671,7 +2659,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
             // attach tunnel(s)
             rc = vnetAttachTunnels(vnetconfig, vlan, newbrname);
             if (rc) {
-                logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, newbrname);
+                LOGWARN("failed to attach tunnels for vlan %d on bridge %s\n", vlan, newbrname);
             }
 
             snprintf(newdevname, 32, "%s", newbrname);
@@ -2680,7 +2668,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
 
             rc = vnetAttachTunnels(vnetconfig, vlan, vnetconfig->privInterface);
             if (rc) {
-                logprintfl(EUCAWARN, "failed to attach tunnels for vlan %d on bridge %s\n", vlan, vnetconfig->privInterface);
+                LOGWARN("failed to attach tunnels for vlan %d on bridge %s\n", vlan, vnetconfig->privInterface);
             }
 
             snprintf(newdevname, 32, "%s", vnetconfig->privInterface);
@@ -2688,7 +2676,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
 
         rc = vnetAddGatewayIP(vnetconfig, vlan, newdevname, vnetconfig->tunnels.localIpId);
         if (rc) {
-            logprintfl(EUCAWARN, "failed to add gateway IP to device %s\n", newdevname);
+            LOGWARN("failed to add gateway IP to device %s\n", newdevname);
         }
 
         *outbrname = strdup(newdevname);
@@ -2718,7 +2706,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
     char tunvlandev[32] = { 0 };
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2727,7 +2715,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
     }
 
     if (vlan < 0 || vlan > NUMBER_OF_VLANS || !newbrname || check_bridge(newbrname)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, vlan=%d, newbrname=%s\n", vnetconfig, vlan, SP(newbrname));
+        LOGERROR("bad input params: vnetconfig=%p, vlan=%d, newbrname=%s\n", vnetconfig, vlan, SP(newbrname));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2735,7 +2723,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl stp %s on", vnetconfig->eucahome, newbrname);
         rc = system(cmd);
         if (rc) {
-            logprintfl(EUCAWARN, "could enable stp on bridge %s\n", newbrname);
+            LOGWARN("could enable stp on bridge %s\n", newbrname);
         }
     }
 
@@ -2748,7 +2736,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
                         snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->tunnels.localIpId, i, vlan);
                         if (check_device(tunvlandev)) {
                             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
-                            logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                            LOGDEBUG("running cmd '%s'\n", cmd);
                             rc = system(cmd);
                             rc = rc >> 8;
                         }
@@ -2758,14 +2746,14 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
 
                     if (check_bridgedev(newbrname, tunvlandev)) {
                         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
-                        logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                        LOGDEBUG("running cmd '%s'\n", cmd);
                         rc = system(cmd);
                         rc = rc >> 8;
                     }
 
                     if (check_deviceup(tunvlandev)) {
                         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
-                        logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                        LOGDEBUG("running cmd '%s'\n", cmd);
                         rc = system(cmd);
                         rc = rc >> 8;
                     }
@@ -2777,7 +2765,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
                         snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->tunnels.localIpId, vlan);
                         if (check_device(tunvlandev)) {
                             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
-                            logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                            LOGDEBUG("running cmd '%s'\n", cmd);
                             rc = system(cmd);
                             rc = rc >> 8;
                         }
@@ -2787,14 +2775,14 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
 
                     if (check_bridgedev(newbrname, tunvlandev)) {
                         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " brctl addif %s %s", vnetconfig->eucahome, newbrname, tunvlandev);
-                        logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                        LOGDEBUG("running cmd '%s'\n", cmd);
                         rc = system(cmd);
                         rc = rc >> 8;
                     }
 
                     if (check_deviceup(tunvlandev)) {
                         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip link set up dev %s", vnetconfig->eucahome, tunvlandev);
-                        logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                        LOGDEBUG("running cmd '%s'\n", cmd);
                         rc = system(cmd);
                         rc = rc >> 8;
                     }
@@ -2829,7 +2817,7 @@ int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
     char *network = NULL;
 
     if ((vnetconfig == NULL) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, vlan=%d, newbrname=%s\n", vnetconfig, vlan, SP(newbrname));
+        LOGERROR("bad input params: vnetconfig=%p, vlan=%d, newbrname=%s\n", vnetconfig, vlan, SP(newbrname));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2846,7 +2834,7 @@ int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
                 snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->tunnels.localIpId, i, vlan);
                 if (!check_device(tunvlandev)) {
                     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig rem %s", vnetconfig->eucahome, tunvlandev);
-                    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                    LOGDEBUG("running cmd '%s'\n", cmd);
                     rc = system(cmd);
                     rc = rc >> 8;
                 }
@@ -2857,7 +2845,7 @@ int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
                 snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->tunnels.localIpId, vlan);
                 if (!check_device(tunvlandev)) {
                     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig rem %s", vnetconfig->eucahome, tunvlandev);
-                    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+                    LOGDEBUG("running cmd '%s'\n", cmd);
                     rc = system(cmd);
                     rc = rc >> 8;
                 }
@@ -2952,7 +2940,7 @@ int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig)
     char rootwrap[MAX_PATH] = { 0 };
 
     if (vnetconfig == NULL) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -2965,7 +2953,7 @@ int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig)
     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vtund -s -n -f " EUCALYPTUS_KEYS_DIR "/vtunall.conf", vnetconfig->eucahome, vnetconfig->eucahome);
     rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot run tunnel server: '%s'\n", cmd);
+        LOGERROR("cannot run tunnel server: '%s'\n", cmd);
     }
 
     for (i = 0; i < NUMBER_OF_CCS; i++) {
@@ -2975,15 +2963,15 @@ int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig)
                 snprintf(tundev, 32, "tap-%d-%d", vnetconfig->tunnels.localIpId, i);
                 rc = check_device(tundev);
                 if (rc) {
-                    logprintfl(EUCADEBUG, "maintaining tunnel for endpoint: %s\n", remoteIp);
+                    LOGDEBUG("maintaining tunnel for endpoint: %s\n", remoteIp);
                     snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/vtund-client-%d-%d.pid", vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i);
                     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vtund -n -f " EUCALYPTUS_KEYS_DIR "/vtunall.conf -p tun-%d-%d %s",
                              vnetconfig->eucahome, vnetconfig->eucahome, vnetconfig->tunnels.localIpId, i, remoteIp);
                     rc = daemonmaintain(cmd, "vtund", pidfile, 0, rootwrap);
                     if (rc) {
-                        logprintfl(EUCAERROR, "cannot run tunnel client: '%s'\n", cmd);
+                        LOGERROR("cannot run tunnel client: '%s'\n", cmd);
                     } else {
-                        logprintfl(EUCADEBUG, "ran cmd '%s'\n", cmd);
+                        LOGDEBUG("ran cmd '%s'\n", cmd);
                     }
                 }
             }
@@ -3020,27 +3008,27 @@ int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int local
     char cmd[MAX_PATH] = { 0 };
 
     if ((vnetconfig == NULL) || (vlan < 0) || (vlan > NUMBER_OF_VLANS)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p vlan=%d, devname=%s, lovalIpId=%d\n", vnetconfig, vlan, SP(devname), localIpId);
+        LOGERROR("bad input params: vnetconfig=%p vlan=%d, devname=%s, lovalIpId=%d\n", vnetconfig, vlan, SP(devname), localIpId);
         return (EUCA_INVALID_ERROR);
     }
 
     if (localIpId < 0) {
-        logprintfl(EUCAWARN, "negative localIpId supplied, defaulting to base gw\n");
+        LOGWARN("negative localIpId supplied, defaulting to base gw\n");
         localIpId = 0;
     }
 
     newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
     broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-    logprintfl(EUCADEBUG, "adding gateway IP: %s\n", newip);
+    LOGDEBUG("adding gateway IP: %s\n", newip);
 
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr add %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
 
-    logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+    LOGDEBUG("running cmd '%s'\n", cmd);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc && rc != 2) {
-        logprintfl(EUCAERROR, "could not bring up new device %s with ip %s\n", devname, newip);
+        LOGERROR("could not bring up new device %s with ip %s\n", devname, newip);
         EUCA_FREE(newip);
         EUCA_FREE(broadcast);
         return (EUCA_ERROR);
@@ -3053,7 +3041,7 @@ int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int local
         rc = system(cmd);
         rc = rc >> 8;
         if (rc) {
-            logprintfl(EUCAERROR, "could not bring up interface '%s'\n", devname);
+            LOGERROR("could not bring up interface '%s'\n", devname);
             return (EUCA_ERROR);
         }
     }
@@ -3092,11 +3080,11 @@ int vnetApplyArpTableRules(vnetConfig * vnetconfig)
     FILE *FH = NULL;
 
     if (!vnetconfig) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "applying arptable rules\n");
+    LOGDEBUG("applying arptable rules\n");
 
     file = strdup("/tmp/euca-arpt-XXXXXX");
     if (!file) {
@@ -3200,23 +3188,23 @@ int vnetDelGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int local
     char cmd[MAX_PATH] = { 0 };
 
     if ((vnetconfig == NULL) || (vlan < 0) || (vlan > NUMBER_OF_VLANS) || (devname == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, vlan=%d, devname=%s, localIpId=%d\n", vnetconfig, vlan, SP(devname), localIpId);
+        LOGERROR("bad input params: vnetconfig=%p, vlan=%d, devname=%s, localIpId=%d\n", vnetconfig, vlan, SP(devname), localIpId);
         return (EUCA_INVALID_ERROR);
     }
 
     if (localIpId < 0) {
-        logprintfl(EUCAWARN, "negative localIpId supplied, defaulting to base gw\n");
+        LOGWARN("negative localIpId supplied, defaulting to base gw\n");
         localIpId = 0;
     }
 
     newip = hex2dot(vnetconfig->networks[vlan].router + localIpId);
     broadcast = hex2dot(vnetconfig->networks[vlan].bc);
-    logprintfl(EUCADEBUG, "removing gateway IP: %s\n", newip);
+    LOGDEBUG("removing gateway IP: %s\n", newip);
     slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->networks[vlan].nm)) + 1);
     snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/%d broadcast %s dev %s", vnetconfig->eucahome, newip, slashnet, broadcast, devname);
     rc = system(cmd);
     if (rc) {
-        logprintfl(EUCAERROR, "could not bring down new device %s with ip %s\n", devname, newip);
+        LOGERROR("could not bring down new device %s with ip %s\n", devname, newip);
         ret = EUCA_ERROR;
     }
 
@@ -3253,12 +3241,12 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
     int slashnet = 0;
 
     if (vnetconfig == NULL) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p\n", vnetconfig);
+        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
         return (EUCA_INVALID_ERROR);
     }
 
     if ((vlan < 0) || (vlan > vnetconfig->max_vlan)) {
-        logprintfl(EUCAWARN, "supplied vlan '%d' is out of range (%d - %d), nothing to do\n", vlan, 0, vnetconfig->max_vlan);
+        LOGWARN("supplied vlan '%d' is out of range (%d - %d), nothing to do\n", vlan, 0, vnetconfig->max_vlan);
         return (EUCA_OK);
     }
 
@@ -3270,7 +3258,7 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip link set dev %s down", vnetconfig->eucahome, newbrname);
         rc = system(cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+            LOGERROR("cmd '%s' failed\n", cmd);
             ret = EUCA_ERROR;
         }
 
@@ -3281,14 +3269,14 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip link set dev %s down", vnetconfig->eucahome, newdevname);
             rc = system(cmd);
             if (rc) {
-                logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+                LOGERROR("cmd '%s' failed\n", cmd);
                 ret = EUCA_ERROR;
             }
 
             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig rem %s", vnetconfig->eucahome, newdevname);
             rc = system(cmd);
             if (rc) {
-                logprintfl(EUCAERROR, "cmd '%s' failed\n", cmd);
+                LOGERROR("cmd '%s' failed\n", cmd);
                 ret = EUCA_ERROR;
             }
         }
@@ -3310,23 +3298,23 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
 
             rc = vnetDetachTunnels(vnetconfig, vlan, newbrname);
             if (rc) {
-                logprintfl(EUCAWARN, "failed to detach tunnels\n");
+                LOGWARN("failed to detach tunnels\n");
             }
 
             rc = vnetDelDev(vnetconfig, newdevname);
             if (rc) {
-                logprintfl(EUCAWARN, "could not remove '%s' from list of interfaces\n", newdevname);
+                LOGWARN("could not remove '%s' from list of interfaces\n", newdevname);
             }
         }
         rc = vnetDelGatewayIP(vnetconfig, vlan, newdevname, vnetconfig->tunnels.localIpId);
         if (rc) {
-            logprintfl(EUCAWARN, "failed to delete gateway IP from interface %s\n", newdevname);
+            LOGWARN("failed to delete gateway IP from interface %s\n", newdevname);
         }
 
         if (userName && netName) {
             rc = vnetDeleteChain(vnetconfig, userName, netName);
             if (rc) {
-                logprintfl(EUCAERROR, "could not delete chain (%s/%s)\n", userName, netName);
+                LOGERROR("could not delete chain (%s/%s)\n", userName, netName);
                 ret = EUCA_ERROR;
             }
         }
@@ -3362,7 +3350,7 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
     int rc = EUCA_OK;
 
     if ((vnetconfig == NULL) || (outbrname == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, outbrname=%p\n", vnetconfig, outbrname);
+        LOGERROR("bad input params: vnetconfig=%p, outbrname=%p\n", vnetconfig, outbrname);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -3373,7 +3361,7 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
             *outbrname = strdup(vnetconfig->privInterface);
         }
         if (*outbrname == NULL) {
-            logprintfl(EUCAERROR, "out of memory!\n");
+            LOGERROR("out of memory!\n");
             return (EUCA_MEMORY_ERROR);
         }
 
@@ -3411,12 +3399,12 @@ int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *alloca
 
     // @todo CHUCK vnetGetPublicIP not found in param_check???
     if (param_check("vnetGetPublicIP", vnetconfig, ip, allocated, addrdevno)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ip=%s, allocated=%p, addrdevno=%p\n", vnetconfig, SP(ip), allocated, addrdevno);
+        LOGERROR("bad input params: vnetconfig=%p, ip=%s, allocated=%p, addrdevno=%p\n", vnetconfig, SP(ip), allocated, addrdevno);
         return (EUCA_INVALID_ERROR);
     }
 
     if ((vnetconfig == NULL) || (ip == NULL) || (allocated == NULL) || (addrdevno == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ip=%s, allocated=%p, addrdevno=%p\n", vnetconfig, SP(ip), allocated, addrdevno);
+        LOGERROR("bad input params: vnetconfig=%p, ip=%s, allocated=%p, addrdevno=%p\n", vnetconfig, SP(ip), allocated, addrdevno);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -3433,7 +3421,7 @@ int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *alloca
     }
 
     if (!done) {
-        logprintfl(EUCAERROR, "could not find ip %s in list of allocateable publicips\n", ip);
+        LOGERROR("could not find ip %s in list of allocateable publicips\n", ip);
         return (EUCA_NOT_FOUND_ERROR);
     }
     return (EUCA_OK);
@@ -3457,7 +3445,7 @@ int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip)
     uint32_t theip = 0;
 
     if (!vnetconfig || !ip) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ip=%s\n", vnetconfig, SP(ip));
+        LOGERROR("bad input params: vnetconfig=%p, ip=%s\n", vnetconfig, SP(ip));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -3499,7 +3487,7 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
     boolean done = FALSE;
 
     if (param_check("vnetAddPublicIP", vnetconfig, inip)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, inip=%s\n", vnetconfig, SP(inip));
+        LOGERROR("bad input params: vnetconfig=%p, inip=%s\n", vnetconfig, SP(inip));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -3533,7 +3521,7 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
             numips = (theip - minip) + 1;
             // check (ip >= 0x7F000000 && ip <= 0x7FFFFFFF) looks for ip in lo range
             if (numips <= 0 || numips > 256 || (minip >= 0x7F000000 && minip <= 0x7FFFFFFF) || (theip >= 0x7F000000 && theip <= 0x7FFFFFFF)) {
-                logprintfl(EUCAERROR, "incorrect PUBLICIPS range specified: %s-%s\n", ip, ptr);
+                LOGERROR("incorrect PUBLICIPS range specified: %s-%s\n", ip, ptr);
                 numips = 0;
             }
 
@@ -3570,7 +3558,7 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
                     vnetconfig->publicips[found].ip = theip;
                 }
             } else {
-                logprintfl(EUCAERROR, "cannot add any more public IPS (limit:%d)\n", NUMBER_OF_PUBLIC_IPS);
+                LOGERROR("cannot add any more public IPS (limit:%d)\n", NUMBER_OF_PUBLIC_IPS);
                 return (EUCA_NO_SPACE_ERROR);
             }
         }
@@ -3601,31 +3589,31 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
     char *network = NULL;
 
     if ((vnetconfig == NULL) || (src == NULL) || (dst == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, src=%s, dst=%s\n", vnetconfig, SP(src), SP(dst));
+        LOGERROR("bad input params: vnetconfig=%p, src=%s, dst=%s\n", vnetconfig, SP(src), SP(dst));
         return (EUCA_INVALID_ERROR);
     }
 
     if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr add %s/32 dev %s", vnetconfig->eucahome, src, vnetconfig->pubInterface);
-        logprintfl(EUCADEBUG, "running cmd %s\n", cmd);
+        LOGDEBUG("running cmd %s\n", cmd);
         rc = system(cmd);
         rc = rc >> 8;
         if (rc && (rc != 2)) {
-            logprintfl(EUCAERROR, "failed to assign IP address '%s'\n", cmd);
+            LOGERROR("failed to assign IP address '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
         snprintf(cmd, MAX_PATH, "-A PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "failed to apply DNAT rule '%s'\n", cmd);
+            LOGERROR("failed to apply DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
         snprintf(cmd, MAX_PATH, "-A OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "failed to apply DNAT rule '%s'\n", cmd);
+            LOGERROR("failed to apply DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
@@ -3635,20 +3623,20 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
         EUCA_FREE(network);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "failed to apply SNAT rule '%s'\n", cmd);
+            LOGERROR("failed to apply SNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
         // For reporting traffic statistics.
         snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_IN -d %s", dst);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "vnetAssignAddress(): failed to apply EUCA_COUNTERS_IN rule '%s'\n", cmd);
+            LOGERROR("vnetAssignAddress(): failed to apply EUCA_COUNTERS_IN rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
         snprintf(cmd, MAX_PATH, "-A EUCA_COUNTERS_OUT -s %s", dst);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "vnetAssignAddress(): failed to apply EUCA_COUNTERS_OUT rule '%s'\n", cmd);
+            LOGERROR("vnetAssignAddress(): failed to apply EUCA_COUNTERS_OUT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
     }
@@ -3709,7 +3697,7 @@ int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, 
 
     //! @todo CHUCK -> vnetSetPublicIP not set for param_check()
     if (param_check("vnetSetPublicIP", vnetconfig, ip, setval)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, ip=%s, setval=%d\n", vnetconfig, SP(ip), setval);
+        LOGERROR("bad input params: vnetconfig=%p, ip=%s, setval=%d\n", vnetconfig, SP(ip), setval);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -3768,7 +3756,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
 
     // assign address if unassigned, unassign/reassign if assigned
     if (!vnetconfig || !uuid || !src || !dst) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, uuid=%s, src=%s, dst=%s\n", vnetconfig, SP(uuid), SP(src), SP(dst));
+        LOGERROR("bad input params: vnetconfig=%p, uuid=%s, src=%s, dst=%s\n", vnetconfig, SP(uuid), SP(src), SP(dst));
         return (EUCA_INVALID_ERROR);
     }
     // get the publicIP of interest
@@ -3785,11 +3773,11 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
     }
 
     if (!done) {
-        logprintfl(EUCAERROR, "could not find ip %s in list of allocateable publicips\n", src);
+        LOGERROR("could not find ip %s in list of allocateable publicips\n", src);
         return (EUCA_NOT_FOUND_ERROR);
     }
 
-    logprintfl(EUCADEBUG, "deciding what to do: src=%s dst=%s allocated=%d currdst=%s\n", SP(src), SP(dst), isallocated, SP(currdst));
+    LOGDEBUG("deciding what to do: src=%s dst=%s allocated=%d currdst=%s\n", SP(src), SP(dst), isallocated, SP(currdst));
     // determine if reassign must happen
     if (isallocated && strcmp(currdst, dst)) {
         rc = vnetUnassignAddress(vnetconfig, src, currdst);
@@ -3814,8 +3802,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
         vnetconfig->publicips[pubidx].allocated = 1;
     }
     snprintf(vnetconfig->publicips[pubidx].uuid, 48, "%s", uuid);
-    logprintfl(EUCADEBUG, "successfully set src=%s to dst=%s with uuid=%s, allocated=%d\n", SP(src), SP(dst), SP(uuid),
-               vnetconfig->publicips[pubidx].allocated);
+    LOGDEBUG("successfully set src=%s to dst=%s with uuid=%s, allocated=%d\n", SP(src), SP(dst), SP(uuid), vnetconfig->publicips[pubidx].allocated);
 
     return (EUCA_OK);
 }
@@ -3843,18 +3830,18 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
     char *network = NULL;
 
     if ((vnetconfig == NULL) || (src == NULL) || (dst == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, src=%s, dst=%s\n", vnetconfig, SP(src), SP(dst));
+        LOGERROR("bad input params: vnetconfig=%p, src=%s, dst=%s\n", vnetconfig, SP(src), SP(dst));
         return (EUCA_INVALID_ERROR);
     }
 
     if ((vnetconfig->role == CC || vnetconfig->role == CLC) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
 
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/32 dev %s", vnetconfig->eucahome, src, vnetconfig->pubInterface);
-        logprintfl(EUCADEBUG, "running cmd %s\n", cmd);
+        LOGDEBUG("running cmd %s\n", cmd);
         rc = system(cmd);
         rc = rc >> 8;
         if (rc && (rc != 2)) {
-            logprintfl(EUCAERROR, "failed to assign IP address '%s'\n", cmd);
+            LOGERROR("failed to assign IP address '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
@@ -3866,7 +3853,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             count++;
         }
         if (rc) {
-            logprintfl(EUCAERROR, "failed to remove DNAT rule '%s'\n", cmd);
+            LOGERROR("failed to remove DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
@@ -3878,7 +3865,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             count++;
         }
         if (rc) {
-            logprintfl(EUCAERROR, "failed to remove DNAT rule '%s'\n", cmd);
+            LOGERROR("failed to remove DNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
@@ -3893,20 +3880,20 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             count++;
         }
         if (rc) {
-            logprintfl(EUCAERROR, "failed to remove SNAT rule '%s'\n", cmd);
+            LOGERROR("failed to remove SNAT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
         // For reporting traffic statistics.
         snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_IN -d %s", dst);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "vnetUnassignAddress(): failed to remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
+            LOGERROR("vnetUnassignAddress(): failed to remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
         snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_OUT -s %s", dst);
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         if (rc) {
-            logprintfl(EUCAERROR, "vnetUnassignAddress(): failed to remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
+            LOGERROR("vnetUnassignAddress(): failed to remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
 
@@ -3962,7 +3949,7 @@ int instId2mac(vnetConfig * vnetconfig, char *instId, char *outmac)
 
     p = strstr(instId, "i-");
     if (p == NULL) {
-        logprintfl(EUCAWARN, "invalid instId=%s\n", SP(instId));
+        LOGWARN("invalid instId=%s\n", SP(instId));
         return (EUCA_INVALID_ERROR);
     }
     p += 2;
@@ -3974,7 +3961,7 @@ int instId2mac(vnetConfig * vnetconfig, char *instId, char *outmac)
             p += 2;
         }
     } else {
-        logprintfl(EUCAWARN, "invalid instId=%s\n", SP(instId));
+        LOGWARN("invalid instId=%s\n", SP(instId));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -4079,7 +4066,7 @@ int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip)
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/populate_arp.pl", vnetconfig->eucahome, vnetconfig->eucahome);
         rc = system(cmd);
         if (rc) {
-            logprintfl(EUCAWARN, "could not execute arp cache populator script, check httpd log for errors\n");
+            LOGWARN("could not execute arp cache populator script, check httpd log for errors\n");
         }
     }
 
@@ -4412,14 +4399,14 @@ int check_chain(vnetConfig * vnetconfig, char *userName, char *netName)
     char userNetString[MAX_PATH] = { 0 };
 
     if ((vnetconfig == NULL) || (userName == NULL) || (netName == NULL)) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
+        LOGERROR("bad input params: vnetconfig=%p, userName=%p, netName=%p\n", vnetconfig, userName, netName);
         return (EUCA_INVALID_ERROR);
     }
 
     snprintf(userNetString, MAX_PATH, "%s%s", userName, netName);
     rc = hash_b64enc_string(userNetString, &hashChain);
     if (rc) {
-        logprintfl(EUCAERROR, "cannot hash user/net string (userNetString=%s)\n", userNetString);
+        LOGERROR("cannot hash user/net string (userNetString=%s)\n", userNetString);
         return (EUCA_ERROR);
     }
 
@@ -4496,7 +4483,7 @@ int check_device(char *dev)
     char file[MAX_PATH] = { 0 };
 
     if (!dev) {
-        logprintfl(EUCAERROR, "bad input params: dev=%s\n", SP(dev));
+        LOGERROR("bad input params: dev=%s\n", SP(dev));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -4526,7 +4513,7 @@ int check_bridgestp(char *br)
     int ret = EUCA_ERROR;
 
     if (!br || check_bridge(br)) {
-        logprintfl(EUCAERROR, "bad input params: br=%s\n", SP(br));
+        LOGERROR("bad input params: br=%s\n", SP(br));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -4559,7 +4546,7 @@ int check_bridgedev(char *br, char *dev)
     char file[MAX_PATH] = { 0 };
 
     if (!br || !dev || check_device(br) || check_device(dev)) {
-        logprintfl(EUCAERROR, "bad input params: br=%s, dev=%s\n", SP(br), SP(dev));
+        LOGERROR("bad input params: br=%s, dev=%s\n", SP(br), SP(dev));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -4587,7 +4574,7 @@ int check_bridge(char *brname)
     char file[MAX_PATH] = { 0 };
 
     if (!brname || check_device(brname)) {
-        logprintfl(EUCAERROR, "bad input params: brname=%s\n", SP(brname));
+        LOGERROR("bad input params: brname=%s\n", SP(brname));
         return (EUCA_INVALID_ERROR);
     }
     snprintf(file, MAX_PATH, "/sys/class/net/%s/bridge/", brname);
@@ -4623,7 +4610,7 @@ int check_tablerule(vnetConfig * vnetconfig, char *table, char *rule)
     char cmd[MAX_PATH] = { 0 };
 
     if (!vnetconfig || !table || !rule) {
-        logprintfl(EUCAERROR, "bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
+        LOGERROR("bad input params: vnetconfig=%p, table=%s, rule=%s\n", vnetconfig, SP(table), SP(rule));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -4659,7 +4646,7 @@ int check_isip(char *ip)
     int rc = 0;
 
     if (!ip) {
-        logprintfl(EUCAERROR, "bad input params: ip=%s\n", SP(ip));
+        LOGERROR("bad input params: ip=%s\n", SP(ip));
         return (EUCA_INVALID_ERROR);
     }
 
@@ -4690,7 +4677,7 @@ char *host2ip(char *host)
     struct addrinfo *result = NULL;
 
     if (!host) {
-        logprintfl(EUCAERROR, "bad input params: host=%s\n", SP(host));
+        LOGERROR("bad input params: host=%s\n", SP(host));
         return (NULL);
     }
 

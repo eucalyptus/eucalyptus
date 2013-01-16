@@ -66,23 +66,30 @@ build: all
 
 buildall: 
 
+setup:
+	@./setup.sh
+
 doc: eucadoc
 
-eucadoc:
+eucadoc: setup
 	@doxygen eucalyptus.doxyfile > /dev/null;
+	
 
-nodedoc:
+nodedoc: setup
 	@doxygen node.doxyfile > /dev/null;
 
-clusterdoc:
+clusterdoc: setup
 	@doxygen cluster.doxyfile > /dev/null;
-
-brokerdoc:
-	@doxygen vmware-broker.doxyfile > /dev/null;
 
 deploy:
 
 clean:
+	@\rm -f node.doxyfile*;
+	@\rm -f cluster.doxyfile*;
+	@\rm -f eucalyptus.doxyfile*;
+	@\rm -rf node;
+	@\rm -rf cluster;
+	@\rm -rf eucalyptus;
 
 distclean:
 

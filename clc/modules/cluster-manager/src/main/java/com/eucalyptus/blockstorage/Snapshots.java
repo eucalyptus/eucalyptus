@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage;
 
 import static java.util.Collections.unmodifiableSet;
 import static java.util.EnumSet.of;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -78,6 +79,7 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -93,6 +95,7 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -302,4 +305,83 @@ public class Snapshots {
     return Transactions.findAll( Snapshot.named( null, null ) );
   }
 
+  public static class SnapshotFilterSupport extends FilterSupport<Snapshot> {
+    public SnapshotFilterSupport() {
+      super( builderFor( Snapshot.class )
+          .withTagFiltering( SnapshotTag.class, "snapshot" )
+          .withStringProperty( "description", FilterFunctions.DESCRIPTION )
+          .withStringProperty( "owner-alias", FilterFunctions.ACCOUNT_NAME ) //TODO:STEVE: won't work, this field isn't populated
+          .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
+          .withStringProperty( "progress", FilterFunctions.PROGRESS )
+          .withStringProperty( "snapshot-id", CloudMetadatas.toDisplayName() )
+          .withStringProperty( "status", FilterFunctions.STATUS )
+          .withDateProperty( "start-time", FilterDateFunctions.START_TIME )
+          .withStringProperty( "volume-id", FilterFunctions.VOLUME_ID )
+          .withStringProperty( "volume-size", FilterFunctions.VOLUME_SIZE  )
+          .withPersistenceFilter( "description" )
+          .withPersistenceFilter( "owner-alias", "ownerAccountName" ) //TODO:STEVE: won't work, this field isn't populated
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
+          //.withPersistenceFilter( "progress" )  //TODO:STEVE: Not working, problem with % escaping?
+          .withPersistenceFilter( "snapshot-id", "displayName" )
+          //.withPersistenceFilter( "start-time", "creationTimestamp", PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "volume-id", "parentVolume" )
+          .withPersistenceFilter( "volume-size", "volumeSize", PersistenceFilter.Type.Integer )
+      );
+    }
+  }
+
+  private enum FilterFunctions implements Function<Snapshot,String> {
+    DESCRIPTION {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.getDescription();
+      }
+    },
+    ACCOUNT_NAME {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.getOwnerAccountName();
+      }
+    },
+    ACCOUNT_ID {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.getOwnerAccountNumber();
+      }
+    },
+    PROGRESS {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.getProgress();
+      }
+    },
+    STATUS {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.mapState();
+      }
+    },
+    VOLUME_ID {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        return snapshot.getParentVolume();
+      }
+    },
+    VOLUME_SIZE {
+      @Override
+      public String apply( final Snapshot snapshot ) {
+        Integer size = snapshot.getVolumeSize();
+        return size == null ? null : String.valueOf( size );
+      }
+    }
+  }
+
+  private enum FilterDateFunctions implements Function<Snapshot,Date> {
+    START_TIME {
+      @Override
+      public Date apply( final Snapshot snapshot ) {
+        return snapshot.getCreationTimestamp();
+      }
+    }
+  }
 }

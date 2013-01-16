@@ -211,12 +211,12 @@ int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
     }
 
     if (configMtime == 0) {
-        logprintfl(EUCAERROR, "could not stat config files (%s,%s)\n", configFiles[0], configFiles[1]);
+        LOGERROR("could not stat config files (%s,%s)\n", configFiles[0], configFiles[1]);
         return (-1);
     }
 
     if (lastConfigMtime != configMtime) {
-        logprintfl(EUCADEBUG, "current mtime=%ld, stored mtime=%ld\n", configMtime, lastConfigMtime);
+        LOGDEBUG("current mtime=%ld, stored mtime=%ld\n", configMtime, lastConfigMtime);
         lastConfigMtime = configMtime;
         return (1);
     }
@@ -321,14 +321,13 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
         new = getConfString(configFiles, numFiles, configKeysRestart[i].key);
         if (configRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                logprintfl(EUCAWARN,
-                           "configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change will take effect!\n",
-                           configKeysRestart[i].key, SP(old), SP(new));
+                LOGWARN("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change "
+                        "will take effect!\n", configKeysRestart[i].key, SP(old), SP(new));
             }
 
             EUCA_FREE(new);
         } else {
-            logprintfl(EUCAINFO, "read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
+            LOGINFO("read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
             EUCA_FREE(configValuesRestart[i]);
             configValuesRestart[i] = new;
             ret++;
@@ -342,8 +341,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
 
         if (configNoRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                logprintfl(EUCAINFO, "configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n",
-                           configKeysNoRestart[i].key, SP(old), SP(new));
+                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", configKeysNoRestart[i].key, SP(old), SP(new));
                 ret++;
                 EUCA_FREE(configValuesNoRestart[i]);
                 configValuesNoRestart[i] = new;
@@ -351,7 +349,7 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
                 EUCA_FREE(new);
             }
         } else {
-            logprintfl(EUCAINFO, "read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
+            LOGINFO("read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
             EUCA_FREE(configValuesNoRestart[i]);
             configValuesNoRestart[i] = new;
             ret++;
@@ -375,7 +373,7 @@ void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log
     long l = 0;
     char *s = configFileValue("LOGLEVEL");
 
-    assert(s != NULL);          // configFileValue should return default
+    assert(s != NULL);                 // configFileValue should return default
 
     *log_level_out = log_level_int(s);
 

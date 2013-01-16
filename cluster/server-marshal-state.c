@@ -79,12 +79,14 @@
 #include <string.h>
 #include <pthread.h>
 
-#include <server-marshal-state.h>
-#include <handlers.h>
+#include <eucalyptus.h>
+#include "server-marshal-state.h"
+
+#include "handlers.h"
 #include <misc.h>
 #include <vnetwork.h>
-#include "adb-helpers.h"
-#include <handlers-state.h>
+#include <adb-helpers.h>
+#include "handlers-state.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

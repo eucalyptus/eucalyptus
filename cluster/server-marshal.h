@@ -126,8 +126,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
 adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env);
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, const axutil_env_t * env);
 adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t * describeNetworks, const axutil_env_t * env);
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
-                                                                      const axutil_env_t * env);
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env);
 adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAddress, const axutil_env_t * env);
 adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * unassignAddress, const axutil_env_t * env);
 adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t * configureNetwork, const axutil_env_t * env);

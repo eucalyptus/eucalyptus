@@ -75,7 +75,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -83,13 +83,13 @@
 #include <sys/stat.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-#include <fcntl.h>              /* For O_* */
+#include <fcntl.h>                     /* For O_* */
 #include <string.h>
 #include <strings.h>
 #include <assert.h>
 
 #include "eucalyptus.h"
-#include "misc.h"               /* logprintfl */
+#include "misc.h"                      /* logprintfl */
 #include "ipc.h"
 
 /*----------------------------------------------------------------------------*\
@@ -234,7 +234,7 @@ sem *sem_realloc(const int val, const char *name, int flags)
         if (s->flags & O_EXCL) {
             if (sem_unlink(name) == 0) {
                 /* clean up in case previous sem holder crashed */
-                logprintfl(EUCAINFO, "cleaning up old semaphore %s\n", name);
+                LOGINFO("cleaning up old semaphore %s\n", name);
             }
         }
 
@@ -246,8 +246,8 @@ sem *sem_realloc(const int val, const char *name, int flags)
         s->name = strdup(name);
     } else {
         /* SYS V IPC semaphores */
-        s->sysv = semget(IPC_PRIVATE,   /* private to process & children */
-                         1,     /* only need one */
+        s->sysv = semget(IPC_PRIVATE,  /* private to process & children */
+                         1,            /* only need one */
                          (IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR) /* user-only */ );
         if (s->sysv < 0) {
             EUCA_FREE(s);
@@ -312,7 +312,7 @@ int sem_prolaag(sem * s, boolean do_log)
     if (s) {
         if (do_log) {
             snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
-            logprintfl(EUCAEXTREME, "%s locking\n", ((s->name) ? (s->name) : (addr)));
+            LOGEXTREME("%s locking\n", ((s->name) ? (s->name) : (addr)));
         }
 
         if (s->usemutex) {
@@ -374,7 +374,7 @@ int sem_verhogen(sem * s, boolean do_log)
     if (s) {
         if (do_log) {
             snprintf(addr, sizeof(addr), "%lx", ((unsigned long)s));
-            logprintfl(EUCAEXTREME, "%s unlocking\n", ((s->name) ? (s->name) : (addr)));
+            LOGEXTREME("%s unlocking\n", ((s->name) ? (s->name) : (addr)));
         }
 
         if (s->usemutex) {

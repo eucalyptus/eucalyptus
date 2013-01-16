@@ -79,11 +79,13 @@
 #include <string.h>
 #include <pthread.h>
 
-#include <server-marshal.h>
-#include <handlers.h>
+#include <eucalyptus.h>
 #include <misc.h>
 #include <vnetwork.h>
-#include "adb-helpers.h"
+
+#include "handlers.h"
+#include "server-marshal.h"
+#include <adb-helpers.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -147,8 +149,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
 adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env);
 adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, const axutil_env_t * env);
 adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t * describeNetworks, const axutil_env_t * env);
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
-                                                                      const axutil_env_t * env);
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env);
 adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAddress, const axutil_env_t * env);
 adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * unassignAddress, const axutil_env_t * env);
 adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t * configureNetwork, const axutil_env_t * env);
@@ -517,7 +518,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     if (instIdsLen > 0) {
         instIds = EUCA_ZALLOC(instIdsLen, sizeof(char *));
         if (instIds == NULL) {
-            logprintfl(EUCAERROR, "out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
+            LOGERROR("out of memory for 'instIds' in 'DescribeSensorsMarshal'\n");
             goto reply;
         }
     }
@@ -531,7 +532,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
     if (sensorIdsLen > 0) {
         sensorIds = EUCA_ZALLOC(sensorIdsLen, sizeof(char *));
         if (sensorIds == NULL) {
-            logprintfl(EUCAERROR, "out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
+            LOGERROR("out of memory for 'sensorIds' in 'DescribeSensorsMarshal'\n");
             goto reply;
         }
     }
@@ -551,7 +552,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
         int error = doDescribeSensors(&meta, historySize, collectionIntervalTimeMs, instIds, instIdsLen, sensorIds, sensorIdsLen, &outResources,
                                       &outResourcesLen);
         if (error) {
-            logprintfl(EUCAERROR, "doDescribeSensors() failed error=%d\n", error);
+            LOGERROR("doDescribeSensors() failed error=%d\n", error);
             if (outResourcesLen > 0 && outResources != NULL) {
                 for (int i = 0; i < outResourcesLen; i++) {
                     EUCA_FREE(outResources[i]);
@@ -559,7 +560,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
                 EUCA_FREE(outResources);
             }
         } else {
-            logprintfl(EUCATRACE, "marshalling results outResourcesLen=%d\n", outResourcesLen);
+            LOGTRACE("marshalling results outResourcesLen=%d\n", outResourcesLen);
 
             // set standard fields in output
             adb_describeSensorsResponseType_set_correlationId(output, env, meta.correlationId);
@@ -573,7 +574,7 @@ adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * de
             }
             EUCA_FREE(outResources);
 
-            result = EUCA_OK;   // success
+            result = EUCA_OK;          // success
         }
     }
 
@@ -593,7 +594,7 @@ reply:
     adb_DescribeSensorsResponse_t *response = adb_DescribeSensorsResponse_create(env);
     adb_DescribeSensorsResponse_set_DescribeSensorsResponse(response, env, output);
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
 
     return response;
 }
@@ -788,8 +789,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
 //!
 //! @note
 //!
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses,
-                                                                      const axutil_env_t * env)
+adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env)
 {
     adb_describePublicAddressesType_t *dpa = NULL;
     adb_DescribePublicAddressesResponse_t *ret = NULL;
@@ -815,7 +815,7 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
         status = AXIS2_FALSE;
         outAddressesLen = 0;
     } else if (rc) {
-        logprintfl(EUCAERROR, "doDescribePublicAddresses() failed\n");
+        LOGERROR("doDescribePublicAddresses() failed\n");
         snprintf(statusMessage, 256, "ERROR");
         status = AXIS2_FALSE;
         outAddressesLen = 0;
@@ -893,9 +893,8 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doAssignAddress(&ccMeta, uuid, src, dst);
-        if (rc) {
-            logprintf("ERROR: doAssignAddress() returned FAIL\n");
+        if ((rc = doAssignAddress(&ccMeta, uuid, src, dst)) != EUCA_OK) {
+            logprintf("doAssignAddress() returned FAIL\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -1089,8 +1088,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
 
         rc = 1;
         if (!DONOTHING) {
-            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol,
-                                    minPort, maxPort);
+            rc = doConfigureNetwork(&ccMeta, accountId, type, namedLen, sourceNames, userNames, netLen, sourceNets, destName, destUserName, protocol, minPort, maxPort);
         }
 
         EUCA_FREE(userNames);
@@ -1314,7 +1312,7 @@ adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_
     }
 
     if (rc) {
-        logprintfl(EUCAERROR, "doDescribeResources() failed %d\n", rc);
+        LOGERROR("doDescribeResources() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {

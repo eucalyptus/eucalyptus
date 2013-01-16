@@ -79,6 +79,7 @@
 
 #include <stdio.h>
 #include <time.h>
+#include <eucalyptus.h>
 #include "axis2_stub_EucalyptusGL.h"
 
 /*----------------------------------------------------------------------------*\

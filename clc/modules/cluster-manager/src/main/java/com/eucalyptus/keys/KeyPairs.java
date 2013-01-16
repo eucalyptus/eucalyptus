@@ -73,10 +73,13 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.List;
+import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataCreationException;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -88,7 +91,10 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.primitives.Ints;
 
 public class KeyPairs {
@@ -103,6 +109,27 @@ public class KeyPairs {
   public static List<SshKeyPair> list( OwnerFullName ownerFullName ) throws NoSuchMetadataException {
     try {
       return Transactions.findAll( SshKeyPair.named( ownerFullName, null ) );
+    } catch ( Exception e ) {
+      throw new NoSuchMetadataException( "Failed to find key pairs for " + ownerFullName, e );
+    }
+  }
+
+  /**
+   * List key pairs for the given owner.
+   *
+   * @param ownerFullName The key pair owner
+   * @param filter Predicate to restrict the results
+   * @param criterion The database criterion to restrict the results
+   * @param aliases Aliases for the database criterion
+   * @return The list of key pairs.
+   * @throws NoSuchMetadataException If an error occurs
+   */
+  public static List<SshKeyPair> list( final OwnerFullName ownerFullName,
+                                       final Predicate<? super SshKeyPair> filter,
+                                       final Criterion criterion,
+                                       final Map<String,String> aliases ) throws NoSuchMetadataException {
+    try {
+      return Transactions.filter(  SshKeyPair.named( ownerFullName, null ), filter, criterion, aliases );
     } catch ( Exception e ) {
       throw new NoSuchMetadataException( "Failed to find key pairs for " + ownerFullName, e );
     }
@@ -274,5 +301,24 @@ public class KeyPairs {
     final byte[] intBytes = new byte[length];
     System.arraycopy( data, index, intBytes, 0, length );
     return new BigInteger( intBytes );
+  }
+
+  public static class KeyPairFilterSupport extends FilterSupport<SshKeyPair> {
+    public KeyPairFilterSupport() {
+      super( builderFor( SshKeyPair.class )
+          .withStringProperty( "fingerprint", FilterFunctions.FINGERPRINT )
+          .withStringProperty( "key-name", CloudMetadatas.toDisplayName() )
+          .withPersistenceFilter( "fingerprint", "fingerPrint" )
+          .withPersistenceFilter( "key-name", "displayName" ) );
+    }
+  }
+
+  private enum FilterFunctions implements Function<SshKeyPair,String> {
+    FINGERPRINT {
+      @Override
+      public String apply( final SshKeyPair keyPair ) {
+        return keyPair.getFingerPrint();
+      }
+    }
   }
 }

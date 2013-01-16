@@ -84,17 +84,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/syscall.h>        // to get thread id
-#include <sys/resource.h>       // rusage
-#include <execinfo.h>           // backtrace
+#include <sys/syscall.h>               // to get thread id
+#include <sys/resource.h>              // rusage
+#include <execinfo.h>                  // backtrace
 #include <errno.h>
-#define SYSLOG_NAMES            // we want facilities as strings
+#define SYSLOG_NAMES                   // we want facilities as strings
 #include <syslog.h>
 
 #include "eucalyptus.h"
 #include "log.h"
-#include "misc.h"               // TRUE/FALSE
-#include "ipc.h"                // semaphores
+#include "misc.h"                      // TRUE/FALSE
+#include "ipc.h"                       // semaphores
 #include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
@@ -141,13 +141,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-//! @{
-//! @name these are set by _EUCA_CONTEXT_SETTER, which is included in log-level macros, such as EUCAWARN
-__thread const char *_log_curr_method = "";
-__thread const char *_log_curr_file = "";
-__thread int _log_curr_line = 0;
-//! @}
-
 const char *log_level_names[] = {
     "ALL",
     "EXTREME",
@@ -176,13 +169,13 @@ const char *log_level_names[] = {
 //!
 const char *log_level_prefix[] = {
     "",
-    "%T %L %t9 %m-24 %F-33 |",  // EXTREME
-    "%T %L %t9 %m-24 |",        // TRACE
-    "%T %L %t9 %m-24 |",        // DEBUG
-    "%T %L |",                  // INFO
-    "%T %L |",                  // WARN
-    "%T %L |",                  // ERROR
-    "%T %L |",                  // FATAL
+    "%T %L %t9 %m-24 %F-33 |",         // EXTREME
+    "%T %L %t9 %m-24 |",               // TRACE
+    "%T %L %t9 %m-24 |",               // DEBUG
+    "%T %L |",                         // INFO
+    "%T %L |",                         // WARN
+    "%T %L |",                         // ERROR
+    "%T %L |",                         // FATAL
     ""
 };
 
@@ -198,15 +191,15 @@ const char *log_level_prefix[] = {
 //! - unless log file becomes too big and rolls over
 static FILE *LOGFH = NULL;
 
-static ino_t log_ino = -1;      //!< the current inode
+static ino_t log_ino = -1;             //!< the current inode
 
 //! @{
 //! @name parameters, for now unmodifiable
-static const boolean timelog = FALSE;   //!< change to TRUE for 'TIMELOG' entries
+static const boolean timelog = FALSE;  //!< change to TRUE for 'TIMELOG' entries
 static const boolean do_close_fd = FALSE;   //!< whether to close log fd after each message
 static const boolean do_stat_log = TRUE;    //!< whether to monitor file for changes
-static char log_name[32] = "euca";  //!< name of the log, such as "euca-nc" or "euca-cc" for syslog
-static const int syslog_options = 0;    //!< flags to be passed to openlog(), such as LOG_PID
+static char log_name[32] = "euca";     //!< name of the log, such as "euca-nc" or "euca-cc" for syslog
+static const int syslog_options = 0;   //!< flags to be passed to openlog(), such as LOG_PID
 //! @}
 
 //! @{
@@ -216,8 +209,8 @@ static int log_roll_number = 10;
 static long log_max_size_bytes = MAXLOGFILESIZE;
 static char log_file_path[EUCA_MAX_PATH] = "";
 static char log_custom_prefix[34] = USE_STANDARD_PREFIX;    //!< any other string means use it as custom prefix
-static sem *log_sem = NULL;     //!< if set, the semaphore will be used when logging & rotating logs
-static int syslog_facility = -1;    //!< if not -1 then we are logging to a syslog facility
+static sem *log_sem = NULL;            //!< if set, the semaphore will be used when logging & rotating logs
+static int syslog_facility = -1;       //!< if not -1 then we are logging to a syslog facility
 //! @}
 
 /*----------------------------------------------------------------------------*\
@@ -228,14 +221,15 @@ static int syslog_facility = -1;    //!< if not -1 then we are logging to a sysl
 
 int log_level_int(const char *level);
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in);
+int log_level_get(void);
 void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out);
 int log_file_set(const char *file);
 int log_prefix_set(const char *log_spec);
 int log_facility_set(const char *facility, const char *component_name);
 int log_sem_set(sem * s);
 int logfile(const char *file, int log_level_in, int log_roll_number_in);
-int logprintf(const char *format, ...) __attribute__ ((__format__(__printf__, 1, 2)));
-int logprintfl(int level, const char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
+int logprintf(const char *format, ...) _attribute_format_(1, 2);
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...) _attribute_format_(5, 6);
 int logcat(int debug_level, const char *file_path);
 void eventlog(char *hostTag, char *userTag, char *cid, char *eventTag, char *other);
 void log_dump_trace(char *buf, int buf_size);
@@ -275,7 +269,7 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 int log_level_int(const char *level)
 {
     int l = 0;
-    for (l = 0; l <= EUCAOFF; l++) {
+    for (l = 0; l <= EUCA_LOG_OFF; l++) {
         if (!strcmp(level, log_level_names[l])) {
             return (l);
         }
@@ -308,12 +302,12 @@ static FILE *get_file(boolean do_reopen)
         return LOGFH_DEFAULT;
 
     int fd = -1;
-    if (LOGFH != NULL) {        // apparently the stream is still open
+    if (LOGFH != NULL) {               // apparently the stream is still open
         boolean file_changed = FALSE;
         if (!do_reopen && do_stat_log) {    // we are not reopening for every write
             struct stat statbuf;
             int err = stat(log_file_path, &statbuf);
-            if (err == -1) {    // probably file does not exist, perhaps because it was renamed
+            if (err == -1) {           // probably file does not exist, perhaps because it was renamed
                 file_changed = TRUE;
             } else if (statbuf.st_size < 1) {   // truncated externally, reopen
                 file_changed = TRUE;
@@ -321,7 +315,7 @@ static FILE *get_file(boolean do_reopen)
                 file_changed = TRUE;
             }
         }
-        fd = fileno(LOGFH);     // try to get the file descriptor
+        fd = fileno(LOGFH);            // try to get the file descriptor
         if (file_changed || do_reopen || fd < 0) {
             fclose(LOGFH);
             LOGFH = NULL;
@@ -346,7 +340,7 @@ retry:
     struct stat statbuf;
     int rc = fstat(fd, &statbuf);
     if (!rc) {
-        log_ino = statbuf.st_ino;   // record the inode number of the currently opened log
+        log_ino = statbuf.st_ino;      // record the inode number of the currently opened log
 
         if (((long)statbuf.st_size > log_max_size_bytes) && (log_roll_number > 0)) {
             char oldFile[EUCA_MAX_PATH], newFile[EUCA_MAX_PATH];
@@ -388,15 +382,15 @@ static void release_file(void)
 void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_bytes_in)
 {
     // update the log level
-    if (log_level_in >= EUCAALL && log_level_in <= EUCAOFF) {
+    if (log_level_in >= EUCA_LOG_ALL && log_level_in <= EUCA_LOG_OFF) {
         log_level = log_level_in;
     } else {
         log_level = DEFAULT_LOG_LEVEL;
     }
 
     // update the roll number limit
-    if (log_roll_number_in >= 0 &&  // sanity check
-        log_roll_number_in < 1000 &&    // sanity check
+    if (log_roll_number_in >= 0 &&     // sanity check
+        log_roll_number_in < 1000 &&   // sanity check
         log_roll_number != log_roll_number_in) {
 
         log_roll_number = log_roll_number_in;
@@ -404,9 +398,18 @@ void log_params_set(int log_level_in, int log_roll_number_in, long log_max_size_
     // update the max size for any file
     if (log_max_size_bytes_in >= 0 && log_max_size_bytes != log_max_size_bytes_in) {
         log_max_size_bytes = log_max_size_bytes_in;
-        if (get_file(FALSE))    // that will rotate log files if needed
+        if (get_file(FALSE))           // that will rotate log files if needed
             release_file();
     }
+}
+
+//!
+//! Getter to retrieve the currently configured log level
+//!
+//! @return the currently configured log level
+int log_level_get(void)
+{
+    return (log_level);
 }
 
 //!
@@ -490,7 +493,7 @@ int log_facility_set(const char *facility, const char *component_name)
             }
         }
         if (!matched) {
-            logprintfl(EUCAERROR, "unrecognized log facility '%s' requested, ignoring\n", facility);
+            LOGERROR("unrecognized log facility '%s' requested, ignoring\n", facility);
             return -1;
         }
     }
@@ -499,9 +502,9 @@ int log_facility_set(const char *facility, const char *component_name)
         syslog_facility = facility_int;
         if (component_name)
             snprintf(log_name, sizeof(log_name) - 1, "euca-%s", component_name);
-        closelog();             // in case it was open
+        closelog();                    // in case it was open
         if (syslog_facility != -1) {
-            logprintfl(EUCAINFO, "opening syslog '%s' in facility '%s'\n", log_name, facility);
+            LOGINFO("opening syslog '%s' in facility '%s'\n", log_name, facility);
             openlog(log_name, syslog_options, syslog_facility);
         }
     }
@@ -645,26 +648,26 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
     int in_field_len = strlen(field);
     int out_field_len = MAX_FIELD_LENGTH;
     if (in_field_len < out_field_len) {
-        out_field_len = in_field_len;   // unless specified, we'll use length of the field or max
+        out_field_len = in_field_len;  // unless specified, we'll use length of the field or max
     }
     // first, look ahead down s[] to see if we have length 
     // and alignment specified (leading '-' means left-justified)
     const char *nstart = (*log_spec) + 1;
-    if (*nstart == '-') {       // a leading zero
+    if (*nstart == '-') {              // a leading zero
         left_justify = TRUE;
         nstart++;
     }
     char *nend;
     int i = (int)strtoll(nstart, &nend, 10);
-    if (nstart != nend) {       // we have some digits
-        *log_spec = nend - 1;   // move the pointer ahead so caller will skip digits
-        if (i > 1 && i < 100) { // sanity check
+    if (nstart != nend) {              // we have some digits
+        *log_spec = nend - 1;          // move the pointer ahead so caller will skip digits
+        if (i > 1 && i < 100) {        // sanity check
             out_field_len = i;
         }
     }
     // create a format string that would truncate the field
     // to len and then print the field into 's'
-    if (left < (out_field_len + 1)) {   // not enough room left
+    if (left < (out_field_len + 1)) {  // not enough room left
         return -1;
     }
     // when right-justifying, we want to truncate the field on the left
@@ -678,7 +681,7 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
     char format[10];
     snprintf(format, sizeof(format), "%%%s%ds", (left_justify) ? "-" : "", out_field_len);
     if (snprintf(buf, (out_field_len + 1), format, field + offset) < out_field_len)
-        return -1;              // error in snprintf
+        return -1;                     // error in snprintf
 
     return out_field_len;
 }
@@ -687,6 +690,9 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 //! Main log-printing function, which will dump a line into a log, with a prefix appropriate for
 //! the log level, given that the log level is above the threshold.
 //!
+//! @param[in] func the caller function name (i.e. __FUNCTION__)
+//! @param[in] file the file in which the caller function reside (i.e. __FILE__)
+//! @param[in] line the line at which this function was called (i.e. __LINE__)
 //! @param[in] level the log level for this message
 //! @param[in] format the format string of the message
 //! @param[in] ... the variable argument part of the format
@@ -697,7 +703,7 @@ static int print_field_truncated(const char **log_spec, char *buf, int left, con
 //!
 //! @todo Chuck to evaluate if we cannot standardize the error code returned.
 //!
-int logprintfl(int level, const char *format, ...)
+int logprintfl(const char *func, const char *file, int line, log_level_e level, const char *format, ...)
 {
     int offset = 0;
     boolean custom_spec = FALSE;
@@ -707,8 +713,8 @@ int logprintfl(int level, const char *format, ...)
     // return if level is invalid or below the threshold
     if (level < log_level) {
         return 0;
-    } else if (level < 0 || level > EUCAOFF) {
-        return -1;              // unexpected log level
+    } else if (level < 0 || level > EUCA_LOG_OFF) {
+        return -1;                     // unexpected log level
     }
 
     if (strcmp(log_custom_prefix, USE_STANDARD_PREFIX) == 0) {
@@ -720,65 +726,65 @@ int logprintfl(int level, const char *format, ...)
     }
 
     // go over prefix format for the log level (defined in log.h or custom)
-    for (;                      // prefix_spec is initialized above
+    for (;                             // prefix_spec is initialized above
          *prefix_spec != '\0'; prefix_spec++) {
 
         char *s = buf + offset;
         int left = sizeof(buf) - offset - 1;
         if (left < 1) {
-            return -1;          // not enough room in internal buffer for a prefix
+            return -1;                 // not enough room in internal buffer for a prefix
         }
         // see if we have a formatting character or a regular one
         char c = prefix_spec[0];
         char cn = prefix_spec[1];
-        if (c != '%'            // not a special formatting char
-            || (c == '%' && cn == '%')  // formatting char, escaped
+        if (c != '%'                   // not a special formatting char
+            || (c == '%' && cn == '%') // formatting char, escaped
             || (c == '%' && cn == '\0')) {  // formatting char at the end
             s[0] = c;
             s[1] = '\0';
             offset++;
             if (c == '%' && cn == '%')
-                prefix_spec++;  // swallow the one extra '%' in input
+                prefix_spec++;         // swallow the one extra '%' in input
             continue;
         }
-        prefix_spec++;          // move past the '%' to the formatting char
+        prefix_spec++;                 // move past the '%' to the formatting char
 
         int size = 0;
         switch (*prefix_spec) {
-        case 'T':              // timestamp
+        case 'T':                     // timestamp
             size = fill_timestamp(s, left);
             break;
 
-        case 'L':{             // log-level
+        case 'L':{                    // log-level
                 char l[6];
                 euca_strncpy(l, log_level_names[level], 6); // we want hard truncation
                 size = snprintf(s, left, "%5s", l);
                 break;
             }
-        case 'p':{             // process ID
+        case 'p':{                    // process ID
                 char p[11];
                 snprintf(p, sizeof(p), "%010d", getpid());  // 10 chars is enough for max 32-bit unsigned integer
                 size = print_field_truncated(&prefix_spec, s, left, p);
                 break;
             }
-        case 't':{             // thread ID
+        case 't':{                    // thread ID
                 char t[21];
                 snprintf(t, sizeof(t), "%020d", (pid_t) syscall(SYS_gettid));   // 20 chars is enough for max 64-bit unsigned integer
                 size = print_field_truncated(&prefix_spec, s, left, t);
                 break;
             }
-        case 'm':              // method
-            size = print_field_truncated(&prefix_spec, s, left, _log_curr_method);
+        case 'm':                     // method
+            size = print_field_truncated(&prefix_spec, s, left, func);
             break;
 
-        case 'F':{             // file-and-line
+        case 'F':{                    // file-and-line
                 char file_and_line[64];
-                snprintf(file_and_line, sizeof(file_and_line), "%s:%d", _log_curr_file, _log_curr_line);
+                snprintf(file_and_line, sizeof(file_and_line), "%s:%d", file, line);
                 size = print_field_truncated(&prefix_spec, s, left, file_and_line);
                 break;
             }
 
-        case 's':{             // max RSS of the process
+        case 's':{                    // max RSS of the process
                 struct rusage u;
                 bzero(&u, sizeof(struct rusage));
                 getrusage(RUSAGE_SELF, &u);
@@ -790,7 +796,7 @@ int logprintfl(int level, const char *format, ...)
                 break;
             }
         case '?':
-            s[0] = '?';         // not supported currently
+            s[0] = '?';                // not supported currently
             s[1] = '\0';
             size = 1;
             break;
@@ -804,7 +810,7 @@ int logprintfl(int level, const char *format, ...)
 
         if (size < 0) {
             logprintf("error in prefix construction in logprintfl()\n");
-            return -1;          // something went wrong in the snprintf()s above
+            return -1;                 // something went wrong in the snprintf()s above
         }
         offset += size;
     }
@@ -824,12 +830,12 @@ int logprintfl(int level, const char *format, ...)
 
     if (syslog_facility != -1) {
         // log to syslog, at the appropriate level
-        int l = LOG_DEBUG;      // euca DEBUG, TRACE, and EXTREME use syslog's DEBUG
-        if (level == EUCAERROR)
+        int l = LOG_DEBUG;             // euca DEBUG, TRACE, and EXTREME use syslog's DEBUG
+        if (level == EUCA_LOG_ERROR)
             l = LOG_ERR;
-        else if (level == EUCAWARN)
+        else if (level == EUCA_LOG_WARN)
             l = LOG_WARNING;
-        else if (level == EUCAINFO)
+        else if (level == EUCA_LOG_INFO)
             l = LOG_INFO;
         if (custom_spec)
             syslog(l, buf);
@@ -865,7 +871,7 @@ int logcat(int debug_level, const char *file_path)
             buf[l++] = '\n';
             buf[l] = '\0';
         }
-        logprintfl(debug_level, buf);
+        EUCALOG(debug_level, buf);
         got += l;
     }
     fclose(fp);

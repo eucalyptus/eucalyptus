@@ -63,10 +63,12 @@
 package com.eucalyptus.cloud;
 
 import java.util.Collection;
+import java.util.List;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
 
 public class CloudMetadatas {
   public static <T extends CloudMetadata> Function<T, String> toDisplayName( ) {
@@ -80,34 +82,96 @@ public class CloudMetadatas {
   }
   
   public static <T extends CloudMetadata> Predicate<T> filterById( final Collection<String> requestedIdentifiers ) {
-    return new Predicate<T>( ) {
-      
+    return filterByProperty( requestedIdentifiers, toDisplayName() );
+  } 
+   
+  public static <T extends CloudMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
+	                                                                           final Function<? super T,String> extractor ) {
+
+   return new Predicate<T>( ) {
       @Override
       public boolean apply( T input ) {
-        return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getDisplayName( ) );
+        return requestedValues == null || requestedValues.isEmpty( ) || requestedValues.contains( extractor.apply( input ) );
       }
     };
-    
   }
   
   public static <T extends CloudMetadata> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
     return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
-    
   }
   
   public static <T extends CloudMetadata> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
     return new Predicate<T>( ) {
-      
       @Override
       public boolean apply( T input ) {
         return requestedIdentifiers == null || requestedIdentifiers.isEmpty( ) || requestedIdentifiers.contains( input.getOwner( ).getAccountNumber( ) );
       }
     };
-    
   }
   
-  public static <T extends CloudMetadata> Predicate<T> filterPrivilegesByOwningAccount( final Collection<String> requestedIdentifiers ) {
-    return Predicates.and( filterByOwningAccount( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
-    
+  public static <T extends CloudMetadata> FilterBuilder<T> filteringFor( final Class<T> metadataClass ) {
+    return new FilterBuilder<T>(metadataClass  );
+  }
+
+  public static class FilterBuilder<T extends CloudMetadata> {
+    private final Class<T> metadataClass;
+    private final List<Predicate<? super T>> predicates = Lists.newArrayList();
+
+    private FilterBuilder( final Class<T> metadataClass ) {
+      this.metadataClass = metadataClass;
+    }
+
+    public FilterBuilder<T> byId( final Collection<String> requestedIdentifiers ) {
+      predicates.add( filterById( requestedIdentifiers ) );
+      return this;
+    }
+
+    public <T extends CloudMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
+                     final Function<? super T,String> extractor ) {
+       return new Predicate<T>( ) {
+         @Override
+         public boolean apply( T input ) {
+           return requestedValues == null || requestedValues.isEmpty() || requestedValues.contains( extractor.apply(input) );
+         }
+       };
+     }
+
+    public FilterBuilder<T> byProperty(final Collection<String> requestedValues, final Function<? super T, String> extractor) {
+      predicates.add(filterByProperty(requestedValues, extractor));
+      return this;
+
+    }
+    public FilterBuilder<T> byPrivileges() {
+      predicates.add( RestrictedTypes.filterPrivileged() );
+      return this;
+    }
+
+    public FilterBuilder<T> byPrivilegesWithoutOwner() {
+      predicates.add( RestrictedTypes.filterPrivilegedWithoutOwner() );
+      return this;
+    }
+
+    public FilterBuilder<T> byOwningAccount( final Collection<String> requestedIdentifiers ) {
+      predicates.add( filterByOwningAccount( requestedIdentifiers ) );
+      return this;
+    }
+
+    public FilterBuilder<T> byPredicate( final Predicate<? super T> predicate ) {
+      predicates.add( predicate );
+      return this;
+    }
+
+//TODO:JDK7:Restore the original code for this (does not compile with OpenJDK 1.6.0_24)    
+//    public Predicate<? super T> buildPredicate() {
+//      return Predicates.and( predicates );
+//    }
+
+    public Predicate<? super T> buildPredicate() {
+      return buildPredicate( predicates );
+    }
+
+    private static <ST> Predicate<ST> buildPredicate( final List<Predicate<? super ST>> predicates ) {
+      return Predicates.and( predicates );
+    }    
   }
 }

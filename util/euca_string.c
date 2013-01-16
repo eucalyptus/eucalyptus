@@ -74,16 +74,16 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>             // strlen, strcpy
-#include <ctype.h>              // isspace
+#include <string.h>                    // strlen, strcpy
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <sys/errno.h>          // errno
+#include <sys/errno.h>                 // errno
 #include <limits.h>
 #include <wchar.h>
 
@@ -505,7 +505,7 @@ char *euca_strncat(char *restrict dest, const char *restrict src, size_t size)
 //! @note If from is longer or equals to size, size - 1 caracters will be copied
 //!       into the resulting string to ensure a NULL-Terminated string. If the given
 //!       size field is 0 or if 'from' is NULL, the function will set the first
-//!       character of 'to' to '\0' and return a pointer to 'to'.
+//!       character of 'to' to null and return a pointer to 'to'.
 //!
 char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
 {

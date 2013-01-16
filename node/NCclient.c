@@ -75,7 +75,7 @@
 \*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
-#include <unistd.h>             /* getopt */
+#include <unistd.h>                    /* getopt */
 
 #include <data.h>
 
@@ -134,7 +134,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-boolean debug = FALSE;          //!< Enables debug mode if set to TRUE
+boolean debug = FALSE;                 //!< Enables debug mode if set to TRUE
 
 #ifndef NO_COMP
 const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
@@ -424,7 +424,7 @@ int main(int argc, char **argv)
             timestamp_str = optarg;
             break;
         case 'h':
-            usage();            // will exit
+            usage();                   // will exit
             break;
         case '?':
         default:

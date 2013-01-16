@@ -64,9 +64,11 @@ package com.eucalyptus.entities;
 
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Criterion;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -75,6 +77,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
@@ -225,24 +228,65 @@ public class Transactions {
     }
   }
   
-  public static <T> List<T> filter( T search, Predicate<T> condition ) throws TransactionException {
+  public static <T> List<T> filter( T search, Predicate<? super T> condition ) throws TransactionException {
     Function<T, T> f = Functions.identity( );
     return filteredTransform( search, condition, f );
   }
-  
+
+  public static <T> List<T> filter( final T search,
+                                    final Predicate<? super T> condition,
+                                    final Criterion criterion,
+                                    final Map<String,String> aliases ) throws TransactionException {
+    Function<T, T> f = Functions.identity( );
+    return filteredTransform( search, criterion, aliases, condition, f );
+  }
+
   public static <S, T> List<S> transform( T search, Function<T, S> f ) throws TransactionException {
     Predicate<T> p = Predicates.alwaysTrue( );
     return filteredTransform( search, p, f );
   }
   
-  public static <T, O> List<O> filteredTransform( T search, Predicate<T> condition, Function<T, O> transform ) throws TransactionException {
+  public static <T, O> List<O> filteredTransform( final T search,
+                                                  final Predicate<? super T> condition,
+                                                  final Function<T, O> transform ) throws TransactionException {
     checkParam( search, notNullValue() );
+    final Supplier<List<T>> resultsSupplier = new Supplier<List<T>>() {
+      @Override
+      public List<T> get() {
+        return Entities.query( search );
+      }
+    };
+
+    return filteredTransform( search.getClass(), resultsSupplier, condition, transform );
+  }
+
+  public static <T, O> List<O> filteredTransform( final T search,
+                                                  final Criterion criterion,
+                                                  final Map<String,String> aliases,
+                                                  final Predicate<? super T> condition,
+                                                  final Function<T, O> transform ) throws TransactionException {
+    checkParam( search, notNullValue() );
+    final Supplier<List<T>> resultsSupplier = new Supplier<List<T>>() {
+      @Override
+      public List<T> get() {
+        return Entities.query( search, false, criterion, aliases );
+      }
+    };
+
+    return filteredTransform( search.getClass(), resultsSupplier, condition, transform );
+  }
+
+  private static <T, O> List<O> filteredTransform( Class<?> searchClass,
+                                                   Supplier<List<T>> searchResultSupplier,
+                                                   Predicate<? super T> condition,
+                                                   Function<T, O> transform ) throws TransactionException {
+    checkParam( searchResultSupplier, notNullValue() );
     checkParam( condition, notNullValue() );
     checkParam( transform, notNullValue() );
     List<O> res = Lists.newArrayList( );
-    EntityTransaction db = Transactions.get( search );
+    EntityTransaction db = Transactions.get( searchClass );
     try {
-      List<T> queryResults = Entities.query( search );
+      List<T> queryResults = searchResultSupplier.get();
       for ( T t : queryResults ) {
         if ( condition.apply( t ) ) {
           try {
@@ -264,7 +308,7 @@ public class Transactions {
       pop( );
     }
   }
-  
+
   public static <T> T save( T saveMe ) throws TransactionException {
     return save( saveMe, new Callback<T>( ) {
       
@@ -308,7 +352,7 @@ public class Transactions {
     } );
   }
   
-  public static <T> boolean delete( T search, Predicate<T> precondition ) throws TransactionException {
+  public static <T> boolean delete( T search, Predicate<? super T> precondition ) throws TransactionException {
     checkParam( search, notNullValue() );
     checkParam( precondition, notNullValue() );
     EntityTransaction db = Transactions.get( search );

@@ -61,37 +61,81 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<binding force-classes="true" add-constructors="true">
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.ResourceTag" abstract="true">
-    <value name="key" field="key" usage="required" />
-    <value name="value" field="value" usage="required" />
-  </mapping>
-  <mapping class="edu.ucsb.eucalyptus.msgs.Filter" abstract="true">
-    <value name="name" field="name" usage="required" />
-    <collection name="valueSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="valueSet"
-      item-type="java.lang.String">
-      <structure name="item">
-        <value name="value" />
-      </structure>
-    </collection>
-  </mapping>
-  <mapping name="CreateTags" class="edu.ucsb.eucalyptus.msgs.CreateTagsType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
-      item-type="java.lang.String">
-      <structure name="item">
-        <value name="resourceId" />
-      </structure>
-    </collection>
-    <structure name="tagSet" usage="optional">
-      <collection field="tagSet" factory="org.jibx.runtime.Utility.arrayListFactory">
-        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
-      </collection>
-    </structure>
-  </mapping>
-  <mapping name="CreateTagsResponse" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
-  </mapping>
+<binding force-classes="true" add-constructors="true">    
+    <mapping class="edu.ucsb.eucalyptus.msgs.Filter" abstract="true">
+        <value name="name" field="name" usage="required"/>
+        <collection name="valueSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="valueSet"
+                    item-type="java.lang.String">
+            <structure name="item">
+                <value name="value"/>
+            </structure>
+        </collection>
+    </mapping>
+    <mapping class="edu.ucsb.eucalyptus.msgs.ResourceTag" abstract="true">
+        <value name="key" field="key" usage="required"/>
+        <value name="value" field="value" usage="required"/>
+    </mapping>
+    <mapping name="CreateTags" class="edu.ucsb.eucalyptus.msgs.CreateTagsType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
+                    item-type="java.lang.String">
+            <structure name="item">
+                <value name="resourceId"/>
+            </structure>
+        </collection>
+        <structure name="tagSet" usage="optional">
+            <collection field="tagSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag"/>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping name="CreateTagsResponse" class="edu.ucsb.eucalyptus.msgs.CreateTagsResponseType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    </mapping>
+    <mapping class="edu.ucsb.eucalyptus.msgs.TagInfo" abstract="true">
+        <value name="resourceId" field="resourceId"/>
+        <value name="resourceType" field="resourceType"/>
+        <value name="key" field="key"/>
+        <value name="value" field="value"/>
+    </mapping>
+    <mapping class="edu.ucsb.eucalyptus.msgs.DeleteResourceTag" abstract="true">
+        <value name="key" field="key" usage="optional"/>
+        <value name="value" field="value" usage="optional"/>
+    </mapping>
+    <mapping name="DeleteTags" class="edu.ucsb.eucalyptus.msgs.DeleteTagsType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
+                    item-type="java.lang.String">
+            <structure name="item">
+                <value name="resourceId"/>
+            </structure>
+        </collection>
+        <structure name="tagSet" usage="optional">
+            <collection field="tagSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.DeleteResourceTag"/>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping name="DeleteTagsResponse" class="edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    </mapping>
+    <mapping name="DescribeTags" class="edu.ucsb.eucalyptus.msgs.DescribeTagsType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+    </mapping>
+    <mapping name="DescribeTagsResponse" class="edu.ucsb.eucalyptus.msgs.DescribeTagsResponseType"
+             extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"/>
+        <structure name="tagSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.TagInfo"/>
+            </collection>
+        </structure>
+    </mapping>
 </binding>

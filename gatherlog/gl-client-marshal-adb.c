@@ -76,9 +76,23 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#define _GNU_SOURCE
+#include <assert.h>
+#include <dirent.h>
+#include <sys/errno.h>
+#include <limits.h>
+#include <locale.h>
+#include <pthread.h>
+#include <stdarg.h>
+#include <string.h>
+#include <unistd.h>
+#include <wchar.h>
+#include <sys/stat.h>
+#include <ctype.h>
+
 #include <gl-client-marshal.h>
-#include <euca_auth.h>
 #include <eucalyptus.h>
+#include <euca_auth.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

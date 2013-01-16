@@ -87,6 +87,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
+#include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"
 
 #include <server-marshal.h>
@@ -220,12 +221,12 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
         return (1);
     }
 
-    logprintfl(EUCADEBUG, "invoked: userId=%s, serviceIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), serviceIdsLen);
+    LOGDEBUG("invoked: userId=%s, serviceIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), serviceIdsLen);
 
     //! @TODO for now, return error if list of services is passed in as parameter
     /*
        if (serviceIdsLen > 0) {
-       logprintfl(EUCAERROR, "DescribeServices(): received non-zero number of input services, returning fail\n");
+       LOGERROR("DescribeServices(): received non-zero number of input services, returning fail\n");
        *outStatusesLen = 0;
        *outStatuses = NULL;
        return(1);
@@ -235,14 +236,14 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     {
         if (!strcmp(config->ccStatus.serviceId.name, "self")) {
             for (i = 0; i < serviceIdsLen; i++) {
-                logprintfl(EUCADEBUG, "received input serviceId[%d]\n", i);
+                LOGDEBUG("received input serviceId[%d]\n", i);
                 if (strlen(serviceIds[i].type)) {
                     if (!strcmp(serviceIds[i].type, "cluster")) {
                         snprintf(uri, MAX_PATH, "%s", serviceIds[i].uris[0]);
                         rc = tokenize_uri(uri, uriType, host, &port, path);
                         if (strlen(host)) {
-                            logprintfl(EUCADEBUG, "setting local serviceId to input serviceId (type=%s name=%s partition=%s)\n",
-                                       SP(serviceIds[i].type), SP(serviceIds[i].name), SP(serviceIds[i].partition));
+                            LOGDEBUG("setting local serviceId to input serviceId (type=%s name=%s partition=%s)\n",
+                                     SP(serviceIds[i].type), SP(serviceIds[i].name), SP(serviceIds[i].partition));
                             memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
                         }
                     }
@@ -254,11 +255,11 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
 
     for (i = 0; i < 16; i++) {
         if (strlen(config->services[i].type)) {
-            logprintfl(EUCADEBUG, "internal serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->services[i].type,
-                       config->services[i].name, config->services[i].partition, config->services[i].urisLen);
+            LOGDEBUG("internal serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->services[i].type,
+                     config->services[i].name, config->services[i].partition, config->services[i].urisLen);
             for (j = 0; j < 8; j++) {
                 if (strlen(config->services[i].uris[j])) {
-                    logprintfl(EUCADEBUG, "internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+                    LOGDEBUG("internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
                 }
             }
         }
@@ -266,11 +267,11 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
 
     for (i = 0; i < 16; i++) {
         if (strlen(config->disabledServices[i].type)) {
-            logprintfl(EUCADEBUG, "internal disabled serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->disabledServices[i].type,
-                       config->disabledServices[i].name, config->disabledServices[i].partition, config->disabledServices[i].urisLen);
+            LOGDEBUG("internal disabled serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->disabledServices[i].type,
+                     config->disabledServices[i].name, config->disabledServices[i].partition, config->disabledServices[i].urisLen);
             for (j = 0; j < 8; j++) {
                 if (strlen(config->disabledServices[i].uris[j])) {
-                    logprintfl(EUCADEBUG, "internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
+                    LOGDEBUG("internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
                 }
             }
         }
@@ -278,11 +279,11 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
 
     for (i = 0; i < 16; i++) {
         if (strlen(config->notreadyServices[i].type)) {
-            logprintfl(EUCADEBUG, "internal not ready serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->notreadyServices[i].type,
-                       config->notreadyServices[i].name, config->notreadyServices[i].partition, config->notreadyServices[i].urisLen);
+            LOGDEBUG("internal not ready serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->notreadyServices[i].type,
+                     config->notreadyServices[i].name, config->notreadyServices[i].partition, config->notreadyServices[i].urisLen);
             for (j = 0; j < 8; j++) {
                 if (strlen(config->notreadyServices[i].uris[j])) {
-                    logprintfl(EUCADEBUG, "internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);
+                    LOGDEBUG("internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);
                 }
             }
         }
@@ -291,7 +292,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     *outStatusesLen = 1;
     *outStatuses = EUCA_ZALLOC(1, sizeof(serviceStatusType));
     if (!*outStatuses) {
-        logprintfl(EUCAFATAL, "out of memory!\n");
+        LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }
 
@@ -301,7 +302,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     myStatus->localEpoch = config->ccStatus.localEpoch;
     memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
     return (0);
 }
 
@@ -326,19 +327,19 @@ int doStartService(ncMetadata * pMeta)
         return (1);
     }
 
-    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     // this is actually a NOP
     sem_mywait(CONFIG);
     {
         if (config->ccState == SHUTDOWNCC) {
-            logprintfl(EUCAWARN, "attempt to start a shutdown CC, skipping.\n");
+            LOGWARN("attempt to start a shutdown CC, skipping.\n");
             ret++;
         } else if (ccCheckState(0)) {
-            logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
             ret++;
         } else {
-            logprintfl(EUCAINFO, "starting service\n");
+            LOGINFO("starting service\n");
             ret = 0;
             config->kick_enabled = 0;
             ccChangeState(DISABLED);
@@ -346,7 +347,7 @@ int doStartService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
 
     return (ret);
 }
@@ -372,18 +373,18 @@ int doStopService(ncMetadata * pMeta)
         return (1);
     }
 
-    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     {
         if (config->ccState == SHUTDOWNCC) {
-            logprintfl(EUCAWARN, "attempt to stop a shutdown CC, skipping.\n");
+            LOGWARN("attempt to stop a shutdown CC, skipping.\n");
             ret++;
         } else if (ccCheckState(0)) {
-            logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
             ret++;
         } else {
-            logprintfl(EUCAINFO, "stopping service\n");
+            LOGINFO("stopping service\n");
             ret = 0;
             config->kick_enabled = 0;
             ccChangeState(STOPPED);
@@ -391,7 +392,7 @@ int doStopService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
 
     return (ret);
 }
@@ -419,18 +420,18 @@ int doEnableService(ncMetadata * pMeta)
         return (1);
     }
 
-    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     {
         if (config->ccState == SHUTDOWNCC) {
-            logprintfl(EUCAWARN, "attempt to enable a shutdown CC, skipping.\n");
+            LOGWARN("attempt to enable a shutdown CC, skipping.\n");
             ret++;
         } else if (ccCheckState(0)) {
-            logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
             ret++;
         } else if (config->ccState != ENABLED) {
-            logprintfl(EUCADEBUG, "enabling service\n");
+            LOGDEBUG("enabling service\n");
             ret = 0;
             // tell monitor thread to (re)enable
             config->kick_monitor_running = 0;
@@ -455,13 +456,13 @@ int doEnableService(ncMetadata * pMeta)
             sem_mypost(CONFIG);
 
             if (!done) {
-                logprintfl(EUCADEBUG, "waiting for monitor to re-initialize (%d/60)\n", i);
+                LOGDEBUG("waiting for monitor to re-initialize (%d/60)\n", i);
                 sleep(1);
             }
         }
     }
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
     return (ret);
 }
 
@@ -486,18 +487,18 @@ int doDisableService(ncMetadata * pMeta)
         return (1);
     }
 
-    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     {
         if (config->ccState == SHUTDOWNCC) {
-            logprintfl(EUCAWARN, "attempt to disable a shutdown CC, skipping.\n");
+            LOGWARN("attempt to disable a shutdown CC, skipping.\n");
             ret++;
         } else if (ccCheckState(0)) {
-            logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
             ret++;
         } else {
-            logprintfl(EUCAINFO, "disabling service\n");
+            LOGINFO("disabling service\n");
             ret = 0;
             config->kick_enabled = 0;
             ccChangeState(DISABLED);
@@ -505,7 +506,7 @@ int doDisableService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
     return (ret);
 }
 
@@ -530,7 +531,7 @@ int doShutdownService(ncMetadata * pMeta)
         return (1);
     }
 
-    logprintfl(EUCADEBUG, "invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
     {
@@ -539,7 +540,7 @@ int doShutdownService(ncMetadata * pMeta)
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
     return (ret);
 }
 
@@ -590,15 +591,13 @@ int instIpSync(ccInstance * inst, void *in)
         return (0);
     }
 
-    logprintfl(EUCADEBUG,
-               "instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s NCvlan=%d NCnetworkIndex=%d\n",
-               inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan, inst->ccnet.networkIndex,
-               inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
+    LOGDEBUG("instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s "
+             "NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan,
+             inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
 
-    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0'
-        && inst->ccnet.privateMac[0] == '\0') {
+    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
         // ccnet is completely empty, make a copy of ncnet
-        logprintfl(EUCADEBUG, "ccnet is empty, copying ncnet\n");
+        LOGDEBUG("ccnet is empty, copying ncnet\n");
         memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
         return (1);
     }
@@ -616,44 +615,40 @@ int instIpSync(ccInstance * inst, void *in)
     if ((inst->ccnet.publicIp[0] == '\0' || !strcmp(inst->ccnet.publicIp, "0.0.0.0"))
         && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
         // case 2
-        logprintfl(EUCADEBUG, "CC publicIp is empty, NC publicIp is set\n");
+        LOGDEBUG("CC publicIp is empty, NC publicIp is set\n");
         snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
         ret++;
     } else if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
                 && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
                && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
         // case 4
-        logprintfl(EUCADEBUG, "CC publicIp and NC publicIp differ\n");
+        LOGDEBUG("CC publicIp and NC publicIp differ\n");
         snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
         ret++;
     }
     // VLAN cases
     if (inst->ccnet.vlan != inst->ncnet.vlan) {
         // problem
-        logprintfl(EUCAERROR, "CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
+        LOGERROR("CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
     }
     inst->ccnet.vlan = inst->ncnet.vlan;
     if (inst->ccnet.vlan >= 0) {
         if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-            logprintfl(EUCAWARN,
-                       "detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n",
-                       inst->ccnet.vlan);
+            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
             ret++;
         }
     }
     // networkIndex cases
     if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
         // problem
-        logprintfl(EUCAERROR, "CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId,
-                   inst->ccnet.networkIndex, inst->ncnet.networkIndex);
+        LOGERROR("CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
     }
     inst->ccnet.networkIndex = inst->ncnet.networkIndex;
 
     // mac addr cases
     if (strcmp(inst->ccnet.privateMac, inst->ncnet.privateMac)) {
         // problem;
-        logprintfl(EUCAERROR, "CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac,
-                   inst->ncnet.privateMac);
+        LOGERROR("CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
     }
     snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
 
@@ -691,8 +686,8 @@ int instNetParamsSet(ccInstance * inst, void *in)
         return (0);
     }
 
-    logprintfl(EUCADEBUG, "instanceId=%s publicIp=%s privateIp=%s privateMac=%s vlan=%d\n", inst->instanceId, inst->ccnet.publicIp,
-               inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan);
+    LOGDEBUG("instanceId=%s publicIp=%s privateIp=%s privateMac=%s vlan=%d\n", inst->instanceId, inst->ccnet.publicIp,
+             inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan);
 
     if (inst->ccnet.vlan >= 0) {
         // activate network
@@ -713,10 +708,9 @@ int instNetParamsSet(ccInstance * inst, void *in)
             if ((vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, cleanGroupName))
                 || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId))) {
                 // this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
-                logprintfl(EUCAERROR,
-                           "input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n",
-                           vnetconfig->users[inst->ccnet.vlan].userName, vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan,
-                           inst->accountId, cleanGroupName, inst->ccnet.vlan);
+                LOGERROR("input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s "
+                         "vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName,
+                         vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->accountId, cleanGroupName, inst->ccnet.vlan);
                 ret = 1;
             } else {
                 //  snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
@@ -737,12 +731,11 @@ int instNetParamsSet(ccInstance * inst, void *in)
     }
 
     if (ret) {
-        logprintfl(EUCADEBUG, "sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
-                   inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
+        LOGDEBUG("sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
+                 inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
     } else {
-        logprintfl(EUCADEBUG,
-                   "sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
-                   inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
+        LOGDEBUG("sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
+                 inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
     }
 
     return (0);
@@ -771,13 +764,13 @@ int instNetReassignAddrs(ccInstance * inst, void *in)
         return (0);
     }
 
-    logprintfl(EUCADEBUG, "instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+    LOGDEBUG("instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
     if (!strcmp(inst->ccnet.publicIp, "0.0.0.0") || !strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
-        logprintfl(EUCAWARN, "ignoring instance with unset publicIp/privateIp\n");
+        LOGWARN("ignoring instance with unset publicIp/privateIp\n");
     } else {
         rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
         if (rc) {
-            logprintfl(EUCAERROR, "cannot reassign address\n");
+            LOGERROR("cannot reassign address\n");
             ret = 1;
         }
     }
@@ -807,7 +800,7 @@ int clean_network_state(void)
 
     tmpvnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
     if (!tmpvnetconfig) {
-        logprintfl(EUCAERROR, "out of memory\n");
+        LOGERROR("out of memory\n");
         return -1;
     }
 
@@ -815,18 +808,18 @@ int clean_network_state(void)
 
     rc = vnetUnsetMetadataRedirect(tmpvnetconfig);
     if (rc) {
-        logprintfl(EUCAWARN, "failed to unset metadata redirect\n");
+        LOGWARN("failed to unset metadata redirect\n");
     }
 
     for (i = 1; i < NUMBER_OF_PUBLIC_IPS; i++) {
         if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
             ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
-            logprintfl(EUCADEBUG, "running command '%s'\n", cmd);
+            LOGDEBUG("running command '%s'\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
             if (rc && rc != 2) {
-                logprintfl(EUCAERROR, "running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
+                LOGERROR("running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
             }
             EUCA_FREE(ipstr);
         }
@@ -840,7 +833,7 @@ int clean_network_state(void)
         if (pidstr) {
             rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
             if (rc) {
-                logprintfl(EUCAERROR, "could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
+                LOGERROR("could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
             }
             EUCA_FREE(pidstr);
         }
@@ -853,7 +846,7 @@ int clean_network_state(void)
             if (vnetconfig->networks[i].active) {
                 rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
                 if (rc) {
-                    logprintfl(EUCADEBUG, "failed to tear down network rc=%d\n", rc);
+                    LOGDEBUG("failed to tear down network rc=%d\n", rc);
                 }
             }
         }

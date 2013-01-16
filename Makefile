@@ -44,6 +44,9 @@ build: Makedefs
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done
 
+doc:
+	@(cd doxygen && $(MAKE) $@) || exit $$? ;
+	
 deploy: build
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done

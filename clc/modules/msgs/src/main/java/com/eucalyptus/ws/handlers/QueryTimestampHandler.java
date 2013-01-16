@@ -64,59 +64,58 @@ package com.eucalyptus.ws.handlers;
 
 import java.net.URLDecoder;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.crypto.util.SecurityHeader;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.StackConfiguration;
+import com.eucalyptus.ws.util.HmacUtils;
+import com.google.common.base.Function;
 
 @ChannelPipelineCoverage( "one" )
 public class QueryTimestampHandler extends MessageStackHandler {
-  private static Logger LOG = Logger.getLogger( QueryTimestampHandler.class );
+  private static final Logger LOG = Logger.getLogger( QueryTimestampHandler.class );
+  private static final EnumSet<HmacUtils.SignatureVersion> SIGNATURE_VERSIONS = EnumSet.allOf(HmacUtils.SignatureVersion.class);
   
   @Override
-  public void incomingMessage( MessageEvent event ) throws AuthenticationException {
+  public void incomingMessage( final MessageEvent event ) throws AuthenticationException {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-      MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-      Map<String, String> parameters = httpRequest.getParameters( );
-      if ( !parameters.containsKey( SecurityParameter.Timestamp.toString( ) ) && !parameters.containsKey( SecurityParameter.Expires.toString( ) ) ) {
-        throw new AuthenticationException( "One of the following parameters must be specified: " + SecurityParameter.Timestamp + " OR "
-          + SecurityParameter.Expires );
+      final MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );      
+      final Map<String, String> parameters = httpRequest.getParameters( );
+      final Function<String,List<String>> headerLookup = SignatureHandlerUtils.headerLookup( httpRequest );
+      final Function<String,List<String>> parameterLookup = SignatureHandlerUtils.parameterLookup( httpRequest );      
+      
+      final boolean hasSignatureDate = HmacUtils.hasSignatureDate( SIGNATURE_VERSIONS, headerLookup, parameterLookup );
+      if ( !hasSignatureDate &&
+           !parameters.containsKey( SecurityParameter.Expires.parameter( ) ) ) {
+        throw new AuthenticationException( "One of the following parameters must be specified: " + SecurityParameter.Timestamp.parameter() + " OR "
+          + SecurityParameter.Expires.parameter() + " OR " + SecurityParameter.X_Amz_Date.parameter() + " OR " + SecurityHeader.Date.header( ) );
       }
-      Calendar now = null;
-      Calendar expires = null;
+      final Calendar now = Calendar.getInstance( );
+      final Calendar expires = Calendar.getInstance( );
       String timestamp = null;
       String exp = null;
       try {
-        now = Calendar.getInstance( );
-        expires = null;
-        if ( parameters.containsKey( SecurityParameter.Timestamp.toString( ) ) ) {
-          timestamp = parameters.remove( SecurityParameter.Timestamp.toString( ) );
-          try {
-            expires = Timestamps.parseTimestamp( timestamp );
-          } catch ( Exception e ) {
-            expires = Timestamps.parseTimestamp( URLDecoder.decode( timestamp ) );
-          }
-          // allow 20 secs for clock drift
-          now.add( Calendar.SECOND, StackConfiguration.CLOCK_SKEW_SEC );
-          // make sure that the message wasn't generated in the future
-          if ( now.before( expires ) ) {
-            throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp );
-          }
-          // allow caching for 15 mins + 20 secs for clock drift
-          expires.add( Calendar.SECOND, 900 + StackConfiguration.CLOCK_SKEW_SEC );
+        if ( hasSignatureDate ) {
+          final Date date = HmacUtils.getSignatureDate( SIGNATURE_VERSIONS, headerLookup, parameterLookup );
+          parameters.keySet().removeAll( HmacUtils.detectSignatureVariant( headerLookup, parameterLookup ).getDateParametersToRemove() );
+          expires.setTimeInMillis( verifyTimestampAndCalculateExpiry( now.getTimeInMillis(), date ) );
         } else {
-          exp = parameters.remove( SecurityParameter.Expires.toString( ) );
+          exp = parameters.remove( SecurityParameter.Expires.parameter( ) );
           try {
-            expires = Timestamps.parseTimestamp( exp );
+            expires.setTime( Timestamps.parseIso8601Timestamp( exp ) );
           } catch ( Exception e ) {
-            expires = Timestamps.parseTimestamp( URLDecoder.decode( exp ) );
+            expires.setTime( Timestamps.parseIso8601Timestamp( URLDecoder.decode( exp ) ) );
           }
           // in case of Expires, for now, we accept arbitrary time in the future
           Calendar cacheExpire = ( Calendar ) now.clone( );
@@ -144,5 +143,19 @@ public class QueryTimestampHandler extends MessageStackHandler {
         throw new AuthenticationException( "Message has expired (times in UTC): Timestamp=" + timestamp + " Expires=" + exp + " Deadline=" + expiryTime );
       }
     }
+  }
+
+  private long verifyTimestampAndCalculateExpiry( final long now, 
+                                                  final Date timestamp ) throws AuthenticationException {
+    // allow 20 secs for clock drift
+    final long maxTimestamp = now + TimeUnit.SECONDS.toMillis( StackConfiguration.CLOCK_SKEW_SEC );
+    
+    // make sure that the message wasn't generated in the future
+    if ( maxTimestamp < timestamp.getTime() ) {
+      throw new AuthenticationException( "Message was generated in the future (times in UTC): Timestamp=" + timestamp );
+    }
+    
+    // allow caching for 15 mins + 20 secs for clock drift
+    return timestamp.getTime() + TimeUnit.SECONDS.toMillis( 900 + StackConfiguration.CLOCK_SKEW_SEC );
   }
 }

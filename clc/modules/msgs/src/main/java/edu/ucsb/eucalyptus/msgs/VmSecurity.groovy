@@ -62,8 +62,6 @@
 
 package edu.ucsb.eucalyptus.msgs
 
-import java.security.Policy;
-import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
@@ -90,11 +88,13 @@ public class AuthorizeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
   String groupUserId;
   String groupName;
+  String groupId;
   @HttpEmbedded
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
 /** *******************************************************************************/
 public class CreateSecurityGroupResponseType extends VmSecurityMessage {
+  String groupId;
 }
 public class CreateSecurityGroupType extends VmSecurityMessage {
   String groupName;
@@ -105,6 +105,7 @@ public class DeleteSecurityGroupResponseType extends VmSecurityMessage {
 }
 public class DeleteSecurityGroupType extends VmSecurityMessage {
   String groupName;
+  String groupId;
 }
 /** *******************************************************************************/
 public class RevokeSecurityGroupIngressResponseType extends VmSecurityMessage {
@@ -113,6 +114,7 @@ public class RevokeSecurityGroupIngressType extends VmSecurityMessage {
   @HttpParameterMapping(parameter="UserId")
   String groupUserId;
   String groupName;
+  String groupId;
   @HttpEmbedded
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
 }
@@ -125,20 +127,23 @@ public class DescribeSecurityGroupsType extends VmSecurityMessage {
   ArrayList<String> securityGroupSet = new ArrayList<String>();
   @HttpParameterMapping (parameter = "GroupId")
   ArrayList<String> securityGroupIdSet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class SecurityGroupItemType extends EucalyptusData {
   String accountId;
   String groupName;
   String groupDescription;
+  String groupId;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
   public SecurityGroupItemType( ) {
     super( );
   }
-  public SecurityGroupItemType( String accountId, String groupName, String groupDescription ) {
+  public SecurityGroupItemType( String accountId, String groupId, String groupName, String groupDescription ) {
     super( );
     this.accountId = accountId;
+    this.groupId = groupId;
     this.groupName = groupName;
     this.groupDescription = groupDescription;
   }

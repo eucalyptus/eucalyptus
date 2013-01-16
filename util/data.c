@@ -265,8 +265,7 @@ ncResource *allocate_resource(char *nodeStatus, char *iqn, int memorySizeMax, in
 void free_resource(ncResource ** resp);
 
 boolean is_volume_used(const ncVolume * v);
-ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal,
-                      const char *stateName);
+ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
 ncVolume *free_volume(ncInstance * instance, const char *volumeId);
 
 /*----------------------------------------------------------------------------*\
@@ -777,8 +776,7 @@ boolean is_volume_used(const ncVolume * v)
 //!
 //! @return a pointer to the volume if found. Otherwize NULL is returned.
 //!
-ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal,
-                      const char *stateName)
+ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName)
 {
     ncVolume *v = NULL;
 

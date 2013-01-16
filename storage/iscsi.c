@@ -77,11 +77,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>             /* close */
+#include <unistd.h>                    /* close */
 #include <assert.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h>              /* open */
+#include <fcntl.h>                     /* open */
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -147,7 +147,7 @@ static char connect_storage_cmd_path[MAX_PATH] = { 0 };
 static char disconnect_storage_cmd_path[MAX_PATH] = { 0 };
 static char get_storage_cmd_path[MAX_PATH] = { 0 };
 
-static sem *iscsi_sem = NULL;   //!< for serializing attach and detach invocations
+static sem *iscsi_sem = NULL;          //!< for serializing attach and detach invocations
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -219,12 +219,12 @@ char *connect_iscsi_target(const char *dev_string)
     assert(strlen(home));
 
     snprintf(command, MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
-    logprintfl(EUCATRACE, "invoking `%s`\n", command);
+    LOGTRACE("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
     ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, CONNECT_TIMEOUT);
     sem_v(iscsi_sem);
-    logprintfl(EUCADEBUG, "connect script returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
+    LOGDEBUG("connect script returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
     if (ret == 0)
         return (strdup(stdout_str));
@@ -248,12 +248,12 @@ int disconnect_iscsi_target(const char *dev_string)
     assert(strlen(home));
 
     snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
-    logprintfl(EUCATRACE, "invoking `%s`\n", command);
+    LOGTRACE("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
     ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, DISCONNECT_TIMEOUT);
     sem_v(iscsi_sem);
-    logprintfl(EUCADEBUG, "disconnect script returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
+    LOGDEBUG("disconnect script returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
     return (ret);
 }
@@ -275,12 +275,12 @@ char *get_iscsi_target(const char *dev_string)
     assert(strlen(home));
 
     snprintf(command, MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
-    logprintfl(EUCADEBUG, "invoking `%s`\n", command);
+    LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
     ret = timeshell(command, stdout_str, stderr_str, MAX_OUTPUT, GET_TIMEOUT);
     sem_v(iscsi_sem);
-    logprintfl(EUCADEBUG, "get storage script returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
+    LOGDEBUG("get storage script returned: %d, stdout: '%s', stderr: '%s'\n", ret, stdout_str, stderr_str);
 
     if (ret == 0)
         return (strdup(stdout_str));

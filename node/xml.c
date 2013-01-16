@@ -79,10 +79,10 @@
 #include <stdlib.h>
 #include <assert.h>
 #define __USE_GNU
-#include <string.h>             // strlen, strcpy
+#include <string.h>                    // strlen, strcpy
 #include <time.h>
-#include <sys/types.h>          // umask
-#include <sys/stat.h>           // umask
+#include <sys/types.h>                 // umask
+#include <sys/stat.h>                  // umask
 #include <pthread.h>
 #include <libxml/xmlmemory.h>
 #include <libxml/debugXML.h>
@@ -97,12 +97,12 @@
 
 #include <eucalyptus.h>
 #include <eucalyptus-config.h>
-#include <backing.h>            // umask
+#include <backing.h>                   // umask
 #include <data.h>
 #include <misc.h>
 #include <euca_string.h>
 
-#include "handlers.h"           // nc_state_t
+#include "handlers.h"                  // nc_state_t
 #include "xml.h"
 
 /*----------------------------------------------------------------------------*\
@@ -149,11 +149,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean initialized = FALSE; //!< To determine if the XML library has been initialized
+static boolean initialized = FALSE;    //!< To determine if the XML library has been initialized
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
-static char xslt_path[MAX_PATH];    //!< Destination path for the XSLT files
+static char xslt_path[MAX_PATH];       //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
 
 /*----------------------------------------------------------------------------*\
@@ -182,9 +182,8 @@ static void cleanup(void);
 static int path_check(const char *path, const char *name);
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
 
-static void error_handler(void *ctx, const char *fmt, ...) __attribute__ ((__format__(__printf__, 2, 3)));;
-static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
-                                 int outputXmlBufferSize);
+static void error_handler(void *ctx, const char *fmt, ...) _attribute_format_(2, 3);
+static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer, int outputXmlBufferSize);
 
 #ifdef __STANDALONE
 static void create_dummy_instance(const char *file);
@@ -193,17 +192,17 @@ int main(int argc, char **argv);
 
 #ifdef __STANDALONE2
 int main(int argc, char **argv)
-#endif                          /* __STANDALONE2 */
+#endif                                 /* __STANDALONE2 */
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-#ifdef __STANDALONE             // if compiling as a stand-alone binary (for unit testing)
+#ifdef __STANDALONE                    // if compiling as a stand-alone binary (for unit testing)
 #define INIT() if (!initialized) init(NULL)
 #elif __STANDALONE2
 #define INIT() if (!initialized) init(NULL)
-#else                           // if linking against an NC, find nc_state symbol
+#else                                  // if linking against an NC, find nc_state symbol
 extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
 #endif
@@ -231,7 +230,7 @@ static void init(struct nc_state_t *nc_state)
     {
         if (!initialized) {
             xmlInitParser();
-            LIBXML_TEST_VERSION;    // verifies that loaded library matches the compiled library
+            LIBXML_TEST_VERSION;       // verifies that loaded library matches the compiled library
             xmlSubstituteEntitiesDefault(1);    // substitute entities while parsing
             xmlSetGenericErrorFunc(NULL, error_handler);    // catches errors/warnings that libxml2 writes to stderr
             xsltSetGenericErrorFunc(NULL, error_handler);   // catches errors/warnings that libslt writes to stderr
@@ -254,7 +253,7 @@ static void init(struct nc_state_t *nc_state)
 static void cleanup(void)
 {
     xsltCleanupGlobals();
-    xmlCleanupParser();         // calls xmlCleanupGlobals()
+    xmlCleanupParser();                // calls xmlCleanupGlobals()
 }
 #endif /* 0 */
 
@@ -269,7 +268,7 @@ static void cleanup(void)
 static int path_check(const char *path, const char *name)
 {
     if (strstr(path, "/dev/") == path) {
-        logprintfl(EUCAERROR, "internal error: path to %s points to a device %s\n", name, path);
+        LOGERROR("internal error: path to %s points to a device %s\n", name, path);
         return (EUCA_ERROR);
     }
     return (EUCA_OK);
@@ -290,11 +289,11 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
     int ret = 0;
     mode_t old_umask = umask(~BACKING_FILE_PERM);   // ensure the generated XML file has the right perms
 
-    chmod(path, BACKING_FILE_PERM); // ensure perms in case when XML file exists
+    chmod(path, BACKING_FILE_PERM);    // ensure perms in case when XML file exists
     if ((ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1)) > 0) {
-        logprintfl(EUCADEBUG, "[%s] wrote %s XML to %s\n", instanceId, type, path);
+        LOGDEBUG("[%s] wrote %s XML to %s\n", instanceId, type, path);
     } else {
-        logprintfl(EUCAERROR, "[%s] failed to write %s XML to %s\n", instanceId, type, path);
+        LOGERROR("[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }
     umask(old_umask);
     return ((ret > 0) ? (EUCA_OK) : (EUCA_ERROR));
@@ -369,14 +368,14 @@ int gen_instance_xml(const ncInstance * instance)
         if (instance->params.kernel) {
             path = instance->params.kernel->backingPath;
             if (path_check(path, "kernel"))
-                goto free;      // sanity check
+                goto free;             // sanity check
             _ELEMENT(instanceNode, "kernel", path);
         }
 
         if (instance->params.ramdisk) {
             path = instance->params.ramdisk->backingPath;
             if (path_check(path, "ramdisk"))
-                goto free;      // sanity check
+                goto free;             // sanity check
             _ELEMENT(instanceNode, "ramdisk", path);
         }
 
@@ -430,7 +429,7 @@ int gen_instance_xml(const ncInstance * instance)
                     if ((vbr->partitionNumber == 0) && (vbr->type == NC_RESOURCE_IMAGE)) {
                         continue;
                     }
-                } else {        // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
+                } else {               // on all other os + hypervisor combinations, disks are used, so partitions must be skipped
                     if (vbr->partitionNumber > 0) {
                         continue;
                     }
@@ -530,7 +529,7 @@ static void error_handler(void *ctx, const char *fmt, ...)
         if ((buf[i] == '\n') || (i == (sizeof(buf) - 1))) {
             size = 0;
             buf[i] = '\0';
-            logprintfl(EUCATRACE, "ERROR from XML2/XSLT {%s}\n", buf);
+            LOGTRACE("ERROR from XML2/XSLT {%s}\n", buf);
         }
 
         if (buf[i] == '\0') {
@@ -551,8 +550,7 @@ static void error_handler(void *ctx, const char *fmt, ...)
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include EUCA_ERROR and EUCA_IO_ERROR.
 //!
-static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer,
-                                 int outputXmlBufferSize)
+static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer, int outputXmlBufferSize)
 {
     int err = EUCA_OK;
     int i = 0;
@@ -583,12 +581,12 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                 if (outputXmlPath != NULL) {
                     if ((fp = fopen(outputXmlPath, "w")) != NULL) {
                         if ((bytes = xsltSaveResultToFile(fp, res, cur)) == -1) {
-                            logprintfl(EUCAERROR, "failed to save XML document to %s\n", outputXmlPath);
+                            LOGERROR("failed to save XML document to %s\n", outputXmlPath);
                             err = EUCA_IO_ERROR;
                         }
                         fclose(fp);
                     } else {
-                        logprintfl(EUCAERROR, "failed to create file %s\n", outputXmlPath);
+                        LOGERROR("failed to create file %s\n", outputXmlPath);
                         err = EUCA_IO_ERROR;
                     }
                 }
@@ -604,29 +602,29 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
                                     outputXmlBuffer[j++] = c;
                             }
                         } else {
-                            logprintfl(EUCAERROR, "XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
+                            LOGERROR("XML string buffer is too small (%d > %d)\n", buf_size, outputXmlBufferSize);
                             err = EUCA_ERROR;
                         }
                         xmlFree(buf);
                     } else {
-                        logprintfl(EUCAERROR, "failed to save XML document to a string\n");
+                        LOGERROR("failed to save XML document to a string\n");
                         err = EUCA_ERROR;
                     }
                 }
             } else {
-                logprintfl(EUCAERROR, "failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
+                LOGERROR("failed to apply stylesheet %s to %s\n", xsltStylesheetPath, inputXmlPath);
                 err = EUCA_ERROR;
             }
             if (res != NULL)
                 xmlFreeDoc(res);
             xmlFreeDoc(doc);
         } else {
-            logprintfl(EUCAERROR, "failed to parse XML document %s\n", inputXmlPath);
+            LOGERROR("failed to parse XML document %s\n", inputXmlPath);
             err = EUCA_ERROR;
         }
         xsltFreeStylesheet(cur);
     } else {
-        logprintfl(EUCAERROR, "failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
+        LOGERROR("failed to open and parse XSL-T stylesheet file %s\n", xsltStylesheetPath);
         err = EUCA_IO_ERROR;
     }
 
@@ -756,7 +754,7 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
 
     INIT();
 
-    logprintfl(EUCATRACE, "searching for '%s' in '%s'\n", xpath, xml_path);
+    LOGTRACE("searching for '%s' in '%s'\n", xpath, xml_path);
     pthread_mutex_lock(&xml_mutex);
     {
         if ((doc = xmlParseFile(xml_path)) != NULL) {
@@ -774,15 +772,15 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
                     }
                     xmlXPathFreeObject(result);
                 } else {
-                    logprintfl(EUCAERROR, "no results for '%s' in '%s'\n", xpath, xml_path);
+                    LOGERROR("no results for '%s' in '%s'\n", xpath, xml_path);
                 }
                 xmlXPathFreeContext(context);
             } else {
-                logprintfl(EUCAERROR, "failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
+                LOGERROR("failed to set xpath '%s' context for '%s'\n", xpath, xml_path);
             }
             xmlFreeDoc(doc);
         } else {
-            logprintfl(EUCADEBUG, "failed to parse XML in '%s'\n", xml_path);
+            LOGDEBUG("failed to parse XML in '%s'\n", xml_path);
         }
     }
     pthread_mutex_unlock(&xml_mutex);
@@ -841,7 +839,7 @@ static void create_dummy_instance(const char *file)
     _ATTRIBUTE(disk1, "sourceType", "file");
 
     xmlSaveFormatFileEnc(file, doc, "UTF-8", 1);
-    logprintfl(EUCAINFO, "wrote XML to %s\n", file);
+    LOGINFO("wrote XML to %s\n", file);
     cat(file);
     xmlFreeDoc(doc);
 }
@@ -862,7 +860,7 @@ int main(int argc, char **argv)
     char xml_buf[2048] = "";
 
     if (argc != 2) {
-        logprintfl(EUCAERROR, "required parameters are <XSLT stylesheet path>\n");
+        LOGERROR("required parameters are <XSLT stylesheet path>\n");
         return (EUCA_ERROR);
     }
 
@@ -872,18 +870,18 @@ int main(int argc, char **argv)
 
     create_dummy_instance(in_path);
 
-    logprintfl(EUCAINFO, "parsing stylesheet %s\n", xslt_path);
+    LOGINFO("parsing stylesheet %s\n", xslt_path);
     if ((err = apply_xslt_stylesheet(xslt_path, in_path, out_path, NULL, 0)) != EUCA_OK)
         goto out;
 
-    logprintfl(EUCAINFO, "parsing stylesheet %s again\n", xslt_path);
+    LOGINFO("parsing stylesheet %s again\n", xslt_path);
     if ((err = apply_xslt_stylesheet(xslt_path, in_path, out_path, xml_buf, sizeof(xml_buf))) != EUCA_OK)
         goto out;
 
-    logprintfl(EUCAINFO, "wrote XML to %s\n", out_path);
+    LOGINFO("wrote XML to %s\n", out_path);
     if (strlen(xml_buf) < 1) {
         err = EUCA_ERROR;
-        logprintfl(EUCAERROR, "failed to see XML in buffer\n");
+        LOGERROR("failed to see XML in buffer\n");
         goto out;
     }
     cat(out_path);
@@ -913,19 +911,19 @@ int main(int argc, char **argv)
     char *inputXmlPath = NULL;
 
     if (argc != 3) {
-        logprintfl(EUCAERROR, "please, supply a path to an XML file and an Xpath\n");
+        LOGERROR("please, supply a path to an XML file and an Xpath\n");
         return (EUCA_ERROR);
     }
 
     inputXmlPath = argv[1];
     if ((devs = get_xpath_content(argv[1], argv[2])) != NULL) {
         for (j = 0; devs[j]; j++) {
-            logprintfl(EUCAINFO, "devs[%d] = '%s'\n", j, devs[j]);
+            LOGINFO("devs[%d] = '%s'\n", j, devs[j]);
             EUCA_FREE(devs[j]);
         }
         EUCA_FREE(devs);
     } else {
-        logprintfl(EUCAERROR, "devs[] are empty\n");
+        LOGERROR("devs[] are empty\n");
     }
 
     return (EUCA_OK);

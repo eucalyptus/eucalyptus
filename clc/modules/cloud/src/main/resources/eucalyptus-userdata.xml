@@ -101,6 +101,18 @@
             </outbound>
         </service>
 
+        <service name="Tags">
+            <inbound>
+                <inbound-endpoint ref="TagsWS"/>
+            </inbound>
+            <component class="com.eucalyptus.tags.TagManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
     </model>
 
 </mule>

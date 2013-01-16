@@ -74,26 +74,26 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
-#define __USE_GNU               /* strnlen */
-#include <string.h>             /* strlen, strcpy */
+#define __USE_GNU                      /* strnlen */
+#include <string.h>                    /* strlen, strcpy */
 #include <time.h>
 #ifndef __DARWIN_UNIX03
-#include <limits.h>             /* INT_MAX */
+#include <limits.h>                    /* INT_MAX */
 #else /* ! _DARWIN_C_SOURCE */
 #include <i386/limits.h>
 #endif /* ! _DARWIN_C_SOURCE */
-#include <sys/types.h>          /* fork */
-#include <sys/wait.h>           /* waitpid */
+#include <sys/types.h>                 /* fork */
+#include <sys/wait.h>                  /* waitpid */
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <signal.h>             /* SIGINT */
+#include <signal.h>                    /* SIGINT */
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
@@ -203,8 +203,7 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta);
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
 static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *localDevReal, char *xml);
 static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);
-static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force,
-                          int grab_inst_sem);
+static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem);
 static void change_createImage_state(ncInstance * instance, createImage_progress state);
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result);
 static void *createImage_thread(void *arg);
@@ -217,8 +216,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
                             char *userPublicKey, char *S3Policy, char *S3PolicySig);
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
-static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                                 int *outBundleTasksLen);
+static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 
@@ -328,15 +326,15 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             remove_instance(&global_instances, instance);
             free_instance(&instance);
         } else {
-            logprintfl(EUCAERROR, "[%s] instance already running\n", instanceId);
-            return EUCA_ERROR;  //! @todo return meaningful error codes?
+            LOGERROR("[%s] instance already running\n", instanceId);
+            return EUCA_ERROR;         //! @todo return meaningful error codes?
         }
     }
     if (!
         (instance =
          allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId, &ncnet,
                            keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize))) {
-        logprintfl(EUCAERROR, "[%s] could not allocate instance struct\n", instanceId);
+        LOGERROR("[%s] could not allocate instance struct\n", instanceId);
         return EUCA_MEMORY_ERROR;
     }
     instance->launchTime = time(NULL);
@@ -354,14 +352,14 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     copy_instances();
     sem_v(inst_sem);
     if (error) {
-        logprintfl(EUCAERROR, "[%s] could not save instance struct\n", instanceId);
+        LOGERROR("[%s] could not save instance struct\n", instanceId);
         ret = EUCA_ERROR;
         goto error;
     }
     // do the potentially long tasks in a thread
     pthread_attr_t *attr = (pthread_attr_t *) EUCA_ZALLOC(1, sizeof(pthread_attr_t));
     if (!attr) {
-        logprintfl(EUCAERROR, "[%s] out of memory\n", instanceId);
+        LOGERROR("[%s] out of memory\n", instanceId);
         ret = EUCA_MEMORY_ERROR;
         goto error;
     }
@@ -370,7 +368,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 
     if (pthread_create(&(instance->tcb), attr, startup_thread, (void *)instance)) {
         pthread_attr_destroy(attr);
-        logprintfl(EUCAERROR, "[%s] failed to spawn a VM startup thread\n", instanceId);
+        LOGERROR("[%s] failed to spawn a VM startup thread\n", instanceId);
         sem_p(inst_sem);
         remove_instance(&global_instances, instance);
         copy_instances();
@@ -401,7 +399,7 @@ error:
 //!
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
-    logprintfl(EUCAERROR, "[%s] no default for %s!\n", instanceId, __func__);
+    LOGERROR("[%s] no default for %s!\n", instanceId, __func__);
     return (EUCA_UNSUPPORTED_ERROR);
 }
 
@@ -417,7 +415,7 @@ static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 //!
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
 {
-    logprintfl(EUCAERROR, "[%s] no default for %s!\n", instanceId, __func__);
+    LOGERROR("[%s] no default for %s!\n", instanceId, __func__);
     return (EUCA_UNSUPPORTED_ERROR);
 }
 
@@ -453,7 +451,7 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
             continue;
 
         int ret;
-        logprintfl(EUCAINFO, "[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
+        LOGINFO("[%s] detaching volume %s, force=%d on termination\n", instanceId, volume->volumeId, force);
         if (nc_state->H->doDetachVolume) {
             ret = nc_state->H->doDetachVolume(nc_state, pMeta, instanceId, volume->volumeId, volume->remoteDev, volume->localDevReal, 0, 0);
         } else {
@@ -470,7 +468,7 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
         }
 
         if ((ret != EUCA_OK) && (force == 0)) {
-            logprintfl(EUCAWARN, "[%s] detaching of volume on terminate failed\n", instanceId);
+            LOGWARN("[%s] detaching of volume on terminate failed\n", instanceId);
             // return ret;
         }
     }
@@ -490,20 +488,21 @@ int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta,
                 err = virDomainShutdown(dom);
             sem_v(hyp_sem);
             if (err == 0) {
-                if (destroy)
-                    logprintfl(EUCAINFO, "[%s] destroying instance\n", instanceId);
-                else
-                    logprintfl(EUCAINFO, "[%s] shutting down instance\n", instanceId);
+                if (destroy) {
+                    LOGINFO("[%s] destroying instance\n", instanceId);
+                } else {
+                    LOGINFO("[%s] shutting down instance\n", instanceId);
+                }
             }
 
             sem_p(hyp_sem);
             {
-                virDomainFree(dom); //! @todo necessary?
+                virDomainFree(dom);    //! @todo necessary?
             }
             sem_v(hyp_sem);
         } else {
             if (instance->state != BOOTING && instance->state != STAGING && instance->state != TEARDOWN)
-                logprintfl(EUCAWARN, "[%s] instance to be terminated not running on hypervisor\n", instanceId);
+                LOGWARN("[%s] instance to be terminated not running on hypervisor\n", instanceId);
         }
     }
     return EUCA_OK;
@@ -580,15 +579,14 @@ static int doDescribeInstances(struct nc_state_t *nc, ncMetadata * pMeta, char *
     int j = 0;
     int k = 0;
 
-    logprintfl(EUCADEBUG, "invoked userId=%s correlationId=%s epoch=%d services[0]{.name=%s .type=%s .uris[0]=%s}\n",
-               SP(pMeta->userId), SP(pMeta->correlationId), pMeta->epoch, SP(pMeta->services[0].name), SP(pMeta->services[0].type),
-               SP(pMeta->services[0].uris[0]));
+    LOGDEBUG("invoked userId=%s correlationId=%s epoch=%d services[0]{.name=%s .type=%s .uris[0]=%s}\n",
+             SP(pMeta->userId), SP(pMeta->correlationId), pMeta->epoch, SP(pMeta->services[0].name), SP(pMeta->services[0].type), SP(pMeta->services[0].uris[0]));
 
     *outInstsLen = 0;
     *outInsts = NULL;
 
     sem_p(inst_copy_sem);
-    if (instIdsLen == 0)        // describe all instances
+    if (instIdsLen == 0)               // describe all instances
         total = total_instances(&global_instances_copy);
     else
         total = instIdsLen;
@@ -648,15 +646,15 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     int cores_free = 0;
 
     // intermediate sums
-    long long sum_mem = 0;      // for known domains: sum of requested memory
-    long long sum_disk = 0;     // for known domains: sum of requested disk sizes
-    int sum_cores = 0;          // for known domains: sum of requested cores
+    long long sum_mem = 0;             // for known domains: sum of requested memory
+    long long sum_disk = 0;            // for known domains: sum of requested disk sizes
+    int sum_cores = 0;                 // for known domains: sum of requested cores
 
     *outRes = NULL;
     sem_p(inst_copy_sem);
     while ((inst = get_instance(&global_instances_copy)) != NULL) {
         if (inst->state == TEARDOWN)
-            continue;           // they don't take up resources
+            continue;                  // they don't take up resources
         sum_mem += inst->params.mem;
         sum_disk += (inst->params.disk);
         sum_cores += inst->params.cores;
@@ -665,35 +663,34 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
 
     disk_free = nc->disk_max - sum_disk;
     if (disk_free < 0)
-        disk_free = 0;          // should not happen
+        disk_free = 0;                 // should not happen
 
     mem_free = nc->mem_max - sum_mem;
     if (mem_free < 0)
-        mem_free = 0;           // should not happen
+        mem_free = 0;                  // should not happen
 
     cores_free = nc->cores_max - sum_cores; //! @todo should we -1 for dom0?
     if (cores_free < 0)
-        cores_free = 0;         // due to timesharing
+        cores_free = 0;                // due to timesharing
 
     // check for potential overflow - should not happen
     if (nc->mem_max > INT_MAX || mem_free > INT_MAX || nc->disk_max > INT_MAX || disk_free > INT_MAX) {
-        logprintfl(EUCAERROR, "stats integer overflow error (bump up the units?)\n");
-        logprintfl(EUCAERROR, "   memory: max=%-10lld free=%-10lld\n", nc->mem_max, mem_free);
-        logprintfl(EUCAERROR, "     disk: max=%-10lld free=%-10lld\n", nc->disk_max, disk_free);
-        logprintfl(EUCAERROR, "    cores: max=%-10lld free=%-10d\n", nc->cores_max, cores_free);
-        logprintfl(EUCAERROR, "       INT_MAX=%-10d\n", INT_MAX);
+        LOGERROR("stats integer overflow error (bump up the units?)\n");
+        LOGERROR("   memory: max=%-10lld free=%-10lld\n", nc->mem_max, mem_free);
+        LOGERROR("     disk: max=%-10lld free=%-10lld\n", nc->disk_max, disk_free);
+        LOGERROR("    cores: max=%-10lld free=%-10d\n", nc->cores_max, cores_free);
+        LOGERROR("       INT_MAX=%-10d\n", INT_MAX);
         return EUCA_OVERFLOW_ERROR;
     }
 
     res = allocate_resource("OK", nc->iqn, nc->mem_max, mem_free, nc->disk_max, disk_free, nc->cores_max, cores_free, "none");
     if (res == NULL) {
-        logprintfl(EUCAERROR, "out of memory\n");
+        LOGERROR("out of memory\n");
         return EUCA_MEMORY_ERROR;
     }
 
     *outRes = res;
-    logprintfl(EUCADEBUG, "returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", cores_free, nc->cores_max, mem_free, nc->mem_max,
-               disk_free, nc->disk_max, nc->iqn);
+    LOGDEBUG("returning cores=%d/%lld mem=%lld/%lld disk=%lld/%lld iqn=%s\n", cores_free, nc->cores_max, mem_free, nc->mem_max, disk_free, nc->disk_max, nc->iqn);
     return EUCA_OK;
 }
 
@@ -712,7 +709,7 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     ncInstance *instance = NULL;
 
     if (instanceId == NULL || publicIp == NULL) {
-        logprintfl(EUCAERROR, "[%s] internal error (bad input parameters to doAssignAddress)\n", instanceId);
+        LOGERROR("[%s] internal error (bad input parameters to doAssignAddress)\n", instanceId);
         return (EUCA_INVALID_ERROR);
     }
 
@@ -744,11 +741,11 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta)
     int rc = 0;
 
     snprintf(cmd, MAX_PATH, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
-    logprintfl(EUCADEBUG, "saving power: %s\n", cmd);
+    LOGDEBUG("saving power: %s\n", cmd);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc)
-        logprintfl(EUCAERROR, "cmd failed: %d\n", rc);
+        LOGERROR("cmd failed: %d\n", rc);
 
     return EUCA_OK;
 }
@@ -777,10 +774,10 @@ static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid,
     rc = vnetStartNetwork(nc->vnetconfig, vlan, NULL, NULL, NULL, &brname);
     if (rc) {
         ret = EUCA_ERROR;
-        logprintfl(EUCAERROR, "failed to start network (port=%d vlan=%d return=%d)\n", port, vlan, rc);
+        LOGERROR("failed to start network (port=%d vlan=%d return=%d)\n", port, vlan, rc);
     } else {
         ret = EUCA_OK;
-        logprintfl(EUCAINFO, "started network (port=%d vlan=%d)\n", port, vlan);
+        LOGINFO("started network (port=%d vlan=%d)\n", port, vlan);
     }
 
     // Regardless of the error code, we should always check and free brname
@@ -813,12 +810,12 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
         char devReal[32];
         char *tmp = strstr(xml, "<target");
         if (tmp == NULL) {
-            logprintfl(EUCAERROR, "[%s] '<target' not found in the device xml\n", instanceId);
+            LOGERROR("[%s] '<target' not found in the device xml\n", instanceId);
             return -1;
         }
         tmp = strstr(tmp, "dev=\"");
         if (tmp == NULL) {
-            logprintfl(EUCAERROR, "[%s] '<target dev' not found in the device xml\n", instanceId);
+            LOGERROR("[%s] '<target dev' not found in the device xml\n", instanceId);
             return -1;
         }
         snprintf(devReal, 32, "%s", tmp + strlen("dev=\""));
@@ -831,20 +828,19 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
 
         if (fd > 0) {
             if (write(fd, xml, strlen(xml)) != strlen(xml)) {
-                logprintfl(EUCAERROR, "[%s] fail to write %ld bytes in temp file.\n", instanceId, strlen(xml));
+                LOGERROR("[%s] fail to write %ld bytes in temp file.\n", instanceId, strlen(xml));
             }
             close(fd);
 
             char cmd[MAX_PATH];
             //! @todo does this work?
-            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path,
-                     nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
-            logprintfl(EUCADEBUG, "%s\n", cmd);
+            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            LOGDEBUG("%s\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
             unlink(tmpfile);
         } else {
-            logprintfl(EUCAERROR, "[%s] could not write to tmpfile for detach XML: %s\n", instanceId, tmpfile);
+            LOGERROR("[%s] could not write to tmpfile for detach XML: %s\n", instanceId, tmpfile);
             rc = 1;
         }
         exit(rc);
@@ -854,7 +850,7 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
         int status;
         rc = timewait(pid, &status, 15);
         if (WEXITSTATUS(status)) {
-            logprintfl(EUCAERROR, "[%s] failed to sucessfully run detach helper\n", instanceId);
+            LOGERROR("[%s] failed to sucessfully run detach helper\n", instanceId);
             err = EUCA_ERROR;
         } else {
             err = EUCA_OK;
@@ -895,7 +891,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         tagBuf = localDevTag;
         localDevName = localDevTag;
     } else {
-        logprintfl(EUCAERROR, "[%s][%s] unknown hypervisor type '%s'\n", instanceId, volumeId, nc->H->name);
+        LOGERROR("[%s][%s] unknown hypervisor type '%s'\n", instanceId, volumeId, nc->H->name);
         return EUCA_ERROR;
     }
 
@@ -915,7 +911,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     // try attaching to hypervisor
     virConnectPtr *conn = check_hypervisor_conn();
     if (conn == NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
         return EUCA_HYPERVISOR_ERROR;
     }
     // find domain on hypervisor
@@ -924,7 +920,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     sem_v(hyp_sem);
     if (dom == NULL) {
         if (instance->state != BOOTING && instance->state != STAGING) {
-            logprintfl(EUCAWARN, "[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
+            LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
         }
         return EUCA_HYPERVISOR_ERROR;
     }
@@ -936,7 +932,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     copy_instances();
     sem_v(inst_sem);
     if (!volume) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
         return EUCA_ERROR;
     }
     // do iscsi connect shellout if remoteDev is an iSCSI target
@@ -947,10 +943,10 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         // get credentials, decrypt them, login into target
         remoteDevStr = connect_iscsi_target(remoteDev);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            logprintfl(EUCAERROR, "[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
+            LOGERROR("[%s][%s] failed to connect to iscsi target\n", instanceId, volumeId);
             remoteDevReal[0] = '\0';
         } else {
-            logprintfl(EUCADEBUG, "[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
+            LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
             have_remote_device = 1;
         }
@@ -967,15 +963,14 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
     // make sure there is a block device
     if (check_block(remoteDevReal)) {
-        logprintfl(EUCAERROR, "[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instanceId, volumeId,
-                   remoteDevReal);
+        LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instanceId, volumeId, remoteDevReal);
         ret = EUCA_ERROR;
         goto release;
     }
     // generate XML for libvirt attachment request
     if (gen_volume_xml(volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
         || gen_libvirt_volume_xml(volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
-        logprintfl(EUCAERROR, "[%s][%s] could not produce attach device xml\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] could not produce attach device xml\n", instanceId, volumeId);
         ret = EUCA_ERROR;
         goto release;
     }
@@ -985,13 +980,13 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX.xml
     snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX-libvirt.xml
     if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
-        logprintfl(EUCAERROR, "[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volumeId);
+        LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volumeId);
         ret = EUCA_ERROR;
         goto release;
     }
     // read in libvirt XML, which may have been modified by the hook above
     if ((xml = file2str(lpath)) == NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
+        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
         ret = EUCA_ERROR;
         goto release;
     }
@@ -1003,26 +998,24 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         err = virDomainAttachDevice(dom, xml);
         sem_v(hyp_sem);
         if (err) {
-            logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId,
-                       remoteDevReal, localDevReal, i);
-            logprintfl(EUCADEBUG, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
-            sleep(3);           //sleep a bit and retry.
+            LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' on attempt %d of 3\n", instanceId, volumeId, remoteDevReal, localDevReal, i);
+            LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            sleep(3);                  //sleep a bit and retry.
         } else {
             break;
         }
     }
 
     if (err) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId,
-                   remoteDevReal, localDevReal);
-        logprintfl(EUCADEBUG, "[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+        LOGERROR("[%s][%s] failed to attach host device '%s' to guest device '%s' after 3 retries\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        LOGDEBUG("[%s][%s] virDomainAttachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         ret = EUCA_ERROR;
     }
 
 release:
 
     sem_p(hyp_sem);
-    virDomainFree(dom);         // release libvirt resource
+    virDomainFree(dom);                // release libvirt resource
     sem_v(hyp_sem);
 
     // record volume state in memory and on disk
@@ -1036,36 +1029,35 @@ release:
     volume = save_volume(instance, volumeId, NULL, NULL, NULL, next_vol_state); // now we can record remoteDevReal
     save_instance_struct(instance);
     copy_instances();
-    update_disk_aliases(instance);  // ask sensor subsystem to track the volume
+    update_disk_aliases(instance);     // ask sensor subsystem to track the volume
     sem_v(inst_sem);
     if (volume == NULL && xml != NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] failed to save the volume record, aborting volume attachment (detaching)\n", instanceId, volumeId);
         sem_p(hyp_sem);
         err = virDomainDetachDevice(dom, xml);
         sem_v(hyp_sem);
         if (err) {
-            logprintfl(EUCAERROR, "[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
-            logprintfl(EUCADEBUG, "[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+            LOGERROR("[%s][%s] failed to detach as part of aborting\n", instanceId, volumeId);
+            LOGDEBUG("[%s][%s] virDomainDetachDevice() failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         }
         ret = EUCA_ERROR;
     }
     // if iSCSI and there were problems, try to disconnect the target
     if (ret != EUCA_OK && is_iscsi_target && have_remote_device) {
-        logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
+        LOGDEBUG("[%s][%s] attempting to disconnect iscsi target due to attachment failure\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
-            logprintfl(EUCAERROR, "[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
+            LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
         }
     }
 
     if (ret == EUCA_OK) {
-        logprintfl(EUCAINFO, "[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal,
-                   localDevReal);
+        LOGINFO("[%s][%s] volume attached as host device '%s' to guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     }
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
-    int log_level_for_devstring = EUCATRACE;
+    int log_level_for_devstring = EUCA_LOG_TRACE;
     if (ret != EUCA_OK)
-        log_level_for_devstring = EUCADEBUG;
-    logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
+        log_level_for_devstring = EUCA_LOG_DEBUG;
+    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     EUCA_FREE(xml);
 
@@ -1089,8 +1081,7 @@ release:
 //!
 //! @see convert_dev_names()
 //!
-static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force,
-                          int grab_inst_sem)
+static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev, int force, int grab_inst_sem)
 {
     int ret = EUCA_OK;
     int is_iscsi_target = 0;
@@ -1109,7 +1100,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         tagBuf = localDevTag;
         localDevName = localDevTag;
     } else {
-        logprintfl(EUCAERROR, "[%s][%s] unknown hypervisor type '%s'\n", instanceId, volumeId, nc->H->name);
+        LOGERROR("[%s][%s] unknown hypervisor type '%s'\n", instanceId, volumeId, nc->H->name);
         return EUCA_ERROR;
     }
 
@@ -1130,7 +1121,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     // try attaching to hypervisor
     virConnectPtr *conn = check_hypervisor_conn();
     if (conn == NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
         return EUCA_HYPERVISOR_ERROR;
     }
     // find domain on hypervisor
@@ -1139,7 +1130,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     sem_v(hyp_sem);
     if (dom == NULL) {
         if (instance->state != BOOTING && instance->state != STAGING) {
-            logprintfl(EUCAWARN, "[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
+            LOGWARN("[%s][%s] domain not running on hypervisor, cannot attach device\n", instanceId, volumeId);
         }
         return EUCA_HYPERVISOR_ERROR;
     }
@@ -1153,7 +1144,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (grab_inst_sem)
         sem_v(inst_sem);
     if (!volume) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] failed to update the volume record, aborting volume attachment\n", instanceId, volumeId);
         return EUCA_ERROR;
     }
     // do iscsi connect shellout if remoteDev is an iSCSI target
@@ -1164,7 +1155,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         // get credentials, decrypt them
         remoteDevStr = get_iscsi_target(remoteDev);
         if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
-            logprintfl(EUCAERROR, "[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
+            LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
             remoteDevReal[0] = '\0';
         } else {
             snprintf(remoteDevReal, 32, "%s", remoteDevStr);
@@ -1183,8 +1174,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     }
     // make sure there is a block device
     if (check_block(remoteDevReal)) {
-        logprintfl(EUCAERROR, "[%s][%s] cannot verify that host device '%s' is available for hypervisor detach\n", instanceId, volumeId,
-                   remoteDevReal);
+        LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor detach\n", instanceId, volumeId, remoteDevReal);
         if (!force)
             ret = EUCA_ERROR;
         goto release;
@@ -1201,7 +1191,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     // read in libvirt XML
     xml = file2str(lpath);
     if (xml == NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
+        LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volumeId, lpath);
         ret = EUCA_ERROR;
         goto release;
     }
@@ -1214,20 +1204,19 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     sem_v(hyp_sem);
 
     if (err) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal,
-                   localDevReal);
-        logprintfl(EUCAERROR, "[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
+        LOGERROR("[%s][%s] failed to detach host device '%s' from guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        LOGERROR("[%s][%s] virDomainDetachDevice() or 'virsh detach' failed (err=%d) XML='%s'\n", instanceId, volumeId, err, xml);
         if (!force)
             ret = EUCA_HYPERVISOR_ERROR;
     } else {
         call_hooks(NC_EVENT_POST_DETACH, path); // invoke hooks, but do not do anything if they return error
-        unlink(lpath);          // remove vol-XXX-libvirt.xml
-        unlink(path);           // remove vol-XXXX.xml file
+        unlink(lpath);                 // remove vol-XXX-libvirt.xml
+        unlink(path);                  // remove vol-XXXX.xml file
     }
 
 release:
     sem_p(hyp_sem);
-    virDomainFree(dom);         // release libvirt resource
+    virDomainFree(dom);                // release libvirt resource
     sem_v(hyp_sem);
     // record volume state in memory and on disk
     char *next_vol_state;
@@ -1241,30 +1230,30 @@ release:
     volume = save_volume(instance, volumeId, NULL, NULL, NULL, next_vol_state);
     save_instance_struct(instance);
     copy_instances();
-    update_disk_aliases(instance);  // ask sensor subsystem to stop tracking the volume
+    update_disk_aliases(instance);     // ask sensor subsystem to stop tracking the volume
     if (grab_inst_sem)
         sem_v(inst_sem);
     if (volume == NULL) {
-        logprintfl(EUCAWARN, "[%s][%s] failed to save the volume record\n", instanceId, volumeId);
+        LOGWARN("[%s][%s] failed to save the volume record\n", instanceId, volumeId);
         ret = EUCA_ERROR;
     }
     // if iSCSI, try to disconnect the target
     if (is_iscsi_target && have_remote_device) {
-        logprintfl(EUCADEBUG, "[%s][%s] attempting to disconnect iscsi target\n", instanceId, volumeId);
+        LOGDEBUG("[%s][%s] attempting to disconnect iscsi target\n", instanceId, volumeId);
         if (disconnect_iscsi_target(remoteDev) != 0) {
-            logprintfl(EUCAERROR, "[%s][%s] failed to disconnet iscsi target\n", instanceId, volumeId);
+            LOGERROR("[%s][%s] failed to disconnet iscsi target\n", instanceId, volumeId);
             if (!force)
                 ret = EUCA_ERROR;
         }
     }
 
     if (ret == EUCA_OK)
-        logprintfl(EUCAINFO, "[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
+        LOGINFO("[%s][%s] detached as host device '%s' and guest device '%s'\n", instanceId, volumeId, remoteDevReal, localDevReal);
     // remoteDev can be a long string, so to keep log readable, we log it at TRACE level unless there was a problem
-    int log_level_for_devstring = EUCATRACE;
+    int log_level_for_devstring = EUCA_LOG_TRACE;
     if (ret != EUCA_OK)
-        log_level_for_devstring = EUCADEBUG;
-    logprintfl(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
+        log_level_for_devstring = EUCA_LOG_DEBUG;
+    EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDev);
 
     EUCA_FREE(xml);
 
@@ -1298,11 +1287,11 @@ static void change_createImage_state(ncInstance * instance, createImage_progress
 //!
 static int cleanup_createImage_task(ncInstance * instance, struct createImage_params_t *params, instance_states state, createImage_progress result)
 {
-    logprintfl(EUCAINFO, "[%s] createImage task result=%s\n", instance->instanceId, createImage_progress_names[result]);
+    LOGINFO("[%s] createImage task result=%s\n", instance->instanceId, createImage_progress_names[result]);
     sem_p(inst_sem);
     {
         change_createImage_state(instance, result);
-        if (state != NO_STATE)  // do not touch instance state (these are early failures, before we destroyed the domain)
+        if (state != NO_STATE)         // do not touch instance state (these are early failures, before we destroyed the domain)
             change_state(instance, state);
         copy_instances();
     }
@@ -1336,33 +1325,33 @@ static void *createImage_thread(void *arg)
     ncInstance *instance = params->instance;
     int rc;
 
-    logprintfl(EUCADEBUG, "[%s] spawning create-image thread\n", instance->instanceId);
-    logprintfl(EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
+    LOGDEBUG("[%s] spawning create-image thread\n", instance->instanceId);
+    LOGINFO("[%s] waiting for instance to shut down\n", instance->instanceId);
     // wait until monitor thread changes the state of the instance instance
     if (wait_state_transition(instance, CREATEIMAGE_SHUTDOWN, CREATEIMAGE_SHUTOFF)) {
         if (instance->createImageCanceled) {    // cancel request came in while the instance was shutting down
-            logprintfl(EUCAINFO, "[%s] cancelled while createImage for instance\n", instance->instanceId);
+            LOGINFO("[%s] cancelled while createImage for instance\n", instance->instanceId);
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
         } else {
-            logprintfl(EUCAINFO, "[%s] failed while createImage for instance\n", instance->instanceId);
+            LOGINFO("[%s] failed while createImage for instance\n", instance->instanceId);
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
         }
         return NULL;
     }
 
-    logprintfl(EUCAINFO, "[%s] started createImage for instance\n", instance->instanceId);
+    LOGINFO("[%s] started createImage for instance\n", instance->instanceId);
     {
         rc = 0;
         if (rc == 0) {
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_SUCCESS);
-            logprintfl(EUCAINFO, "[%s] finished createImage for instance\n", instance->instanceId);
+            LOGINFO("[%s] finished createImage for instance\n", instance->instanceId);
         } else if (rc == -1) {
             // bundler child was cancelled (killed)
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_CANCELLED);
-            logprintfl(EUCAINFO, "[%s] cancelled while createImage for instance (rc=%d)\n", instance->instanceId, rc);
+            LOGINFO("[%s] cancelled while createImage for instance (rc=%d)\n", instance->instanceId, rc);
         } else {
             cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
-            logprintfl(EUCAINFO, "[%s] failed while createImage for instance (rc=%d)\n", instance->instanceId, rc);
+            LOGINFO("[%s] failed while createImage for instance (rc=%d)\n", instance->instanceId, rc);
         }
     }
 
@@ -1389,14 +1378,13 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
 {
     // sanity checking
     if (instanceId == NULL || remoteDev == NULL || volumeId == NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId),
-                   ((volumeId == NULL) ? "UNKNOWN" : volumeId));
+        LOGERROR("[%s][%s] called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId), ((volumeId == NULL) ? "UNKNOWN" : volumeId));
         return EUCA_ERROR;
     }
     // find the instance
     ncInstance *instance = find_instance(&global_instances, instanceId);
     if (instance == NULL) {
-        logprintfl(EUCAERROR, "[%s][%s] instance not found\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] instance not found\n", instanceId, volumeId);
         return EUCA_NOT_FOUND_ERROR;
     }
     // "marshall" thread parameters
@@ -1430,7 +1418,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
     if (pthread_create(&tid, &tattr, createImage_thread, (void *)params) != 0) {
-        logprintfl(EUCAERROR, "[%s][%s] failed to start VM createImage thread\n", instanceId, volumeId);
+        LOGERROR("[%s][%s] failed to start VM createImage thread\n", instanceId, volumeId);
         return cleanup_createImage_task(instance, params, SHUTOFF, CREATEIMAGE_FAILED);
     }
 
@@ -1492,7 +1480,7 @@ static int restart_instance(ncInstance * instance)
 
     // do the potentially long tasks in a thread
     if ((attr = (pthread_attr_t *) EUCA_ZALLOC(1, sizeof(pthread_attr_t))) == NULL) {
-        logprintfl(EUCAERROR, "[%s] out of memory\n", instance->instanceId);
+        LOGERROR("[%s] out of memory\n", instance->instanceId);
         error = EUCA_MEMORY_ERROR;
         goto error;
     }
@@ -1502,7 +1490,7 @@ static int restart_instance(ncInstance * instance)
 
     if (pthread_create(&(instance->tcb), attr, restart_thread, ((void *)instance))) {
         pthread_attr_destroy(attr);
-        logprintfl(EUCAERROR, "[%s] failed to spawn a VM startup thread\n", instance->instanceId);
+        LOGERROR("[%s] failed to spawn a VM startup thread\n", instance->instanceId);
         error = EUCA_THREAD_ERROR;
         sem_p(inst_sem);
         {
@@ -1539,7 +1527,7 @@ static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t
     char cmd[MAX_PATH] = { 0 };
     char buf[MAX_PATH] = { 0 };
 
-    logprintfl(EUCAINFO, "[%s] bundling task result=%s\n", instance->instanceId, bundling_progress_names[result]);
+    LOGINFO("[%s] bundling task result=%s\n", instance->instanceId, bundling_progress_names[result]);
 
     sem_p(inst_sem);
     {
@@ -1583,11 +1571,11 @@ static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t
             snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
             setenv("EUCA_PRIVATE_KEY", buf, 1);
 
-            logprintfl(EUCADEBUG, "running cmd '%s'\n", cmd);
+            LOGDEBUG("running cmd '%s'\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
             if (rc) {
-                logprintfl(EUCAWARN, "[%s] bucket cleanup cmd '%s' failed with rc '%d'\n", instance->instanceId, cmd, rc);
+                LOGWARN("[%s] bucket cleanup cmd '%s' failed with rc '%d'\n", instance->instanceId, cmd, rc);
             }
         }
 
@@ -1621,33 +1609,33 @@ static void *bundling_thread(void *arg)
     char cmd[MAX_PATH];
     char buf[MAX_PATH];
 
-    logprintfl(EUCADEBUG, "[%s] spawning bundling thread\n", instance->instanceId);
-    logprintfl(EUCAINFO, "[%s] waiting for instance to shut down\n", instance->instanceId);
+    LOGDEBUG("[%s] spawning bundling thread\n", instance->instanceId);
+    LOGINFO("[%s] waiting for instance to shut down\n", instance->instanceId);
     // wait until monitor thread changes the state of the instance instance
     if (wait_state_transition(instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
         if (instance->bundleCanceled) { // cancel request came in while the instance was shutting down
-            logprintfl(EUCAINFO, "[%s] cancelled while bundling instance\n", instance->instanceId);
+            LOGINFO("[%s] cancelled while bundling instance\n", instance->instanceId);
             cleanup_bundling_task(instance, params, BUNDLING_CANCELLED);
         } else {
-            logprintfl(EUCAINFO, "[%s] failed while bundling instance\n", instance->instanceId);
+            LOGINFO("[%s] failed while bundling instance\n", instance->instanceId);
             cleanup_bundling_task(instance, params, BUNDLING_FAILED);
         }
         return NULL;
     }
 
-    logprintfl(EUCAINFO, "[%s] started bundling instance\n", instance->instanceId);
+    LOGINFO("[%s] started bundling instance\n", instance->instanceId);
 
     int rc = EUCA_OK;
     char bundlePath[MAX_PATH];
     bundlePath[0] = '\0';
     if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != EUCA_OK) {
-        logprintfl(EUCAERROR, "[%s] could not clone the instance image\n", instance->instanceId);
+        LOGERROR("[%s] could not clone the instance image\n", instance->instanceId);
         cleanup_bundling_task(instance, params, BUNDLING_FAILED);
     } else {
         char prefixPath[MAX_PATH];
         snprintf(prefixPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
         if (strcmp(bundlePath, prefixPath) != 0 && rename(bundlePath, prefixPath) != 0) {
-            logprintfl(EUCAERROR, "[%s] could not rename from %s to %s\n", instance->instanceId, bundlePath, prefixPath);
+            LOGERROR("[%s] could not rename from %s to %s\n", instance->instanceId, bundlePath, prefixPath);
             cleanup_bundling_task(instance, params, BUNDLING_FAILED);
             return NULL;
         }
@@ -1681,21 +1669,21 @@ static void *bundling_thread(void *arg)
 
         // check to see if the bucket exists in advance
         snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth", params->ncCheckBucketCmd, params->bucketName);
-        logprintfl(EUCADEBUG, "[%s] running cmd '%s'\n", instance->instanceId, cmd);
+        LOGDEBUG("[%s] running cmd '%s'\n", instance->instanceId, cmd);
         rc = system(cmd);
         rc = rc >> 8;
         instance->bundleBucketExists = rc;
 
         if (instance->bundleCanceled) {
-            logprintfl(EUCAINFO, "[%s] bundle task canceled; terminating bundling thread\n", instance->instanceId);
+            LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", instance->instanceId);
             cleanup_bundling_task(instance, params, BUNDLING_CANCELLED);
             return NULL;
         }
 
         pid = fork();
         if (!pid) {
-            logprintfl(EUCADEBUG, "[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", instance->instanceId,
-                       params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
+            LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", instance->instanceId,
+                     params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
             exit(execlp
                  (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
                   params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
@@ -1711,14 +1699,14 @@ static void *bundling_thread(void *arg)
 
         if (rc == 0) {
             cleanup_bundling_task(instance, params, BUNDLING_SUCCESS);
-            logprintfl(EUCAINFO, "[%s] finished bundling instance\n", instance->instanceId);
+            LOGINFO("[%s] finished bundling instance\n", instance->instanceId);
         } else if (rc == -1) {
             // bundler child was cancelled (killed), but should report it as failed
             cleanup_bundling_task(instance, params, BUNDLING_FAILED);
-            logprintfl(EUCAINFO, "[%s] cancelled while bundling instance (rc=%d)\n", instance->instanceId, rc);
+            LOGINFO("[%s] cancelled while bundling instance (rc=%d)\n", instance->instanceId, rc);
         } else {
             cleanup_bundling_task(instance, params, BUNDLING_FAILED);
-            logprintfl(EUCAINFO, "[%s] failed while bundling instance (rc=%d)\n", instance->instanceId, rc);
+            LOGINFO("[%s] failed while bundling instance (rc=%d)\n", instance->instanceId, rc);
         }
     }
     return NULL;
@@ -1748,15 +1736,14 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
                             char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     // sanity checking
-    if (instanceId == NULL || bucketName == NULL || filePrefix == NULL || walrusURL == NULL || userPublicKey == NULL || S3Policy == NULL
-        || S3PolicySig == NULL) {
-        logprintfl(EUCAERROR, "[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
+    if (instanceId == NULL || bucketName == NULL || filePrefix == NULL || walrusURL == NULL || userPublicKey == NULL || S3Policy == NULL || S3PolicySig == NULL) {
+        LOGERROR("[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
         return EUCA_ERROR;
     }
     // find the instance
     ncInstance *instance = find_instance(&global_instances, instanceId);
     if (instance == NULL) {
-        logprintfl(EUCAERROR, "[%s] instance not found\n", instanceId);
+        LOGERROR("[%s] instance not found\n", instanceId);
         return EUCA_NOT_FOUND_ERROR;
     }
     // "marshall" thread parameters
@@ -1798,7 +1785,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
     if (pthread_create(&tid, &tattr, bundling_thread, (void *)params) != 0) {
-        logprintfl(EUCAERROR, "[%s] failed to start VM bundling thread\n", instanceId);
+        LOGERROR("[%s] failed to start VM bundling thread\n", instanceId);
         return cleanup_bundling_task(instance, params, BUNDLING_FAILED);
     }
 
@@ -1822,12 +1809,12 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
 
     // sanity checking
     if (instanceId == NULL) {
-        logprintfl(EUCAERROR, "bundle restart instance called with invalid parameters\n");
+        LOGERROR("bundle restart instance called with invalid parameters\n");
         return (EUCA_ERROR);
     }
     // find the instance
     if ((instance = find_instance(&global_instances, instanceId)) == NULL) {
-        logprintfl(EUCAERROR, "[%s] instance not found\n", instanceId);
+        LOGERROR("[%s] instance not found\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
     }
     // Now restart this instance regardless of bundling success or failure
@@ -1847,13 +1834,13 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 {
     ncInstance *instance = find_instance(&global_instances, instanceId);
     if (instance == NULL) {
-        logprintfl(EUCAERROR, "[%s] instance not found\n", instanceId);
+        LOGERROR("[%s] instance not found\n", instanceId);
         return EUCA_NOT_FOUND_ERROR;
     }
 
-    instance->bundleCanceled = 1;   // record the intent to cancel bundling so that bundling thread can abort
+    instance->bundleCanceled = 1;      // record the intent to cancel bundling so that bundling thread can abort
     if ((instance->bundlePid > 0) && !check_process(instance->bundlePid, "euca-bundle-upload")) {
-        logprintfl(EUCADEBUG, "[%s] found bundlePid '%d', sending kill signal...\n", instanceId, instance->bundlePid);
+        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", instanceId, instance->bundlePid);
         kill(instance->bundlePid, 9);
         instance->bundlePid = 0;
     }
@@ -1874,11 +1861,10 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR
 //!         and EUCA_MEMORY_ERROR.
 //!
-static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks,
-                                 int *outBundleTasksLen)
+static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
 {
     if (instIdsLen < 1 || instIds == NULL) {
-        logprintfl(EUCADEBUG, "internal error (invalid parameters to doDescribeBundleTasks)\n");
+        LOGDEBUG("internal error (invalid parameters to doDescribeBundleTasks)\n");
         return EUCA_ERROR;
     }
     // Maximum size
@@ -1887,7 +1873,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
         return EUCA_MEMORY_ERROR;
     }
 
-    *outBundleTasksLen = 0;     // we may return fewer than instIdsLen
+    *outBundleTasksLen = 0;            // we may return fewer than instIdsLen
 
     int i, j;
     for (i = 0, j = 0; i < instIdsLen; i++) {
@@ -1898,7 +1884,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
         if (instance != NULL) {
             bundle = EUCA_ZALLOC(1, sizeof(bundleTask));
             if (bundle == NULL) {
-                logprintfl(EUCAERROR, "out of memory\n");
+                LOGERROR("out of memory\n");
                 sem_v(inst_sem);
                 return EUCA_MEMORY_ERROR;
             }
@@ -1938,10 +1924,10 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 
     int err = sensor_config(historySize, collectionIntervalTimeMs); // update the config parameters if they are different
     if (err != 0)
-        logprintfl(EUCAERROR, "failed to update sensor configuration (err=%d)\n", err);
+        LOGERROR("failed to update sensor configuration (err=%d)\n", err);
 
     sem_p(inst_copy_sem);
-    if (instIdsLen == 0)        // describe all instances
+    if (instIdsLen == 0)               // describe all instances
         total = total_instances(&global_instances_copy);
     else
         total = instIdsLen;
@@ -1979,7 +1965,7 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
         assert(k < total);
         rss[k] = EUCA_ZALLOC(1, sizeof(sensorResource));
         if (sensor_get_instance_data(instance->instanceId, sensorIds, sensorIdsLen, rss + k, 1) != EUCA_OK) {
-            logprintfl(EUCADEBUG, "[%s] failed to retrieve sensor data\n", instance->instanceId);
+            LOGDEBUG("[%s] failed to retrieve sensor data\n", instance->instanceId);
             EUCA_FREE(rss[k]);
         } else {
             k++;
@@ -1990,6 +1976,6 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
     *outResources = rss;
     sem_v(inst_copy_sem);
 
-    logprintfl(EUCADEBUG, "found %d resource(s)\n", k);
+    LOGDEBUG("found %d resource(s)\n", k);
     return EUCA_OK;
 }

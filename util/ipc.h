@@ -120,7 +120,7 @@ typedef struct sem_struct {
     int flags;
 } sem;
 
-#include "misc.h"               // MUST be after this structure for boolean inclusion
+#include "misc.h"                      // MUST be after this structure for boolean inclusion
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

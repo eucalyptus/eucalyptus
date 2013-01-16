@@ -99,60 +99,6 @@ public class DescribeReservedInstancesResponseType extends UnimplementedMessage 
   ArrayList<String> reservedInstancesSet = new ArrayList<String>();
 }
 /** *******************************************************************************/
-public class Filter extends EucalyptusData {
-  String name;
-  ArrayList<String> valueSet = new ArrayList<String>( );
-}
-public class ResourceTag extends EucalyptusData {
-  String key;
-  String value;
-  public ResourceTagSetItemType() {
-  }
-}
-
-public class DescribeTagsType extends ResourceTagMessage  {
-  ArrayList<Filter> filterSet = new ArrayList<Filter>();
-  public DescribeTagsType() {
-  }
-}
-public class DescribeTagsResponseType extends ResourceTagMessage  {
-  String requestId;
-  ArrayList<TagInfo> tagSet = new ArrayList<TagInfo>( );
-  public DescribeTagsResponseType() {
-  }
-}
-public class DeleteTagsResponseType extends ResourceTagMessage {
-  String requestId;
-  public DeleteTagsResponseType() {
-  }
-}
-
-public class DeleteTagsType extends ResourceTagMessage {
-  ArrayList<String> resourcesSet = new ArrayList<String>();
-  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
-  public DeleteTagsType() {
-  }
-}
-public class TagInfo extends EucalyptusData {
-  String resourceId;
-  String resourceType;
-  String key;
-  String value;
-  public TagSetItemType() {
-  }
-}
-public class CreateTagsResponseType extends ResourceTagMessage  {
-  public CreateTagsResponseType() {
-  }
-}
-
-public class CreateTagsType extends ResourceTagMessage  {
-  ArrayList<String> resourcesSet = new ArrayList<String>();
-  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
-  public CreateTagsType() {
-  }
-}
-
 
 public class CreatePlacementGroupType extends VmPlacementMessage {
   String groupName;

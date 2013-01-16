@@ -70,13 +70,18 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
@@ -112,6 +117,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
@@ -126,9 +132,12 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -648,30 +657,56 @@ public class VmInstances {
     return list( null );
   }
   
-  public static List<VmInstance> list( Predicate<VmInstance> predicate ) {
+  public static List<VmInstance> list( @Nullable Predicate<? super VmInstance> predicate ) {
     return list( null, null, predicate );
   }
   
-  public static List<VmInstance> list( OwnerFullName ownerFullName, Predicate<VmInstance> predicate ) {
+  public static List<VmInstance> list( @Nullable OwnerFullName ownerFullName,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
     return list( ownerFullName, null, predicate );
   }
-  
-  public static List<VmInstance> list( String instanceId, Predicate<VmInstance> predicate ) {
+
+  public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
+                                       final Criterion criterion,
+                                       final Map<String,String> aliases,
+                                       @Nullable final Predicate<? super VmInstance> predicate ) {
+    return list( new Supplier<List<VmInstance>>() {
+      @Override
+      public List<VmInstance> get() {
+        return Entities.query( VmInstance.named( ownerFullName, null ), false, criterion, aliases );
+      }
+    }, predicate );
+  }
+
+  public static List<VmInstance> list( @Nullable String instanceId,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
     return list( null, instanceId, predicate );
   }
   
-  public static List<VmInstance> list( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
+  public static List<VmInstance> list( @Nullable final OwnerFullName ownerFullName,
+                                       @Nullable final String instanceId,
+                                       @Nullable Predicate<? super VmInstance> predicate ) {
+    return list( new Supplier<List<VmInstance>>() {
+      @Override
+      public List<VmInstance> get() {
+        return Entities.query( VmInstance.named( ownerFullName, instanceId ) );
+      }
+    }, predicate );
+  }
+
+  private static List<VmInstance> list( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
+                                        @Nullable Predicate<? super VmInstance> predicate ) {
     predicate = checkPredicate( predicate );
-    List<VmInstance> ret = listPersistent( ownerFullName, instanceId, predicate );
+    List<VmInstance> ret = listPersistent( instancesSupplier, predicate );
     ret.addAll( Collections2.filter( terminateCache.values( ), predicate ) );
     return ret;
   }
-  
-  private static List<VmInstance> listPersistent( OwnerFullName ownerFullName, String instanceId, Predicate<VmInstance> predicate ) {
-    predicate = checkPredicate( predicate );
+
+  private static List<VmInstance> listPersistent( @Nonnull Supplier<List<VmInstance>> instancesSupplier,
+                                                  @Nonnull Predicate<? super VmInstance> predicate ) {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      final Iterable<VmInstance> vms = Iterables.filter( Entities.query( VmInstance.named( ownerFullName, instanceId ) ), predicate );
+      final Iterable<VmInstance> vms = Iterables.filter( instancesSupplier.get(), predicate );
       db.commit( );
       return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
@@ -682,17 +717,10 @@ public class VmInstances {
     }
   }
   
-  private static Predicate<VmInstance> checkPredicate( Predicate<VmInstance> predicate ) {
-    if ( predicate == null ) {
-      predicate = new Predicate<VmInstance>( ) {
-        
-        @Override
-        public boolean apply( VmInstance input ) {
-          return true;
-        }
-      };
-    }
-    return predicate;
+  private static <T> Predicate<T> checkPredicate( Predicate<T> predicate ) {
+    return predicate == null ?
+        Predicates.<T>alwaysTrue() :
+        predicate;
   }
   
   public static boolean contains( final String name ) {
@@ -774,6 +802,10 @@ public class VmInstances {
     }
   }
 
+  public static Function<VmInstance,VmBundleTask> bundleTask() {
+    return VmInstanceToVmBundleTask.INSTANCE;
+  }
+
   public static class VmInstanceAvailabilityEventListener implements EventListener<ClockTick> {
 
     private static final class AvailabilityAccumulator {
@@ -846,4 +878,127 @@ public class VmInstances {
     }
   }
 
+  public static class VmInstanceFilterSupport extends FilterSupport<VmInstance> {
+    public VmInstanceFilterSupport() {
+      super( builderFor( VmInstance.class ).withTagFiltering( VmInstanceTag.class, "instance" ) );
+    }
+  }
+
+  public static class VmBundleTaskFilterSupport extends FilterSupport<VmBundleTask> {
+    private enum ProgressToInteger implements Function<String,Integer> {
+      INSTANCE {
+        @Override
+        public Integer apply( final String textValue ) {
+          String cleanedValue = textValue;
+          if ( cleanedValue.endsWith( "%" ) ) {
+            cleanedValue = cleanedValue.substring( 0, cleanedValue.length() - 1 );
+          }
+          try {
+            return java.lang.Integer.valueOf( cleanedValue );
+          } catch ( NumberFormatException e ) {
+            return null;
+          }
+        }
+      }
+    }
+
+    public VmBundleTaskFilterSupport() {
+      super( builderFor( VmBundleTask.class )
+          .withStringProperty( "bundle-id", BundleFilterFunctions.BUNDLE_ID )
+          .withStringProperty( "error-code", BundleFilterFunctions.ERROR_CODE )
+          .withStringProperty( "error-message", BundleFilterFunctions.ERROR_MESSAGE )
+          .withStringProperty( "instance-id", BundleFilterFunctions.INSTANCE_ID )
+          .withStringProperty( "progress", BundleFilterFunctions.PROGRESS )
+          .withStringProperty( "s3-bucket", BundleFilterFunctions.S3_BUCKET )
+          .withStringProperty( "s3-prefix", BundleFilterFunctions.S3_PREFIX )
+          .withDateProperty( "start-time", BundleDateFilterFunctions.START_TIME )
+          .withStringProperty( "state", BundleFilterFunctions.STATE )
+          .withDateProperty( "update-time", BundleDateFilterFunctions.UPDATE_TIME )
+          .withPersistenceFilter( "error-code", "runtimeState.bundleTask.errorCode", Collections.<String>emptySet() )
+          .withPersistenceFilter( "error-message", "runtimeState.bundleTask.errorMessage", Collections.<String>emptySet() )
+          .withPersistenceFilter( "instance-id", "displayName" )
+          .withPersistenceFilter( "progress", "runtimeState.bundleTask.progress", Collections.<String>emptySet(), ProgressToInteger.INSTANCE )
+          .withPersistenceFilter( "s3-bucket", "runtimeState.bundleTask.bucket", Collections.<String>emptySet() )
+          .withPersistenceFilter( "s3-prefix", "runtimeState.bundleTask.prefix", Collections.<String>emptySet() )
+          //.withPersistenceFilter( "start-time", "runtimeState.bundleTask.startTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "state", "runtimeState.bundleTask.state", Collections.<String>emptySet(), Enums.valueOfFunction( VmBundleTask.BundleState.class ) )
+          //.withPersistenceFilter( "update-time", "runtimeState.bundleTask.updateTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+      );
+    }
+  }
+
+  private enum BundleDateFilterFunctions implements Function<VmBundleTask,Date> {
+    START_TIME {
+      @Override
+      public Date apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getStartTime();
+      }
+    },
+    UPDATE_TIME {
+      @Override
+      public Date apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getUpdateTime();
+      }
+    },
+  }
+
+  private enum BundleFilterFunctions implements Function<VmBundleTask,String> {
+    BUNDLE_ID {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getBundleId();
+      }
+    },
+    ERROR_CODE {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getErrorCode();
+      }
+    },
+    ERROR_MESSAGE {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getErrorMessage();
+      }
+    },
+    INSTANCE_ID {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getInstanceId();
+      }
+    },
+    PROGRESS {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getProgress() + "%";
+      }
+    },
+    S3_BUCKET {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getBucket();
+      }
+    },
+    S3_PREFIX {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getPrefix();
+      }
+    },
+    STATE {
+      @Override
+      public String apply( final VmBundleTask bundleTask ) {
+        return bundleTask.getState().name();
+      }
+    },
+  }
+
+  private enum VmInstanceToVmBundleTask implements Function<VmInstance,VmBundleTask> {
+    INSTANCE {
+      @Override
+      public VmBundleTask apply( final VmInstance vmInstance ) {
+        return vmInstance.getRuntimeState() == null ? null : vmInstance.getRuntimeState().getBundleTask();
+      }
+    }
+  }
 }

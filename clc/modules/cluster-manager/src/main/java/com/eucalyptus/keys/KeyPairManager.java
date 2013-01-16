@@ -76,6 +76,7 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -83,7 +84,10 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.tags.Filter;
+import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -104,13 +108,18 @@ public class KeyPairManager {
   private static Logger LOG = Logger.getLogger( KeyPairManager.class );
   
   public DescribeKeyPairsResponseType describe( DescribeKeyPairsType request ) throws Exception {
-    DescribeKeyPairsResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
-    boolean showAll = request.getKeySet( ).remove( "verbose" );
-    for ( SshKeyPair kp : Iterables.filter( KeyPairs.list( ( ctx.hasAdministrativePrivileges( ) &&  showAll ) ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( ) ), RestrictedTypes.filterPrivileged( ) ) ) {
-      if ( request.getKeySet( ).isEmpty( ) || request.getKeySet( ).contains( kp.getDisplayName( ) ) ) {
-        reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
-      }
+    final DescribeKeyPairsResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.getKeySet( ).remove( "verbose" );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll  ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( );
+    final Filter filter = Filters.generate( request.getFilterSet(), SshKeyPair.class );
+    final Predicate<? super SshKeyPair> requestedAndAccessible = CloudMetadatas.filteringFor( SshKeyPair.class )
+        .byId( request.getKeySet( ) )
+        .byPredicate( filter.asPredicate() )
+        .byPrivileges()
+        .buildPredicate();
+    for ( final SshKeyPair kp : KeyPairs.list( ownerFullName, requestedAndAccessible, filter.asCriterion(), filter.getAliases() ) ) {
+      reply.getKeySet( ).add( new DescribeKeyPairsResponseItemType( kp.getDisplayName( ), kp.getFingerPrint( ) ) );
     }
     return reply;
   }

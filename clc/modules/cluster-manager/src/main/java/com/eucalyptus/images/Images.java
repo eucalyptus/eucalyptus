@@ -84,6 +84,7 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
+import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
@@ -656,5 +657,11 @@ public class Images {
   public static String lookupDefaultRamdiskId( ) {
     return ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
   }
-  
+
+  public static class ImageInfoFilterSupport extends FilterSupport<ImageInfo> {
+    public ImageInfoFilterSupport() {
+      super( builderFor( ImageInfo.class )
+          .withTagFiltering( ImageInfoTag.class, "image" ) );
+    }
+  }
 }

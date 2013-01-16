@@ -68,7 +68,7 @@
 
 //!
 //! @file util/misc.h
-//! Need to provide description
+//! Defines a variety of utility tools
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -79,10 +79,12 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h>             // ssize_t
-#include <sys/types.h>          // mode_t
+#include <unistd.h>                    // ssize_t
+#include <sys/types.h>                 // mode_t
 #include <linux/limits.h>
-#include <stdint.h>             // uint32_t
+#include <stdint.h>                    // uint32_t
+
+#include <eucalyptus.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -90,8 +92,13 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define TRUE                                     1
-#define FALSE                                    0
+//! @{
+//! @name Definition of the boolean values TRUE and FALSE
+
+#define TRUE                                     1  //!< Defines the "TRUE" boolean value
+#define FALSE                                    0  //!< Defines the "FALSE" boolean value
+
+//! @}
 
 #ifndef MAX_PATH
 #define MAX_PATH                                 4096
@@ -103,9 +110,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef unsigned char boolean;  //! @todo move this somewhere more global?
+typedef unsigned char boolean;         //!< @todo move this somewhere more global?
 
-#include "log.h"                // so everyone picks up the logging functions
+#include "log.h"                       // so everyone picks up the logging functions
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -160,7 +167,7 @@ int hash_code_bin(const char *buf, int buf_size);
 char *get_string_stats(const char *s);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
 int daemonrun(char *incmd, char *pidfile);
-int vrun(const char *fmt, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+int vrun(const char *fmt, ...) _attribute_format_(1, 2);
 int cat(const char *file_name);
 int touch(const char *path);
 int diff(const char *path1, const char *path2);
@@ -201,8 +208,26 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Macro to print a string that might be NULL. If NULL the string "UNSET" is returned.
 #define SP(_a)                                   (((_a) != NULL) ? (_a) : "UNSET")
+
+//! Macro to generate a randum alphanumeric number.
 #define RANDALPHANUM()                           ((rand() % 2) ? (rand() % 26 + 97) : ((rand() % 2) ? (rand() % 26 + 65) : (rand() % 10 + 48)))
+
+//! @{
+//! @name MIN and MAX macros
+
+#undef MIN
+#undef MAX
+#define MIN(_a, _b)                              (((_a) < (_b)) ? (_a) : (_b))
+#define MAX(_a, _b)                              (((_a) > (_b)) ? (_a) : (_b))
+#if 0
+// Faster min/max macros
+#define MIN(_a, _b)                              ((_b) + (((_a) - (_b)) & -((_a) < (_b))))
+#define MAX(_a, _b)                              ((_a) - (((_a) - (_b)) & -((_a) < (_b))))
+#endif /* 0 */
+
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -76,15 +76,18 @@
 
 #include <stdio.h>
 #include <time.h>
-#include <misc.h>
-#include <data.h>
-#include <cc-client-marshal.h>
-#include "axis2_stub_EucalyptusCC.h"
-#include <euca_auth.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "adb-helpers.h"
-#include "sensor.h"
+
+#include <eucalyptus.h>
+#include <misc.h>
+#include <data.h>
+#include <euca_auth.h>
+#include <sensor.h>
+
+#include "cc-client-marshal.h"
+#include "axis2_stub_EucalyptusCC.h"
+#include <adb-helpers.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -147,8 +150,7 @@ int cc_stopNetwork(int vlan, char *netName, axutil_env_t * env, axis2_stub_t * p
 int cc_attachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_detachVolume(char *volumeId, char *instanceId, char *remoteDev, char *localDev, int force, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env_t * env, axis2_stub_t * pStub);
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env,
-                      axis2_stub_t * pStub);
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_assignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_unassignAddress(char *src, char *dst, axutil_env_t * env, axis2_stub_t * pStub);
@@ -681,8 +683,7 @@ int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env
 //!
 //! @note
 //!
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env,
-                      axis2_stub_t * pStub)
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub)
 {
     int i = 0;
     adb_BundleInstance_t *input = NULL;
@@ -1219,10 +1220,7 @@ int cc_describeInstances(char **instIds, int instIdsLen, axutil_env_t * env, axi
                      adb_netConfigType_get_privateIp(nct, env), adb_netConfigType_get_publicIp(nct, env), adb_netConfigType_get_vlan(nct, env),
                      keyName, adb_virtualMachineType_get_name(vm, env), adb_virtualMachineType_get_cores(vm, env),
                      adb_virtualMachineType_get_memory(vm, env), adb_virtualMachineType_get_disk(vm, env), adb_ccInstanceType_get_serviceTag(it, env),
-                     adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it,
-                                                                                                                                                 env,
-                                                                                                                                                 0),
-                     volId, networkIndex);
+                     adb_ccInstanceType_get_userData(it, env), adb_ccInstanceType_get_launchIndex(it, env), adb_ccInstanceType_get_groupNames_at(it, env, 0), volId, networkIndex);
             }
         }
     }
@@ -1301,8 +1299,7 @@ int cc_runInstances(char *amiId, char *amiURL, char *kernelId, char *kernelURL, 
     mac = EUCA_ALLOC(SIZE, sizeof(char));
 
     for (i = 0; i < num; i++) {
-        snprintf(mac, SIZE, "aa:dd:11:%c%c:%c%c:%c%c", rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65,
-                 rand() % 5 + 65);
+        snprintf(mac, SIZE, "aa:dd:11:%c%c:%c%c:%c%c", rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65, rand() % 5 + 65);
         adb_runInstancesType_add_macAddresses(rit, env, mac);
 
         snprintf(instId, SIZE, "i-");
@@ -1458,14 +1455,14 @@ int cc_describeSensors(int historySize, long long collectionIntervalTimeMs, char
         // do it
         output = axis2_stub_op_EucalyptusCC_DescribeSensors(pStub, env, input);
         if (!output) {
-            logprintfl(EUCAERROR, "DescribeSensors could not be invoked\n");
+            LOGERROR("DescribeSensors could not be invoked\n");
             status = -1;
 
         } else {
             response = adb_DescribeSensorsResponse_get_DescribeSensorsResponse(output, env);
 
             if (adb_describeSensorsResponseType_get_return(response, env) == AXIS2_FALSE) {
-                logprintfl(EUCAERROR, "DescribeSensors returned an error\n");
+                LOGERROR("DescribeSensors returned an error\n");
                 status = 1;
             }
 
@@ -1473,7 +1470,7 @@ int cc_describeSensors(int historySize, long long collectionIntervalTimeMs, char
             if (*outResourcesLen) {
                 *outResources = EUCA_ZALLOC((*outResourcesLen), sizeof(sensorResource *));
                 if (*outResources == NULL) {
-                    logprintfl(EUCAERROR, "out of memory\n");
+                    LOGERROR("out of memory\n");
                     *outResourcesLen = 0;
                     status = 2;
                 } else {

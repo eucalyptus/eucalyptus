@@ -182,7 +182,7 @@ public class VmBundleTask {
       
       @Override
       public BundleTask apply( final VmBundleTask input ) {
-        return new BundleTask( input.getVmInstance( ).getInstanceId( ),//GRZE: this constructor reference is crap.
+        return new BundleTask( input.getInstanceId( ),
                                input.getBundleId( ),
                                input.getState( ).name( ),
                                input.getStartTime( ),
@@ -203,9 +203,13 @@ public class VmBundleTask {
   private void setVmInstance( final VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-  
+
+  String getInstanceId( ) {
+    return vmInstance.getInstanceId( );
+  }
+
   String getBundleId( ) {
-    return this.vmInstance.getInstanceId( ).replaceFirst( "i-", "bun-" );
+    return getInstanceId( ).replaceFirst( "i-", "bun-" );
   }
   
   BundleState getState( ) {
@@ -216,15 +220,15 @@ public class VmBundleTask {
     this.state = state;
   }
   
-  private Date getStartTime( ) {
+  Date getStartTime( ) {
     return this.startTime;
   }
   
-  private void setStartTime( final Date startTime ) {
+  void setStartTime( final Date startTime ) {
     this.startTime = startTime;
   }
   
-  private Date getUpdateTime( ) {
+  Date getUpdateTime( ) {
     return this.updateTime;
   }
   
@@ -232,39 +236,39 @@ public class VmBundleTask {
     this.updateTime = updateTime;
   }
   
-  private Integer getProgress( ) {
+  Integer getProgress( ) {
     return this.progress;
   }
   
-  private void setProgress( final Integer progress ) {
+  void setProgress( final Integer progress ) {
     this.progress = progress;
   }
   
-  private String getBucket( ) {
+  String getBucket( ) {
     return this.bucket;
   }
   
-  private void setBucket( final String bucket ) {
+  void setBucket( final String bucket ) {
     this.bucket = bucket;
   }
   
-  private String getPrefix( ) {
+  String getPrefix( ) {
     return this.prefix;
   }
   
-  private void setPrefix( final String prefix ) {
+  void setPrefix( final String prefix ) {
     this.prefix = prefix;
   }
   
-  private String getErrorMessage( ) {
+  String getErrorMessage( ) {
     return this.errorMessage;
   }
-  
-  private void setErrorMessage( final String errorMessage ) {
+
+  void setErrorMessage( final String errorMessage ) {
     this.errorMessage = errorMessage;
   }
   
-  private String getErrorCode( ) {
+  String getErrorCode( ) {
     return this.errorCode;
   }
   

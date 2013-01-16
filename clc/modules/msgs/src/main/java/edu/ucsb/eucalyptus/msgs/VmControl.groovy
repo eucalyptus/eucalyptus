@@ -79,20 +79,6 @@ public class VmControlMessage extends EucalyptusMessage {
     super( userId );
   }
 }
-public class ResourceTagMessage extends EucalyptusMessage {
-  
-  public ResourceTagMessage( ) {
-    super( );
-  }
-  
-  public ResourceTagMessage( EucalyptusMessage msg ) {
-    super( msg );
-  }
-  
-  public ResourceTagMessage( String userId ) {
-    super( userId );
-  }
-}
 public class VmPlacementMessage extends EucalyptusMessage {
   
   public VmPlacementMessage( ) {
@@ -130,7 +116,8 @@ public class DescribeInstancesType extends VmControlMessage {
   
   @HttpParameterMapping (parameter = "InstanceId")
   ArrayList<String> instancesSet = new ArrayList<String>();
-  @HttpParameterMapping (parameter = "FilterSet")
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
   ArrayList<Filter> filterSet = new ArrayList<Filter>();
 }
 public class DescribeInstancesResponseType extends VmControlMessage {

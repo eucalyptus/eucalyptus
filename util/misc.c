@@ -65,7 +65,7 @@
 
 //!
 //! @file util/misc.c
-//! Need to provide description
+//! Implements a variety of utility tools
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -74,12 +74,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>             // strlen, strcpy
-#include <ctype.h>              // isspace
+#include <string.h>                    // strlen, strcpy
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
 #include <sys/types.h>
@@ -87,16 +87,16 @@
 #include <sys/vfs.h>
 #include <unistd.h>
 #include <time.h>
-#include <math.h>               // powf
-#include <fcntl.h>              // open
-#include <utime.h>              // utime
+#include <math.h>                      // powf
+#include <fcntl.h>                     // open
+#include <utime.h>                     // utime
 #include <sys/wait.h>
 #include <pwd.h>
-#include <dirent.h>             // opendir, etc
-#include <sys/errno.h>          // errno
-#include <sys/time.h>           // gettimeofday
+#include <dirent.h>                    // opendir, etc
+#include <sys/errno.h>                 // errno
+#include <sys/time.h>                  // gettimeofday
 #include <limits.h>
-#include <sys/mman.h>           // mmap
+#include <sys/mman.h>                  // mmap
 #include <pthread.h>
 
 #include "eucalyptus.h"
@@ -188,7 +188,7 @@ int hash_code_bin(const char *buf, int buf_size);
 char *get_string_stats(const char *s);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
 int daemonrun(char *incmd, char *pidfile);
-int vrun(const char *fmt, ...) __attribute__ ((__format__(__printf__, 1, 2)));
+int vrun(const char *fmt, ...) _attribute_format_(1, 2);
 int cat(const char *file_name);
 int touch(const char *path);
 int diff(const char *path1, const char *path2);
@@ -290,7 +290,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
             if (!rc && S_ISREG(statbuf.st_mode)) {
                 done++;
             }
-        } else {                // no full path was given, so search $PATH
+        } else {                       // no full path was given, so search $PATH
             if ((tok = getenv("PATH")) == NULL) {
                 missing_helpers = -1;
                 goto cleanup;
@@ -337,9 +337,9 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
 
         if (!done) {
             missing_helpers++;
-            logprintfl(EUCATRACE, "did not find '%s' in path\n", helpers[i]);
+            LOGTRACE("did not find '%s' in path\n", helpers[i]);
         } else {
-            logprintfl(EUCATRACE, "found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
+            LOGTRACE("found '%s' at '%s'\n", helpers[i], tmp_helpers_path[i]);
         }
     }
 
@@ -380,7 +380,7 @@ int timeread(int fd, void *buf, size_t bytes, int timeout)
 
     if ((rc = select(fd + 1, &rfds, NULL, NULL, &tv)) <= 0) {
         // timeout
-        logprintfl(EUCAERROR, "select() timed out for read: timeout=%d\n", timeout);
+        LOGERROR("select() timed out for read: timeout=%d\n", timeout);
         return (-1);
     }
 
@@ -414,7 +414,7 @@ int add_euca_to_path(const char *euca_home_supplied)
         old_path = "";
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
-             EUCALYPTUS_SBIN_DIR ":"    // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
+             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
@@ -458,7 +458,7 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec)
     }
 
     if (rc == 0) {
-        logprintfl(EUCAERROR, "waitpid() timed out: pid=%d\n", pid);
+        LOGERROR("waitpid() timed out: pid=%d\n", pid);
     }
 
     return (rc);
@@ -571,7 +571,7 @@ int param_check(const char *func, ...)
     va_end(al);
 
     if (fail) {
-        logprintfl(EUCAERROR, "incorrect input parameters to function %s\n", func);
+        LOGERROR("incorrect input parameters to function %s\n", func);
         return (1);
     }
     return (0);
@@ -805,12 +805,12 @@ int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned lo
 
     // will convert a path with symbolic links and '..' into canonical form
     if (realpath(path, cpath) == NULL) {
-        logprintfl(EUCAERROR, "failed to resolve %s (%s)\n", path, strerror(errno));
+        LOGERROR("failed to resolve %s (%s)\n", path, strerror(errno));
         return (EUCA_IO_ERROR);
     }
     // obtain the size and ID info from the file system of the canonical path
     if (statfs(cpath, &fs) == -1) {
-        logprintfl(EUCAERROR, "failed to stat %s (%s)\n", cpath, strerror(errno));
+        LOGERROR("failed to stat %s (%s)\n", cpath, strerror(errno));
         return (EUCA_IO_ERROR);
     }
 
@@ -818,9 +818,9 @@ int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned lo
     *fs_bytes_size = (long long)fs.f_bsize * (long long)(fs.f_blocks);
     *fs_bytes_available = (long long)fs.f_bsize * (long long)(fs.f_bavail);
 
-    logprintfl(EUCADEBUG, "path '%s' resolved\n", path);
-    logprintfl(EUCADEBUG, "  to '%s' with ID %0x\n", cpath, *fs_id);
-    logprintfl(EUCADEBUG, "  of size %llu bytes with available %llu bytes\n", *fs_bytes_size, *fs_bytes_available);
+    LOGDEBUG("path '%s' resolved\n", path);
+    LOGDEBUG("  to '%s' with ID %0x\n", cpath, *fs_id);
+    LOGDEBUG("  of size %llu bytes with available %llu bytes\n", *fs_bytes_size, *fs_bytes_available);
 
     return (EUCA_OK);
 }
@@ -863,19 +863,19 @@ char *fp2str(FILE * fp)
         memset((new_buf + buf_current), 0, (INCREMENT * sizeof(char)));
 
         buf = new_buf;
-        logprintfl(EUCAEXTREME, "enlarged buf to %d\n", buf_max);
+        LOGEXTREME("enlarged buf to %d\n", buf_max);
 
-        do {                    // read in until EOF or buffer is full
+        do {                           // read in until EOF or buffer is full
             last_read = fgets(buf + buf_current, buf_max - buf_current, fp);
             if (last_read != NULL) {
                 buf_current = strlen(buf);
             } else if (!feof(fp)) {
-                logprintfl(EUCAERROR, "failed while reading from file handle\n");
+                LOGERROR("failed while reading from file handle\n");
                 EUCA_FREE(buf);
                 return (NULL);
             }
 
-            logprintfl(EUCAEXTREME, "read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read ? "no" : "yes");
+            LOGEXTREME("read %d characters so far (max=%d, last=%s)\n", buf_current, buf_max, last_read ? "no" : "yes");
         } while (last_read && (buf_max > (buf_current + 1)));   // +1 is needed for fgets() to put \0
 
         // in case it is full
@@ -907,7 +907,7 @@ char *system_output(char *shell_command)
         return (NULL);
 
     // forks off command (this doesn't fail if command doesn't exist
-    logprintfl(EUCATRACE, "[%s]\n", shell_command);
+    LOGTRACE("[%s]\n", shell_command);
     if ((fp = popen(shell_command, "r")) == NULL) {
         // caller can check errno
         return (NULL);
@@ -1214,7 +1214,7 @@ int hash_code_bin(const char *buf, int buf_size)
 char *get_string_stats(const char *s)
 {
     size_t len = 0;
-    static char out[OUTSIZE] = "";  //! @todo malloc this?
+    static char out[OUTSIZE] = "";     //! @todo malloc this?
 
     out[0] = '\0';
     if ((s != NULL) && (s[0] != '\0')) {
@@ -1420,9 +1420,9 @@ int vrun(const char *fmt, ...)
     vsnprintf(buf, MAX_PATH, fmt, ap);
     va_end(ap);
 
-    logprintfl(EUCAINFO, "[%s]\n", buf);
+    LOGINFO("[%s]\n", buf);
     if ((e = system(buf)) != 0) {
-        logprintfl(EUCAERROR, "system(%s) failed with %d\n", buf, e);   //! @todo remove?
+        LOGERROR("system(%s) failed with %d\n", buf, e);    //! @todo remove?
     }
     return (e);
 }
@@ -1469,11 +1469,11 @@ int touch(const char *path)
     if ((fd = open(path, O_WRONLY | O_CREAT | O_NONBLOCK, 0644)) >= 0) {
         close(fd);
         if (utime(path, NULL) != 0) {
-            logprintfl(EUCAERROR, "failed to adjust time for %s (%s)\n", path, strerror(errno));
+            LOGERROR("failed to adjust time for %s (%s)\n", path, strerror(errno));
             ret = EUCA_IO_ERROR;
         }
     } else {
-        logprintfl(EUCAERROR, "failed to create/open file %s (%s)\n", path, strerror(errno));
+        LOGERROR("failed to create/open file %s (%s)\n", path, strerror(errno));
         ret = EUCA_IO_ERROR;
     }
     return (ret);
@@ -1497,9 +1497,9 @@ int diff(const char *path1, const char *path2)
     char buf2[BUFSIZE] = "";
 
     if ((fd1 = open(path1, O_RDONLY)) < 0) {
-        logprintfl(EUCAERROR, "failed to open %s\n", path1);
+        LOGERROR("failed to open %s\n", path1);
     } else if ((fd2 = open(path2, O_RDONLY)) < 0) {
-        logprintfl(EUCAERROR, "failed to open %s\n", path2);
+        LOGERROR("failed to open %s\n", path2);
         close(fd1);
     } else {
         do {
@@ -1514,7 +1514,7 @@ int diff(const char *path1, const char *path2)
 
         close(fd1);
         close(fd2);
-        return (-(read1 + read2));  // both should be 0s if files are equal
+        return (-(read1 + read2));     // both should be 0s if files are equal
     }
     return EUCA_ERROR;
 }
@@ -1539,12 +1539,12 @@ long long dir_size(const char *path)
     struct dirent *dir_entry = NULL;
 
     if ((dir = opendir(path)) == NULL) {
-        logprintfl(EUCAWARN, "unopeneable directory %s\n", path);
+        LOGWARN("unopeneable directory %s\n", path);
         return (-1);
     }
 
     if (stat(path, &mystat) < 0) {
-        logprintfl(EUCAWARN, "could not stat %s\n", path);
+        LOGWARN("could not stat %s\n", path);
         closedir(dir);
         return (-1);
     }
@@ -1559,14 +1559,14 @@ long long dir_size(const char *path)
             continue;
 
         if (DT_REG != type) {
-            logprintfl(EUCAWARN, "non-regular (type=%d) file %s/%s\n", type, path, name);
+            LOGWARN("non-regular (type=%d) file %s/%s\n", type, path, name);
             size = -1;
             break;
         }
 
         snprintf(filepath, MAX_PATH, "%s/%s", path, name);
         if (stat(filepath, &mystat) < 0) {
-            logprintfl(EUCAWARN, "could not stat file %s\n", filepath);
+            LOGWARN("could not stat file %s\n", filepath);
             size = -1;
             break;
         }
@@ -1616,12 +1616,12 @@ char *file2strn(const char *path, const ssize_t limit)
     struct stat mystat = { 0 };
 
     if (stat(path, &mystat) < 0) {
-        logprintfl(EUCAERROR, "could not stat file %s\n", path);
+        LOGERROR("could not stat file %s\n", path);
         return (NULL);
     }
 
     if (mystat.st_size > limit) {
-        logprintfl(EUCAERROR, "file %s exceeds the limit (%lu) in file2strn()\n", path, limit);
+        LOGERROR("file %s exceeds the limit (%lu) in file2strn()\n", path, limit);
         return (NULL);
     }
 
@@ -1649,19 +1649,19 @@ char *file2str(const char *path)
     struct stat mystat = { 0 };
 
     if (stat(path, &mystat) < 0) {
-        logprintfl(EUCAERROR, "could not stat file %s\n", path);
+        LOGERROR("could not stat file %s\n", path);
         return (content);
     }
 
     file_size = mystat.st_size;
 
     if ((content = EUCA_ALLOC((file_size + 1), sizeof(char))) == NULL) {
-        logprintfl(EUCAERROR, "out of memory reading file %s\n", path);
+        LOGERROR("out of memory reading file %s\n", path);
         return (content);
     }
 
     if ((fp = open(path, O_RDONLY)) < 0) {
-        logprintfl(EUCAERROR, "failed to open file %s\n", path);
+        LOGERROR("failed to open file %s\n", path);
         EUCA_FREE(content);
         return (content);
     }
@@ -1679,7 +1679,7 @@ char *file2str(const char *path)
     close(fp);
 
     if (bytes < 0) {
-        logprintfl(EUCAERROR, "failed to read file %s\n", path);
+        LOGERROR("failed to read file %s\n", path);
         EUCA_FREE(content);
         return (content);
     }
@@ -1707,12 +1707,12 @@ char *file2str_seek(char *file, size_t size, int mode)
     struct stat statbuf = { 0 };
 
     if (!file || size <= 0) {
-        logprintfl(EUCAERROR, "bad input parameters\n");
+        LOGERROR("bad input parameters\n");
         return (NULL);
     }
 
     if ((ret = EUCA_ZALLOC(size, sizeof(char))) == NULL) {
-        logprintfl(EUCAERROR, "out of memory!\n");
+        LOGERROR("out of memory!\n");
         return (NULL);
     }
 
@@ -1721,7 +1721,7 @@ char *file2str_seek(char *file, size_t size, int mode)
             if (mode == 1) {
                 if ((rc = lseek(fd, (off_t) (-1 * size), SEEK_END)) < 0) {
                     if ((rc = lseek(fd, (off_t) 0, SEEK_SET)) < 0) {
-                        logprintfl(EUCAERROR, "cannot seek\n");
+                        LOGERROR("cannot seek\n");
                         EUCA_FREE(ret);
                         close(fd);
                         return (NULL);
@@ -1732,12 +1732,12 @@ char *file2str_seek(char *file, size_t size, int mode)
             rc = read(fd, ret, (size) - 1);
             close(fd);
         } else {
-            logprintfl(EUCAERROR, "cannot open '%s' read-only\n", file);
+            LOGERROR("cannot open '%s' read-only\n", file);
             EUCA_FREE(ret);
             return (NULL);
         }
     } else {
-        logprintfl(EUCAERROR, "cannot stat console_output file '%s'\n", file);
+        LOGERROR("cannot stat console_output file '%s'\n", file);
         EUCA_FREE(ret);
         return (NULL);
     }
@@ -1793,7 +1793,7 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
 
     rc = 1;
     if ((pidstr = file2str(pidfile)) != NULL) {
-        logprintfl(EUCADEBUG, "calling safekill with pid %d\n", atoi(pidstr));
+        LOGDEBUG("calling safekill with pid %d\n", atoi(pidstr));
         rc = safekill(atoi(pidstr), procname, sig, rootwrap);
         EUCA_FREE(pidstr);
     }
@@ -1901,31 +1901,31 @@ int copy_file(const char *src, const char *dst)
     struct stat mystat = { 0 };
 
     if (stat(src, &mystat) < 0) {
-        logprintfl(EUCAERROR, "cannot stat '%s'\n", src);
+        LOGERROR("cannot stat '%s'\n", src);
         return (EUCA_IO_ERROR);
     }
 
     if ((ifp = open(src, O_RDONLY)) < 0) {
-        logprintfl(EUCAERROR, "failed to open the input file '%s'\n", src);
+        LOGERROR("failed to open the input file '%s'\n", src);
         return (EUCA_IO_ERROR);
     }
 
     if ((ofp = open(dst, O_WRONLY | O_CREAT, 0600)) < 0) {
-        logprintfl(EUCAERROR, "failed to create the ouput file '%s'\n", dst);
+        LOGERROR("failed to create the ouput file '%s'\n", dst);
         close(ifp);
         return (EUCA_IO_ERROR);
     }
 
     while ((bytes = read(ifp, buf, _BUFSIZE)) > 0) {
         if (write(ofp, buf, bytes) < 1) {
-            logprintfl(EUCAERROR, "failed while writing to '%s'\n", dst);
+            LOGERROR("failed while writing to '%s'\n", dst);
             ret = EUCA_IO_ERROR;
             break;
         }
     }
 
     if (bytes < 0) {
-        logprintfl(EUCAERROR, "failed while writing to '%s'\n", dst);
+        LOGERROR("failed while writing to '%s'\n", dst);
         ret = EUCA_IO_ERROR;
     }
 
@@ -1985,12 +1985,12 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
     const char *last_ch = NULL;
 
     for (p = xml; *p; p++) {
-        if (*p == '<') {        // found a new tag
-            tag_start = (p - xml);  // record the char so its offset can be returned
+        if (*p == '<') {               // found a new tag
+            tag_start = (p - xml);     // record the char so its offset can be returned
 
             *closing = 0;
             if ((*(p + 1) == '/') || (*(p + 1) == '?')) {
-                if (*(p + 1) == '/')    // if followed by '/' then it is a "closing" tag
+                if (*(p + 1) == '/')   // if followed by '/' then it is a "closing" tag
                     *closing = 1;
                 name_start = (p - xml + 2);
                 p++;
@@ -2006,15 +2006,15 @@ static char *next_tag(const char *xml, int *start, int *end, int *single, int *c
         }
 
         if (*p == '>') {
-            if (name_start == -1)   // never saw '<', error
+            if (name_start == -1)      // never saw '<', error
                 break;
 
-            if (p < (xml + 2))  // tag is too short, error
+            if (p < (xml + 2))         // tag is too short, error
                 break;
 
             last_ch = p - 1;
             if ((*last_ch == '/') || (*last_ch == '?')) {
-                *single = 1;    // preceded by '/' then it is a "single" tag
+                *single = 1;           // preceded by '/' then it is a "single" tag
                 last_ch--;
             } else {
                 *single = 0;
@@ -2082,14 +2082,14 @@ static char *find_cont(const char *xml, char *xpath)
     for (xml_offset = 0; (name = next_tag(xml + xml_offset, &tag_start, &tag_end, &single, &closing)) != NULL; xml_offset += tag_end + 1) {
         if (single) {
             // not interested in singles because we are looking for content
-        } else if (!closing) {  // opening a tag
+        } else if (!closing) {         // opening a tag
             // put name and pointer to content onto the stack
             stk_p++;
-            if (stk_p == _STK_SIZE) // exceeding stack size, error
+            if (stk_p == _STK_SIZE)    // exceeding stack size, error
                 goto cleanup;
             n_stk[stk_p] = euca_strduptolower(name);    // put a lower-case-only copy onto stack
             c_stk[stk_p] = xml + xml_offset + tag_end + 1;
-        } else {                // closing tag
+        } else {                       // closing tag
             // get the name in all lower-case, for consistency with xpath
             name_lc = euca_strduptolower(name);
             EUCA_FREE(name);
@@ -2112,7 +2112,7 @@ static char *find_cont(const char *xml, char *xpath)
             }
 
             // pop the stack whether we have a match or not
-            if (stk_p < 0)      // past the bottom of the stack, error
+            if (stk_p < 0)             // past the bottom of the stack, error
                 goto cleanup;
 
             contp = c_stk[stk_p];
@@ -2134,9 +2134,9 @@ static char *find_cont(const char *xml, char *xpath)
     }
 
 cleanup:
-    EUCA_FREE(name);            // for exceptions
+    EUCA_FREE(name);                   // for exceptions
     for (i = 0; i <= stk_p; i++)
-        EUCA_FREE(n_stk[i]);    // free everything on the stack
+        EUCA_FREE(n_stk[i]);           // free everything on the stack
     return (ret);
 
 #undef _STK_SIZE
@@ -2326,25 +2326,25 @@ int ensure_directories_exist(const char *path, int is_file_path, const char *use
 
         if (try_dir) {
             if (stat(path_copy, &buf) == -1) {
-                logprintfl(EUCAINFO, "creating path %s\n", path_copy);
+                LOGINFO("creating path %s\n", path_copy);
 
                 if (mkdir(path_copy, mode) == -1) {
-                    logprintfl(EUCAERROR, "failed to create path %s: %s\n", path_copy, strerror(errno));
+                    LOGERROR("failed to create path %s: %s\n", path_copy, strerror(errno));
 
                     EUCA_FREE(path_copy);
                     return (-1);
                 }
 
-                ret = 1;        // we created a directory
+                ret = 1;               // we created a directory
 
                 if (diskutil_ch(path_copy, user, group, mode) != EUCA_OK) {
-                    logprintfl(EUCAERROR, "failed to change perms on path %s\n", path_copy);
+                    LOGERROR("failed to change perms on path %s\n", path_copy);
                     EUCA_FREE(path_copy);
                     return (-1);
                 }
             }
 
-            path_copy[i] = '/'; // restore the slash
+            path_copy[i] = '/';        // restore the slash
         }
     }
 
@@ -2466,7 +2466,7 @@ char parse_boolean(const char *s)
     } else if (!strcmp(lc, "n") || !strcmp(lc, "no") || !strcmp(lc, "f") || !strcmp(lc, "false")) {
         val = 0;
     } else {
-        logprintfl(EUCAERROR, "failed to parse value '%s' as boolean", lc);
+        LOGERROR("failed to parse value '%s' as boolean", lc);
     }
 
     EUCA_FREE(lc);
@@ -2483,11 +2483,11 @@ int drop_privs(void)
     int s = 0;
     struct passwd pwd = { 0 };
     struct passwd *result = NULL;
-    char buf[16384] = { 0 };    // man-page said this is enough
+    char buf[16384] = { 0 };           // man-page said this is enough
 
     s = getpwnam_r(EUCALYPTUS_ADMIN, &pwd, buf, sizeof(buf), &result);
     if (result == NULL)
-        return (EUCA_ERROR);    // not found if s==0, check errno otherwise
+        return (EUCA_ERROR);           // not found if s==0, check errno otherwise
 
     if (setgid(pwd.pw_gid) != 0)
         return (EUCA_ERROR);
@@ -2534,12 +2534,12 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 
     if (pipe(stdoutfds) < 0) {
         strerror_r(errno, errorBuf, 256);
-        logprintfl(EUCAERROR, "error: failed to create pipe for stdout: %s\n", errorBuf);
+        LOGERROR("error: failed to create pipe for stdout: %s\n", errorBuf);
         return (-1);
     }
     if (pipe(stderrfds) < 0) {
         strerror_r(errno, errorBuf, 256);
-        logprintfl(EUCAERROR, "error: failed to create pipe for stderr: %s\n", errorBuf);
+        LOGERROR("error: failed to create pipe for stderr: %s\n", errorBuf);
         return (-1);
     }
 
@@ -2547,7 +2547,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
         close(stdoutfds[0]);
         if (dup2(stdoutfds[1], STDOUT_FILENO) < 0) {
             strerror_r(errno, errorBuf, 256);
-            logprintfl(EUCAERROR, "error: failed to dup2 stdout: %s\n", errorBuf);
+            LOGERROR("error: failed to dup2 stdout: %s\n", errorBuf);
             exit(1);
         }
 
@@ -2556,7 +2556,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
 
         if (dup2(stderrfds[1], STDERR_FILENO) < 0) {
             strerror_r(errno, errorBuf, 256);
-            logprintfl(EUCAERROR, "error: failed to dup2 stderr: %s\n", errorBuf);
+            LOGERROR("error: failed to dup2 stderr: %s\n", errorBuf);
             exit(1);
         };
 
@@ -2611,12 +2611,12 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
             }
         } else if (retval < 0) {
             strerror_r(errno, errorBuf, 256);
-            logprintfl(EUCAWARN, "warning: select error on pipe read: %s\n", errorBuf);
+            LOGWARN("warning: select error on pipe read: %s\n", errorBuf);
             break;
         }
 
         if ((time(NULL) - start_time) > timeout) {
-            logprintfl(EUCAWARN, "warning: read timeout\n");
+            LOGWARN("warning: read timeout\n");
             break;
         }
     }
@@ -2629,7 +2629,7 @@ int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, i
         rc = WEXITSTATUS(status);
     } else {
         kill(child_pid, SIGKILL);
-        logprintfl(EUCAERROR, "warning: shell execution timeout\n");
+        LOGERROR("warning: shell execution timeout\n");
         return (-1);
     }
 
