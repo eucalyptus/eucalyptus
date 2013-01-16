@@ -69,8 +69,9 @@
 #include "misc.h"               // bolean
 #include "ipc.h"                // sem
 
-#define MBR_BLOCKS 63           // the size of "DOS-compatibility region" partially used by 'grub'
-#define SECTOR_SIZE 512
+#define MBR_BLOCKS                                   63    //!< the size of "DOS-compatibility region" (32K) partially used by 'grub'
+#define BOOT_BLOCKS                              204800    //!< the size of the boot partition (100MB)
+#define SECTOR_SIZE                                 512    //!< the size of each sector in Bytes
 
 int diskutil_init(int require_grub);
 sem *diskutil_get_loop_sem(void);

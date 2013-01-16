@@ -192,7 +192,7 @@ out_error:
 int main(int argc, char **argv)
 {
     ncMetadata meta = { "correlate-me-please", "eucalyptus" };
-    virtualMachine params = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, {}, 0 };
+    virtualMachine params = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
     char *nc_hostport = DEFAULT_NC_HOSTPORT;
     char *walrus_hostport = DEFAULT_WALRUS_HOSTPORT;
     char *instance_id = NULL;

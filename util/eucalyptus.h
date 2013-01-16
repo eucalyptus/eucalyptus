@@ -63,6 +63,8 @@
 #ifndef INCLUDE_EUCALYPTUS_H
 #define INCLUDE_EUCALYPTUS_H
 
+#include <stdint.h>
+
 // Maybe we should have no defaults, but I will put them here for the moment.
 #ifndef LIBDIR
 #define LIBDIR "/usr/lib"

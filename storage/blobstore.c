@@ -2958,6 +2958,96 @@ int blockblob_copy(blockblob * src_bb,  // source blob to copy data from
     return ret;
 }
 
+//!
+//! Sorts the device mapper table string sent to dmsetup. In some case, the table is
+//! sent in partition ordering rather than start block ordering. This cause dmsetup to
+//! get sick and puke some errors. For example, the following table will cause some
+//! errors:
+//! \li 0 63 linear /dev/mapper/euca-dsk-3AE63D3B-d6320e89-p0-snap 0
+//! \li 204863 2764800 linear /dev/loop0 0
+//! \li 2969663 6516 linear /dev/loop1 0
+//! \li 2976179 1024 linear /dev/loop2 0
+//! \li 63 204800 linear /dev/loop3 0
+//! This function will take the previous table and re-order it in starting block order
+//! as in the following:
+//! \li 0 63 linear /dev/mapper/euca-dsk-3AE63D3B-d6320e89-p0-snap 0
+//! \li 63 204800 linear /dev/loop3 0
+//! \li 204863 2764800 linear /dev/loop0 0
+//! \li 2969663 6516 linear /dev/loop1 0
+//! \li 2976179 1024 linear /dev/loop2 0
+//!
+//! @param[in] table the table string to sort
+//!
+//! @return a pointer to the newly allocated table string if successful or NULL if any
+//!         error occured.
+//!
+//! @pre The provided table field must not be NULL and must contain more than 1 entry
+//!      separated by the newline character.
+//!
+//! @post On success the given table will be freed and a newly constructed will be returned.
+//!
+static char * dm_sort_table(char *pOldTable)
+{
+    unsigned int i = 0;
+    unsigned int lineId = UINT32_MAX;
+    unsigned long long minVal = UINT64_MAX;
+    unsigned long long curVal = 0;
+    char *aLines[32] = { NULL };
+    char sLine[64] = "";
+    char *pNewTable = NULL;
+    register unsigned int j = 0;
+    register unsigned int count = 0;
+
+    // Make sure our given table isn't NULL.
+    if (pOldTable) {
+        aLines[count] = strtok(pOldTable, "\n");
+        while(aLines[count] != NULL) {
+            count++;
+            aLines[count] = strtok(NULL, "\n");
+        }
+
+        // we need more than 1 line in this table to sort
+        if(count > 1) {
+            // Sort every lines in the 'lines' array
+            for (i = 0; i < count; i++) {
+                // Search for the smaller starting block value in the lefover lines
+                lineId = UINT32_MAX;
+                minVal = UINT64_MAX;
+                for(j = 0; j < count; j++) {
+                    // As we pick lines from the array, they become NULLs
+                    if(aLines[j] != NULL) {
+                        // Retrieve the starting block number which is the first item on the line
+                        if(sscanf(aLines[j], "%llu", &curVal) == 1) {
+                            // Is this a newest low?
+                            if(curVal < minVal) {
+                                lineId = j;
+                                minVal = curVal;
+                            }
+                        }
+                    }
+                }
+
+                // Since we set line ID to UINT32_MAX, its safe to assume its valid if less than count
+                if(lineId < count) {
+                    // Re-add the newline character at the end of this string.
+                    if(snprintf(sLine, 64, "%s\n", aLines[lineId]) > 0) {
+                        // Add it to our new table.
+                        if((pNewTable = euca_strdupcat(pNewTable, sLine)) == NULL)
+                            return(NULL);
+                    }
+
+                    // Lets no longer consider this line.
+                    aLines[lineId] = NULL;
+                }
+            }
+        }
+    }
+
+    // Free our given table and return the new one.
+    EUCA_FREE(pOldTable);
+    return(pNewTable);
+}
+
 int blockblob_clone(blockblob * bb, // destination blob, which blocks may be used as backing
                     const blockmap * map,   // map of blocks from other blobs/devices to be copied/mapped/snapshotted
                     unsigned int map_size)  // size of the map []
@@ -3159,7 +3249,10 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
     if (mapped_or_snapshotted) {    // we must use the device mapper
         safe_strncpy(bb->dm_name, dm_base, sizeof(bb->dm_name));
         dev_names[devices] = strdup(dm_base);
-        dm_tables[devices] = main_dm_table;
+        if((dm_tables[devices] = dm_sort_table(main_dm_table)) == NULL) {
+            ret = -1;
+            goto free;
+        }
         devices++;
 
         // change device_path from loopback to the device-mapper path

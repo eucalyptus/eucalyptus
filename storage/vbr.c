@@ -193,17 +193,21 @@ parse_rec(                      // parses the VBR as supplied by a client or use
             vm->ramdisk = vbr;
     } else if (strstr(vbr->typeName, "ephemeral") == vbr->typeName) {
         vbr->type = NC_RESOURCE_EPHEMERAL;
-        if (strstr(vbr->typeName, "ephemeral0") == vbr->typeName) { // TODO: remove
+        if (strstr(vbr->typeName, "ephemeral0") == vbr->typeName) {
             if (vm) {
                 vm->ephemeral0 = vbr;
             }
         }
-    } else if (strstr(vbr->typeName, "swap") == vbr->typeName) {    // TODO: remove
+    } else if (strstr(vbr->typeName, "swap") == vbr->typeName) {
         vbr->type = NC_RESOURCE_SWAP;
         if (vm)
             vm->swap = vbr;
     } else if (strstr(vbr->typeName, "ebs") == vbr->typeName) {
         vbr->type = NC_RESOURCE_EBS;
+    } else if (strstr(vbr->typeName, "boot") == vbr->typeName) {
+        vbr->type = NC_RESOURCE_BOOT;
+        if (vm)
+            vm->boot = vbr;
     } else {
         logprintfl(EUCAERROR, "failed to parse resource type '%s'\n", vbr->typeName);
         return ERROR;
@@ -236,7 +240,7 @@ parse_rec(                      // parses the VBR as supplied by a client or use
         if (meta)
             error = prep_location(vbr, meta, "sc");
     } else if (strcasestr(vbr->resourceLocation, "none") == vbr->resourceLocation) {
-        if (vbr->type != NC_RESOURCE_EPHEMERAL && vbr->type != NC_RESOURCE_SWAP) {
+        if (vbr->type != NC_RESOURCE_EPHEMERAL && vbr->type != NC_RESOURCE_SWAP && vbr->type != NC_RESOURCE_BOOT) {
             logprintfl(EUCAERROR, "resourceLocation not specified for non-ephemeral resource '%s'\n", vbr->resourceLocation);
             return ERROR;
         }
@@ -367,7 +371,7 @@ parse_rec(                      // parses the VBR as supplied by a client or use
         logprintfl(EUCAERROR, "failed to parse resource format '%s'\n", vbr->formatName);
         return ERROR;
     }
-    if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP) {  // TODO: should we allow ephemeral/swap that reside remotely?
+    if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP || vbr->type == NC_RESOURCE_BOOT) {  //! @TODO should we allow ephemeral/swap that reside remotely?
         if (vbr->size < 1) {
             logprintfl(EUCAERROR, "invalid size '%lld' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
             return ERROR;
@@ -715,10 +719,14 @@ static void set_disk_dev(virtualBootRecord * vbr)
 static int disk_creator(artifact * a)   // creates a 'raw' disk based on partitions
 {
     int ret = ERROR;
+    assert(a);
     assert(a->bb);
     const char *dest_dev = blockblob_get_dev(a->bb);
 
     assert(dest_dev);
+    if(a->do_make_bootable) {
+        a->size_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
+    }
     logprintfl(EUCAINFO, "[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
 
     blockmap_relation_t mbr_op = BLOBSTORE_SNAPSHOT;
@@ -738,9 +746,19 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     int map_entries = 1;        // first map entry is for the MBR
     int root_entry = -1;        // we do not know the root entry 
     int root_part = -1;         // we do not know the root partition
+    int boot_entry = -1;               // we do not know the boot entry
+    int boot_part = -1;                // we do not know the boot partition
     const char *kernel_path = NULL;
     const char *ramdisk_path = NULL;
-    long long offset_bytes = 512 * MBR_BLOCKS;  // first partition begins after MBR
+    long long offset_bytes = SECTOR_SIZE * MBR_BLOCKS;  // first partition begins after MBR
+
+    // Actually, after /boot if we're bootable
+    if (a->do_make_bootable) {
+        offset_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
+    }
+
+    logprintfl(EUCAINFO, "[%s] offset_bytes=%llu\n", a->instanceId, offset_bytes);
+
     assert(disk);
     for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
         artifact *dep = a->deps[i];
@@ -775,6 +793,16 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         map_entries++;
     }
     assert(p1);
+
+    if (a->do_make_bootable) {
+        map[map_entries - 1].first_block_dst = MBR_BLOCKS;
+        map[map_entries - 1].len_blocks = BOOT_BLOCKS;
+        boot_entry = map_entries - 1;
+        boot_part = boot_entry - 1;
+        logprintfl(EUCADEBUG, "[%s] re-mapping partition %d from %s [%lld-%lld] %lld blocks\n", a->instanceId, boot_entry,
+                   blockblob_get_dev(map[map_entries - 1].source.blob), map[map_entries - 1].first_block_dst,
+                   (map[map_entries - 1].first_block_dst + map[map_entries - 1].len_blocks - 1), map[map_entries - 1].len_blocks);
+    }
 
     // set fields in vbr that are needed for
     // xml.c:gen_instance_xml() to generate correct disk entries
@@ -814,7 +842,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         boolean bootification_failed = 1;
 
         logprintfl(EUCAINFO, "[%s] making disk bootable\n", a->instanceId);
-        if (root_entry < 1 || root_part < 0) {
+        if (boot_entry < 1 || boot_part < 0) {
             logprintfl(EUCAERROR, "[%s] cannot make bootable a disk without an image\n", a->instanceId);
             goto cleanup;
         }
@@ -828,14 +856,14 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         }
         // `parted mkpart` causes children devices for each partition to be created
         // (e.g., /dev/mapper/euca-diskX gets /dev/mapper/euca-diskXp1 or ...X1 and so on)
-        // we mount such a device here so as to copy files to the root partition
+        // we mount such a device here so as to copy files to the boot partition
         // (we cannot mount the dev of the partition's blob because it becomes
         // 'busy' after the clone operation)
         char *mapper_dev = NULL;
         char dev_with_p[EUCA_MAX_PATH];
         char dev_without_p[EUCA_MAX_PATH];  // on Ubuntu Precise, some dev names do not have 'p' in them
-        snprintf(dev_with_p, sizeof(dev_with_p), "%sp%d", blockblob_get_dev(a->bb), root_entry);
-        snprintf(dev_without_p, sizeof(dev_without_p), "%s%d", blockblob_get_dev(a->bb), root_entry);
+        snprintf(dev_with_p, sizeof(dev_with_p), "%sp%d", blockblob_get_dev(a->bb), boot_entry);
+        snprintf(dev_without_p, sizeof(dev_without_p), "%s%d", blockblob_get_dev(a->bb), boot_entry);
         if (check_path(dev_with_p) == 0) {
             mapper_dev = dev_with_p;
         } else if (check_path(dev_without_p) == 0) {
@@ -847,7 +875,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         logprintfl(EUCAINFO, "[%s] found partition device %s\n", a->instanceId, mapper_dev);
 
         // point a loopback device at the partition device because grub-probe on Ubuntu Precise 
-        // sometimes does not grok root partitions mounted from /dev/mapper/... 
+        // sometimes does not grok boot partitions mounted from /dev/mapper/...
         char loop_dev[EUCA_MAX_PATH];
         if (diskutil_loop(mapper_dev, 0, loop_dev, sizeof(loop_dev)) != OK) {
             logprintfl(EUCAERROR, "[%s] failed to attach '%s' on a loopback device\n", a->instanceId, mapper_dev);
@@ -855,7 +883,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         }
         assert(strncmp(loop_dev, "/dev/loop", 9) == 0);
 
-        // mount the root partition
+        // mount the boot partition
         char mnt_pt[EUCA_MAX_PATH] = "/tmp/euca-mount-XXXXXX";
         if (safe_mkdtemp(mnt_pt) == NULL) {
             logprintfl(EUCAERROR, "[%s] mkdtemp() failed: %s\n", a->instanceId, strerror(errno));
@@ -865,11 +893,11 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             logprintfl(EUCAERROR, "[%s] failed to mount '%s' on '%s'\n", a->instanceId, loop_dev, mnt_pt);
             goto unloop;
         }
-        // copy in kernel and ramdisk and run grub over the root partition and the MBR
-        logprintfl(EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, root_part);
+        // copy in kernel and ramdisk and run grub over the boot partition and the MBR
+        logprintfl(EUCAINFO, "[%s] making partition %d bootable\n", a->instanceId, boot_part);
         logprintfl(EUCAINFO, "[%s] with kernel %s\n", a->instanceId, kernel_path);
         logprintfl(EUCAINFO, "[%s] and ramdisk %s\n", a->instanceId, ramdisk_path);
-        if (diskutil_grub_files(mnt_pt, root_part, kernel_path, ramdisk_path) != OK) {
+        if (diskutil_grub_files(mnt_pt, boot_part, kernel_path, ramdisk_path) != OK) {
             logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub files)\n", a->instanceId);
             goto unmount;
         }
@@ -877,11 +905,11 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
             logprintfl(EUCAERROR, "[%s] failed to flush I/O on disk\n", a->instanceId);
             goto unmount;
         }
-        if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), root_part, mnt_pt) != OK) {
+        if (diskutil_grub2_mbr(blockblob_get_dev(a->bb), boot_part, mnt_pt) != OK) {
             logprintfl(EUCAERROR, "[%s] failed to make disk bootable (could not install grub)\n", a->instanceId);
             goto unmount;
         }
-        // change user of the blob device back to 'eucalyptus' (grub sets it to 'root')
+        // change user of the blob device back to 'eucalyptus' (grub sets it to 'boot')
         sleep(1);               // without this, perms on dev-mapper devices can flip back, presumably because in-kernel ops complete after grub process finishes
         if (diskutil_ch(blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN, NULL, 0) != OK) {
             logprintfl(EUCAINFO, "[%s] failed to change user for '%s' to '%s'\n", a->instanceId, blockblob_get_dev(a->bb), EUCALYPTUS_ADMIN);
@@ -1315,8 +1343,6 @@ w_out:
 
     case NC_LOCATION_NONE:{
             assert(vbr->size > 0L);
-
-            vbr->size = vbr->size * VBR_SIZE_SCALING;   // TODO: remove this adjustment (CLC sends size in KBs) 
 
             char art_sig[ART_SIG_MAX];  // signature for this artifact based on its salient characteristics
             if (snprintf(art_sig, sizeof(art_sig), "id=%s size=%lld format=%s\n\n", vbr->id, vbr->size, vbr->formatName) >= sizeof(art_sig))    // output was truncated
