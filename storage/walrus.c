@@ -502,6 +502,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     if (auth_str==NULL) {
         close(fd);
         pthread_mutex_unlock(&wreq_mutex);
+        if(!url_host) free(url_host);
         return ERROR;
     }
     assert (strlen(auth_str)+16<=BUFSIZE);
@@ -593,6 +594,7 @@ static int walrus_request_timeout (const char * walrus_op, const char * verb, co
     }
 
     free (auth_str);
+    if(!url_host) free(url_host);
     curl_slist_free_all (headers);
     curl_easy_cleanup (curl);
     pthread_mutex_unlock(&wreq_mutex);
