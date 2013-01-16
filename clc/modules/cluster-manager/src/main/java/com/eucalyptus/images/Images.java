@@ -84,6 +84,8 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -96,6 +98,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -662,7 +666,200 @@ public class Images {
   public static class ImageInfoFilterSupport extends FilterSupport<ImageInfo> {
     public ImageInfoFilterSupport() {
       super( builderFor( ImageInfo.class )
+          .withStringProperty( "architecture" , FilterStringFunctions.ARCHITECTURE )
+          .withBooleanSetProperty( "block-device-mapping.delete-on-termination" , FilterBooleanSetFunctions.BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATION)
+          .withStringSetProperty( "block-device-mapping.device-name", FilterStringSetFunctions.BLOCK_DEVICE_MAPPING_DEVICE_NAME )
+          .withStringSetProperty( "block-device-mapping.snapshot-id", FilterStringSetFunctions.BLOCK_DEVICE_MAPPING_SNAPSHOT_ID )
+          .withIntegerSetProperty( "block-device-mapping.volume-size", FilterIntegerSetFunctions.BLOCK_DEVICE_MAPPING_VOLUME_SIZE )
+          .withConstantProperty( "block-device-mapping.volume-type" , "standard" )
+          .withStringProperty( "description" , FilterStringFunctions.DESCRIPTION )
+          .withStringProperty( "image-id", FilterStringFunctions.IMAGE_ID )
+          .withStringProperty( "image-type" , FilterStringFunctions.IMAGE_TYPE )
+          .withBooleanProperty( "is-public" , FilterBooleanFunctions.IS_PUBLIC )
+          .withStringProperty( "kernel-id", FilterStringFunctions.KERNEL_ID )
+          .withStringProperty( "manifest-location" , FilterStringFunctions.MANIFEST_LOCATION )
+          .withStringProperty( "name" , FilterStringFunctions.NAME )
+          .withStringProperty( "owner-alias" , FilterStringFunctions.OWNER_ALIAS )
+          .withStringProperty( "owner-id" , FilterStringFunctions.OWNER_ID )
+          .withStringProperty( "platform", FilterStringFunctions.PLATFORM )
+          .withStringSetProperty( "product-code" , FilterStringSetFunctions.PRODUCT_CODE )
+          .withUnsupportedProperty( "product-code.type" )
+          .withStringProperty( "ramdisk-id", FilterStringFunctions.RAMDISK_ID )
+          .withStringProperty( "root-device-name", FilterStringFunctions.ROOT_DEVICE_NAME )
+          .withStringProperty( "root-device-type", FilterStringFunctions.ROOT_DEVICE_TYPE )
+          .withStringProperty( "state" , FilterStringFunctions.STATE )
+          .withUnsupportedProperty( "state-reason-code" )
+          .withUnsupportedProperty( "state-reason-message" )
+//          .withUnsupportedProperty( "tag-key" )
+//          .withUnsupportedProperty( "tag-value" )
+//          .withUnsupportedProperty( "tag:key" )
+          .withUnsupportedProperty( "virtualization-type")
+          .withUnsupportedProperty( "hypervisor")
           .withTagFiltering( ImageInfoTag.class, "image" ) );
+    }
+  }
+
+  private enum FilterBooleanFunctions implements Function<ImageInfo,Boolean> {
+    IS_PUBLIC {
+      @Override
+      public Boolean apply( final ImageInfo imageInfo ) {
+	      return TO_IMAGE_DETAILS.apply(imageInfo).getIsPublic();
+	    }
+    } 
+  }
+
+  private enum FilterBooleanSetFunctions implements Function<ImageInfo,Set<Boolean>> {
+    BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATION {
+      @Override
+      public Set<Boolean> apply( final ImageInfo imageInfo ) {
+        final Set<Boolean> result = Sets.newHashSet();
+        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
+          Boolean deleteOnTermination = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getEbs().getDeleteOnTermination();
+          if (deleteOnTermination != null) {
+            result.add(deleteOnTermination);
+          }
+        }
+        return result;
+      }
+    } 
+  }
+
+
+  private enum FilterIntegerSetFunctions implements Function<ImageInfo,Set<Integer>> {
+    BLOCK_DEVICE_MAPPING_VOLUME_SIZE {
+      @Override
+      public Set<Integer> apply( final ImageInfo imageInfo ) {
+        final Set<Integer> result = Sets.newHashSet();
+        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
+          Integer volumeSize = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getEbs().getVolumeSize();
+          if (volumeSize != null) {
+            result.add(volumeSize);
+          }
+        }
+        return result;
+      }
+    } 
+  }
+
+  private enum FilterStringFunctions implements Function<ImageInfo,String> {
+    ARCHITECTURE {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getArchitecture().toString();
+      }
+    }, 
+    DESCRIPTION {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getDescription();
+      }
+    }, 
+    IMAGE_ID {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getDisplayName();
+      }
+    },
+    IMAGE_TYPE {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getImageType().toString();
+      }
+    },
+    KERNEL_ID {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getKernelId();
+      }
+    },
+    MANIFEST_LOCATION {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getImageLocation(); // TODO: is this right?
+      }
+    },  
+    NAME {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getImageName();
+      }
+    },
+    OWNER_ALIAS {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getImageOwnerAlias();
+      }
+    },
+    OWNER_ID {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getOwnerAccountNumber().toString();
+      }
+    },
+    PLATFORM {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getPlatform();
+      }
+    },
+    RAMDISK_ID {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getRamdiskId();
+      }
+    },
+    ROOT_DEVICE_NAME {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getRootDeviceName();
+      }
+    },
+    ROOT_DEVICE_TYPE {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return TO_IMAGE_DETAILS.apply(imageInfo).getRootDeviceType();
+      }
+    },
+    STATE {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo.getState().toString();
+      }
+    }
+ }
+
+  private enum FilterStringSetFunctions implements Function<ImageInfo,Set<String>> {
+    BLOCK_DEVICE_MAPPING_DEVICE_NAME {
+      @Override
+      public Set<String> apply( final ImageInfo imageInfo ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
+          String deviceName = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getDeviceName();
+          if (deviceName != null) {
+            result.add(deviceName);
+          }
+        }
+        return result;
+      }
+    }, 
+    BLOCK_DEVICE_MAPPING_SNAPSHOT_ID {
+      @Override
+      public Set<String> apply( final ImageInfo imageInfo ) {
+        final Set<String> result = Sets.newHashSet();
+        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
+          String snapshotId = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getEbs().getSnapshotId();
+          if (snapshotId != null) {
+            result.add(snapshotId);
+          }
+        }
+        return result;
+      }
+    }, 
+    PRODUCT_CODE {
+      @Override
+      public Set<String> apply( final ImageInfo imageInfo ) {
+        return imageInfo.getProductCodes();
+      }
     }
   }
 }
