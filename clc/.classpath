@@ -27,6 +27,7 @@
 	<classpathentry kind="src" path="modules/storage-controller/src/main/java"/>
 	<classpathentry kind="src" path="modules/walrus/src/main/java"/>
 	<classpathentry kind="src" path="modules/walrus/conf/drbd"/>
+	<classpathentry kind="src" path="modules/walrus/src/test/java"/>
 	<classpathentry kind="src" path="modules/wsstack/src/main/java"/>
 	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
 	<classpathentry kind="src" path="modules/www/src/main/java"/>

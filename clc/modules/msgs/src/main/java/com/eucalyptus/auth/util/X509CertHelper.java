@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.util;
 
 import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import com.eucalyptus.crypto.util.B64;
@@ -101,5 +102,28 @@ public class X509CertHelper {
       return new String( PEMFiles.getBytes( pk ) );
     }
   }
+  
+  public static String calcFingerprint(X509Certificate cert) {
+      try {
+      	MessageDigest md = MessageDigest.getInstance("MD5");
+      	byte[] der = cert.getEncoded();        
+      	md.update(der);
+      	byte[] digest = md.digest();
+      	return hexify(digest);
+      } catch(Exception e) {
+      	return null;
+      }
+  }
+
+  public static String hexify (byte bytes[]) {
+    StringBuilder builder = new StringBuilder(bytes.length * 2);      
+    for (byte b : bytes) {
+    	builder.append(Integer.toHexString((b & 0xf0) >> 4));
+    	builder.append(Integer.toHexString(b & 0x0f));
+    }
+
+    return builder.toString();
+  }
+
   
 }

@@ -66,15 +66,18 @@ import java.io.File;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 
 public class HttpWriter extends HttpTransfer {
-
+	private static Logger LOG = Logger.getLogger(HttpWriter.class);
+	
 	private HttpClient httpClient;
 	private HttpMethodBase method;
 	public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
@@ -82,11 +85,12 @@ public class HttpWriter extends HttpTransfer {
 		String walrusAddr = StorageProperties.WALRUS_URL;
 		if(walrusAddr != null) {
 			String addr = walrusAddr + "/" + bucket + "/" + key;
-			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
+			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader, true);
 		}
 	}
 
 	public HttpWriter(String httpVerb, File file, String size, CallBack callback, String bucket, String key, String eucaOperation, String eucaHeader, Map<String, String> httpParameters) {
+
 		httpClient = new HttpClient();
 		String walrusAddr = StorageProperties.WALRUS_URL;
 		if(walrusAddr != null) {
@@ -105,16 +109,29 @@ public class HttpWriter extends HttpTransfer {
 				if(value != null)
 					addr += "=" + value;
 			}
-			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader);
-			if(method != null) {
+			method = constructHttpMethod(httpVerb, addr, eucaOperation, eucaHeader, false);
+			if(method != null) {				
+				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), size);				
 				method.setRequestHeader("Transfer-Encoding", "chunked");
-				method.addRequestHeader(StorageProperties.StorageParameters.EucaSnapSize.toString(), size);
+				
+				//Sign the request
+				signEucaInternal(method);
+				
 				((PutMethodWithProgress)method).setOutFile(file);
 				((PutMethodWithProgress)method).setCallBack(callback);
-			}
+			}	
 		}
 	}
 
+	private String print() {
+		StringBuilder requestString = new StringBuilder();
+		for(Header h : method.getRequestHeaders()) {
+			requestString.append("Header name: " + h.getName() + " = " + h.getValue() + "\n");
+		}		
+		
+		return requestString.toString();
+	}
+	
 	public void run() throws EucalyptusCloudException {
 		try {
 			httpClient.executeMethod(method);
