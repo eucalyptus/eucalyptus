@@ -96,6 +96,10 @@ public class SnapshotInfo extends AbstractPersistent {
     @Column(name = "should_transfer")
     private Boolean shouldTransfer;
     
+    //TODO: zhill, persist the snapshot consistency point id here for cleanup. Should be removed upon snapshot completion
+    @Column(name = "snapshot_point_id")
+    private String snapPointId;
+    
     public SnapshotInfo() {
     	this.scName = StorageProperties.NAME;
     }
@@ -199,6 +203,14 @@ public class SnapshotInfo extends AbstractPersistent {
 		} else if (!snapshotId.equals(other.snapshotId))
 			return false;
 		return true;
+	}
+
+	public String getSnapPointId() {
+		return snapPointId;
+	}
+
+	public void setSnapPointId(String snapPointId) {
+		this.snapPointId = snapPointId;
 	}
 
 }

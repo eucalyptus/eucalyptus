@@ -76,6 +76,7 @@ import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -88,8 +89,6 @@ public class HttpReader extends HttpTransfer {
 	private static Logger LOG = Logger.getLogger(HttpReader.class);
 
 	private LinkedBlockingQueue<WalrusDataMessage> getQueue;
-	private HttpClient httpClient;
-	private HttpMethodBase method;
 	private File file;
 	private String tempPath;
 	private boolean compressed;

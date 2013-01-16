@@ -30,12 +30,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.hibernate.ejb.Ejb3Configuration;
 import org.hibernate.tool.hbm2ddl.SchemaUpdate;
@@ -159,7 +161,8 @@ public class Upgrades {
     v3_1_0,
     v3_1_1,
     v3_1_2,
-    v3_2_0;
+    v3_2_0,
+    v3_2_1;
     
     public String getVersion( ) {
       return this.name( ).substring( 1 ).replace( "_", "." );
@@ -175,6 +178,22 @@ public class Upgrades {
     
     public static Version getCurrentVersion( ) {
       return Version.valueOf( "v" + Arguments.CURRENT_VERSION.getValue( ).replace( ".", "_" ) );
+    }
+    
+    /**
+     * Filter {@link Version#values()} to include only those {@link Version}s which are in the
+     * current upgrade path (if any).
+     * 
+     * @return Iterable<Version> which are in the upgrade path.
+     */
+    public static Iterable<Version> upgradePath( ) {
+      return Iterables.filter( Arrays.asList( Version.values( ) ), new Predicate<Version>( ) {
+        
+        @Override
+        public boolean apply( @Nullable Version input ) {
+          return getOldVersion( ).ordinal( ) < input.ordinal( ) && getNewVersion( ).ordinal( ) >= input.ordinal( );
+        }
+      } );
     }
   }
   
@@ -736,7 +755,7 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         for ( ComponentId c : ComponentIds.list( ) ) {
-          for ( Version v : Version.values( ) ) {
+          for ( Version v : Version.upgradePath( ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Callable<Boolean> p : upgradeInfo.getPreUpgrades( ) ) {
               boolean result = false;
@@ -761,7 +780,7 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         for ( ComponentId c : ComponentIds.list( ) ) {
-          for ( Version v : Version.values( ) ) {
+          for ( Version v : Version.upgradePath( ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Entry<Class, Predicate> p : upgradeInfo.getEntityUpgrades( ).entries( ) ) {
               Boolean result = false;
@@ -787,7 +806,7 @@ public class Upgrades {
       @Override
       public Boolean call( ) {
         for ( ComponentId c : ComponentIds.list( ) ) {
-          for ( Version v : Version.values( ) ) {
+          for ( Version v : Version.upgradePath( ) ) {
             ComponentUpgradeInfo upgradeInfo = ComponentUpgradeInfo.get( v, c.getClass( ) );
             for ( Callable<Boolean> p : upgradeInfo.getPostUpgrades( ) ) {
               boolean result = false;

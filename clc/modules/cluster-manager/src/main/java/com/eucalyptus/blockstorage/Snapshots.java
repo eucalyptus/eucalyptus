@@ -271,15 +271,17 @@ public class Snapshots {
         
         @Override
         public void fire( Snapshot s ) {
-          try {
-            CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), snap.getDisplayName( ) );
+          String scSnapStatus = null;
+        	try {
+          	CreateStorageSnapshotType scRequest = new CreateStorageSnapshotType( vol.getDisplayName( ), snap.getDisplayName( ) );
             CreateStorageSnapshotResponseType scReply = AsyncRequests.sendSync( sc, scRequest );
             s.setMappedState( scReply.getStatus( ) );
+            scSnapStatus = scReply.getStatus();
           } catch ( Exception ex ) {
             throw Exceptions.toUndeclared( ex );
           }
         }
-      } ); 
+      } );      
     } catch ( ConstraintViolationException ex ) {
       throw new DuplicateMetadataException( "Duplicate snapshot creation: " + snap + ": " + ex.getMessage( ), ex );
     } catch ( ExecutionException ex ) {

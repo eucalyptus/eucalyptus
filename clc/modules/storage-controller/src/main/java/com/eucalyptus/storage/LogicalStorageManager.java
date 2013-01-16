@@ -84,7 +84,16 @@ public interface LogicalStorageManager {
 
 	public void cleanSnapshot(String snapshotId);
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
+	/**
+	 * If snapshotPointId == null, then create full snapshot, if != null then use snapPointId as starting point and complete snapshot creation
+	 * @param volumeId
+	 * @param snapshotId
+	 * @param snapshotPointId - The opaque id used to identify a snap point on the given backend. This is backend-specific and not universal.
+	 * @param shouldTransferSnapshots
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshots) throws EucalyptusCloudException;
 
 	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException;
 
@@ -128,6 +137,24 @@ public interface LogicalStorageManager {
 
 	public void detachVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException;
 
+	/* Added to allow synchronous snapshot setting */
+	/**
+	 * Should return either the id of the snapshot point created, or null if the point was not created.
+	 * @param parentVolumeId
+	 * @param volumeId
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
+	public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException;
+	
+	/**
+	 * Deletes the specified snapshot point
+	 * @param parentVolumeId
+	 * @param volumeId
+	 * @throws EucalyptusCloudException
+	 */
+	public void deleteSnapshotPoint(String parentVolumeId, String volumeId, String snapshotPointId) throws EucalyptusCloudException;
+	
 	public void checkReady() throws EucalyptusCloudException;
 
 	public void stop() throws EucalyptusCloudException;

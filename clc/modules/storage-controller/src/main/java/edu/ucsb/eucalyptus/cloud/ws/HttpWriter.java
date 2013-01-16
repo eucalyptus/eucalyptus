@@ -77,9 +77,7 @@ import com.eucalyptus.util.StorageProperties;
 
 public class HttpWriter extends HttpTransfer {
 	private static Logger LOG = Logger.getLogger(HttpWriter.class);
-	
-	private HttpClient httpClient;
-	private HttpMethodBase method;
+
 	public HttpWriter(String httpVerb, String bucket, String key, String eucaOperation, String eucaHeader) {
 		httpClient = new HttpClient();
 		String walrusAddr = StorageProperties.WALRUS_URL;

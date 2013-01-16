@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -103,6 +104,8 @@ import com.eucalyptus.util.WalrusUtil;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
+
 
 @ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
@@ -164,14 +167,50 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			httpRequest.addHeader(foundHeader, headerMap.get(foundHeader).toString());
 		}
 	}
+		
+	/**
+	 * This method exists to clean up a problem encountered periodically where the HTTP
+	 * headers are duplicated
+	 * 
+	 * @param httpRequest
+	 */
+	private static void removeDuplicateHeaderValues(MappingHttpRequest httpRequest) {
+		List<String> hdrList = null;
+		HashMap<String, List<String>> fixedHeaders = new HashMap<String, List<String>>();
+		boolean foundDup = false;
+		for(String header : httpRequest.getHeaderNames()) {
+			hdrList = httpRequest.getHeaders(header);
+			
+			//Only address the specific case where there is exactly one identical copy of the header
+			if(hdrList != null && hdrList.size() == 2 && hdrList.get(0).equals(hdrList.get(1))) {
+				foundDup = true;
+				fixedHeaders.put(header, Lists.newArrayList(hdrList.get(0)));
+			} else {
+				fixedHeaders.put(header, hdrList);
+			}
+		}
+		
+		if(foundDup) {
+			LOG.debug("Found duplicate headers in: " + httpRequest.logMessage());		
+			httpRequest.clearHeaders();
+		
+			for(Map.Entry<String,List<String>> e : fixedHeaders.entrySet()) {
+				for(String v : e.getValue()) {
+					httpRequest.addHeader(e.getKey(), v);
+				}
+			}			
+		}		
+	}
 	
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
 			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 
+			removeDuplicateHeaderValues(httpRequest);			
 			//Consolidate duplicates, etc.
-			canonicalizeHeaders(httpRequest);
+			
+			canonicalizeHeaders(httpRequest);			
 			if(httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
 				checkUploadPolicy(httpRequest);
 			}

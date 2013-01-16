@@ -19,77 +19,63 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+
+import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
- * <p>ReportingAccountDao is an object for reading ReportingAccount objects from the
- * database.
+ * <p>
+ * ReportingAccountDao is an object for reading ReportingAccount objects from
+ * the database.
  */
-public class ReportingAccountDao
-{
-	private static Logger LOG = Logger.getLogger( ReportingAccountDao.class );
+public class ReportingAccountDao {
+    private static Logger LOG = Logger.getLogger(ReportingAccountDao.class);
 
-	private static ReportingAccountDao instance = null;
-	
-	public static synchronized ReportingAccountDao getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingAccountDao();
-			instance.loadFromDb();
-		}
-		return instance;
+    private static ReportingAccountDao instance = null;
+
+    public static ReportingAccountDao getInstance() {
+	if (instance == null) {
+	    instance = new ReportingAccountDao();
+	}
+	return instance;
+    }
+
+    private ReportingAccountDao() {}
+
+    public ReportingAccount getReportingAccount(String accountId) {
+
+	ReportingAccount searchAccount = new ReportingAccount();
+	searchAccount.setId(accountId);
+	List<ReportingAccount> foundAccountList = Lists.newArrayList();
+
+	EntityTransaction db = Entities.get(ReportingAccount.class);
+	try {
+
+	    foundAccountList = (List<ReportingAccount>) Entities.query(
+		    searchAccount, true);
+
+	    db.commit();
+	} catch (Exception ex) {
+	    LOG.error(ex, ex);
+	    foundAccountList.clear();
+	} finally {
+	    if (db.isActive())
+		db.rollback();
+	}
+
+	if (foundAccountList.isEmpty()) {
+	    return null;
 	}
 	
-	private final Map<String,ReportingAccount> accounts =
-		new ConcurrentHashMap<String,ReportingAccount>();
+	Iterables.removeIf(foundAccountList, Predicates.isNull());
+	return foundAccountList.get(0);
 
-	private ReportingAccountDao()
-	{
-		
-	}
-
-	public ReportingAccount getReportingAccount(String accountId)
-	{
-		return accounts.get(accountId);
-	}
-	
-	private void loadFromDb()
-	{
-		LOG.debug("Load accounts from db");
-		
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
-
-		try {
-			@SuppressWarnings("rawtypes")
-			List reportingAccounts = (List)
-				entityWrapper.createQuery("from ReportingAccount")
-				.list();
-
-			for (Object obj: reportingAccounts) {
-				ReportingAccount account = (ReportingAccount) obj;
-				accounts.put(account.getId(), account);
-				LOG.debug("load account from db, id:" + account.getId() + " name:" + account.getName());
-			}
-				
-			entityWrapper.commit();
-		} catch (Exception ex) {
-			LOG.error(ex);
-			entityWrapper.rollback();
-			throw new RuntimeException(ex);
-		}			
-	}
-	
-	void putCache(ReportingAccount account)
-	{
-		accounts.put(account.getId(), account);
-	}
-	
-
+    }
 }
-

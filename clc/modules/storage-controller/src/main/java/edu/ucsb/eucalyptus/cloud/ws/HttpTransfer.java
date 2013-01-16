@@ -70,6 +70,7 @@ import java.util.Date;
 import java.util.HashMap;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.URIException;
 import org.apache.commons.httpclient.methods.DeleteMethod;
@@ -82,6 +83,7 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.auth.SystemCredentials.Credentials;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.google.common.base.Strings;
 
@@ -91,7 +93,9 @@ import java.util.Arrays;
 //All HttpTransfer operations should be called asynchronously. The operations themselves are synchronous.
 public class HttpTransfer {	
 	private static Logger LOG = Logger.getLogger(HttpTransfer.class);
-	
+	protected HttpClient httpClient;
+	protected HttpMethodBase method;
+		
 	protected static final String EUCA2_AUTH_ID = "EUCA2-RSA-SHA256";
 	protected static final String EUCA2_AUTH_HEADER_NAME = "Authorization";
 	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
@@ -313,6 +317,13 @@ public class HttpTransfer {
 		}
 		
 		return method;
+	}
+	
+	public void abortTransfer() throws EucalyptusCloudException {
+		if(httpClient != null && method != null) {
+			method.abort();
+			method.releaseConnection();
+		}
 	}
 
 	public HttpTransfer() {}
