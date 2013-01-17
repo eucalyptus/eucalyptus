@@ -121,7 +121,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
             }
 
         } else {                // no full path was given, so search $PATH
-            char *tok, *toka, *path, *helper, *save, *savea;
+            char *tok = NULL, *toka = NULL, *path = NULL, *helper = NULL, *save = NULL, *savea = NULL;
 
             tok = getenv("PATH");
             if (!tok) {
@@ -1625,10 +1625,10 @@ static char *find_cont(const char *xml, char *xpath)
 {
     char *ret = NULL;
 
-    int tag_start;
+    int tag_start = 1;
     int tag_end = -1;
-    int single;
-    int closing;
+    int single = 0;
+    int closing = 0;
     char *name;
 #define _STK_SIZE 64
     char *n_stk[_STK_SIZE];
@@ -1665,10 +1665,12 @@ static char *find_cont(const char *xml, char *xpath)
             }
             // construct the xpath of the closing tag based on stack contents
             char xpath_cur[MAX_PATH] = "";
-            for (int i = 0; i <= stk_p; i++) {
-                if (i > 0)
-                    strncat(xpath_cur, "/", MAX_PATH);
-                strncat(xpath_cur, n_stk[i], MAX_PATH);
+            for (int i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
+                if (i > 0) {
+                    strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur)));
+                }
+
+                strncat(xpath_cur, n_stk[i], (xpathLen - strlen(xpath_cur)));
             }
 
             // pop the stack whether we have a match or not

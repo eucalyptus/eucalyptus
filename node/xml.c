@@ -105,7 +105,7 @@ extern struct nc_state_t nc_state;
 #define INIT() if (!initialized) init(&nc_state)
 #endif
 
-static void error_handler(void *ctx, const char *fmt, ...)  __attribute__ ((__format__(__printf__, 2, 3)));;
+static void error_handler(void *ctx, const char *fmt, ...) __attribute__ ((__format__(__printf__, 2, 3)));;
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   // process-global mutex
 
 // macros for making XML construction a bit more readable

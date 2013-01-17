@@ -123,7 +123,7 @@ static char *helpers[LASTHELPER] = {
 
 static char *helpers_path[LASTHELPER];
 static char stage_files_dir[EUCA_MAX_PATH] = "";
-static char *pruntf(boolean log_error, char *format, ...)  __attribute__ ((__format__(__printf__, 2, 3)));
+static char *pruntf(boolean log_error, char *format, ...) __attribute__ ((__format__(__printf__, 2, 3)));
 static int initialized = 0;
 static sem *loop_sem = NULL;    // semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;

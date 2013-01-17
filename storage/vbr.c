@@ -371,7 +371,7 @@ parse_rec(                      // parses the VBR as supplied by a client or use
         logprintfl(EUCAERROR, "failed to parse resource format '%s'\n", vbr->formatName);
         return ERROR;
     }
-    if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP || vbr->type == NC_RESOURCE_BOOT) {  //! @TODO should we allow ephemeral/swap that reside remotely?
+    if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP || vbr->type == NC_RESOURCE_BOOT) { //! @TODO should we allow ephemeral/swap that reside remotely?
         if (vbr->size < 1) {
             logprintfl(EUCAERROR, "invalid size '%lld' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
             return ERROR;
@@ -724,7 +724,7 @@ static int disk_creator(artifact * a)   // creates a 'raw' disk based on partiti
     const char *dest_dev = blockblob_get_dev(a->bb);
 
     assert(dest_dev);
-    if(a->do_make_bootable) {
+    if (a->do_make_bootable) {
         a->size_bytes += (SECTOR_SIZE * BOOT_BLOCKS);
     }
     logprintfl(EUCAINFO, "[%s] constructing disk of size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
@@ -746,8 +746,8 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     int map_entries = 1;        // first map entry is for the MBR
     int root_entry = -1;        // we do not know the root entry 
     int root_part = -1;         // we do not know the root partition
-    int boot_entry = -1;               // we do not know the boot entry
-    int boot_part = -1;                // we do not know the boot partition
+    int boot_entry = -1;        // we do not know the boot entry
+    int boot_part = -1;         // we do not know the boot partition
     const char *kernel_path = NULL;
     const char *ramdisk_path = NULL;
     long long offset_bytes = SECTOR_SIZE * MBR_BLOCKS;  // first partition begins after MBR
@@ -803,7 +803,6 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
                    blockblob_get_dev(map[map_entries - 1].source.blob), map[map_entries - 1].first_block_dst,
                    (map[map_entries - 1].first_block_dst + map[map_entries - 1].len_blocks - 1), map[map_entries - 1].len_blocks);
     }
-
     // set fields in vbr that are needed for
     // xml.c:gen_instance_xml() to generate correct disk entries
     disk->guestDeviceType = p1->guestDeviceType;
@@ -1264,6 +1263,7 @@ static char *url_get_digest(const char *url)
 static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_copy, boolean must_be_file, const char *sshkey)
 {
     artifact *a = NULL;
+    char *blob_sig = NULL;
 
     switch (vbr->locationType) {
     case NC_LOCATION_CLC:
@@ -1274,7 +1274,6 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
     case NC_LOCATION_URL:{
             // get the digest for size and signature
             char manifestURL[MAX_PATH];
-            char *blob_sig = NULL;
             snprintf(manifestURL, MAX_PATH, "%s.manifest.xml", vbr->preparedResourceLocation);
             blob_sig = url_get_digest(manifestURL);
             if (blob_sig == NULL)
@@ -1302,7 +1301,7 @@ u_out:
         }
     case NC_LOCATION_WALRUS:{
             // get the digest for size and signature
-            char *blob_sig = walrus_get_digest(vbr->preparedResourceLocation);
+            blob_sig = walrus_get_digest(vbr->preparedResourceLocation);
             if (blob_sig == NULL) {
                 logprintfl(EUCAERROR, "[%s] failed to obtain image digest from  Walrus\n", current_instanceId);
                 goto w_out;
@@ -1326,8 +1325,7 @@ u_out:
 
 w_out:
 
-            if (blob_sig)
-                free(blob_sig);
+            free(blob_sig);
             break;
         }
 
@@ -1367,6 +1365,7 @@ w_out:
         }
     default:
         logprintfl(EUCAERROR, "[%s] unrecognized locationType %d\n", current_instanceId, vbr->locationType);
+        break;
     }
 
     // allocate another artifact struct if a work copy is requested
@@ -2193,7 +2192,10 @@ int main(int argc, char **argv)
     int warnings = 0;
     char cwd[1024];
 
-    getcwd(cwd, sizeof(cwd));
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("Failed to retrieve the current working directory.\n");
+        return (1);
+    }
     srandom(time(NULL));
     blobstore_set_error_function(dummy_err_fn);
 

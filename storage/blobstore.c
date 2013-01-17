@@ -163,7 +163,7 @@ static long _open_timeout_ctr = 0L;
 static long _close_error_ctr = 0L;
 static char zero_buf[1] = "\0";
 
-const char *_blobstore_error_strings[] = { // make sure these match up with blobstore_error_t enums above
+const char *_blobstore_error_strings[] = {  // make sure these match up with blobstore_error_t enums above
     "success",
     "general error",
 
@@ -1768,7 +1768,7 @@ static long long purge_blockblobs_lru(blobstore * bs, blockblob * bb_list, long 
                     code = 'D';
                     deleted++;
                 }
-                logprintfl(EUCADEBUG, "LRU %d %08lld: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id, (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'),  // o = open
+                logprintfl(EUCADEBUG, "LRU %d %08lld: %29s %c%c%c%c %c %9llu %s", iteration, purged, bb->id, (bb->in_use & BLOCKBLOB_STATUS_OPENED) ? ('o') : ('-'),    // o = open
                            (bb->in_use & BLOCKBLOB_STATUS_BACKED) ? ('p') : ('-'),  // p = has parents
                            (bb->in_use & BLOCKBLOB_STATUS_MAPPED) ? ('c') : ('-'),  // c = has children
                            (bb->in_use & BLOCKBLOB_STATUS_ABANDONED) ? ('a') : ('-'),   // a = was abandoned
@@ -1829,11 +1829,14 @@ unlock:
     }
 
     safe_strncpy(meta->id, bs->id, sizeof(meta->id));
-    realpath(bs->path, meta->path);
     meta->revocation_policy = bs->revocation_policy;
     meta->snapshot_policy = bs->snapshot_policy;
     meta->format = bs->format;
     meta->blocks_limit = bs->limit_blocks;
+    if (realpath(bs->path, meta->path) == NULL) {
+        logprintfl(EUCAERROR, "failed to resolve the blobstore path %s\n", bs->path);
+        ret = -1;
+    }
 
     return ret;
 }
@@ -2220,9 +2223,13 @@ blockblob *blockblob_open(blobstore * bs, const char *id,   // can be NULL if cr
         goto clean;
     }
     char thread_id[512];
+    int thread_id_len = 0;
     snprintf(thread_id, sizeof(thread_id), "%d/%u", getpid(), (unsigned int)pthread_self());
-    write(bb->fd_lock, thread_id, strlen(thread_id));
-
+    thread_id_len = strlen(thread_id);
+    if (write(bb->fd_lock, thread_id, thread_id_len) != thread_id_len) {
+        // Fail to write our thread indentifier in the lock file.
+        goto clean;
+    }
     // convert BLOBSTORE_* flags into standard Posix open() flags and open/create the blocks file
     int o_flags = 0;
     if (flags & BLOBSTORE_FLAG_RDONLY) {
@@ -2392,7 +2399,9 @@ clean:
     {
         int saved_errno = _blobstore_errno; // save it because close_and_unlock() or delete_blockblob_files() may reset it
         if (bb->fd_lock != -1) {
-            ftruncate(bb->fd_lock, 0);
+            if (ftruncate(bb->fd_lock, 0) != 0) {
+                ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+            }
             close_and_unlock(bb->fd_lock);
         }
         if (bb->fd_blocks != -1) {
@@ -2474,7 +2483,9 @@ int blockblob_close(blockblob * bb)
         ret = loop_remove(bb->store, bb->id);
     }
     ret |= close(bb->fd_blocks);
-    ftruncate(bb->fd_lock, 0);
+    if (ftruncate(bb->fd_lock, 0) != 0) {
+        ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+    }
     ret |= close_and_unlock(bb->fd_lock);
     free(bb);                   // we free the blob regardless of whether closing succeeds or not
     return ret;
@@ -2848,7 +2859,10 @@ int blockblob_delete(blockblob * bb, long long timeout_usec, char do_force)
         ret = delete_blob_state(bb, timeout_usec, do_force);    // do the bulk of the cleanup
 
         // close the open file descriptors
-        ftruncate(bb->fd_lock, 0);
+        if (ftruncate(bb->fd_lock, 0) != 0) {
+            ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to truncate the blobstore lock file.");
+        }
+
         if (close_and_unlock(bb->fd_lock) == -1) {
             ret = -1;
         } else {
@@ -2986,7 +3000,7 @@ int blockblob_copy(blockblob * src_bb,  // source blob to copy data from
 //!
 //! @post On success the given table will be freed and a newly constructed will be returned.
 //!
-static char * dm_sort_table(char *pOldTable)
+static char *dm_sort_table(char *pOldTable)
 {
     unsigned int i = 0;
     unsigned int lineId = UINT32_MAX;
@@ -3001,25 +3015,25 @@ static char * dm_sort_table(char *pOldTable)
     // Make sure our given table isn't NULL.
     if (pOldTable) {
         aLines[count] = strtok(pOldTable, "\n");
-        while(aLines[count] != NULL) {
+        while (aLines[count] != NULL) {
             count++;
             aLines[count] = strtok(NULL, "\n");
         }
 
         // we need more than 1 line in this table to sort
-        if(count > 1) {
+        if (count > 1) {
             // Sort every lines in the 'lines' array
             for (i = 0; i < count; i++) {
                 // Search for the smaller starting block value in the lefover lines
                 lineId = UINT32_MAX;
                 minVal = UINT64_MAX;
-                for(j = 0; j < count; j++) {
+                for (j = 0; j < count; j++) {
                     // As we pick lines from the array, they become NULLs
-                    if(aLines[j] != NULL) {
+                    if (aLines[j] != NULL) {
                         // Retrieve the starting block number which is the first item on the line
-                        if(sscanf(aLines[j], "%llu", &curVal) == 1) {
+                        if (sscanf(aLines[j], "%llu", &curVal) == 1) {
                             // Is this a newest low?
-                            if(curVal < minVal) {
+                            if (curVal < minVal) {
                                 lineId = j;
                                 minVal = curVal;
                             }
@@ -3028,24 +3042,22 @@ static char * dm_sort_table(char *pOldTable)
                 }
 
                 // Since we set line ID to UINT32_MAX, its safe to assume its valid if less than count
-                if(lineId < count) {
+                if (lineId < count) {
                     // Re-add the newline character at the end of this string.
-                    if(snprintf(sLine, 64, "%s\n", aLines[lineId]) > 0) {
+                    if (snprintf(sLine, 64, "%s\n", aLines[lineId]) > 0) {
                         // Add it to our new table.
-                        if((pNewTable = euca_strdupcat(pNewTable, sLine)) == NULL)
-                            return(NULL);
+                        if ((pNewTable = strdupcat(pNewTable, sLine)) == NULL)
+                            return (NULL);
                     }
-
                     // Lets no longer consider this line.
                     aLines[lineId] = NULL;
                 }
             }
         }
     }
-
     // Free our given table and return the new one.
     EUCA_FREE(pOldTable);
-    return(pNewTable);
+    return (pNewTable);
 }
 
 int blockblob_clone(blockblob * bb, // destination blob, which blocks may be used as backing
@@ -3249,7 +3261,7 @@ int blockblob_clone(blockblob * bb, // destination blob, which blocks may be use
     if (mapped_or_snapshotted) {    // we must use the device mapper
         safe_strncpy(bb->dm_name, dm_base, sizeof(bb->dm_name));
         dev_names[devices] = strdup(dm_base);
-        if((dm_tables[devices] = dm_sort_table(main_dm_table)) == NULL) {
+        if ((dm_tables[devices] = dm_sort_table(main_dm_table)) == NULL) {
             ret = -1;
             goto free;
         }
@@ -3617,11 +3629,14 @@ static int do_clone_stresstest(const char *base, const char *name, blobstore_for
     printf("commencing cloning stress-test...\n");
 
     blobstore *bs1 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_NONE, BLOBSTORE_SNAPSHOT_DM);
+    blobstore *bs2 = NULL;
+
     if (bs1 == NULL) {
         errors++;
         goto done;
     }
-    blobstore *bs2 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
+
+    bs2 = create_teststore(STRESS_BS_SIZE, base, name, BLOBSTORE_FORMAT_DIRECTORY, BLOBSTORE_REVOCATION_LRU, BLOBSTORE_SNAPSHOT_DM);
     if (bs2 == NULL) {
         errors++;
         goto done;
@@ -4434,7 +4449,12 @@ int main(int argc, char **argv)
 {
     int errors = 0;
     char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
+
+    if (getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("Fail to retrieve the current working directory.\n");
+        return (1);
+    }
+
     srandom(time(NULL));
 
     logfile(NULL, EUCATRACE, 4);
@@ -4463,7 +4483,8 @@ int main(int argc, char **argv)
         char buf[32];
         bzero(buf, sizeof(buf));
         snprintf(buf, sizeof(buf), "%lld\n", (long long)time(NULL));
-        write(fd, buf, strlen(buf));
+        if (write(fd, buf, strlen(buf)) != strlen(buf))
+            printf("---------> Fail to write %ld bytes to %s\n", strlen(buf), blockblob_get_file(bb));
         close(fd);
 
         printf("---------> sleeping while holding blob %s\n", id);

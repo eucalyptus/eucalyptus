@@ -1343,7 +1343,7 @@ int sensor_shift_metric(const char *resourceName, const char *metricName)
             continue;
 
         for (int d = 0; d < sc->dimensionsLen; d++) {
-            sensorDimension *sd = ((sensorDimension *)(sc->dimensions + d));
+            sensorDimension *sd = ((sensorDimension *) (sc->dimensions + d));
 
             if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
                 logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
