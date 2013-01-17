@@ -855,7 +855,11 @@ public class OverlayManager implements LogicalStorageManager {
 		}
 	}
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+		if(snapshotPointId != null) {
+			throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
+		}
+		
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
 		ArrayList<String> returnValues = new ArrayList<String>();
@@ -1824,4 +1828,16 @@ public class OverlayManager implements LogicalStorageManager {
 			volumeOps.remove(key);
 		}
 	}
+
+	@Override
+	public String createSnapshotPoint(String volumeId, String snapshotId)
+			throws EucalyptusCloudException {
+		return null;
+	}
+
+	@Override
+	public void deleteSnapshotPoint(String volumeId, String snapshotId, String snapshotPointId)
+			throws EucalyptusCloudException {
+		throw new EucalyptusCloudException("Synchronous snapshot points not supported in Overlay storage manager");
+	}	
 }

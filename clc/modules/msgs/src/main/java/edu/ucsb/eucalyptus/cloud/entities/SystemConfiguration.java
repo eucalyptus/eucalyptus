@@ -98,9 +98,10 @@ public class SystemConfiguration extends AbstractPersistent {
   @ConfigurableField( description = "Domain name to use for DNS." )
   @Column( name = "dns_domain" )
   private String  dnsDomain;
-  @ConfigurableField( description = "Nameserver address." )
+  @ConfigurableField( description = "Nameserver hostname." )
   @Column( name = "nameserver" )
   private String  nameserver;
+  @ConfigurableField( description = "Nameserver ip address." )
   @Column( name = "ns_address" )
   private String  nameserverAddress;
 

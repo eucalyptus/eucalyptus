@@ -86,6 +86,7 @@ import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
@@ -548,47 +549,53 @@ public class Hosts {
             }
           }
           /**
-           * At this point local state is up-to-date and only the previous coordinators need to make any kind of decisions based on that information.
+           * At this point local state is up-to-date and only CLCs need to proceed
            */
-          if ( this.coordinator ) {
+          if ( BootstrapArgs.isCloudController( ) ) {
+            boolean partitioned = false;
             /**
              * Check if any DB was partitioned from the local view.
-             * Check if db hosts have differing partitions:  are there two distinct views which match a DB host.
              */
-            Set<View> dbViews = Sets.newHashSet( );
+            Set<View> dbViews = Sets.newHashSet( );//used only for logging
             for ( Host db : Hosts.listDatabases() ) {
               View dbView = partitions.get( db.getDisplayName( ) );
               if ( !dbView.equals( localView ) ) {
-                LOG.warn( logPrefix( localView ) + " found partitioned database: " + dbView );
-                Databases.Locks.PARTITIONED.create( );
-              } else {
-                dbViews.add( dbView );
+                partitioned = true;
               }
-            }
-            /**
-             * Check each database and determine if a partition arose between them.
-             */
-            if ( !dbViews.isEmpty( ) ) {
-              LOG.warn( logPrefix( localView ) + " found partitioned database views: " + Joiner.on( ", " ).join( dbViews ) );
-              Databases.Locks.PARTITIONED.create( );
+              dbViews.add( dbView );
             }
             /**
              * Check to ensure that if this host was not the original coordinator it isn't restarted as the coordinator.
              */
             Host newCoordinator = Coordinator.INSTANCE.get( );
             if ( !coordinatorAddress.equals( newCoordinator.getDisplayName() ) ) {
-              LOG.warn( logPrefix( localView ) + " found different coordinator " + newCoordinator );
-              Databases.Locks.PARTITIONED.create( );
+              partitioned = true;
             }
-
-            if ( Hosts.hasCoordinator() && !Hosts.isCoordinator() && BootstrapArgs.isCloudController() ) {
-              LOG.fatal( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+            
+            if ( !partitioned ) {//no partition, keep going ==> happy time.
+              return;
+            } else if ( !newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator, am not now ==> failstop
+              LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+              LOG.error( "PARTITION FAIL-STOP: " + printMap( ) );
+              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
               Databases.Locks.PARTITIONED.failStop( );
-            } else if ( Hosts.isCoordinator( ) ) {
-              LOG.fatal( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
+            } else if ( newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator and continue to be ==> backup and keep going
+              LOG.error( "PARTITION CONTINUE:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
+            } else if ( !newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, still am not AND someone else is ==> restart to resync data
+              LOG.error( "PARTITION RESTART:  Possibility for stale data copy detected for Host: " + Hosts.localHost() );
+              LOG.error( "PARTITION RESTART: " + printMap( ) );
+              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found different coordinator " + newCoordinator );
+              Databases.Locks.PARTITIONED.failStop( );
+//              SystemBootstrapper.restart( );
+            } else if ( newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, but somehow am now (wtf?) ==> pretty sure this is badness ==> failstop
+              LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+              LOG.error( "PARTITION FAIL-STOP: " + printMap( ) );
+              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
+              Databases.Locks.PARTITIONED.failStop( );
             }
           }
         }
+
       };
       Threads.newThread( mergeViews ).start( );
     }

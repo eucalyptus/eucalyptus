@@ -73,6 +73,13 @@
        
         thisObj._trigger('doLogin', evt, { param: param,
           onSuccess: function(args){
+	     if ($.eucaData['u_session']['account'] === 'eucalyptus'){
+               thisObj.popupWarning(login_account_warning, function(){ 
+                 var admin_url = $.eucaData.g_session['admin_console_url'];
+                 window.open(admin_url, '_blank');
+               });
+             }
+            
             $login.remove();
             eucalyptus.main($.eucaData);
    	    },
@@ -127,7 +134,7 @@
     _destroy : function() { },
 
   /////// PUBLIC METHODS //////
-    popupDialog : function(bError, msg, callback) {
+    popupError : function(bError, msg, callback) {
      var thisObj = this;
      thisObj.errorDialog.eucadialog('open');
      if(callback){
@@ -143,7 +150,19 @@
        else
          window.open(thisObj.options.support_url,'_blank');
      });
-   }
+   },
+
+   popupWarning : function(msg, onClick){
+     var thisObj = this;
+     thisObj.errorDialog.eucadialog('open');
+     var msgdiv = thisObj.errorDialog.find("#login-error-message p"); 
+     thisObj.errorDialog.eucadialog('option', 'title', login_warning_title);
+     thisObj.errorDialog.parent().find('span.ui-button-text').text(dialog_continue_btn);
+     msgdiv.html(msg);
+     if(onClick){
+       thisObj.errorDialog.find('#login-error-message a').click(onClick);
+     }
+   },
   });
 })(jQuery, 
    window.eucalyptus ? window.eucalyptus : window.eucalyptus = {});

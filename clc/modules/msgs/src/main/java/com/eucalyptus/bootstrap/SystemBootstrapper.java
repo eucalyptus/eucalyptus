@@ -303,6 +303,8 @@ public class SystemBootstrapper {
     return true;
   }
   
+  public static void restart( ) { System.exit( 123 ); }
+  
   private static native void shutdown( boolean reload );
   
   public static native void hello( );

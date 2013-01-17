@@ -63,7 +63,7 @@ if __name__ == "__main__":
         parser.print_help()
         exit(-1)
     source_arr = []
-    source_map= build_map('./Messages_en_US.properties', source_arr);
+    source_map= build_map('./Messages.properties', source_arr);
     
     # open en_US properties file and build a map
     for lang in options.language:
@@ -81,6 +81,7 @@ if __name__ == "__main__":
                 contents.append('%s = %s\n' % (k, source_map[k]))
             else:
                 contents.append(k)
+            
         g=open(tmp,'w')
         if g:
           g.writelines(contents)

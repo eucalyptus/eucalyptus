@@ -113,6 +113,7 @@ public class StorageProperties {
 	public static final String DEFAULT_EBS_MANAGER = "OverlayManager";
 	public static String DAS_DEVICE = "/dev/blockdev";
 	public static final String STORAGE_CLASS_PREFIX = "com.eucalyptus.storage.";
+  public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
 
 	static { Groovyness.loadConfig("storageprops.groovy"); }
 
