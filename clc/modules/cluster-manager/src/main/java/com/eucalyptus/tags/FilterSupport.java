@@ -522,9 +522,7 @@ public abstract class FilterSupport<RT> {
           if ( persistentValue != null ) {
             for ( final String alias : persistenceFilter.getAliases() ) aliases.put( alias, this.aliases.get( alias ) );
             disjunction.add( buildRestriction( persistenceFilter.getProperty(), persistentValue ) );
-          } else {
-            disjunction.add( Restrictions.not( Restrictions.conjunction() ) ); // always false
-          }
+          } // else, there is no valid DB filter for the given value (e.g. wildcard for integer value)
         }
       }
       conjunction.add( disjunction );

@@ -67,20 +67,24 @@ import com.eucalyptus.cloud.ImageMetadata;
 
 public interface BootableImageInfo {
  
-  public abstract String getKernelId( );
+  String getKernelId( );
   
-  public abstract String getRamdiskId( );
+  String getRamdiskId( );
   
-  public abstract boolean hasKernel( );
+  boolean hasKernel( );
   
-  public abstract boolean hasRamdisk( );
+  boolean hasRamdisk( );
 
-  public abstract ImageMetadata.Platform getPlatform( );
+  ImageMetadata.Platform getPlatform( );
 
-  public abstract Long getImageSizeBytes( );
+  Long getImageSizeBytes( );
 
-  public abstract String getDisplayName( );
+  String getDisplayName( );
 
-  public abstract Set<String> getProductCodes( );
+  Set<String> getProductCodes( );
+
+  String getRootDeviceName( );
+  
+  String getRootDeviceType( );
   
 }

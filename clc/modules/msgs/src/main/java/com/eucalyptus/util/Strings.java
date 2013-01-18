@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import javax.annotation.Nullable;
 import com.google.common.base.Function;
 
 /**
@@ -26,6 +27,28 @@ import com.google.common.base.Function;
  */
 public class Strings {
 
+  /**
+   * Null safe string conversion
+   *
+   * @param object The object to convert to a String
+   * @return The object as a String or null if null                    
+   */
+  public static String toString( @Nullable final Object object ) {
+    return toString( object, null );
+  }
+
+  /**
+   * Null safe string conversion
+   * 
+   * @param object The object to convert to a String
+   * @param defaultValue The default value to use
+   * @return The object as a String or the default value if null                    
+   */
+  public static String toString( @Nullable final Object object,
+                                 @Nullable final String defaultValue ) {
+    return object == null ? defaultValue : object.toString();     
+  }
+  
   /**
    * Get a Function for trimming a String.
    *

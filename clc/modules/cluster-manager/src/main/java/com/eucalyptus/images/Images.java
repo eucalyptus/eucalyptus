@@ -68,6 +68,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
@@ -75,6 +76,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.WalrusUtil;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.context.Context;
@@ -84,15 +86,15 @@ import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
-import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
@@ -236,11 +238,11 @@ public class Images {
     public ImageDetails apply( BlockStorageImageInfo arg0 ) {
       ImageDetails i = new ImageDetails( );
       i.setName( arg0.getImageName( ) );
-      i.setDescription( arg0.getDescription( ) );
-      i.setArchitecture( arg0.getArchitecture( ).toString( ) );
-      i.setRootDeviceName( "/dev/sda1" );
-      i.setRootDeviceType( "ebs" );
-      i.setImageId( arg0.getDisplayName( ) );
+      i.setDescription( arg0.getDescription() );
+      i.setArchitecture( arg0.getArchitecture().toString() );
+      i.setRootDeviceName( arg0.getRootDeviceName() );
+      i.setRootDeviceType( arg0.getRootDeviceType() );
+      i.setImageId( arg0.getDisplayName() );
       i.setImageLocation( arg0.getOwnerAccountNumber( ) + "/" + arg0.getImageName( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
@@ -271,10 +273,9 @@ public class Images {
       i.setName( arg0.getImageName( ) );
       i.setDescription( arg0.getDescription( ) );
       i.setArchitecture( arg0.getArchitecture( ).toString( ) );
-      //TODO      i.setRootDeviceName( arg0.getD )
-      i.setRootDeviceName( "/dev/sda1" );
-      i.setRootDeviceType( "instance-store" );
-      i.setImageId( arg0.getDisplayName( ) );
+      i.setRootDeviceName( arg0.getRootDeviceName() );
+      i.setRootDeviceType( arg0.getRootDeviceType() );
+      i.setImageId( arg0.getDisplayName() );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
@@ -289,7 +290,6 @@ public class Images {
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
 //      i.getProductCodes().addAll( arg0.getProductCodes() );//TODO:GRZE:NOW
-//      i.getTags().addAll( arg0.getTags() );//TODO:GRZE:NOW
 //      i.setHypervisor( arg0.getHypervisor( ) );//TODO:GRZE:NOW
       return i;
     }
@@ -666,36 +666,112 @@ public class Images {
   public static class ImageInfoFilterSupport extends FilterSupport<ImageInfo> {
     public ImageInfoFilterSupport() {
       super( builderFor( ImageInfo.class )
-          .withStringProperty( "architecture" , FilterStringFunctions.ARCHITECTURE )
-          .withBooleanSetProperty( "block-device-mapping.delete-on-termination" , FilterBooleanSetFunctions.BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATION)
+          .withTagFiltering( ImageInfoTag.class, "image" )
+          .withStringProperty( "architecture", FilterStringFunctions.ARCHITECTURE )
+          .withBooleanSetProperty( "block-device-mapping.delete-on-termination", FilterBooleanSetFunctions.BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATION )
           .withStringSetProperty( "block-device-mapping.device-name", FilterStringSetFunctions.BLOCK_DEVICE_MAPPING_DEVICE_NAME )
           .withStringSetProperty( "block-device-mapping.snapshot-id", FilterStringSetFunctions.BLOCK_DEVICE_MAPPING_SNAPSHOT_ID )
           .withIntegerSetProperty( "block-device-mapping.volume-size", FilterIntegerSetFunctions.BLOCK_DEVICE_MAPPING_VOLUME_SIZE )
-          .withConstantProperty( "block-device-mapping.volume-type" , "standard" )
-          .withStringProperty( "description" , FilterStringFunctions.DESCRIPTION )
-          .withStringProperty( "image-id", FilterStringFunctions.IMAGE_ID )
-          .withStringProperty( "image-type" , FilterStringFunctions.IMAGE_TYPE )
-          .withBooleanProperty( "is-public" , FilterBooleanFunctions.IS_PUBLIC )
-          .withStringProperty( "kernel-id", FilterStringFunctions.KERNEL_ID )
-          .withStringProperty( "manifest-location" , FilterStringFunctions.MANIFEST_LOCATION )
-          .withStringProperty( "name" , FilterStringFunctions.NAME )
-          .withStringProperty( "owner-alias" , FilterStringFunctions.OWNER_ALIAS )
-          .withStringProperty( "owner-id" , FilterStringFunctions.OWNER_ID )
+          .withConstantProperty( "block-device-mapping.volume-type", "standard" )
+          .withStringProperty( "description", FilterStringFunctions.DESCRIPTION )
+          .withStringProperty( "image-id", CloudMetadatas.toDisplayName() )
+          .withStringProperty( "image-type", FilterStringFunctions.IMAGE_TYPE )
+          .withBooleanProperty( "is-public", FilterBooleanFunctions.IS_PUBLIC )
+          .withStringProperty( "kernel-id", asImageInfoFunction( BootableImageInfoFilterStringFunctions.KERNEL_ID ) )
+          .withStringProperty( "manifest-location", FilterStringFunctions.MANIFEST_LOCATION )
+          .withStringProperty( "name", FilterStringFunctions.NAME )
+          .withStringProperty( "owner-alias", FilterStringFunctions.OWNER_ALIAS )
+          .withStringProperty( "owner-id", FilterStringFunctions.OWNER_ID )
           .withStringProperty( "platform", FilterStringFunctions.PLATFORM )
-          .withStringSetProperty( "product-code" , FilterStringSetFunctions.PRODUCT_CODE )
+          .withStringSetProperty( "product-code", FilterStringSetFunctions.PRODUCT_CODE )
           .withUnsupportedProperty( "product-code.type" )
-          .withStringProperty( "ramdisk-id", FilterStringFunctions.RAMDISK_ID )
-          .withStringProperty( "root-device-name", FilterStringFunctions.ROOT_DEVICE_NAME )
-          .withStringProperty( "root-device-type", FilterStringFunctions.ROOT_DEVICE_TYPE )
-          .withStringProperty( "state" , FilterStringFunctions.STATE )
+          .withStringProperty( "ramdisk-id", asImageInfoFunction( BootableImageInfoFilterStringFunctions.RAMDISK_ID ) )
+          .withStringProperty( "root-device-name", asImageInfoFunction( BootableImageInfoFilterStringFunctions.ROOT_DEVICE_NAME ) )
+          .withStringProperty( "root-device-type", asImageInfoFunction( BootableImageInfoFilterStringFunctions.ROOT_DEVICE_TYPE ) )
+          .withStringProperty( "state", FilterStringFunctions.STATE )
           .withUnsupportedProperty( "state-reason-code" )
           .withUnsupportedProperty( "state-reason-message" )
-//          .withUnsupportedProperty( "tag-key" )
-//          .withUnsupportedProperty( "tag-value" )
-//          .withUnsupportedProperty( "tag:key" )
-          .withUnsupportedProperty( "virtualization-type")
-          .withUnsupportedProperty( "hypervisor")
-          .withTagFiltering( ImageInfoTag.class, "image" ) );
+          .withUnsupportedProperty( "virtualization-type" )
+          .withUnsupportedProperty( "hypervisor" )
+          .withPersistenceAlias( "deviceMappings", "deviceMappings" )
+          .withPersistenceFilter( "architecture", "architecture", Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
+          .withPersistenceFilter( "block-device-mapping.delete-on-termination", "deviceMappings.delete", PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "block-device-mapping.device-name", "deviceMappings.deviceName" )
+          .withPersistenceFilter( "block-device-mapping.snapshot-id", "deviceMappings.snapshotId" )
+          .withPersistenceFilter( "block-device-mapping.volume-size", "deviceMappings.size", PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "description" )
+          .withPersistenceFilter( "image-id", "displayName" )
+          .withPersistenceFilter( "image-type", "imageType", Enums.valueOfFunction( ImageMetadata.Type.class ) )
+          .withPersistenceFilter( "is-public", "imagePublic", PersistenceFilter.Type.Boolean )
+          .withPersistenceFilter( "kernel-id", "kernelId" )
+          .withPersistenceFilter( "manifest-location", "manifestLocation" )
+          .withPersistenceFilter( "name", "imageName" )
+          .withPersistenceFilter( "owner-alias", "ownerAccountName" ) //TODO:STEVE: won't work, isn't populated 
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
+          .withPersistenceFilter( "platform", "platform", Enums.valueOfFunction( ImageMetadata.Platform.class ) )
+          .withPersistenceFilter( "ramdisk-id", "ramdiskId" )
+          .withPersistenceFilter( "state", "state", Enums.valueOfFunction( ImageMetadata.State.class ) )
+      );
+    }
+  }
+
+  private static <T> Function<ImageInfo,T> asImageInfoFunction( final Function<BootableImageInfo,T> bootableImageInfoFunction ) {
+    return Images.typedFunction( bootableImageInfoFunction, BootableImageInfo.class, null );        
+  }
+  
+  private static <R, T, TT> Function<T, R> typedFunction( final Function<TT,R> typeSpecificFunction, 
+                                                                      final Class<TT> subClass,
+                                                                      @Nullable final R defaultValue ) {
+    return new Function<T,R>() {
+      @Override
+      public R apply( final T parameter ) {
+        return subClass.isInstance( parameter ) ?
+            typeSpecificFunction.apply( subClass.cast( parameter ) ) :
+            defaultValue;
+      }
+    };     
+  }
+  
+  private static <T> Set<T> blockDeviceSet( final ImageInfo imageInfo,
+                                            final Function<DeviceMapping,T> transform ) {
+    return Sets.newHashSet( Iterables.transform(
+        imageInfo.getDeviceMappings(),
+        transform ) );
+  }
+
+  private enum BlockDeviceMappingBooleanFilterFunctions implements Function<BlockStorageDeviceMapping,Boolean>  {
+    DELETE_ON_TERMINATION {
+      @Override
+      public Boolean apply( final BlockStorageDeviceMapping deviceMapping ) {
+        return deviceMapping.getDelete();
+      }
+    }
+  }
+
+  private enum BlockDeviceMappingIntegerFilterFunctions implements Function<BlockStorageDeviceMapping,Integer>  {
+    SIZE {
+      @Override
+      public Integer apply( final BlockStorageDeviceMapping deviceMapping ) {
+        return deviceMapping.getSize();
+      }
+    }
+  }
+
+  private enum BlockDeviceMappingFilterFunctions implements Function<BlockStorageDeviceMapping, String> {
+    SNAPSHOT_ID {
+      @Override
+      public String apply( final BlockStorageDeviceMapping deviceMapping ) {
+        return deviceMapping.getSnapshotId();
+      }
+    }
+  }
+
+  private enum DeviceMappingFilterFunctions implements Function<DeviceMapping, String> {
+    DEVICE_NAME {
+      @Override
+      public String apply( final DeviceMapping deviceMapping ) {
+        return deviceMapping.getDeviceName();
+      }
     }
   }
 
@@ -703,49 +779,63 @@ public class Images {
     IS_PUBLIC {
       @Override
       public Boolean apply( final ImageInfo imageInfo ) {
-	      return TO_IMAGE_DETAILS.apply(imageInfo).getIsPublic();
-	    }
+        return imageInfo.getImagePublic();
+      }
     } 
-  }
-
+  }  
+  
   private enum FilterBooleanSetFunctions implements Function<ImageInfo,Set<Boolean>> {
     BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATION {
       @Override
       public Set<Boolean> apply( final ImageInfo imageInfo ) {
-        final Set<Boolean> result = Sets.newHashSet();
-        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
-          Boolean deleteOnTermination = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getEbs().getDeleteOnTermination();
-          if (deleteOnTermination != null) {
-            result.add(deleteOnTermination);
-          }
-        }
-        return result;
+        return blockDeviceSet( imageInfo, 
+            Images.<Boolean,DeviceMapping,BlockStorageDeviceMapping>typedFunction( BlockDeviceMappingBooleanFilterFunctions.DELETE_ON_TERMINATION, BlockStorageDeviceMapping.class, null ) );
       }
     } 
   }
-
 
   private enum FilterIntegerSetFunctions implements Function<ImageInfo,Set<Integer>> {
     BLOCK_DEVICE_MAPPING_VOLUME_SIZE {
       @Override
       public Set<Integer> apply( final ImageInfo imageInfo ) {
-        final Set<Integer> result = Sets.newHashSet();
-        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
-          Integer volumeSize = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getEbs().getVolumeSize();
-          if (volumeSize != null) {
-            result.add(volumeSize);
-          }
-        }
-        return result;
+        return blockDeviceSet( imageInfo,
+            Images.<Integer,DeviceMapping,BlockStorageDeviceMapping>typedFunction( BlockDeviceMappingIntegerFilterFunctions.SIZE, BlockStorageDeviceMapping.class, null ) );
       }
     } 
+  }
+
+  private enum BootableImageInfoFilterStringFunctions implements Function<BootableImageInfo,String> {
+    KERNEL_ID {
+      @Override
+      public String apply( final BootableImageInfo imageInfo ) {
+        return imageInfo.getKernelId();
+      }
+    },
+    RAMDISK_ID {
+      @Override
+      public String apply( final BootableImageInfo imageInfo ) {
+        return imageInfo.getRamdiskId();
+      }
+    },
+    ROOT_DEVICE_NAME {
+      @Override
+      public String apply( final BootableImageInfo imageInfo ) {
+        return imageInfo.getRootDeviceName();
+      }
+    },
+    ROOT_DEVICE_TYPE {
+      @Override
+      public String apply( final BootableImageInfo imageInfo ) {
+        return imageInfo.getRootDeviceType();
+      }
+    },
   }
 
   private enum FilterStringFunctions implements Function<ImageInfo,String> {
     ARCHITECTURE {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return imageInfo.getArchitecture().toString();
+        return Strings.toString( imageInfo.getArchitecture() );
       }
     }, 
     DESCRIPTION {
@@ -754,28 +844,18 @@ public class Images {
         return imageInfo.getDescription();
       }
     }, 
-    IMAGE_ID {
-      @Override
-      public String apply( final ImageInfo imageInfo ) {
-        return imageInfo.getDisplayName();
-      }
-    },
     IMAGE_TYPE {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return imageInfo.getImageType().toString();
-      }
-    },
-    KERNEL_ID {
-      @Override
-      public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getKernelId();
+        return Strings.toString( imageInfo.getImageType() );
       }
     },
     MANIFEST_LOCATION {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getImageLocation(); // TODO: is this right?
+        return imageInfo instanceof PutGetImageInfo ? 
+          ((PutGetImageInfo) imageInfo).getManifestLocation() : // TODO:STEVE: is this right?
+          null; 
       }
     },  
     NAME {
@@ -787,43 +867,25 @@ public class Images {
     OWNER_ALIAS {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getImageOwnerAlias();
+        return imageInfo.getOwnerAccountName(); //TODO:STEVE: // won't work, not populated
       }
     },
     OWNER_ID {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return imageInfo.getOwnerAccountNumber().toString();
+        return imageInfo.getOwnerAccountNumber();
       }
     },
     PLATFORM {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getPlatform();
-      }
-    },
-    RAMDISK_ID {
-      @Override
-      public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getRamdiskId();
-      }
-    },
-    ROOT_DEVICE_NAME {
-      @Override
-      public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getRootDeviceName();
-      }
-    },
-    ROOT_DEVICE_TYPE {
-      @Override
-      public String apply( final ImageInfo imageInfo ) {
-        return TO_IMAGE_DETAILS.apply(imageInfo).getRootDeviceType();
+        return Strings.toString( imageInfo.getPlatform() );
       }
     },
     STATE {
       @Override
       public String apply( final ImageInfo imageInfo ) {
-        return imageInfo.getState().toString();
+        return Strings.toString( imageInfo.getState() );
       }
     }
  }
@@ -832,27 +894,14 @@ public class Images {
     BLOCK_DEVICE_MAPPING_DEVICE_NAME {
       @Override
       public Set<String> apply( final ImageInfo imageInfo ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
-          String deviceName = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getDeviceName();
-          if (deviceName != null) {
-            result.add(deviceName);
-          }
-        }
-        return result;
+        return blockDeviceSet( imageInfo, DeviceMappingFilterFunctions.DEVICE_NAME );
       }
     }, 
     BLOCK_DEVICE_MAPPING_SNAPSHOT_ID {
       @Override
       public Set<String> apply( final ImageInfo imageInfo ) {
-        final Set<String> result = Sets.newHashSet();
-        for ( final DeviceMapping deviceMapping: imageInfo.getDeviceMappings() ) {
-          String snapshotId = DeviceMappingDetails.INSTANCE.apply(deviceMapping).getEbs().getSnapshotId();
-          if (snapshotId != null) {
-            result.add(snapshotId);
-          }
-        }
-        return result;
+        return blockDeviceSet( imageInfo,
+            Images.<String,DeviceMapping,BlockStorageDeviceMapping>typedFunction(BlockDeviceMappingFilterFunctions.SNAPSHOT_ID, BlockStorageDeviceMapping.class, null ) );
       }
     }, 
     PRODUCT_CODE {
