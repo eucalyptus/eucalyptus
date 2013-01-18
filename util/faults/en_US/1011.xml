@@ -27,7 +27,7 @@
     message="${DB_LOCK_FILE} is present"/>
 
     <cause
-    message="Disabled CLC started out of order."/>
+    message="This CLC host was previously involved in a network partition where DB state may have become inconsistent."/>
 
     <initiator
     message="Eucalyptus"/>

@@ -240,7 +240,7 @@ typedef struct instance_t {
     virtualMachine ccvm;
 
     int ncHostIdx;
-    char serviceTag[64];
+    char serviceTag[384];
     char uuid[48];
 
     char userData[16384];
@@ -257,18 +257,28 @@ typedef struct instance_t {
     ncVolume volumes[EUCA_MAX_VOLUMES];
     int volumesSize;
 
-    long long blkbytes, netbytes;
+    long long blkbytes;
+    long long netbytes;
 } ccInstance;
 
 typedef struct resource_t {
-    char ncURL[128];
+    char ncURL[384];
     char ncService[128];
     int ncPort;
-    char hostname[128], mac[24], ip[24], iqn[128];
-    int maxMemory, availMemory, maxDisk, availDisk, maxCores, availCores;
+    char hostname[256];
+    char mac[24];
+    char ip[24];
+    char iqn[128];
+    int maxMemory;
+    int availMemory;
+    int maxDisk;
+    int availDisk;
+    int maxCores;
+    int availCores;
     // state information
     int state, lastState;
-    time_t stateChange, idleStart;
+    time_t stateChange;
+    time_t idleStart;
     int running;
     int lockidx;
 } ccResource;

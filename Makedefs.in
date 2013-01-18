@@ -39,6 +39,7 @@ TOP			= @TOP@
 # system dependents 
 CC		= @CC@
 CFLAGS		= @CFLAGS@
+CPPFLAGS	= @CPPFLAGS@
 LDFLAGS		= @LDFLAGS@
 INCLUDES	= @INCLUDES@
 LIBS		= @LIBS@ -pthread

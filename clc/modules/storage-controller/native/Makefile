@@ -72,15 +72,15 @@ WARN=-Wall -Wno-unused-variable
 all: $(LIBDIR)/$(LVM2_SO) $(LIBDIR)/$(DAS_SO) 
 
 .c.o:
-	gcc -c $(WARN) $(CFLAGS) $<
+	gcc -c $(WARN) $(CPPFLAGS) $(CFLAGS) $<
 
 $(LIBDIR)/$(LVM2_SO): 
 	mkdir -p $(LIBDIR)
-	gcc -shared $(CFLAGS) -o $(LIBDIR)/$(LVM2_SO) com_eucalyptus_storage_OverlayManager.c com_eucalyptus_storage_AOEManager.c
+	gcc -shared $(CPPFLAGS) $(CFLAGS) -o $(LIBDIR)/$(LVM2_SO) com_eucalyptus_storage_OverlayManager.c com_eucalyptus_storage_AOEManager.c
 
 $(LIBDIR)/$(DAS_SO): 
 	mkdir -p $(LIBDIR)
-	gcc -shared $(CFLAGS) -o $(LIBDIR)/$(DAS_SO) com_eucalyptus_storage_DASManager.c
+	gcc -shared $(CPPFLAGS) $(CFLAGS) -o $(LIBDIR)/$(DAS_SO) com_eucalyptus_storage_DASManager.c
 
 indent:
 	@for idfile in *.[ch]; do \

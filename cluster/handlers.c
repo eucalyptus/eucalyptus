@@ -2278,7 +2278,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
 
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
-                            euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 64);
+                            euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);
                             {
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
@@ -5903,7 +5903,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
             (*numHosts)++;
             *res = EUCA_REALLOC(*res, (*numHosts), sizeof(ccResource));
             bzero(&((*res)[*numHosts - 1]), sizeof(ccResource));
-            snprintf((*res)[*numHosts - 1].hostname, 128, "%s", hosts[i]);
+            snprintf((*res)[*numHosts - 1].hostname, 256, "%s", hosts[i]);
 
             ipbuf = host2ip(hosts[i]);
             if (ipbuf) {
@@ -5913,7 +5913,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
 
             (*res)[*numHosts - 1].ncPort = ncport;
             snprintf((*res)[*numHosts - 1].ncService, 128, "%s", ncservice);
-            snprintf((*res)[*numHosts - 1].ncURL, 128, "http://%s:%d/%s", hosts[i], ncport, ncservice);
+            snprintf((*res)[*numHosts - 1].ncURL, 384, "http://%s:%d/%s", hosts[i], ncport, ncservice);
             (*res)[*numHosts - 1].state = RESDOWN;
             (*res)[*numHosts - 1].lastState = RESDOWN;
             (*res)[*numHosts - 1].lockidx = NCCALL0 + lockmod;
@@ -5994,11 +5994,11 @@ int allocate_ccResource(ccResource * out, char *ncURL, char *ncService, int ncPo
 
     if (out != NULL) {
         if (ncURL)
-            euca_strncpy(out->ncURL, ncURL, 128);
+            euca_strncpy(out->ncURL, ncURL, 384);
         if (ncService)
             euca_strncpy(out->ncService, ncService, 128);
         if (hostname)
-            euca_strncpy(out->hostname, hostname, 128);
+            euca_strncpy(out->hostname, hostname, 256);
         if (mac)
             euca_strncpy(out->mac, mac, 24);
         if (ip)
@@ -6148,7 +6148,7 @@ int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId,
         out->ts = ts;
         out->ncHostIdx = ncHostIdx;
         if (serviceTag)
-            euca_strncpy(out->serviceTag, serviceTag, 64);
+            euca_strncpy(out->serviceTag, serviceTag, 384);
         if (userData)
             euca_strncpy(out->userData, userData, 16384);
         if (launchIndex)
