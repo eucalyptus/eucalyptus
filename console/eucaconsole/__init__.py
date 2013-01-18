@@ -84,6 +84,14 @@ class UserSession(object):
         return self.obj_secret_key
 
     @property
+    def host_override(self):
+        return self.obj_host_override
+
+    @host_override.setter
+    def host_override(self, val):
+        self.obj_host_override = val
+
+    @property
     def fullname(self):
         return self.obj_fullname
 
@@ -148,7 +156,10 @@ class GlobalSession(object):
         m1_large = [self.get_value('instance_type','m1.large.cpu', '2'),self.get_value('instance_type','m1.large.mem', '512'),self.get_value('instance_type','m1.large.disk', '10')];
         m1_xlarge = [self.get_value('instance_type','m1.xlarge.cpu', '2'),self.get_value('instance_type','m1.xlarge.mem', '1024'),self.get_value('instance_type','m1.xlarge.disk', '10')]; 
         c1_xlarge = [self.get_value('instance_type','c1.xlarge.cpu', '4'),self.get_value('instance_type','c1.xlarge.mem', '2048'),self.get_value('instance_type','c1.xlarge.disk', '10')]; 
-        return {'m1.small':m1_small, 'c1.medium':c1_medium, 'm1.large':m1_large, 'm1.xlarge':m1_xlarge, 'c1.xlarge':c1_xlarge};
+        m3_xlarge = [self.get_value('instance_type','m3.xlarge.cpu', '4'),self.get_value('instance_type','m3.xlarge.mem', '15360'),self.get_value('instance_type','m3.xlarge.disk', '0')]; 
+        m3_2xlarge = [self.get_value('instance_type','m3.2xlarge.cpu', '8'),self.get_value('instance_type','m3.2xlarge.mem', '30720'),self.get_value('instance_type','m3.2xlarge.disk', '0')]; 
+
+        return {'m1.small':m1_small, 'c1.medium':c1_medium, 'm1.large':m1_large, 'm1.xlarge':m1_xlarge, 'c1.xlarge':c1_xlarge, 'm3.xlarge':m3_xlarge, 'm3.2xlarge':m3_2xlarge};
 
     # return the collection of global session info
     def get_session(self):
@@ -332,14 +343,12 @@ class LoginProcessor(ProxyProcessor):
         remember = web_req.get_argument("remember")
 
         ec2_endpoint = None
-        try:
-            ec2_endpoint = config.get('test', 'ec2.endpoint')
-            access_id = config.get('test', 'ec2.accessid')
-            secret_key = config.get('test', 'ec2.secretkey')
+        if account[len(account)-13:] == 'amazonaws.com':
+            ec2_endpoint = account
+            access_id = user
+            secret_key = passwd
             session_token = None
-            #print "ec2: %s, $s, %s" %(ec2_endpoint, access_id, secret_key)
-        except ConfigParser.Error:
-            pass
+            print "ec2: %s, %s, %s" %(ec2_endpoint, access_id, secret_key)
         if ec2_endpoint == None:
             if config.getboolean('test', 'usemock') == False:
                 auth = TokenAuthenticator(config.get('server', 'clchost'),
@@ -374,6 +383,7 @@ class LoginProcessor(ProxyProcessor):
             web_req.clear_cookie("username")
             web_req.clear_cookie("remember")
         sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
+        sessions[sid].host_override = ec2_endpoint
 
         return LoginResponse(sessions[sid])
 

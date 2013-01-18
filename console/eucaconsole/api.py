@@ -544,10 +544,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.user_session.clc = MockClcInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
-                try:
-                    host = eucaconsole.config.get('test', 'ec2.endpoint')
-                except ConfigParser.Error:
-                    pass
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
                 self.user_session.clc = BotoClcInterface(host,
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,

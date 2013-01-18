@@ -24,7 +24,7 @@
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
       endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
-                  {name:'image', url: '/ec2?Action=DescribeImages'},
+                  {name:'image', url: '/ec2?Action=DescribeImages'+IMG_OPT_PARAMS},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},
                   {name:'snapshot', url: '/ec2?Action=DescribeSnapshots'},
                   {name:'eip', url: '/ec2?Action=DescribeAddresses'},

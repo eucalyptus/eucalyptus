@@ -37,6 +37,12 @@ from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
+# these things came in with boto 2.6
+try:
+    from boto.ec2.instance import InstanceState
+    from boto.ec2.instance import InstancePlacement
+except ImportError:
+    pass
 from boto.ec2.tag import Tag
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
@@ -145,6 +151,15 @@ class BotoJsonEncoder(JSONEncoder):
             values = {'name':obj.name}
             values['__obj_name__'] = 'Bucket'
             return (values)
+        if isinstance(obj, InstanceState):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'InstanceState'
+            return (values)
+        elif isinstance(obj, InstancePlacement):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'InstancePlacement'
+            return (values)
+        print obj.__class__.__name__
         return super(BotoJsonEncoder, self).default(obj)
 
 class BotoJsonDecoder(JSONDecoder):

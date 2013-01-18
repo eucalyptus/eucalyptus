@@ -34,7 +34,7 @@
         id : 'images', // user of this widget should customize these options,
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "sAjaxSource": "../ec2?Action=DescribeImages"+IMG_OPT_PARAMS,
           "fnServerData": function (sSource, aoData, fnCallback) {
                 $.ajax( {
                     "dataType": 'json',
