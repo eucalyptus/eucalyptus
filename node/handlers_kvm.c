@@ -645,10 +645,10 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         }
         change_state(new_instance, PAUSED);
         
-        sem_p(inst_sem);
-        error = add_instance(&global_instances, new_instance);
-        copy_instances();
-        sem_v(inst_sem);
+        //sem_p(inst_sem);
+        //error = add_instance(&global_instances, new_instance);
+        //copy_instances();
+        //sem_v(inst_sem);
         if (error) {
             logprintfl(EUCAERROR, "[%s] could not save instance struct\n", new_instance->instanceId);
             goto failed_dest;
