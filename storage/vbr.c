@@ -696,6 +696,7 @@ static void set_disk_dev(virtualBootRecord * vbr)
         case BUS_TYPES_TOTAL:
         default:
             type[0] = '?';      // error
+            break;
         }
     }
 
