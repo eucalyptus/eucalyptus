@@ -636,7 +636,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				throw new AuthenticationException("Unable to parse date.");
 			}
 
-			return verifyDate;
+			return date;
 		}
 		
 		private static String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
