@@ -1,0 +1,772 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<binding name="autoscaling_amazonaws_com_doc_2011_01_01" force-classes="true" add-constructors="true">
+  <namespace uri="http://autoscaling.amazonaws.com/doc/2011-01-01/" prefix="auto" default="elements"/>
+  <mapping class="com.eucalyptus.autoscaling.ResponseMetadata" abstract="true">
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Error" abstract="true">
+    <value name="Type" field="type" usage="required"/>
+    <value name="Code" field="code" usage="required"/>
+    <value name="Message" field="message" usage="required"/>
+    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.autoscaling.ErrorDetail"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.autoscaling.ErrorResponse" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="error">
+      <structure name="Error" type="com.eucalyptus.autoscaling.Error"/>
+    </collection>
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeAutoScalingGroups" class="com.eucalyptus.autoscaling.DescribeAutoScalingGroupsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="AutoScalingGroupNames" field="autoScalingGroupNames" usage="optional" type="com.eucalyptus.autoscaling.AutoScalingGroupNames"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeAutoScalingGroupsResponse" class="com.eucalyptus.autoscaling.DescribeAutoScalingGroupsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeAutoScalingGroupsResult" field="describeAutoScalingGroupsResult" usage="required" type="com.eucalyptus.autoscaling.DescribeAutoScalingGroupsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeAutoScalingGroupsResult" abstract="true">
+    <structure name="AutoScalingGroups" field="autoScalingGroups" usage="required" type="com.eucalyptus.autoscaling.AutoScalingGroups"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="EnableMetricsCollection" class="com.eucalyptus.autoscaling.EnableMetricsCollectionType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.autoscaling.Metrics"/>
+    <value name="Granularity" field="granularity" usage="required"/>
+  </mapping>
+  <mapping name="EnableMetricsCollectionResponse" class="com.eucalyptus.autoscaling.EnableMetricsCollectionResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="ResumeProcesses" class="com.eucalyptus.autoscaling.ResumeProcessesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <structure name="ScalingProcesses" field="scalingProcesses" usage="optional" type="com.eucalyptus.autoscaling.ProcessNames"/>
+  </mapping>
+  <mapping name="ResumeProcessesResponse" class="com.eucalyptus.autoscaling.ResumeProcessesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DeleteLaunchConfiguration" class="com.eucalyptus.autoscaling.DeleteLaunchConfigurationType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteLaunchConfigurationResponse" class="com.eucalyptus.autoscaling.DeleteLaunchConfigurationResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DescribePolicies" class="com.eucalyptus.autoscaling.DescribePoliciesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <structure name="PolicyNames" field="policyNames" usage="optional" type="com.eucalyptus.autoscaling.PolicyNames"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+  </mapping>
+  <mapping name="DescribePoliciesResponse" class="com.eucalyptus.autoscaling.DescribePoliciesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribePoliciesResult" field="describePoliciesResult" usage="required" type="com.eucalyptus.autoscaling.DescribePoliciesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribePoliciesResult" abstract="true">
+    <structure name="ScalingPolicies" field="scalingPolicies" usage="optional" type="com.eucalyptus.autoscaling.ScalingPolicies"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeScalingProcessTypes" class="com.eucalyptus.autoscaling.DescribeScalingProcessTypesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+  </mapping>
+  <mapping name="DescribeScalingProcessTypesResponse" class="com.eucalyptus.autoscaling.DescribeScalingProcessTypesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeScalingProcessTypesResult" field="describeScalingProcessTypesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeScalingProcessTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeScalingProcessTypesResult" abstract="true">
+    <structure name="Processes" field="processes" usage="optional" type="com.eucalyptus.autoscaling.Processes"/>
+  </mapping>
+  <mapping name="CreateAutoScalingGroup" class="com.eucalyptus.autoscaling.CreateAutoScalingGroupType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="MinSize" field="minSize" usage="required"/>
+    <value name="MaxSize" field="maxSize" usage="required"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
+    <value name="DefaultCooldown" field="defaultCooldown" usage="optional"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.autoscaling.AvailabilityZones"/>
+    <structure name="LoadBalancerNames" field="loadBalancerNames" usage="optional" type="com.eucalyptus.autoscaling.LoadBalancerNames"/>
+    <value name="HealthCheckType" field="healthCheckType" usage="optional"/>
+    <value name="HealthCheckGracePeriod" field="healthCheckGracePeriod" usage="optional"/>
+    <value name="PlacementGroup" field="placementGroup" usage="optional"/>
+    <value name="VPCZoneIdentifier" field="vpcZoneIdentifier" usage="optional"/>
+    <structure name="TerminationPolicies" field="terminationPolicies" usage="optional" type="com.eucalyptus.autoscaling.TerminationPolicies"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.autoscaling.Tags"/>
+  </mapping>
+  <mapping name="CreateAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.CreateAutoScalingGroupResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DescribeScalingActivities" class="com.eucalyptus.autoscaling.DescribeScalingActivitiesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ActivityIds" field="activityIds" usage="optional" type="com.eucalyptus.autoscaling.ActivityIds"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeScalingActivitiesResponse" class="com.eucalyptus.autoscaling.DescribeScalingActivitiesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeScalingActivitiesResult" field="describeScalingActivitiesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeScalingActivitiesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeScalingActivitiesResult" abstract="true">
+    <structure name="Activities" field="activities" usage="required" type="com.eucalyptus.autoscaling.Activities"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeNotificationConfigurations" class="com.eucalyptus.autoscaling.DescribeNotificationConfigurationsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="AutoScalingGroupNames" field="autoScalingGroupNames" usage="optional" type="com.eucalyptus.autoscaling.AutoScalingGroupNames"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeNotificationConfigurationsResponse" class="com.eucalyptus.autoscaling.DescribeNotificationConfigurationsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeNotificationConfigurationsResult" field="describeNotificationConfigurationsResult" usage="required" type="com.eucalyptus.autoscaling.DescribeNotificationConfigurationsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeNotificationConfigurationsResult" abstract="true">
+    <structure name="NotificationConfigurations" field="notificationConfigurations" usage="required" type="com.eucalyptus.autoscaling.NotificationConfigurations"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeTerminationPolicyTypes" class="com.eucalyptus.autoscaling.DescribeTerminationPolicyTypesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+  </mapping>
+  <mapping name="DescribeTerminationPolicyTypesResponse" class="com.eucalyptus.autoscaling.DescribeTerminationPolicyTypesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeTerminationPolicyTypesResult" field="describeTerminationPolicyTypesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeTerminationPolicyTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeTerminationPolicyTypesResult" abstract="true">
+    <structure name="TerminationPolicyTypes" field="terminationPolicyTypes" usage="optional" type="com.eucalyptus.autoscaling.TerminationPolicies"/>
+  </mapping>
+  <mapping name="DescribeTags" class="com.eucalyptus.autoscaling.DescribeTagsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="Filters" field="filters" usage="optional" type="com.eucalyptus.autoscaling.Filters"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeTagsResponse" class="com.eucalyptus.autoscaling.DescribeTagsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeTagsResult" field="describeTagsResult" usage="required" type="com.eucalyptus.autoscaling.DescribeTagsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeTagsResult" abstract="true">
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.autoscaling.TagDescriptionList"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="ExecutePolicy" class="com.eucalyptus.autoscaling.ExecutePolicyType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="HonorCooldown" field="honorCooldown" usage="optional"/>
+  </mapping>
+  <mapping name="ExecutePolicyResponse" class="com.eucalyptus.autoscaling.ExecutePolicyResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DeleteTags" class="com.eucalyptus.autoscaling.DeleteTagsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="Tags" field="tags" usage="required" type="com.eucalyptus.autoscaling.Tags"/>
+  </mapping>
+  <mapping name="DeleteTagsResponse" class="com.eucalyptus.autoscaling.DeleteTagsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="PutScalingPolicy" class="com.eucalyptus.autoscaling.PutScalingPolicyType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="ScalingAdjustment" field="scalingAdjustment" usage="required"/>
+    <value name="AdjustmentType" field="adjustmentType" usage="required"/>
+    <value name="Cooldown" field="cooldown" usage="optional"/>
+    <value name="MinAdjustmentStep" field="minAdjustmentStep" usage="optional"/>
+  </mapping>
+  <mapping name="PutScalingPolicyResponse" class="com.eucalyptus.autoscaling.PutScalingPolicyResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="PutScalingPolicyResult" field="putScalingPolicyResult" usage="required" type="com.eucalyptus.autoscaling.PutScalingPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.PutScalingPolicyResult" abstract="true">
+    <value name="PolicyARN" field="policyARN" usage="optional"/>
+  </mapping>
+  <mapping name="PutNotificationConfiguration" class="com.eucalyptus.autoscaling.PutNotificationConfigurationType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="TopicARN" field="topicARN" usage="required"/>
+    <structure name="NotificationTypes" field="notificationTypes" usage="required" type="com.eucalyptus.autoscaling.AutoScalingNotificationTypes"/>
+  </mapping>
+  <mapping name="PutNotificationConfigurationResponse" class="com.eucalyptus.autoscaling.PutNotificationConfigurationResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DeletePolicy" class="com.eucalyptus.autoscaling.DeletePolicyType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+  </mapping>
+  <mapping name="DeletePolicyResponse" class="com.eucalyptus.autoscaling.DeletePolicyResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DeleteNotificationConfiguration" class="com.eucalyptus.autoscaling.DeleteNotificationConfigurationType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="TopicARN" field="topicARN" usage="required"/>
+  </mapping>
+  <mapping name="DeleteNotificationConfigurationResponse" class="com.eucalyptus.autoscaling.DeleteNotificationConfigurationResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DeleteScheduledAction" class="com.eucalyptus.autoscaling.DeleteScheduledActionType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="ScheduledActionName" field="scheduledActionName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteScheduledActionResponse" class="com.eucalyptus.autoscaling.DeleteScheduledActionResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="SetInstanceHealth" class="com.eucalyptus.autoscaling.SetInstanceHealthType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="InstanceId" field="instanceId" usage="required"/>
+    <value name="HealthStatus" field="healthStatus" usage="required"/>
+    <value name="ShouldRespectGracePeriod" field="shouldRespectGracePeriod" usage="optional"/>
+  </mapping>
+  <mapping name="SetInstanceHealthResponse" class="com.eucalyptus.autoscaling.SetInstanceHealthResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DescribeAutoScalingNotificationTypes" class="com.eucalyptus.autoscaling.DescribeAutoScalingNotificationTypesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+  </mapping>
+  <mapping name="DescribeAutoScalingNotificationTypesResponse" class="com.eucalyptus.autoscaling.DescribeAutoScalingNotificationTypesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeAutoScalingNotificationTypesResult" field="describeAutoScalingNotificationTypesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeAutoScalingNotificationTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeAutoScalingNotificationTypesResult" abstract="true">
+    <structure name="AutoScalingNotificationTypes" field="autoScalingNotificationTypes" usage="optional" type="com.eucalyptus.autoscaling.AutoScalingNotificationTypes"/>
+  </mapping>
+  <mapping name="CreateOrUpdateTags" class="com.eucalyptus.autoscaling.CreateOrUpdateTagsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="Tags" field="tags" usage="required" type="com.eucalyptus.autoscaling.Tags"/>
+  </mapping>
+  <mapping name="CreateOrUpdateTagsResponse" class="com.eucalyptus.autoscaling.CreateOrUpdateTagsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="SuspendProcesses" class="com.eucalyptus.autoscaling.SuspendProcessesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <structure name="ScalingProcesses" field="scalingProcesses" usage="optional" type="com.eucalyptus.autoscaling.ProcessNames"/>
+  </mapping>
+  <mapping name="SuspendProcessesResponse" class="com.eucalyptus.autoscaling.SuspendProcessesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DescribeAutoScalingInstances" class="com.eucalyptus.autoscaling.DescribeAutoScalingInstancesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="InstanceIds" field="instanceIds" usage="optional" type="com.eucalyptus.autoscaling.InstanceIds"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeAutoScalingInstancesResponse" class="com.eucalyptus.autoscaling.DescribeAutoScalingInstancesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeAutoScalingInstancesResult" field="describeAutoScalingInstancesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeAutoScalingInstancesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeAutoScalingInstancesResult" abstract="true">
+    <structure name="AutoScalingInstances" field="autoScalingInstances" usage="optional" type="com.eucalyptus.autoscaling.AutoScalingInstances"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLaunchConfiguration" class="com.eucalyptus.autoscaling.CreateLaunchConfigurationType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="ImageId" field="imageId" usage="required"/>
+    <value name="KeyName" field="keyName" usage="optional"/>
+    <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.autoscaling.SecurityGroups"/>
+    <value name="UserData" field="userData" usage="optional"/>
+    <value name="InstanceType" field="instanceType" usage="required"/>
+    <value name="KernelId" field="kernelId" usage="optional"/>
+    <value name="RamdiskId" field="ramdiskId" usage="optional"/>
+    <structure name="BlockDeviceMappings" field="blockDeviceMappings" usage="optional" type="com.eucalyptus.autoscaling.BlockDeviceMappings"/>
+    <structure name="InstanceMonitoring" field="instanceMonitoring" usage="optional" type="com.eucalyptus.autoscaling.InstanceMonitoring"/>
+    <value name="SpotPrice" field="spotPrice" usage="optional"/>
+    <value name="IamInstanceProfile" field="iamInstanceProfile" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLaunchConfigurationResponse" class="com.eucalyptus.autoscaling.CreateLaunchConfigurationResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DeleteAutoScalingGroup" class="com.eucalyptus.autoscaling.DeleteAutoScalingGroupType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="ForceDelete" field="forceDelete" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.DeleteAutoScalingGroupResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DisableMetricsCollection" class="com.eucalyptus.autoscaling.DisableMetricsCollectionType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.autoscaling.Metrics"/>
+  </mapping>
+  <mapping name="DisableMetricsCollectionResponse" class="com.eucalyptus.autoscaling.DisableMetricsCollectionResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="UpdateAutoScalingGroup" class="com.eucalyptus.autoscaling.UpdateAutoScalingGroupType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="optional"/>
+    <value name="MinSize" field="minSize" usage="optional"/>
+    <value name="MaxSize" field="maxSize" usage="optional"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
+    <value name="DefaultCooldown" field="defaultCooldown" usage="optional"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.autoscaling.AvailabilityZones"/>
+    <value name="HealthCheckType" field="healthCheckType" usage="optional"/>
+    <value name="HealthCheckGracePeriod" field="healthCheckGracePeriod" usage="optional"/>
+    <value name="PlacementGroup" field="placementGroup" usage="optional"/>
+    <value name="VPCZoneIdentifier" field="vpcZoneIdentifier" usage="optional"/>
+    <structure name="TerminationPolicies" field="terminationPolicies" usage="optional" type="com.eucalyptus.autoscaling.TerminationPolicies"/>
+  </mapping>
+  <mapping name="UpdateAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.UpdateAutoScalingGroupResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DescribeLaunchConfigurations" class="com.eucalyptus.autoscaling.DescribeLaunchConfigurationsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="LaunchConfigurationNames" field="launchConfigurationNames" usage="optional" type="com.eucalyptus.autoscaling.LaunchConfigurationNames"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLaunchConfigurationsResponse" class="com.eucalyptus.autoscaling.DescribeLaunchConfigurationsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeLaunchConfigurationsResult" field="describeLaunchConfigurationsResult" usage="required" type="com.eucalyptus.autoscaling.DescribeLaunchConfigurationsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeLaunchConfigurationsResult" abstract="true">
+    <structure name="LaunchConfigurations" field="launchConfigurations" usage="required" type="com.eucalyptus.autoscaling.LaunchConfigurations"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeAdjustmentTypes" class="com.eucalyptus.autoscaling.DescribeAdjustmentTypesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+  </mapping>
+  <mapping name="DescribeAdjustmentTypesResponse" class="com.eucalyptus.autoscaling.DescribeAdjustmentTypesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeAdjustmentTypesResult" field="describeAdjustmentTypesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeAdjustmentTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeAdjustmentTypesResult" abstract="true">
+    <structure name="AdjustmentTypes" field="adjustmentTypes" usage="optional" type="com.eucalyptus.autoscaling.AdjustmentTypes"/>
+  </mapping>
+  <mapping name="DescribeScheduledActions" class="com.eucalyptus.autoscaling.DescribeScheduledActionsType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <structure name="ScheduledActionNames" field="scheduledActionNames" usage="optional" type="com.eucalyptus.autoscaling.ScheduledActionNames"/>
+    <value name="StartTime" field="startTime" usage="optional"/>
+    <value name="EndTime" field="endTime" usage="optional"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+    <value name="MaxRecords" field="maxRecords" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeScheduledActionsResponse" class="com.eucalyptus.autoscaling.DescribeScheduledActionsResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeScheduledActionsResult" field="describeScheduledActionsResult" usage="required" type="com.eucalyptus.autoscaling.DescribeScheduledActionsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeScheduledActionsResult" abstract="true">
+    <structure name="ScheduledUpdateGroupActions" field="scheduledUpdateGroupActions" usage="optional" type="com.eucalyptus.autoscaling.ScheduledUpdateGroupActions"/>
+    <value name="NextToken" field="nextToken" usage="optional"/>
+  </mapping>
+  <mapping name="PutScheduledUpdateGroupAction" class="com.eucalyptus.autoscaling.PutScheduledUpdateGroupActionType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="ScheduledActionName" field="scheduledActionName" usage="required"/>
+    <value name="Time" field="time" usage="optional"/>
+    <value name="StartTime" field="startTime" usage="optional"/>
+    <value name="EndTime" field="endTime" usage="optional"/>
+    <value name="Recurrence" field="recurrence" usage="optional"/>
+    <value name="MinSize" field="minSize" usage="optional"/>
+    <value name="MaxSize" field="maxSize" usage="optional"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
+  </mapping>
+  <mapping name="PutScheduledUpdateGroupActionResponse" class="com.eucalyptus.autoscaling.PutScheduledUpdateGroupActionResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="DescribeMetricCollectionTypes" class="com.eucalyptus.autoscaling.DescribeMetricCollectionTypesType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+  </mapping>
+  <mapping name="DescribeMetricCollectionTypesResponse" class="com.eucalyptus.autoscaling.DescribeMetricCollectionTypesResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="DescribeMetricCollectionTypesResult" field="describeMetricCollectionTypesResult" usage="required" type="com.eucalyptus.autoscaling.DescribeMetricCollectionTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.DescribeMetricCollectionTypesResult" abstract="true">
+    <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.autoscaling.MetricCollectionTypes"/>
+    <structure name="Granularities" field="granularities" usage="optional" type="com.eucalyptus.autoscaling.MetricGranularityTypes"/>
+  </mapping>
+  <mapping name="SetDesiredCapacity" class="com.eucalyptus.autoscaling.SetDesiredCapacityType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="required"/>
+    <value name="HonorCooldown" field="honorCooldown" usage="optional"/>
+  </mapping>
+  <mapping name="SetDesiredCapacityResponse" class="com.eucalyptus.autoscaling.SetDesiredCapacityResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping name="TerminateInstanceInAutoScalingGroup" class="com.eucalyptus.autoscaling.TerminateInstanceInAutoScalingGroupType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="InstanceId" field="instanceId" usage="required"/>
+    <value name="ShouldDecrementDesiredCapacity" field="shouldDecrementDesiredCapacity" usage="required"/>
+  </mapping>
+  <mapping name="TerminateInstanceInAutoScalingGroupResponse" class="com.eucalyptus.autoscaling.TerminateInstanceInAutoScalingGroupResponseType" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <structure name="TerminateInstanceInAutoScalingGroupResult" field="terminateInstanceInAutoScalingGroupResult" usage="required" type="com.eucalyptus.autoscaling.TerminateInstanceInAutoScalingGroupResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.TerminateInstanceInAutoScalingGroupResult" abstract="true">
+    <structure name="Activity" field="activity" usage="optional" type="com.eucalyptus.autoscaling.Activity"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.MetricGranularityType" abstract="true">
+    <value name="Granularity" field="granularity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.SuspendedProcesses" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.SuspendedProcess"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.LoadBalancerNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Tag" abstract="true">
+    <value name="ResourceId" field="resourceId" usage="optional"/>
+    <value name="ResourceType" field="resourceType" usage="optional"/>
+    <value name="Key" field="key" usage="required"/>
+    <value name="Value" field="value" usage="optional"/>
+    <value name="PropagateAtLaunch" field="propagateAtLaunch" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.PolicyNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.TagDescription" abstract="true">
+    <value name="ResourceId" field="resourceId" usage="optional"/>
+    <value name="ResourceType" field="resourceType" usage="optional"/>
+    <value name="Key" field="key" usage="optional"/>
+    <value name="Value" field="value" usage="optional"/>
+    <value name="PropagateAtLaunch" field="propagateAtLaunch" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.NotificationConfiguration" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="TopicARN" field="topicARN" usage="optional"/>
+    <value name="NotificationType" field="notificationType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AdjustmentTypes" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.AdjustmentType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ScheduledActionNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.NotificationConfigurations" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.NotificationConfiguration"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.LaunchConfigurations" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.LaunchConfiguration"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroup" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AutoScalingGroupARN" field="autoScalingGroupARN" usage="optional"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="MinSize" field="minSize" usage="required"/>
+    <value name="MaxSize" field="maxSize" usage="required"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="required"/>
+    <value name="DefaultCooldown" field="defaultCooldown" usage="required"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.autoscaling.AvailabilityZones"/>
+    <structure name="LoadBalancerNames" field="loadBalancerNames" usage="optional" type="com.eucalyptus.autoscaling.LoadBalancerNames"/>
+    <value name="HealthCheckType" field="healthCheckType" usage="required"/>
+    <value name="HealthCheckGracePeriod" field="healthCheckGracePeriod" usage="optional"/>
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.autoscaling.Instances"/>
+    <value name="CreatedTime" field="createdTime" usage="required"/>
+    <structure name="SuspendedProcesses" field="suspendedProcesses" usage="optional" type="com.eucalyptus.autoscaling.SuspendedProcesses"/>
+    <value name="PlacementGroup" field="placementGroup" usage="optional"/>
+    <value name="VPCZoneIdentifier" field="vpcZoneIdentifier" usage="optional"/>
+    <structure name="EnabledMetrics" field="enabledMetrics" usage="optional" type="com.eucalyptus.autoscaling.EnabledMetrics"/>
+    <value name="Status" field="status" usage="optional"/>
+    <structure name="Tags" field="tags" usage="optional" type="com.eucalyptus.autoscaling.TagDescriptionList"/>
+    <structure name="TerminationPolicies" field="terminationPolicies" usage="optional" type="com.eucalyptus.autoscaling.TerminationPolicies"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Ebs" abstract="true">
+    <value name="SnapshotId" field="snapshotId" usage="optional"/>
+    <value name="VolumeSize" field="volumeSize" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.BlockDeviceMapping" abstract="true">
+    <value name="VirtualName" field="virtualName" usage="optional"/>
+    <value name="DeviceName" field="deviceName" usage="required"/>
+    <structure name="Ebs" field="ebs" usage="optional" type="com.eucalyptus.autoscaling.Ebs"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Instance" abstract="true">
+    <value name="InstanceId" field="instanceId" usage="required"/>
+    <value name="AvailabilityZone" field="availabilityZone" usage="required"/>
+    <value name="LifecycleState" field="lifecycleState" usage="required"/>
+    <value name="HealthStatus" field="healthStatus" usage="required"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Instances" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.Instance"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ScheduledUpdateGroupActions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.ScheduledUpdateGroupAction"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Tags" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.Tag"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.MetricCollectionTypes" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.MetricCollectionType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingInstanceDetails" abstract="true">
+    <value name="InstanceId" field="instanceId" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="AvailabilityZone" field="availabilityZone" usage="required"/>
+    <value name="LifecycleState" field="lifecycleState" usage="required"/>
+    <value name="HealthStatus" field="healthStatus" usage="required"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.EnabledMetrics" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.EnabledMetric"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Metrics" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Activity" abstract="true">
+    <value name="ActivityId" field="activityId" usage="required"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
+    <value name="Description" field="description" usage="optional"/>
+    <value name="Cause" field="cause" usage="required"/>
+    <value name="StartTime" field="startTime" usage="required"/>
+    <value name="EndTime" field="endTime" usage="optional"/>
+    <value name="StatusCode" field="statusCode" usage="required"/>
+    <value name="StatusMessage" field="statusMessage" usage="optional"/>
+    <value name="Progress" field="progress" usage="optional"/>
+    <value name="Details" field="details" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ScalingPolicy" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="ScalingAdjustment" field="scalingAdjustment" usage="optional"/>
+    <value name="AdjustmentType" field="adjustmentType" usage="optional"/>
+    <value name="Cooldown" field="cooldown" usage="optional"/>
+    <value name="PolicyARN" field="policyARN" usage="optional"/>
+    <structure name="Alarms" field="alarms" usage="optional" type="com.eucalyptus.autoscaling.Alarms"/>
+    <value name="MinAdjustmentStep" field="minAdjustmentStep" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Values" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingInstances" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.AutoScalingInstanceDetails"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.SecurityGroups" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ProcessType" abstract="true">
+    <value name="ProcessName" field="processName" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Processes" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.ProcessType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AdjustmentType" abstract="true">
+    <value name="AdjustmentType" field="adjustmentType" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AvailabilityZones" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Alarm" abstract="true">
+    <value name="AlarmName" field="alarmName" usage="optional"/>
+    <value name="AlarmARN" field="alarmARN" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.InstanceIds" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.LaunchConfigurationNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.TagDescriptionList" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.TagDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.MetricCollectionType" abstract="true">
+    <value name="Metric" field="metric" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ScheduledUpdateGroupAction" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
+    <value name="ScheduledActionName" field="scheduledActionName" usage="optional"/>
+    <value name="ScheduledActionARN" field="scheduledActionARN" usage="optional"/>
+    <value name="Time" field="time" usage="optional"/>
+    <value name="StartTime" field="startTime" usage="optional"/>
+    <value name="EndTime" field="endTime" usage="optional"/>
+    <value name="Recurrence" field="recurrence" usage="optional"/>
+    <value name="MinSize" field="minSize" usage="optional"/>
+    <value name="MaxSize" field="maxSize" usage="optional"/>
+    <value name="DesiredCapacity" field="desiredCapacity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.MetricGranularityTypes" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.MetricGranularityType"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.SuspendedProcess" abstract="true">
+    <value name="ProcessName" field="processName" usage="optional"/>
+    <value name="SuspensionReason" field="suspensionReason" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.BlockDeviceMappings" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.BlockDeviceMapping"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroupNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Filters" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.Filter"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Filter" abstract="true">
+    <value name="Name" field="name" usage="optional"/>
+    <structure name="Values" field="values" usage="optional" type="com.eucalyptus.autoscaling.Values"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.InstanceMonitoring" abstract="true">
+    <value name="Enabled" field="enabled" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroups" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.AutoScalingGroup"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Alarms" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.Alarm"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingNotificationTypes" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ScalingPolicies" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.ScalingPolicy"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.Activities" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.autoscaling.Activity"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ActivityIds" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.TerminationPolicies" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.ProcessNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.LaunchConfiguration" abstract="true" extends="com.eucalyptus.autoscaling.AutoScalingMessage">
+    <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
+    <value name="LaunchConfigurationName" field="launchConfigurationName" usage="required"/>
+    <value name="LaunchConfigurationARN" field="launchConfigurationARN" usage="optional"/>
+    <value name="ImageId" field="imageId" usage="required"/>
+    <value name="KeyName" field="keyName" usage="optional"/>
+    <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.autoscaling.SecurityGroups"/>
+    <value name="UserData" field="userData" usage="optional"/>
+    <value name="InstanceType" field="instanceType" usage="required"/>
+    <value name="KernelId" field="kernelId" usage="optional"/>
+    <value name="RamdiskId" field="ramdiskId" usage="optional"/>
+    <structure name="BlockDeviceMappings" field="blockDeviceMappings" usage="optional" type="com.eucalyptus.autoscaling.BlockDeviceMappings"/>
+    <structure name="InstanceMonitoring" field="instanceMonitoring" usage="optional" type="com.eucalyptus.autoscaling.InstanceMonitoring"/>
+    <value name="SpotPrice" field="spotPrice" usage="optional"/>
+    <value name="IamInstanceProfile" field="iamInstanceProfile" usage="optional"/>
+    <value name="CreatedTime" field="createdTime" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.EnabledMetric" abstract="true">
+    <value name="Metric" field="metric" usage="optional"/>
+    <value name="Granularity" field="granularity" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingMessage" abstract="true"/>
+</binding>

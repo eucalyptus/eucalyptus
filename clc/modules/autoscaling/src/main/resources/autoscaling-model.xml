@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+      xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
+       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
+       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
+
+    <euca:endpoint name="AutoScalingControllerWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/services/AutoScaling"/>
+    <euca:endpoint name="AutoScalingInternalWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/internal/AutoScalingInternal"
+                   synchronous="true"/>
+
+    <endpoint name="AutoScalingWS" address="vm://AutoScaling" synchronous="false"/>
+    <endpoint name="AutoScalingInternalVM" address="vm://AutoScalingInternal" synchronous="true"/>
+    <endpoint name="AutoScalingErrorQueueWS" address="vm://AutoScalingErrorQueue" synchronous="false"/>
+    <model name="autoscaling">
+
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="AutoScalingErrorQueueWS" />
+        </default-service-exception-strategy>
+
+        <service name="AutoScalingRequestQueue">
+            <inbound>
+                <vm:inbound-endpoint ref="AutoScalingRequestQueueEndpoint" />
+            </inbound>
+            <bridge-component />
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="AutoScalingWS" />
+                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.AutoScalingMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="AutoScaling">
+            <inbound>
+                <inbound-endpoint ref="AutoScalingWS" />
+            </inbound>
+            <component class="com.eucalyptus.autoscaling.AutoScalingService" />
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint" />
+                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.AutoScalingMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="AutoScalingErrorQueue">
+            <inbound>
+                <inbound-endpoint ref="AutoScalingErrorQueueWS" />
+            </inbound>
+            <component class="com.eucalyptus.autoscaling.ws.AutoScalingErrorHandler" />
+        </service>
+
+    </model>
+    <model name="autoscaling-internal">
+        <service name="AutoScalingInternal">
+            <inbound>
+                <inbound-endpoint ref="AutoScalingInternalWS" />
+                <inbound-endpoint ref="AutoScalingInternalVM" />
+            </inbound>
+            <component class="com.eucalyptus.autoscaling.AutoScalingService" />
+        </service>
+    </model>
+
+</mule>
