@@ -1718,6 +1718,15 @@ static int init(void)
         }
     }
 
+    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || 
+                !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED"))) {
+            char errorm[256];
+            memset(errorm,0,256);
+            sprintf(errorm,"Invalid VNET_MODE setting: %s",tmp);
+            logprintfl (EUCAFATAL,"%s\n",errorm);
+            log_eucafault("1012","component",euca_this_component_name,"cause",errorm,NULL);
+    }
+
     int initFail = 0;
     if (tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
