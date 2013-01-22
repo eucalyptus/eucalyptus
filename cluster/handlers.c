@@ -4253,6 +4253,16 @@ int init_config(void)
                 free(tmpstr);
         }
 
+        if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") || 
+                !strcmp(pubmode, "STATIC-DYNMAC")   || 
+                !strcmp(pubmode, "MANAGED-NOVLAN")  || !strcmp(pubmode, "MANAGED"))) {
+            char errorm[256];
+            memset(errorm,0,256);
+            sprintf(errorm,"Invalid VNET_MODE setting: %s",pubmode);
+            logprintfl (EUCAFATAL,"%s\n",errorm);
+            log_eucafault("1012","component",euca_this_component_name,"cause",errorm,NULL);
+        }
+
         if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "STATIC-DYNMAC"))) {
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
