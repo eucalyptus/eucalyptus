@@ -999,10 +999,7 @@ static int copy_creator(artifact * a)
             if ((blobstore_snapshot_t) a->bb->store->snapshot_policy == BLOBSTORE_SNAPSHOT_NONE) {
                 op = BLOBSTORE_COPY;    // but fall back to copy when snapshots are not possible or desired
             }
-            blockmap map[] = {
-{op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}
-                 , 0, 0, round_up_sec(dep->size_bytes) / 512}
-            };
+            blockmap map[] = { {op, BLOBSTORE_BLOCKBLOB, {blob:dep->bb}, 0, 0, round_up_sec(dep->size_bytes) / 512} };
             if (blockblob_clone(a->bb, map, 1) == -1) {
                 logprintfl(EUCAERROR, "[%s] failed to clone/copy blob %s to blob %s: %d %s\n", a->instanceId, dep->bb->id, a->bb->id,
                            blobstore_get_error(), blobstore_get_last_msg());
