@@ -274,7 +274,7 @@ public class BaseMessage {
       msgClass = msgClass.getSuperclass( );
     }
     TYPE reply = null;
-    String replyType = msgClass.getName( ).replaceAll( "Type", "" ) + "ResponseType";
+    String replyType = msgClass.getName( ).replaceAll( "Type$", "" ) + "ResponseType";
     try {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
