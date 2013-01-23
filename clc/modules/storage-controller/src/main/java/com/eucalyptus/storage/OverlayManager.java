@@ -295,7 +295,7 @@ public class OverlayManager implements LogicalStorageManager {
 	}
 
 	private String duplicateLogicalVolume(String oldLvName, String newLvName) throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{"dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
+		return SystemUtil.run(new String[]{ StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + oldLvName, "of=" + newLvName, "bs=" + StorageProperties.blockSize});
 	}
 
 	private String createFile(String fileName, long size) throws EucalyptusCloudException {
