@@ -3897,10 +3897,10 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
 
     if (!nodeName || !stateName) {
-        logprintfl(EUCAERROR, "bad input params\n");
+        LOGERROR("bad input params\n");
         return (1);
     }
-    logprintfl(EUCAINFO, "modifying node %s with state=%s\n", SP(nodeName), SP(stateName));
+    LOGINFO("modifying node %s with state=%s\n", SP(nodeName), SP(stateName));
 
     sem_mywait(RESCACHE);
     memcpy(&resourceCacheLocal, resourceCache, sizeof(ccResourceCache));
@@ -3918,7 +3918,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
         }
     }
     if (src_index == -1) {
-        logprintfl(EUCAERROR, "node requested for modification (%s) cannot be found\n", SP(nodeName));
+        LOGERROR("node requested for modification (%s) cannot be found\n", SP(nodeName));
         goto out;
     }
     
@@ -3947,12 +3947,12 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     }
     sem_mypost(INSTCACHE);    
     if (! found_instance) {
-        logprintfl(EUCAINFO, "no instances running on host %s\n", SP(nodeName));
+        LOGINFO("no instances running on host %s\n", SP(nodeName));
         goto out;
     }
 
     if (dst_index == -1) {
-        logprintfl(EUCAERROR, "have instances to migrate, but no destinations\n");
+        LOGERROR("have instances to migrate, but no destinations\n");
         goto out;
     }
 
@@ -3964,7 +3964,7 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[dst_index].lockidx, resourceCacheLocal.resources[dst_index].ncURL, "ncMigrateInstance",
                       &nc_instance, resourceCacheLocal.resources[src_index].hostname, resourceCacheLocal.resources[dst_index].hostname, NULL);
     if (rc) {
-        logprintfl(EUCAERROR, "failed to request migration on destination\n");
+        LOGERROR("failed to request migration on destination\n");
         ret = 1;
         goto out;
     }
@@ -3974,14 +3974,14 @@ int doModifyNode(ncMetadata * pMeta, char *nodeName, char *stateName)
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstance",
                       &nc_instance, resourceCacheLocal.resources[src_index].hostname, resourceCacheLocal.resources[dst_index].hostname, NULL);
     if (rc) {
-        logprintfl(EUCAERROR, "failed to request migration on source\n");
+        LOGERROR("failed to request migration on source\n");
         ret = 1;
         goto out;
     }
 
  out:
 
-    logprintfl(EUCATRACE, "done\n");
+    LOGTRACE("done\n");
 
     shawn();
 

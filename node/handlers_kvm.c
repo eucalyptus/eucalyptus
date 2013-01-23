@@ -564,13 +564,13 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
     int ret = EUCA_OK;
 
     if (!strcmp(pMeta->nodeName, sourceNodeName)) {
-        logprintfl(EUCAINFO, "source of migration initating\n");
+        LOGINFO("source of migration initating\n");
 
         virDomainPtr dom = NULL;
         virConnectPtr *conn = NULL;
         
         if ((conn = check_hypervisor_conn()) == NULL) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
+            LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
             goto failed_src;
         }
         
@@ -581,7 +581,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         sem_v(hyp_sem);
         
         if (dom == NULL) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
+            LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
             goto failed_src;
         }
 
@@ -590,7 +590,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         virConnectPtr dconn = NULL;
         dconn = virConnectOpen(duri);
         if (dconn==NULL) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
+            LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
             goto failed_src;
         }
 
@@ -601,7 +601,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
                                   NULL, 
                                   0L);
         if (rc != 0) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
+            LOGERROR("[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
             goto failed_src;
         }
 
@@ -610,7 +610,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         ret = EUCA_ERROR;
 
     } else if (!strcmp(pMeta->nodeName, destNodeName)) {
-        logprintfl(EUCAINFO, "destination of migration initating\n");
+        LOGINFO("destination of migration initating\n");
 
         int error;
         
@@ -622,7 +622,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         // set up networking
         char *brname = NULL;
         if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
-            logprintfl(EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
+            LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
             EUCA_FREE(brname);
             goto failed;
         }
@@ -634,13 +634,13 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         instance->do_inject_key = nc->do_inject_key;
 
         if ((error = create_instance_backing(instance))) {
-            logprintfl(EUCAERROR, "[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
+            LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
             goto failed_dest;
         }
         
         ncInstance *new_instance = clone_instance(instance);
         if (new_instance == NULL) {
-            logprintfl(EUCAERROR, "[%s] could not allocate instance struct\n", instance->instanceId);
+            LOGERROR("[%s] could not allocate instance struct\n", instance->instanceId);
             goto failed_dest;
         }
         change_state(new_instance, PAUSED);
@@ -650,7 +650,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         //copy_instances();
         //sem_v(inst_sem);
         if (error) {
-            logprintfl(EUCAERROR, "[%s] could not save instance struct\n", new_instance->instanceId);
+            LOGERROR("[%s] could not save instance struct\n", new_instance->instanceId);
             goto failed_dest;
         }
 
@@ -659,7 +659,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         ret = EUCA_ERROR;
 
     } else {
-        logprintfl(EUCAERROR, "unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
+        LOGERROR("unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
         ret = EUCA_ERROR;
     }
 

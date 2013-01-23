@@ -1366,7 +1366,7 @@ adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNod
 
         error = doModifyNode (&meta, stateName);
         if (error != EUCA_OK) {
-            logprintfl (EUCAERROR, "failed error=%d\n", error);
+            LOGERROR("failed error=%d\n", error);
             adb_ncModifyNodeResponseType_set_return(output, env, AXIS2_FALSE);
         } else {
             // set standard fields in output
@@ -1435,7 +1435,7 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
 
         error = doMigrateInstance (&meta, instance, sourceNodeName, destNodeName, credentials);
         if (error != EUCA_OK) {
-            logprintfl (EUCAERROR, "failed error=%d\n", error);
+            LOGERROR("failed error=%d\n", error);
             adb_ncMigrateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
         } else {
             // set standard fields in output

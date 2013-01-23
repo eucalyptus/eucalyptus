@@ -2775,7 +2775,7 @@ int doModifyNode(ncMetadata * pMeta, char * stateName)
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCADEBUG, "invoked (stateName=%s)\n", stateName);
+    LOGDEBUG("invoked (stateName=%s)\n", stateName);
 
     if (nc_state.H->doModifyNode) {
         ret = nc_state.H->doModifyNode(&nc_state, pMeta, stateName);
@@ -2799,7 +2799,7 @@ int doMigrateInstance(ncMetadata * pMeta, ncInstance * instance, char * sourceNo
     if (init())
         return (EUCA_ERROR);
 
-    logprintfl(EUCADEBUG, "invoked (instId=%s sourceNodeName=%s destNodeName=%s credentials=%s)\n",
+    LOGDEBUG("invoked (instId=%s sourceNodeName=%s destNodeName=%s credentials=%s)\n",
                instance->instanceId, sourceNodeName, destNodeName, (credentials==NULL)?("unavailable"):("present"));
     
     if (nc_state.H->doMigrateInstance) {

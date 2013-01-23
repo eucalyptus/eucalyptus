@@ -812,7 +812,7 @@ int create_migration_backing(ncInstance * instance)
     if (strstr(instance->platform, "windows")) {
         // generate the floppy file for windows instances
         if (makeWindowsFloppy(nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {
-            logprintfl(EUCAERROR, "[%s] could not create windows bootup script floppy\n", instance->instanceId);
+            LOGERROR("[%s] could not create windows bootup script floppy\n", instance->instanceId);
             goto out;
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
@@ -828,7 +828,7 @@ int create_migration_backing(ncInstance * instance)
                               (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
                               instance->instanceId);    // ID is for logging
     if (sentinel == NULL) {
-        logprintfl(EUCAERROR, "[%s] failed to prepare backing for instance\n", instance->instanceId);
+        LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
         goto out;
     }
 
@@ -845,7 +845,7 @@ int create_migration_backing(ncInstance * instance)
     sem_v(disk_sem);
 
     if (rc != EUCA_OK) {
-        logprintfl(EUCAERROR, "[%s] failed to implement migration backing for instance\n", instance->instanceId);
+        LOGERROR("[%s] failed to implement migration backing for instance\n", instance->instanceId);
         goto out;
     }
 
