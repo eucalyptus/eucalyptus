@@ -792,6 +792,10 @@ public abstract class FilterSupport<RT> {
     return persistenceFilters;
   }
 
+  Map<String, String> getAliases() {
+    return aliases;
+  }
+
   /**
    * Build a criterion that uses a sub-select to match the given tag restrictions
    */

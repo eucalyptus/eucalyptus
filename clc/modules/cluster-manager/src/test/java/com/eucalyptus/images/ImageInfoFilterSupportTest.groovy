@@ -32,7 +32,10 @@ class ImageInfoFilterSupportTest extends FilterSupportTest.InstanceTest<ImageInf
                                                                           
   @Test
   void testFilteringSupport() {
-    assertValid( new Images.ImageInfoFilterSupport() )
+    assertValid( new Images.ImageInfoFilterSupport(), [ 
+        (DeviceMapping.class) : [ BlockStorageDeviceMapping.class ],
+        (ImageInfo.class) : [ KernelImageInfo.class, MachineImageInfo.class, RamdiskImageInfo.class ]
+    ] )
   }
   
   @Test

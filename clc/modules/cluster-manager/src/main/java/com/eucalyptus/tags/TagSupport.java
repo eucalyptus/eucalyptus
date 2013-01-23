@@ -116,22 +116,24 @@ public abstract class TagSupport {
     for ( final String id : identifiers ) {
       tagMap.put( id, Lists.<Tag>newArrayList() );
     }
-    final Tag example = example( owner );
-    final DetachedCriteria detachedCriteria = DetachedCriteria.forClass( resourceClass )
-        .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( identifiers ) ) )
-        .setProjection( Projections.id() );
-    final Criterion idRestriction = Property.forName( tagClassResourceField ).in( detachedCriteria );
-    try {
-      final List<Tag> tags = Tags.list( example, Predicates.alwaysTrue(), idRestriction, Collections.<String,String>emptyMap()  );
-      for ( final Tag tag : tags ) {
-        tagMap.get( tag.getResourceId() ).add( tag );
+    if ( !tagMap.isEmpty() ) {
+      final Tag example = example( owner );
+      final DetachedCriteria detachedCriteria = DetachedCriteria.forClass( resourceClass )
+          .add( Restrictions.in( resourceClassIdField, Lists.newArrayList( identifiers ) ) )
+          .setProjection( Projections.id() );
+      final Criterion idRestriction = Property.forName( tagClassResourceField ).in( detachedCriteria );
+      try {
+        final List<Tag> tags = Tags.list( example, Predicates.alwaysTrue(), idRestriction, Collections.<String,String>emptyMap()  );
+        for ( final Tag tag : tags ) {
+          tagMap.get( tag.getResourceId() ).add( tag );
+        }
+      } catch ( NoSuchMetadataException e ) {
+        log.error( e, e );
       }
-    } catch ( NoSuchMetadataException e ) {
-      log.error( e, e );
-    }
-    Ordering<Tag> order = Ordering.natural().onResultOf( Tags.key() );
-    for ( final String id : identifiers ) {
-      Collections.sort( tagMap.get( id ), order );
+      Ordering<Tag> order = Ordering.natural().onResultOf( Tags.key() );
+      for ( final String id : identifiers ) {
+        Collections.sort( tagMap.get( id ), order );
+      }
     }
     return tagMap;
   }

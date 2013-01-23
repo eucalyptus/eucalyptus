@@ -104,6 +104,7 @@ import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -144,7 +145,7 @@ import com.eucalyptus.vm.VmInstances.Timeout;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
@@ -169,6 +170,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private static final Logger        LOG                  = Logger.getLogger( VmInstance.class );
   public static final String         DEFAULT_TYPE         = "m1.small";
   public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
+  public static final String         ROOT_DEVICE_TYPE_INSTANCE_STORE = "instance-store";
 
   @Embedded
   private VmNetworkConfig      networkConfig;
@@ -1214,13 +1216,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getImageId( ) {
     return this.bootRecord.getMachine( ) == null ? "emi-00000000" : this.bootRecord.getMachine( ).getDisplayName( );
   }
-  
+
+  @Nullable
   public String getRamdiskId( ) {
-    return this.bootRecord.getRamdisk( ).getDisplayName( );
+    return CloudMetadatas.toDisplayName().apply( this.bootRecord.getRamdisk() );
   }
-  
+
+  @Nullable
   public String getKernelId( ) {
-    return this.bootRecord.getKernel( ).getDisplayName( );
+    return CloudMetadatas.toDisplayName().apply(  this.bootRecord.getKernel( ) );
   }
   
   public boolean hasPublicAddress( ) {
@@ -1728,7 +1732,43 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void setNetworkIndex( final PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
-  
+
+  VmState getDisplayState() {
+    return getRuntimeState( ).isBundling( ) ?
+        VmState.TERMINATED :
+        getState( );
+  }
+
+  String getDisplayPublicDnsName( ) {
+    return dns() ?
+        Objects.firstNonNull( getPublicDnsName( ), VmNetworkConfig.DEFAULT_IP ) :
+        getDisplayPublicAddress( );
+  }
+
+  String getDisplayPublicAddress( ) {
+    return dns() ?
+        getPublicAddress( ) :
+        VmNetworkConfig.DEFAULT_IP.equals( Objects.firstNonNull( getPublicAddress( ), VmNetworkConfig.DEFAULT_IP ) ) ?
+            getDisplayPrivateAddress( ) :
+            Objects.firstNonNull( getPublicAddress( ), VmNetworkConfig.DEFAULT_IP );
+  }
+
+  String getDisplayPrivateDnsName( ) {
+    return dns() ?
+      Objects.firstNonNull( getPrivateDnsName( ), VmNetworkConfig.DEFAULT_IP ) :
+      getDisplayPrivateAddress( );
+  }
+
+  String getDisplayPrivateAddress( ) {
+    return dns() ?
+        getPrivateAddress( ) :
+        Objects.firstNonNull( getPrivateAddress( ), VmNetworkConfig.DEFAULT_IP );
+  }
+
+  private static boolean dns( ) {
+    return StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
+  }
+
   @TypeMapper
   public enum Transform implements Function<VmInstance, RunningInstancesItemType> {
     INSTANCE;
@@ -1745,65 +1785,25 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           final VmInstance input = Entities.merge( v );
           RunningInstancesItemType runningInstance;
-          final boolean dns = StackConfiguration.USE_INSTANCE_DNS && !ComponentIds.lookup( Dns.class ).runLimitedServices( );
           runningInstance = new RunningInstancesItemType( );
           
           runningInstance.setAmiLaunchIndex( Integer.toString( input.getLaunchRecord( ).getLaunchIndex( ) ) );
-          if ( ( input.getRuntimeState( ).isBundling( ) ) ) {
-            runningInstance.setStateCode( Integer.toString( VmState.TERMINATED.getCode( ) ) );
-            runningInstance.setStateName( VmState.TERMINATED.getName( ) );
-          } else {
-            runningInstance.setStateCode( Integer.toString( input.getState( ).getCode( ) ) );
-            runningInstance.setStateName( input.getState( ).getName( ) );
-          }
+          final VmState displayState = input.getDisplayState();
+          runningInstance.setStateCode( Integer.toString( displayState.getCode() ) );
+          runningInstance.setStateName( displayState.getName() );
           runningInstance.setPlatform( input.getPlatform( ) );
           
           runningInstance.setInstanceId( input.getVmId( ).getInstanceId( ) );
           //ASAP:FIXME:GRZE: restore.
           runningInstance.setProductCodes( new ArrayList<String>( ) );
           runningInstance.setImageId( input.getImageId() );
-          if ( input.getBootRecord( ).getKernel( ) != null ) {
-            runningInstance.setKernel( input.getKernelId() );
-          }
-          if ( input.getBootRecord( ).getRamdisk( ) != null ) {
-            runningInstance.setRamdisk( input.getBootRecord( ).getRamdisk( ).getDisplayName( ) );
-          }
-          if ( dns ) {
-              String publicDnsName = input.getPublicDnsName( );
-              String publicAddress = input.getPublicAddress( );
-              String privateDnsName = input.getPrivateDnsName( );
-              String privateAddress = input.getPrivateAddress( );
-              		
-              publicDnsName = ( publicDnsName == null
-                                                     ? VmNetworkConfig.DEFAULT_IP
-                                                     : publicDnsName );
-              privateDnsName = ( privateDnsName == null
-                                                       ? VmNetworkConfig.DEFAULT_IP
-                                                       : privateDnsName );
-              runningInstance.setDnsName( publicDnsName );
-              runningInstance.setIpAddress( publicAddress );
-              runningInstance.setPrivateDnsName( privateDnsName );
-              runningInstance.setPrivateIpAddress( privateAddress );
-          } else {
-            String publicDnsName = input.getPublicAddress( );
-            String privateDnsName = input.getPrivateAddress( );
-            publicDnsName = ( publicDnsName == null
-                                                   ? VmNetworkConfig.DEFAULT_IP
-                                                   : publicDnsName );
-            privateDnsName = ( privateDnsName == null
-                                                     ? VmNetworkConfig.DEFAULT_IP
-                                                     : privateDnsName );
-            runningInstance.setPrivateDnsName( privateDnsName );
-            runningInstance.setPrivateIpAddress( privateDnsName );
-            if ( !VmNetworkConfig.DEFAULT_IP.equals( publicDnsName ) ) {
-              runningInstance.setDnsName( publicDnsName );
-              runningInstance.setIpAddress( publicDnsName );
-            } else {
-              runningInstance.setDnsName( privateDnsName );
-              runningInstance.setIpAddress( privateDnsName );
-            }
-          }
-          
+          runningInstance.setKernel( input.getKernelId() );
+          runningInstance.setRamdisk( input.getRamdiskId() );
+          runningInstance.setDnsName( input.getDisplayPublicDnsName() );
+          runningInstance.setIpAddress( input.getDisplayPublicAddress() );
+          runningInstance.setPrivateDnsName( input.getDisplayPrivateDnsName() );
+          runningInstance.setPrivateIpAddress( input.getDisplayPrivateAddress() );
+
           runningInstance.setReason( input.runtimeState.getReason( ) );
           
           if ( input.getBootRecord( ).getSshKeyPair( ) != null )

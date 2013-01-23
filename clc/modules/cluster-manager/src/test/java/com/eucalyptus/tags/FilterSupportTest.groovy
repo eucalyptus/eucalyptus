@@ -33,6 +33,8 @@ import javax.persistence.ElementCollection
 import javax.persistence.Embedded
 import com.eucalyptus.crypto.util.Timestamps
 import com.google.common.base.Functions
+import com.google.common.collect.BiMap
+import com.google.common.collect.HashBiMap
 
 /**
  * Unit tests for filter support
@@ -90,30 +92,72 @@ class FilterSupportTest {
       }
     }
 
-    void assertValidFilters( final FilterSupport<RT> filterSupport ) {
-      assertValidFilters( filterSupport, filterSupport.resourceClass )
+    void assertValidAliases( final FilterSupport<RT> filterSupport ) {
+      assertValidAliases( filterSupport.aliases.keySet(), filterSupport.resourceClass )
     }
-
-    void assertValidFilters( final FilterSupport<RT> filterSupport,
+    
+    void assertValidAliases( final Set<String> aliasProperties,
                              final Class target ) {
-      filterSupport.getPersistenceFilters().values().each { property ->
-        String[] propPath = property.property.split( "\\." )
+      aliasProperties.each { property ->
+        String[] propPath = property.split( "\\." )
         Class targetType = target;
         propPath.each { propName ->
           boolean found = false;
           ReflectionUtils.doWithFields( targetType, { Field field ->
             if ( field.name.equals( propName ) ) {
+              assertTrue( "Field must be a relation or embedded: " + propName, isAnnotatedAsRelation( field ) || Ats.from( field ).has( Embedded.class ) )
               if ( Collection.isAssignableFrom( field.type ) ) { // relation
-                assertTrue( "Collection must be relation: " + propName, Ats.from( field ).has( ManyToMany.class ) || Ats.from( field ).has( OneToMany.class ) || Ats.from( field ).has( ManyToOne.class ) || Ats.from( field ).has( OneToOne.class ) )
-                assertFalse( "Collection must not be ElementCollection: " + propName, Ats.from( field ).has( ElementCollection.class ) )
                 targetType = field.genericType.getActualTypeArguments()[0]
               } else {
-                assertTrue( "Field type not supported: " + field.type, (field.type instanceof Class<String> || field.type instanceof Class<Date> || field.type instanceof Class<Boolean> || field.type instanceof Class<Long> || field.type instanceof Class<Integer> ) || Ats.from( field ).has( Embedded.class ) )
                 targetType = field.type
               }
               found = true
             }
           } as ReflectionUtils.FieldCallback )
+          assertTrue( "Property not found " + propName + " on " + targetType, found )
+        }
+      }
+    }
+
+    void assertValidFilters( final FilterSupport<RT> filterSupport ) {
+      assertValidFilters( filterSupport, filterSupport.resourceClass, [:] )
+    }
+
+    void assertValidFilters( final FilterSupport<RT> filterSupport,
+                             final Class target,
+                             final Map<Class,List<Class>> searchableSubclasses ) {
+      filterSupport.getPersistenceFilters().values().each { property ->
+        List<String> propPath = property.property.split( "\\." ) as List
+        if ( filterSupport.aliases.values().contains( propPath.first() ) ) {
+          // expand alias
+          BiMap<String,String> aliases = HashBiMap.create( filterSupport.aliases ).inverse()
+          aliases.get( propPath.remove( 0 ) ).split( "\\." ).reverse().each { propName ->
+            propPath.add( 0, propName )              
+          }
+        }
+        Class targetType = target;
+        propPath.each { propName ->
+          boolean found = false;
+          List<Class> searchTargets = [ targetType ]
+          searchableSubclasses.get( targetType )?.each { clazz ->
+            searchTargets.add( clazz )            
+          }
+          for ( Class searchTarget : searchTargets ) {
+            if ( found ) break;
+            ReflectionUtils.doWithFields( searchTarget, { Field field ->
+              if ( field.name.equals( propName ) ) {
+                if ( Collection.isAssignableFrom( field.type ) ) { // relation
+                  assertTrue( "Collection must be relation: " + propName, Ats.from( field ).has( ManyToMany.class ) || Ats.from( field ).has( OneToMany.class ) || Ats.from( field ).has( ManyToOne.class ) || Ats.from( field ).has( OneToOne.class ) )
+                  assertFalse( "Collection must not be ElementCollection: " + propName, Ats.from( field ).has( ElementCollection.class ) )
+                  targetType = field.genericType.getActualTypeArguments()[0]
+                } else {
+                  assertTrue( "Field type not supported: " + field.type, (field.type instanceof Class<String> || field.type instanceof Class<Date> || field.type instanceof Class<Boolean> || field.type instanceof Class<Long> || field.type instanceof Class<Integer> ) || Ats.from( field ).has( Embedded.class ) )
+                  targetType = field.type
+                }
+                found = true
+              }
+            } as ReflectionUtils.FieldCallback )
+          }
           assertTrue( "Property not found " + propName + " on " + targetType, found )
         }
         if ( !String.class.equals( targetType ) ) {
@@ -123,7 +167,13 @@ class FilterSupportTest {
     }
 
     void assertValid( final FilterSupport<RT> filterSupport ) {
-      assertValidFilters( filterSupport )
+      assertValid( filterSupport, [:] )
+    }
+    
+    void assertValid( final FilterSupport<RT> filterSupport,
+                      final Map<Class,List<Class>> searchableSubclasses ) {
+      assertValidAliases( filterSupport )
+      assertValidFilters( filterSupport, filterSupport.resourceClass, searchableSubclasses )
       assertValidKeys( filterSupport )
       assertValidTagConfig( filterSupport )
     }
@@ -155,6 +205,14 @@ class FilterSupportTest {
 
     Date date( String isoDateText ) {
       Timestamps.parseTimestamp( isoDateText, Timestamps.Type.ISO_8601 );
+    }
+    
+    boolean isAnnotatedAsRelation( final Field field ) {
+      return \
+          Ats.from( field ).has( ManyToMany.class ) || 
+          Ats.from( field ).has( OneToMany.class ) || 
+          Ats.from( field ).has( ManyToOne.class ) || 
+          Ats.from( field ).has( OneToOne.class )
     }
   }
 }
