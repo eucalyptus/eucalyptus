@@ -3003,12 +3003,15 @@ int blockblob_copy(blockblob * src_bb,  // source blob to copy data from
 //!
 static char *dm_sort_table(char **pOldTable)
 {
+#define DM_MAX_LINES          32
+#define DM_LINE_LENGTH       256
+
     unsigned int i = 0;
     unsigned int lineId = UINT32_MAX;
     unsigned long long minVal = UINT64_MAX;
     unsigned long long curVal = 0;
-    char *aLines[32] = { NULL };
-    char sLine[64] = "";
+    char *aLines[DM_MAX_LINES] = { NULL }; //!< TODO: Turn this into a dynamic re-alloc'ed array?
+    char sLine[DM_LINE_LENGTH] = "";
     char *pNewTable = NULL;
     char *pDupTable = NULL;
     register unsigned int j = 0;
@@ -3021,18 +3024,22 @@ static char *dm_sort_table(char **pOldTable)
 
         // Split in lines and count
         aLines[count] = strtok((*pOldTable), "\n");
-        while (aLines[count] != NULL) {
+        while ((aLines[count] != NULL) && (count < DM_MAX_LINES)) {
             count++;
             aLines[count] = strtok(NULL, "\n");
         }
 
         // Will we need to sort?
-        if (count == 1) {
+        if(aLines[count] != NULL) {
+            // hmmm. This sounds list we has more than DM_MAX_LINES... Just return the table as is
+            pNewTable = pDupTable;
+        } else if (count == 1) {
             // So we have 1 line. Because strtok() messed up the original table
             // lets return the duplicate version of the original
             pNewTable = pDupTable;
         } else {
-            // we need more than 1 line in this table to sort
+            // we need more than 1 line in this table to sort. At this point we know
+            // we have less than DM_MAX_LINES so we don't have to worry 'bout it.
             if (count > 1) {
                 // Sort every lines in the 'lines' array
                 for (i = 0; i < count; i++) {
@@ -3056,7 +3063,7 @@ static char *dm_sort_table(char **pOldTable)
                     // Since we set line ID to UINT32_MAX, its safe to assume its valid if less than count
                     if (lineId < count) {
                         // Re-add the newline character at the end of this string.
-                        if (snprintf(sLine, 64, "%s\n", aLines[lineId]) > 0) {
+                        if (snprintf(sLine, DM_LINE_LENGTH, "%s\n", aLines[lineId]) > 0) {
                             // Add it to our new table.
                             if ((pNewTable = strdupcat(pNewTable, sLine)) == NULL) {
                                 EUCA_FREE(pDupTable);
@@ -3079,6 +3086,9 @@ static char *dm_sort_table(char **pOldTable)
     // Set our in/out parameter properly on our way out
     (*pOldTable) = pNewTable;
     return (pNewTable);
+
+#undef DM_MAX_LINES
+#undef DM_LINE_LENGTH
 }
 
 int blockblob_clone(blockblob * bb, // destination blob, which blocks may be used as backing
