@@ -28,7 +28,7 @@ import com.eucalyptus.component.id.Eucalyptus;
  */
 @ComponentId.Partition( Eucalyptus.class )
 @ComponentId.PublicService
-//@ComponentId.PolicyVendor( PolicySpec.VENDOR_... )
+@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
 @ComponentId.FaultLogPrefix( "cloud" )
 public class AutoScaling extends ComponentId {
   private static final long serialVersionUID = 1L;
