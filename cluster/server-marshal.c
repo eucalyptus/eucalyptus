@@ -1355,8 +1355,6 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
             rc = ccInstanceUnmarshal(it, myInstance, env);
             adb_runInstancesResponseType_add_instances(rirt, env, it);
         }
-        if (outInsts)
-            free(outInsts);
     }
 
     adb_runInstancesResponseType_set_correlationId(rirt, env, ccMeta.correlationId);
@@ -1373,9 +1371,8 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     free(netNames);
     free(instIds);
     free(userData);
-    if (uuids != NULL)
-        free(uuids);
-
+    free(uuids);
+    free(outInsts);
     return (ret);
 }
 
