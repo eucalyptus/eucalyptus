@@ -22,7 +22,7 @@
 	</mapping>
 
 	<mapping name="ModifyNodeResponse"
-		class="edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+		class="edu.ucsb.eucalyptus.msgs.ModifyNodeResponse" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
 		<structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
 	</mapping>
 
