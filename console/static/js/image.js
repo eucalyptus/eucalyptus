@@ -46,45 +46,69 @@
 
           },
           "aoColumns": [
-            { 
+            {
+	      // Display the name of the image in eucatable
+	      // Allow the name to be clickable
+	      // Use 'twist' in CSS 
               "fnRender" : function(oObj) { 
-                 return $('<div>').append($('<a>').addClass('twist').attr('href','#').text(oObj.aData.name)).html();
+		return eucatableDisplayColumnTypeTwist (oObj.aData.name, oObj.aData.name, 255);
               },
             },
-            { "mDataProp": "id" },
-            { "mDataProp": "architecture" },
-            { "mDataProp": "description" },
-            { "mDataProp": "root_device_type" },
+            { 
+	      // Display the id of the image in eucatable
+	      "mDataProp": "id"
+	    },
+            { 
+	      // Display the artitecture of the image in eucatable
+	      "mDataProp": "architecture"
+	    },
             {
+	      // Display the description of the image in eucatable
+	      "mDataProp": "description"
+	    },
+            { 
+	      // Display the root device type of the image in eucatable
+	      "mDataProp": "root_device_type"
+	    },
+            {
+	      // Display the launch instance button for the image in eucatable
               "bSortable": false,
               "sClass": "centered-cell",
-              "fnRender": function(oObj) { 
-                return  '<a href="#" class="button table-button" onClick="startLaunchWizard({image:\''+oObj.aData.id+'\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;">' + image_launch_btn +'</a>' },
+              "fnRender": function(oObj) {
+	        return eucatableDisplayColumnTypeLaunchInstanceButton (oObj.aData.id); 
+	      },
               "sWidth": 80,
             },
             {
+	      // Hidden column for the state of the image
               "bVisible": false,
               "mDataProp": "state"
             },
             {
+	      // Hidden column for the type of the image
               "bVisible": false,
               "mDataProp": "type"
             },
             { 
+	      // Hidden column for the id of the image
               "bVisible": false,
               "mDataProp": "id",
             },
-            { // idx = 9
+            { 
+	      // Hidden column for the platform/OS of the image
+	      // idx = 9
               "bVisible" : false,
               "fnRender" : function(oObj) {
                 return oObj.aData.platform ? oObj.aData.platform : 'linux';
               }
             },
             {
+	      // Hidden column for the location of the image
               "bVisible" : false,
               "mDataProp" : "location",
             },
             {
+	      // Hidden column for the ownership of the image ?
               "bVisible": false,
               "fnRender" : function(oObj){
                 var results = describe('sgroup');

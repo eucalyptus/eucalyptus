@@ -584,3 +584,63 @@ function trim (str) {
     else
       return str;
 }
+
+//----------------------------------------------------------------------------
+//
+// Display Helper Functions for providing data types for eucatable rendering
+//
+//----------------------------------------------------------------------------
+
+// For displaying the type 'twist', which is defined in CSS, in eucatable
+function eucatableDisplayColumnTypeTwist (title, str, limit) {
+	sanitizedTitle = escape(title);
+	shortStr = addEllipsis(str, limit);
+	$html = $('<a>').attr('href','#').attr('title', sanitizedTitle).addClass('twist').text(shortStr);
+	return asHTML($html);
+}
+
+// For displaying the type 'text' in eucatable
+function eucatableDisplayColumnTypeText (title, str, limit){
+	if( str == null ){
+		return "";
+	}
+	sanitizedTitle = escape(title);
+        shortStr = addEllipsis(str, limit);
+        $html = "<span title='" + sanitizedTitle + "'>" + $('<div>').text(shortStr).text() + "</span>";
+        return $html;
+}
+
+// For displaying the instance status icon in eucatable
+function eucatableDisplayColumnTypeInstanceStatus (iStatus){
+        // '-' has an issue with Messages.properties; shutting-down -> shuttingdown
+        iStatusProcessed = iStatus.replace('-','');
+        sanitizedStatus = escape(iStatusProcessed);
+        $html = $('<div>').addClass('table-row-status').addClass('status-'+sanitizedStatus).append('&nbsp;');
+        return asHTML($html);
+}
+
+// For displaying the volume status icon in eucatable
+function eucatableDisplayColumnTypeVolumeStatus (vStatus){
+	sanitizedStatus = escape(vStatus);
+	$html = $('<div>').addClass('table-row-status').addClass('status-'+sanitizedStatus).append('&nbsp;');
+	return asHTML($html);
+}
+
+// For displaying the snapshot statuis icon in eucatable
+function eucatableDisplayColumnTypeSnapshotStatus (snStatus, snProgress){
+        sanitizedStatus = escape(snStatus);
+	sanitizedProgress = $('<div>').text(snProgress).text();
+	$html = $('<div>').addClass('table-row-status').addClass('status-'+sanitizedStatus).append(snStatus=='pending' ?  sanitizedProgress : '&nbsp;');
+        return asHTML($html);
+}
+
+// For displaying the launch instance button in eucatable
+function eucatableDisplayColumnTypeLaunchInstanceButton (imageID){
+	sanitizedID = escape(imageID);
+	sanitizedButton = $('<div>').text(image_launch_btn).text();		// Where is this value coming from ? 	KYO	012313
+	$html = '<a href="#" class="button table-button"';
+	$html = $html + ' onClick="startLaunchWizard({image:\'' + sanitizedID + '\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;"';
+	$html = $html + ' >' + sanitizedButton + '</a>';
+	return asHTML($html);
+};
+

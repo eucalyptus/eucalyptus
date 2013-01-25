@@ -59,82 +59,106 @@
           "aaSorting": [[ 10, "desc" ]],
           "aoColumns": [
             {
+	      // Display the checkbox button in the main table
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
-            { // platform
+            { 
+	      // Hidden column for displaying the platform of the instance
               "bVisible" : false,
               "fnRender" : function(oObj) { 
-               var result = describe('image', oObj.aData.image_id);
-               if(result && result.platform) 
-                 return result.platform;
-               else
-                 return "linux";
-               }
-            },
-            { "fnRender" : function(oObj){
-                 return $('<div>').append($('<a>').addClass('twist').attr('href','#').text(oObj.aData.id)).html();
+			var result = describe('image', oObj.aData.image_id);
+               		if(result && result.platform) 
+				return result.platform;
+			return "linux";
               }
             },
             { 
+	      // Display the id of the instance in the main table
+	      // Allow the id to be clickable to display the platform data above
+	      // Use CSS 'twist'
+	      "fnRender" : function(oObj){
+                 return eucatableDisplayColumnTypeTwist(oObj.aData.id, oObj.aData.id, 255);
+	      }
+            },
+            { 
+	      // Display the status of the instance in the main table
               "iDataSort": 12,
               "fnRender": function(oObj) { 
-                 var state = oObj.aData.state;
-                 state = state.replace('-','');  // '-' has an issue with Messages.properties; shutting-down -> shuttingdown
-                 return '<div class="table-row-status status-'+state+'">&nbsp;</div>';
-               },
+                 return eucatableDisplayColumnTypeInstanceStatus(oObj.aData.state);
+	      },
             },
-            { "mDataProp": "image_id"},
-            { "mDataProp": "placement" }, 
-            {
-	          "mDataProp": "public_dns_name",
- 			  "sClass": "wrap-content"
-			},
-            {
-	          "mDataProp": "private_dns_name",
- 			  "sClass": "wrap-content"
-			},
-            { "mDataProp": "key_name" },
-            { "mDataProp": "group_name" },
             { 
-              "fnRender": function(oObj) { return formatDateTime(oObj.aData.launch_time) },
+	      // Display the image id of the instance in the main table
+	      "mDataProp": "image_id"
+	    },
+            { 
+	      // Display the availiability zone of the instance in the main table
+	      "mDataProp": "placement"
+	    }, 
+            {
+	      // Display the public dns name of the instance in the main table
+	      "mDataProp": "public_dns_name",
+ 	      "sClass": "wrap-content"
+	    },
+            {
+	      // Display the private dns name of the instance in the main table
+	      "mDataProp": "private_dns_name",
+ 	      "sClass": "wrap-content"
+	    },
+            { 
+	      // Display the key name of the instance in the main table
+	      "mDataProp": "key_name" 
+	    },
+            {
+	      // Display the group name of the instance in the main table
+	      "mDataProp": "group_name"
+	    },
+            { 
+	      // Display the launch time of the instance in the main table
+              "fnRender": function(oObj) {
+		return formatDateTime(oObj.aData.launch_time)
+	      },
               "iDataSort": 13,
               "asSorting" : [ 'desc', 'asc' ],
             },
             {
+	      // Hidden column for the root device type of the instance
               "bVisible": false,
               "mDataProp": "root_device_type"
             },
             {
+	      // Hidden column for the status of the instance
               "bVisible": false,
               "mDataProp":"state"
             },
             {
+	      // Hidden column for the launch time of the instance
               "asSorting" : [ 'desc', 'asc' ],
               "bVisible": false,
               "mDataProp": "launch_time",
               "sType": "date"
             },
             {
+	      // Hidden column for the image location of the instance
               "bVisible": false,
-              "fnRender" : function(oObj) { 
-                 var results = describe('image');
-                 var image = null;
-                 for (i in results){
-                   if(results[i].id === oObj.aData.image_id){
-                     image = results[i];
-                     break;
-                   }
-                 }
-                 return image ? image.location.replace('&#x2f;','/') : '';
+              "fnRender" : function(oObj) {
+			var image = null;
+              		var result = describe('image', oObj.aData.image_id);
+			if( result ){
+				image = result;
+			};
+                 	return image ? image.location.replace('&#x2f;','/') : '';
               }
             },
             {
+	      // Hidden column for the instance type of the instance
               "bVisible": false,
               "mDataProp": "instance_type",
             },
             {
+	      // Hidden column for the ip address of the instance
               "bVisible": false,
               "mDataProp": "ip_address",
             },
