@@ -72,4 +72,14 @@ public class Numbers {
     return interval;
   }
 
+  /**
+   * Null safe integer value converter.
+   * 
+   * @param number The number to convert
+   * @return The value or null
+   */
+  public static Integer intValue( final Number number ) {
+    return number == null ? null : number.intValue();   
+  }
+  
 }

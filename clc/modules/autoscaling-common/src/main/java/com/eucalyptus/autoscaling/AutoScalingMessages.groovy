@@ -1,11 +1,16 @@
 
 package com.eucalyptus.autoscaling;
-import java.util.Date;
+
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import java.math.BigInteger;
-import java.util.ArrayList
-import com.eucalyptus.component.ComponentId;
+
+
+import com.eucalyptus.component.ComponentId
+import com.google.common.collect.Lists
+import com.eucalyptus.binding.HttpEmbedded
+import com.eucalyptus.binding.HttpParameterMapping
+import java.lang.reflect.Field;
 
 
 
@@ -28,6 +33,7 @@ public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalin
 }
 public class LaunchConfigurationNames extends EucalyptusData {
   public LaunchConfigurationNames() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 @ComponentId.ComponentMessage(AutoScaling.class)
@@ -35,8 +41,11 @@ public class AutoScalingMessage extends BaseMessage {
   @Override
   def <TYPE extends BaseMessage> TYPE getReply() {
     TYPE type = super.getReply()
-    if (type.properties.containsKey("responseMetadata")) {
-      ((ResponseMetadata) type.properties.get("responseMetadata")).requestId = getCorrelationId();
+     try {
+      Field responseMetadataField = type.class.getDeclaredField("responseMetadata");
+      responseMetadataField.setAccessible( true ); 
+      ((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId();
+    } catch ( Exception e ) {       
     }
     return type
   }
@@ -61,7 +70,12 @@ public class ErrorResponse extends AutoScalingMessage {
 }
 public class BlockDeviceMappings extends EucalyptusData {
   public BlockDeviceMappings() {  }
-  ArrayList<BlockDeviceMapping> member = new ArrayList<BlockDeviceMapping>();
+  public BlockDeviceMappings( Collection<BlockDeviceMappingType> mappings ) { 
+    member.addAll( mappings );
+  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
+  ArrayList<BlockDeviceMappingType> member = new ArrayList<BlockDeviceMappingType>();
 }
 public class LoadBalancerNames extends EucalyptusData {
   public LoadBalancerNames() {  }
@@ -221,6 +235,9 @@ public class SuspendedProcesses extends EucalyptusData {
 public class InstanceMonitoring extends EucalyptusData {
   Boolean enabled;
   public InstanceMonitoring() {  }
+  public InstanceMonitoring( Boolean enabled ) {
+    this.enabled = enabled;  
+  }
 }
 public class DescribeScheduledActionsType extends AutoScalingMessage {
   String autoScalingGroupName;
@@ -249,10 +266,18 @@ public class DescribeAutoScalingInstancesResult extends EucalyptusData {
   public DescribeAutoScalingInstancesResult() {  }
 }
 public class DescribeLaunchConfigurationsType extends AutoScalingMessage {
-  LaunchConfigurationNames launchConfigurationNames;
+  @HttpEmbedded
+  LaunchConfigurationNames launchConfigurationNames = new LaunchConfigurationNames();
   String nextToken;
   BigInteger maxRecords;
   public DescribeLaunchConfigurationsType() {  }
+  public List<String> launchConfigurationNames() {
+    List<String> names = Lists.newArrayList();
+    if ( launchConfigurationNames != null ) {
+      names.addAll( launchConfigurationNames.getMember() )  
+    }
+    return names;
+  }
 }
 public class DescribeMetricCollectionTypesResponseType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesResponseType() {  }
@@ -385,6 +410,10 @@ public class SuspendedProcess extends EucalyptusData {
 }
 public class SecurityGroups extends EucalyptusData {
   public SecurityGroups() {  }
+  public SecurityGroups( Collection<String> groups ) {
+    member.addAll( groups )  
+  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class NotificationConfigurations extends AutoScalingMessage {
@@ -423,9 +452,9 @@ public class SuspendProcessesType extends AutoScalingMessage {
   ProcessNames scalingProcesses;
   public SuspendProcessesType() {  }
 }
-public class LaunchConfigurations extends AutoScalingMessage {
-  public LaunchConfigurations() {  }
-  ArrayList<LaunchConfiguration> member = new ArrayList<LaunchConfiguration>();
+public class LaunchConfigurationsType extends AutoScalingMessage {
+  public LaunchConfigurationsType() {  }
+  ArrayList<LaunchConfigurationType> member = new ArrayList<LaunchConfigurationType>();
 }
 public class Instances extends AutoScalingMessage {
   public Instances() {  }
@@ -529,7 +558,7 @@ public class DescribeScalingActivitiesType extends AutoScalingMessage {
   String nextToken;
   public DescribeScalingActivitiesType() {  }
 }
-public class LaunchConfiguration extends AutoScalingMessage {
+public class LaunchConfigurationType extends AutoScalingMessage {
   String launchConfigurationName;
   String launchConfigurationARN;
   String imageId;
@@ -544,7 +573,8 @@ public class LaunchConfiguration extends AutoScalingMessage {
   String spotPrice;
   String iamInstanceProfile;
   Date createdTime;
-  public LaunchConfiguration() {  }
+  Boolean ebsOptimized;
+  public LaunchConfigurationType() {  }
 }
 public class Processes extends AutoScalingMessage {
   public Processes() {  }
@@ -581,11 +611,18 @@ public class DescribeMetricCollectionTypesResult extends EucalyptusData {
   MetricGranularityTypes granularities;
   public DescribeMetricCollectionTypesResult() {  }
 }
-public class BlockDeviceMapping extends EucalyptusData {
+public class BlockDeviceMappingType extends EucalyptusData {
   String virtualName;
   String deviceName;
   Ebs ebs;
-  public BlockDeviceMapping() {  }
+  public BlockDeviceMappingType() {  }
+  public BlockDeviceMappingType( String deviceName, String virtualName, String snapshotId, Integer volumeSize ) {
+    this.deviceName = deviceName;
+    this.virtualName = virtualName;
+    if ( snapshotId != null || volumeSize != null ) {
+      this.ebs = new Ebs( snapshotId: snapshotId, volumeSize: volumeSize==null ? null : BigInteger.valueOf(volumeSize) );  
+    }
+  }
 }
 public class ScalingPolicies extends EucalyptusData {
   public ScalingPolicies() {  }
@@ -601,7 +638,7 @@ public class DescribeTerminationPolicyTypesResponseType extends AutoScalingMessa
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class DescribeLaunchConfigurationsResult extends EucalyptusData {
-  LaunchConfigurations launchConfigurations = new LaunchConfigurations();
+  LaunchConfigurationsType launchConfigurations = new LaunchConfigurationsType();
   String nextToken;
   public DescribeLaunchConfigurationsResult() {  }
 }
@@ -733,15 +770,19 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
   String launchConfigurationName;
   String imageId;
   String keyName;
+  @HttpEmbedded
   SecurityGroups securityGroups;
   String userData;
   String instanceType;
   String kernelId;
   String ramdiskId;
+  @HttpEmbedded
   BlockDeviceMappings blockDeviceMappings;
+  @HttpEmbedded
   InstanceMonitoring instanceMonitoring;
   String spotPrice;
   String iamInstanceProfile;
+  Boolean ebsOptimized;
   public CreateLaunchConfigurationType() {  }
 }
 public class MetricCollectionType extends EucalyptusData {

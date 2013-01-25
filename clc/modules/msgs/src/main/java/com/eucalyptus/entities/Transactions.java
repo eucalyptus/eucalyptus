@@ -343,13 +343,7 @@ public class Transactions {
   }
   
   public static <T> boolean delete( T search ) throws TransactionException {
-    return delete( search, new Predicate<T>( ) {
-      
-      @Override
-      public boolean apply( T input ) {
-        return false;
-      }
-    } );
+    return delete( search, Predicates.alwaysTrue() );
   }
   
   public static <T> boolean delete( T search, Predicate<? super T> precondition ) throws TransactionException {

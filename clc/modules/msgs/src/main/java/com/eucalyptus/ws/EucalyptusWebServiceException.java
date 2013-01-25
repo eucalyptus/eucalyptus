@@ -49,7 +49,7 @@ public class EucalyptusWebServiceException extends EucalyptusCloudException {
     super( message );
     checkParam( code, not( isEmptyOrNullString() ) );
     checkParam( role, notNullValue() );
-    checkParam( message, not( isEmptyOrNullString() ) );
+    checkParam( message, notNullValue() );
     this.code = code;
     this.role = role;
   }
