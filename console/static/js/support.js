@@ -593,10 +593,13 @@ function trim (str) {
 
 // For displaying the type 'twist', which is defined in CSS, in eucatable
 function eucatableDisplayColumnTypeTwist (title, str, limit) {
-	sanitizedTitle = escape(title);
-	shortStr = addEllipsis(str, limit);
-	$html = $('<a>').attr('href','#').attr('title', sanitizedTitle).addClass('twist').text(shortStr);
-	return asHTML($html);
+	if( str == null ){
+		return "ERROR!";
+	}
+	sanitizedTitle = $('<div>').text(title).text();
+	shortStr = $('<div>').text(addEllipsis(str, limit)).text();
+	$html = "<a href='#' title='" + sanitizedTitle + "' class='twist' >" + shortStr + "</a>";
+	return asHTML($html); 
 }
 
 // For displaying the type 'text' in eucatable
@@ -604,10 +607,10 @@ function eucatableDisplayColumnTypeText (title, str, limit){
 	if( str == null ){
 		return "";
 	}
-	sanitizedTitle = escape(title);
-        shortStr = addEllipsis(str, limit);
-        $html = "<span title='" + sanitizedTitle + "'>" + $('<div>').text(shortStr).text() + "</span>";
-        return $html;
+	sanitizedTitle = $('<div>').text(title).text();
+        shortStr = $('<div>').text(addEllipsis(str, limit)).text();
+        $html = "<span title='" + sanitizedTitle + "'>" + shortStr + "</span>";
+        return asHTML($html);
 }
 
 // For displaying the instance status icon in eucatable
