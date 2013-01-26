@@ -20,5 +20,6 @@ troubleshooting
 walrus
 storage-controller
 autoscaling-common
+cloudwatch-common
 dns
 www

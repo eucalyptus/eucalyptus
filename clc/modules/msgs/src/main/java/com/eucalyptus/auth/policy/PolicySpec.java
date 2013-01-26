@@ -100,13 +100,15 @@ public class PolicySpec {
   public static final String VENDOR_S3 = "s3";
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
-
+  public static final String VENDOR_CLOUDWATCH = "cloudwatch";
+  
   public static final Set<String> VENDORS = ImmutableSet.of(
     VENDOR_IAM,
     VENDOR_EC2,
     VENDOR_S3,
     VENDOR_STS,
-    VENDOR_AUTOSCALING
+    VENDOR_AUTOSCALING,
+    VENDOR_CLOUDWATCH
   );
 
   public static final String ALL_ACTION = "*";
