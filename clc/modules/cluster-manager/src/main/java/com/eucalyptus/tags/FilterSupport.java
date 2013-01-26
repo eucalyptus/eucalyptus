@@ -530,7 +530,7 @@ public abstract class FilterSupport<RT> {
 
     // Construct database filter and aliases for tags
     boolean tagPresent = false;
-    final Junction tagConjunction = Restrictions.conjunction();
+    final List<Junction> tagJunctions = Lists.newArrayList();
     for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), isTagFilter() ) ) {
       tagPresent = true;
       final Junction disjunction = Restrictions.disjunction();
@@ -544,9 +544,9 @@ public abstract class FilterSupport<RT> {
           disjunction.add( buildTagRestriction( filterName.substring(4), value, false ) );
         }
       }
-      tagConjunction.add( disjunction );
+      tagJunctions.add( disjunction );
     }
-    if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagConjunction ) );
+    if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagJunctions ) );
 
     return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
   }
@@ -797,15 +797,21 @@ public abstract class FilterSupport<RT> {
   }
 
   /**
-   * Build a criterion that uses a sub-select to match the given tag restrictions
+   * Build a criterion that uses sub-selects to match the given tag restrictions
    */
   private Criterion tagCriterion( final String accountId,
-                                  final Criterion criterion ) {
-    final DetachedCriteria criteria = DetachedCriteria.forClass( tagClass )
-        .add( Restrictions.eq( "ownerAccountNumber", accountId ) )
-        .add( criterion )
-        .setProjection( Projections.property( resourceFieldName ) );
-    return Property.forName( tagFieldName ).in( criteria );
+                                  final List<Junction> junctions ) {
+    final Junction conjunction = Restrictions.conjunction();
+    
+    for ( final Junction criterion : junctions ) {
+      final DetachedCriteria criteria = DetachedCriteria.forClass( tagClass )
+          .add( Restrictions.eq( "ownerAccountNumber", accountId ) )
+          .add( criterion )
+          .setProjection( Projections.property( resourceFieldName ) );
+      conjunction.add( Property.forName( tagFieldName ).in( criteria ) );
+    }
+    
+    return conjunction;
   }
 
   /**
