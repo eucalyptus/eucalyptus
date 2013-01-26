@@ -274,7 +274,7 @@ public class DescribeLaunchConfigurationsType extends AutoScalingMessage {
   public List<String> launchConfigurationNames() {
     List<String> names = Lists.newArrayList();
     if ( launchConfigurationNames != null ) {
-      names.addAll( launchConfigurationNames.getMember() )  
+      names = launchConfigurationNames.getMember();  
     }
     return names;
   }

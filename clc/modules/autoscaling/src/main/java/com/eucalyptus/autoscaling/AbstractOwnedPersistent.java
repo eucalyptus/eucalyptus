@@ -25,6 +25,7 @@ import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.OwnerFullName;
 
@@ -83,7 +84,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     return ownerFullNameCached;
   }
 
-  public void setOwnerFullNameCached( final OwnerFullName ownerFullNameCached ) {
+  protected void setOwnerFullNameCached( final OwnerFullName ownerFullNameCached ) {
     this.ownerFullNameCached = ownerFullNameCached;
   }
 
@@ -106,8 +107,18 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
   public OwnerFullName getOwner( ) {
     if ( this.ownerFullNameCached != null ) {
       return this.ownerFullNameCached;
+    } else if ( this.getOwnerUserId() != null ) {
+      final OwnerFullName tempOwner;
+      if ( Principals.nobodyFullName( ).getUserId().equals( this.getOwnerUserId() ) ) {
+        tempOwner = Principals.nobodyFullName( );
+      } else if ( Principals.systemFullName( ).getUserId().equals( this.getOwnerUserId() ) ) {
+        tempOwner = Principals.systemFullName( );
+      } else {
+        tempOwner = UserFullName.getInstance( this.getOwnerUserId() );
+      }
+      return ( this.ownerFullNameCached = tempOwner );
     } else if ( this.getOwnerAccountNumber( ) != null ) {
-      OwnerFullName tempOwner;
+      final OwnerFullName tempOwner;
       if ( Principals.nobodyFullName().getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
         tempOwner = Principals.nobodyFullName( );
       } else if ( Principals.systemFullName( ).getAccountNumber( ).equals( this.getOwnerAccountNumber( ) ) ) {
@@ -117,7 +128,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
       }
       return ( this.ownerFullNameCached = tempOwner );
     } else {
-      throw new RuntimeException( "Failed to identify user with id " + this.ownerAccountNumber + " something has gone seriously wrong." );
+      throw new RuntimeException( "Failed to identify resource owner" );
     }
   }
 
@@ -125,6 +136,12 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     this.ownerFullNameCached = null;
     this.setOwnerAccountNumber( owner != null
         ? owner.getAccountNumber( )
+        : null );
+    this.setOwnerUserId( owner != null
+        ? owner.getUserId( )
+        : null );
+    this.setOwnerUserName( owner != null
+        ? owner.getUserName( )
         : null );
   }
 

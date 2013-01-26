@@ -482,7 +482,7 @@ public class PolicySpec {
   .build();
   
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";

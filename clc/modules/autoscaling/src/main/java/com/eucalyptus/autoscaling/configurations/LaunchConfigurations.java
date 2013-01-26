@@ -19,14 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.configurations;
 
+import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.List;
+import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.BlockDeviceMappingType;
 import com.eucalyptus.autoscaling.BlockDeviceMappings;
 import com.eucalyptus.autoscaling.InstanceMonitoring;
 import com.eucalyptus.autoscaling.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.SecurityGroups;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -123,5 +127,20 @@ public abstract class LaunchConfigurations {
           ebs != null ? ebs.getSnapshotId() : null,
           ebs != null ? ebs.getVolumeSize() : null );
     }
-  }   
+  }
+
+  @RestrictedTypes.QuantityMetricFunction( LaunchConfigurationMetadata.class )
+  public enum CountLaunchConfigurations implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( final OwnerFullName input ) {
+      final EntityTransaction db = Entities.get( LaunchConfiguration.class );
+      try {
+        return Entities.count( LaunchConfiguration.withOwner( input ) );
+      } finally {
+        db.rollback( );
+      }
+    }
+  }  
 }

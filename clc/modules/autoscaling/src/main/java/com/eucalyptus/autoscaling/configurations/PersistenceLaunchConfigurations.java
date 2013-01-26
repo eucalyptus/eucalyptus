@@ -77,7 +77,7 @@ public class PersistenceLaunchConfigurations extends LaunchConfigurations {
   @Override
   public LaunchConfiguration save( final LaunchConfiguration launchConfiguration ) throws MetadataException {
     try {
-      return Transactions.save( launchConfiguration );
+      return Transactions.saveDirect( launchConfiguration );
     } catch ( Exception e ) {
       throw new MetadataException( "Error creating launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
     }

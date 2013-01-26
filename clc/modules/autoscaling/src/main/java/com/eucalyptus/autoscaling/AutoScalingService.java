@@ -22,6 +22,8 @@ package com.eucalyptus.autoscaling;
 import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.List;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
@@ -299,7 +301,18 @@ public class AutoScalingService {
     if ( cause != null ) {
       throw cause;
     }
-
+    
+    final AuthQuotaException quotaCause = Exceptions.findCause( e, AuthQuotaException.class );
+    if ( quotaCause != null ) {
+      throw new LimitExceededException( "Request would exceed quota for type: " + quotaCause.getType() );
+    }
+    
+    final ConstraintViolationException constraintViolationException = 
+        Exceptions.findCause( e, ConstraintViolationException.class );
+    if ( constraintViolationException != null ) {
+      throw new AlreadyExistsException( "Resource already exists" );
+    }
+    
     logger.error( e, e );
 
     final InternalFailureException exception = new InternalFailureException( e.getMessage() );
