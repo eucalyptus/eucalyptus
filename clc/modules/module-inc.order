@@ -21,5 +21,6 @@ walrus
 storage-controller
 autoscaling-common
 cloudwatch-common
+loadbalancing-common
 dns
 www
