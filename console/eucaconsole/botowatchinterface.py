@@ -36,7 +36,7 @@ from .watchinterface import WatchInterface
 # This class provides an implmentation of the clcinterface using boto
 class BotoWatchInterface(WatchInterface):
     conn = None
-    saveclcdata = False
+    saveclcdata = True
 
     def __init__(self, clc_host, access_id, secret_key, token):
         boto.set_stream_logger('foo')
@@ -59,10 +59,16 @@ class BotoWatchInterface(WatchInterface):
         f.close()
 
     def get_metric_statistics(self, period, start_name, end_time, metric_name, namespace, statistics, dimensions, unit):
-        return self.conn.get_metric_statistics(period, start_name, end_time, metric_name, namespace, statistics, dimensions, unit)
+        obj = self.conn.get_metric_statistics(period, start_name, end_time, metric_name, namespace, statistics, dimensions, unit)
+        if self.saveclcdata:
+            self.__save_json__(obj, "mockdata/CW_Statistics.json")
+        return obj
 
     def list_metrics(self, next_token, dimensions, metric_name, namespace):
-        return self.conn.list_metrics(next_token, dimensions, metric_name, namespace)
+        obj = self.conn.list_metrics(next_token, dimensions, metric_name, namespace)
+        if self.saveclcdata:
+            self.__save_json__(obj, "mockdata/CW_Metrics.json")
+        return obj
 
     def put_metric_data(self, namespace, name, value, timestamp, unit, dimensions, statistics):
         return self.conn.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics)

@@ -32,7 +32,7 @@ from uiproxyclient import UIProxyClient
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'WrqiHhytac2cPR9biaKfinir3Tp6PUBU1aCpMA7H')
+    client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'SECRET HERE')
     print "=== Getting Metrics ==="
     print client.list_metrics()
     end = datetime.now()

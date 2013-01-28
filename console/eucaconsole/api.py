@@ -52,6 +52,7 @@ from .cachingclcinterface import CachingClcInterface
 from .cachingwalrusinterface import CachingWalrusInterface
 from .cachingwatchinterface import CachingWatchInterface
 from .mockclcinterface import MockClcInterface
+from .mockwatchinterface import MockWatchInterface
 from .response import ClcError
 from .response import Response
 
@@ -129,7 +130,7 @@ class WatchHandler(BaseAPIHandler):
             raise tornado.web.HTTPError(401, "not authorized")
         if not(self.user_session.cw):
             if self.should_use_mock():
-                pass #self.user_session.walrus = MockClcInterface()
+                self.user_session.walrus = MockWatchInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
                 if self.user_session.host_override:

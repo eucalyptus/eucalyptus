@@ -43,10 +43,10 @@ class CachingWatchInterface(WatchInterface):
         self.cw = watchinterface
         pollfreq = config.getint('server', 'pollfreq')
         try:
-            freq = config.getint('server', 'pollfreq.stats')
+            freq = config.getint('server', 'pollfreq.metrics')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.stats = Cache(freq)
+        self.metrics = Cache(freq)
 
     ##
     # cloud watch methods
@@ -66,14 +66,17 @@ class CachingWatchInterface(WatchInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def list_metrics(self, next_token=None, dimensions=None, metric_name=None, namespace=None, callback=None):
-        params = {'next_token':next_token, 'dimensions':dimensions, 'metric_name':metric_name, 'namespace':namespace}
-        Threads.instance().runThread(self.__list_metrics_cb__, (params, callback))
+        if self.metrics.isCacheStale():
+            params = {'next_token':next_token, 'dimensions':dimensions, 'metric_name':metric_name, 'namespace':namespace}
+            Threads.instance().runThread(self.__list_metrics_cb__, (params, callback))
+        else:
+            callback(Response(data=self.metrics.values))
 
     def __list_metrics_cb__(self, kwargs, callback):
         try:
-            ret = self.cw.list_metrics(kwargs['next_token'], kwargs['dimensions'],
+            self.metrics.values = self.cw.list_metrics(kwargs['next_token'], kwargs['dimensions'],
                                        kwargs['metric_name'], kwargs['namespace'])
-            Threads.instance().invokeCallback(callback, Response(data=ret))
+            Threads.instance().invokeCallback(callback, Response(data=self.metrics.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
