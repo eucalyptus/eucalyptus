@@ -25,6 +25,7 @@
 
 import base64
 import ConfigParser
+from datetime import datetime
 import functools
 import logging
 import json
@@ -38,25 +39,24 @@ from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
+from boto.exception import S3ResponseError
+from boto.exception import BotoServerError
 from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
+from .botowalrusinterface import BotoWalrusInterface
+from .botowatchinterface import BotoWatchInterface
 from .botojsonencoder import BotoJsonEncoder
+from .botojsonencoder import BotoJsonWatchEncoder
 from .cachingclcinterface import CachingClcInterface
+from .cachingwalrusinterface import CachingWalrusInterface
+from .cachingwatchinterface import CachingWatchInterface
 from .mockclcinterface import MockClcInterface
 from .response import ClcError
 from .response import Response
 
-class ComputeHandler(eucaconsole.BaseHandler):
-
-    # This method unescapes values that were escaped in the jsonbotoencoder.__sanitize_and_copy__ method
-    # TODO: this should not be needed when we stop escaping on the proxy and only escape in the browser as needed
-    def get_argument(self, name, default=tornado.web.RequestHandler._ARG_DEFAULT, strip=True):
-        arg = super(ComputeHandler, self).get_argument(name, default, strip)
-        if arg:
-            return unescape(arg)
-        else:
-            return arg
+class BaseAPIHandler(eucaconsole.BaseHandler):
+    json_encoder = None
 
     def get_argument_list(self, name, name_suffix=None, another_suffix=None, size=None):
         ret = []
@@ -80,6 +80,157 @@ class ComputeHandler(eucaconsole.BaseHandler):
             else:
                 val = self.get_argument(pattern % (index), None)
         return ret
+
+    # async calls end up back here so we can check error status and reply appropriately
+    def callback(self, response):
+        if response.error:
+            err = response.error
+            ret = '[]'
+            if isinstance(err, BotoServerError):
+                ret = ClcError(err.status, err.reason, err.message)
+                self.set_status(err.status);
+            elif issubclass(err.__class__, Exception):
+                if isinstance(err, socket.timeout):
+                    ret = ClcError(504, 'Timed out', None)
+                    self.set_status(504);
+                else:
+                    ret = ClcError(500, err.message, None)
+                    self.set_status(500);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.write(json.dumps(ret, cls=self.json_encoder))
+            self.finish()
+            logging.exception(err)
+        else:
+            try:
+                try:
+                    if(eucaconsole.config.get('test','apidelay')):
+                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
+                except ConfigParser.NoOptionError:
+                    pass
+                ret = Response(response.data) # wrap all responses in an object for security purposes
+                data = json.dumps(ret, cls=self.json_encoder, indent=2)
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.write(data)
+                self.finish()
+            except Exception, err:
+                print err
+
+class WatchHandler(BaseAPIHandler):
+    ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+    json_encoder = BotoJsonWatchEncoder
+
+    ##
+    # This is the main entry point for API calls for CloudWatch from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.cw):
+            if self.should_use_mock():
+                pass #self.user_session.walrus = MockClcInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.cw = BotoWatchInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.cw = CachingWatchInterface(self.user_session.cw, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Get') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'GetMetricStatistics':
+                period = self.get_argument('Period')
+                start_time = datetime.strptime(self.get_argument('StartTime'), self.ISO_FORMAT)
+                end_time = datetime.strptime(self.get_argument('EndTime'), self.ISO_FORMAT)
+                metric_name = self.get_argument('MetricName')
+                namespace = self.get_argument('Namespace')
+                statistics = self.get_argument_list('Statistics.member')
+                dimensions = self.get_argument_list('Dimensions.member')
+                unit = self.get_argument('Unit')
+                self.user_session.cw.get_metric_statistics(period, start_time, end_time, metric_name, namespace, statistics, dimensions, unit, self.callback)
+            elif action == 'ListMetrics':
+                dimensions = self.get_argument_list('Dimensions.member')
+                metric_name = self.get_argument('MetricName', None)
+                namespace = self.get_argument('Namespace', None)
+                next_token = self.get_argument('NextToken', None)
+                self.user_session.cw.list_metrics(next_token, dimensions, metric_name, namespace, self.callback)
+            elif action == 'PutMetricData':
+                namespace = self.get_argument('Namespace')
+                # TODO: more args, reconcile api docs and boto
+                self.user_session.cw.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+class StorageHandler(BaseAPIHandler):
+#    def __init__(self):
+#        self.json_encoder = JsonBotoStorageEncoder
+
+    ##
+    # This is the main entry point for API calls for S3(Walrus) from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.walrus):
+            if self.should_use_mock():
+                pass #self.user_session.walrus = MockClcInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.walrus = BotoWalrusInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.walrus = CachingWalrusInterface(self.user_session.walrus, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Describe') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'DescribeBuckets':
+                self.user_session.walrus.get_all_buckets(self.callback)
+            elif action == 'DescribeObjects':
+                bucket = self.get_argument('Bucket')
+                self.user_session.walrus.get_all_objects(bucket, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+class ComputeHandler(BaseAPIHandler):
+    json_encoder = BotoJsonEncoder
+
+    # This method unescapes values that were escaped in the jsonbotoencoder.__sanitize_and_copy__ method
+    # TODO: this should not be needed when we stop escaping on the proxy and only escape in the browser as needed
+    #def get_argument(self, name, default=tornado.web.RequestHandler._ARG_DEFAULT, strip=True):
+    #    arg = super(ComputeHandler, self).get_argument(name, default, strip)
+    #    if arg:
+    #        return unescape(arg)
+    #    else:
+    #        return arg
 
     def get_filter_args(self):
         ret = {}
@@ -463,10 +614,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.user_session.clc = MockClcInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
-                try:
-                    host = eucaconsole.config.get('test', 'ec2.endpoint')
-                except ConfigParser.Error:
-                    pass
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
                 self.user_session.clc = BotoClcInterface(host,
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
@@ -543,36 +692,3 @@ class ComputeHandler(eucaconsole.BaseHandler):
         if not(response.error):
             self.user_session.keypair_cache[name] = response.data.material
 
-    # async calls end up back here so we can check error status and reply appropriately
-    def callback(self, response):
-        if response.error:
-            err = response.error
-            ret = '[]'
-            if isinstance(err, EC2ResponseError):
-                ret = ClcError(err.status, err.reason, err.errors[0][1])
-                self.set_status(err.status);
-            elif issubclass(err.__class__, Exception):
-                if isinstance(err, socket.timeout):
-                    ret = ClcError(504, 'Timed out', None)
-                    self.set_status(504);
-                else:
-                    ret = ClcError(500, err.message, None)
-                    self.set_status(500);
-            self.set_header("Content-Type", "application/json;charset=UTF-8")
-            self.write(json.dumps(ret, cls=BotoJsonEncoder))
-            self.finish()
-            logging.exception(err)
-        else:
-            try:
-                try:
-                    if(eucaconsole.config.get('test','apidelay')):
-                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
-                except ConfigParser.NoOptionError:
-                    pass
-                ret = Response(response.data) # wrap all responses in an object for security purposes
-                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
-                self.set_header("Content-Type", "application/json;charset=UTF-8")
-                self.write(data)
-                self.finish()
-            except Exception, err:
-                print err

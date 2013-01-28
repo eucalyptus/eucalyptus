@@ -86,8 +86,72 @@ class UIProxyClient(object):
                 j += 1
             i += 1
 
+
+    def __build_dimension_param__(self, dimension, params):
+        prefix = 'Dimensions.member'
+        i = 0
+        for dim_name in dimension:
+            dim_value = dimension[dim_name]
+            if dim_value:
+                if isinstance(dim_value, basestring):
+                    dim_value = [dim_value]
+                for value in dim_value:
+                    params['%s.%d.Name' % (prefix, i+1)] = dim_name
+                    params['%s.%d.Value' % (prefix, i+1)] = value
+                    i += 1
+            else:
+                params['%s.%d.Name' % (prefix, i+1)] = dim_name
+                i += 1
+
+    def __build_list_params__(self, params, items, label):
+        if isinstance(items, basestring):
+            items = [items]
+        for index, item in enumerate(items):
+            i = index + 1
+            if isinstance(item, dict):
+                for k, v in item.iteritems():
+                    params[label % (i, 'Name')] = k
+                    if v is not None:
+                        params[label % (i, 'Value')] = v
+            else:
+                params[label % i] = item
+
     def __make_request__(self, action, params):
         url = 'http://%s:%s/ec2?'%(self.host, self.port)
+        for param in params.keys():
+            if params[param]==None:
+                del params[param]
+        params['Action'] = action
+        params['_xsrf'] = self.xsrf
+        data = urllib.urlencode(params)
+        print "request : "+data
+        try:
+            req = urllib2.Request(url)
+            self.__check_logged_in__(req)
+            response = urllib2.urlopen(req, data)
+            return json.loads(response.read())
+        except urllib2.URLError, err:
+            print "Error! "+str(err.code)
+
+    def __make_request_walrus__(self, action, params):
+        url = 'http://%s:%s/s3?'%(self.host, self.port)
+        for param in params.keys():
+            if params[param]==None:
+                del params[param]
+        params['Action'] = action
+        params['_xsrf'] = self.xsrf
+        data = urllib.urlencode(params)
+        print "request : "+data
+        try:
+            req = urllib2.Request(url)
+            self.__check_logged_in__(req)
+            response = urllib2.urlopen(req, data)
+            return json.loads(response.read())
+        except urllib2.URLError, err:
+            print "Error! "+str(err.code)
+
+    def __make_cw_request__(self, action, params):
+        url = 'http://%s:%s/monitor?'%(self.host, self.port)
         for param in params.keys():
             if params[param]==None:
                 del params[param]
@@ -187,7 +251,7 @@ class UIProxyClient(object):
         if private_ip_address:
             params['PrivateIpAddress'] = private_ip_address
         if block_device_map:
-            block_device_map.build_list_params(params)
+            block_device_map.__build_list_params__(params)
         if disable_api_termination:
             params['DisableApiTermination'] = 'true'
         if instance_initiated_shutdown_behavior:
@@ -434,3 +498,68 @@ class UIProxyClient(object):
             i += 1
         return self.__make_request__('DeleteTags', params)
 
+
+    ##
+    # Walrus methods
+    ##
+    def get_buckets(self):
+        return self.__make_request_walrus__('DescribeBuckets', {})
+
+    def get_objects(self, bucket):
+        params = {'Bucket': bucket}
+        return self.__make_request_walrus__('DescribeObjects', params)
+
+    ##
+    # CloudWatch methods
+    ##
+    def get_metric_statistics(self, period, start_time, end_time, metric_name,
+                              namespace, statistics, dimensions=None,
+                              unit=None):
+        params = {'Period': period,
+                  'MetricName': metric_name,
+                  'Namespace': namespace,
+                  'StartTime': start_time.isoformat(),
+                  'EndTime': end_time.isoformat()}
+        self.__build_list_params__(params, statistics, 'Statistics.member.%d')
+        if dimensions:
+            self.__build_dimension_param__(dimensions, params)
+        if unit:
+            params['Unit'] = unit
+        
+        return self.__make_cw_request__('GetMetricStatistics', params)
+
+    def list_metrics(self, next_token=None, dimensions=None,
+                     metric_name=None, namespace=None):
+        params = {}
+        if next_token:
+            params['NextToken'] = next_token
+        if dimensions:
+            self.__build_dimension_param__(dimensions, params)
+        if metric_name:
+            params['MetricName'] = metric_name
+        if namespace:
+            params['Namespace'] = namespace
+
+        return self.__make_cw_request__('ListMetrics', params)
+    
+    def put_metric_data(self, namespace, name, value=None, timestamp=None,
+                        unit=None, dimensions=None, statistics=None):
+        params = {'Namespace': namespace,
+                  'Name': name}
+        if value:
+            params['Value'] = value
+        if timestamp:
+            params['Timestamp'] = timestamp.isoformat()
+        if unit:
+            params['Unit'] = unit
+        if dimensions:
+            self.__build_dimension_param__(dimensions, params)
+        # TODO: how to format stats? API doc isn't clear
+        if statistics:
+            pass
+
+        self.build_put_params(params, name, value=value, timestamp=timestamp,
+            unit=unit, dimensions=dimensions, statistics=statistics)
+
+        return self.__make_cw_request__('PutMetricData', params) 
+    

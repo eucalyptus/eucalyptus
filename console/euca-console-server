@@ -119,6 +119,8 @@ def start_console():
             (r"/help/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'help')}),
             (r"/fonts/(.*)", tornado.web.StaticFileHandler, {'path': os.path.join(webroot, 'fonts')}),
             (r"/ec2", api.ComputeHandler),
+            (r"/s3", api.StorageHandler),
+            (r"/monitor", api.WatchHandler),
             (r"/checkip", eucaconsole.CheckIpHandler),
             (r"/(.*)", eucaconsole.RootHandler),
         ], **settings)

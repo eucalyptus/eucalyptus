@@ -37,10 +37,22 @@ from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
+from boto.ec2.cloudwatch import CloudWatchConnection
+from boto.ec2.cloudwatch.dimension import Dimension
+from boto.ec2.cloudwatch.metric import Metric
+from boto.ec2.cloudwatch.alarm import MetricAlarms
+from boto.ec2.cloudwatch.alarm import MetricAlarm
+# these things came in with boto 2.6
+try:
+    from boto.ec2.instance import InstanceState
+    from boto.ec2.instance import InstancePlacement
+except ImportError:
+    pass
 from boto.ec2.tag import Tag
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
 from boto.ec2.volume import AttachmentSet
+from boto.s3.bucket import Bucket
 from .response import ClcError
 from .response import Response
 from esapi.codecs.html_entity import HTMLEntityCodec
@@ -140,7 +152,43 @@ class BotoJsonEncoder(JSONEncoder):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = 'Tag'
             return (values)
+        elif isinstance(obj, Bucket):
+            values = {'name':obj.name}
+            values['__obj_name__'] = 'Bucket'
+            return (values)
+        if isinstance(obj, InstanceState):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'InstanceState'
+            return (values)
+        elif isinstance(obj, InstancePlacement):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'InstancePlacement'
+            return (values)
         return super(BotoJsonEncoder, self).default(obj)
+
+class BotoJsonWatchEncoder(JSONEncoder):
+    def default(self, obj):
+        if issubclass(obj.__class__, EC2Object):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = obj.__class__.__name__
+            return (values)
+        elif isinstance(obj, RegionInfo):
+            return []
+        elif isinstance(obj, ClcError):
+            return copy.copy(obj.__dict__)
+        elif isinstance(obj, Response):
+            return obj.__dict__
+        elif isinstance(obj, CloudWatchConnection):
+            return []
+        elif isinstance(obj, Dimension):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Dimension'
+            return (values)
+        elif isinstance(obj, Metric):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Metric'
+            return (values)
+        return super(BotoJsonWatchEncoder, self).default(obj)
 
 class BotoJsonDecoder(JSONDecoder):
     # if we need to map classes to specific boto objects, we'd do that here

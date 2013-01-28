@@ -45,6 +45,8 @@ var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
 var MAX_DESCRIPTION_LEN = 255;
 var KEEP_VIEW = 'keep_view';
 
+var IMG_OPT_PARAMS='';
+
 function isValidIPv4Address(ipaddr) {
   ipaddr = ipaddr.replace( /\s/g, "")
   if (IP_PATTER.test(ipaddr)) {
