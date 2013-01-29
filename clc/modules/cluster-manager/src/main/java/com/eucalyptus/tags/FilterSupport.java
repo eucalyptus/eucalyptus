@@ -774,13 +774,16 @@ public abstract class FilterSupport<RT> {
   private Criterion buildRestriction( final String property, final Object persistentValue ) {
     final Object valueObject;
     if ( persistentValue instanceof String ) {
+      final String value = persistentValue.toString();
       final StringBuilder likeValueBuilder = new StringBuilder();
-      if ( translateWildcards( persistentValue.toString(), likeValueBuilder, "_", "%", SyntaxEscape.Like ) ) {
-        return Restrictions.like( property, likeValueBuilder.toString() );
+      translateWildcards( value, likeValueBuilder, "_", "%", SyntaxEscape.Like );
+      final String likeValue = likeValueBuilder.toString();
+      
+      if ( !value.equals( likeValue ) ) { // even if no regex, may contain \ escapes that must be removed
+        return Restrictions.like( property, likeValue );
       }
-
-      // even if no regex, may contain \ escapes that must be removed
-      valueObject = likeValueBuilder.toString();
+      
+      valueObject = persistentValue;
     } else {
       valueObject = persistentValue;
     }

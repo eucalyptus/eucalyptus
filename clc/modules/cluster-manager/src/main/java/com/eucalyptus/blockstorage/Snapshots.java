@@ -321,7 +321,7 @@ public class Snapshots {
           .withPersistenceFilter( "description" )
           .withPersistenceFilter( "owner-alias", "ownerAccountName" ) //TODO:STEVE: won't work, this field isn't populated
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
-          //.withPersistenceFilter( "progress" )  //TODO:STEVE: Not working, problem with % escaping?
+          .withPersistenceFilter( "progress" )
           .withPersistenceFilter( "snapshot-id", "displayName" )
           .withPersistenceFilter( "start-time", "creationTimestamp", PersistenceFilter.Type.Date )
           .withPersistenceFilter( "volume-id", "parentVolume" )
