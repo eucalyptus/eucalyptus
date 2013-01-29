@@ -85,6 +85,18 @@ public class Strings {
     return StringFunctions.LOWER;
   }
 
+  /**
+   * Convert an object to a string.
+   *
+   * <P>The returned function will pass through null values.</P>
+   * 
+   * @return The toString function
+   * @see #toString(Object)
+   */
+  public static Function<Object,String> toStringFunction() {
+    return StringerFunctions.TOSTRING;
+  }
+  
   private enum StringFunctions implements Function<String,String> {
     LOWER {
       @Override
@@ -102,6 +114,15 @@ public class Strings {
       @Override
       public String apply( final String text ) {
         return text == null ? null : text.toUpperCase();
+      }
+    }    
+  }
+  
+  private enum StringerFunctions implements Function<Object,String> {
+    TOSTRING {
+      @Override
+      public String apply( final Object object ) {
+        return Strings.toString( object );
       }
     }
   }

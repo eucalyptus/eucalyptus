@@ -30,7 +30,7 @@
     <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.autoscaling.ResponseMetadata"/>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.DescribeAutoScalingGroupsResult" abstract="true">
-    <structure name="AutoScalingGroups" field="autoScalingGroups" usage="required" type="com.eucalyptus.autoscaling.AutoScalingGroups"/>
+    <structure name="AutoScalingGroups" field="autoScalingGroups" usage="required" type="com.eucalyptus.autoscaling.AutoScalingGroupsType"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
   <mapping name="EnableMetricsCollection" class="com.eucalyptus.autoscaling.EnableMetricsCollectionType">
@@ -502,7 +502,7 @@
       <structure name="member" type="com.eucalyptus.autoscaling.LaunchConfigurationType"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroup" abstract="true">
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroupType" abstract="true">
     <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="required"/>
     <value name="AutoScalingGroupARN" field="autoScalingGroupARN" usage="optional"/>
@@ -704,10 +704,10 @@
   <mapping class="com.eucalyptus.autoscaling.InstanceMonitoring" abstract="true">
     <value name="Enabled" field="enabled" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroups" abstract="true">
+  <mapping class="com.eucalyptus.autoscaling.AutoScalingGroupsType" abstract="true">
     <structure map-as="com.eucalyptus.autoscaling.AutoScalingMessage"/>
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.autoscaling.AutoScalingGroup"/>
+      <structure name="member" type="com.eucalyptus.autoscaling.AutoScalingGroupType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.Alarms" abstract="true">

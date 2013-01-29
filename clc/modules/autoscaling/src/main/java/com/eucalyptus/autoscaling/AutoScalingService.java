@@ -19,40 +19,80 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling;
 
+import static com.eucalyptus.autoscaling.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
 import com.eucalyptus.autoscaling.configurations.PersistenceLaunchConfigurations;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
+import com.eucalyptus.autoscaling.groups.HealthCheckType;
+import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
+import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Numbers;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.Enums;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 public class AutoScalingService {
   private static final Logger logger = Logger.getLogger( AutoScalingService.class );
   private final LaunchConfigurations launchConfigurations;
+  private final AutoScalingGroups autoScalingGroups;
   
   public AutoScalingService() {
-    this( new PersistenceLaunchConfigurations() );
+    this( 
+        new PersistenceLaunchConfigurations( ),
+        new PersistenceAutoScalingGroups( ) );
   }
 
-  protected AutoScalingService( final LaunchConfigurations launchConfigurations ) {
+  protected AutoScalingService( final LaunchConfigurations launchConfigurations,
+                                final AutoScalingGroups autoScalingGroups ) {
     this.launchConfigurations = launchConfigurations;
+    this.autoScalingGroups = autoScalingGroups;
   }
 
-  public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups(DescribeAutoScalingGroupsType request) throws EucalyptusCloudException {
-    DescribeAutoScalingGroupsResponseType reply = request.getReply( );
+  public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {
+    final DescribeAutoScalingGroupsResponseType reply = request.getReply( );
+
+    //TODO:STEVE: MaxRecords / NextToken support for DescribeAutoScalingGroups
+
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.autoScalingGroupNames().remove( "verbose" );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    final Predicate<AutoScalingGroupMetadata> requestedAndAccessible =
+        AutoScalingMetadatas.filterPrivilegesById( request.autoScalingGroupNames() );
+
+    try {
+      final List<AutoScalingGroupType> results = reply.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
+      for ( final AutoScalingGroup autoScalingGroup : autoScalingGroups.list( ownerFullName, requestedAndAccessible ) ) {
+        results.add( TypeMappers.transform( autoScalingGroup, AutoScalingGroupType.class ) );
+      }
+    } catch ( Exception e ) {
+      handleException( e );
+    }    
+    
     return reply;
   }
 
@@ -76,7 +116,7 @@ public class AutoScalingService {
       if ( RestrictedTypes.filterPrivileged().apply( launchConfiguration ) ) {
         launchConfigurations.delete( launchConfiguration );
       } // else treat this as though the configuration does not exist
-    } catch ( NoSuchMetadataException e ) {
+    } catch ( AutoScalingMetadataNotFoundException e ) {
       // so nothing to delete, move along      
     } catch ( Exception e ) {
       handleException( e );
@@ -94,8 +134,50 @@ public class AutoScalingService {
     return reply;
   }
 
-  public CreateAutoScalingGroupResponseType createAutoScalingGroup(CreateAutoScalingGroupType request) throws EucalyptusCloudException {
-    CreateAutoScalingGroupResponseType reply = request.getReply( );
+  public CreateAutoScalingGroupResponseType createAutoScalingGroup( final CreateAutoScalingGroupType request ) throws EucalyptusCloudException {
+    final CreateAutoScalingGroupResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    final Supplier<AutoScalingGroup> allocator = new Supplier<AutoScalingGroup>( ) {
+      @Override
+      public AutoScalingGroup get( ) {
+        try {
+          final AutoScalingGroups.PersistingBuilder builder = autoScalingGroups.create(
+              ctx.getUserFullName().asAccountFullName(),
+              request.getAutoScalingGroupName(),
+              launchConfigurations.lookup( ctx.getUserFullName().asAccountFullName(), request.getLaunchConfigurationName() ),
+              Numbers.intValue( request.getMinSize() ),
+              Numbers.intValue( request.getMaxSize() ) )
+              .withAvailabilityZones( request.availabilityZones() )
+              .withDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) )
+              .withDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) )
+              .withHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) )
+              .withHealthCheckType(
+                  request.getHealthCheckType()==null ? null : HealthCheckType.valueOf( request.getHealthCheckType() ) )
+              .withLoadBalancerNames( request.loadBalancerNames() )
+              .withTerminationPolicyTypes( request.terminationPolicies() == null ? null :
+                  Collections2.filter( Collections2.transform( 
+                    request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class) ),
+                    Predicates.not( Predicates.isNull() ) ) );
+
+          //TODO:STEVE: input validation
+          return builder.persist();
+        } catch ( AutoScalingMetadataNotFoundException e ) {
+          throw Exceptions.toUndeclared( new InvalidParameterValueException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
+        } catch ( IllegalArgumentException e ) {
+          throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid health check type: " + request.getHealthCheckType() ) );
+        } catch ( Exception ex ) {
+          throw new RuntimeException( ex );
+        }
+      }
+    };
+
+    try {
+      RestrictedTypes.allocateUnitlessResource( allocator );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -109,8 +191,14 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribeTerminationPolicyTypesResponseType describeTerminationPolicyTypes(DescribeTerminationPolicyTypesType request) throws EucalyptusCloudException {
-    DescribeTerminationPolicyTypesResponseType reply = request.getReply( );
+  public DescribeTerminationPolicyTypesResponseType describeTerminationPolicyTypes( final DescribeTerminationPolicyTypesType request ) throws EucalyptusCloudException {
+    final DescribeTerminationPolicyTypesResponseType reply = request.getReply( );    
+    
+    final List<String> policies = reply.getDescribeTerminationPolicyTypesResult().getTerminationPolicyTypes().getMember();
+    policies.addAll( Collections2.transform( 
+        Collections2.filter( Arrays.asList( TerminationPolicyType.values() ), RestrictedTypes.filterPrivilegedWithoutOwner() ), 
+        Strings.toStringFunction() ) );
+    
     return reply;
   }
 
@@ -225,8 +313,23 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DeleteAutoScalingGroupResponseType deleteAutoScalingGroup(DeleteAutoScalingGroupType request) throws EucalyptusCloudException {
-    DeleteAutoScalingGroupResponseType reply = request.getReply( );
+  public DeleteAutoScalingGroupResponseType deleteAutoScalingGroup( final DeleteAutoScalingGroupType request ) throws EucalyptusCloudException {
+    final DeleteAutoScalingGroupResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AutoScalingGroup autoScalingGroup = autoScalingGroups.lookup(
+          ctx.getUserFullName( ).asAccountFullName( ),
+          request.getAutoScalingGroupName() );
+      if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+        autoScalingGroups.delete( autoScalingGroup );
+      } // else treat this as though the group does not exist
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      // so nothing to delete, move along      
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+    
     return reply;
   }
 
@@ -235,8 +338,57 @@ public class AutoScalingService {
     return reply;
   }
 
-  public UpdateAutoScalingGroupResponseType updateAutoScalingGroup(UpdateAutoScalingGroupType request) throws EucalyptusCloudException {
-    UpdateAutoScalingGroupResponseType reply = request.getReply( );
+  public UpdateAutoScalingGroupResponseType updateAutoScalingGroup( final UpdateAutoScalingGroupType request ) throws EucalyptusCloudException {
+    final UpdateAutoScalingGroupResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            if ( request.availabilityZones() != null && !request.availabilityZones().isEmpty() )
+              autoScalingGroup.setAvailabilityZones( Sets.newHashSet( request.availabilityZones() ) );
+            if ( request.getDefaultCooldown() != null )
+              autoScalingGroup.setDefaultCooldown( Numbers.intValue( request.getDefaultCooldown() ) );
+            if ( request.getDesiredCapacity() != null )
+              autoScalingGroup.setDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) );
+            if ( request.getHealthCheckGracePeriod() != null )
+              autoScalingGroup.setHealthCheckGracePeriod( Numbers.intValue( request.getHealthCheckGracePeriod() ) );
+            if ( request.getHealthCheckType() != null )
+              autoScalingGroup.setHealthCheckType( Enums.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType() ) );
+            if ( request.getLaunchConfigurationName() != null )
+              try {
+                autoScalingGroup.setLaunchConfiguration( launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName() ) );
+              } catch ( AutoScalingMetadataNotFoundException e ) {
+                throw Exceptions.toUndeclared( new InvalidParameterValueException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
+              } catch ( AutoScalingMetadataException e ) {
+                throw Exceptions.toUndeclared( e );
+              }
+            if ( request.getMaxSize() != null )
+              autoScalingGroup.setMaxSize( Numbers.intValue( request.getMaxSize() ) );
+            if ( request.getMinSize() != null )
+              autoScalingGroup.setMinSize( Numbers.intValue( request.getMinSize() ) );
+            if ( request.terminationPolicies() != null && !request.terminationPolicies().isEmpty() )
+              autoScalingGroup.setTerminationPolicies( Sets.newHashSet( Iterables.filter( Iterables.transform(
+                  request.terminationPolicies(), Enums.valueOfFunction( TerminationPolicyType.class ) ),
+                  Predicates.not( Predicates.isNull() ) ) ) );
+            //TODO:STEVE: something for VPC zone identifier or placement group?
+          }
+        }
+      };
+
+      autoScalingGroups.update(
+          accountFullName,
+          request.getAutoScalingGroupName(),
+          groupCallback);
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+    
     return reply;
   }
 
@@ -286,8 +438,30 @@ public class AutoScalingService {
     return reply;
   }
 
-  public SetDesiredCapacityResponseType setDesiredCapacity(SetDesiredCapacityType request) throws EucalyptusCloudException {
-    SetDesiredCapacityResponseType reply = request.getReply( );
+  public SetDesiredCapacityResponseType setDesiredCapacity( final SetDesiredCapacityType request ) throws EucalyptusCloudException {
+    final SetDesiredCapacityResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    try {
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+            autoScalingGroup.setDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) );
+          } 
+        }
+      };
+      
+      autoScalingGroups.update(
+          ctx.getUserFullName().asAccountFullName(),
+          request.getAutoScalingGroupName(),
+          groupCallback);
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() );
+    } catch ( Exception e ) {
+      handleException( e );
+    }    
+    
     return reply;
   }
 
@@ -315,7 +489,7 @@ public class AutoScalingService {
     
     logger.error( e, e );
 
-    final InternalFailureException exception = new InternalFailureException( e.getMessage() );
+    final InternalFailureException exception = new InternalFailureException( String.valueOf(e.getMessage()) );
     if ( Contexts.lookup( ).hasAdministrativePrivileges() ) {
       exception.initCause( e );      
     }

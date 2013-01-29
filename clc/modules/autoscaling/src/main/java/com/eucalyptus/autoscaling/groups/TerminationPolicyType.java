@@ -17,23 +17,26 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.policy;
+package com.eucalyptus.autoscaling.groups;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.PolicyKey;
+import static com.eucalyptus.autoscaling.AutoScalingMetadata.TerminationPolicyTypeMetadata;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.util.OwnerFullName;
 
 /**
  *
  */
-@PolicyKey( LaunchConfigurationNumberQuotaKey.KEY )
-public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKeySupport<LaunchConfigurationMetadata> {
+public enum TerminationPolicyType implements TerminationPolicyTypeMetadata {  
   
-  public static final String KEY = "autoscaling:quota-launchconfigurationnumber";
+  OldestInstance, OldestLaunchConfiguration, NewestInstance, ClosestToNextInstanceHour, Default;
 
-  public LaunchConfigurationNumberQuotaKey() {
-    super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
-        LaunchConfigurationMetadata.class );
-  }   
+  @Override
+  public String getDisplayName() {
+    return name();
+  }
+
+  @Override
+  public OwnerFullName getOwner() {
+    return Principals.systemFullName();
+  }
 }

@@ -98,40 +98,5 @@ public class BlockDeviceMapping {
   public int hashCode() {
     return deviceName.hashCode();
   }
-  
-  @Embeddable
-  public static class EbsParameters {
-    protected EbsParameters() {      
-    }
 
-    protected EbsParameters( final String snapshotId, 
-                             final Integer volumeSize ) {
-      this.snapshotId = snapshotId;
-      this.volumeSize = volumeSize;
-    }
-
-    @Column( name = "metadata_snapshot_id" )
-    private String snapshotId;
-
-    @Column( name = "metadata_volume_size" )
-    private Integer volumeSize;
-
-    @Nullable
-    public String getSnapshotId() {
-      return snapshotId;
-    }
-
-    public void setSnapshotId( final String snapshotId ) {
-      this.snapshotId = snapshotId;
-    }
-
-    @Nullable
-    public Integer getVolumeSize() {
-      return volumeSize;
-    }
-
-    public void setVolumeSize( final Integer volumeSize ) {
-      this.volumeSize = volumeSize;
-    }
-  }
 }

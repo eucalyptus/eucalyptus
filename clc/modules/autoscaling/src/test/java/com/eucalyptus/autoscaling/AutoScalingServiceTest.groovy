@@ -40,8 +40,9 @@ import edu.ucsb.eucalyptus.cloud.NotImplementedException
 import com.google.common.collect.Lists
 import com.eucalyptus.context.Contexts
 import com.eucalyptus.util.TypeMappers
-import com.google.common.collect.Iterables
-import com.google.common.base.Predicates
+import com.eucalyptus.autoscaling.groups.AutoScalingGroups
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup
+import com.eucalyptus.util.Callback
 
 /**
  * 
@@ -54,7 +55,7 @@ class AutoScalingServiceTest {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
     discovery.processClass( LaunchConfigurations.BlockDeviceTransform.class )
     discovery.processClass( LaunchConfigurations.LaunchConfigurationTransform.class )
-    AutoScalingService service = new AutoScalingService( launchConfigurationStore() )
+    AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
     
     service.createLaunchConfiguration( new CreateLaunchConfigurationType( 
@@ -107,6 +108,84 @@ class AutoScalingServiceTest {
     assertEquals( "Configuration count", 0, 
         service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
         .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
+  }
+
+  @Test
+  void testAutoScalingGroups() {
+    Accounts.setAccountProvider( accountProvider() )
+    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
+    AutoScalingService service = service()
+    Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
+
+    service.createLaunchConfiguration( new CreateLaunchConfigurationType(
+        launchConfigurationName: "TestLaunch",
+        imageId: "emi-00000001",
+        instanceType: "m1.small"
+    ) )
+
+    service.createAutoScalingGroup( new CreateAutoScalingGroupType( 
+      autoScalingGroupName: "Test",
+      defaultCooldown: 5,
+      desiredCapacity: 3,
+      minSize: 1,
+      maxSize: 10,
+      availabilityZones: new AvailabilityZones( member: [ "zone-1" ] ),
+      launchConfigurationName: "TestLaunch",
+      healthCheckGracePeriod: 4,
+      healthCheckType: "EC2",
+      loadBalancerNames: new LoadBalancerNames( member: [ "balancer-1", "balancer-2" ] ),
+      placementGroup: "placementgroup",
+      terminationPolicies: new TerminationPolicies( member: [ "NewestInstance", "Default" ] ),
+      vpcZoneIdentifier: "vpc-1",      
+    ) )
+
+    DescribeAutoScalingGroupsResponseType emptyDescribeResponse =
+      service.describeAutoScalingGroups( new DescribeAutoScalingGroupsType( autoScalingGroupNames: new AutoScalingGroupNames( member: [ "BADNAME" ] ) ) )
+
+    List<AutoScalingGroupType> emptyGroups =
+      emptyDescribeResponse.describeAutoScalingGroupsResult.autoScalingGroups.member
+
+    assertEquals( "Configuration count", 0, emptyGroups.size() )
+
+    DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType =
+      service.describeAutoScalingGroups( new DescribeAutoScalingGroupsType() )
+
+    List<AutoScalingGroupType> groups =
+      describeAutoScalingGroupsResponseType.describeAutoScalingGroupsResult.autoScalingGroups.member
+
+    assertEquals( "Group count", 1, groups.size() )
+    AutoScalingGroupType group = groups.get( 0 )
+    assertEquals( "Auto scaling group name", "Test", group.autoScalingGroupName )
+    assertEquals( "Launch configuration name", "TestLaunch", group.launchConfigurationName )
+    assertEquals( "Max size", 10,  group.getMaxSize() )
+    assertEquals( "Min size", 1,  group.getMinSize() )
+    assertEquals( "Default cooldown", 5,  group.getDefaultCooldown() )
+    assertEquals( "Desired capacity", 3,  group.getDesiredCapacity() )
+    assertEquals( "Health check grace period", 4,  group.getHealthCheckGracePeriod() )
+    assertEquals( "Health check type", "EC2", group.getHealthCheckType() )
+    assertNotNull( "Availability zones", group.availabilityZones )
+    assertEquals( "Availability zones", [ "zone-1" ] as Set, group.availabilityZones.member as Set )
+    assertNotNull( "Load balancer names", group.loadBalancerNames )
+    assertEquals( "Load balancer names", [ "balancer-1", "balancer-2" ] as Set, group.loadBalancerNames.member as Set )
+    assertNotNull( "Termination policies", group.terminationPolicies )
+    assertEquals( "Termination policies", [ "NewestInstance", "Default" ] as Set, group.terminationPolicies.member as Set )
+
+    service.deleteAutoScalingGroup( new DeleteAutoScalingGroupType( autoScalingGroupName: "Test" ) )
+
+    assertEquals( "Groups count", 0,
+        service.describeAutoScalingGroups( new DescribeAutoScalingGroupsType() )
+            .describeAutoScalingGroupsResult.autoScalingGroups.member.size() )
+
+    service.deleteLaunchConfiguration( new DeleteLaunchConfigurationType( launchConfigurationName: "TestLaunch" ) )
+
+    assertEquals( "Configuration count", 0,
+        service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
+            .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
+  }  
+  
+  AutoScalingService service() {
+    new AutoScalingService( launchConfigurationStore(), autoScalingGroupStore() )
   }
   
   AccountProvider accountProvider() {
@@ -189,7 +268,7 @@ class AutoScalingServiceTest {
   }
   
   LaunchConfigurations launchConfigurationStore() {
-    List<LaunchConfiguration> configurations = Lists.newArrayList()
+    List<LaunchConfiguration> configurations = []
     
     new LaunchConfigurations() {
       @Override
@@ -204,9 +283,9 @@ class AutoScalingServiceTest {
 
       @Override
       LaunchConfiguration lookup(OwnerFullName ownerFullName, String launchConfigurationName) {
-        configurations.find { configuration -> 
-          configuration.displayName.equals( launchConfigurationName ) && 
-              configuration.ownerAccountNumber.equals( ownerFullName.accountNumber ) 
+        configurations.find { LaunchConfiguration configuration ->
+          configuration.getClass().getMethod("getDisplayName").invoke( configuration ).equals( launchConfigurationName ) &&  // work around some groovy metaclass issue
+              configuration.getClass().getMethod("getOwnerAccountNumber").invoke( configuration ).equals( ownerFullName.accountNumber ) 
         }
       }
 
@@ -223,4 +302,49 @@ class AutoScalingServiceTest {
       }
     }
   } 
+  
+  AutoScalingGroups autoScalingGroupStore() {
+    List<AutoScalingGroup> groups = []
+
+    new AutoScalingGroups() {
+      @Override
+      List<AutoScalingGroup> list(OwnerFullName ownerFullName) {
+        groups.findAll { group -> group.ownerAccountNumber.equals( ownerFullName.accountNumber ) }
+      }
+
+      @Override
+      List<AutoScalingGroup> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingGroup> filter) {
+        groups.findAll { group -> filter.apply( group ) } as List
+      }
+
+      @Override
+      AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
+        groups.find { AutoScalingGroup group ->
+          group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
+              group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber )
+        }
+      }
+
+      @Override
+      AutoScalingGroup update(OwnerFullName ownerFullName, 
+                              String autoScalingGroupName, 
+                              Callback<AutoScalingGroup> groupUpdateCallback) {
+        AutoScalingGroup group = lookup( ownerFullName, autoScalingGroupName )
+        groupUpdateCallback.fire( group )
+        group 
+      }
+
+      @Override
+      boolean delete(AutoScalingGroup autoScalingGroup) {
+        groups.remove( 0 ) != null
+      }
+
+      @Override
+      AutoScalingGroup save(AutoScalingGroup autoScalingGroup) {
+        autoScalingGroup.setId( "1" )
+        groups.add( autoScalingGroup )
+        autoScalingGroup
+      }
+    }
+  }
 }

@@ -79,6 +79,11 @@ public class BlockDeviceMappings extends EucalyptusData {
 }
 public class LoadBalancerNames extends EucalyptusData {
   public LoadBalancerNames() {  }
+  public LoadBalancerNames( Collection<String> names ) {
+    if ( names != null ) member.addAll( names )
+  }
+  @HttpParameterMapping(parameter="member")
+  @HttpEmbedded(multiple=true)
   ArrayList<String> member = new ArrayList<String>();
 }
 public class PolicyNames extends EucalyptusData {
@@ -104,7 +109,7 @@ public class DeleteAutoScalingGroupType extends AutoScalingMessage {
 public class DescribeNotificationConfigurationsType extends AutoScalingMessage {
   AutoScalingGroupNames autoScalingGroupNames;
   String nextToken;
-  BigInteger maxRecords;
+  Integer maxRecords;
   public DescribeNotificationConfigurationsType() {  }
 }
 public class ScheduledUpdateGroupAction extends AutoScalingMessage {
@@ -115,9 +120,9 @@ public class ScheduledUpdateGroupAction extends AutoScalingMessage {
   Date startTime;
   Date endTime;
   String recurrence;
-  BigInteger minSize;
-  BigInteger maxSize;
-  BigInteger desiredCapacity;
+  Integer minSize;
+  Integer maxSize;
+  Integer desiredCapacity;
   public ScheduledUpdateGroupAction() {  }
 }
 public class PutScheduledUpdateGroupActionResponseType extends AutoScalingMessage {
@@ -162,7 +167,7 @@ public class DeletePolicyType extends AutoScalingMessage {
   public DeletePolicyType() {  }
 }
 public class DescribeAutoScalingGroupsResult extends EucalyptusData {
-  AutoScalingGroups autoScalingGroups = new AutoScalingGroups();
+  AutoScalingGroupsType autoScalingGroups = new AutoScalingGroupsType();
   String nextToken;
   public DescribeAutoScalingGroupsResult() {  }
 }
@@ -203,7 +208,7 @@ public class TagDescriptionList extends EucalyptusData {
   ArrayList<TagDescription> member = new ArrayList<TagDescription>();
 }
 public class DescribeTerminationPolicyTypesResult extends EucalyptusData {
-  TerminationPolicies terminationPolicyTypes;
+  TerminationPolicies terminationPolicyTypes = new TerminationPolicies();
   public DescribeTerminationPolicyTypesResult() {  }
 }
 public class DescribeScalingProcessTypesResponseType extends AutoScalingMessage {
@@ -224,7 +229,7 @@ public class Activity extends EucalyptusData {
   Date endTime;
   String statusCode;
   String statusMessage;
-  BigInteger progress;
+  Integer progress;
   String details;
   public Activity() {  }
 }
@@ -245,7 +250,7 @@ public class DescribeScheduledActionsType extends AutoScalingMessage {
   Date startTime;
   Date endTime;
   String nextToken;
-  BigInteger maxRecords;
+  Integer maxRecords;
   public DescribeScheduledActionsType() {  }
 }
 public class Filter extends EucalyptusData {
@@ -269,7 +274,7 @@ public class DescribeLaunchConfigurationsType extends AutoScalingMessage {
   @HttpEmbedded
   LaunchConfigurationNames launchConfigurationNames = new LaunchConfigurationNames();
   String nextToken;
-  BigInteger maxRecords;
+  Integer maxRecords;
   public DescribeLaunchConfigurationsType() {  }
   public List<String> launchConfigurationNames() {
     List<String> names = Lists.newArrayList();
@@ -291,7 +296,7 @@ public class AutoScalingInstances extends AutoScalingMessage {
 public class DescribeTagsType extends AutoScalingMessage {
   Filters filters;
   String nextToken;
-  BigInteger maxRecords;
+  Integer maxRecords;
   public DescribeTagsType() {  }
 }
 public class AdjustmentType extends EucalyptusData {
@@ -310,19 +315,32 @@ public class DisableMetricsCollectionResponseType extends AutoScalingMessage {
 public class CreateAutoScalingGroupType extends AutoScalingMessage {
   String autoScalingGroupName;
   String launchConfigurationName;
-  BigInteger minSize;
-  BigInteger maxSize;
-  BigInteger desiredCapacity;
-  BigInteger defaultCooldown;
+  Integer minSize;
+  Integer maxSize;
+  Integer desiredCapacity;
+  Integer defaultCooldown;
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
+  @HttpEmbedded
   LoadBalancerNames loadBalancerNames;
   String healthCheckType;
-  BigInteger healthCheckGracePeriod;
+  Integer healthCheckGracePeriod;
   String placementGroup;
+  @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier;
+  @HttpEmbedded
   TerminationPolicies terminationPolicies;
   Tags tags;
   public CreateAutoScalingGroupType() {  }
+  public Collection<String> availabilityZones() {
+    return availabilityZones?.member;
+  }
+  public Collection<String> loadBalancerNames() {
+    return loadBalancerNames?.member;
+  }
+  public Collection<String> terminationPolicies() {
+    return terminationPolicies?.member;
+  }
 }
 public class DisableMetricsCollectionType extends AutoScalingMessage {
   String autoScalingGroupName;
@@ -334,6 +352,11 @@ public class DescribeAdjustmentTypesType extends AutoScalingMessage {
 }
 public class TerminationPolicies extends EucalyptusData {
   public TerminationPolicies() {  }
+  public TerminationPolicies( Collection<String> terminationPolicies ) { 
+    if ( terminationPolicies != null ) member.addAll( terminationPolicies )
+  }
+  @HttpParameterMapping(parameter="member")
+  @HttpEmbedded(multiple=true)
   ArrayList<String> member = new ArrayList<String>();
 }
 public class NotificationConfiguration extends AutoScalingMessage {
@@ -358,6 +381,11 @@ public class ScheduledActionNames extends EucalyptusData {
 }
 public class AvailabilityZones extends EucalyptusData {
   public AvailabilityZones() {  }
+  public AvailabilityZones( Collection<String> zones ) { 
+    if ( zones != null ) member.addAll( zones )
+  }
+  @HttpParameterMapping(parameter="member")
+  @HttpEmbedded(multiple=true)
   ArrayList<String> member = new ArrayList<String>();
 }
 public class DescribeScalingActivitiesResult extends EucalyptusData {
@@ -398,9 +426,9 @@ public class PutScheduledUpdateGroupActionType extends AutoScalingMessage {
   Date startTime;
   Date endTime;
   String recurrence;
-  BigInteger minSize;
-  BigInteger maxSize;
-  BigInteger desiredCapacity;
+  Integer minSize;
+  Integer maxSize;
+  Integer desiredCapacity;
   public PutScheduledUpdateGroupActionType() {  }
 }
 public class SuspendedProcess extends EucalyptusData {
@@ -471,7 +499,7 @@ public class DescribeScheduledActionsResult extends EucalyptusData {
 }
 public class DescribeAutoScalingInstancesType extends AutoScalingMessage {
   InstanceIds instanceIds;
-  BigInteger maxRecords;
+  Integer maxRecords;
   String nextToken;
   public DescribeAutoScalingInstancesType() {  }
 }
@@ -545,6 +573,8 @@ public class PutScalingPolicyResponseType extends AutoScalingMessage {
 }
 public class Tags extends AutoScalingMessage {
   public Tags() {  }
+  @HttpParameterMapping(parameter="member")
+  @HttpEmbedded(multiple=true)
   ArrayList<Tag> member = new ArrayList<Tag>();
 }
 public class SetDesiredCapacityResponseType extends AutoScalingMessage {
@@ -554,7 +584,7 @@ public class SetDesiredCapacityResponseType extends AutoScalingMessage {
 public class DescribeScalingActivitiesType extends AutoScalingMessage {
   ActivityIds activityIds;
   String autoScalingGroupName;
-  BigInteger maxRecords;
+  Integer maxRecords;
   String nextToken;
   public DescribeScalingActivitiesType() {  }
 }
@@ -582,7 +612,7 @@ public class Processes extends AutoScalingMessage {
 }
 public class Ebs extends EucalyptusData {
   String snapshotId;
-  BigInteger volumeSize;
+  Integer volumeSize;
   public Ebs() {  }
 }
 public class SetInstanceHealthType extends AutoScalingMessage {
@@ -594,17 +624,26 @@ public class SetInstanceHealthType extends AutoScalingMessage {
 public class UpdateAutoScalingGroupType extends AutoScalingMessage {
   String autoScalingGroupName;
   String launchConfigurationName;
-  BigInteger minSize;
-  BigInteger maxSize;
-  BigInteger desiredCapacity;
-  BigInteger defaultCooldown;
+  Integer minSize;
+  Integer maxSize;
+  Integer desiredCapacity;
+  Integer defaultCooldown;
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
   String healthCheckType;
-  BigInteger healthCheckGracePeriod;
+  Integer healthCheckGracePeriod;
   String placementGroup;
+  @HttpParameterMapping(parameter="VPCZoneIdentifier")
   String vpcZoneIdentifier;
+  @HttpEmbedded
   TerminationPolicies terminationPolicies;
   public UpdateAutoScalingGroupType() {  }
+  public Collection<String> availabilityZones() {
+    return availabilityZones?.member;
+  }
+  public Collection<String> terminationPolicies() {
+    return terminationPolicies?.member;
+  }  
 }
 public class DescribeMetricCollectionTypesResult extends EucalyptusData {
   MetricCollectionTypes metrics;
@@ -620,7 +659,7 @@ public class BlockDeviceMappingType extends EucalyptusData {
     this.deviceName = deviceName;
     this.virtualName = virtualName;
     if ( snapshotId != null || volumeSize != null ) {
-      this.ebs = new Ebs( snapshotId: snapshotId, volumeSize: volumeSize==null ? null : BigInteger.valueOf(volumeSize) );  
+      this.ebs = new Ebs( snapshotId: snapshotId, volumeSize: volumeSize );  
     }
   }
 }
@@ -647,9 +686,9 @@ public class DescribePoliciesResult extends EucalyptusData {
   String nextToken;
   public DescribePoliciesResult() {  }
 }
-public class AutoScalingGroups extends AutoScalingMessage {
-  public AutoScalingGroups() {  }
-  ArrayList<AutoScalingGroup> member = new ArrayList<AutoScalingGroup>();
+public class AutoScalingGroupsType extends AutoScalingMessage {
+  public AutoScalingGroupsType() {  }
+  ArrayList<AutoScalingGroupType> member = new ArrayList<AutoScalingGroupType>();
 }
 public class EnabledMetrics extends EucalyptusData {
   public EnabledMetrics() {  }
@@ -657,17 +696,17 @@ public class EnabledMetrics extends EucalyptusData {
 }
 public class SetDesiredCapacityType extends AutoScalingMessage {
   String autoScalingGroupName;
-  BigInteger desiredCapacity;
+  Integer desiredCapacity;
   Boolean honorCooldown;
   public SetDesiredCapacityType() {  }
 }
 public class PutScalingPolicyType extends AutoScalingMessage {
   String autoScalingGroupName;
   String policyName;
-  BigInteger scalingAdjustment;
+  Integer scalingAdjustment;
   String adjustmentType;
-  BigInteger cooldown;
-  BigInteger minAdjustmentStep;
+  Integer cooldown;
+  Integer minAdjustmentStep;
   public PutScalingPolicyType() {  }
 }
 public class DescribeAutoScalingGroupsResponseType extends AutoScalingMessage {
@@ -675,18 +714,18 @@ public class DescribeAutoScalingGroupsResponseType extends AutoScalingMessage {
   DescribeAutoScalingGroupsResult describeAutoScalingGroupsResult = new DescribeAutoScalingGroupsResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class AutoScalingGroup extends AutoScalingMessage {
+public class AutoScalingGroupType extends AutoScalingMessage {
   String autoScalingGroupName;
   String autoScalingGroupARN;
   String launchConfigurationName;
-  BigInteger minSize;
-  BigInteger maxSize;
-  BigInteger desiredCapacity;
-  BigInteger defaultCooldown;
+  Integer minSize;
+  Integer maxSize;
+  Integer desiredCapacity;
+  Integer defaultCooldown;
   AvailabilityZones availabilityZones;
   LoadBalancerNames loadBalancerNames;
   String healthCheckType;
-  BigInteger healthCheckGracePeriod;
+  Integer healthCheckGracePeriod;
   Instances instances;
   Date createdTime;
   SuspendedProcesses suspendedProcesses;
@@ -696,7 +735,7 @@ public class AutoScalingGroup extends AutoScalingMessage {
   String status;
   TagDescriptionList tags;
   TerminationPolicies terminationPolicies;
-  public AutoScalingGroup() {  }
+  public AutoScalingGroupType() {  }
 }
 public class DeleteLaunchConfigurationType extends AutoScalingMessage {
   String launchConfigurationName;
@@ -714,12 +753,12 @@ public class DescribeScalingActivitiesResponseType extends AutoScalingMessage {
 public class ScalingPolicy extends AutoScalingMessage {
   String autoScalingGroupName;
   String policyName;
-  BigInteger scalingAdjustment;
+  Integer scalingAdjustment;
   String adjustmentType;
-  BigInteger cooldown;
+  Integer cooldown;
   String policyARN;
   Alarms alarms;
-  BigInteger minAdjustmentStep;
+  Integer minAdjustmentStep;
   public ScalingPolicy() {  }
 }
 public class AutoScalingGroupNames extends EucalyptusData {
@@ -749,7 +788,7 @@ public class DescribePoliciesType extends AutoScalingMessage {
   String autoScalingGroupName;
   PolicyNames policyNames;
   String nextToken;
-  BigInteger maxRecords;
+  Integer maxRecords;
   public DescribePoliciesType() {  }
 }
 public class PutScalingPolicyResult extends EucalyptusData {
@@ -763,8 +802,15 @@ public class ResumeProcessesResponseType extends AutoScalingMessage {
 public class DescribeAutoScalingGroupsType extends AutoScalingMessage {
   AutoScalingGroupNames autoScalingGroupNames;
   String nextToken;
-  BigInteger maxRecords;
+  Integer maxRecords;
   public DescribeAutoScalingGroupsType() {  }
+  public List<String> autoScalingGroupNames() {
+    List<String> names = Lists.newArrayList();
+    if ( autoScalingGroupNames != null ) {
+      names = autoScalingGroupNames.getMember();
+    }
+    return names;
+  }  
 }
 public class CreateLaunchConfigurationType extends AutoScalingMessage {
   String launchConfigurationName;

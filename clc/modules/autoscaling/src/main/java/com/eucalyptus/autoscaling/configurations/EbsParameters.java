@@ -17,23 +17,49 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.policy;
+package com.eucalyptus.autoscaling.configurations;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.PolicyKey;
+import javax.annotation.Nullable;
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
 
 /**
  *
  */
-@PolicyKey( LaunchConfigurationNumberQuotaKey.KEY )
-public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKeySupport<LaunchConfigurationMetadata> {
+@Embeddable
+public class EbsParameters {
   
-  public static final String KEY = "autoscaling:quota-launchconfigurationnumber";
+  //TODO:STEVE: Fix persistence annotations so column names are used ...
+  @Column( name = "metadata_snapshot_id" )
+  private String snapshotId;
 
-  public LaunchConfigurationNumberQuotaKey() {
-    super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
-        LaunchConfigurationMetadata.class );
-  }   
+  @Column( name = "metadata_volume_size" )
+  private Integer volumeSize;
+
+  protected EbsParameters() {      
+  }
+
+  protected EbsParameters( final String snapshotId,
+                 final Integer volumeSize ) {
+    this.snapshotId = snapshotId;
+    this.volumeSize = volumeSize;
+  }
+
+  @Nullable
+  public String getSnapshotId() {
+    return snapshotId;
+  }
+
+  public void setSnapshotId( final String snapshotId ) {
+    this.snapshotId = snapshotId;
+  }
+
+  @Nullable
+  public Integer getVolumeSize() {
+    return volumeSize;
+  }
+
+  public void setVolumeSize( final Integer volumeSize ) {
+    this.volumeSize = volumeSize;
+  }
 }

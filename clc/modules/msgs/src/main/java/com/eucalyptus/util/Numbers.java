@@ -81,5 +81,5 @@ public class Numbers {
   public static Integer intValue( final Number number ) {
     return number == null ? null : number.intValue();   
   }
-  
+
 }

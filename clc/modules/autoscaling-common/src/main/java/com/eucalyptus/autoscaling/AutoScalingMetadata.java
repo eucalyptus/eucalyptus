@@ -32,4 +32,10 @@ public interface AutoScalingMetadata extends RestrictedType {
 
   @PolicyResourceType( "launchconfiguration" )
   public interface LaunchConfigurationMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "autoscalingroup" )
+  public interface AutoScalingGroupMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "terminationpolicytype" )
+  public interface TerminationPolicyTypeMetadata extends AutoScalingMetadata {}
 }

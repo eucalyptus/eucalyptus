@@ -17,23 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.policy;
-
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.PolicyKey;
+package com.eucalyptus.autoscaling;
 
 /**
- *
+ * Internal metadata access exception.
  */
-@PolicyKey( LaunchConfigurationNumberQuotaKey.KEY )
-public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKeySupport<LaunchConfigurationMetadata> {
-  
-  public static final String KEY = "autoscaling:quota-launchconfigurationnumber";
+public class AutoScalingMetadataException extends Exception {
+  private static final long serialVersionUID = 1L;
 
-  public LaunchConfigurationNumberQuotaKey() {
-    super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
-        LaunchConfigurationMetadata.class );
-  }   
+  public AutoScalingMetadataException( final String message ) {
+    super( message );
+  }
+
+  public AutoScalingMetadataException( final String message, final Throwable cause ) {
+    super( message, cause );
+  }
 }

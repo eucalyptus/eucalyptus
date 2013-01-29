@@ -22,12 +22,12 @@ package com.eucalyptus.autoscaling.configurations;
 import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.List;
 import javax.persistence.EntityTransaction;
+import com.eucalyptus.autoscaling.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.BlockDeviceMappingType;
 import com.eucalyptus.autoscaling.BlockDeviceMappings;
 import com.eucalyptus.autoscaling.InstanceMonitoring;
 import com.eucalyptus.autoscaling.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.SecurityGroups;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -41,17 +41,17 @@ import com.google.common.collect.Collections2;
  */
 public abstract class LaunchConfigurations {
 
-  public abstract List<LaunchConfiguration> list( OwnerFullName ownerFullName ) throws MetadataException;
+  public abstract List<LaunchConfiguration> list( OwnerFullName ownerFullName ) throws AutoScalingMetadataException;
 
   public abstract List<LaunchConfiguration> list( OwnerFullName ownerFullName,
-                                                  Predicate<? super LaunchConfiguration> filter ) throws MetadataException;
+                                                  Predicate<? super LaunchConfiguration> filter ) throws AutoScalingMetadataException;
 
   public abstract LaunchConfiguration lookup( OwnerFullName ownerFullName, 
-                                              String launchConfigurationName ) throws MetadataException;
+                                              String launchConfigurationName ) throws AutoScalingMetadataException;
 
-  public abstract boolean delete( LaunchConfiguration launchConfiguration ) throws MetadataException;
+  public abstract boolean delete( LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException;
 
-  public abstract LaunchConfiguration save( LaunchConfiguration launchConfiguration ) throws MetadataException;
+  public abstract LaunchConfiguration save( LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException;
   
   public final PersistingBuilder create( final OwnerFullName ownerFullName,
                                    final String launchConfigurationName,
@@ -77,7 +77,7 @@ public abstract class LaunchConfigurations {
       return this;
     }
     
-    public LaunchConfiguration persist() throws MetadataException {
+    public LaunchConfiguration persist() throws AutoScalingMetadataException {
       return launchConfigurations.save( build() );
     }
   }
@@ -120,7 +120,7 @@ public abstract class LaunchConfigurations {
 
     @Override
     public BlockDeviceMappingType apply( final BlockDeviceMapping blockDeviceMapping ) {
-      final BlockDeviceMapping.EbsParameters ebs = blockDeviceMapping.getEbsParameters();
+      final EbsParameters ebs = blockDeviceMapping.getEbsParameters();
       return new BlockDeviceMappingType( 
           blockDeviceMapping.getDeviceName(),
           blockDeviceMapping.getVirtualName(),
