@@ -259,9 +259,9 @@ public class X509Download extends HttpServlet {
         sb.append( "\necho WARN:  TOKEN URL is not configured. >&2" );
       }
       if ( Topology.isEnabled( AutoScaling.class ) ) {
-        sb.append( "\nexport AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
+        sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
       } else {
-        sb.append( "\necho WARN:  AUTO SCALING URL is not configured. >&2" );
+        sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
       }
       sb.append( "\nexport EUSTORE_URL=" + StackConfiguration.DEFAULT_EUSTORE_URL );
       sb.append( "\nexport EC2_PRIVATE_KEY=${EUCA_KEY_DIR}/" + baseName + "-pk.pem" );
