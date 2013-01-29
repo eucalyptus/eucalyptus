@@ -126,7 +126,7 @@ class GlobalSession(object):
 
     @property
     def version(self):
-        return '3.2.0'
+        return '3.2.1'
     
     @property
     def admin_console_url(self):
