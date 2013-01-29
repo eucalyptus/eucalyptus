@@ -323,7 +323,7 @@ public class Snapshots {
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           //.withPersistenceFilter( "progress" )  //TODO:STEVE: Not working, problem with % escaping?
           .withPersistenceFilter( "snapshot-id", "displayName" )
-          //.withPersistenceFilter( "start-time", "creationTimestamp", PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "start-time", "creationTimestamp", PersistenceFilter.Type.Date )
           .withPersistenceFilter( "volume-id", "parentVolume" )
           .withPersistenceFilter( "volume-size", "volumeSize", PersistenceFilter.Type.Integer )
       );

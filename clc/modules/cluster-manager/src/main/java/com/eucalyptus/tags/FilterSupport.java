@@ -970,7 +970,7 @@ public abstract class FilterSupport<RT> {
         boolean matches( final Object targetValue, final Object resourceValue ) {
           boolean match = false;
           if ( resourceValue instanceof Date && targetValue instanceof Date ) {
-            match = (((Date) resourceValue).getTime()/1000L) == (((Date) targetValue).getTime()/1000L); //TODO:STEVE: match to second only?
+            match = ((Date) resourceValue).getTime() == ((Date) targetValue).getTime();
           }
           return match;
         }
