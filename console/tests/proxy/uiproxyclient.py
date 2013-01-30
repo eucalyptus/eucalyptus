@@ -30,8 +30,8 @@ import urllib
 import urllib2
 import json
 
-# This is a client to test the interface that the browser uses
 # to talk to the UI proxy. It can make all of the REST calls as you
+# This is a client to test the interface that the browser uses
 # would from the browser GUI
 
 class UIProxyClient(object):
@@ -116,8 +116,8 @@ class UIProxyClient(object):
             else:
                 params[label % i] = item
 
-    def __make_request__(self, action, params):
-        url = 'http://%s:%s/ec2?'%(self.host, self.port)
+    def __make_request__(self, action, params, endpoint='ec2'):
+        url = 'http://%s:%s/%s?'%(self.host, self.port, endpoint)
         for param in params.keys():
             if params[param]==None:
                 del params[param]
@@ -134,38 +134,13 @@ class UIProxyClient(object):
             print "Error! "+str(err.code)
 
     def __make_request_walrus__(self, action, params):
-        url = 'http://%s:%s/s3?'%(self.host, self.port)
-        for param in params.keys():
-            if params[param]==None:
-                del params[param]
-        params['Action'] = action
-        params['_xsrf'] = self.xsrf
-        data = urllib.urlencode(params)
-        print "request : "+data
-        try:
-            req = urllib2.Request(url)
-            self.__check_logged_in__(req)
-            response = urllib2.urlopen(req, data)
-            return json.loads(response.read())
-        except urllib2.URLError, err:
-            print "Error! "+str(err.code)
+        return self.__make_request__(action, params, 's3')
 
     def __make_cw_request__(self, action, params):
-        url = 'http://%s:%s/monitor?'%(self.host, self.port)
-        for param in params.keys():
-            if params[param]==None:
-                del params[param]
-        params['Action'] = action
-        params['_xsrf'] = self.xsrf
-        data = urllib.urlencode(params)
-        print "request : "+data
-        try:
-            req = urllib2.Request(url)
-            self.__check_logged_in__(req)
-            response = urllib2.urlopen(req, data)
-            return json.loads(response.read())
-        except urllib2.URLError, err:
-            print "Error! "+str(err.code)
+        return self.__make_request__(action, params, 'monitor')
+
+    def __make_scale_request__(self, action, params):
+        return self.__make_request__(action, params, 'autoscaling')
 
     ##
     # Zone methods
@@ -562,4 +537,44 @@ class UIProxyClient(object):
             unit=unit, dimensions=dimensions, statistics=statistics)
 
         return self.__make_cw_request__('PutMetricData', params) 
+    
+    ##
+    # Auto Scaling methods
+    ##
+    def get_all_groups(self, names=None, max_records=None, next_token=None):
+        params = {}
+        if names:
+            self.__build_list_params__(params, names, 'Names.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribeAutoScalingGroups', params) 
+    
+    def get_all_autoscaling_instances(self, instance_ids=None,
+                                      max_records=None, next_token=None):
+        params = {}
+        if instance_ids:
+            self.__build_list_params__(params, instance_ids, 'InstanceIds.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribeAutoScalingInstances', params) 
+
+    def get_all_launch_configurations(self, configuration_names=None,
+                           max_records=None, next_token=None):
+        params = {}
+        if configuration_names:
+            self.__build_list_params__(params, configuration_names,
+                                       'LaunchConfigurationNames.member.%d')
+        if max_records:
+            params['MaxRecords'] = max_records
+        if next_token:
+            params['NextToken'] = next_token
+
+        return self.__make_scale_request__('DescribeLaunchConfigurations', params) 
+    
     

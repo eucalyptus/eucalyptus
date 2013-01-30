@@ -46,11 +46,14 @@ from eucaconsole.threads import Threads
 from .botoclcinterface import BotoClcInterface
 from .botowalrusinterface import BotoWalrusInterface
 from .botowatchinterface import BotoWatchInterface
+from .botoscaleinterface import BotoScaleInterface
 from .botojsonencoder import BotoJsonEncoder
 from .botojsonencoder import BotoJsonWatchEncoder
+from .botojsonencoder import BotoJsonScaleEncoder
 from .cachingclcinterface import CachingClcInterface
 from .cachingwalrusinterface import CachingWalrusInterface
 from .cachingwatchinterface import CachingWatchInterface
+from .cachingscaleinterface import CachingScaleInterface
 from .mockclcinterface import MockClcInterface
 from .mockwatchinterface import MockWatchInterface
 from .response import ClcError
@@ -115,6 +118,94 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                 self.finish()
             except Exception, err:
                 print err
+
+class ScaleHandler(BaseAPIHandler):
+    json_encoder = BotoJsonScaleEncoder
+
+    ##
+    # This is the main entry point for API calls for AutoScaling from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.scaling):
+            if self.should_use_mock():
+                pass #self.user_session.walrus = MockScaleInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.scaling = BotoScaleInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.scaling = CachingScaleInterface(self.user_session.scaling, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Get') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'CreateAutoScalingGroup':
+                name = self.get_argument('AutoScalingGroupName')
+                launch_config = self.get_argument('LaunchConfigurationName')
+                azones = self.get_argument_list('AvailabilityZones.member')
+                balancers = self.get_argument_list('LoadBalancerNames.member')
+                def_cooldown = self.get_argument('DefaultCooldown')
+                hc_type = self.get_argument('HealthCheckType')
+                hc_period = self.get_argument('HealthCheckGracePeriod')
+                desired_capacity = self.get_argument('DesiredCapacity')
+                min_size = self.get_argument('MinSize')
+                max_size = self.get_argument('MaxSize')
+                tags = self.get_argument_list('Tags.member')
+                termination_policy = self.get_argument_list('TerminationPolicies.member')
+                as_group = AutoScalingGroup(name=name, launch_config=launch_config,
+                                availability_zones=azones, load_balancers=balancers,
+                                default_cooldown=def_cooldown, health_check_type=hc_type,
+                                health_check_period=hc_period, desired_capacity=desired_capacity,
+                                min_size=min_size, max_size=max_size, tags=tags,
+                                termination_policy=termination_policy)
+                self.user_session.scaling.create_auto_scaling_group(as_group, self.callback)
+            elif action == 'DeleteAutoScalingGroup':
+                pass
+            elif action == 'DescribeAutoScalingGroups':
+                names = self.get_argument_list('AutoScalingGroupNames.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_groups(names, max_records, next_token, self.callback)
+            elif action == 'DescribeAutoScalingInstances':
+                instance_ids = self.get_argument_list('InstanceIds.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_autoscaling_instances(instance_ids, max_records, next_token, self.callback)
+            elif action == 'SetDesiredCapacity':
+                pass
+            elif action == 'SetInstanceHealth':
+                pass
+            elif action == 'TerminateAutoScalingGroup':
+                pass
+            elif action == 'UpdateAutoScalingGroup':
+                pass
+            elif action == 'CreateLaunchConfiguration':
+                pass
+            elif action == 'DeleteLaunchConfiguration':
+                pass
+            elif action == 'DescribeLaunchConfigurations':
+                config_names = self.get_argument_list('LaunchConfigurationNames.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_launch_configurations(config_names, max_records, next_token, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
 
 class WatchHandler(BaseAPIHandler):
     ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"

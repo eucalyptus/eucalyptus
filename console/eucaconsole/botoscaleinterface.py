@@ -26,31 +26,31 @@
 import boto
 import ConfigParser
 import json
-from boto.ec2.cloudwatch import CloudWatchConnection
+from boto.ec2.autoscale import AutoScaleConnection
 from boto.ec2.regioninfo import RegionInfo
 
 import eucaconsole
-from .botojsonencoder import BotoJsonWatchEncoder
-from .watchinterface import WatchInterface
+from .botojsonencoder import BotoJsonScaleEncoder
+from .scaleinterface import ScaleInterface
 
 # This class provides an implmentation of the clcinterface using boto
-class BotoWatchInterface(WatchInterface):
+class BotoScaleInterface(ScaleInterface):
     conn = None
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        #boto.set_stream_logger('foo')
-        path='/services/CloudWatch'
+        boto.set_stream_logger('foo')
+        path='/services/AutoScaling'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
-            clc_host = clc_host.replace('ec2', 'monitoring', 1)
+            clc_host = clc_host.replace('ec2', 'autoscaling', 1)
             path = '/'
             reg = None
             port=443
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
-        self.conn = CloudWatchConnection(access_id, secret_key, region=reg,
+        self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=0)
+                                  is_secure=True, security_token=token, debug=2)
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
@@ -58,18 +58,48 @@ class BotoWatchInterface(WatchInterface):
         json.dump(obj, f, cls=BotoJsonWatchEncoder, indent=2)
         f.close()
 
-    def get_metric_statistics(self, period, start_name, end_time, metric_name, namespace, statistics, dimensions, unit):
-        obj = self.conn.get_metric_statistics(period, start_name, end_time, metric_name, namespace, statistics, dimensions, unit)
+    ##
+    # autoscaling methods
+    ##
+    def create_auto_scaling_group(self, as_group):
+        return None
+
+    def delete_auto_scaling_group(self, name, force_delete=False):
+        return None
+
+    def get_all_groups(self, names=None, max_records=None, next_token=None):
+        obj = self.conn.get_all_groups(names, max_records, next_token)
         if self.saveclcdata:
-            self.__save_json__(obj, "mockdata/CW_Statistics.json")
+            self.__save_json__(obj, "mockdata/AS_Groups.json")
         return obj
 
-    def list_metrics(self, next_token, dimensions, metric_name, namespace):
-        obj = self.conn.list_metrics(next_token, dimensions, metric_name, namespace)
+    def get_all_autoscaling_instances(self, instance_ids=None, max_records=None, next_token=None):
+        obj = self.conn.get_all_autoscaling_instances(instance_ids, max_records, next_token)
         if self.saveclcdata:
-            self.__save_json__(obj, "mockdata/CW_Metrics.json")
+            self.__save_json__(obj, "mockdata/AS_Instances.json")
         return obj
 
-    def put_metric_data(self, namespace, name, value, timestamp, unit, dimensions, statistics):
-        return self.conn.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics)
+    def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
+        return None
+
+    def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True):
+        return None
+
+    def terminate_instance(self, instance_id, decrement_capacity=True):
+        return None
+
+    def update_autoscaling_group(self, as_group):
+        return None
+
+    def create_launch_configuration(self, launch_config):
+        return None
+
+    def delete_launch_configuration(self, launch_config_name):
+        return None
+
+    def get_all_launch_configurations(self, config_names, max_records, next_token):
+        obj = self.conn.get_all_launch_configurations(names=config_names, max_records=max_records, next_token=next_token)
+        if self.saveclcdata:
+            self.__save_json__(obj, "mockdata/AS_LaunchConfigs.json")
+        return obj
 

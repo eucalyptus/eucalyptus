@@ -25,6 +25,7 @@
 
 import boto
 import copy
+from datetime import datetime
 import json
 import logging
 
@@ -42,6 +43,10 @@ from boto.ec2.cloudwatch.dimension import Dimension
 from boto.ec2.cloudwatch.metric import Metric
 from boto.ec2.cloudwatch.alarm import MetricAlarms
 from boto.ec2.cloudwatch.alarm import MetricAlarm
+from boto.ec2.autoscale import AutoScaleConnection
+from boto.ec2.autoscale.launchconfig import LaunchConfiguration
+from boto.ec2.autoscale.launchconfig import InstanceMonitoring
+from boto.ec2.autoscale.group import AutoScalingGroup
 # these things came in with boto 2.6
 try:
     from boto.ec2.instance import InstanceState
@@ -188,6 +193,38 @@ class BotoJsonWatchEncoder(JSONEncoder):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'Metric'
             return (values)
+        return super(BotoJsonWatchEncoder, self).default(obj)
+
+class BotoJsonScaleEncoder(JSONEncoder):
+    def default(self, obj):
+        if issubclass(obj.__class__, EC2Object):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = obj.__class__.__name__
+            return (values)
+        elif isinstance(obj, RegionInfo):
+            return []
+        elif isinstance(obj, ClcError):
+            return copy.copy(obj.__dict__)
+        elif isinstance(obj, Response):
+            return obj.__dict__
+        elif isinstance(obj, AutoScaleConnection):
+            return []
+        elif isinstance(obj, datetime):
+            return (obj.isoformat())
+        elif isinstance(obj, AutoScalingGroup):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'AutoScalingGroup'
+            return (values)
+        elif isinstance(obj, LaunchConfiguration):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'LaunchConfiguration'
+            return (values)
+        elif isinstance(obj, InstanceMonitoring):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'InstanceMonitoring'
+            return (values)
+        print obj.__class__.__name__
         return super(BotoJsonWatchEncoder, self).default(obj)
 
 class BotoJsonDecoder(JSONDecoder):

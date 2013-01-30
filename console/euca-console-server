@@ -121,6 +121,7 @@ def start_console():
             (r"/ec2", api.ComputeHandler),
             (r"/s3", api.StorageHandler),
             (r"/monitor", api.WatchHandler),
+            (r"/autoscaling", api.ScaleHandler),
             (r"/checkip", eucaconsole.CheckIpHandler),
             (r"/(.*)", eucaconsole.RootHandler),
         ], **settings)
