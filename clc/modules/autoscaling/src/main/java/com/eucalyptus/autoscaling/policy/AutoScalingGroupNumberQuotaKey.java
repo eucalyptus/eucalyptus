@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.policy;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.AutoScalingGroupMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 

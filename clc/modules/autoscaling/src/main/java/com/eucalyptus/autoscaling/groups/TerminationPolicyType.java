@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.TerminationPolicyTypeMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.TerminationPolicyTypeMetadata;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.util.OwnerFullName;
 

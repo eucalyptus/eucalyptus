@@ -43,6 +43,25 @@ import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup
 import com.eucalyptus.util.Callback
+import com.eucalyptus.autoscaling.common.LaunchConfigurationNames
+import com.eucalyptus.autoscaling.common.BlockDeviceMappings
+import com.eucalyptus.autoscaling.common.LoadBalancerNames
+import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.InstanceMonitoring
+import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType
+import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.TerminationPolicies
+import com.eucalyptus.autoscaling.common.AvailabilityZones
+import com.eucalyptus.autoscaling.common.SecurityGroups
+import com.eucalyptus.autoscaling.common.LaunchConfigurationType
+import com.eucalyptus.autoscaling.common.BlockDeviceMappingType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType
+import com.eucalyptus.autoscaling.common.AutoScalingGroupType
+import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.AutoScalingGroupNames
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType
+import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsResponseType
 
 /**
  * 

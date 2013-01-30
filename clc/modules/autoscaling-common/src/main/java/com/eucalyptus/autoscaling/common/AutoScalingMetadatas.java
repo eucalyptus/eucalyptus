@@ -17,10 +17,9 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling;
+package com.eucalyptus.autoscaling.common;
 
 import java.util.Collection;
-import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

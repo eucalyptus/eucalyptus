@@ -19,8 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.ws;
 
+import com.eucalyptus.autoscaling.common.*;
+import com.eucalyptus.autoscaling.common.Error;
 import com.eucalyptus.ws.Role;
-import com.eucalyptus.autoscaling.ErrorResponse;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -44,7 +45,7 @@ public class AutoScalingErrorHandler extends ErrorHandlerSupport {
     final ErrorResponse errorResp = new ErrorResponse( );
     errorResp.setCorrelationId( correlationId );
     errorResp.setRequestId( correlationId );
-    final com.eucalyptus.autoscaling.Error error = new com.eucalyptus.autoscaling.Error( );
+    final com.eucalyptus.autoscaling.common.Error error = new Error( );
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" );
     error.setCode( code );
     error.setMessage( message );

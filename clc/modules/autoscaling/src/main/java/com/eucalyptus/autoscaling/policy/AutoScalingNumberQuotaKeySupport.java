@@ -25,7 +25,7 @@ import com.eucalyptus.auth.policy.key.KeyUtils;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.autoscaling.AutoScalingMetadata;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.util.RestrictedTypes;
 import net.sf.json.JSONException;
 

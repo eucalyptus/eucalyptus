@@ -80,7 +80,7 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.autoscaling.AutoScaling;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;

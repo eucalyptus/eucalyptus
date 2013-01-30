@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.autoscaling.AutoScaling;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;

@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.configurations;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.Collection;
 import java.util.Set;
 import javax.persistence.CollectionTable;

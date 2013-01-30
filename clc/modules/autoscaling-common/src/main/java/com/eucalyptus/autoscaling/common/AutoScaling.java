@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling;
+package com.eucalyptus.autoscaling.common;
 
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;

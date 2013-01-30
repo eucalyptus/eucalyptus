@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.groups;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.AutoScalingGroupMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;

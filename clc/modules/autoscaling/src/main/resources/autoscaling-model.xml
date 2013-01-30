@@ -52,7 +52,7 @@
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="AutoScalingWS" />
-                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.AutoScalingMessage" />
+                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.common.AutoScalingMessage" />
                 </filtering-router>
             </outbound>
         </service>
@@ -65,7 +65,7 @@
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
-                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.AutoScalingMessage" />
+                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.common.AutoScalingMessage" />
                 </filtering-router>
             </outbound>
         </service>

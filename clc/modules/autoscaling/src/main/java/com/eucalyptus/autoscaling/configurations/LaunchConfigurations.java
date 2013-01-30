@@ -19,15 +19,15 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.configurations;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.List;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.AutoScalingMetadataException;
-import com.eucalyptus.autoscaling.BlockDeviceMappingType;
-import com.eucalyptus.autoscaling.BlockDeviceMappings;
-import com.eucalyptus.autoscaling.InstanceMonitoring;
-import com.eucalyptus.autoscaling.LaunchConfigurationType;
-import com.eucalyptus.autoscaling.SecurityGroups;
+import com.eucalyptus.autoscaling.common.BlockDeviceMappingType;
+import com.eucalyptus.autoscaling.common.BlockDeviceMappings;
+import com.eucalyptus.autoscaling.common.InstanceMonitoring;
+import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.SecurityGroups;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
