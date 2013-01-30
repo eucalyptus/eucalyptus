@@ -20,6 +20,7 @@
 package com.eucalyptus.tags;
 
 import static com.eucalyptus.tags.FilterSupport.PersistenceFilter.persistenceFilter;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -273,6 +274,14 @@ public abstract class FilterSupport<RT> {
       return this;
     }
 
+    public Builder<RT> withLikeExplodedProperty( final String filterName,
+                                                 final Function<? super RT, ?> extractor,
+                                                 final Function<String, Collection> explodeFunction ) {
+      predicateFunctions.put( filterName, 
+          FilterSupport.<RT>explodedLiteralFilter( extractor, likeWildFunction( explodeFunction ) ) );
+      return this;
+    }
+    
     /**
      * Declare a constant valued string property.
      *
@@ -428,6 +437,28 @@ public abstract class FilterSupport<RT> {
       return this;
     }
 
+    /**
+     * Declare a property filterable at the persistence layer after expansion.
+     *
+     * <p>The given function will be passed a expression containing like
+     * wildcards and is expected to explode to a collection of literal values
+     * to match.</p>
+     * 
+     * @param filterName The name of the filter
+     * @param fieldName The path to the field (dot separated)
+     * @param explodeFunction Function to expand a given like expression
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withLikeExplodingPersistenceFilter( final String filterName,
+                                                           final String fieldName,
+                                                           final Function<String, Collection> explodeFunction ) {
+      persistenceFilters.put( filterName, persistenceFilter( 
+          fieldName, 
+          aliases( fieldName ), 
+          likeWildFunction( explodeFunction ) ) );
+      return this;
+    }
+    
     private Set<String> aliases( final String fieldPath ) {
       final Set<String> aliases = Sets.newHashSet();
       final Iterator<String> aliasIterator = Splitter.on( "." ).split( fieldPath ).iterator();
@@ -555,8 +586,35 @@ public abstract class FilterSupport<RT> {
     return supportByClass.get( metadataClass );
   }
 
+  /**
+   * Will the given like expression match any value?
+   * 
+   * @param expression The expression to test
+   * @return True if fully wild
+   */
+  public static boolean isTotallyWildLikeExpression( final String expression ) {
+    return expression.replace("%","").isEmpty();  
+  }
+  
   private static <T> Function<? super String, Predicate<? super T>> falseFilter() {
     return Functions.<Predicate<? super T>>constant( Predicates.alwaysFalse() );
+  }
+
+
+  private static <T> Function<? super String, Predicate<? super T>> explodedLiteralFilter( final Function<? super T,?> extractor,
+                                                                                           final Function<String, Collection> explodeFunction ) {
+    return new Function<String,Predicate<? super T>>() {
+      @SuppressWarnings( "unchecked" )
+      @Override
+      public Predicate<T> apply( final String filterValue ) {
+        Collection values = explodeFunction.apply( filterValue );        
+        return values == null ?
+            Predicates.<T>alwaysTrue() :
+            Predicates.compose( 
+              Predicates.<Object>in( values ), 
+              Functions.compose( extractor, Functions.<T>identity() ) );
+      }
+    };
   }
 
   private static <T> Function<? super String, Predicate<? super T>> stringFilter( final Function<? super T, String> extractor ) {
@@ -653,6 +711,22 @@ public abstract class FilterSupport<RT> {
       }
     };
   }
+
+  private static <T> Function<String,T> likeWildFunction( final Function<String,T> delegate ) {
+    return new Function<String, T>() {
+      @Override
+      public T apply( final String expression ) {
+        final StringBuilder likeValueBuilder = new StringBuilder();
+        translateWildcards( expression, likeValueBuilder, "_", "%", SyntaxEscape.Like );
+        final String likeExpression = likeValueBuilder.toString();
+        if ( isTotallyWildLikeExpression( likeExpression ) ) {
+          return null;
+        } else {
+          return delegate.apply( likeExpression );
+        }
+      }
+    };
+  }  
 
   private boolean isTagFilter( final String filter ) {
     return isTagFilteringEnabled() && (
@@ -788,7 +862,15 @@ public abstract class FilterSupport<RT> {
       valueObject = persistentValue;
     }
 
-    return Restrictions.eq( property, valueObject );
+    if ( persistentValue instanceof Collection ) {
+      if ( ((Collection) persistentValue).isEmpty() ) {
+        return Restrictions.not( Restrictions.conjunction() ); // always false
+      } else {
+        return Restrictions.in( property, (Collection) persistentValue );
+      }
+    } else {    
+      return Restrictions.eq( property, valueObject );
+    }
   }
 
   Map<String, PersistenceFilter> getPersistenceFilters() {

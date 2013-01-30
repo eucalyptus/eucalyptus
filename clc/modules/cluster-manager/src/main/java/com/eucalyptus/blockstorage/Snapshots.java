@@ -64,6 +64,8 @@ package com.eucalyptus.blockstorage;
 
 import static java.util.Collections.unmodifiableSet;
 import static java.util.EnumSet.of;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,8 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
@@ -310,16 +314,16 @@ public class Snapshots {
       super( builderFor( Snapshot.class )
           .withTagFiltering( SnapshotTag.class, "snapshot" )
           .withStringProperty( "description", FilterFunctions.DESCRIPTION )
-          .withStringProperty( "owner-alias", FilterFunctions.ACCOUNT_NAME ) //TODO:STEVE: won't work, this field isn't populated
+          .withLikeExplodedProperty( "owner-alias", FilterFunctions.ACCOUNT_ID, accountAliasExploder() )
           .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
           .withStringProperty( "progress", FilterFunctions.PROGRESS )
           .withStringProperty( "snapshot-id", CloudMetadatas.toDisplayName() )
           .withStringProperty( "status", FilterFunctions.STATUS )
           .withDateProperty( "start-time", FilterDateFunctions.START_TIME )
           .withStringProperty( "volume-id", FilterFunctions.VOLUME_ID )
-          .withStringProperty( "volume-size", FilterFunctions.VOLUME_SIZE  )
+          .withStringProperty( "volume-size", FilterFunctions.VOLUME_SIZE )
           .withPersistenceFilter( "description" )
-          .withPersistenceFilter( "owner-alias", "ownerAccountName" ) //TODO:STEVE: won't work, this field isn't populated
+          .withLikeExplodingPersistenceFilter( "owner-alias", "ownerAccountNumber", accountAliasExploder() )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "progress" )
           .withPersistenceFilter( "snapshot-id", "displayName" )
@@ -330,17 +334,25 @@ public class Snapshots {
     }
   }
 
+  private static Function<String,Collection> accountAliasExploder() {
+    return new Function<String,Collection>() {
+      @Override
+      public Collection<String> apply( final String accountAliasExpression ) {
+        try {
+          return Accounts.resolveAccountNumbersForName( accountAliasExpression );
+        } catch ( AuthException e ) {
+          LOG.error( e, e );
+          return Collections.emptySet();
+        }
+      }
+    };
+  }  
+
   private enum FilterFunctions implements Function<Snapshot,String> {
     DESCRIPTION {
       @Override
       public String apply( final Snapshot snapshot ) {
         return snapshot.getDescription();
-      }
-    },
-    ACCOUNT_NAME {
-      @Override
-      public String apply( final Snapshot snapshot ) {
-        return snapshot.getOwnerAccountName();
       }
     },
     ACCOUNT_ID {

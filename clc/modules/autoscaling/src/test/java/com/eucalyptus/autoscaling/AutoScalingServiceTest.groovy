@@ -216,6 +216,11 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      Set<String> resolveAccountNumbersForName(final String accountNAmeLike) {
+        [] as Set
+      }
+
+      @Override
       List<User> listAllUsers() {
         throw new NotImplementedException()
       }
