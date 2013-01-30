@@ -113,7 +113,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static final String AWS_AUTH_TYPE = "AWS";
 	private static final String EUCA_AUTH_TYPE = "EUCA2-RSA-SHA256";
 	private static final String EUCA_OLD_AUTH_TYPE = "Euca";
-	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'hhmmss'Z'"; //Use the ISO8601 format
+	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
 
 	
 	public static enum SecurityParameter {
@@ -376,9 +376,12 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				formats.add(ISO_8601_FORMAT);
 				Date dateToVerify = DateUtil.parseDate(verifyDate, formats);
 				Date currentDate = new Date();
-				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT)
+				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
+					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
 					throw new AuthenticationException("Message expired. Sorry.");
+				}
 			} catch(DateParseException ex) {
+				LOG.error("Walrus cannot parse date: " + verifyDate);
 				throw new AuthenticationException("Unable to parse date.");
 			}
 		}
@@ -630,9 +633,12 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 			try {
 				Date dateToVerify = DateUtil.parseDate(verifyDate);
 				Date currentDate = new Date();
-				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT)
+				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
+					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
 					throw new AuthenticationException("Message expired. Sorry.");
+				}
 			} catch(Exception ex) {
+				LOG.error("Cannot parse date: " + verifyDate);
 				throw new AuthenticationException("Unable to parse date.");
 			}
 
