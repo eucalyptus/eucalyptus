@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
-import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
@@ -89,6 +89,7 @@ import com.eucalyptus.autoscaling.common.PutScheduledUpdateGroupActionResponseTy
 import com.eucalyptus.autoscaling.common.PutScheduledUpdateGroupActionType;
 import com.eucalyptus.autoscaling.common.ResumeProcessesResponseType;
 import com.eucalyptus.autoscaling.common.ResumeProcessesType;
+import com.eucalyptus.autoscaling.common.ScalingPolicyType;
 import com.eucalyptus.autoscaling.common.SetDesiredCapacityResponseType;
 import com.eucalyptus.autoscaling.common.SetDesiredCapacityType;
 import com.eucalyptus.autoscaling.common.SetInstanceHealthResponseType;
@@ -107,9 +108,14 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
+import com.eucalyptus.autoscaling.policies.AdjustmentType;
+import com.eucalyptus.autoscaling.policies.PersistenceScalingPolicies;
+import com.eucalyptus.autoscaling.policies.ScalingPolicies;
+import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Numbers;
@@ -118,6 +124,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -129,17 +136,21 @@ public class AutoScalingService {
   private static final Logger logger = Logger.getLogger( AutoScalingService.class );
   private final LaunchConfigurations launchConfigurations;
   private final AutoScalingGroups autoScalingGroups;
+  private final ScalingPolicies scalingPolicies;
   
   public AutoScalingService() {
     this( 
         new PersistenceLaunchConfigurations( ),
-        new PersistenceAutoScalingGroups( ) );
+        new PersistenceAutoScalingGroups( ),
+        new PersistenceScalingPolicies( ) );
   }
 
   protected AutoScalingService( final LaunchConfigurations launchConfigurations,
-                                final AutoScalingGroups autoScalingGroups ) {
+                                final AutoScalingGroups autoScalingGroups,
+                                final ScalingPolicies scalingPolicies ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
+    this.scalingPolicies = scalingPolicies;
   }
 
   public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {
@@ -196,8 +207,34 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribePoliciesResponseType describePolicies(DescribePoliciesType request) throws EucalyptusCloudException {
-    DescribePoliciesResponseType reply = request.getReply( );
+  public DescribePoliciesResponseType describePolicies(final DescribePoliciesType request) throws EucalyptusCloudException {
+    final DescribePoliciesResponseType reply = request.getReply( );
+
+    //TODO:STEVE: MaxRecords / NextToken support for DescribePolicies
+
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.policyNames().remove( "verbose" );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    final Predicate<ScalingPolicy> requestedAndAccessible =
+        Predicates.and( 
+          AutoScalingMetadatas.filterPrivilegesById( request.policyNames() ),
+          AutoScalingMetadatas.filterByProperty( 
+              CollectionUtils.<String>listUnit().apply(request.getAutoScalingGroupName()), 
+              ScalingPolicies.toGroupName() )
+        );
+
+    try {
+      final List<ScalingPolicyType> results = reply.getDescribePoliciesResult().getScalingPolicies().getMember();
+      for ( final ScalingPolicy scalingPolicy : scalingPolicies.list( ownerFullName, requestedAndAccessible ) ) {
+        results.add( TypeMappers.transform( scalingPolicy, ScalingPolicyType.class ) );
+      }
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -268,7 +305,7 @@ public class AutoScalingService {
     
     final List<String> policies = reply.getDescribeTerminationPolicyTypesResult().getTerminationPolicyTypes().getMember();
     policies.addAll( Collections2.transform( 
-        Collections2.filter( Arrays.asList( TerminationPolicyType.values() ), RestrictedTypes.filterPrivilegedWithoutOwner() ), 
+        Collections2.filter( EnumSet.allOf( TerminationPolicyType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ), 
         Strings.toStringFunction() ) );
     
     return reply;
@@ -279,8 +316,40 @@ public class AutoScalingService {
     return reply;
   }
 
-  public ExecutePolicyResponseType executePolicy(ExecutePolicyType request) throws EucalyptusCloudException {
-    ExecutePolicyResponseType reply = request.getReply( );
+  public ExecutePolicyResponseType executePolicy(final ExecutePolicyType request) throws EucalyptusCloudException {
+    final ExecutePolicyResponseType reply = request.getReply( );
+    
+    //TODO:STEVE: cooldown support
+
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
+    try {
+      final ScalingPolicy scalingPolicy;
+      try {
+        scalingPolicy = scalingPolicies.lookup( 
+          accountFullName,
+          request.getAutoScalingGroupName(), 
+          request.getPolicyName() );
+      } catch ( AutoScalingMetadataNotFoundException e ) {
+        throw new InvalidParameterValueException( "Scaling policy not found: " + request.getPolicyName() );
+      } 
+      
+      autoScalingGroups.update( accountFullName, request.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {          
+          autoScalingGroup.setDesiredCapacity( scalingPolicy.getAdjustmentType().adjustCapacity( 
+            autoScalingGroup.getDesiredCapacity(), //TODO:STEVE: should be actual capacity ...
+            scalingPolicy.getScalingAdjustment(),
+            Objects.firstNonNull( scalingPolicy.getMinAdjustmentStep(), 0),
+            Objects.firstNonNull( autoScalingGroup.getMinSize(), 0 ),
+            Objects.firstNonNull( autoScalingGroup.getMaxSize(), Integer.MAX_VALUE )
+          ) );
+        }
+      } );
+    } catch( Exception e ) {
+      handleException( e );
+    }    
+    
     return reply;
   }
 
@@ -289,8 +358,75 @@ public class AutoScalingService {
     return reply;
   }
 
-  public PutScalingPolicyResponseType putScalingPolicy(PutScalingPolicyType request) throws EucalyptusCloudException {
-    PutScalingPolicyResponseType reply = request.getReply( );
+  public PutScalingPolicyResponseType putScalingPolicy(final PutScalingPolicyType request) throws EucalyptusCloudException {
+    final PutScalingPolicyResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName();
+    try {
+      // Try update
+      final ScalingPolicy scalingPolicy = scalingPolicies.update(
+          accountFullName,
+          request.getAutoScalingGroupName(),
+          request.getPolicyName(), new Callback<ScalingPolicy>() {
+        @Override
+        public void fire( final ScalingPolicy scalingPolicy ) {
+          if ( RestrictedTypes.filterPrivileged().apply( scalingPolicy ) ) {
+            //TODO:STEVE: input validation
+            // You will get a ValidationError if you use MinAdjustmentStep on a policy with an AdjustmentType other than PercentChangeInCapacity. 
+            if ( request.getAdjustmentType() != null )
+              scalingPolicy.setAdjustmentType( 
+                  Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ) );
+            if ( request.getScalingAdjustment() != null )
+              scalingPolicy.setScalingAdjustment( request.getScalingAdjustment() );
+            if ( request.getCooldown() != null )
+              scalingPolicy.setCooldown( request.getCooldown() );
+            if ( request.getMinAdjustmentStep() != null )
+              scalingPolicy.setMinAdjustmentStep( request.getMinAdjustmentStep() );
+          }
+        }
+      } );
+      reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getPolicyARN() );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      // Not found, create
+      final Supplier<ScalingPolicy> allocator = new Supplier<ScalingPolicy>( ) {
+        @Override
+        public ScalingPolicy get( ) {
+          try {
+            final ScalingPolicies.PersistingBuilder builder = scalingPolicies.create(
+                accountFullName,
+                autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName() ),
+                request.getPolicyName(),
+                Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ),
+                request.getScalingAdjustment() )
+                .withCooldown( request.getCooldown() )
+                .withMinAdjustmentStep( request.getMinAdjustmentStep() );
+
+            //TODO:STEVE: input validation
+            // No Auto Scaling name, including policy names, can contain the colon (:) character because colons serve as delimiters in ARNs.
+            // You will get a ValidationError if you use MinAdjustmentStep on a policy with an AdjustmentType other than PercentChangeInCapacity. 
+            return builder.persist();
+          } catch ( AutoScalingMetadataNotFoundException e ) {
+            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Auto scaling group not found: " + request.getAutoScalingGroupName() ) );
+          } catch ( IllegalArgumentException e ) {
+            throw Exceptions.toUndeclared( new InvalidParameterValueException( "Invalid adjustment type: " + request.getAdjustmentType() ) );
+          } catch ( Exception ex ) {
+            throw new RuntimeException( ex );
+          }
+        }
+      };
+
+      try {
+        final ScalingPolicy scalingPolicy = RestrictedTypes.allocateUnitlessResource( allocator );
+        reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getPolicyARN() );
+      } catch ( Exception exception ) {
+        handleException( exception );
+      }
+
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
@@ -299,8 +435,22 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DeletePolicyResponseType deletePolicy(DeletePolicyType request) throws EucalyptusCloudException {
-    DeletePolicyResponseType reply = request.getReply( );
+  public DeletePolicyResponseType deletePolicy(final DeletePolicyType request) throws EucalyptusCloudException {
+    final DeletePolicyResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    try {
+      final ScalingPolicy scalingPolicy = scalingPolicies.lookup(
+          ctx.getUserFullName( ).asAccountFullName( ),
+          request.getAutoScalingGroupName(),
+          request.getPolicyName( ) );
+      if ( RestrictedTypes.filterPrivileged().apply( scalingPolicy ) ) {
+        scalingPolicies.delete( scalingPolicy );
+      } // else treat this as though the configuration does not exist
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      // so nothing to delete, move along      
+    } catch ( Exception e ) {
+      handleException( e );
+    }
     return reply;
   }
 
@@ -490,8 +640,14 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribeAdjustmentTypesResponseType describeAdjustmentTypes(DescribeAdjustmentTypesType request) throws EucalyptusCloudException {
-    DescribeAdjustmentTypesResponseType reply = request.getReply( );
+  public DescribeAdjustmentTypesResponseType describeAdjustmentTypes(final DescribeAdjustmentTypesType request) throws EucalyptusCloudException {
+    final DescribeAdjustmentTypesResponseType reply = request.getReply( );
+
+    reply.getDescribeAdjustmentTypesResult().setAdjustmentTypes(
+        Collections2.transform(
+            Collections2.filter( EnumSet.allOf( AdjustmentType.class ), RestrictedTypes.filterPrivilegedWithoutOwner() ),
+            Strings.toStringFunction() ) );
+
     return reply;
   }
 

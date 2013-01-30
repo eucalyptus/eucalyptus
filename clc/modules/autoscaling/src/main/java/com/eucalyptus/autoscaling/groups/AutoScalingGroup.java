@@ -49,7 +49,7 @@ import com.google.common.collect.Sets;
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_auto_scaling_groups" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class AutoScalingGroup  extends AbstractOwnedPersistent implements AutoScalingGroupMetadata {
+public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoScalingGroupMetadata {
   private static final long serialVersionUID = 1L;
 
   @Column( name = "metadata_max_size", nullable = false )

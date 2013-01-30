@@ -62,6 +62,15 @@ import com.eucalyptus.autoscaling.common.AutoScalingGroupNames
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType
 import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType
 import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsResponseType
+import com.eucalyptus.autoscaling.policies.ScalingPolicies
+import com.eucalyptus.autoscaling.policies.ScalingPolicy
+import com.eucalyptus.autoscaling.common.PutScalingPolicyType
+import com.eucalyptus.autoscaling.common.DescribePoliciesResponseType
+import com.eucalyptus.autoscaling.common.DescribePoliciesType
+import com.eucalyptus.autoscaling.common.PolicyNames
+import com.eucalyptus.autoscaling.common.ScalingPolicyType
+import com.eucalyptus.autoscaling.common.DeletePolicyType
+import com.eucalyptus.autoscaling.common.ExecutePolicyType
 
 /**
  * 
@@ -201,10 +210,96 @@ class AutoScalingServiceTest {
     assertEquals( "Configuration count", 0,
         service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
             .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
-  }  
-  
+  }
+
+  @Test
+  void testScalingPolicies() {
+    Accounts.setAccountProvider( accountProvider() )
+    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( ScalingPolicies.ScalingPolicyTransform.class )
+    discovery.processClass( AutoScalingGroups.AutoScalingGroupTransform.class )
+    AutoScalingService service = service()
+    Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
+
+    service.createLaunchConfiguration( new CreateLaunchConfigurationType(
+        launchConfigurationName: "TestLaunch",
+        imageId: "emi-00000001",
+        instanceType: "m1.small"
+    ) )
+
+    service.createAutoScalingGroup( new CreateAutoScalingGroupType(
+        autoScalingGroupName: "TestGroup",
+        desiredCapacity: 3,
+        minSize: 1,
+        maxSize: 10,
+        availabilityZones: new AvailabilityZones( member: [ "zone-1" ] ),
+        launchConfigurationName: "TestLaunch"
+    ) )
+
+    service.putScalingPolicy( new PutScalingPolicyType(
+        autoScalingGroupName: "TestGroup",
+        policyName: "Test",
+        adjustmentType: "ChangeInCapacity",
+        scalingAdjustment: 2        
+    ) )
+
+    DescribePoliciesResponseType emptyDescribeResponse =
+      service.describePolicies( new DescribePoliciesType( policyNames: new PolicyNames( member: [ "BADNAME" ] ) ) )
+
+    List<ScalingPolicyType> emptyPolicies =
+      emptyDescribeResponse.describePoliciesResult.scalingPolicies.member
+
+    assertEquals( "Configuration count", 0, emptyPolicies.size() )
+
+    DescribePoliciesResponseType describePoliciesResponseType =
+      service.describePolicies( new DescribePoliciesType() )
+
+    List<ScalingPolicyType> policies =
+      describePoliciesResponseType.describePoliciesResult.scalingPolicies.member
+
+    assertEquals( "Group count", 1, policies.size() )
+    ScalingPolicyType policy = policies.get( 0 )
+    assertEquals( "Policy name", "Test", policy.policyName )
+    assertEquals( "Auto scaling group name", "TestGroup", policy.autoScalingGroupName )
+    assertEquals( "Adjustment type", "ChangeInCapacity",  policy.adjustmentType )
+    assertEquals( "Scaling adjustment", 2,  policy.scalingAdjustment )
+    
+    service.executePolicy( new ExecutePolicyType( autoScalingGroupName: "TestGroup", policyName: "Test" ) )
+
+    DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType =
+      service.describeAutoScalingGroups( new DescribeAutoScalingGroupsType() )
+
+    List<AutoScalingGroupType> groups =
+      describeAutoScalingGroupsResponseType.describeAutoScalingGroupsResult.autoScalingGroups.member
+
+    assertEquals( "Group count", 1, groups.size() )
+    AutoScalingGroupType group = groups.get( 0 )
+    assertEquals( "Group desired capacity after scaling", 5, group.desiredCapacity )
+
+    service.deletePolicy( new DeletePolicyType( autoScalingGroupName: "TestGroup", policyName: "Test" ) )
+
+    assertEquals( "Policies count", 0,
+        service.describePolicies( new DescribePoliciesType() )
+            .describePoliciesResult.scalingPolicies.member.size() )
+
+    service.deleteAutoScalingGroup( new DeleteAutoScalingGroupType( autoScalingGroupName: "TestGroup" ) )
+
+    assertEquals( "Groups count", 0,
+        service.describeAutoScalingGroups( new DescribeAutoScalingGroupsType() )
+            .describeAutoScalingGroupsResult.autoScalingGroups.member.size() )
+
+    service.deleteLaunchConfiguration( new DeleteLaunchConfigurationType( launchConfigurationName: "TestLaunch" ) )
+
+    assertEquals( "Configuration count", 0,
+        service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
+            .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
+  }
+
   AutoScalingService service() {
-    new AutoScalingService( launchConfigurationStore(), autoScalingGroupStore() )
+    new AutoScalingService( 
+        launchConfigurationStore(),         
+        autoScalingGroupStore(), 
+        scalingPolicyStore() )
   }
   
   AccountProvider accountProvider() {
@@ -343,10 +438,14 @@ class AutoScalingServiceTest {
 
       @Override
       AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
-        groups.find { AutoScalingGroup group ->
+        AutoScalingGroup group = groups.find { AutoScalingGroup group ->
           group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
               group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber )
         }
+        if ( group == null ) {
+          throw new AutoScalingMetadataNotFoundException("Group not found: " + autoScalingGroupName)
+        }        
+        group
       }
 
       @Override
@@ -368,6 +467,53 @@ class AutoScalingServiceTest {
         autoScalingGroup.setId( "1" )
         groups.add( autoScalingGroup )
         autoScalingGroup
+      }
+    }
+  }
+  
+  ScalingPolicies scalingPolicyStore() {
+    List<ScalingPolicy> policies = []
+    
+    new ScalingPolicies() {
+      @Override
+      List<ScalingPolicy> list(final OwnerFullName ownerFullName) {
+        policies.findAll { policy -> policy.ownerAccountNumber.equals( ownerFullName.accountNumber ) }
+      }
+
+      @Override
+      List<ScalingPolicy> list(final OwnerFullName ownerFullName, final Predicate<? super ScalingPolicy> filter) {
+        policies.findAll { policy -> filter.apply( policy ) } as List
+      }
+
+      @Override
+      ScalingPolicy lookup(final OwnerFullName ownerFullName, final String autoScalingGroupName, final String policyName) {
+        ScalingPolicy policy = policies.find { ScalingPolicy policy ->
+          policy.getClass().getMethod("getDisplayName").invoke( policy ).equals( policyName ) && // work around some groovy metaclass issue
+          policy.getClass().getMethod("getOwnerAccountNumber").invoke( policy ).equals( ownerFullName.accountNumber )
+        }
+        if ( policy == null ) {
+          throw new AutoScalingMetadataNotFoundException("Policy not found: " + policyName)  
+        }
+        policy
+      }
+
+      @Override
+      ScalingPolicy update(final OwnerFullName ownerFullName, final String autoScalingGroupName, final String policyName, final Callback<ScalingPolicy> policyUpdateCallback) {
+        ScalingPolicy policy = lookup( ownerFullName, autoScalingGroupName, policyName )
+        policyUpdateCallback.fire( policy )
+        policy
+      }
+
+      @Override
+      boolean delete(final ScalingPolicy scalingPolicy) {
+        policies.remove( 0 ) != null
+      }
+
+      @Override
+      ScalingPolicy save(final ScalingPolicy scalingPolicy) {
+        scalingPolicy.setId( "1" )
+        policies.add( scalingPolicy )
+        scalingPolicy
       }
     }
   }

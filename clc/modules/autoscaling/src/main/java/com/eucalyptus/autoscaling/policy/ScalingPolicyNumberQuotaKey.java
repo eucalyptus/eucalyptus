@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,31 +17,23 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.common;
+package com.eucalyptus.autoscaling.policy;
 
-import com.eucalyptus.auth.policy.PolicyResourceType;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingPolicyMetadata;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.util.RestrictedType;
+import com.eucalyptus.auth.policy.key.PolicyKey;
 
 /**
  *
  */
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
-public interface AutoScalingMetadata extends RestrictedType {
+@PolicyKey( ScalingPolicyNumberQuotaKey.KEY )
+public class ScalingPolicyNumberQuotaKey extends AutoScalingNumberQuotaKeySupport<ScalingPolicyMetadata> {
 
-  @PolicyResourceType( "launchconfiguration" )
-  public interface LaunchConfigurationMetadata extends AutoScalingMetadata {}
+  public static final String KEY = "autoscaling:quota-scalingpolicynumber";
 
-  @PolicyResourceType( "autoscalingroup" )
-  public interface AutoScalingGroupMetadata extends AutoScalingMetadata {}
-
-  @PolicyResourceType( "terminationpolicytype" )
-  public interface TerminationPolicyTypeMetadata extends AutoScalingMetadata {}
-
-  @PolicyResourceType( "adjustmenttype" )
-  public interface AdjustmentTypeMetadata extends AutoScalingMetadata {}
-
-  @PolicyResourceType( "scalingpolicy" )
-  public interface ScalingPolicyMetadata extends AutoScalingMetadata {}
+  public ScalingPolicyNumberQuotaKey() {
+    super( KEY,
+        PolicySpec.AUTOSCALING_PUTSCALINGPOLICY,
+        ScalingPolicyMetadata.class );
+  }
 }

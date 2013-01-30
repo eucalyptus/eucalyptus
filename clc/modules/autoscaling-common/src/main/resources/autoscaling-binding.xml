@@ -613,7 +613,7 @@
     <value name="Progress" field="progress" usage="optional"/>
     <value name="Details" field="details" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.autoscaling.common.ScalingPolicy" abstract="true">
+  <mapping class="com.eucalyptus.autoscaling.common.ScalingPolicyType" abstract="true">
     <structure map-as="com.eucalyptus.autoscaling.common.AutoScalingMessage"/>
     <value name="AutoScalingGroupName" field="autoScalingGroupName" usage="optional"/>
     <value name="PolicyName" field="policyName" usage="optional"/>
@@ -742,7 +742,7 @@
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.ScalingPolicies" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.autoscaling.common.ScalingPolicy"/>
+      <structure name="member" type="com.eucalyptus.autoscaling.common.ScalingPolicyType"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.autoscaling.common.Activities" abstract="true">

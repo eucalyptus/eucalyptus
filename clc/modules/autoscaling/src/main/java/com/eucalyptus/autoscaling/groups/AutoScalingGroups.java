@@ -58,7 +58,7 @@ public abstract class AutoScalingGroups {
   
   public abstract boolean delete( AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException;
 
-  public abstract AutoScalingGroup save( AutoScalingGroup launchConfiguration ) throws AutoScalingMetadataException;
+  public abstract AutoScalingGroup save( AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException;
 
   public final PersistingBuilder create( final OwnerFullName ownerFullName,
                                          final String autoScalingGroupName,

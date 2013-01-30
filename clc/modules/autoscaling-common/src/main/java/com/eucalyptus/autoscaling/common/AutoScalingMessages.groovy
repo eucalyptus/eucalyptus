@@ -101,6 +101,8 @@ public class LoadBalancerNames extends EucalyptusData {
 }
 public class PolicyNames extends EucalyptusData {
   public PolicyNames() {  }
+  @HttpParameterMapping(parameter="member")
+  @HttpEmbedded(multiple=true)
   ArrayList<String> member = new ArrayList<String>()
 }
 public class DescribeTerminationPolicyTypesType extends AutoScalingMessage {
@@ -678,7 +680,7 @@ public class BlockDeviceMappingType extends EucalyptusData {
 }
 public class ScalingPolicies extends EucalyptusData {
   public ScalingPolicies() {  }
-  ArrayList<ScalingPolicy> member = new ArrayList<ScalingPolicy>()
+  ArrayList<ScalingPolicyType> member = new ArrayList<ScalingPolicyType>()
 }
 public class ResponseMetadata extends EucalyptusData {
   String requestId
@@ -695,7 +697,7 @@ public class DescribeLaunchConfigurationsResult extends EucalyptusData {
   public DescribeLaunchConfigurationsResult() {  }
 }
 public class DescribePoliciesResult extends EucalyptusData {
-  ScalingPolicies scalingPolicies
+  ScalingPolicies scalingPolicies = new ScalingPolicies()
   String nextToken
   public DescribePoliciesResult() {  }
 }
@@ -763,7 +765,7 @@ public class DescribeScalingActivitiesResponseType extends AutoScalingMessage {
   DescribeScalingActivitiesResult describeScalingActivitiesResult = new DescribeScalingActivitiesResult()
   ResponseMetadata responseMetadata = new ResponseMetadata()
 }
-public class ScalingPolicy extends AutoScalingMessage {
+public class ScalingPolicyType extends AutoScalingMessage {
   String autoScalingGroupName
   String policyName
   Integer scalingAdjustment
@@ -772,7 +774,7 @@ public class ScalingPolicy extends AutoScalingMessage {
   String policyARN
   Alarms alarms
   Integer minAdjustmentStep
-  public ScalingPolicy() {  }
+  public ScalingPolicyType() {  }
 }
 public class AutoScalingGroupNames extends EucalyptusData {
   public AutoScalingGroupNames() {  }
@@ -799,10 +801,18 @@ public class Activities extends AutoScalingMessage {
 }
 public class DescribePoliciesType extends AutoScalingMessage {
   String autoScalingGroupName
+  @HttpEmbedded
   PolicyNames policyNames
   String nextToken
   Integer maxRecords
   public DescribePoliciesType() {  }
+  public List<String> policyNames() {
+    List<String> names = Lists.newArrayList()
+    if ( policyNames != null ) {
+      names = policyNames.getMember()
+    }
+    return names
+  }
 }
 public class PutScalingPolicyResult extends EucalyptusData {
   String policyARN
@@ -867,6 +877,10 @@ public class ProcessNames extends EucalyptusData {
 public class DescribeAdjustmentTypesResult extends EucalyptusData {
   AdjustmentTypes adjustmentTypes
   public DescribeAdjustmentTypesResult() {  }
+  public void setAdjustmentTypes( Collection<String> values ) {
+    adjustmentTypes = new AdjustmentTypes( member: values.collect { 
+      value -> new AdjustmentType( adjustmentType: value ) } )  
+  }
 }
 public class DescribeScalingProcessTypesResult extends EucalyptusData {
   Processes processes
