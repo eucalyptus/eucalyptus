@@ -5,6 +5,9 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import java.util.ArrayList;
 import java.math.BigInteger;
+
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.ComponentId;
 
 
@@ -56,6 +59,8 @@ public class PutMetricAlarmResponseType extends CloudWatchMessage {
 }
 public class DimensionFilters extends EucalyptusData {
   public DimensionFilters() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<DimensionFilter> member = new ArrayList<DimensionFilter>();
 }
 public class PutMetricAlarmType extends CloudWatchMessage {
@@ -81,6 +86,7 @@ public class DescribeAlarmHistoryResult extends EucalyptusData {
   String nextToken;
   public DescribeAlarmHistoryResult() {  }
 }
+@HttpEmbedded
 public class DimensionFilter extends EucalyptusData {
   String name;
   String value;
@@ -197,6 +203,7 @@ public class Statistics extends CloudWatchMessage {
 public class ListMetricsType extends CloudWatchMessage {
   String namespace;
   String metricName;
+  @HttpEmbedded
   DimensionFilters dimensions;
   String nextToken;
   public ListMetricsType() {  }
