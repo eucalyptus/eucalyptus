@@ -55,7 +55,7 @@ class BotoScaleInterface(ScaleInterface):
 
     def __save_json__(self, obj, name):
         f = open(name, 'w')
-        json.dump(obj, f, cls=BotoJsonWatchEncoder, indent=2)
+        json.dump(obj, f, cls=BotoJsonScaleEncoder, indent=2)
         f.close()
 
     ##
