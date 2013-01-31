@@ -8,14 +8,19 @@ import java.util.ArrayList;
 
 import com.eucalyptus.autoscaling.AutoScaling;
 import com.eucalyptus.component.ComponentId;
-
+import com.eucalyptus.binding.HttpEmbedded
+import com.eucalyptus.binding.HttpParameterMapping
 
 
 public class CreateLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Listeners listeners;
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
+  @HttpEmbedded
   Subnets subnets;
+  @HttpEmbedded
   SecurityGroups securityGroups;
   String scheme;
   public CreateLoadBalancerType() {  }
@@ -40,14 +45,18 @@ public class DeregisterInstancesFromLoadBalancerResponseType extends LoadBalanci
 public class CreateAppCookieStickinessPolicyResult extends EucalyptusData {
   public CreateAppCookieStickinessPolicyResult() {  }
 }
-public class Listeners extends LoadBalancingMessage {
+public class Listeners extends EucalyptusData {
   public Listeners() {  }
+  
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<Listener> member = new ArrayList<Listener>();
 }
 public class DeleteLoadBalancerListenersResult extends EucalyptusData {
   public DeleteLoadBalancerListenersResult() {  }
 }
 public class DescribeLoadBalancerPolicyTypesType extends LoadBalancingMessage {
+  @HttpEmbedded
   PolicyTypeNames policyTypeNames;
   public DescribeLoadBalancerPolicyTypesType() {  }
 }
@@ -70,11 +79,13 @@ public class DeleteLoadBalancerResult extends EucalyptusData {
   public DeleteLoadBalancerResult() {  }
 }
 public class DeregisterInstancesFromLoadBalancerResult extends EucalyptusData {
+  @HttpEmbedded
   Instances instances;
   public DeregisterInstancesFromLoadBalancerResult() {  }
 }
 public class RegisterInstancesWithLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded 
   Instances instances;
   public RegisterInstancesWithLoadBalancerType() {  }
 }
@@ -88,31 +99,47 @@ public class LoadBalancerDescription extends EucalyptusData {
   String dnsName;
   String canonicalHostedZoneName;
   String canonicalHostedZoneNameID;
+  @HttpEmbedded
   ListenerDescriptions listenerDescriptions;
+  @HttpEmbedded
   Policies policies;
+  @HttpEmbedded
   BackendServerDescriptions backendServerDescriptions;
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
+  @HttpEmbedded
   Subnets subnets;
   String vpcId;
+  @HttpEmbedded
   Instances instances;
+  @HttpEmbedded
   HealthCheck healthCheck;
+  @HttpEmbedded
   SourceSecurityGroup sourceSecurityGroup;
+  @HttpEmbedded
   SecurityGroups securityGroups;
+  
   Date createdTime;
   String scheme;
   public LoadBalancerDescription() {  }
 }
 public class LBCookieStickinessPolicies extends EucalyptusData {
   public LBCookieStickinessPolicies() {  }
+  
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<LBCookieStickinessPolicy> member = new ArrayList<LBCookieStickinessPolicy>();
 }
 public class PolicyTypeDescriptions extends EucalyptusData {
   public PolicyTypeDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<PolicyTypeDescription> member = new ArrayList<PolicyTypeDescription>();
 }
 public class Ports extends EucalyptusData {
   public Ports() {  }
-  ArrayList<BigInteger> member = new ArrayList<BigInteger>();
+  @HttpParameterMapping(parameter="member")
+  ArrayList<String> member = new ArrayList<String>();
 }
 public class CreateAppCookieStickinessPolicyResponseType extends LoadBalancingMessage {
   public CreateAppCookieStickinessPolicyResponseType() {  }
@@ -125,15 +152,19 @@ public class EnableAvailabilityZonesForLoadBalancerResponseType extends LoadBala
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class Subnets extends LoadBalancingMessage {
-  public Subnets() {  }
+  public Subnets() {  }  
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class ApplySecurityGroupsToLoadBalancerResult extends EucalyptusData {
+  @HttpEmbedded
   SecurityGroups securityGroups;
   public ApplySecurityGroupsToLoadBalancerResult() {  }
 }
 public class InstanceStates extends EucalyptusData {
   public InstanceStates() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<InstanceState> member = new ArrayList<InstanceState>();
 }
 public class DescribeInstanceHealthResponseType extends LoadBalancingMessage {
@@ -145,7 +176,8 @@ public class Error extends EucalyptusData {
   String type;
   String code;
   String message;
-  public Error() {  }
+  public Error() {  }  
+  @HttpEmbedded
   ErrorDetail detail = new ErrorDetail();
 }
 public class DeleteLoadBalancerPolicyResult extends EucalyptusData {
@@ -161,11 +193,14 @@ public class CreateLBCookieStickinessPolicyResult extends EucalyptusData {
 }
 public class DescribeLoadBalancerPoliciesType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   PolicyNames policyNames;
   public DescribeLoadBalancerPoliciesType() {  }
 }
 public class PolicyAttributeDescriptions extends EucalyptusData {
   public PolicyAttributeDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<PolicyAttributeDescription> member = new ArrayList<PolicyAttributeDescription>();
 }
 public class DescribeLoadBalancerPoliciesResponseType extends LoadBalancingMessage {
@@ -183,6 +218,7 @@ public class Instance extends EucalyptusData {
 }
 public class DisableAvailabilityZonesForLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
   public DisableAvailabilityZonesForLoadBalancerType() {  }
 }
@@ -191,21 +227,23 @@ public class RegisterInstancesWithLoadBalancerResponseType extends LoadBalancing
   RegisterInstancesWithLoadBalancerResult registerInstancesWithLoadBalancerResult = new RegisterInstancesWithLoadBalancerResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class Listener extends LoadBalancingMessage {
+public class Listener extends EucalyptusData {
   String protocol;
-  BigInteger loadBalancerPort;
+  Integer loadBalancerPort;
   String instanceProtocol;
-  BigInteger instancePort;
+  Integer instancePort;
   String sslCertificateId;
   public Listener() {  }
 }
 public class SetLoadBalancerPoliciesForBackendServerType extends LoadBalancingMessage {
   String loadBalancerName;
   BigInteger instancePort;
+  @HttpEmbedded
   PolicyNames policyNames;
   public SetLoadBalancerPoliciesForBackendServerType() {  }
 }
 public class AttachLoadBalancerToSubnetsResult extends EucalyptusData {
+  @HttpEmbedded
   Subnets subnets;
   public AttachLoadBalancerToSubnetsResult() {  }
 }
@@ -223,12 +261,14 @@ public class HealthCheck extends LoadBalancingMessage {
   public HealthCheck() {  }
 }
 public class DescribeLoadBalancerPolicyTypesResult extends EucalyptusData {
+  @HttpEmbedded
   PolicyTypeDescriptions policyTypeDescriptions;
   public DescribeLoadBalancerPolicyTypesResult() {  }
 }
 public class PolicyTypeDescription extends EucalyptusData {
   String policyTypeName;
   String description;
+  @HttpEmbedded
   PolicyAttributeTypeDescriptions policyAttributeTypeDescriptions;
   public PolicyTypeDescription() {  }
 }
@@ -255,51 +295,68 @@ public class SetLoadBalancerListenerSSLCertificateType extends LoadBalancingMess
 }
 public class PolicyTypeNames extends EucalyptusData {
   public PolicyTypeNames() {  }
+  
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class ListenerDescription extends EucalyptusData {
+  @HttpEmbedded	
   Listener listener;
+  @HttpEmbedded
   PolicyNames policyNames;
   public ListenerDescription() {  }
 }
 public class LoadBalancerNames extends EucalyptusData {
   public LoadBalancerNames() {  }
+  
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class SetLoadBalancerPoliciesOfListenerType extends LoadBalancingMessage {
   String loadBalancerName;
   BigInteger loadBalancerPort;
+  @HttpEmbedded
   PolicyNames policyNames;
   public SetLoadBalancerPoliciesOfListenerType() {  }
 }
 public class DetachLoadBalancerFromSubnetsResult extends EucalyptusData {
+  @HttpEmbedded
   Subnets subnets;
   public DetachLoadBalancerFromSubnetsResult() {  }
 }
 public class ListenerDescriptions extends EucalyptusData {
   public ListenerDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<ListenerDescription> member = new ArrayList<ListenerDescription>();
 }
 public class DeleteLoadBalancerListenersType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Ports loadBalancerPorts;
   public DeleteLoadBalancerListenersType() {  }
 }
 public class PolicyNames extends EucalyptusData {
   public PolicyNames() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class EnableAvailabilityZonesForLoadBalancerResult extends EucalyptusData {
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
   public EnableAvailabilityZonesForLoadBalancerResult() {  }
 }
 public class DetachLoadBalancerFromSubnetsType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Subnets subnets;
   public DetachLoadBalancerFromSubnetsType() {  }
 }
 public class PolicyAttributeTypeDescriptions extends EucalyptusData {
   public PolicyAttributeTypeDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<PolicyAttributeTypeDescription> member = new ArrayList<PolicyAttributeTypeDescription>();
 }
 public class CreateLoadBalancerListenersResult extends EucalyptusData {
@@ -319,11 +376,13 @@ public class CreateLoadBalancerPolicyType extends LoadBalancingMessage {
   String loadBalancerName;
   String policyName;
   String policyTypeName;
+  @HttpEmbedded
   PolicyAttributes policyAttributes;
   public CreateLoadBalancerPolicyType() {  }
 }
 public class ConfigureHealthCheckType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   HealthCheck healthCheck;
   public ConfigureHealthCheckType() {  }
 }
@@ -334,15 +393,19 @@ public class CreateAppCookieStickinessPolicyType extends LoadBalancingMessage {
   public CreateAppCookieStickinessPolicyType() {  }
 }
 public class ConfigureHealthCheckResult extends EucalyptusData {
+  @HttpEmbedded
   HealthCheck healthCheck;
   public ConfigureHealthCheckResult() {  }
 }
 public class Instances extends EucalyptusData {
   public Instances() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<Instance> member = new ArrayList<Instance>();
 }
 public class AvailabilityZones extends EucalyptusData {
   public AvailabilityZones() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class SourceSecurityGroup extends EucalyptusData {
@@ -359,6 +422,7 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 public class DescribeLoadBalancersResult extends EucalyptusData {
+  @HttpEmbedded
   LoadBalancerDescriptions loadBalancerDescriptions;
   String nextMarker;
   public DescribeLoadBalancersResult() {  }
@@ -370,18 +434,23 @@ public class DeleteLoadBalancerListenersResponseType extends LoadBalancingMessag
 }
 public class LoadBalancerDescriptions extends EucalyptusData {
   public LoadBalancerDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<LoadBalancerDescription> member = new ArrayList<LoadBalancerDescription>();
 }
 public class BackendServerDescription extends EucalyptusData {
   BigInteger instancePort;
+  @HttpEmbedded
   PolicyNames policyNames;
   public BackendServerDescription() {  }
 }
 public class DescribeLoadBalancerPoliciesResult extends EucalyptusData {
+  @HttpEmbedded
   PolicyDescriptions policyDescriptions;
   public DescribeLoadBalancerPoliciesResult() {  }
 }
 public class RegisterInstancesWithLoadBalancerResult extends EucalyptusData {
+  @HttpEmbedded
   Instances instances;
   public RegisterInstancesWithLoadBalancerResult() {  }
 }
@@ -392,6 +461,7 @@ public class PolicyAttribute extends EucalyptusData {
 }
 public class CreateLoadBalancerListenersType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Listeners listeners;
   public CreateLoadBalancerListenersType() {  }
 }
@@ -401,6 +471,7 @@ public class ConfigureHealthCheckResponseType extends LoadBalancingMessage {
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class DisableAvailabilityZonesForLoadBalancerResult extends EucalyptusData {
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
   public DisableAvailabilityZonesForLoadBalancerResult() {  }
 }
@@ -410,8 +481,11 @@ public class SetLoadBalancerListenerSSLCertificateResponseType extends LoadBalan
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 public class Policies extends LoadBalancingMessage {
+  @HttpEmbedded
   AppCookieStickinessPolicies appCookieStickinessPolicies;
+  @HttpEmbedded
   LBCookieStickinessPolicies lbCookieStickinessPolicies;
+  @HttpEmbedded
   PolicyNames otherPolicies;
   public Policies() {  }
 }
@@ -421,6 +495,7 @@ public class CreateLoadBalancerResult extends EucalyptusData {
 }
 public class SecurityGroups extends EucalyptusData {
   public SecurityGroups() {  }
+  @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
 }
 public class CreateLBCookieStickinessPolicyResponseType extends LoadBalancingMessage {
@@ -438,6 +513,7 @@ public class SetLoadBalancerPoliciesForBackendServerResult extends EucalyptusDat
 }
 public class EnableAvailabilityZonesForLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   AvailabilityZones availabilityZones;
   public EnableAvailabilityZonesForLoadBalancerType() {  }
 }
@@ -448,6 +524,7 @@ public class DeleteLoadBalancerPolicyResponseType extends LoadBalancingMessage {
 }
 public class DescribeInstanceHealthType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Instances instances;
   public DescribeInstanceHealthType() {  }
 }
@@ -460,6 +537,7 @@ public class CreateLBCookieStickinessPolicyType extends LoadBalancingMessage {
 public class PolicyDescription extends EucalyptusData {
   String policyName;
   String policyTypeName;
+  @HttpEmbedded
   PolicyAttributeDescriptions policyAttributeDescriptions;
   public PolicyDescription() {  }
 }
@@ -471,17 +549,20 @@ public class InstanceState extends EucalyptusData {
   public InstanceState() {  }
 }
 public class DescribeLoadBalancersType extends LoadBalancingMessage {
+  @HttpEmbedded
   LoadBalancerNames loadBalancerNames;
   String marker;
   public DescribeLoadBalancersType() {  }
 }
 public class DeregisterInstancesFromLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Instances instances;
   public DeregisterInstancesFromLoadBalancerType() {  }
 }
 public class AttachLoadBalancerToSubnetsType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   Subnets subnets;
   public AttachLoadBalancerToSubnetsType() {  }
 }
@@ -500,19 +581,27 @@ public class ResponseMetadata extends EucalyptusData {
 }
 public class BackendServerDescriptions extends EucalyptusData {
   public BackendServerDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<BackendServerDescription> member = new ArrayList<BackendServerDescription>();
 }
 public class PolicyAttributes extends EucalyptusData {
   public PolicyAttributes() {  }
+  
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<PolicyAttribute> member = new ArrayList<PolicyAttribute>();
 }
 public class ErrorResponse extends LoadBalancingMessage { // EucalyptusData {
   String requestId;
   public ErrorResponse() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="error")
   ArrayList<Error> error = new ArrayList<Error>();
 }
 public class ApplySecurityGroupsToLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;
+  @HttpEmbedded
   SecurityGroups securityGroups;
   public ApplySecurityGroupsToLoadBalancerType() {  }
 }
@@ -520,6 +609,7 @@ public class SetLoadBalancerPoliciesOfListenerResult extends EucalyptusData {
   public SetLoadBalancerPoliciesOfListenerResult() {  }
 }
 public class DescribeInstanceHealthResult extends EucalyptusData {
+  @HttpEmbedded
   InstanceStates instanceStates;
   public DescribeInstanceHealthResult() {  }
 }
@@ -533,6 +623,8 @@ public class PolicyAttributeTypeDescription extends EucalyptusData {
 }
 public class PolicyDescriptions extends EucalyptusData {
   public PolicyDescriptions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<PolicyDescription> member = new ArrayList<PolicyDescription>();
 }
 public class PolicyAttributeDescription extends EucalyptusData {

@@ -18,33 +18,12 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
-
-import com.eucalyptus.ws.EucalyptusWebServiceException;
-import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
-/**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
- */
-public class LoadBalancingException extends EucalyptusWebServiceException {
-  
-	public static final String DUPLICATE_LOADBALANCER_EXCEPTION = "Duplicate loadbalancer name is found";
-	public static final String LOADBALANCER_CREATE_EXCEPTION = "Failed to create a new loadbalancer";
-	
-	public static final Role DEFAULT_ROLE = Role.Receiver;
-	public static final String DEFAULT_CODE = "400";  //  TODO: SPARK: Figure out the use of code
-	
-	public LoadBalancingException(final String message){
-		this(DEFAULT_CODE, DEFAULT_ROLE, message);
+@QueryBindingInfo( statusCode = 409 )
+public class InvalidConfigurationRequestException extends LoadBalancingException {
+	private static final long serialVersionUID = 1L;
+	public InvalidConfigurationRequestException(){
+		super("Requested configuration change is invalid");
 	}
-	public LoadBalancingException(final String message, Throwable inner){
-		this(DEFAULT_CODE, DEFAULT_ROLE, message);
-		this.initCause(inner);
-	}
- 	public LoadBalancingException( 
-                               final String code, 
-                               final Role role, 
-                               final String message ) {
- 		 super( code, role, message );
-  	}
 }

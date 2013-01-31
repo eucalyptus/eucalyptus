@@ -27,8 +27,8 @@ import com.eucalyptus.ws.protocol.OperationParameter;
  */
 public class LoadBalancingQueryBinding extends BaseQueryBinding<OperationParameter> {
 
-  static final String LOADBALANCING_NAMESPACE_PATTERN = "http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/";  //TODO:GEN2OOLS: replace version with pattern : %s  
-  static final String LOADBALANCING_DEFAULT_VERSION = "2012-06-01";              //TODO:GEN2OOLS: replace with correct default API version
+  static final String LOADBALANCING_NAMESPACE_PATTERN = "http://elasticloadbalancing.amazonaws.com/doc/2011-04-05/";  //TODO:GEN2OOLS: replace version with pattern : %s  
+  static final String LOADBALANCING_DEFAULT_VERSION = "2011-04-05"; //"2012-06-01";              //TODO:GEN2OOLS: replace with correct default API version
   static final String LOADBALANCING_DEFAULT_NAMESPACE = String.format( LOADBALANCING_NAMESPACE_PATTERN, LOADBALANCING_DEFAULT_VERSION );
 
   public LoadBalancingQueryBinding() {

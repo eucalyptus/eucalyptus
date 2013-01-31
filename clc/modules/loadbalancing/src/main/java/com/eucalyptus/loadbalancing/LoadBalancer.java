@@ -19,11 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.util.Collection;
+import java.util.NoSuchElementException;
+
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Embedded;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -37,6 +44,8 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 /**
  * @author Sang-Min Park
@@ -49,6 +58,10 @@ import com.eucalyptus.util.OwnerFullName;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements LoadBalancingMetadata {    
 	private static Logger    LOG     = Logger.getLogger( LoadBalancer.class );
+
+	@Transient
+	private static final long serialVersionUID = 1L;
+	
 	public enum STATE {
 		pending, available, failed
 	} // TODO: SPARK: what's the state for loadbalancer?
@@ -75,6 +88,19 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Column( name = "dns_address", nullable=true)
 	private String dnsAddress = null; // the address by which the loadbalancer is reached
 	
+
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerBackendInstance> backendInstances = null;
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerListener> listeners = null;
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerZone> zones = null;
+	
 	public void setScheme(String scheme){
 		this.scheme = scheme;
 	}
@@ -89,6 +115,50 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public String getDnsAddress(){
 		return this.dnsAddress;
+	}
+	
+	public LoadBalancerBackendInstance findBackendInstance(final String instanceId){
+		if(this.backendInstances!=null){
+			try{
+				return Iterables.find(this.backendInstances, new Predicate<LoadBalancerBackendInstance>(){
+					  @Override
+					  public boolean apply(final LoadBalancerBackendInstance input){
+						return input.getInstanceId().contentEquals(instanceId);
+					}
+				});
+			}catch(NoSuchElementException ex){
+				return null;
+			}
+		}
+		return null;
+	}
+	
+	public boolean hasBackendInstance(final String instanceId){
+		return this.findBackendInstance(instanceId) != null;
+	}
+	
+	public Collection<LoadBalancerBackendInstance> getBackendInstances(){
+		return this.backendInstances;
+	}
+	
+	public LoadBalancerListener findListener(final int lbPort){
+		if(this.listeners!=null){
+			try{
+				return Iterables.find(this.listeners, new Predicate<LoadBalancerListener>(){
+					@Override
+					public boolean apply(final LoadBalancerListener input){
+						return input.getLoadbalancerPort() == lbPort;
+					}
+				});
+			}catch(NoSuchElementException ex){
+				return null;
+			}
+		}
+		return null;
+	}
+	
+	public boolean hasListener(final int lbPort){
+		return this.findListener(lbPort)!=null;
 	}
 	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)

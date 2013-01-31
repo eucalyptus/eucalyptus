@@ -371,14 +371,12 @@
     <value name="AttributeName" field="attributeName" usage="optional"/>
     <value name="AttributeValue" field="attributeValue" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.Listeners" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.Listeners" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.loadbalancing.Listener"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.Listener" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.Listener" abstract="true">
     <value name="Protocol" field="protocol" usage="required"/>
     <value name="LoadBalancerPort" field="loadBalancerPort" usage="required"/>
     <value name="InstanceProtocol" field="instanceProtocol" usage="optional"/>
@@ -464,7 +462,7 @@
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.Ports" abstract="true">
     <collection field="member">
-      <value name="member" type="java.math.BigInteger"/>
+      <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.HealthCheck" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
