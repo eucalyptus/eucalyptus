@@ -2285,6 +2285,17 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             // update CC instance with instance state from NC
                             rc = ncInstance_to_ccInstance(myInstance, ncOutInsts[j]);
 
+                            // migration-related logic
+                            if (ncOutInsts[j]->migration_state != NOT_MIGRATING) {
+                                if (!strcmp (resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
+
+                                    // TODO: for now just ignore updates from destination while migrating
+
+                                    EUCA_FREE(myInstance);
+                                    break;
+                                }
+                            }
+
                             // instance info that the CC maintains
                             myInstance->ncHostIdx = i;
                             euca_strncpy(myInstance->serviceTag, resourceCacheStage->resources[i].ncURL, 384);

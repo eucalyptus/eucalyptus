@@ -129,6 +129,7 @@ struct nc_state_t {
     int save_instance_files;
     char uri[CHAR_BUFFER_SIZE];
     char iqn[CHAR_BUFFER_SIZE];
+    char ip[HOSTNAME_SIZE];
     virConnectPtr conn;
     boolean convert_to_disk;
     boolean do_inject_key;
@@ -302,6 +303,7 @@ int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
 int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p, char destroy);
 void copy_instances(void);
+int is_migration_dest(const ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

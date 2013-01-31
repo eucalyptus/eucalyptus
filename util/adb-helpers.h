@@ -836,6 +836,9 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
     adb_instanceType_set_launchTime(instance, env, dt);
     adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);
     adb_instanceType_set_netbytes(instance, env, outInst->netbytes);
+    adb_instanceType_set_migrationStateName(instance, env, migration_state_names[outInst->migration_state]);
+    adb_instanceType_set_migrationSource(instance, env, outInst->migration_src);
+    adb_instanceType_set_migrationDestination(instance, env, outInst->migration_dst);
 
     // passed into RunInstances for safekeeping by NC
     adb_instanceType_set_userData(instance, env, outInst->userData);
@@ -922,6 +925,9 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
+    outInst->migration_state = migration_state_from_string(adb_instanceType_get_migrationStateName(instance, env));
+    euca_strncpy(outInst->migration_src, adb_instanceType_get_migrationSource(instance, env), HOSTNAME_SIZE);
+    euca_strncpy(outInst->migration_dst, adb_instanceType_get_migrationDestination(instance, env), HOSTNAME_SIZE);
 
     if ((dt = adb_instanceType_get_launchTime(instance, env)) != NULL) {
         outInst->launchTime = datetime_to_unix(dt, env);

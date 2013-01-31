@@ -99,6 +99,10 @@
 #ifndef MAX_PATH
 #define MAX_PATH               4096    //!< Max path string length
 #endif /*  ! MAX_PATH */
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <eucalyptus.h>
 #include <eucalyptus-config.h>
@@ -798,6 +802,14 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
             LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
         }
+
+        // migration-related logic
+        if (is_migration_dest(instance)
+            && (new_state == RUNNING || new_state == BLOCKED)) {
+            instance->migration_state = NOT_MIGRATING; // done!
+            LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+        }
+
         // change to state, whatever it happens to be
         change_state(instance, new_state);
         break;
@@ -2138,6 +2150,34 @@ static int init(void)
         }
     }
 
+    { // find and set IP
+        char hostname [HOSTNAME_SIZE];
+        if (gethostname (hostname, sizeof(hostname)) != 0) {
+            LOGFATAL("failed to find hostname\n");
+            return (EUCA_FATAL_ERROR);
+        }
+
+        struct hostent *he;
+        if ((he = gethostbyname(hostname)) == NULL) {
+            LOGFATAL("failed to obtain host information for %s\n", hostname);
+            return (EUCA_FATAL_ERROR);
+        }
+
+        int found = 0;
+        struct in_addr **addr_list = (struct in_addr **)he->h_addr_list;
+        for (int i = 0; !found && addr_list[i] != NULL; i++) {
+            if (! found) {
+                strncpy (nc_state.ip, inet_ntoa(*addr_list[i]), sizeof(nc_state.ip));
+                found = 1;
+            }
+        }
+        if (!found) {
+            LOGFATAL("failed to obtain IP for %s\n", hostname);
+            return (EUCA_FATAL_ERROR);
+        }
+        LOGINFO("using IP %s\n", nc_state.ip);
+    }
+
     {                                  // start the monitoring thread
         pthread_t tcb;
         if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
@@ -2870,4 +2910,19 @@ int doMigrateInstance(ncMetadata * pMeta, char * instanceId, char * sourceNodeNa
 ncInstance *find_global_instance(const char *instanceId)
 {
     return NULL;
+}
+
+//!
+//! Predicate determining whether the instance is a migration destination
+//!
+//! @param[in] instance pointer to the instance struct
+//! 
+//! @return true or false
+//!
+int is_migration_dest(const ncInstance * instance)
+{
+    if (instance->migration_state != NOT_MIGRATING &&
+        !strcmp (instance->migration_dst, nc_state.ip))
+        return TRUE;
+    return FALSE;
 }

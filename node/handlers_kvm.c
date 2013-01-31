@@ -643,12 +643,13 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
             logprintfl(EUCAERROR, "[%s] could not allocate instance struct\n", instance->instanceId);
             goto failed_dest;
         }
-        change_state(new_instance, PAUSED);
-        
-        //sem_p(inst_sem);
-        //error = add_instance(&global_instances, new_instance);
-        //copy_instances();
-        //sem_v(inst_sem);
+        change_state(new_instance, BOOTING); // not STAGING, since in that mode we don't poll hypervisor for info
+        new_instance->migration_state = MIGRATION_READY;
+
+        sem_p(inst_sem);
+        error = add_instance(&global_instances, new_instance);
+        copy_instances();
+        sem_v(inst_sem);
         if (error) {
             logprintfl(EUCAERROR, "[%s] could not save instance struct\n", new_instance->instanceId);
             goto failed_dest;
