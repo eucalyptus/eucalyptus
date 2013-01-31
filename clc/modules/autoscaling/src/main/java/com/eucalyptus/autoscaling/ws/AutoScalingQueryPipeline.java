@@ -24,7 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
-import com.eucalyptus.autoscaling.AutoScaling;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>

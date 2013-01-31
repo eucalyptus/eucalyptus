@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,23 +17,31 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.policy;
+package com.eucalyptus.autoscaling.common;
 
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
+import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
-@PolicyKey( LaunchConfigurationNumberQuotaKey.KEY )
-public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKeySupport<LaunchConfigurationMetadata> {
-  
-  public static final String KEY = "autoscaling:quota-launchconfigurationnumber";
+@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+public interface AutoScalingMetadata extends RestrictedType {
 
-  public LaunchConfigurationNumberQuotaKey() {
-    super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
-        LaunchConfigurationMetadata.class );
-  }   
+  @PolicyResourceType( "launchconfiguration" )
+  public interface LaunchConfigurationMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "autoscalingroup" )
+  public interface AutoScalingGroupMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "terminationpolicytype" )
+  public interface TerminationPolicyTypeMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "adjustmenttype" )
+  public interface AdjustmentTypeMetadata extends AutoScalingMetadata {}
+
+  @PolicyResourceType( "scalingpolicy" )
+  public interface ScalingPolicyMetadata extends AutoScalingMetadata {}
 }

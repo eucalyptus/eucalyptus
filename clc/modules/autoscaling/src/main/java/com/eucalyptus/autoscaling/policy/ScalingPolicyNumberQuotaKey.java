@@ -19,21 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.policy;
 
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.ScalingPolicyMetadata;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.key.PolicyKey;
 
 /**
  *
  */
-@PolicyKey( LaunchConfigurationNumberQuotaKey.KEY )
-public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKeySupport<LaunchConfigurationMetadata> {
-  
-  public static final String KEY = "autoscaling:quota-launchconfigurationnumber";
+@PolicyKey( ScalingPolicyNumberQuotaKey.KEY )
+public class ScalingPolicyNumberQuotaKey extends AutoScalingNumberQuotaKeySupport<ScalingPolicyMetadata> {
 
-  public LaunchConfigurationNumberQuotaKey() {
+  public static final String KEY = "autoscaling:quota-scalingpolicynumber";
+
+  public ScalingPolicyNumberQuotaKey() {
     super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
-        LaunchConfigurationMetadata.class );
-  }   
+        PolicySpec.AUTOSCALING_PUTSCALINGPOLICY,
+        ScalingPolicyMetadata.class );
+  }
 }

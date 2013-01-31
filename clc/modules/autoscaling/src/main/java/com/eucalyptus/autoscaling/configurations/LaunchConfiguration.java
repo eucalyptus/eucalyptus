@@ -19,12 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.configurations;
 
-import static com.eucalyptus.autoscaling.AutoScalingMetadata.LaunchConfigurationMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.Collection;
 import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
@@ -59,9 +60,10 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @Column( name = "metadata_key_name" )
   private String keyName;
 
-  @Column( name = "metadata_security_group" )
   @ElementCollection
   @CollectionTable( name = "metadata_launch_configuration_security_groups" )
+  @Column( name = "metadata_security_group" )
+  @JoinColumn( name = "metadata_launch_configuration_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String> securityGroups = Sets.newHashSet();
 
@@ -73,8 +75,9 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
   @Column( name = "metadata_instance_type", nullable = false )
   private String instanceType;
   
-  @ElementCollection
+  @ElementCollection  
   @CollectionTable( name = "metadata_launch_configuration_block_device_mappings" )
+  @JoinColumn( name = "metadata_launch_configuration_id" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<BlockDeviceMapping> blockDeviceMappings = Sets.newHashSet();
 

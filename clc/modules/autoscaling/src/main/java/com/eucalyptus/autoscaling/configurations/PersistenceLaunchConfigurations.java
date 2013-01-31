@@ -21,8 +21,8 @@ package com.eucalyptus.autoscaling.configurations;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import com.eucalyptus.cloud.util.MetadataException;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.autoscaling.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
@@ -33,53 +33,53 @@ import com.google.common.base.Predicate;
 public class PersistenceLaunchConfigurations extends LaunchConfigurations {
 
   @Override
-  public List<LaunchConfiguration> list( final OwnerFullName ownerFullName ) throws MetadataException {
+  public List<LaunchConfiguration> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
     try {
       return Transactions.findAll( LaunchConfiguration.withOwner( ownerFullName ) );
     } catch ( Exception e ) {
-      throw new MetadataException( "Failed to find launch configurations for " + ownerFullName, e );
+      throw new AutoScalingMetadataException( "Failed to find launch configurations for " + ownerFullName, e );
     }
   }
 
   @Override
   public List<LaunchConfiguration> list( final OwnerFullName ownerFullName,
-                                         final Predicate<? super LaunchConfiguration> filter ) throws MetadataException {
+                                         final Predicate<? super LaunchConfiguration> filter ) throws AutoScalingMetadataException {
     try {
       return Transactions.filter( LaunchConfiguration.withOwner( ownerFullName ), filter );
     } catch ( Exception e ) {
-      throw new MetadataException( "Failed to find launch configurations for " + ownerFullName, e );
+      throw new AutoScalingMetadataException( "Failed to find launch configurations for " + ownerFullName, e );
     }
   }
 
   @Override
   public LaunchConfiguration lookup( final OwnerFullName ownerFullName,
-                                     final String launchConfigurationName ) throws MetadataException {
+                                     final String launchConfigurationName ) throws AutoScalingMetadataException {
     try {
       return Transactions.find( LaunchConfiguration.named( ownerFullName, launchConfigurationName ) );
     } catch ( NoSuchElementException e ) {
-      throw new NoSuchMetadataException( "Launch configuration not found '"+launchConfigurationName+"' for " + ownerFullName, e );
+      throw new AutoScalingMetadataNotFoundException( "Launch configuration not found '"+launchConfigurationName+"' for " + ownerFullName, e );
     } catch ( Exception e ) {
-      throw new MetadataException( "Error finding launch configuration '"+launchConfigurationName+"' for " + ownerFullName, e );
+      throw new AutoScalingMetadataException( "Error finding launch configuration '"+launchConfigurationName+"' for " + ownerFullName, e );
     }
   }
 
   @Override
-  public boolean delete( final LaunchConfiguration launchConfiguration ) throws MetadataException {
+  public boolean delete( final LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException {
     try {
       return Transactions.delete( LaunchConfiguration.withId( launchConfiguration ) );
     } catch ( NoSuchElementException e ) {
       return false;
     } catch ( Exception e ) {
-      throw new MetadataException( "Error deleting launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
+      throw new AutoScalingMetadataException( "Error deleting launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
     }
   }
 
   @Override
-  public LaunchConfiguration save( final LaunchConfiguration launchConfiguration ) throws MetadataException {
+  public LaunchConfiguration save( final LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException {
     try {
       return Transactions.saveDirect( launchConfiguration );
     } catch ( Exception e ) {
-      throw new MetadataException( "Error creating launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
+      throw new AutoScalingMetadataException( "Error creating launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
     }
   }
 

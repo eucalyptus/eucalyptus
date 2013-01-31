@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -72,6 +73,8 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
@@ -244,7 +247,7 @@ public class Images {
       i.setRootDeviceType( arg0.getRootDeviceType() );
       i.setImageId( arg0.getDisplayName() );
       i.setImageLocation( arg0.getOwnerAccountNumber( ) + "/" + arg0.getImageName( ) );
-      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString() );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -278,7 +281,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName() );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
-      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
+      i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString() );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).toString( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
@@ -680,7 +683,7 @@ public class Images {
           .withStringProperty( "kernel-id", asImageInfoFunction( BootableImageInfoFilterStringFunctions.KERNEL_ID ) )
           .withStringProperty( "manifest-location", FilterStringFunctions.MANIFEST_LOCATION )
           .withStringProperty( "name", FilterStringFunctions.NAME )
-          .withStringProperty( "owner-alias", FilterStringFunctions.OWNER_ALIAS )
+          .withLikeExplodedProperty( "owner-alias", FilterStringFunctions.OWNER_ID, accountAliasExploder() )
           .withStringProperty( "owner-id", FilterStringFunctions.OWNER_ID )
           .withStringProperty( "platform", FilterStringFunctions.PLATFORM )
           .withStringSetProperty( "product-code", FilterStringSetFunctions.PRODUCT_CODE )
@@ -706,7 +709,7 @@ public class Images {
           .withPersistenceFilter( "kernel-id", "kernelId" )
           .withPersistenceFilter( "manifest-location", "manifestLocation" )
           .withPersistenceFilter( "name", "imageName" )
-          .withPersistenceFilter( "owner-alias", "ownerAccountName" ) //TODO:STEVE: won't work, isn't populated 
+          .withLikeExplodingPersistenceFilter( "owner-alias", "ownerAccountNumber", accountAliasExploder() )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "platform", "platform", Enums.valueOfFunction( ImageMetadata.Platform.class ) )
           .withPersistenceFilter( "ramdisk-id", "ramdiskId" )
@@ -715,6 +718,20 @@ public class Images {
     }
   }
 
+  private static Function<String,Collection> accountAliasExploder() {
+    return new Function<String,Collection>() {
+      @Override
+      public Collection<String> apply( final String accountAliasExpression ) {
+        try {
+          return Accounts.resolveAccountNumbersForName( accountAliasExpression );
+        } catch ( AuthException e ) {
+          LOG.error( e, e );
+          return Collections.emptySet();
+        }
+      }
+    };  
+  }
+  
   private static <T> Function<ImageInfo,T> asImageInfoFunction( final Function<BootableImageInfo,T> bootableImageInfoFunction ) {
     return Images.typedFunction( bootableImageInfoFunction, BootableImageInfo.class, null );        
   }
@@ -854,7 +871,7 @@ public class Images {
       @Override
       public String apply( final ImageInfo imageInfo ) {
         return imageInfo instanceof PutGetImageInfo ? 
-          ((PutGetImageInfo) imageInfo).getManifestLocation() : // TODO:STEVE: is this right?
+          ((PutGetImageInfo) imageInfo).getManifestLocation() :
           null; 
       }
     },  
@@ -862,12 +879,6 @@ public class Images {
       @Override
       public String apply( final ImageInfo imageInfo ) {
         return imageInfo.getImageName();
-      }
-    },
-    OWNER_ALIAS {
-      @Override
-      public String apply( final ImageInfo imageInfo ) {
-        return imageInfo.getOwnerAccountName(); //TODO:STEVE: // won't work, not populated
       }
     },
     OWNER_ID {

@@ -64,6 +64,7 @@ package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Set;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -143,6 +144,10 @@ public class Accounts {
   
   public static Account addSystemAccount( ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( Account.SYSTEM_ACCOUNT );
+  }
+  
+  public static Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
+    return Accounts.getAccountProvider().resolveAccountNumbersForName( accountNameLike );    
   }
   
   public static List<User> listAllUsers( ) throws AuthException {

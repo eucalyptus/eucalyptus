@@ -1000,7 +1000,7 @@ public class VmInstances {
           .withPersistenceFilter( "instance-type", "vmType.name", Sets.newHashSet("bootRecord.vmType")  )
           .withPersistenceFilter( "kernel-id", "image.kernelId", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "launch-index", "launchRecord.launchIndex", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
-          //.withPersistenceFilter( "launch-time", "launchRecord.launchTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "launch-time", "launchRecord.launchTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
           .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet("bootRecord.machineImage") )
           .withPersistenceFilter( "reservation-id", "vmId.reservationId", Collections.<String>emptySet() )
@@ -1044,9 +1044,9 @@ public class VmInstances {
           .withPersistenceFilter( "progress", "runtimeState.bundleTask.progress", Collections.<String>emptySet(), ProgressToInteger.INSTANCE )
           .withPersistenceFilter( "s3-bucket", "runtimeState.bundleTask.bucket", Collections.<String>emptySet() )
           .withPersistenceFilter( "s3-prefix", "runtimeState.bundleTask.prefix", Collections.<String>emptySet() )
-          //.withPersistenceFilter( "start-time", "runtimeState.bundleTask.startTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "start-time", "runtimeState.bundleTask.startTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
           .withPersistenceFilter( "state", "runtimeState.bundleTask.state", Collections.<String>emptySet(), Enums.valueOfFunction( VmBundleTask.BundleState.class ) )
-          //.withPersistenceFilter( "update-time", "runtimeState.bundleTask.updateTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "update-time", "runtimeState.bundleTask.updateTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
       );
     }
   }

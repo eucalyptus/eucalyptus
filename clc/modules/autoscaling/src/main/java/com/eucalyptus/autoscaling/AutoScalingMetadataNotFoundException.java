@@ -19,22 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling;
 
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Eucalyptus;
-
 /**
- * @author Chris Grzegorczyk <grze@eucalyptus.com>
+ * Metadata could not be found by name or other identifier.
  */
-@ComponentId.Partition( Eucalyptus.class )
-@ComponentId.PublicService
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
-@ComponentId.FaultLogPrefix( "cloud" )
-public class AutoScaling extends ComponentId {
+public class AutoScalingMetadataNotFoundException extends AutoScalingMetadataException {
   private static final long serialVersionUID = 1L;
 
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling";
+  public AutoScalingMetadataNotFoundException( final String message ) {
+    super( message );
+  }
+
+  public AutoScalingMetadataNotFoundException( final String message, final Throwable cause ) {
+    super( message, cause );
   }
 }

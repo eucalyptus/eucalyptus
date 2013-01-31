@@ -62,7 +62,7 @@
 
 package com.eucalyptus.crypto.util;
 
-import java.text.ParseException;
+import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -76,6 +76,9 @@ import com.google.common.collect.Lists;
 public class Timestamps {
   private static final Logger LOG = Logger.getLogger( Timestamps.class );
 
+  private static boolean allowTrailers = Boolean.parseBoolean( 
+      System.getProperty( "com.eucalyptus.crypto.util.allowTimestampTrailers", "false" ) );
+  
   public enum Type {
     RFC_2616(rfc2616),
     ISO_8601(iso8601);
@@ -115,10 +118,12 @@ public class Timestamps {
 
   public static Date parseTimestamp( final String timestamp, final Iterable<String> patterns ) throws AuthenticationException {
     if ( timestamp != null ) for ( String pattern : patterns ) {
-      try {
-        return sdf( pattern ).parse( timestamp );
-      } catch ( ParseException e ) {
-        LOG.trace( e, e );
+      final ParsePosition position = new ParsePosition(0);
+      final Date parsed = sdf( pattern ).parse( timestamp, position );
+      if ( parsed == null || (position.getIndex() != timestamp.length() && !allowTrailers)) {
+        if ( LOG.isTraceEnabled() ) LOG.trace( "Parse of timestamp '"+timestamp+"' failed for pattern '"+pattern+"', at: " + position.getErrorIndex() );
+      } else {
+        return parsed;
       }
     }
     throw new AuthenticationException( "Invalid timestamp format: " + timestamp  );
@@ -160,7 +165,7 @@ public class Timestamps {
   /**
    * ISO 8601 date formats
    */
-  private static final List<String> iso8601;  
+  static final List<String> iso8601;
   
   static {
     final String[] patterns = {

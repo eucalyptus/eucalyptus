@@ -17,23 +17,24 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.policy;
+package com.eucalyptus.autoscaling.common;
 
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.policy.key.PolicyKey;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.id.Eucalyptus;
 
 /**
- *
+ * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@PolicyKey( LaunchConfigurationNumberQuotaKey.KEY )
-public class LaunchConfigurationNumberQuotaKey  extends AutoScalingNumberQuotaKeySupport<LaunchConfigurationMetadata> {
-  
-  public static final String KEY = "autoscaling:quota-launchconfigurationnumber";
+@ComponentId.Partition( Eucalyptus.class )
+@ComponentId.PublicService
+@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@ComponentId.FaultLogPrefix( "cloud" )
+public class AutoScaling extends ComponentId {
+  private static final long serialVersionUID = 1L;
 
-  public LaunchConfigurationNumberQuotaKey() {
-    super( KEY,
-        PolicySpec.AUTOSCALING_CREATELAUNCHCONFIGURATION,
-        LaunchConfigurationMetadata.class );
-  }   
+  @Override
+  public String getInternalNamespaceSuffix() {
+    return "/autoscaling";
+  }
 }

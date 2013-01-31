@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +17,13 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling;
-
-import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.util.RestrictedType;
+package com.eucalyptus.autoscaling.groups;
 
 /**
  *
  */
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
-public interface AutoScalingMetadata extends RestrictedType {
-
-  @PolicyResourceType( "launchconfiguration" )
-  public interface LaunchConfigurationMetadata extends AutoScalingMetadata {}
+public enum HealthCheckType {
+  
+  EC2, ELB
+  
 }
