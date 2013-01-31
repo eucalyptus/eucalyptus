@@ -169,6 +169,7 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:attribute name="type">
                             <xsl:value-of select="@sourceType"/>
                         </xsl:attribute>
+                        <driver cache="none"/>
                         <source>
                             <xsl:choose>
                                 <xsl:when test="@sourceType = 'file'">
