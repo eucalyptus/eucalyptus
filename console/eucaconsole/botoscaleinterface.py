@@ -39,7 +39,7 @@ class BotoScaleInterface(ScaleInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        boto.set_stream_logger('foo')
+        #boto.set_stream_logger('foo')
         path='/services/AutoScaling'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
@@ -50,7 +50,7 @@ class BotoScaleInterface(ScaleInterface):
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path, validate_certs=False,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
@@ -62,10 +62,10 @@ class BotoScaleInterface(ScaleInterface):
     # autoscaling methods
     ##
     def create_auto_scaling_group(self, as_group):
-        return None
+        return self.conn.create_auto_scaling_group(as_group)
 
     def delete_auto_scaling_group(self, name, force_delete=False):
-        return None
+        return self.conn.delete_auto_scaling_group(name, force_delete)
 
     def get_all_groups(self, names=None, max_records=None, next_token=None):
         obj = self.conn.get_all_groups(names, max_records, next_token)
@@ -80,22 +80,24 @@ class BotoScaleInterface(ScaleInterface):
         return obj
 
     def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
-        return None
+        return self.conn.set_desired_capacity(group_name, desired_capacity, honor_cooldown)
 
     def set_instance_health(self, instance_id, health_status, should_respect_grace_period=True):
-        return None
+        return self.conn.set_instance_health(instance_id, health_status,
+                                             should_respect_grace_period)
 
     def terminate_instance(self, instance_id, decrement_capacity=True):
-        return None
+        return self.conn.terminate_instance(instance_id, decrement_capacity)
 
     def update_autoscaling_group(self, as_group):
-        return None
+        as_group.connection = self.conn
+        return as_group.update()
 
     def create_launch_configuration(self, launch_config):
-        return None
+        return self.conn.create_launch_configuration(launch_config)
 
     def delete_launch_configuration(self, launch_config_name):
-        return None
+        return self.conn.delete_launch_configuration(launch_config_name)
 
     def get_all_launch_configurations(self, config_names, max_records, next_token):
         obj = self.conn.get_all_launch_configurations(names=config_names, max_records=max_records, next_token=next_token)

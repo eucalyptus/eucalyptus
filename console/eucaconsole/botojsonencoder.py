@@ -46,6 +46,7 @@ from boto.ec2.cloudwatch.alarm import MetricAlarm
 from boto.ec2.autoscale import AutoScaleConnection
 from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.launchconfig import InstanceMonitoring
+from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
 # these things came in with boto 2.6
 try:
@@ -218,6 +219,11 @@ class BotoJsonScaleEncoder(JSONEncoder):
         elif isinstance(obj, LaunchConfiguration):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'LaunchConfiguration'
+            return (values)
+        elif isinstance(obj, Request):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'Request'
             return (values)
         elif isinstance(obj, InstanceMonitoring):
             values = copy.copy(obj.__dict__)

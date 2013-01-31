@@ -38,6 +38,8 @@ import time
 from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
+from boto.ec2.autoscale.launchconfig import LaunchConfiguration
+from boto.ec2.autoscale.group import AutoScalingGroup
 from boto.exception import EC2ResponseError
 from boto.exception import S3ResponseError
 from boto.exception import BotoServerError
@@ -157,12 +159,12 @@ class ScaleHandler(BaseAPIHandler):
                 launch_config = self.get_argument('LaunchConfigurationName')
                 azones = self.get_argument_list('AvailabilityZones.member')
                 balancers = self.get_argument_list('LoadBalancerNames.member')
-                def_cooldown = self.get_argument('DefaultCooldown')
-                hc_type = self.get_argument('HealthCheckType')
-                hc_period = self.get_argument('HealthCheckGracePeriod')
-                desired_capacity = self.get_argument('DesiredCapacity')
-                min_size = self.get_argument('MinSize')
-                max_size = self.get_argument('MaxSize')
+                def_cooldown = self.get_argument('DefaultCooldown', None)
+                hc_type = self.get_argument('HealthCheckType', None)
+                hc_period = self.get_argument('HealthCheckGracePeriod', None)
+                desired_capacity = self.get_argument('DesiredCapacity', None)
+                min_size = self.get_argument('MinSize', 0)
+                max_size = self.get_argument('MaxSize', 0)
                 tags = self.get_argument_list('Tags.member')
                 termination_policy = self.get_argument_list('TerminationPolicies.member')
                 as_group = AutoScalingGroup(name=name, launch_config=launch_config,
@@ -173,7 +175,9 @@ class ScaleHandler(BaseAPIHandler):
                                 termination_policy=termination_policy)
                 self.user_session.scaling.create_auto_scaling_group(as_group, self.callback)
             elif action == 'DeleteAutoScalingGroup':
-                pass
+                name = self.get_argument('AutoScalingGroupName')
+                force = self.get_argument('ForceDelete', '') == 'true'
+                self.user_session.scaling.delete_auto_scaling_group(name, force, self.callback)
             elif action == 'DescribeAutoScalingGroups':
                 names = self.get_argument_list('AutoScalingGroupNames.member')
                 max_records = self.get_argument("MaxRecords", None)
@@ -185,17 +189,62 @@ class ScaleHandler(BaseAPIHandler):
                 next_token = self.get_argument("NextToken", None)
                 self.user_session.scaling.get_all_autoscaling_instances(instance_ids, max_records, next_token, self.callback)
             elif action == 'SetDesiredCapacity':
-                pass
+                name = self.get_argument('AutoScalingGroupName')
+                desired_capacity = self.get_argument('DesiredCapacity')
+                honor_cooldown = self.get_argument('HonorCooldown', '') == 'true'
+                self.user_session.scaling.set_desired_capacity(name, desired_capacity, honor_cooldown, self.callback)
             elif action == 'SetInstanceHealth':
-                pass
+                instance_id = self.get_argument('InstanceId')
+                health_status = self.get_argument('HealthStatus')
+                respect_grace_period = self.get_argument('ShouldRespectGracePeriod', '') == 'true'
+                self.user_session.scaling.set_instance_health(instance_id, health_status, respect_grace_period, self.callback)
             elif action == 'TerminateAutoScalingGroup':
-                pass
+                instance_id = self.get_argument('InstanceId')
+                decrement_capacity = self.get_argument('ShouldDecrementDesiredCapacity', '') == 'true'
+                self.user_session.scaling.terminate_instance(instance_id, decrement_capacity, self.callback)
             elif action == 'UpdateAutoScalingGroup':
-                pass
+                name = self.get_argument('AutoScalingGroupName')
+                azones = self.get_argument_list('AvailabilityZones.member', None)
+                def_cooldown = self.get_argument('DefaultCooldown', None)
+                desired_capacity = self.get_argument('DesiredCapacity', None)
+                hc_period = self.get_argument('HealthCheckGracePeriod', None)
+                hc_type = self.get_argument('HealthCheckType', None)
+                launch_config = self.get_argument('LaunchConfigurationName', None)
+                min_size = self.get_argument('MinSize', None)
+                max_size = self.get_argument('MaxSize', None)
+                termination_policy = self.get_argument_list('TerminationPolicies.member')
+                group = AutoScalingGroup(name=name, launch_config=launch_config,
+                                availability_zones=azones, default_cooldown=def_cooldown,
+                                health_check_type=hc_type, health_check_period=hc_period,
+                                desired_capacity=desired_capacity,
+                                min_size=min_size, max_size=max_size,
+                                termination_policies=termination_policies)
+                self.user_session.scaling.update_autoscaling_group(group, self.callback)
             elif action == 'CreateLaunchConfiguration':
-                pass
+                image_id = self.get_argument('ImageId')
+                name = self.get_argument('LaunchConfigurationName')
+                instance_type = self.get_argument('InstanceType', 'm1.small')
+                key_name = self.get_argument('KeyName', None)
+                user_data = self.get_argument('UserData', None)
+                kernel_id = self.get_argument('KernelId', None)
+                ramdisk_id = self.get_argument('RamdiskId', None)
+                groups = self.get_argument_list('SecurityGroups.member')
+                bdm = self.get_argument_list('BlockDeviceMappings.member')
+                monitoring = self.get_argument('Instancemonitoring.Enabled', '') == 'true'
+                spot_price = self.get_argument('SpotPrice', None)
+                iam_instance_profile = self.get_argument('IamInstanceProfile', None)
+                config = LaunchConfiguration(image_id=image_id, name=name,
+                                instance_type=instance_type, key_name=key_name,
+                                user_data=user_data, kernel_id=kernel_id,
+                                ramdisk_id=ramdisk_id, instance_monitoring=monitoring,
+                                spot_price=spot_price,
+                                instance_profile_name=iam_instance_profile,
+                                block_device_mappings=bdm,
+                                security_groups=groups)
+                self.user_session.scaling.create_launch_configuration(config, self.callback)
             elif action == 'DeleteLaunchConfiguration':
-                pass
+                config_name = self.get_argument('LaunchConfigurationName')
+                self.user_session.scaling.delete_launch_configuration(config_name, self.callback)
             elif action == 'DescribeLaunchConfigurations':
                 config_names = self.get_argument_list('LaunchConfigurationNames.member')
                 max_records = self.get_argument("MaxRecords", None)

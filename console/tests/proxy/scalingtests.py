@@ -32,10 +32,22 @@ from uiproxyclient import UIProxyClient
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'SECRET')
-    print "=== Getting Scaling Groups ==="
-    print client.get_all_groups()
-    print "=== Getting Scaling Group Instances ==="
-    print client.get_all_autoscaling_instances()
+    client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'SECRET KEY')
     print "=== Getting Launch Configurations ==="
     print client.get_all_launch_configurations()
+    print "=== Create Launch Config ==="
+    print client.create_launch_configuration('testlaunchconfig', 'ami-1624987f', instance_type='t1.micro', instance_monitoring='true')
+    print client.get_all_launch_configurations()
+    print "=== Getting Scaling Groups ==="
+    print client.get_all_groups()
+    print "=== Create Scaling Group ==="
+    print client.create_auto_scaling_group('testscalegroup', 'testlaunchconfig', min_size=0, max_size=4, default_cooldown=555, zones=['us-east-1a'])
+    print client.get_all_groups()
+    print "=== Set Desired Capacity ==="
+    print client.set_desired_capacity("testscalegroup", 2)
+    print "=== Delete Scaling Group ==="
+    print client.delete_auto_scaling_group("testscalegroup", force_delete=True)
+    print "=== Getting Scaling Group Instances ==="
+    print client.get_all_autoscaling_instances()
+    print "=== Delete Launch Config ==="
+    print client.delete_launch_configuration('testlaunchconfig')

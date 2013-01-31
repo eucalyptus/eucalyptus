@@ -86,7 +86,6 @@ class UIProxyClient(object):
                 j += 1
             i += 1
 
-
     def __build_dimension_param__(self, dimension, params):
         prefix = 'Dimensions.member'
         i = 0
@@ -541,6 +540,42 @@ class UIProxyClient(object):
     ##
     # Auto Scaling methods
     ##
+    def create_auto_scaling_group(self, name, launch_config, zones=None, load_balancers=None,
+                                  default_cooldown=None, hc_type=None, hc_period=None,
+                                  desired_capacity=None, min_size=0, max_size=0,
+                                  tags=None, termination_policies=None):
+        params = {'AutoScalingGroupName':name,
+                  'LaunchConfigurationName':launch_config,
+                  'MinSize':min_size,
+                  'MaxSize':max_size}
+        if zones != None:
+            self.__build_list_params__(params, zones, 'AvailabilityZones.member.%d')
+        if load_balancers != None:
+            self.__build_list_params__(params, load_balancers, 'LoadBalancerNames.member.%d')
+        if default_cooldown != None:
+            params['DefaultCooldown'] = default_cooldown
+        if hc_type != None:
+            params['HealthCheckType'] = hc_type
+        if hc_period != None:
+            params['HealthCheckGracePeriod'] = hc_period
+        if desired_capacity != None:
+            params['DesiredCapacity'] = desired_capacity
+        if hc_period != None:
+            params['HealthCheckGracePeriod'] = hc_period
+        if tags != None:
+            self.__build_list_params__(params, tags, 'Tags.member.%d')
+        if termination_policies != None:
+            self.__build_list_params__(params, termination_policies, 'TerminationPolicies.member.%d')
+
+        return self.__make_scale_request__('CreateAutoScalingGroup', params) 
+
+    def delete_auto_scaling_group(self, name, force_delete=False):
+        params = {'AutoScalingGroupName':name}
+        if force_delete:
+            params['ForceDelete'] = 'true'
+
+        return self.__make_scale_request__('DeleteAutoScalingGroup', params) 
+
     def get_all_groups(self, names=None, max_records=None, next_token=None):
         params = {}
         if names:
@@ -563,6 +598,64 @@ class UIProxyClient(object):
             params['NextToken'] = next_token
 
         return self.__make_scale_request__('DescribeAutoScalingInstances', params) 
+
+    def set_desired_capacity(self, group_name, desired_capacity, honor_cooldown=False):
+        params = {'AutoScalingGroupName':group_name,
+                  'DesiredCapacity':desired_capacity}
+        if honor_cooldown:
+            params['HonorCooldown'] = 'true'
+
+        return self.__make_scale_request__('SetDesiredCapacity', params) 
+
+    def set_instance_health(self, instance_id, health_status, should_respect_grace_period=False):
+        params = {'InstanceId':instance_id,
+                  'HealthStatus':health_status}
+        if should_respect_grace_period:
+            params['ShouldRespectGracePeriod'] = 'true'
+
+        return self.__make_scale_request__('SetInstanceHealth', params) 
+
+    def terminate_instance(self, instance_id, decrement_capacity=False):
+        params = {'InstanceId':instance_id}
+        if decrement_capacity:
+            params['ShouldDecrementDesiredCapacity'] = 'true'
+
+        return self.__make_scale_request__('TerminateInstanceInAutoScalingGroup', params) 
+
+    def create_launch_configuration(self, name, image_id, key_name=None, security_groups=None,
+                                    user_data=None, instance_type=None, kernel_id=None,
+                                    ramdisk_id=None, block_device_mappings=None,
+                                    instance_monitoring=None, spot_price=None,
+                                    instance_profile_name=None):
+        params = {'LaunchConfigurationName':name,
+                  'ImageId':image_id}
+        if key_name != None:
+            params['KeyName'] = key_name
+        if security_groups != None:
+            self.__build_list_params__(params, security_groups, 'SecurityGroups.member.%d')
+        if user_data != None:
+            params['UserData'] = user_data
+        if instance_type != None:
+            params['InstanceType'] = instance_type
+        if kernel_id != None:
+            params['KernelId'] = kernel_id
+        if ramdisk_id != None:
+            params['RamdiskId'] = ramdisk_id
+        if block_device_mappings != None:
+            self.__build_list_params__(params, block_device_mapings, 'BlockDeviceMappings.member.%d')
+        if instance_monitoring != None:
+            params['InstanceMonitoring'] = instance_monitoring
+        if spot_price != None:
+            params['SpotPrice'] = spot_price
+        if instance_profile_name != None:
+            params['IamInstanceProfile'] = instance_profile_name
+
+        return self.__make_scale_request__('CreateLaunchConfiguration', params) 
+
+    def delete_launch_configuration(self, launch_config_name):
+        params = {'LaunchConfigurationName':launch_config_name}
+
+        return self.__make_scale_request__('DeleteLaunchConfiguration', params) 
 
     def get_all_launch_configurations(self, configuration_names=None,
                            max_records=None, next_token=None):
