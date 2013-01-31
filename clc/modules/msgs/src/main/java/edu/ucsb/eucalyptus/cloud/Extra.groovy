@@ -150,12 +150,12 @@ public class VirtualBootRecord extends EucalyptusData implements Cloneable {
   def VirtualBootRecord() {
   }
   
-  def VirtualBootRecord(final id, final resourceLocation, final type, final guestDeviceName, final size, final format) {
+  def VirtualBootRecord(final id, final resourceLocation, final type, final guestDeviceName, final sizeBytes, final format) {
     this.id = id;
     this.resourceLocation = resourceLocation;
     this.type = type;
     this.guestDeviceName = guestDeviceName;
-    this.size = size;
+    this.size = sizeBytes;
     this.format = format;
   }
   
