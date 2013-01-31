@@ -248,7 +248,7 @@ typedef struct virtualBootRecord_t {
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach}Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
-    long long size;                    //!< Size of the boot record in bytes
+    long long sizeBytes;                    //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
     char id[SMALL_CHAR_BUFFER_SIZE];   //!< emi|eki|eri|vol|none
     char typeName[SMALL_CHAR_BUFFER_SIZE];  //!< machine|kernel|ramdisk|ephemeral|ebs

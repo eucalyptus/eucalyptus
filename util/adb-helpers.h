@@ -329,8 +329,8 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
                 LOGTRACE("resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
                 euca_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
-                params->virtualBootRecord[i].size = (long long)adb_virtualBootRecordType_get_size(vbr_type, env);
-                LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].size);
+                params->virtualBootRecord[i].sizeBytes = (long long)adb_virtualBootRecordType_get_size(vbr_type, env);
+                LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].sizeBytes);
                 euca_strncpy(params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("           format: %s\n", params->virtualBootRecord[i].formatName);
                 euca_strncpy(params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
@@ -370,7 +370,7 @@ static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t *
                     if ((vbr_type = adb_virtualBootRecordType_create(env)) != NULL) {
                         adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
                         adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
-                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t)vbr->size / 1024L); //! @TODO remove this when VBR_SIZE_SCALING is removed
+                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t)vbr->sizeBytes);
                         adb_virtualBootRecordType_set_format(vbr_type, env, vbr->formatName);
                         adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
                         adb_virtualBootRecordType_set_type(vbr_type, env, vbr->typeName);

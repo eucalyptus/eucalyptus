@@ -318,7 +318,7 @@ int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
             strncpy(out_r->guestDeviceName, in_r->guestDeviceName, sizeof(out_r->guestDeviceName));
             strncpy(out_r->id, in_r->id, sizeof(out_r->id));
             strncpy(out_r->typeName, in_r->typeName, sizeof(out_r->typeName));
-            out_r->size = in_r->size;
+            out_r->sizeBytes = in_r->sizeBytes;
             strncpy(out_r->formatName, in_r->formatName, sizeof(out_r->formatName));
         }
 

@@ -261,7 +261,7 @@ int add_vbr(const char *spec_str, virtualMachine * vm_type)
         fprintf(stderr, "ERROR: invalid 'size' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    vbr->size = atoi(size_spec);
+    vbr->sizeBytes = atoi(size_spec);
     if (format_spec == NULL) {
         fprintf(stderr, "ERROR: invalid 'format' specification in VBR '%s'\n", spec_str);
         goto out_error;
