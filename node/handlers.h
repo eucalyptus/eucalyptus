@@ -303,7 +303,8 @@ int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
 int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p, char destroy);
 void copy_instances(void);
-int is_migration_dest(const ncInstance * instance);
+int is_migration_dst(const ncInstance * instance);
+int is_migration_src(const ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

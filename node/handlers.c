@@ -762,6 +762,12 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             LOGINFO("[%s] detected disappearance of createImage domain\n", instance->instanceId);
             change_state(instance, CREATEIMAGE_SHUTOFF);
         } else if (old_state == RUNNING || old_state == BLOCKED || old_state == PAUSED || old_state == SHUTDOWN) {
+            // if we just finished migration, then this is normal
+            if (is_migration_src(instance)) {
+                LOGINFO("[%s] migration completed, cleaning up\n", instance->instanceId);
+                change_state(instance, SHUTOFF);
+            }
+
             // most likely the user has shut it down from the inside
             invalidate_hypervisor_conn();   // to rule out libvirt badness, we'll restart the connection
             if (instance->retries) {
@@ -804,7 +810,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
         }
 
         // migration-related logic
-        if (is_migration_dest(instance)
+        if (is_migration_dst(instance)
             && (new_state == RUNNING || new_state == BLOCKED)) {
             instance->migration_state = NOT_MIGRATING; // done!
             LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
@@ -2919,10 +2925,25 @@ ncInstance *find_global_instance(const char *instanceId)
 //! 
 //! @return true or false
 //!
-int is_migration_dest(const ncInstance * instance)
+int is_migration_dst(const ncInstance * instance)
 {
     if (instance->migration_state != NOT_MIGRATING &&
         !strcmp (instance->migration_dst, nc_state.ip))
+        return TRUE;
+    return FALSE;
+}
+
+//!
+//! Predicate determining whether the instance is a migration source
+//!
+//! @param[in] instance pointer to the instance struct
+//! 
+//! @return true or false
+//!
+int is_migration_src(const ncInstance * instance)
+{
+    if (instance->migration_state != NOT_MIGRATING &&
+        !strcmp (instance->migration_src, nc_state.ip))
         return TRUE;
     return FALSE;
 }
