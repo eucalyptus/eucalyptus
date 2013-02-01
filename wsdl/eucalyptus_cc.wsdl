@@ -863,6 +863,28 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+
+      <xs:complexType name="migrateInstancesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="sourceHost" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="destinationHost" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="allowHosts" type="xs:boolean"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="migrateInstancesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
       
       <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
       <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
@@ -887,6 +909,9 @@
 
       <xs:element name="ModifyNode" nillable="true" type="tns:modifyNodeType"/>
       <xs:element name="ModifyNodeResponse" nillable="true" type="tns:modifyNodeResponseType"/>
+
+      <xs:element name="MigrateInstances" nillable="true" type="tns:migrateInstancesType"/>
+      <xs:element name="MigrateInstancesResponse" nillable="true" type="tns:migrateInstancesResponseType"/>
       
       <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
       <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>

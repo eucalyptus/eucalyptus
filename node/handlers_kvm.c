@@ -556,6 +556,65 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     return (ret);
 }
 
+//!
+//! Defines the thread that does the actual migration of an instance off the source.
+//!
+//! @param[in] arg a transparent pointer to the argument passed to this thread handler
+//!
+//! @return Always return NULL
+//!
+static void *migrating_thread(void *arg)
+{
+    ncInstance *instance = ((ncInstance *) arg);
+    virDomainPtr dom = NULL;
+    virConnectPtr *conn = NULL;
+    
+    if ((conn = check_hypervisor_conn()) == NULL) {
+        LOGERROR("[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
+        goto out;
+    }
+    
+    sem_p(hyp_sem);
+    {
+        dom = virDomainLookupByName(*conn, instance->instanceId);
+    }
+    sem_v(hyp_sem);
+    
+    if (dom == NULL) {
+        LOGERROR("[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
+        goto out;
+    }
+    
+    char duri [1024];
+    snprintf (duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
+    virConnectPtr dconn = NULL;
+    dconn = virConnectOpen(duri);
+    if (dconn==NULL) {
+        LOGERROR("[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
+        goto out;
+    }
+    
+    instance->migration_state = MIGRATION_IN_PROGRESS;
+    virDomain * ddom = virDomainMigrate(dom, 
+                                        dconn, 
+                                        VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
+                                        NULL, // new name on destination (optional)
+                                        NULL, // destination URI as seen from source (optional)
+                                        0L); // bandwidth limitation (0 => unlimited)
+    virConnectClose(dconn);
+    
+    if (ddom == NULL) {
+        LOGERROR("[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
+        goto out;
+    }
+    virDomainFree(ddom);
+    
+ out:
+    if (dom)
+        virDomainFree(dom);
+    return NULL;
+}
+
 //!                                                                                                                                                                              
 //! TODO: doxygen
 //!
@@ -574,60 +633,24 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         sem_v(inst_sem);
         if (instance == NULL) {
             LOGERROR("[%s] cannot find instance\n", instance_req->instanceId);
-            goto failed_src;
+            return (EUCA_ERROR);
         }
         instance->migration_state = MIGRATION_PREPARING;
         euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
         euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-        LOGINFO("[%s] migration source initating %s->%s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+        LOGINFO("[%s] migration source initiating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
 
-        virDomainPtr dom = NULL;
-        virConnectPtr *conn = NULL;
-        
-        if ((conn = check_hypervisor_conn()) == NULL) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to connect to hypervisor), giving up\n", instance->instanceId, instance->instanceId);
-            goto failed_src;
+        // since shutdown/restart may take a while, we do them in a thread
+        pthread_t tcb = { 0 };
+        if (pthread_create(&tcb, NULL, migrating_thread, (void *)instance)) {
+            LOGERROR("[%s] failed to spawn a reboot thread\n", instance->instanceId);
+            return (EUCA_ERROR);
         }
         
-        sem_p(hyp_sem);
-        {
-            dom = virDomainLookupByName(*conn, instance->instanceId);
+        if (pthread_detach(tcb)) {
+            LOGERROR("[%s] failed to detach the rebooting thread\n", instance->instanceId);
+            return (EUCA_ERROR);
         }
-        sem_v(hyp_sem);
-        
-        if (dom == NULL) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to find domain), giving up\n", instance->instanceId, instance->instanceId);
-            goto failed_src;
-        }
-        
-        char duri [1024];
-        snprintf (duri, sizeof(duri), "qemu+ssh://%s/system", destNodeName);
-        virConnectPtr dconn = NULL;
-        dconn = virConnectOpen(duri);
-        if (dconn==NULL) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s (failed to connect to remote), giving up\n", instance->instanceId, instance->instanceId);
-            goto failed_src;
-        }
-        
-        instance->migration_state = MIGRATION_IN_PROGRESS;
-        virDomain * ddom = virDomainMigrate(dom, 
-                                            dconn, 
-                                            VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
-                                            NULL, // new name on destination (optional)
-                                            NULL, // destination URI as seen from source (optional)
-                                            0L); // bandwidth limitation (0 => unlimited)
-        virConnectClose(dconn);
-
-        if (ddom == NULL) {
-            LOGERROR("[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
-            goto failed_src;
-        }
-        virDomainFree(ddom);
-        virDomainFree(dom);
-
-        goto out;
-    failed_src:
-        ret = EUCA_ERROR;
 
     } else if (!strcmp(pMeta->nodeName, destNodeName)) {
 
@@ -640,7 +663,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         instance->migration_state = MIGRATION_PREPARING;
         euca_strncpy(instance->migration_src, sourceNodeName, HOSTNAME_SIZE);
         euca_strncpy(instance->migration_dst, destNodeName, HOSTNAME_SIZE);
-        LOGINFO("[%s] migration destination initating %s->%s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
+        LOGINFO("[%s] migration destination initating %s > %s\n", instance->instanceId, instance->migration_src, instance->migration_dst);
         
         int error;
         
