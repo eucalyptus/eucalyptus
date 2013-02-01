@@ -618,15 +618,13 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
             goto failed_dest;
         }
         
-        /*
         // set up networking
         char *brname = NULL;
         if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
             logprintfl(EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
             EUCA_FREE(brname);
-            goto failed;
+            goto failed_dest;
         }
-        */
 
         // TODO: move stuff in startup_thread() into a function?
 
@@ -643,6 +641,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
             logprintfl(EUCAERROR, "[%s] could not allocate instance struct\n", instance->instanceId);
             goto failed_dest;
         }
+        new_instance->bootTime = time(NULL); // otherwise nc_state.booting_cleanup_threshold will kick in
         change_state(new_instance, BOOTING); // not STAGING, since in that mode we don't poll hypervisor for info
         new_instance->migration_state = MIGRATION_READY;
 
