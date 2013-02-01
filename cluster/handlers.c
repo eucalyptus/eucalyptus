@@ -2290,7 +2290,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 if (!strcmp (resourceCacheStage->resources[i].hostname, ncOutInsts[j]->migration_dst)) {
 
                                     // TODO: for now just ignore updates from destination while migrating
-
+                                    LOGDEBUG("[%s] ignoring updates from destination node %s\n", myInstance->instanceId, resourceCacheStage->resources[i].hostname);
                                     EUCA_FREE(myInstance);
                                     break;
                                 }

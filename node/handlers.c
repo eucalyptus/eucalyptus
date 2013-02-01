@@ -766,6 +766,7 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             if (is_migration_src(instance)) {
                 LOGINFO("[%s] migration completed, cleaning up\n", instance->instanceId);
                 change_state(instance, SHUTOFF);
+                return;
             }
 
             // most likely the user has shut it down from the inside
