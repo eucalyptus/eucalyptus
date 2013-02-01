@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <binding name="monitoring_amazonaws_com_doc_2010_08_01" xmlns:tns="http://monitoring.amazonaws.com/doc/2010-08-01/" force-classes="true" add-constructors="true">
-  <namespace uri="http://monitoring.amazonaws.com/doc/2010-08-01/" prefix="tns" default="elements"/>
+  <namespace uri="http://monitoring.amazonaws.com/doc/2010-08-01/" default="elements"/>
   <mapping class="com.eucalyptus.cloudwatch.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
