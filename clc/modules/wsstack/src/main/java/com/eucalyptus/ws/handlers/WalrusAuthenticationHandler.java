@@ -320,39 +320,51 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		return sigString.split(":");
 	}
 
+	private String combineMultilineHeader(String header) {
+		StringBuilder result = new StringBuilder();
+		String[] parts = header.trim().split("\n");
+
+		for(String part: parts) {
+			result.append(part.trim());
+			result.append(" ");
+		}
+		// Delete the final space
+		if (values.length() > 0)
+			result.deleteCharAt(values.length() -1);
+
+		return result.toString();
+	}
+
 	private String getCanonicalizedAmzHeaders(MappingHttpRequest httpRequest) {
-		String result = "";
 		Set<String> headerNames = httpRequest.getHeaderNames();
 
 		TreeMap amzHeaders = new TreeMap<String, String>();
 		for(String headerName : headerNames) {
-			String headerNameString = headerName.toLowerCase().trim();
-			if(headerNameString.startsWith("x-amz-")) {
-				String value =  httpRequest.getHeader(headerName).trim();
-				String[] parts = value.split("\n");
-				value = "";
-				for(String part: parts) {
-					part = part.trim();
-					value += part + " ";
-				}
-				value = value.trim();
-				if(amzHeaders.containsKey(headerNameString)) {
-					String oldValue = (String) amzHeaders.remove(headerNameString);
-					oldValue += "," + value;
-					amzHeaders.put(headerNameString, oldValue);
-				} else {
-					amzHeaders.put(headerNameString, value);
-				}
+			String headerNameLcase = headerName.toLowerCase().trim();
+			if (!headerNameLcase.startsWith("x-amz-"))
+				continue;
+
+			StringBuilder values = new StringBuilder();
+			for (String headerValue: httpRequest.getHeaders(headerName)) {
+				values.append(combineMultilineHeader(headerValue));
+				values.append(",");
 			}
+			// Remove the last comma
+			if (values.length() > 0)
+				values.deleteCharAt(values.length() -1);
+
+			amzHeaders.put(headerNameLcase, values.toString());
 		}
 
+		StringBuilder result = new StringBuilder();
 		Iterator<String> iterator = amzHeaders.keySet().iterator();
 		while(iterator.hasNext()) {
 			String key = iterator.next();
 			String value = (String) amzHeaders.get(key);
-			result += key + ":" + value + "\n";
+			result.append(key).append(":");
+			result.append(value).append("\n");
 		}
-		return result;
+		return result.toString();
 	}
 
 	private void checkUploadPolicy(MappingHttpRequest httpRequest) throws AuthenticationException {
