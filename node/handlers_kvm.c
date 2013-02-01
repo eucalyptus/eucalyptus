@@ -101,6 +101,7 @@
 
 #include "handlers.h"
 #include "xml.h"
+#include "hooks.h"
 #include "vbr.h" // vbr_parse
 
 /*----------------------------------------------------------------------------*\
@@ -687,6 +688,85 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         if ((error = create_instance_backing(instance))) {
             logprintfl(EUCAERROR, "[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
             goto failed_dest;
+        }
+
+        // attach any volumes
+        for (int v = 0; v < EUCA_MAX_VOLUMES; v++) {
+            ncVolume *volume = &instance->volumes[v];
+            if (strcmp(volume->stateName, VOL_STATE_ATTACHED) && strcmp(volume->stateName, VOL_STATE_ATTACHING))
+                continue;                  // skip the entry unless attached or attaching
+            LOGDEBUG("[%s] volumes [%d] = '%s'\n", instance->instanceId, v, volume->stateName);
+            
+            // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
+
+            int is_iscsi_target = 0;
+            int have_remote_device = 0;
+            char *xml = NULL;
+
+            char localDevReal[32], localDevTag[256], remoteDevReal[32];
+            char * tagBuf = localDevTag;
+            char * localDevName = localDevTag; // UNUSED
+            ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
+            if (ret) 
+                goto unroll;
+
+            // do iscsi connect shellout if remoteDev is an iSCSI target
+            
+            if (check_iscsi(volume->remoteDev)) {
+                char *remoteDevStr = NULL;
+                is_iscsi_target = 1;
+                
+                // get credentials, decrypt them, login into target
+                remoteDevStr = connect_iscsi_target(volume->remoteDev);
+                if (!remoteDevStr || !strstr(remoteDevStr, "/dev")) {
+                    LOGERROR("[%s][%s] failed to connect to iscsi target\n", instance->instanceId, volume->volumeId);
+                    remoteDevReal[0] = '\0';
+                } else {
+                    LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
+                    snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+                    have_remote_device = 1;
+                }
+                EUCA_FREE(remoteDevStr);
+            } else {
+                snprintf(remoteDevReal, 32, "%s", volume->remoteDev);
+                have_remote_device = 1;
+            }
+
+            // something went wrong above, abort
+            if (!have_remote_device) {
+                goto unroll;
+            }
+            // make sure there is a block device
+            if (check_block(remoteDevReal)) {
+                LOGERROR("[%s][%s] cannot verify that host device '%s' is available for hypervisor attach\n", instance->instanceId, volume->volumeId, remoteDevReal);
+                goto unroll;
+            }
+            // generate XML for libvirt attachment request
+            if (gen_volume_xml(volume->volumeId, instance, localDevReal, remoteDevReal) // creates vol-XXX.xml
+                || gen_libvirt_volume_xml(volume->volumeId, instance)) {    // creates vol-XXX-libvirt.xml via XSLT transform
+                LOGERROR("[%s][%s] could not produce attach device xml\n", instance->instanceId, volume->volumeId);
+                goto unroll;
+            }
+
+            // invoke hooks
+            char path[MAX_PATH];
+            char lpath[MAX_PATH];
+            snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
+            snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
+            if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
+                LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volume->volumeId);
+                goto unroll;
+            }
+            // read in libvirt XML, which may have been modified by the hook above
+            if ((xml = file2str(lpath)) == NULL) {
+                LOGERROR("[%s][%s] failed to read volume XML from %s\n", instance->instanceId, volume->volumeId, lpath);
+                goto unroll;
+            }
+
+            continue;
+        unroll:
+            // TODO: unroll all volume attachments
+            break;
         }
         
         instance->bootTime = time(NULL); // otherwise nc_state.booting_cleanup_threshold will kick in

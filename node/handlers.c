@@ -805,15 +805,19 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     case RUNNING:
     case BLOCKED:
     case PAUSED:
-        if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
-            LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
+        // migration-related logic
+        if (is_migration_dst(instance)) {
+            if (new_state == RUNNING || new_state == BLOCKED) {
+                instance->migration_state = NOT_MIGRATING; // done!
+                LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+            } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
+                // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
+                break;
+            }
         }
 
-        // migration-related logic
-        if (is_migration_dst(instance)
-            && (new_state == RUNNING || new_state == BLOCKED)) {
-            instance->migration_state = NOT_MIGRATING; // done!
-            LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+        if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
+            LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
         }
 
         // change to state, whatever it happens to be
