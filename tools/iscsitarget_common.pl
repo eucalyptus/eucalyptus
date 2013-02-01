@@ -287,3 +287,34 @@ sub lookup_session {
   }
   return @sessions;
 }
+
+sub unwrap_device {
+    my ($store) = @_;
+
+    my $wrapped_name = "euca-" . $store;
+    $wrapped_name =~ s/[\.:]/-/g;
+    
+    my $cmd = "dmsetup remove $wrapped_name";
+    if (system($cmd) != 0) {
+	print STDERR "'$cmd' failed with $?\n";
+    }
+}
+
+sub wrap_device {
+    my ($localdev, $store) = @_;
+
+    my $wrapped_name = "euca-" . $store;
+    $wrapped_name =~ s/[\.:]/-/g;
+    my $size_sectors = `blockdev --getsz $localdev`;
+    chomp($size_sectors); # remove newline
+    if ($size_sectors > 0) {
+	my $cmd = "echo \"0 $size_sectors linear $localdev 0\" | dmsetup create $wrapped_name";
+	if (system($cmd) != 0) {
+	    print STDERR "'$cmd' failed with $?\n";
+	} else {
+	    return "/dev/mapper/$wrapped_name"; # return the wrapped name
+	}
+    }
+
+    return "$localdev"; # something failed above, return the unwrapped name
+}

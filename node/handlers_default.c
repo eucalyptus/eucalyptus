@@ -887,7 +887,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 
     char *tagBuf;
     char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[32];
+    char localDevReal[32], localDevTag[256], remoteDevReal[132];
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
@@ -951,12 +951,12 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             remoteDevReal[0] = '\0';
         } else {
             LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
-            snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+            snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
             have_remote_device = 1;
         }
         EUCA_FREE(remoteDevStr);
     } else {
-        snprintf(remoteDevReal, 32, "%s", remoteDev);
+        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDev);
         have_remote_device = 1;
     }
 
@@ -1096,7 +1096,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 
     char *tagBuf;
     char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[32];
+    char localDevReal[32], localDevTag[256], remoteDevReal[132];
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
@@ -1162,12 +1162,12 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
             remoteDevReal[0] = '\0';
         } else {
-            snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+            snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
             have_remote_device = 1;
         }
         EUCA_FREE(remoteDevStr);
     } else {
-        snprintf(remoteDevReal, 32, "%s", remoteDev);
+        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDev);
         have_remote_device = 1;
     }
 

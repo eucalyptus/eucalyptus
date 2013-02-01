@@ -703,7 +703,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
             int have_remote_device = 0;
             char *xml = NULL;
 
-            char localDevReal[32], localDevTag[256], remoteDevReal[32];
+            char localDevReal[32], localDevTag[256], remoteDevReal[132];
             char * tagBuf = localDevTag;
             char * localDevName = localDevTag; // UNUSED
             ret = convert_dev_names(volume->localDev, localDevReal, tagBuf);
@@ -723,12 +723,12 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
                     remoteDevReal[0] = '\0';
                 } else {
                     LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instance->instanceId, volume->volumeId, remoteDevStr);
-                    snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+                    snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
                     have_remote_device = 1;
                 }
                 EUCA_FREE(remoteDevStr);
             } else {
-                snprintf(remoteDevReal, 32, "%s", volume->remoteDev);
+                snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", volume->remoteDev);
                 have_remote_device = 1;
             }
 

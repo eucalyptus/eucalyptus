@@ -104,6 +104,7 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
   print STDERR "Target paths are not complete:$dev_string\n";
   do_exit(1);
 }
+my $first_store = $paths[2];
 $multipath = 0;
 $multipath = 1 if @paths > 3;
 if (($multipath == 1) && (!-x $MULTIPATH)) {
@@ -184,6 +185,8 @@ for ($i = 0; $i < 12; $i++) {
   last if (-e "$localdev");
   sleep(1);
 }
+
+wrap_device($localdev, $first_store);
 
 print "$localdev";
 
