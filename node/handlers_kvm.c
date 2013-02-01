@@ -594,16 +594,19 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
             goto failed_src;
         }
 
-        int rc = virDomainMigrate(dom, 
-                                  dconn, 
-                                  VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
-                                  NULL, 
-                                  NULL, 
-                                  0L);
-        if (rc != 0) {
-            logprintfl(EUCAERROR, "[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
+        virDomain * ddom = virDomainMigrate(dom, 
+                                            dconn, 
+                                            VIR_MIGRATE_LIVE | VIR_MIGRATE_NON_SHARED_DISK, 
+                                            NULL, // new name on destination (optional)
+                                            NULL, // destination URI as seen from source (optional)
+                                            0L); // bandwidth limitation (0 => unlimited)
+        virConnectClose(dconn);
+
+        if (ddom == NULL) {
+            LOGERROR("[%s] cannot migrate instance %s, giving up\n", instance->instanceId, instance->instanceId);
             goto failed_src;
         }
+        virDomainFree(ddom);
 
         goto out;
     failed_src:
