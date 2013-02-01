@@ -70,6 +70,7 @@ import java.util.TimeZone;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -83,9 +84,9 @@ public class Timestamps {
     RFC_2616(rfc2616),
     ISO_8601(iso8601);
     
-    private final List<String> patterns;
+    private final List<PatternHolder> patterns;
     
-    private Type( final List<String> patterns ) {
+    private Type( final List<PatternHolder> patterns ) {
       this.patterns = patterns;  
     }
   }
@@ -116,11 +117,11 @@ public class Timestamps {
     return parseTimestamp( timestamp, type.patterns );
   }
 
-  public static Date parseTimestamp( final String timestamp, final Iterable<String> patterns ) throws AuthenticationException {
-    if ( timestamp != null ) for ( String pattern : patterns ) {
+  private static Date parseTimestamp( final String timestamp, final Iterable<PatternHolder> patterns ) throws AuthenticationException {
+    if ( timestamp != null ) for ( final PatternHolder pattern : patterns ) {
       final ParsePosition position = new ParsePosition(0);
-      final Date parsed = sdf( pattern ).parse( timestamp, position );
-      if ( parsed == null || (position.getIndex() != timestamp.length() && !allowTrailers)) {
+      final Date parsed = pattern.parse( timestamp, position );
+      if ( parsed == null || (position.getIndex() < timestamp.length() && !allowTrailers)) {
         if ( LOG.isTraceEnabled() ) LOG.trace( "Parse of timestamp '"+timestamp+"' failed for pattern '"+pattern+"', at: " + position.getErrorIndex() );
       } else {
         return parsed;
@@ -156,39 +157,138 @@ public class Timestamps {
   /**
    * RFC 2616 / HTTP 1.1 date formats (http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3.1)
    */
-  private static final List<String> rfc2616 = ImmutableList.of(
-      "EEE, dd MMM yyyy HH:mm:ss zzz", // RFC 822 / 1123
-      "EEEE, dd-MMM-yy HH:mm:ss zzz", // RFC 850 / 1036
-      "EEE MMM d HH:mm:ss yyyy" // ANSI C asctime() format 
+  private static final List<PatternHolder> rfc2616 = ImmutableList.of(
+    new PatternHolder( "EEE, dd MMM yyyy HH:mm:ss zzz" ), // RFC 822 / 1123
+    new PatternHolder(  "EEEE, dd-MMM-yy HH:mm:ss zzz" ), // RFC 850 / 1036
+    new PatternHolder(  "EEE MMM d HH:mm:ss yyyy" ) // ANSI C asctime() format 
   );
 
   /**
    * ISO 8601 date formats
    */
-  static final List<String> iso8601;
+  static final List<PatternHolder> iso8601;
   
   static {
-    final String[] patterns = {
-        "yyyy-MM-dd'T'HH:mm:ss",
-        "yyyy-MM-dd'T'HH:mm:ssZ",
-        "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z",
-        "yyyy-MM-dd'T'HH:mm:ss'Z'",
-        "yyyy-MM-dd'T'HH:mm:ss'Z'Z" };
-    
-    final List<String> generatedPatterns = Lists.newArrayList();
-    
+    final List<String> patterns = Lists.newArrayList(
+      "yyyy-MM-dd'T'HH:mm:ss",
+      "yyyy-MM-dd'T'HH:mm:ssZ",
+      "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'Z",
+      "yyyy-MM-dd'T'HH:mm:ss'Z'",
+      "yyyy-MM-dd'T'HH:mm:ss'Z'Z" 
+    );
+
+    // Generate seed patterns with various sub-second precisions
+    for ( int i=1; i<10; i++ ) {
+      String pattern = "yyyy-MM-dd'T'HH:mm:ss." + Strings.repeat( "S", i );
+      patterns.add( pattern );
+      patterns.add( pattern + "'Z'" );
+    }
+
+    final List<PatternHolder> generatedPatterns = Lists.newArrayList();    
     for ( final String pattern : patterns ) {
       for ( final Iso8601Variants variant : Iso8601Variants.values() ) {
         // Type hint required to compile on OpenJDK 1.6
-        generatedPatterns.add( ((Function<String,String>)variant).apply( pattern ) );
+        generatedPatterns.add( PatternHolder.generate( ((Function<String,String>)variant).apply( pattern ) ) );
       }
     }
-    
+
     LOG.debug( "Using ISO 8601 date patterns: " + generatedPatterns );
     
     iso8601 = ImmutableList.copyOf( generatedPatterns );  
+  }
+  
+  private static final class PatternHolder {
+    private final String pattern;
+    private final int length; // length of the text that can match the pattern if known
+    private final int fractionTrunction;
+    private final int fractionPadding;
+
+    private PatternHolder( final String pattern ) {
+      this( pattern, -1 ); 
+    }
+
+    private PatternHolder( final String pattern, final int length ) {
+      this.pattern = pattern;
+      this.length = length;
+      
+      int precision = 0;
+      for ( char character : pattern.toCharArray() ) {
+        if ( character == 'S' ) precision++;  
+      }      
+      fractionTrunction = Math.max( 0, precision - 3 );
+      fractionPadding = precision == 0  ? 0 : Math.max( 0, 3 - precision );
+    }
+
+    /**
+     * TODO - WARNING, only supports a special case for expected ISO 8601 date formats 
+     */
+    private static PatternHolder generate( final String pattern ) {
+      String representativeInput = pattern;
+      representativeInput = representativeInput.replace( "'T'", "T" );
+      representativeInput = representativeInput.replace( "'Z'", "U" );
+      representativeInput = representativeInput.replace( "Z", "-0000" );
+      return new PatternHolder( pattern, representativeInput.length() );  
+    }
+    
+    private Date parse( final String timestamp, final ParsePosition position ) {
+      Date result = null;
+      if ( length == -1 || length == timestamp.length() - position.getIndex() ) {
+        String timestampForParsing = timestamp;   
+        boolean valid = true;
+        if ( fractionTrunction > 0 || fractionPadding > 0 ) {
+          valid = false;
+          final int fractionIndex = timestamp.indexOf('.');
+          if ( fractionTrunction > 0 ) {
+            // Date parser parses milliseconds from the wrong end of the value
+            // e.g. 000581 is 581 milliseconds when it should be zero
+            // To parse correctly we shift the value and pad with leading zeros.
+            if ( fractionIndex > 0 && timestamp.length() >= (fractionIndex + 4 + fractionTrunction) ) {
+                timestampForParsing = 
+                  timestamp.substring( 0, fractionIndex + 1 ) +
+                  Strings.repeat( "0", fractionTrunction ) +
+                  timestamp.substring( fractionIndex + 1, fractionIndex + 4 ) +
+                  timestamp.substring( fractionIndex + 4 + fractionTrunction );
+              final String unparsed = timestamp.substring( fractionIndex + 4, fractionIndex + 4 + fractionTrunction );            
+              valid = isDigits( unparsed );
+            }
+          } else if ( fractionIndex > 0 && timestamp.length() >= (fractionIndex + 3 - fractionPadding) ) {
+            // Date parser parses fractional tens or hundredths of a second incorrectly
+            // e.g. .5 is 5 milliseconds when it should be 500
+            // To parse correctly we pad with trailing zeros.
+            timestampForParsing =
+                timestamp.substring( 0, fractionIndex + ( 4 - fractionPadding )  ) +
+                Strings.repeat( "0", fractionPadding ) +
+                timestamp.substring( fractionIndex + ( 4 - fractionPadding ) );
+            valid = true;
+          }
+        }
+        if ( valid ) {
+          result = sdf( pattern ).parse( timestampForParsing, position );
+        }
+      } 
+      
+      if ( result == null && position.getErrorIndex() < 0 ) {
+        position.setErrorIndex( position.getIndex() );
+      }
+      
+      return result;
+    }
+    
+    private boolean isDigits( final String text )  {
+      boolean digits = true;
+      for ( final char character : text.toCharArray() ) {
+        if ( character < '0' || character > '9' ) {
+          digits = false;
+          break;
+        }
+      }     
+      return digits;
+    }
+    
+    public String toString() {
+      return pattern;
+    }
   }
   
   private enum Iso8601Variants implements Function<String,String> {
