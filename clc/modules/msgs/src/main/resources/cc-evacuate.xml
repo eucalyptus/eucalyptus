@@ -61,38 +61,15 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<binding name="eucalyptus_ucsb_edu" force-classes="true" add-constructors="true">
-  <namespace uri="http://eucalyptus.ucsb.edu/" default="elements" />
-
-  <include path="classpath:cc-network.xml" />
-  <include path="classpath:cc-volumes.xml" />
-  <include path="classpath:cc-resources.xml" />
-  <include path="classpath:cc-vms.xml" />
-  <include path="classpath:cc-getlogs.xml" />
-  <include path="classpath:cc-services.xml" />
-  <include path="classpath:broker-types.xml"/>
-  <include path="classpath:cc-sensors.xml"/>
-  <include path="classpath:cc-evacuate.xml"/>
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
+<binding force-classes="true" add-constructors="true">
+  <mapping class="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
   </mapping>
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="correlationId" field="correlationId" usage="optional" />
-    <value name="userId" field="userId" usage="optional" />
-    <value name="statusMessage" field="statusMessage" usage="optional" />
-    <value name="return" field="_return" usage="optional" />
-    <value name="epoch" field="_epoch" usage="optional" />
-    <collection field="_services" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="services" map-as="com.eucalyptus.empyrean.ServiceId" />
-    </collection>
-    <collection field="_disabledServices" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="disabledServices" map-as="com.eucalyptus.empyrean.ServiceId" />
-    </collection>
-    <collection field="_notreadyServices" factory="org.jibx.runtime.Utility.arrayListFactory">
-      <structure name="notreadyServices" map-as="com.eucalyptus.empyrean.ServiceId" />
-    </collection>
+  <mapping name="MigrateInstances" class="edu.ucsb.eucalyptus.msgs.MigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
+    <value name="nodeName" get-method="getServiceTag" usage="required" />
   </mapping>
-
+  <mapping name="MigrateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.MigrateInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
+  </mapping>
 </binding>

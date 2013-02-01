@@ -1013,6 +1013,11 @@
     </wsdl:part>
   </wsdl:message>
   
+  <wsdl:message name="MigrateInstancesResponse">
+    <wsdl:part element="tns:MigrateInstancesResponse" name="MigrateInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
   <wsdl:message name="AttachVolumeResponse">
     <wsdl:part element="tns:AttachVolumeResponse" name="AttachVolumeResponse">
     </wsdl:part>
@@ -1145,6 +1150,11 @@
 
   <wsdl:message name="ModifyNode">
     <wsdl:part element="tns:ModifyNode" name="ModifyNode">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="MigrateInstances">
+    <wsdl:part element="tns:MigrateInstances" name="MigrateInstances">
     </wsdl:part>
   </wsdl:message>
 
@@ -1305,6 +1315,13 @@
       <wsdl:input message="tns:ModifyNode" name="ModifyNode">
       </wsdl:input>
       <wsdl:output message="tns:ModifyNodeResponse" name="ModifyNodeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="MigrateInstances">
+      <wsdl:input message="tns:MigrateInstances" name="MigrateInstances">
+      </wsdl:input>
+      <wsdl:output message="tns:MigrateInstancesResponse" name="MigrateInstancesResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1527,10 +1544,20 @@
     <wsdl:operation name="ModifyNode">
       <soap:operation soapAction="EucalyptusCC#ModifyNode" style="document"/>
       <wsdl:input name="ModifyNode">
-	<soap:body use="literal"/>
+  <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="ModifyNodeResponse">
-	<soap:body use="literal"/>
+  <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="MigrateInstances">
+      <soap:operation soapAction="EucalyptusCC#MigrateInstances" style="document"/>
+      <wsdl:input name="MigrateInstances">
+  <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="MigrateInstancesResponse">
+  <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
 
