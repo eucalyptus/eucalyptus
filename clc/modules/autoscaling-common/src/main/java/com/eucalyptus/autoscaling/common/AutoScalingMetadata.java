@@ -30,11 +30,15 @@ import com.eucalyptus.util.RestrictedType;
 @ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
 public interface AutoScalingMetadata extends RestrictedType {
 
+  public interface AutoScalingMetadataWithResourceName extends AutoScalingMetadata {
+    String getArn();
+  } 
+  
   @PolicyResourceType( "launchconfiguration" )
-  public interface LaunchConfigurationMetadata extends AutoScalingMetadata {}
+  public interface LaunchConfigurationMetadata extends AutoScalingMetadataWithResourceName {}
 
   @PolicyResourceType( "autoscalingroup" )
-  public interface AutoScalingGroupMetadata extends AutoScalingMetadata {}
+  public interface AutoScalingGroupMetadata extends AutoScalingMetadataWithResourceName {}
 
   @PolicyResourceType( "terminationpolicytype" )
   public interface TerminationPolicyTypeMetadata extends AutoScalingMetadata {}
@@ -43,5 +47,5 @@ public interface AutoScalingMetadata extends RestrictedType {
   public interface AdjustmentTypeMetadata extends AutoScalingMetadata {}
 
   @PolicyResourceType( "scalingpolicy" )
-  public interface ScalingPolicyMetadata extends AutoScalingMetadata {}
+  public interface ScalingPolicyMetadata extends AutoScalingMetadataWithResourceName {}
 }

@@ -19,8 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidResourceNameException;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
+import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
 import java.util.EnumSet;
 import java.util.List;
 import org.apache.log4j.Logger;
@@ -29,6 +31,7 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
+import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.common.BlockDeviceMappingType;
 import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType;
@@ -108,6 +111,8 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
 import com.eucalyptus.autoscaling.policies.PersistenceScalingPolicies;
 import com.eucalyptus.autoscaling.policies.ScalingPolicies;
@@ -115,7 +120,6 @@ import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Numbers;
@@ -164,8 +168,8 @@ public class AutoScalingService {
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
-    final Predicate<AutoScalingGroupMetadata> requestedAndAccessible =
-        AutoScalingMetadatas.filterPrivilegesById( request.autoScalingGroupNames() );
+    final Predicate<AutoScalingGroupMetadata> requestedAndAccessible = 
+        AutoScalingMetadatas.filterPrivilegesByIdOrArn( request.autoScalingGroupNames() );
 
     try {
       final List<AutoScalingGroupType> results = reply.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
@@ -218,15 +222,19 @@ public class AutoScalingService {
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
-    final Predicate<ScalingPolicy> requestedAndAccessible =
+    try {
+      final Predicate<ScalingPolicy> requestedAndAccessible =
         Predicates.and( 
-          AutoScalingMetadatas.filterPrivilegesById( request.policyNames() ),
-          AutoScalingMetadatas.filterByProperty( 
-              CollectionUtils.<String>listUnit().apply(request.getAutoScalingGroupName()), 
-              ScalingPolicies.toGroupName() )
+          AutoScalingMetadatas.filterPrivilegesByIdOrArn( request.policyNames() ),
+          AutoScalingResourceName.isResourceName().apply( request.getAutoScalingGroupName() ) ?
+            AutoScalingMetadatas.filterByProperty(
+                  AutoScalingResourceName.parse( request.getAutoScalingGroupName(), autoScalingGroup ).getUuid(),
+                  ScalingPolicies.toGroupUuid() )  :
+            AutoScalingMetadatas.filterByProperty( 
+                request.getAutoScalingGroupName(), 
+                ScalingPolicies.toGroupName() )
         );
 
-    try {
       final List<ScalingPolicyType> results = reply.getDescribePoliciesResult().getScalingPolicies().getMember();
       for ( final ScalingPolicy scalingPolicy : scalingPolicies.list( ownerFullName, requestedAndAccessible ) ) {
         results.add( TypeMappers.transform( scalingPolicy, ScalingPolicyType.class ) );
@@ -252,7 +260,7 @@ public class AutoScalingService {
       public AutoScalingGroup get( ) {
         try {
           final AutoScalingGroups.PersistingBuilder builder = autoScalingGroups.create(
-              ctx.getUserFullName().asAccountFullName(),
+              ctx.getUserFullName(),
               request.getAutoScalingGroupName(),
               launchConfigurations.lookup( ctx.getUserFullName().asAccountFullName(), request.getLaunchConfigurationName() ),
               Numbers.intValue( request.getMinSize() ),
@@ -328,8 +336,8 @@ public class AutoScalingService {
       try {
         scalingPolicy = scalingPolicies.lookup( 
           accountFullName,
-          request.getAutoScalingGroupName(), 
-          request.getPolicyName() );
+          request.getAutoScalingGroupName(),
+          request.getPolicyName() );        
       } catch ( AutoScalingMetadataNotFoundException e ) {
         throw new InvalidParameterValueException( "Scaling policy not found: " + request.getPolicyName() );
       } 
@@ -386,7 +394,7 @@ public class AutoScalingService {
           }
         }
       } );
-      reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getPolicyARN() );
+      reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getArn() );
     } catch ( AutoScalingMetadataNotFoundException e ) {
       // Not found, create
       final Supplier<ScalingPolicy> allocator = new Supplier<ScalingPolicy>( ) {
@@ -394,7 +402,7 @@ public class AutoScalingService {
         public ScalingPolicy get( ) {
           try {
             final ScalingPolicies.PersistingBuilder builder = scalingPolicies.create(
-                accountFullName,
+                ctx.getUserFullName( ),
                 autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName() ),
                 request.getPolicyName(),
                 Enums.valueOfFunction( AdjustmentType.class ).apply( request.getAdjustmentType() ),
@@ -418,7 +426,7 @@ public class AutoScalingService {
 
       try {
         final ScalingPolicy scalingPolicy = RestrictedTypes.allocateUnitlessResource( allocator );
-        reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getPolicyARN() );
+        reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getArn() );
       } catch ( Exception exception ) {
         handleException( exception );
       }
@@ -497,7 +505,7 @@ public class AutoScalingService {
       public LaunchConfiguration get( ) {
         try {
           final LaunchConfigurations.PersistingBuilder builder = launchConfigurations.create(
-              ctx.getUserFullName().asAccountFullName(),
+              ctx.getUserFullName(),
               request.getLaunchConfigurationName(),
               request.getImageId(),
               request.getInstanceType() )
@@ -620,13 +628,13 @@ public class AutoScalingService {
     //TODO:STEVE: MaxRecords / NextToken support for DescribeLaunchConfigurations
     
     final Context ctx = Contexts.lookup( );
-    final boolean showAll = request.launchConfigurationNames().remove( "verbose" );
+    final boolean showAll = request.launchConfigurationNames().remove( "verbose" );  
     final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ? 
         null : 
         ctx.getUserFullName( ).asAccountFullName( );
 
-    final Predicate<LaunchConfigurationMetadata> requestedAndAccessible = 
-        AutoScalingMetadatas.filterPrivilegesById( request.launchConfigurationNames() );
+    final Predicate<LaunchConfigurationMetadata> requestedAndAccessible =
+        AutoScalingMetadatas.filterPrivilegesByIdOrArn( request.launchConfigurationNames() );
 
     try {
       final List<LaunchConfigurationType> results = reply.getDescribeLaunchConfigurationsResult( ).getLaunchConfigurations().getMember();
@@ -714,7 +722,13 @@ public class AutoScalingService {
     if ( constraintViolationException != null ) {
       throw new AlreadyExistsException( "Resource already exists" );
     }
-    
+
+    final InvalidResourceNameException invalidResourceNameException =
+        Exceptions.findCause( e, InvalidResourceNameException.class );
+    if ( invalidResourceNameException != null ) {
+      throw new InvalidParameterValueException( invalidResourceNameException.getMessage() );
+    }
+
     logger.error( e, e );
 
     final InternalFailureException exception = new InternalFailureException( String.valueOf(e.getMessage()) );

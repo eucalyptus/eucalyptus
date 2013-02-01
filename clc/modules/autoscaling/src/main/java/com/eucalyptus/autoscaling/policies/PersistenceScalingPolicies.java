@@ -20,10 +20,9 @@
 package com.eucalyptus.autoscaling.policies;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import com.eucalyptus.autoscaling.AutoScalingMetadataException;
-import com.eucalyptus.autoscaling.AutoScalingMetadataNotFoundException;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
@@ -33,36 +32,24 @@ import com.google.common.base.Predicate;
  */
 public class PersistenceScalingPolicies extends ScalingPolicies {
 
+  private final PersistenceSupport persistenceSupport = new PersistenceSupport();
+  
   @Override
   public List<ScalingPolicy> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.findAll( ScalingPolicy.withOwner( ownerFullName ) );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find scaling policies for " + ownerFullName, e );
-    }
+    return persistenceSupport.list( ownerFullName );
   }
 
   @Override
   public List<ScalingPolicy> list( final OwnerFullName ownerFullName,
                                    final Predicate<? super ScalingPolicy> filter ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.filter( ScalingPolicy.withOwner( ownerFullName ), filter );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find scaling policies for " + ownerFullName, e );
-    }
+    return persistenceSupport.list( ownerFullName, filter );
   }
 
   @Override
   public ScalingPolicy lookup( final OwnerFullName ownerFullName,
                                final String autoScalingGroupName,
                                final String policyName ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.find( ScalingPolicy.named( ownerFullName, autoScalingGroupName, policyName ) );
-    } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Scaling policy not found '"+policyName+"' for " + ownerFullName, e );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error finding scaling policy '"+policyName+"' for " + ownerFullName, e );
-    }
+    return persistenceSupport.lookup( ownerFullName, autoScalingGroupName, policyName );
   }
 
   @Override
@@ -70,32 +57,45 @@ public class PersistenceScalingPolicies extends ScalingPolicies {
                                final String autoScalingGroupName,
                                final String policyName,
                                final Callback<ScalingPolicy> policyUpdateCallback ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.one( ScalingPolicy.named( ownerFullName, autoScalingGroupName, policyName ), policyUpdateCallback );
-    } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Scaling policy not found '"+policyName+"' for " + ownerFullName, e );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error finding scaling policy '"+policyName+"' for " + ownerFullName, e );
-    }
+    return persistenceSupport.update( ownerFullName, autoScalingGroupName, policyName, policyUpdateCallback );
   }
 
   @Override
   public boolean delete( final ScalingPolicy scalingPolicy ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.delete( ScalingPolicy.withId( scalingPolicy ) );
-    } catch ( NoSuchElementException e ) {
-      return false;
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error deleting scaling policy '"+scalingPolicy.getPolicyName()+"'", e );
-    }
+    return persistenceSupport.delete( scalingPolicy );
   }
 
   @Override
   public ScalingPolicy save( final ScalingPolicy scalingPolicy ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.saveDirect( scalingPolicy );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error creating scaling policy '"+scalingPolicy.getPolicyName()+"'", e );
+    return persistenceSupport.save( scalingPolicy );
+  }
+
+  private static class PersistenceSupport extends AbstractOwnedPersistents<ScalingPolicy> {
+    private PersistenceSupport() {
+      super( AutoScalingResourceName.Type.scalingPolicy );
+    }
+
+    @Override
+    protected ScalingPolicy exampleWithOwner( final OwnerFullName ownerFullName ) {
+      return ScalingPolicy.withOwner( ownerFullName );
+    }
+
+    @Override
+    protected ScalingPolicy exampleWithName( final OwnerFullName ownerFullName, 
+                                             final String name ) {
+      throw new IllegalStateException( "Unscoped name not supported." );
+    }
+
+    @Override
+    protected ScalingPolicy exampleWithName( final OwnerFullName ownerFullName,
+                                             final String scope,
+                                             final String name ) {
+      return ScalingPolicy.named( ownerFullName, scope, name );
+    }
+
+    @Override
+    protected ScalingPolicy exampleWithUuid( final String uuid ) {
+      return ScalingPolicy.withUuid( uuid );
     }
   }
 }

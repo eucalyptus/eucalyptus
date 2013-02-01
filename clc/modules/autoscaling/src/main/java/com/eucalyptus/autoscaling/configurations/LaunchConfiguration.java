@@ -33,7 +33,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
-import com.eucalyptus.autoscaling.AbstractOwnedPersistent;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.collect.Sets;
 
@@ -171,7 +171,8 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     this.instanceMonitoring = instanceMonitoring;
   }
   
-  public String getLaunchConfigurationARN() {
+  @Override
+  public String getArn() {
     return String.format( 
         "arn:aws:autoscaling::%1s:launchConfiguration:%2s:launchConfigurationName/%3s", 
         getOwnerAccountNumber(), 
@@ -201,12 +202,18 @@ public class LaunchConfiguration extends AbstractOwnedPersistent implements Laun
     return new LaunchConfiguration( ownerFullName, name );
   }
 
-  public static LaunchConfiguration withId( final LaunchConfiguration launchConfiguration ) {
+  public static LaunchConfiguration withId( final String id ) {
     final LaunchConfiguration example = new LaunchConfiguration();
-    example.setId( launchConfiguration.getId() );
+    example.setId( id );
     return example;
   }
-  
+
+  public static LaunchConfiguration withUuid( final String uuid ) {
+    final LaunchConfiguration example = new LaunchConfiguration();
+    example.setNaturalId( uuid );
+    return example;
+  }
+
   public static LaunchConfiguration create( final OwnerFullName ownerFullName,
                                             final String name,
                                             final String imageId,

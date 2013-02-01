@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling;
+package com.eucalyptus.autoscaling.metadata;
 
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
@@ -41,7 +41,7 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
 
   @Column( name = "metadata_account_id" )
   private String          ownerAccountNumber;
-  @Column( name = "metadata_unique_name", unique = true, nullable = false )
+  @Column( name = "metadata_unique_name", unique = true, nullable = false, length = 600)
   private String          uniqueName;
   @Transient
   protected OwnerFullName ownerFullNameCached = null;

@@ -19,7 +19,7 @@
   additional information or have any questions.
   -->
 <binding name="autoscaling_amazonaws_com_doc_2011_01_01" force-classes="true" add-constructors="true">
-  <namespace uri="http://autoscaling.amazonaws.com/doc/2011-01-01/" prefix="auto" default="elements"/>
+  <namespace uri="http://autoscaling.amazonaws.com/doc/2011-01-01/" default="elements"/>
   <mapping class="com.eucalyptus.autoscaling.common.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>

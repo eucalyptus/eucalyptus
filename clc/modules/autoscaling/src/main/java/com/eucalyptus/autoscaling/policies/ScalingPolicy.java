@@ -32,7 +32,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.autoscaling.AbstractOwnedPersistent;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.util.OwnerFullName;
@@ -137,7 +137,8 @@ public class ScalingPolicy extends AbstractOwnedPersistent implements ScalingPol
     this.adjustmentType = adjustmentType;
   }
 
-  public String getPolicyARN() {
+  @Override
+  public String getArn() {
     return String.format(
         "arn:aws:autoscaling::%1s:scalingPolicy:%2s:autoScalingGroupName/%3s:policyName/%4s",
         getOwnerAccountNumber(),
@@ -173,9 +174,15 @@ public class ScalingPolicy extends AbstractOwnedPersistent implements ScalingPol
     return example;
   }
   
-  public static ScalingPolicy withId( final ScalingPolicy scalingPolicy ) {
+  public static ScalingPolicy withId( final String id ) {
     final ScalingPolicy example = new ScalingPolicy();
-    example.setId( scalingPolicy.getId() );
+    example.setId( id );
+    return example;
+  }
+
+  public static ScalingPolicy withUuid( final String uuid ) {
+    final ScalingPolicy example = new ScalingPolicy();
+    example.setNaturalId( uuid );
     return example;
   }
 
@@ -192,7 +199,9 @@ public class ScalingPolicy extends AbstractOwnedPersistent implements ScalingPol
 
   @Override
   protected String createUniqueName() {
-    return super.createUniqueName();    //TODO:STEVE: implement, name unique within associated group
+    return ( this.getOwnerAccountNumber() != null && this.getGroup() != null && this.getDisplayName( ) != null )
+        ? this.getOwnerAccountNumber() + ":" + getGroup().getDisplayName() + ":" + this.getDisplayName( )
+        : null;
   }
 
   protected static abstract class BaseBuilder<T extends BaseBuilder<T>> {

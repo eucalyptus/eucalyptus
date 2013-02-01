@@ -17,19 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling;
+package com.eucalyptus.autoscaling.metadata;
 
 /**
- * Internal metadata access exception.
+ * Metadata could not be found by name or other identifier.
  */
-public class AutoScalingMetadataException extends Exception {
+public class AutoScalingMetadataNotFoundException extends AutoScalingMetadataException {
   private static final long serialVersionUID = 1L;
 
-  public AutoScalingMetadataException( final String message ) {
+  public AutoScalingMetadataNotFoundException( final String message ) {
     super( message );
   }
 
-  public AutoScalingMetadataException( final String message, final Throwable cause ) {
+  public AutoScalingMetadataNotFoundException( final String message, final Throwable cause ) {
     super( message, cause );
   }
 }

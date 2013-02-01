@@ -22,7 +22,7 @@ package com.eucalyptus.autoscaling.configurations;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import java.util.List;
 import javax.persistence.EntityTransaction;
-import com.eucalyptus.autoscaling.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.common.BlockDeviceMappingType;
 import com.eucalyptus.autoscaling.common.BlockDeviceMappings;
 import com.eucalyptus.autoscaling.common.InstanceMonitoring;
@@ -46,9 +46,9 @@ public abstract class LaunchConfigurations {
   public abstract List<LaunchConfiguration> list( OwnerFullName ownerFullName,
                                                   Predicate<? super LaunchConfiguration> filter ) throws AutoScalingMetadataException;
 
-  public abstract LaunchConfiguration lookup( OwnerFullName ownerFullName, 
-                                              String launchConfigurationName ) throws AutoScalingMetadataException;
-
+  public abstract LaunchConfiguration lookup( OwnerFullName ownerFullName,
+                                              String launchConfigurationNameOrArn ) throws AutoScalingMetadataException;
+  
   public abstract boolean delete( LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException;
 
   public abstract LaunchConfiguration save( LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException;
@@ -97,7 +97,7 @@ public abstract class LaunchConfigurations {
       type.setInstanceType( launchConfiguration.getInstanceType() );
       type.setKernelId( launchConfiguration.getKernelId() );
       type.setKeyName( launchConfiguration.getKeyName() );
-      type.setLaunchConfigurationARN( launchConfiguration.getLaunchConfigurationARN() );
+      type.setLaunchConfigurationARN( launchConfiguration.getArn() );
       type.setLaunchConfigurationName( launchConfiguration.getLaunchConfigurationName() );
       type.setRamdiskId( launchConfiguration.getRamdiskId() );
       if ( launchConfiguration.getSecurityGroups() != null &&

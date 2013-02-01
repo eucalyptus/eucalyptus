@@ -21,7 +21,7 @@ package com.eucalyptus.autoscaling.policies;
 
 import java.util.List;
 import javax.persistence.EntityTransaction;
-import com.eucalyptus.autoscaling.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.ScalingPolicyType;
@@ -69,7 +69,11 @@ public abstract class ScalingPolicies {
   public static Function<ScalingPolicy,String> toGroupName() {
     return ScalingPolicyProperties.GROUP_NAME;
   }
-  
+
+  public static Function<ScalingPolicy,String> toGroupUuid() {
+    return ScalingPolicyProperties.GROUP_UUID;
+  }
+
   public static class PersistingBuilder extends ScalingPolicy.BaseBuilder<PersistingBuilder> {
     private final ScalingPolicies scalingPolicies;
 
@@ -101,7 +105,7 @@ public abstract class ScalingPolicies {
     public ScalingPolicyType apply( final ScalingPolicy policy ) {
       final ScalingPolicyType type = new ScalingPolicyType();
 
-      type.setPolicyARN( policy.getPolicyARN() );
+      type.setPolicyARN( policy.getArn() );
       type.setPolicyName( policy.getPolicyName() );
       if ( policy.getGroup() != null )
         type.setAutoScalingGroupName( policy.getGroup().getAutoScalingGroupName() );
@@ -135,6 +139,12 @@ public abstract class ScalingPolicies {
       @Override
       public String apply( final ScalingPolicy scalingPolicy ) {
         return AutoScalingMetadatas.toDisplayName().apply( scalingPolicy.getGroup() );
+      }
+    },
+    GROUP_UUID {
+      @Override
+      public String apply( final ScalingPolicy scalingPolicy ) {
+        return scalingPolicy.getGroup() == null ? null : scalingPolicy.getGroup().getNaturalId();
       }
     }
   } 

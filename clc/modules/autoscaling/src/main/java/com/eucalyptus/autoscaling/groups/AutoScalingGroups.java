@@ -23,7 +23,7 @@ import java.util.List;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
-import com.eucalyptus.autoscaling.AutoScalingMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AvailabilityZones;
 import com.eucalyptus.autoscaling.common.LoadBalancerNames;
@@ -99,7 +99,7 @@ public abstract class AutoScalingGroups {
     public AutoScalingGroupType apply( final AutoScalingGroup group ) {
       final AutoScalingGroupType type = new AutoScalingGroupType();
 
-      type.setAutoScalingGroupARN( group.getAutoScalingGroupARN() );
+      type.setAutoScalingGroupARN( group.getArn() );
       type.setAutoScalingGroupName( group.getAutoScalingGroupName() );
       type.setAvailabilityZones( new AvailabilityZones( group.getAvailabilityZones() ) );
       type.setCreatedTime( group.getCreationTimestamp() );

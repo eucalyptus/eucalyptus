@@ -20,10 +20,9 @@
 package com.eucalyptus.autoscaling.groups;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import com.eucalyptus.autoscaling.AutoScalingMetadataException;
-import com.eucalyptus.autoscaling.AutoScalingMetadataNotFoundException;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
@@ -32,68 +31,60 @@ import com.google.common.base.Predicate;
  *
  */
 public class PersistenceAutoScalingGroups extends AutoScalingGroups {
-
+  
+  private PersistenceSupport persistenceSupport = new PersistenceSupport();
+  
   @Override
   public List<AutoScalingGroup> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.findAll( AutoScalingGroup.withOwner( ownerFullName ) );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find auto scaling groups for " + ownerFullName, e );
-    }
+    return persistenceSupport.list( ownerFullName );
   }
 
   @Override
   public List<AutoScalingGroup> list( final OwnerFullName ownerFullName, 
                                       final Predicate<? super AutoScalingGroup> filter ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.filter( AutoScalingGroup.withOwner( ownerFullName ), filter );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find auto scaling groups for " + ownerFullName, e );
-    }
+    return persistenceSupport.list( ownerFullName, filter );
   }
 
   @Override
-  public AutoScalingGroup lookup( final OwnerFullName ownerFullName, 
-                                  final String autoScalingGroupName ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.find( AutoScalingGroup.named( ownerFullName, autoScalingGroupName ) );
-    } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Auto scaling group not found '"+autoScalingGroupName+"' for " + ownerFullName, e );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error finding auto scaling group '"+autoScalingGroupName+"' for " + ownerFullName, e );
-    }
+  public AutoScalingGroup lookup( final OwnerFullName ownerFullName, final String autoScalingGroupName ) throws AutoScalingMetadataException {
+    return persistenceSupport.lookup( ownerFullName, autoScalingGroupName );
   }
 
   @Override
   public AutoScalingGroup update( final OwnerFullName ownerFullName,
                                   final String autoScalingGroupName,
                                   final Callback<AutoScalingGroup> groupUpdateCallback ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.one( AutoScalingGroup.named( ownerFullName, autoScalingGroupName ), groupUpdateCallback );
-    } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Auto scaling group not found '"+autoScalingGroupName+"' for " + ownerFullName, e );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error finding auto scaling group '"+autoScalingGroupName+"' for " + ownerFullName, e );
-    }
+    return persistenceSupport.update( ownerFullName, autoScalingGroupName, groupUpdateCallback );
   }
 
   @Override
   public boolean delete( final AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.delete( AutoScalingGroup.withId( autoScalingGroup ) );
-    } catch ( NoSuchElementException e ) {
-      return false;
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error deleting auto scaling group '"+autoScalingGroup.getAutoScalingGroupName()+"'", e );
-    }
+    return persistenceSupport.delete( autoScalingGroup );
   }
 
   @Override
   public AutoScalingGroup save( final AutoScalingGroup autoScalingGroup ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.saveDirect( autoScalingGroup );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error creating auto scaling group '"+autoScalingGroup.getAutoScalingGroupName()+"'", e );
-    }
+    return persistenceSupport.save( autoScalingGroup );
   }
+
+  private static class PersistenceSupport extends AbstractOwnedPersistents<AutoScalingGroup> {
+    private PersistenceSupport() {
+      super( AutoScalingResourceName.Type.autoScalingGroup );
+    }
+
+    @Override
+    protected AutoScalingGroup exampleWithOwner( final OwnerFullName ownerFullName ) {
+      return AutoScalingGroup.withOwner( ownerFullName );
+    }
+
+    @Override
+    protected AutoScalingGroup exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+      return AutoScalingGroup.named( ownerFullName, name );
+    }
+
+    @Override
+    protected AutoScalingGroup exampleWithUuid( final String uuid ) {
+      return AutoScalingGroup.withUuid( uuid );
+    }
+  }  
 }

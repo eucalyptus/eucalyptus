@@ -20,10 +20,9 @@
 package com.eucalyptus.autoscaling.configurations;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import com.eucalyptus.autoscaling.AutoScalingMetadataException;
-import com.eucalyptus.autoscaling.AutoScalingMetadataNotFoundException;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 
@@ -32,55 +31,52 @@ import com.google.common.base.Predicate;
  */
 public class PersistenceLaunchConfigurations extends LaunchConfigurations {
 
+  private PersistenceSupport persistenceSupport = new PersistenceSupport();
+  
   @Override
   public List<LaunchConfiguration> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.findAll( LaunchConfiguration.withOwner( ownerFullName ) );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find launch configurations for " + ownerFullName, e );
-    }
+    return persistenceSupport.list( ownerFullName );
   }
 
   @Override
   public List<LaunchConfiguration> list( final OwnerFullName ownerFullName,
                                          final Predicate<? super LaunchConfiguration> filter ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.filter( LaunchConfiguration.withOwner( ownerFullName ), filter );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find launch configurations for " + ownerFullName, e );
-    }
+    return persistenceSupport.list( ownerFullName, filter );
   }
 
   @Override
-  public LaunchConfiguration lookup( final OwnerFullName ownerFullName,
-                                     final String launchConfigurationName ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.find( LaunchConfiguration.named( ownerFullName, launchConfigurationName ) );
-    } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Launch configuration not found '"+launchConfigurationName+"' for " + ownerFullName, e );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error finding launch configuration '"+launchConfigurationName+"' for " + ownerFullName, e );
-    }
+  public LaunchConfiguration lookup( final OwnerFullName ownerFullName, final String launchConfigurationNameOrArn ) throws AutoScalingMetadataException {
+    return persistenceSupport.lookup( ownerFullName, launchConfigurationNameOrArn );
   }
 
   @Override
   public boolean delete( final LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.delete( LaunchConfiguration.withId( launchConfiguration ) );
-    } catch ( NoSuchElementException e ) {
-      return false;
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error deleting launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
-    }
+    return persistenceSupport.delete( launchConfiguration );
   }
 
   @Override
   public LaunchConfiguration save( final LaunchConfiguration launchConfiguration ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.saveDirect( launchConfiguration );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error creating launch configuration '"+launchConfiguration.getLaunchConfigurationName()+"'", e );
-    }
+    return persistenceSupport.save( launchConfiguration );
   }
 
+  private static class PersistenceSupport extends AbstractOwnedPersistents<LaunchConfiguration> {
+    private PersistenceSupport() {
+      super( AutoScalingResourceName.Type.launchConfiguration );
+    }
+
+    @Override
+    protected LaunchConfiguration exampleWithOwner( final OwnerFullName ownerFullName ) {
+      return LaunchConfiguration.withOwner( ownerFullName );
+    }
+
+    @Override
+    protected LaunchConfiguration exampleWithName( final OwnerFullName ownerFullName, final String name ) {
+      return LaunchConfiguration.named( ownerFullName, name );
+    }
+
+    @Override
+    protected LaunchConfiguration exampleWithUuid( final String uuid ) {
+      return LaunchConfiguration.withUuid( uuid );
+    }
+  }
 }

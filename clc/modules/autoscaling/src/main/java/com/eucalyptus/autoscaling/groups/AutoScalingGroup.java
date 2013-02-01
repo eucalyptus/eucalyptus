@@ -35,7 +35,7 @@ import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.autoscaling.AbstractOwnedPersistent;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
@@ -214,7 +214,8 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     this.loadBalancerNames = loadBalancerNames;
   }
 
-  public String getAutoScalingGroupARN() {
+  @Override
+  public String getArn() {
     return String.format(
         "arn:aws:autoscaling::%1s:autoScalingGroup:%2s:autoScalingGroupName/%3s",
         getOwnerAccountNumber(),
@@ -244,9 +245,15 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
     return new AutoScalingGroup( ownerFullName, name );
   }
 
-  public static AutoScalingGroup withId( final AutoScalingGroup launchConfiguration ) {
+  public static AutoScalingGroup withId( final String id ) {
     final AutoScalingGroup example = new AutoScalingGroup();
-    example.setId( launchConfiguration.getId() );
+    example.setId( id);
+    return example;
+  }
+
+  public static AutoScalingGroup withUuid( final String uuid ) {
+    final AutoScalingGroup example = new AutoScalingGroup();
+    example.setNaturalId( uuid );
     return example;
   }
 

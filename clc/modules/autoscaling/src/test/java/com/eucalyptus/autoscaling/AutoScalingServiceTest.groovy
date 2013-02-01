@@ -71,6 +71,7 @@ import com.eucalyptus.autoscaling.common.PolicyNames
 import com.eucalyptus.autoscaling.common.ScalingPolicyType
 import com.eucalyptus.autoscaling.common.DeletePolicyType
 import com.eucalyptus.autoscaling.common.ExecutePolicyType
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
 
 /**
  * 
@@ -106,7 +107,6 @@ class AutoScalingServiceTest {
       emptyDescribeResponse.describeLaunchConfigurationsResult.launchConfigurations.member
 
     assertEquals( "Configuration count", 0, emptyConfigurations.size() )
-
 
     DescribeLaunchConfigurationsResponseType describeLaunchConfigurationsResponseType = 
       service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
