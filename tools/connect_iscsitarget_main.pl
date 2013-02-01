@@ -186,9 +186,7 @@ for ($i = 0; $i < 12; $i++) {
   sleep(1);
 }
 
-wrap_device($localdev, $first_store);
-
-print "$localdev";
+print wrap_device($localdev, $first_store);
 
 ##################################################################
 sub login_target {
