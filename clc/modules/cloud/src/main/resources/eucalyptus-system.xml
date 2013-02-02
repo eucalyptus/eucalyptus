@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!--
   Copyright 2009-2012 Eucalyptus Systems, Inc.
 
@@ -61,63 +60,34 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xmlns:spring="http://www.springframework.org/schema/beans" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
-  xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:mule="http://www.mulesource.org/schema/mule/core/2.0"
-  xsi:schemaLocation="
+  <mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
+      xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+      xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
        http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
        http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
        http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
-  <mule:configuration>
-    <mule:default-threading-profile doThreading="true" maxThreadsActive="16"
-      poolExhaustedAction="RUN" />
-  </mule:configuration>
-  <euca:connector name="eucaws" />
-  <vm:connector name="internal-async" queueEvents="false">
-    <vm:queueProfile persistent="false" maxOutstandingMessages="256" />
-  </vm:connector>
-  <endpoint name="ReplyQueueEndpoint" address="vm://ReplyQueue" synchronous="false" />
-  <endpoint name="RequestQueueEndpoint" address="vm://RequestQueue" synchronous="false" />
-  <endpoint name="EmpyreanRequestQueueEndpoint" address="vm://EmpyreanRequestQueue" synchronous="false" />
-  #foreach( $component in $components )
-      <endpoint name="${component.getEntryPoint()}" address="vm://${component.getEntryPoint()}" synchronous="false" />
-  #end 
-  <model name="eucalyptus-bootstrap">
-    <default-service-exception-strategy>
-      <outbound-endpoint ref="ReplyQueueEndpoint" />
-    </default-service-exception-strategy>
-    <service name="ReplyQueue">
-      <inbound>
-        <inbound-endpoint ref="ReplyQueueEndpoint" />
-      </inbound>
-      <component class="com.eucalyptus.ws.util.ReplyQueue" />
-    </service>
-    <service name="RequestQueue">
-      <inbound>
-        <inbound-endpoint ref="RequestQueueEndpoint" />
-      </inbound>
-      <component class="com.eucalyptus.ws.util.RequestQueue" />
-      <outbound>
-        <filtering-router>
-          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="com.eucalyptus.empyrean.EmpyreanMessage" />
-        </filtering-router>
-        #foreach( $component in $components )
-        <filtering-router>
-          <outbound-endpoint ref="${component.getEntryPoint()}" synchronous="false" />
-          <payload-type-filter expectedType="${component.lookupBaseMessageType().getCanonicalName()}" />
-        </filtering-router>
-        #end
-        <filtering-router>
-          <outbound-endpoint ref="EmpyreanRequestQueueEndpoint" synchronous="false" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-        </filtering-router>
-      </outbound>
-    </service>
-  </model>
-  <spring:beans>
-    <spring:import resource="classpath:empyrean-model.xml" />
-  </spring:beans>
+
+    <model name="eucalyptus-system">
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="ReplyQueueEndpoint"/>
+        </default-service-exception-strategy>
+
+        <service name="VmTypes">
+            <inbound>
+                <inbound-endpoint ref="VmTypesWS"/>
+            </inbound>
+            <component class="com.eucalyptus.vmtypes.VmTypesManager"/>
+            <outbound>
+                <outbound-pass-through-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
+                </outbound-pass-through-router>
+            </outbound>
+        </service>
+
+    </model>
 
 </mule>

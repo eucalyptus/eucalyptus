@@ -94,7 +94,8 @@ import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
 
 
 public class ISCSIManager implements StorageExportManager {
-	private static Logger LOG = Logger.getLogger(ISCSIManager.class);
+  public static String  TGT_SERVICE_NAME = "tgtd";
+  private static Logger LOG = Logger.getLogger(ISCSIManager.class);
 	private static String ROOT_WRAP = StorageProperties.EUCA_ROOT_WRAPPER;
 
 	private static ExecutorService service = Executors.newFixedThreadPool(10);
@@ -117,9 +118,9 @@ public class ISCSIManager implements StorageExportManager {
 		if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
 			LOG.warn("Unable to connect to tgt daemon. Is tgtd loaded?");
 			LOG.info("Attempting to start tgtd ISCSI daemon");
-			output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "status" }, timeout);
+			output = execute(new String[] { ROOT_WRAP, "service", TGT_SERVICE_NAME, "status" }, timeout);
 			if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
-				output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "start" }, timeout);
+				output = execute(new String[] { ROOT_WRAP, "service", TGT_SERVICE_NAME, "start" }, timeout);
 				if (output.returnValue != 0 || StringUtils.isNotBlank(output.error)) {
 					Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "service tgt start").withVar("error", output.error).log();
 					throw new EucalyptusCloudException("Unable to start tgt daemon. Cannot proceed.");
@@ -138,7 +139,7 @@ public class ISCSIManager implements StorageExportManager {
 	public void check() throws EucalyptusCloudException {
 		Long timeout = DirectStorageInfo.getStorageInfo().getTimeoutInMillis();
 
-		CommandOutput output = execute(new String[] { ROOT_WRAP, "service", "tgtd", "status" }, timeout);
+		CommandOutput output = execute(new String[] { ROOT_WRAP, "service", TGT_SERVICE_NAME, "status" }, timeout);
 		if (StringUtils.isNotBlank(output.error)) {
 			Faults.forComponent(Storage.class).havingId(TGT_CORRUPTED).withVar("component", "Storage Controller").withVar("operation", "service tgt status").withVar("error", output.error).log();
 			throw new EucalyptusCloudException("tgt service check failed with error: " + output.error);

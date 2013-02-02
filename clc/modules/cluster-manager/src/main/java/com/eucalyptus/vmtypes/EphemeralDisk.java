@@ -60,111 +60,148 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.component;
+package com.eucalyptus.vmtypes;
 
-import java.net.URI;
-import java.util.concurrent.ExecutionException;
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.OrderedShutdown;
-import com.eucalyptus.component.Component.State;
-import com.eucalyptus.component.Component.Transition;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.util.fsm.StateMachine;
+import javax.persistence.Column;
+import javax.persistence.Embeddable;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import org.hibernate.annotations.Parent;
+import com.eucalyptus.images.EphemeralDeviceMapping;
+import com.eucalyptus.vmtypes.VmTypes.Format;
 
-public class BasicService {
-  private static Logger                                                                   LOG            = Logger.getLogger( BasicService.class );
-  private final ServiceConfiguration                                                      serviceConfiguration;
-  private final StateMachine<ServiceConfiguration, Component.State, Component.Transition> stateMachine;
-  private final State                                                                     goal           = Component.State.ENABLED;
-  public static String                                                                    LOCAL_HOSTNAME = "@localhost";
+/**
+ * Static instance type definition of the base/default epehemeral disk configurations (NOT to be
+ * confused with {@link EphemeralDeviceMapping}.
+ * 
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ * @see {@link EphemeralDeviceMapping}
+ */
+@Embeddable
+public class EphemeralDisk implements Comparable<EphemeralDisk> {
   
-  BasicService( final ServiceConfiguration serviceConfiguration ) {
+  @Parent
+  private VmType  parent;
+  @Column( name = "config_vm_type_ephemeral_disk_name" )
+  private String  diskName;  //e.g., ephemeral0
+  @Column( name = "config_vm_type_ephemeral_device_name" )
+  private String  deviceName;
+  @Column( name = "config_vm_type_ephemeral_size" )
+  private Integer size;      //in GBs, of course?
+  @Enumerated( EnumType.STRING )
+  @Column( name = "config_vm_type_ephemeral_format" )
+  private Format  format;
+  
+  private EphemeralDisk( VmType parent, String diskName, String deviceName, Integer size ) {
     super( );
-    this.serviceConfiguration = serviceConfiguration;
-    this.stateMachine = new ServiceState( this.serviceConfiguration );
-    URI remoteUri;
-    if ( this.getServiceConfiguration( ).isVmLocal( ) ) {
-      remoteUri = ServiceUris.internal( this.getServiceConfiguration( ).getComponentId( ) );
-    } else {
-      remoteUri = ServiceUris.internal( this.getServiceConfiguration( ) );
-    }
-    
-    if ( this.serviceConfiguration.isVmLocal( ) ) {
-      ComponentId compId = BasicService.this.serviceConfiguration.getComponentId( );
-      OrderedShutdown.registerShutdownHook( compId.getClass( ), new Runnable( ) {
-        @Override
-        public void run( ) {
-          try {
-            ServiceTransitions.pathTo( BasicService.this.serviceConfiguration, Component.State.PRIMORDIAL ).get( );
-            LOG.warn( "SHUTDOWN Service: " + BasicService.this.serviceConfiguration.getFullName( ) );
-          } catch ( final InterruptedException ex ) {
-            Thread.currentThread( ).interrupt( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
-            Logs.extreme( ).error( ex, ex );
-          }
-        }
-      } );
-    }
+    this.parent = parent;
+    this.diskName = diskName;
+    this.deviceName = deviceName;
+    this.size = size;
   }
   
-  public final String getName( ) {
-    return this.serviceConfiguration.getFullName( ).toString( );
-  }
-  
-  public Boolean isLocal( ) {
-    return this.serviceConfiguration.isVmLocal( );
-  }
-  
-  ServiceConfiguration getServiceConfiguration( ) {
-    return this.serviceConfiguration;
-  }
-  
-  @Override
-  public String toString( ) {
-    return String.format( "Service %s name=%s serviceConfiguration=%s\n",
-                          this.getServiceConfiguration( ).getComponentId( ).name( ), this.getName( ), this.getServiceConfiguration( ) );
+  private EphemeralDisk( VmType parent, String diskName, String deviceName, Integer size, Format format ) {
+    this( parent, diskName, deviceName, size );
+    this.format = format;
   }
   
   @Override
   public int hashCode( ) {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ( ( this.serviceConfiguration == null )
-        ? 0
-            : this.serviceConfiguration.hashCode( ) );
+    result = prime * result + ( ( this.deviceName == null ) ? 0 : this.deviceName.hashCode( ) );
+    result = prime * result + ( ( this.diskName == null ) ? 0 : this.diskName.hashCode( ) );
+    result = prime * result + ( ( this.size == null ) ? 0 : this.size.hashCode( ) );
     return result;
   }
   
   @Override
-  public boolean equals( final Object obj ) {
+  public boolean equals( Object obj ) {
     if ( this == obj ) {
       return true;
     }
     if ( obj == null ) {
       return false;
     }
-    if ( this.getClass( ) != obj.getClass( ) ) {
+    if ( getClass( ) != obj.getClass( ) ) {
       return false;
     }
-    final BasicService other = ( BasicService ) obj;
-    if ( this.serviceConfiguration == null ) {
-      if ( other.serviceConfiguration != null ) {
+    EphemeralDisk other = ( EphemeralDisk ) obj;
+    if ( this.deviceName == null ) {
+      if ( other.deviceName != null ) {
         return false;
       }
-    } else if ( !this.serviceConfiguration.equals( other.serviceConfiguration ) ) {
+    } else if ( !this.deviceName.equals( other.deviceName ) ) {
+      return false;
+    }
+    if ( this.diskName == null ) {
+      if ( other.diskName != null ) {
+        return false;
+      }
+    } else if ( !this.diskName.equals( other.diskName ) ) {
+      return false;
+    }
+    if ( this.size == null ) {
+      if ( other.size != null ) {
+        return false;
+      }
+    } else if ( !this.size.equals( other.size ) ) {
       return false;
     }
     return true;
   }
   
-  public int compareTo( final ServiceConfiguration that ) {
-    return this.serviceConfiguration.compareTo( that );
+  @Override
+  public int compareTo( EphemeralDisk o ) {
+    return this.equals( o ) ? 0 : this.hashCode( ) - o.hashCode( );
   }
 
-  public StateMachine<ServiceConfiguration, State, Transition> getStateMachine( ) {
-    return this.stateMachine;
+  static EphemeralDisk create( VmType parent, String diskName, String deviceName, Integer size, Format format ) {
+    return new EphemeralDisk( parent, diskName, deviceName, size, format );
   }
+
+  static EphemeralDisk create( String diskName, String deviceName, Integer size, Format format ) {
+    return new EphemeralDisk( null, diskName, deviceName, size, format );
+  }
+
+  VmType getParent( ) {
+    return this.parent;
+  }
+
+  String getDiskName( ) {
+    return this.diskName;
+  }
+
+  String getDeviceName( ) {
+    return this.deviceName;
+  }
+
+  Integer getSize( ) {
+    return this.size;
+  }
+
+  Format getFormat( ) {
+    return this.format;
+  }
+
+  private void setParent( VmType parent ) {
+    this.parent = parent;
+  }
+
+  private void setDiskName( String diskName ) {
+    this.diskName = diskName;
+  }
+
+  private void setDeviceName( String deviceName ) {
+    this.deviceName = deviceName;
+  }
+
+  private void setSize( Integer size ) {
+    this.size = size;
+  }
+
+  private void setFormat( Format format ) {
+    this.format = format;
+  }
+  
 }

@@ -60,83 +60,18 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.bootstrap;
+package com.eucalyptus.vm;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.PriorityBlockingQueue;
-
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.util.Exceptions;
+import edu.ucsb.eucalyptus.msgs.DescribeSpotInstanceRequestsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSpotInstanceRequestsType;
 
 
 /**
- * Executes shutdown hooks in order
+ * @todo doc
+ * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-public class OrderedShutdown {
-  
-  static Logger                     LOG = Logger.getLogger( OrderedShutdown.class );
-  static LinkedBlockingQueue<ShutdownHook> preShutdownHooks = new LinkedBlockingQueue<ShutdownHook>();
-  static PriorityBlockingQueue<ShutdownHook> shutdownHooks = new PriorityBlockingQueue<ShutdownHook>();
-  static LinkedBlockingQueue<ShutdownHook> postShutdownHooks = new LinkedBlockingQueue<ShutdownHook>();
-
-  public static <T extends ComponentId> void registerShutdownHook(Class<T> id, Runnable r) {
-	  ShutdownHook hook = new ShutdownHook(ComponentIds.lookup(id), r);
-	  shutdownHooks.offer(hook);
-  }
-  
-  public static void registerPreShutdownHook(Runnable r) {
-	  ShutdownHook hook = new ShutdownHook(r);
-	  preShutdownHooks.offer(hook);
-  }
-  
-  public static void registerPostShutdownHook(Runnable r) {
-	  ShutdownHook hook = new ShutdownHook(r);
-	  postShutdownHooks.offer(hook);
-  }
-  
-  public static void initialize() {
-	  Runtime.getRuntime().addShutdownHook(new Thread() {
-		@Override
-		public void run() {
-			LOG.info("Executing Pre-Shutdown Hooks...");
-			ShutdownHook prehook;
-			while((prehook = preShutdownHooks.poll()) != null) {
-				try {
-		      LOG.info("Executing Pre-Shutdown Hook: " + prehook.getRunnable( ) );
-					prehook.getRunnable().run();
-				} catch (Exception e) {
-				  Exceptions.maybeInterrupted(e);
-				}
-			}
-			
-			LOG.info("Executing Shutdown Hooks...");
-			ShutdownHook h;
-			while((h = shutdownHooks.poll()) != null) {
-				try {
-          LOG.info("Executing Shutdown Hook: " + h.getRunnable( ) );
-					h.getRunnable().run();
-				} catch (Exception e) {
-				  Exceptions.maybeInterrupted(e);
-				}
-			}
-			
-			LOG.info("Executing Post-Shutdown Hooks...");
-			ShutdownHook posthook;
-			while((posthook = postShutdownHooks.poll()) != null) {
-				try {
-          LOG.info("Executing Post-Shutdown Hook: " + posthook.getRunnable( ) );
-					posthook.getRunnable().run();
-				} catch (Exception e) {
-				  Exceptions.maybeInterrupted(e);
-				}
-			}
-		}		 
-	  });
+public class SpotManager {
+  public DescribeSpotInstanceRequestsResponseType DescribeSpotInstances( DescribeSpotInstanceRequestsType request ) {
+    return request.getReply( );
   }
 }

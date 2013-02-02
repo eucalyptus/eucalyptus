@@ -1032,6 +1032,16 @@ public class Entities {
     
   }
   
+  public static <E, T> Predicate<T> asTransaction( final Predicate<T> predicate ) {
+    final List<Class> generics = Classes.genericsToClasses( predicate );
+    for ( final Class<?> type : generics ) {
+      if ( PersistenceContexts.isPersistentClass( type ) ) {
+        return asTransaction( type, predicate );
+      }
+    }
+    throw new IllegalArgumentException( "Failed to find generics for provided predicate, cannot make into transaction: " + Threads.currentStackString( ) );
+  }
+
   public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
     return asTransaction( type, predicate, CONCURRENT_UPDATE_RETRIES );
   }

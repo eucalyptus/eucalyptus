@@ -59,56 +59,62 @@
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
+/**
+ * Messages for operations related to reading, updating, and interrogating vm type definitions.
+ * @author chris grzegorczyk <grze@eucalyptus.com>
+ */
 
-package com.eucalyptus.util;
+package com.eucalyptus.vmtypes
 
-import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
+import java.util.ArrayList;
+import com.eucalyptus.component.ComponentId.ComponentMessage;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.vm.VmType;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
-@Provides( Eucalyptus.class )
-@RunDuring( Bootstrap.Stage.UserCredentialsInit )
-public class MetadataStateBootstrapper extends Bootstrapper.Simple {
-  private static Logger LOG = Logger.getLogger( MetadataStateBootstrapper.class );
-  
-  @Override
-  public boolean start( ) throws Exception {
-    try {
-      if ( Hosts.isCoordinator( ) ) {
-        ensureCountersExist( );
-        ensureVmTypesExist( );
-      }
-    } catch ( Exception ex ) {
-      LOG.error( ex, ex );
-    }
-    return true;
+@ComponentMessage(Eucalyptus.class)
+public class VmTypeMessage extends BaseMessage{
+}
+public class VmTypeDetails extends EucalyptusData {
+  String name;
+  Integer cpu;
+  Integer disk;
+  Integer memory;
+  ArrayList<VmTypeZoneStatus> availability = new ArrayList<VmTypeZoneStatus>( );
+  ArrayList<VmTypeEphemeralDisk> ephemeralDisk = new ArrayList<EphemeralDisk>( );
+}
+public class VmTypeZoneStatus extends EucalyptusData {
+  String name;
+  String zoneName;
+  Integer max;
+  Integer available;
+}
+public class VmTypeEphemeralDisk extends EucalyptusData {
+  String virtualDeviceName;
+  String deviceName;
+  Integer size;
+  String format;
+  private VmTypeEphemeralDisk( String virtualDeviceName, String deviceName, Integer size, String format ) {
+    super( );
+    this.virtualDeviceName = virtualDeviceName;
+    this.deviceName = deviceName;
+    this.size = size;
+    this.format = format;
   }
   
-  private static void ensureCountersExist( ) {
-    UniqueIds.nextId( );
-    UniqueIds.nextId( Eucalyptus.class );
-  }
-  
-  private static void ensureVmTypesExist( ) {
-    EntityWrapper<VmType> db = EntityWrapper.get( VmType.class );
-    try {
-      if ( db.query( new VmType( ) ).size( ) == 0 ) { //TODO: make defaults configurable?
-        db.add( new VmType( "m1.small",  1,  5,  512 ) );
-        db.add( new VmType( "c1.medium", 2, 10,  512 ) );
-        db.add( new VmType( "m1.large",  2, 15, 1024 ) );
-        db.add( new VmType( "m1.xlarge", 2, 20, 2048 ) );
-        db.add( new VmType( "c1.xlarge", 4, 20, 4096 ) );
-      }
-      db.commit( );
-    } catch ( Exception e ) {
-      db.rollback( );
-    }
-  }
-  
+}
+public class ModifyVmTypeAttributeType extends VmTypeMessage {
+  Boolean reset;
+  VmTypeDetails vmType;
+}
+public class ModifyVmTypeAttributeResponseType extends VmTypeMessage {
+  VmTypeDetails vmType;
+}
+public class DescribeVmTypesType extends VmTypeMessage {
+  Boolean verbose = false;
+  Boolean availability = false;
+  ArrayList<String> vmTypes = new ArrayList<String>();
+}
+public class DescribeVmTypesResponseType extends VmTypeMessage  {
+  ArrayList<VmTypeDetails> vmTypeDetails= new ArrayList<String>();
 }

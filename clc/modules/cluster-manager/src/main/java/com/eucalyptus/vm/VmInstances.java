@@ -139,6 +139,8 @@ import com.eucalyptus.util.async.Request;
 import com.eucalyptus.vm.VmInstance.Transitions;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstance.VmStateSet;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
