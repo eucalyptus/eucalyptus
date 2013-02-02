@@ -45,6 +45,8 @@ var IP_PATTER = new RegExp('[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$');
 var MAX_DESCRIPTION_LEN = 255;
 var KEEP_VIEW = 'keep_view';
 
+var IMG_OPT_PARAMS='';
+
 function isValidIPv4Address(ipaddr) {
   ipaddr = ipaddr.replace( /\s/g, "")
   if (IP_PATTER.test(ipaddr)) {
@@ -106,7 +108,10 @@ if( !Array.prototype.indexOf ) {
 }
 
 function addEllipsis(input, maxLen){
-  if (input == undefined || input.length < maxLen)
+  if (input == undefined)
+    return input;
+  input = DefaultEncoder().encodeForHTML(input);
+  if (input.length < maxLen)
     return input;
   input = input.substring(0, maxLen);
   i = input.lastIndexOf(" ");
@@ -477,7 +482,7 @@ function errorAndLogout(errorCode){
     bError = true;
   }
 
-  $('html body').find(DOM_BINDING['hidden']).login('popupDialog', bError, errorMsg, function(){
+  $('html body').find(DOM_BINDING['hidden']).login('popupError', bError, errorMsg, function(){
     logout();
   });
 }
@@ -559,7 +564,6 @@ function sortArray(array, comperator){
     var idx2 = 0;
     while(idx1 < arr1.length  || idx2 < arr2.length){
       if(idx1 < arr1.length && idx2 < arr2.length){
-       // if(arr1[idx1] < arr2[idx2])
         if(comperator(arr1[idx1], arr2[idx2]))
           merged.push(arr1[idx1++]);
         else

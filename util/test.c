@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,127 +63,257 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file util/test.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>             /* usleep */
+#include <unistd.h>                    /* usleep */
 #include <pthread.h>
 #include "ipc.h"
 #include "misc.h"
 #include "data.h"
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define ITER                                     (160 * 4)
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 const char *euca_this_component_name = "test";
 
-#define ITER 160*4
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void test_sem_fork(void);
+void *thread_a(void *arg);
+void *thread_b(void *arg);
+void test_sem_pthreads(void);
+int main(int argc, char *argv[]);
+
+ /*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static void test_volumes(void);
+
+ /*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define EXIT()                                       \
+{                                                    \
+	fprintf(stderr, "error on line %d\n", __LINE__); \
+	exit(1);                                         \
+}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
 void test_sem_fork(void)
 {
+    int i = 0;
+    char c = '\0';
     sem *s = sem_alloc(1, "eucalyptus-util-test");
 
     printf("---> testing semaphores between processes\n");
 
     if (fork()) {
-        char c = 'A';
-        int i;
+        c = 'A';
         sleep(1);
         printf("A trying sem...\n");
         sem_p(s);
-        printf("A got sem!\n");
-        sleep(1);
-        printf("A releasing sem...\n");
+        {
+            printf("A got sem!\n");
+            sleep(1);
+            printf("A releasing sem...\n");
+        }
         sem_v(s);
         sleep(1);
 
         for (i = 0; i < ITER; i++) {
             sem_p(s);
+            {
+                if (i % 16 == 0)
+                    printf("\n");
+                write(1, &c, 1);
+                usleep(100);
+                write(1, &c, 1);
+            }
+            sem_v(s);
+        }
+    } else {
+        c = 'B';
+
+        printf("B trying sem...\n");
+        sem_p(s);
+        {
+            printf("B got sem!\n");
+            sleep(2);
+            printf("B releasing sem...\n");
+        }
+        sem_v(s);
+        sleep(2);
+
+        for (i = 0; i < ITER; i++) {
+            sem_p(s);
+            {
+                write(1, &c, 1);
+                usleep(100);
+                write(1, &c, 1);
+            }
+            sem_v(s);
+        }
+        exit(0);                       /* child quits */
+    }
+
+    SEM_FREE(s);
+    printf("\n");
+}
+
+//!
+//!
+//!
+//! @param[in] arg tranparent pointer to thread arguments
+//!
+//! @return Always return NULL
+//!
+void *thread_a(void *arg)
+{
+    int i = 0;
+    char c = 'T';
+    sem *s = ((sem *) arg);
+
+    sleep(1);
+    printf("T trying sem...\n");
+    sem_p(s);
+    {
+        printf("T got sem!\n");
+        sleep(1);
+        printf("T releasing sem...\n");
+    }
+    sem_v(s);
+    sleep(1);
+
+    for (i = 0; i < ITER; i++) {
+        sem_p(s);
+        {
             if (i % 16 == 0)
                 printf("\n");
             write(1, &c, 1);
             usleep(100);
             write(1, &c, 1);
-            sem_v(s);
         }
-
-    } else {
-        char c = 'B';
-        int i;
-
-        printf("B trying sem...\n");
-        sem_p(s);
-        printf("B got sem!\n");
-        sleep(2);
-        printf("B releasing sem...\n");
-        sem_v(s);
-        sleep(2);
-
-        for (i = 0; i < ITER; i++) {
-            sem_p(s);
-            write(1, &c, 1);
-            usleep(100);
-            write(1, &c, 1);
-            sem_v(s);
-        }
-        exit(0);                /* child quits */
-    }
-
-    sem_free(s);
-    printf("\n");
-}
-
-void *thread_a(void *arg)
-{
-    sem *s = (sem *) arg;
-    char c = 'T';
-    int i;
-    sleep(1);
-    printf("T trying sem...\n");
-    sem_p(s);
-    printf("T got sem!\n");
-    sleep(1);
-    printf("T releasing sem...\n");
-    sem_v(s);
-    sleep(1);
-
-    for (i = 0; i < ITER; i++) {
-        sem_p(s);
-        if (i % 16 == 0)
-            printf("\n");
-        write(1, &c, 1);
-        usleep(100);
-        write(1, &c, 1);
         sem_v(s);
     }
-    return NULL;
+    return (NULL);
 }
 
+//!
+//!
+//!
+//! @param[in] arg tranparent pointer to thread arguments
+//!
+//! @return Always return NULL
+//!
 void *thread_b(void *arg)
 {
-    sem *s = (sem *) arg;
+    int i = 0;
     char c = 'U';
-    int i;
+    sem *s = ((sem *) arg);
 
     printf("U trying sem...\n");
     sem_p(s);
-    printf("U got sem!\n");
-    sleep(2);
-    printf("U releasing sem...\n");
+    {
+        printf("U got sem!\n");
+        sleep(2);
+        printf("U releasing sem...\n");
+    }
     sem_v(s);
     sleep(2);
 
     for (i = 0; i < ITER; i++) {
         sem_p(s);
-        write(1, &c, 1);
-        usleep(100);
-        write(1, &c, 1);
+        {
+            write(1, &c, 1);
+            usleep(100);
+            write(1, &c, 1);
+        }
         sem_v(s);
     }
-    return NULL;
+    return (NULL);
 }
 
+//!
+//!
+//!
 void test_sem_pthreads(void)
 {
+    void *status = NULL;
+    pthread_t ta = { 0 };
+    pthread_t tb = { 0 };
     sem *s = sem_alloc(1, "eucalyptus-util-test2");
-    pthread_t ta, tb;
-    void *status;
 
     printf("---> testing semaphores between threads\n");
     pthread_create(&ta, NULL, thread_a, s);
@@ -189,20 +322,25 @@ void test_sem_pthreads(void)
     pthread_join(tb, &status);
     printf("\n");
 
-    sem_free(s);
+    SEM_FREE(s);
 }
 
-#define EXIT { fprintf (stderr, "error on line %d\n", __LINE__); exit (1); }
-
+//!
+//!
+//!
 static void test_volumes(void)
 {
-    int i, j;
-    char id[100];
-    ncInstance inst;
-    ncVolume *vols[EUCA_MAX_VOLUMES + 1];
+    int i = 0;
+    int j = 0;
+    int pivot = 0;
+    char id[100] = { 0 };
+    ncInstance inst = { 0 };
+    ncVolume *vols[EUCA_MAX_VOLUMES + 1] = { NULL };
+    ncVolume *v = NULL;
+    ncVolume *v2 = NULL;
 
     for (j = 0; j < 10; j++) {
-        int pivot = random() % EUCA_MAX_VOLUMES;
+        pivot = random() % EUCA_MAX_VOLUMES;
         printf("testing volumes iteration=%d pivot=%d\n", j, pivot);
         bzero(&inst, sizeof(ncInstance));
         for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
@@ -210,82 +348,103 @@ static void test_volumes(void)
             vols[i] = add_volume(&inst, id, "remote", "local");
             if (vols[i] == NULL) {
                 fprintf(stderr, "error on add iteration %i-%i\n", i, j);
-                EXIT;
+                EXIT();
             }
+
             if (inst.volumesSize != i + 1) {
                 fprintf(stderr, "error on add iteration %i-%i\n", i, j);
-                EXIT;
+                EXIT();
             }
         }
 
         snprintf(id, 100, "v%06d", i);
         vols[i] = add_volume(&inst, id, "remote", "local");
         if (vols[i] != NULL)
-            EXIT;
-        if (inst.volumesSize != EUCA_MAX_VOLUMES)
-            EXIT;
+            EXIT();
 
-        ncVolume *v = vols[pivot];
-        strncpy(id, v->volumeId, 100);
-        ncVolume *v2 = free_volume(&inst, id, "remote", "local");
-        if (v2 != v)
-            EXIT;
-        if (inst.volumesSize != EUCA_MAX_VOLUMES - 1)
-            EXIT;
-        v = add_volume(&inst, id, "remote", "local");
-        if (v == NULL)
-            EXIT;
         if (inst.volumesSize != EUCA_MAX_VOLUMES)
-            EXIT;
+            EXIT();
+
+        v = vols[pivot];
+        strncpy(id, v->volumeId, 100);
         v2 = free_volume(&inst, id, "remote", "local");
         if (v2 != v)
-            EXIT;
+            EXIT();
+
         if (inst.volumesSize != EUCA_MAX_VOLUMES - 1)
-            EXIT;
+            EXIT();
+
         v = add_volume(&inst, id, "remote", "local");
         if (v == NULL)
-            EXIT;
+            EXIT();
+
         if (inst.volumesSize != EUCA_MAX_VOLUMES)
-            EXIT;
+            EXIT();
+
+        v2 = free_volume(&inst, id, "remote", "local");
+        if (v2 != v)
+            EXIT();
+
+        if (inst.volumesSize != EUCA_MAX_VOLUMES - 1)
+            EXIT();
+
+        v = add_volume(&inst, id, "remote", "local");
+        if (v == NULL)
+            EXIT();
+
+        if (inst.volumesSize != EUCA_MAX_VOLUMES)
+            EXIT();
 
         for (i = 0; i < EUCA_MAX_VOLUMES; i++) {
             snprintf(id, 100, "v%06d", i);
             v = free_volume(&inst, id, "remote", "local");
             if (v == NULL) {
                 fprintf(stderr, "error on free iteration %i-%i\n", i, j);
-                EXIT;
+                EXIT();
             }
+
             if (inst.volumesSize != EUCA_MAX_VOLUMES - i - 1) {
                 fprintf(stderr, "error on free iteration %i-%i\n", i, j);
-                EXIT;
+                EXIT();
             }
         }
     }
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK
+//!
 int main(int argc, char *argv[])
 {
-    if (diff("/etc/motd", "/etc/motd") != 0)
-        EXIT;
-    if (diff("/etc/passwd", "/etc/motd") == 0)
-        EXIT;
-
     char *s = strdup("jolly old jolly old time...");
     char **sp = &s;
-    if (strcmp(replace_string(sp, "old", "new"), "jolly new jolly new time..."))
-        EXIT;
+
+    if (diff("/etc/motd", "/etc/motd") != 0)
+        EXIT();
+
+    if (diff("/etc/passwd", "/etc/motd") == 0)
+        EXIT();
+
+    if (strcmp(euca_strreplace(sp, "old", "new"), "jolly new jolly new time..."))
+        EXIT();
+
     if (vrun("ls / /etc >/dev/null"))
-        EXIT;
+        EXIT();
 
     test_volumes();
 
     printf("all tests passed!\n");
     if (argc == 1)
-        return 0;
+        return (EUCA_OK);
 
     /* "visual" testing of the semaphores */
     test_sem_fork();
     test_sem_pthreads();
 
-    return 0;
+    return (EUCA_OK);
 }

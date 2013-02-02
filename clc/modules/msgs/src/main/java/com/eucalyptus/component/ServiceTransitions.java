@@ -70,6 +70,7 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.bootstrap.Host;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.Component.State;
@@ -170,18 +171,18 @@ public class ServiceTransitions {
           break;
       }
       if ( !initialState.equals( goalState ) ) {
-        LOG.debug( configuration.getFullName( ) + " transitioning "
-                   + initialState + "->" + goalState
-                   + " using path " + Joiner.on( "->" ).join( path ) );
-      }
+				Logs.extreme().debug(configuration.getName() + " transitioning "
+														 + initialState + "->" + goalState
+														 + " using path " + Joiner.on("->").join(path));
+			}
       CheckedListenableFuture<ServiceConfiguration> result = executeTransition( configuration, Automata.sequenceTransitions( configuration, path ) );
       return result;
     } catch ( RuntimeException ex ) {
-      Logs.extreme( ).error( configuration.getFullName( ) + " failed to transition to "
-                   + goalState
-                   + " because of: "
-                   + Exceptions.causeString( ex ) );
-      Logs.extreme( ).error( ex, ex );
+			Logs.extreme().error(configuration.getName() + " failed to transition to "
+													 + goalState
+													 + " because of: "
+													 + Exceptions.causeString(ex));
+			Logs.extreme( ).error( ex, ex );
       throw ex;
     }
   }
@@ -329,8 +330,7 @@ public class ServiceTransitions {
       }
       
     } catch ( Exception ex ) {
-      LOG.error( parent.getFullName( ) + " failed request because of: " + ex.getMessage( ) );
-      Logs.extreme( ).error( ex, ex );
+      Logs.extreme( ).error( parent.getFullName( ) + " failed request because of: " + ex.getMessage( ), ex );
       throw ex;
     }
   }
@@ -357,7 +357,7 @@ public class ServiceTransitions {
       transitionCallback.fire( );
       Faults.flush( parent );
     } catch ( Exception ex ) {
-      LOG.error( parent.getFullName( ) + " failed transition " + transitionAction.name( ) + " because of " + ex.getMessage( ) );
+      Logs.extreme().info( parent.getName( ) + " failed " + transitionAction.name( ) + ": " + ex.getMessage( ) );
       if ( Faults.filter( parent, ex ) ) {
         transitionCallback.fireException( ex );
         Faults.submit( parent, transitionRecord, Faults.failure( parent, ex ) );
@@ -839,9 +839,11 @@ public class ServiceTransitions {
             try {
               PropertyDirectory.addProperty( prop );
               try {
-                prop.getValue( );
-              } catch ( Exception ex ) {
-                Logs.extreme( ).error( ex );
+                if (!Databases.isVolatile()) {
+                  prop.getValue();
+                }
+              } catch (Exception ex) {
+                Logs.extreme().error(ex);
               }
             } catch ( Exception ex ) {
               Logs.extreme( ).error( ex, ex );

@@ -24,7 +24,7 @@
       refresh_interval_sec : REFRESH_INTERVAL_SEC,
       max_refresh_attempt : 3,
       endpoints: [{name:'instance', url: '/ec2?Action=DescribeInstances'},
-                  {name:'image', url: '/ec2?Action=DescribeImages'},
+                  {name:'image', url: '/ec2?Action=DescribeImages'+IMG_OPT_PARAMS},
                   {name:'volume', url: '/ec2?Action=DescribeVolumes'},
                   {name:'snapshot', url: '/ec2?Action=DescribeSnapshots'},
                   {name:'eip', url: '/ec2?Action=DescribeAddresses'},
@@ -73,10 +73,10 @@
                  });
                }
              }else {
-               ;//TODO: how to notify errors?
+               ;
              }
            },
-           error: function(jqXHR, textStatus, errorThrown){ //TODO: need to call notification subsystem
+           error: function(jqXHR, textStatus, errorThrown){ 
              thisObj._errorCode = jqXHR.status;
              thisObj._numPending--;
              if(thisObj._data[name]){
@@ -141,7 +141,6 @@
         }
         if(!duplicate)
           thisObj._listeners[resource].push({src:source, callback: callback});
-     //   alert(resource+' num cb: '+thisObj._listeners[resource].length);
       }
     },
     
@@ -168,7 +167,6 @@
     },
 
     // status: online, offline, error
-    // TODO: refine implementation
     getStatus : function(){
       var thisObj = this;
       var status = 'online';

@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,28 +63,79 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef IPC_H
-#define IPC_H
+#ifndef _INCLUDE_IPC_H_
+#define _INCLUDE_IPC_H_
+
+//!
+//! @file util/ipc.h
+//! Provides wrappers that support BOTH SYS V semaphores and the POSIX named
+//! semaphores depending on whether name was passed to sem_alloc().
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <semaphore.h>
 #include <pthread.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! Semaphore structure
 typedef struct sem_struct {
     int sysv;
     sem_t *posix;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    int usemutex, mutwaiters, mutcount;
+    int usemutex;
+    int mutwaiters;
+    int mutcount;
     char *name;
     int flags;
 } sem;
 
-#include "misc.h"               // boolean
+#include "misc.h"                      // MUST be after this structure for boolean inclusion
 
-sem *sem_realloc(const int val, const char *name, const int flags);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 sem *sem_alloc(const int val, const char *name);
+sem *sem_realloc(const int val, const char *name, int flags);
 sem *sem_alloc_posix(sem_t * external_lock);
 int sem_prolaag(sem * s, boolean do_log);
 int sem_p(sem * s);
@@ -89,4 +143,29 @@ int sem_verhogen(sem * s, boolean do_log);
 int sem_v(sem * s);
 void sem_free(sem * s);
 
-#endif /* IPC_H */
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! A safe macro to free a semaphore. Force the semaphore to NULL after free.
+#define SEM_FREE(_sem)  \
+{                       \
+    sem_free((_sem));   \
+    (_sem) = NULL;      \
+}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_IPC_H_ */

@@ -72,26 +72,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.eucalyptus.util.async.Futures;
+import com.google.common.collect.*;
 import org.apache.log4j.Logger;
-import org.jgroups.Address;
-import org.jgroups.ChannelException;
-import org.jgroups.Global;
-import org.jgroups.Header;
-import org.jgroups.JChannel;
-import org.jgroups.View;
+import org.jgroups.*;
 import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
@@ -116,11 +111,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 /**
@@ -130,7 +121,8 @@ import com.google.common.primitives.Longs;
 @ConfigurableClass( root = "bootstrap.hosts",
                     description = "Properties controlling the handling of remote host bootstrapping" )
 public class Hosts {
-  
+
+  private static int                             REJOIN_BACKOFF_SECS        = Integer.parseInt( System.getProperty( "euca.bootstrap.rejoin.backoff", "30" ) );//GRZE: do not want to mess w/ this unless necessary -- its here just in case.
   @ConfigurableField( description = "Timeout for state transfers (in msec).",
                       readonly = true )
   public static final Long                       STATE_TRANSFER_TIMEOUT     = 10000L;
@@ -141,32 +133,32 @@ public class Hosts {
   public static final long                       SERVICE_INITIALIZE_TIMEOUT = 10000L;
   private static ReplicatedHashMap<String, Host> hostMap;
   private static final ReentrantReadWriteLock    canHas                     = new ReentrantReadWriteLock( );
-  
+
   public static Predicate<ServiceConfiguration> nonLocalAddressMatch( final InetAddress addr ) {
     return new Predicate<ServiceConfiguration>( ) {
-      
+
       @Override
       public boolean apply( final ServiceConfiguration input ) {
         return input.getInetAddress( ).equals( addr ) || input.getInetAddress( ).getCanonicalHostName( ).equals( addr.getCanonicalHostName( ) )
                || input.getHostName( ).equals( addr.getCanonicalHostName( ) );
       }
-      
+
     };
   }
-  
+
   public static Predicate<ComponentId> nonLocalAddressFilter( final InetAddress addr ) {
     return new Predicate<ComponentId>( ) {
-      
+
       @Override
       public boolean apply( final ComponentId input ) {
         return !Internets.testLocal( addr );
       }
     };
   }
-  
+
   private static <T extends ComponentId> Function<T, ServiceConfiguration> initRemoteSetupConfigurations( final InetAddress addr ) {
     return new Function<T, ServiceConfiguration>( ) {
-      
+
       @Override
       public ServiceConfiguration apply( final T input ) {
         Component component = Components.lookup( input );
@@ -176,7 +168,7 @@ public class Hosts {
       }
     };
   }
-  
+
   enum SetupRemoteServiceConfigurations implements Function<ServiceConfiguration, ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -222,13 +214,13 @@ public class Hosts {
       }
     }
   }
-  
+
   enum ShouldLoadRemote implements Predicate<ComponentId> {
     EMPYREAN( Empyrean.class ),
     EUCALYPTUS( Eucalyptus.class );
     Predicate<ComponentId>       delegate;
     Class<? extends ComponentId> compId;
-    
+
     private ShouldLoadRemote( final Class<? extends ComponentId> compId ) {
       this.delegate = new Predicate<ComponentId>( ) {
         @Override
@@ -238,22 +230,22 @@ public class Hosts {
       };
       this.compId = compId;
     }
-    
+
     @Override
     public boolean apply( final ComponentId input ) {
       return this.delegate.apply( input );
     }
-    
+
     public static Collection<ComponentId> findDependentComponents( final Class<? extends ComponentId> comp, final InetAddress addr ) {
       return Collections2.filter( ComponentIds.list( ), Predicates.and( EMPYREAN.compId.equals( comp ) ? EMPYREAN : EUCALYPTUS, nonLocalAddressFilter( addr ) ) );
     }
-    
+
   }
-  
+
   enum PeriodicMembershipChecks implements Runnable {
     ENTRYUPDATE( 2 ) {
       private volatile int counter = 0;
-      
+
       @Override
       public void run( ) {
         final Host currentHost = Hosts.localHost( );
@@ -276,20 +268,20 @@ public class Hosts {
           Logs.extreme( ).debug( ex, ex );
         }
       }
-      
+
     },
     PRUNING( 10 ) {
-      
+
       @Override
       public void run( ) {
         if ( Hosts.pruneHosts( ) ) {
           Hosts.updateServices( );
         }
       }
-      
+
     },
     INITIALIZE( 5 ) {
-      
+
       @Override
       public void run( ) {
         final Host currentHost = Hosts.localHost( );
@@ -297,20 +289,20 @@ public class Hosts {
           System.exit( 123 );
         }
       }
-      
+
     };
     private final long                            interval;
     private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool( 32 );
     private static final Lock                     canHasChecks = new ReentrantLock( );
-    
+
     private PeriodicMembershipChecks( long interval ) {
       this.interval = interval;
     }
-    
+
     public static void setup( ) {
       for ( final PeriodicMembershipChecks runner : PeriodicMembershipChecks.values( ) ) {
         Runnable safeRunner = new Runnable( ) {
-          
+
           @Override
           public void run( ) {
             if ( !Bootstrap.isLoaded( ) || Bootstrap.isShuttingDown( ) ) {
@@ -342,26 +334,26 @@ public class Hosts {
         hostPruner.scheduleAtFixedRate( safeRunner, 0L, runner.getInterval( ), TimeUnit.SECONDS );
       }
     }
-    
+
     private long getInterval( ) {
       return this.interval;
     }
-    
+
     @Override
     public String toString( ) {
       return "Hosts.PeriodicMembershipChecks." + this.name( );
     }
-    
+
     public static List<Runnable> shutdownNow( ) {
       return hostPruner.shutdownNow( );
     }
-    
+
     public void submit( ) {
       hostPruner.execute( this );
     }
-    
+
   }
-  
+
   private static boolean pruneHosts( ) {
     try {
       Set<Address> currentMembers = Sets.newHashSet( hostMap.getChannel( ).getView( ).getMembers( ) );
@@ -397,7 +389,7 @@ public class Hosts {
     }
     return true;
   }
-  
+
   private static void updateServices( ) {
     try {
       if ( !Topology.isEnabled( Eucalyptus.class ) && Hosts.getCoordinator( ) != null ) {
@@ -412,43 +404,43 @@ public class Hosts {
       Logs.extreme( ).debug( ex, ex );
     }
   }
-  
+
   enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {
     INSTANCE;
     private static final ExecutorService dbActivation = Executors.newFixedThreadPool( 32 );
-    
+
     private String printMap( ) {
       return "\n" + Joiner.on( "\nHosts.values(): " ).join( hostMap.values( ) );
     }
-    
+
     @Override
     public void contentsCleared( ) {
       LOG.info( "Hosts.contentsCleared(): " + this.printMap( ) );
     }
-    
+
     @Override
     public void contentsSet( final Map<String, Host> input ) {
       LOG.info( "Hosts.contentsSet(): " + this.printMap( ) );
     }
-    
+
     @Override
     public void entryRemoved( final String input ) {
       LOG.info( "Hosts.entryRemoved(): " + input );
       Databases.disable( input );
     }
-    
+
     @Override
     public void entrySet( final String hostKey, final Host host ) {
       if ( Bootstrap.isShuttingDown( ) ) {
         return;
       } else {
-        Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " => " + host );
+        Logs.extreme().debug( "Hosts.entrySet(): " + hostKey + " => " + host );
         try {
           if ( host.isLocalHost( ) && host.hasDatabase( ) && Bootstrap.isLoaded( ) ) {
             final boolean wasSynched = Databases.isSynchronized( );
             final boolean wasVolatile = Databases.isVolatile( );
             dbActivation.submit( new Runnable( ) {
-              
+
               @Override
               public void run( ) {
                 if ( !wasSynched && !Databases.SyncState.SYNCING.isCurrent( ) && !Databases.isSynchronized( ) ) {
@@ -479,32 +471,145 @@ public class Hosts {
         Logs.extreme( ).info( "Hosts.entrySet(): " + hostKey + " finished." );
       }
     }
-    
+
     @Override
     public void viewChange( final View currentView, final Vector<Address> joinMembers, final Vector<Address> partMembers ) {
+      LOG.info( "Hosts.viewChange(): new view [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
+                + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       LOG.info( "Hosts.viewChange(): " + printMap( ) );
-      LOG.info( "Hosts.viewChange(): new view => " + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
-      if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   => " + Joiner.on( ", " ).join( joinMembers ) );
-      if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   => " + Joiner.on( ", " ).join( partMembers ) );
+      if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
+                                               + Joiner.on( ", " ).join( joinMembers ) );
+      if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
+                                               + Joiner.on( ", " ).join( partMembers ) );
       List<Address> allHostAddresses = Lists.transform( Hosts.list( ), GroupAddressTransform.INSTANCE );
       Collection<Address> partedHosts = Collections2.filter( allHostAddresses, Predicates.in( partMembers ) );
       for ( final Address hostAddress : partedHosts ) {
         LOG.info( "Hosts.viewChange(): -> removed  => " + hostAddress );
       }
-      if ( !partedHosts.isEmpty( ) ) {
-        PeriodicMembershipChecks.PRUNING.submit( );
-      }
+      if ( currentView instanceof MergeView ) this.handleMergeView( ( MergeView ) currentView );
       LOG.info( "Hosts.viewChange(): new view finished." );
     }
-    
+
+    /**
+     * When we get a MergeView all hosts need to:
+     * <ol>
+     * <li>Update their map copies from non-member partition's coordinator with {@link ReplicatedHashMap#setState(byte[])}.</li>
+     * <li>Check to see if the current view state is compatible with their previous view state.</li>
+     * <li>Fail-stop if an inconsistency exists.</li>
+     * </ol>
+     */
+    private void handleMergeView( final MergeView mergeView ) {
+      /**
+       * Which host was the coordinator for the partition this host belongs to.
+       */
+      final Host preMergeCoordinator = Coordinator.INSTANCE.get();
+      LOG.info("Hosts.viewChange(): merge   : pre-merge-coordinator=" + preMergeCoordinator );
+      Runnable mergeViews = new Runnable() {
+        /**
+         * Was this host the coordinator when the merge view arrived (i.e., before the partiton has been resolved)?
+         */
+        private final boolean coordinator = preMergeCoordinator.isLocalHost();
+        /**
+         * Which host was the coordinator for the partition this host belongs to.
+         */
+        private final String coordinatorAddress = preMergeCoordinator != null ? preMergeCoordinator.getDisplayName() : "NONE";
+
+        private String logPrefix( View v ) { return "Hosts.viewChange(): merge   [" + v.getViewId( ).getId( ) + ":" + v.getViewId( ).getCoordAddress( ) + "]=> "; }
+
+        @Override
+        public void run( ) {
+          Map<String, View> partitions = Maps.newHashMap( );
+          View localView = null;
+          for ( View v : ( ( MergeView ) mergeView ).getSubgroups( ) ) {
+            LOG.info( logPrefix( v ) + " localhost-member=" + v.containsMember( Hosts.getLocalGroupAddress( ) )
+                      + "coordinator=[ group=" + v.getViewId( ).getCoordAddress( )
+                      + ", system=" + this.coordinatorAddress
+                      + ", localhost=" + this.coordinator + "]" );
+            LOG.info( logPrefix( v ) + Joiner.on( ", " ).join( v.getMembers( ) ) );
+
+            /**
+             * If this subgroup/partiton is not one we are a member of then sync the state from the coordinator, i.e. {@code org.jgroups.View#getMembers()#firstElement()} is the coordinator.
+             */
+            if ( !v.containsMember( Hosts.getLocalGroupAddress( ) ) ) {
+              try {
+                HostManager.getMembershipChannel().getState( v.getMembers().firstElement(), 0L );
+              } catch ( Exception e ) {
+                LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
+                Logs.extreme().error( e, e );
+              }
+            } else {
+              localView = v;
+            }
+
+            /**
+             * Make a map of all group members and their views
+             */
+            for ( Address addr : v.getMembers() ) {
+              partitions.put( addr.toString(), v );
+            }
+          }
+          /**
+           * At this point local state is up-to-date and only CLCs need to proceed
+           */
+          if ( BootstrapArgs.isCloudController( ) ) {
+            boolean partitioned = false;
+            /**
+             * Check if any DB was partitioned from the local view.
+             */
+            Set<View> dbViews = Sets.newHashSet( );//used only for logging
+            for ( Host db : Hosts.listDatabases() ) {
+              View dbView = partitions.get( db.getDisplayName( ) );
+              if ( !dbView.equals( localView ) ) {
+                partitioned = true;
+              }
+              dbViews.add( dbView );
+            }
+            /**
+             * Check to ensure that if this host was not the original coordinator it isn't restarted as the coordinator.
+             */
+            Host newCoordinator = Coordinator.INSTANCE.get( );
+            if ( !coordinatorAddress.equals( newCoordinator.getDisplayName() ) ) {
+              partitioned = true;
+            }
+            
+            if ( !partitioned ) {//no partition, keep going ==> happy time.
+              return;
+            } else if ( !newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator, am not now ==> failstop
+              LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+              LOG.error( "PARTITION FAIL-STOP: " + printMap( ) );
+              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
+              Databases.Locks.PARTITIONED.failStop( );
+            } else if ( newCoordinator.isLocalHost( ) && this.coordinator ) {//was coordinator and continue to be ==> backup and keep going
+              LOG.error( "PARTITION CONTINUE:  Possibility for inconsistency detected for hosts in the following views: " + Joiner.on( ", " ).join( dbViews ) );
+            } else if ( !newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, still am not AND someone else is ==> restart to resync data
+              LOG.error( "PARTITION RESTART:  Possibility for stale data copy detected for Host: " + Hosts.localHost() );
+              LOG.error( "PARTITION RESTART: " + printMap( ) );
+              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found different coordinator " + newCoordinator );
+              Databases.Locks.PARTITIONED.failStop( );
+//              SystemBootstrapper.restart( );
+            } else if ( newCoordinator.isLocalHost( ) && !this.coordinator ) {//wasn't coordinator, but somehow am now (wtf?) ==> pretty sure this is badness ==> failstop
+              LOG.error( "PARTITION FAIL-STOP:  Possibility for inconsistency detected for Host: " + Hosts.localHost() );
+              LOG.error( "PARTITION FAIL-STOP: " + printMap( ) );
+              Databases.Locks.PARTITIONED.create( logPrefix( localView ) + " found partitioned database in subgroup views: " + Joiner.on( ", " ).join( dbViews ) );
+              Databases.Locks.PARTITIONED.failStop( );
+            }
+          }
+        }
+
+      };
+      Threads.newThread( mergeViews ).start( );
+    }
+
   }
-  
+
   enum SyncDatabases implements Predicate<Host> {
     INSTANCE;
-    
+
     @Override
     public boolean apply( final Host input ) {
-      if ( Hosts.isCoordinator( input ) && input.hasBootstrapped( ) && !input.isLocalHost( ) ) {
+      if ( !Hosts.contains( input.getGroupsId() ) ) {
+        return false;
+      } else if ( Hosts.isCoordinator( input ) && input.hasBootstrapped( ) && !input.isLocalHost( ) ) {
         return Databases.enable( input );
       } else if ( input.hasDatabase( ) && input.hasSynced( ) && !input.isLocalHost( ) ) {
         return Databases.enable( input );
@@ -514,9 +619,9 @@ public class Hosts {
         return false;
       }
     }
-    
+
   }
-  
+
   enum BootstrapComponent implements Predicate<Host> {
     SETUP {
       @Override
@@ -562,14 +667,14 @@ public class Hosts {
           }
         }
       }
-      
+
       private void tryPromoteSelf( final Host input ) {
         if ( input.hasDatabase( ) && BootstrapArgs.isCloudController( ) ) {
           BootstrapComponent.SETUP.apply( Hosts.localHost( ) );
           UpdateEntry.INSTANCE.apply( Hosts.localHost( ) );
         }
       }
-      
+
       private void removeHost( final Host input ) {
         if ( Hosts.isCoordinator( ) ) {
           Hosts.remove( input.getDisplayName( ) );
@@ -585,7 +690,7 @@ public class Hosts {
       }
     },
     REMOTESETUP {
-      
+
       @Override
       public boolean apply( Host input ) {
         if ( !input.isLocalHost( ) ) {
@@ -595,20 +700,22 @@ public class Hosts {
         }
       }
     };
-    
+
     public abstract boolean apply( Host input );
-    
+
     private static <T extends ComponentId> boolean teardown( final Class<T> compClass, final InetAddress addr ) {
-      if ( Internets.testLocal( addr ) ) {
+      if ( Internets.testLocal( addr ) || !Bootstrap.isOperational() ) {
         return false;
       } else {
         try {
+          Map<ServiceConfiguration,Future<ServiceConfiguration>> disabled = Maps.newHashMap();
           for ( final ComponentId c : ShouldLoadRemote.findDependentComponents( compClass, addr ) ) {
             try {
               for ( final ServiceConfiguration s : Components.lookup( compClass ).services( ) ) {
                 try {
                   if ( s.getHostName( ).equals( addr.getHostAddress( ) ) ) {
-                    Topology.destroy( s ).get( );
+                    Future<ServiceConfiguration> disable = Topology.disable( s );
+                    disabled.put( s, disable );
                   }
                 } catch ( final Exception ex ) {
                   LOG.error( ex );
@@ -619,6 +726,8 @@ public class Hosts {
               Logs.extreme( ).error( ex, ex );
             }
           }
+//GRZE: should be no reason we need to wait for the torn down futures to complete, but better safe than sorry.
+          Futures.waitAll( disabled );
         } catch ( final Exception ex ) {
           LOG.error( ex );
           Logs.extreme( ).error( ex, ex );
@@ -627,7 +736,7 @@ public class Hosts {
         return true;
       }
     }
-    
+
     private static <T extends ComponentId> boolean setup( final Class<T> compId, final InetAddress addr ) {
       try {
         final Function<ComponentId, ServiceConfiguration> initFunc = Functions.compose( SetupRemoteServiceConfigurations.INSTANCE,
@@ -643,10 +752,10 @@ public class Hosts {
       }
     }
   }
-  
+
   enum CheckStale implements Predicate<Host> {
     INSTANCE;
-    
+
     @Override
     public boolean apply( final Host input ) {
       if ( !input.isLocalHost( ) ) {
@@ -669,10 +778,10 @@ public class Hosts {
       }
     }
   }
-  
+
   enum UpdateEntry implements Predicate<Host> {
     INSTANCE;
-    
+
     @Override
     public boolean apply( final Host input ) {
       if ( input == null ) {
@@ -708,10 +817,10 @@ public class Hosts {
       return true;
     }
   }
-  
+
   enum InitializeAsCloudController implements Predicate<Host> {
     INSTANCE;
-    
+
     @Override
     public boolean apply( final Host input ) {
       if ( !BootstrapArgs.isCloudController( ) && input.isLocalHost( ) && input.hasDatabase( ) ) {
@@ -732,21 +841,21 @@ public class Hosts {
         return false;
       }
     }
-    
+
   }
-  
+
   public static Address getLocalGroupAddress( ) {
     return HostManager.getMembershipChannel( ).getAddress( );
   }
-  
+
   static class HostManager {
     private final JChannel     membershipChannel;
     private static HostManager singleton;
     public static short        PROTOCOL_ID = 513;
     public static short        HEADER_ID   = 1025;
-    
+
     private HostManager( ) {
-      this.membershipChannel = HostManager.buildChannel( );
+      this.membershipChannel = buildChannel();
       //TODO:GRZE:set socket factory for crypto
       try {
         LOG.info( "Starting membership channel... " );
@@ -759,108 +868,109 @@ public class Hosts {
         throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
       }
     }
-    
+
     public static short lookupRegisteredId( final Class c ) {
       return ClassConfigurator.getMagicNumber( c );
     }
-    
+
     private static synchronized <T extends Header> String registerHeader( final Class<T> h ) {
       if ( ClassConfigurator.getMagicNumber( h ) == -1 ) {
         ClassConfigurator.add( ++HEADER_ID, h );
       }
       return "euca-" + ( h.isAnonymousClass( ) ? h.getSuperclass( ).getSimpleName( ).toLowerCase( ) : h.getSimpleName( ).toLowerCase( ) ) + "-header";
     }
-    
+
     private static List<Protocol> getMembershipProtocolStack( ) {
       return Groovyness.run( "setup_membership.groovy" );
     }
-    
-    private static HostManager getInstance( ) {
-      if ( singleton != null ) {
-        return singleton;
-      } else {
-        synchronized ( HostManager.class ) {
-          if ( singleton != null ) {
-            return singleton;
-          } else {
-            singleton = new HostManager( );
-            return singleton;
-          }
+
+    private static synchronized void start( ) {
+      if ( singleton == null ) {
+        singleton = new HostManager( );
+      }
+    }
+
+    private static JChannel singletonChannel;
+    private static synchronized JChannel buildChannel( ) {
+      if ( singletonChannel == null ) {
+        try {
+          final JChannel channel = new JChannel( false );
+          channel.setName( Internets.localHostIdentifier( ) );
+          final ProtocolStack stack = new ProtocolStack( );
+          channel.setProtocolStack( stack );
+          stack.addProtocols( HostManager.getMembershipProtocolStack( ) );
+          stack.init( );
+          singletonChannel = channel;
+          return channel;
+        } catch ( final Exception ex ) {
+          LOG.fatal( ex, ex );
+          throw new RuntimeException( ex );
         }
+      } else {
+        return singletonChannel;
       }
     }
-    
-    private static JChannel buildChannel( ) {
-      try {
-        final JChannel channel = new JChannel( false );
-        channel.setName( Internets.localHostIdentifier( ) );
-        final ProtocolStack stack = new ProtocolStack( );
-        channel.setProtocolStack( stack );
-        stack.addProtocols( HostManager.getMembershipProtocolStack( ) );
-        stack.init( );
-        return channel;
-      } catch ( final Exception ex ) {
-        LOG.fatal( ex, ex );
-        throw new RuntimeException( ex );
-      }
-    }
-    
+
     public static JChannel getMembershipChannel( ) {
-      return getInstance( ).membershipChannel;
+      return singletonChannel != null ? singletonChannel : buildChannel();
     }
-    
+
     public static class EpochHeader extends Header {
       private Integer value;
-      
+
       public EpochHeader( ) {
         super( );
       }
-      
+
       public EpochHeader( final Integer value ) {
         super( );
         this.value = value;
       }
-      
+
       @Override
       public void writeTo( final DataOutputStream out ) throws IOException {
         out.writeInt( this.value );
       }
-      
+
       @Override
       public void readFrom( final DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
         this.value = in.readInt( );
       }
-      
+
       @Override
       public int size( ) {
         return Global.INT_SIZE;
       }
-      
+
       public Integer getValue( ) {
         return this.value;
       }
     }
-    
+
   }
-  
+
   @Provides( Empyrean.class )
   @RunDuring( Bootstrap.Stage.RemoteConfiguration )
   public static class HostMembershipBootstrapper extends Bootstrapper.Simple {
-    
+
     @Override
     public boolean load( ) throws Exception {
       try {
-        HostManager.getInstance( );
+        //GRZE: 1. we must build the channel
+        JChannel jchannel = HostManager.buildChannel( );
         LOG.info( "Started membership channel " + SystemIds.membershipGroupName( ) );
-        hostMap = new ReplicatedHashMap<String, Host>( HostManager.getMembershipChannel( ) );
+        //GRZE: 2. then start the map
+        hostMap = new ReplicatedHashMap<String, Host>( jchannel );
         hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
+        //GRZE: 3. the connect the group
+        HostManager.start( );
         Runnable runMap = new Runnable( ) {
           public void run( ) {
             try {
               hostMap.start( STATE_INITIALIZE_TIMEOUT );
               OrderedShutdown.registerPreShutdownHook( new Runnable( ) {
-                
+
                 @Override
                 public void run( ) {
                   try {
@@ -893,14 +1003,14 @@ public class Hosts {
           }
         };
         Timers.loggingWrapper( runMap, hostMap ).call( );
-        
+
         /** initialize distributed system host state **/
         LOG.info( "Initial view: " + HostMapStateListener.INSTANCE.printMap( ) );
         LOG.info( "Searching for potential coordinator: " + Hosts.getCoordinator( ) );
         Hosts.Coordinator.INSTANCE.await( );
         Coordinator.INSTANCE.initialize( hostMap.values( ) );
-        LOG.info( "Initial coordinator:\n" + Hosts.getCoordinator( ) );
-        
+
+
         /** create host entry for localhost **/
         LOG.info( "Created local host entry: " + Hosts.localHost( ) );
         hostMap.addNotifier( HostMapStateListener.INSTANCE );
@@ -909,19 +1019,19 @@ public class Hosts {
         LOG.info( "System coordinator: " + Hosts.getCoordinator( ) );
         //TODO:GRZE:enable this
         //        Hosts.checkHostVersions( );
-        
+
         /** wait for db if needed **/
         Hosts.awaitDatabases( );
         LOG.info( "Membership address for localhost: " + Hosts.localHost( ) );
-        
+
         /** setup remote host states **/
         for ( final Host h : hostMap.values( ) ) {
           BootstrapComponent.REMOTESETUP.apply( h );
         }
-        
+
         /** setup host map handling **/
         PeriodicMembershipChecks.setup( );
-        
+
         return true;
       } catch ( final Exception ex ) {
         LOG.fatal( ex, ex );
@@ -929,9 +1039,9 @@ public class Hosts {
         return false;
       }
     }
-    
+
   }
-  
+
   private static void doInitialize( ) {
     try {
       hostMap.stop( );
@@ -946,7 +1056,7 @@ public class Hosts {
       System.exit( 123 );
     }
   }
-  
+
   public static int maxEpoch( ) {
     try {
       return Collections.max( Collections2.transform( hostMap.values( ), EpochTransform.INSTANCE ) );
@@ -954,7 +1064,7 @@ public class Hosts {
       return 0;
     }
   }
-  
+
   public static List<Host> list( ) {
     List<Host> hosts = Lists.newArrayList( );
     if ( hostMap != null ) {
@@ -962,41 +1072,41 @@ public class Hosts {
     }
     return hosts;
   }
-  
+
   public static List<Host> list( final Predicate<Host> filter ) {
     return Lists.newArrayList( Iterables.filter( list( ), filter ) );
   }
-  
+
   public static List<Host> listDatabases( ) {
     return Hosts.list( DbFilter.INSTANCE );
   }
-  
+
   private static final Predicate<Host> FILTER_SYNCED_DBS        = Predicates.and( DbFilter.INSTANCE, SyncedDbFilter.INSTANCE );
   private static final Predicate<Host> FILTER_BOOTED_SYNCED_DBS = Predicates.and( FILTER_SYNCED_DBS, BootedFilter.INSTANCE );
-  
+
   public static List<Host> listActiveDatabases( ) {
     return Hosts.list( FILTER_SYNCED_DBS );
   }
-  
+
   private static Host put( final Host newHost ) {
     return hostMap.put( newHost.getDisplayName( ), newHost );
   }
-  
+
   private static Host putIfAbsent( final Host host ) {
     return hostMap.putIfAbsent( host.getDisplayName( ), host );
   }
-  
+
   public static Host lookup( final Address hostGroupAddress ) {
     return lookup( hostGroupAddress.toString( ) );
   }
-  
+
   public static Host lookup( final String hostDisplayName ) {
     if ( hostMap.containsKey( hostDisplayName ) ) {
       return hostMap.get( hostDisplayName );
     } else {
       final InetAddress addr = Internets.toAddress( hostDisplayName );
       Hosts.list( new Predicate<Host>( ) {
-        
+
         @Override
         public boolean apply( Host input ) {
           if ( input.getBindAddress( ).equals( addr ) ) {
@@ -1011,29 +1121,34 @@ public class Hosts {
     }
     return null;
   }
-  
+
   public static boolean contains( final String hostDisplayName ) {
     return hostMap.containsKey( hostDisplayName );
   }
-  
-  private static boolean contains( final Address hostGroupAddress ) {
-    return contains( hostGroupAddress.toString( ) );
+
+  static boolean contains( final Address hostGroupAddress ) {
+    if ( !HostManager.getMembershipChannel( ).getView( ).containsMember( hostGroupAddress ) ) {
+      return false;
+    } else {
+      return contains( hostGroupAddress.toString( ) );
+    }
   }
-  
-  private static boolean contains( final Host host ) {
-    return contains( host.getDisplayName( ) );
+
+  static Host remove( final Address hostGroupAddress ) {
+    return remove( hostGroupAddress.toString( ) );
   }
-  
-  private static Host remove( Host host ) {
-    return remove( host.getDisplayName( ) );
-  }
-  
-  private static Host remove( String hostDisplayName ) {
-    Host ret = hostMap.remove( hostDisplayName );
-    LOG.info( "Removing host map entry for: " + hostDisplayName + " => " + ret );
+
+  static Host remove( String hostDisplayName ) {
+    Host ret = null;
+    try {
+      ret = hostMap.remove( hostDisplayName );
+      LOG.info( "Removing host map entry for: " + hostDisplayName + " => " + ret );
+    } catch ( RuntimeException e ) {
+      LOG.info( "Removing host map entry for: " + hostDisplayName + " => " + e.getMessage( ) );
+    }
     return ret;
   }
-  
+
   public static Host localHost( ) {
     if ( ( hostMap == null ) || !hostMap.containsKey( Internets.localHostIdentifier( ) ) ) {
       return Host.create( );
@@ -1041,16 +1156,16 @@ public class Hosts {
       return lookup( Internets.localHostIdentifier( ) );
     }
   }
-  
+
   enum ModifiedTimeTransform implements Function<Host, Long> {
     INSTANCE;
     @Override
     public Long apply( final Host input ) {
       return input.getTimestamp( ).getTime( );
     }
-    
+
   }
-  
+
   enum StartTimeTransform implements Function<Host, Long> {
     INSTANCE;
     @Override
@@ -1058,101 +1173,101 @@ public class Hosts {
       final long startTime = input.isLocalHost( ) ? 0L : input.getStartedTime( );
       return startTime == Long.MAX_VALUE ? 0L : startTime;
     }
-    
+
   }
-  
+
   enum NameTransform implements Function<Host, String> {
     INSTANCE;
     @Override
     public String apply( final Host input ) {
       return input.getDisplayName( );
     }
-    
+
   }
-  
+
   enum GroupAddressTransform implements Function<Host, Address> {
     INSTANCE;
     @Override
     public Address apply( final Host input ) {
       return input.getGroupsId( );
     }
-    
+
   }
-  
+
   enum EpochTransform implements Function<Host, Integer> {
     INSTANCE;
     @Override
     public Integer apply( final Host input ) {
       return input.getEpoch( );
     }
-    
+
   }
-  
+
   enum BootedFilter implements Predicate<Host> {
     INSTANCE;
     @Override
     public boolean apply( final Host input ) {
       return input.hasBootstrapped( );
     }
-    
+
   }
-  
+
   enum DbFilter implements Predicate<Host> {
     INSTANCE;
     @Override
     public boolean apply( final Host input ) {
       return input.hasDatabase( );
     }
-    
+
   }
-  
+
   enum SyncedDbFilter implements Predicate<Host> {
     INSTANCE;
     @Override
     public boolean apply( final Host input ) {
       return input.hasSynced( );
     }
-    
+
   }
-  
+
   enum NonLocalFilter implements Predicate<Host> {
     INSTANCE;
     @Override
     public boolean apply( final Host input ) {
       return !input.isLocalHost( );
     }
-    
+
   }
-  
+
   public static Long getStartTime( ) {
     return Coordinator.INSTANCE.getCurrentStartTime( );
   }
-  
+
   public static boolean isCoordinator( Host host ) {
     return isCoordinator( host.getBindAddress( ) );
   }
-  
+
   public static boolean isCoordinator( InetAddress addr ) {
     Host coordinator = Hosts.getCoordinator( );
     return coordinator != null && coordinator.getBindAddress( ).equals( addr );
   }
-  
+
   public static void failstop( ) {
     Coordinator.INSTANCE.reset( );
   }
-  
+
   public static boolean hasCoordinator( ) {
     return Coordinator.INSTANCE.get( ) != null;
   }
-  
+
   public static boolean isCoordinator( ) {
     return Coordinator.INSTANCE.isLocalhost( );
   }
-  
+
   public static Host getCoordinator( ) {
     return Coordinator.INSTANCE.get( );
   }
-  
+
   enum JoinShouldWait implements Predicate<Host>, Supplier<Host> {
     CLOUD_CONTROLLER {
       @Override
@@ -1167,7 +1282,7 @@ public class Hosts {
           return false;
         }
       }
-      
+
       @Override
       public Host get( ) {
         return Coordinator.find( Hosts.listDatabases( ) );
@@ -1186,22 +1301,22 @@ public class Hosts {
           return false;
         }
       }
-      
+
       @Override
       public Host get( ) {
         return Coordinator.find( Hosts.listActiveDatabases( ) );
       }
     };
-    
+
     public abstract boolean apply( Host input );
-    
+
     public abstract Host get( );
   }
-  
+
   private enum Coordinator {
     INSTANCE;
     private final AtomicLong currentStartTime = new AtomicLong( Long.MAX_VALUE );
-    
+
     /**
      * @param values
      */
@@ -1218,7 +1333,7 @@ public class Hosts {
       currentStartTime.set( Long.MAX_VALUE );
       initialize( hostMap.values( ) );
     }
-    
+
     public Boolean isLocalhost( ) {
       Host minHost = get( );
       if ( minHost == null && BootstrapArgs.isCloudController( ) ) {
@@ -1229,13 +1344,14 @@ public class Hosts {
         return false;
       }
     }
-    
+
     public Host get( ) {//GRZE: this needs to use active DBs to avoid db-sync race.
       List<Host> dbHosts = Hosts.listActiveDatabases( );
       return find( dbHosts );
     }
-    
+
     public Host await( ) {//GRZE: this needs to use all DBs to ensure waiting for booting coordinator
+      while ( !Hosts.isCoordinator( ) && AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
       Host coord = get( );
       if ( !BootstrapArgs.isCloudController( ) ) {
         Coordinator.loggedWait( JoinShouldWait.NON_CLOUD_CONTROLLER );
@@ -1249,7 +1365,7 @@ public class Hosts {
         }
       }
     }
-    
+
     private static void loggedWait( JoinShouldWait waitFunction ) {
       for ( Host h = waitFunction.get( ); waitFunction.apply( h ); h = waitFunction.get( ) ) {
         try {
@@ -1260,7 +1376,7 @@ public class Hosts {
         }
       }
     }
-    
+
     private static Host find( List<Host> dbHosts ) {
       Host minHost = null;
       for ( final Host h : dbHosts ) {
@@ -1274,25 +1390,58 @@ public class Hosts {
       }
       return minHost;
     }
-    
+
     public long getCurrentStartTime( ) {
       return this.currentStartTime.get( );
     }
-    
+
   }
-  
+
   public static boolean isServiceLocal( final ServiceConfiguration parent ) {
     return parent.isVmLocal( ) || ( parent.isHostLocal( ) && isCoordinator( ) );
   }
-  
+
   enum AwaitDatabase implements Predicate<Host> {
     INSTANCE;
-    
+
     @Override
     public boolean apply( Host c ) {
       if ( c != null && ( c.isLocalHost( ) || c.hasBootstrapped( ) ) ) {
         LOG.info( "Found system view with database: " + c );
-        return false;
+        /**
+         * Ensure that cloud controller is not too aggressive about rejoining
+         * membership group. A host which leaves the system and returns to the
+         * group too quickly will race with fault detection time outs.
+         *
+         * Here a CLC which is joining a group which has a coordinator already (so, an ENABLED CLC)
+         * will wait at least {@code 10*REJOIN_BACKOFF_SECS} (150 seconds, by default) after the
+         * declared {@code coordinator.getStartedTime()} to ensure that everyone's timeout has
+         * popped and
+         * service state has settled.
+         *
+         * In case of emergency adjust value using -Deuca.bootstrap.rejoin.backoff
+         */
+        long now = System.currentTimeMillis( );
+        long coordTime = c.getStartedTime( );
+        long earliestJoin = coordTime + ( REJOIN_BACKOFF_SECS * 5L * 1000L );
+        if ( now > earliestJoin ) {
+          return false;
+        } else {
+          try {
+            LOG.info( "Waiting for system view to settle till "
+                      + earliestJoin
+                      + " for coordinator "
+                      + coordTime
+                      + " ("
+                      + ( earliestJoin - now )
+                      / 1000l
+                      + " secs)." );
+            TimeUnit.SECONDS.sleep( REJOIN_BACKOFF_SECS );
+          } catch ( InterruptedException ex ) {
+            Exceptions.maybeInterrupted( ex );
+          }
+          return true;
+        }
       } else {
         try {
           TimeUnit.SECONDS.sleep( 3 );//GRZE: db state check sleep time
@@ -1303,9 +1452,9 @@ public class Hosts {
         return true;
       }
     }
-    
+
   }
-  
+
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
       while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
@@ -1317,7 +1466,7 @@ public class Hosts {
       }
     } else if ( BootstrapArgs.isCloudController( ) && !Hosts.isCoordinator( ) ) {
       while ( AwaitDatabase.INSTANCE.apply( Hosts.getCoordinator( ) ) );
-      TimeUnit.SECONDS.sleep( 30 );//GRZE: rejoin backoff
+      TimeUnit.SECONDS.sleep( REJOIN_BACKOFF_SECS );
     }
   }
 

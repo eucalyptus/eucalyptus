@@ -1,5 +1,5 @@
 These are build instructions for the development version of Eucalyptus.
-====================================================================
+=======================================================================
 
 ***NOTE*** The following install instructions are still under development and may be INCOMPLETE. Contributions encouraged! :)
 
@@ -22,15 +22,15 @@ CentOS/RHEL 6
 
 Install the EPEL repository:
 
-yum --nogpg install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm
+yum install http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-7.noarch.rpm
 
 Install the ELRepo repository (needed on the Walrus host only):
 
-yum --nogpg install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
+yum install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-4.el6.elrepo.noarch.rpm
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$releasever/$basearch
 
 Install the following build and runtime dependencies (this is the superset of all dependencies. Not all may be required for every component).
 
@@ -40,7 +40,7 @@ java-devel java-devel openssl-devel curl-devel axis2c dhcp dhcp-common postgresq
 python-boto rampartc iscsi-initiator-utils perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
 sudo which jpackage-utils java lvm2 velocity drbd83 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts \
 dejavu-serif-fonts  bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted util-linux rsync \
-PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server
+PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils vconfig wget kvm dhcp-server iputils
 
 Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
 
@@ -51,9 +51,9 @@ Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
 - tgt was replaced by scsi-target-utils.
 - bitstream-vera-fonts is no longer available.
 
-Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh
+Download and save the following file https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
 
-to /opt/euca-WSDL2C.sh
+to /opt/euca-WSDL2C.sh and make it executable
 
 CentOS/RHEL 5
 -------------
@@ -66,7 +66,7 @@ rpm -Uvh epel-release-5-4.noarch.rpm
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.1/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.2/rhel/$releasever/$basearch
 
 Install the following build dependencies:
 
@@ -83,11 +83,11 @@ perl-Crypt-OpenSSL-Random sudo which jpackage-utils java lvm2 velocity drbd83
 drbd83-kmod drbd-utils drbd euca2ools bitstream-vera-fonts dejavu-serif-fonts
 bridge-utils iptables vtun device-mapper coreutils e2fsprogs file parted
 util-linux rsync PyGreSQL libcurl4 curl apache2 httpd libvirt tgt scsi-target-utils
-vconfig wget xen dhcp-server
+vconfig wget xen dhcp-server iputils
 
-Download and save the following file https://github.com/eucalyptus/eucalyptus-rpmspec/blob/master/euca-WSDL2C.sh
+Download and save the following file https://raw.github.com/eucalyptus/eucalyptus-rpmspec/master/euca-WSDL2C.sh
 
-to /opt/euca-WSDL2C.sh
+to /opt/euca-WSDL2C.sh and make it executable
 
 
 Ubuntu 12.04 LTS
@@ -99,7 +99,7 @@ cdbs debhelper libaxis2c-dev librampart-dev \
 default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev \
 libssl-dev ant-optional zlib1g-dev pkg-config swig python \
 python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
-groovy postgresql-server-dev-9.1
+groovy postgresql-server-dev-9.1 iputils-arping
 
 Download axis2-1.4 from http://archive.apache.org/dist/ws/axis2/1_4/axis2-1.4-bin.zip and unzip it in /opt, so /opt/axis2-1.4 exists
 
@@ -111,7 +111,7 @@ Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-
 
 SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil, tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, lvm2, vblade
 
-CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3)
+CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3), iputils-arping
 
 NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4), libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server, openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), file, rsync
 
@@ -130,7 +130,7 @@ cdbs debhelper libaxis2c-dev librampart-dev \
 default-jdk libvirt-dev libfuse-dev libfuse2 libcurl4-openssl-dev \
 libssl-dev ant-optional zlib1g-dev pkg-config swig python \
 python-setuptools rsync wget open-iscsi libxslt1-dev gengetopt ant \
-groovy postgresql-server-dev-9.1
+groovy postgresql-server-dev-9.1 iputils-arping
 
 Install the following runtime dependencies. Dependencies are broken down by Eucalyptus component.
 
@@ -140,7 +140,7 @@ Walrus: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-
 
 SC: libc6, adduser, openssh-server, openssh-client, sudo, rsync, postgresql-client-9.1, python, python2.7, python-boto (>= 2.1), python-psutil, tgt, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, lvm2, vblade
 
-CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3)
+CC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), adduser, openssh-server, openssh-client, sudo, rsync, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), apache2, libapache2-mod-axis2c, libssl1.0.0 (>= 1.0.0), bridge-utils, vlan, dhcp3-server, iptables, vtun, libpam-modules (>= 1.0.1-9ubuntu3), iputils-arping
 
 NC: libaxis2c0, libc6 (>= 2.14), libcurl3 (>= 7.16.2-1), librampart0 (>= 1.3.0-1euca2), libssl1.0.0 (>= 1.0.0), libvirt0 (>= 0.3.0), libxml2 (>= 2.7.4), libxslt1.1 (>= 1.1.25), apache2-mpm-worker | apache2-mpm-prefork, libapache2-mod-axis2c, apache2, libc6 (>= 2.2.5), adduser, openssh-server, openssh-client, sudo, adduser, parted, libvirt-bin, open-iscsi, libcrypt-openssl-random-perl, libcrypt-openssl-rsa-perl, libcrypt-x509-perl, euca2ools (>= 1.4~), libdevmapper, python (>= 2.5), python2.7, python-boto (>= 2.1), python-psutil (>= 0.1.2), file, rsync
 

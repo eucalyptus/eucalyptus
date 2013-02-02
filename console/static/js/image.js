@@ -34,7 +34,7 @@
         id : 'images', // user of this widget should customize these options,
         hidden: thisObj.options['hidden'],
         dt_arg : {
-          "sAjaxSource": "../ec2?Action=DescribeImages",
+          "sAjaxSource": "../ec2?Action=DescribeImages"+IMG_OPT_PARAMS,
           "fnServerData": function (sSource, aoData, fnCallback) {
                 $.ajax( {
                     "dataType": 'json',
@@ -233,7 +233,6 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 
 /**** Public Methods ****/
     close: function() {
-//      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },

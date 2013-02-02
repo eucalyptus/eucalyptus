@@ -50,6 +50,7 @@ class MockClcInterface(ClcInterface):
     groups = None
     volumes = None
     snapshots = None
+    tags = None
     consoleoutput = None
 
     # load saved state to simulate CLC
@@ -76,13 +77,15 @@ class MockClcInterface(ClcInterface):
             self.volumes = json.load(f, cls=BotoJsonDecoder)
         with open(os.path.join(self.mockpath, 'Snapshots.json')) as f:
             self.snapshots = json.load(f, cls=BotoJsonDecoder)
+        with open(os.path.join(self.mockpath, 'Tags.json')) as f:
+            self.tags = json.load(f, cls=BotoJsonDecoder)
         with open(os.path.join(self.mockpath, 'ConsoleOutput.json')) as f:
             self.consoleoutput = json.load(f, cls=BotoJsonDecoder)
 
-    def get_all_zones(self, callback=None):
+    def get_all_zones(self, filters, callback=None):
         return self.zones
 
-    def get_all_images(self, owners, callback=None):
+    def get_all_images(self, owners, filters, callback=None):
         return self.images
 
     # returns list of snapshots attributes
@@ -97,7 +100,7 @@ class MockClcInterface(ClcInterface):
     def reset_image_attribute(self, image_id, attribute):
         return None
 
-    def get_all_instances(self, callback=None):
+    def get_all_instances(self, filters, callback=None):
         return self.instances
 
     def run_instances(self, image_id, min_count=1, max_count=1,
@@ -176,7 +179,7 @@ class MockClcInterface(ClcInterface):
     def get_password_data(self, instance_id):
         return None
 
-    def get_all_addresses(self, callback=None):
+    def get_all_addresses(self, filters, callback=None):
         return self.addresses
 
     # returns address info
@@ -195,7 +198,7 @@ class MockClcInterface(ClcInterface):
     def disassociate_address(self, publicip):
         return False
 
-    def get_all_key_pairs(self, callback=None):
+    def get_all_key_pairs(self, filters, callback=None):
         return self.keypairs
 
     # returns keypair info and key
@@ -226,7 +229,7 @@ class MockClcInterface(ClcInterface):
         self.keypairs.append(newkey)
         return newkey
 
-    def get_all_security_groups(self, callback=None):
+    def get_all_security_groups(self, filters, callback=None):
         return self.groups
 
     # returns True if successful
@@ -292,7 +295,7 @@ class MockClcInterface(ClcInterface):
                                  src_security_group_group_id=None):
         return False
 
-    def get_all_volumes(self, callback=None):
+    def get_all_volumes(self, filters, callback=None):
         return self.volumes
 
     def __gen_id__(self, prefix):
@@ -348,7 +351,7 @@ class MockClcInterface(ClcInterface):
     def detach_volume(self, volume_id, force=False):
         return True
 
-    def get_all_snapshots(self, callback=None):
+    def get_all_snapshots(self, filters, callback=None):
         return self.snapshots
 
     # returns snapshot info
@@ -392,3 +395,14 @@ class MockClcInterface(ClcInterface):
 
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None):
         pass
+
+    def get_all_tags(self, filters, callback=None):
+        return self.tags
+
+    # returns tag info
+    def create_tags(self, resourceIds, tags, callback):
+        pass
+
+    # returns True if successful
+    def delete_tags(self, resourceIds, tags, callback):
+        return True

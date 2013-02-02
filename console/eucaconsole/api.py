@@ -38,18 +38,100 @@ from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.exception import EC2ResponseError
+from boto.exception import S3ResponseError
 from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
+from .botowalrusinterface import BotoWalrusInterface
 from .botojsonencoder import BotoJsonEncoder
 from .cachingclcinterface import CachingClcInterface
+from .cachingwalrusinterface import CachingWalrusInterface
 from .mockclcinterface import MockClcInterface
 from .response import ClcError
 from .response import Response
 
+class StorageHandler(eucaconsole.BaseHandler):
+    ##
+    # This is the main entry point for API calls for S3(Walrus) from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.walrus):
+            if self.should_use_mock():
+                pass #self.user_session.walrus = MockClcInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                #try:
+                #    host = eucaconsole.config.get('test', 'ec2.endpoint')
+                #except ConfigParser.Error:
+                #    pass
+                self.user_session.walrus = BotoWalrusInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.walrus = CachingWalrusInterface(self.user_session.walrus, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Describe') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'DescribeBuckets':
+                self.user_session.walrus.get_all_buckets(self.callback)
+            elif action == 'DescribeObjects':
+                bucket = self.get_argument('Bucket')
+                self.user_session.walrus.get_all_objects(bucket, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+    # async calls end up back here so we can check error status and reply appropriately
+    def callback(self, response):
+        if response.error:
+            err = response.error
+            ret = '[]'
+            if isinstance(err, S3ResponseError):
+                ret = ClcError(err.status, err.reason, err.errors[0][1])
+                self.set_status(err.status);
+            elif issubclass(err.__class__, Exception):
+                if isinstance(err, socket.timeout):
+                    ret = ClcError(504, 'Timed out', None)
+                    self.set_status(504);
+                else:
+                    ret = ClcError(500, err.message, None)
+                    self.set_status(500);
+            self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.write(json.dumps(ret, cls=BotoJsonEncoder))
+            self.finish()
+            logging.exception(err)
+        else:
+            try:
+                try:
+                    if(eucaconsole.config.get('test','apidelay')):
+                        time.sleep(int(eucaconsole.config.get('test','apidelay'))/1000.0);
+                except ConfigParser.NoOptionError:
+                    pass
+                ret = Response(response.data) # wrap all responses in an object for security purposes
+                data = json.dumps(ret, cls=BotoJsonEncoder, indent=2)
+                self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.write(data)
+                self.finish()
+            except Exception, err:
+                print err
+
 class ComputeHandler(eucaconsole.BaseHandler):
 
     # This method unescapes values that were escaped in the jsonbotoencoder.__sanitize_and_copy__ method
+    # TODO: this should not be needed when we stop escaping on the proxy and only escape in the browser as needed
     def get_argument(self, name, default=tornado.web.RequestHandler._ARG_DEFAULT, strip=True):
         arg = super(ComputeHandler, self).get_argument(name, default, strip)
         if arg:
@@ -78,6 +160,49 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 val = self.get_argument(pattern % (index, index2), None)
             else:
                 val = self.get_argument(pattern % (index), None)
+        return ret
+
+    def get_filter_args(self):
+        ret = {}
+        index = 1
+        index2 = 1
+        name_p = 'Filter.%d.Name'
+        value_p = 'Filter.%d.Value.%d'
+        vals = []
+        done = False
+        while not(done):
+            name = self.get_argument(name_p % (index), None)
+            if not(name):
+                done = True
+                break
+            val = self.get_argument(value_p % (index, index2), None)
+            while (val):
+                vals.append(val)
+                index2 += 1
+                val = self.get_argument(value_p % (index, index2), None)
+            if index2 > 1: # values found
+                ret[name] = vals
+            index += 1
+            index2 = 1
+            
+        return ret
+
+    def get_tags(self):
+        ret = {}
+        index = 1
+        name_p = 'Tag.%d.Key'
+        value_p = 'Tag.%d.Value'
+        done = False
+        while not(done):
+            name = self.get_argument(name_p % (index), None)
+            if not(name):
+                done = True
+                break
+            val = self.get_argument(value_p % (index), None)
+            if val:
+                ret[name] = val
+            index += 1
+            
         return ret
 
     def handleRunInstances(self, action, clc, user_data_file, callback):
@@ -163,7 +288,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 owners = None
             else:
                 owners = [owner]
-            return clc.get_all_images(owners, callback)
+            filters = self.get_filter_args()
+            return clc.get_all_images(owners, filters, callback)
         elif action == 'DescribeImageAttribute':
             imageid = self.get_argument('ImageId')
             attribute = self.get_argument('Attribute')
@@ -224,8 +350,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleInstances(self, action, clc, callback=None):
         if action == 'DescribeInstances':
-            # apply transformation of data to normalize instances
-            return clc.get_all_instances(callback)
+            filters = self.get_filter_args()
+            return clc.get_all_instances(filters, callback)
         elif action == 'RunInstances':
             return self.handleRunInstances(action, clc, None, callback)
         elif action == 'TerminateInstances':
@@ -246,7 +372,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleKeypairs(self, action, clc, callback=None):
         if action == 'DescribeKeyPairs':
-            return clc.get_all_key_pairs(callback)
+            filters = self.get_filter_args()
+            return clc.get_all_key_pairs(filters, callback)
         elif action == 'CreateKeyPair':
             name = self.get_argument('KeyName')
             ret = clc.create_key_pair(name, functools.partial(self.keycache_callback, name=name, callback=callback))
@@ -261,7 +388,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleGroups(self, action, clc, callback=None):
         if action == 'DescribeSecurityGroups':
-            return clc.get_all_security_groups(callback)
+            filters = self.get_filter_args()
+            return clc.get_all_security_groups(filters, callback)
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
             desc = self.get_argument('GroupDescription')
@@ -306,7 +434,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleAddresses(self, action, clc, callback=None):
         if action == 'DescribeAddresses':
-            return clc.get_all_addresses(callback)
+            filters = self.get_filter_args()
+            return clc.get_all_addresses(filters, callback)
         elif action == 'AllocateAddress':
             return clc.allocate_address(callback)
         elif action == 'ReleaseAddress':
@@ -322,7 +451,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleVolumes(self, action, clc, callback=None):
         if action == 'DescribeVolumes':
-            return clc.get_all_volumes(callback)
+            filters = self.get_filter_args()
+            return clc.get_all_volumes(filters, callback)
         elif action == 'CreateVolume':
             size = self.get_argument('Size')
             zone = self.get_argument('AvailabilityZone')
@@ -343,7 +473,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
 
     def handleSnapshots(self, action, clc, callback=None):
         if action == "DescribeSnapshots":
-            return clc.get_all_snapshots(callback)
+            filters = self.get_filter_args()
+            return clc.get_all_snapshots(filters, callback)
         elif action == 'CreateSnapshot':
             volumeid = self.get_argument('VolumeId')
             description = self.get_argument('Description', None)
@@ -368,6 +499,19 @@ class ComputeHandler(eucaconsole.BaseHandler):
             snapshotid = self.get_argument('SnapshotId')
             attribute = self.get_argument('Attribute')
             return clc.reset_snapshot_attribute(snapshotid, attribute, callback)
+
+    def handleTags(self, action, clc, callback=None):
+        if action == "DescribeTags":
+            filters = self.get_filter_args()
+            return clc.get_all_tags(filters, callback)
+        elif action == 'CreateTags':
+            resourceIds = self.get_argument_list('ResourceId')
+            tags = self.get_tags()
+            return clc.create_tags(resourceIds, tags, callback)
+        elif action == 'DeleteTags':
+            resourceIds = self.get_argument_list('ResourceId')
+            tags = self.get_tags()
+            return clc.delete_tags(resourceIds, tags, callback)
 
     def handleGetPassword(self, clc, callback):
         instanceid = self.get_argument('InstanceId')
@@ -400,10 +544,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.user_session.clc = MockClcInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
-                try:
-                    host = eucaconsole.config.get('test', 'ec2.endpoint')
-                except ConfigParser.Error:
-                    pass
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
                 self.user_session.clc = BotoClcInterface(host,
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
@@ -447,7 +589,8 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 else:
                     self.handleRunInstances(action, self.user_session.clc, None, self.callback)
             elif action == 'DescribeAvailabilityZones':
-                self.user_session.clc.get_all_zones(self.callback)
+                filters = self.get_filter_args()
+                self.user_session.clc.get_all_zones(filters, self.callback)
             elif action.find('Image') > -1:
                 self.handleImages(action, self.user_session.clc, self.callback)
             elif action.find('Instance') > -1 or action == 'GetConsoleOutput':
@@ -462,12 +605,14 @@ class ComputeHandler(eucaconsole.BaseHandler):
                 self.handleVolumes(action, self.user_session.clc, self.callback)
             elif action.find('Snapshot') > -1:
                 self.handleSnapshots(action, self.user_session.clc, self.callback)
+            elif action.find('Tags') > -1:
+                self.handleTags(action, self.user_session.clc, self.callback)
             elif action == 'GetPassword':
                 self.handleGetPassword(self.user_session.clc, self.callback)
 
         except Exception as ex:
-            logging.error("Could not fullfil request, exception to follow")
-            logging.error("Since we got here, client likelly not notified either!")
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
             logging.exception(ex)
 
     def keycache_callback(self, response, name, callback):

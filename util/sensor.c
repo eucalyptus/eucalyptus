@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,17 +63,25 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+//!
+//! @file util/sensor.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #define _GNU_SOURCE
-#include <string.h>             // strlen, strcpy
-#include <ctype.h>              // isspace
+#include <string.h>                    // strlen, strcpy
+#include <ctype.h>                     // isspace
 #include <assert.h>
 #include <stdarg.h>
-#include <unistd.h>             // usleep
+#include <unistd.h>                    // usleep
 #include <pthread.h>
 #include <assert.h>
 #include <errno.h>
@@ -79,17 +90,37 @@
 #include "misc.h"
 #include "sensor.h"
 #include "ipc.h"
+#include "euca_string.h"
 
-#define MAX_SENSOR_RESOURCES MAXINSTANCES_PER_CC    // used for resource name cache
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
-static sensorResourceCache *sensor_state = NULL;
-static sem *state_sem = NULL;
-static sem *hyp_sem = NULL;
-static long long sn = 0L;
-static int (*sensor_update_euca_config) (void) = NULL;
+#define MAX_SENSOR_RESOURCES                     MAXINSTANCES_PER_CC    //!< used for resource name cache
+#define SENSOR_SYSTEM_POLL_INTERVAL_MINIMUM_USEC 5000000    //!< never poll system more often than this
 
-typedef struct getstat_t {      // an internal struct for temporary storage of stats
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! an internal struct for temporary storage of stats
+typedef struct getstat_t {
     char instanceId[100];
     long long timestamp;
     char metricName[100];
@@ -99,6 +130,136 @@ typedef struct getstat_t {      // an internal struct for temporary storage of s
     struct getstat_t *next;
 } getstat;
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#ifdef _UNIT_TEST
+const char *euca_this_component_name = "ignore";
+const char *euca_client_component_name = "ignore";
+#endif /* _UNIT_TEST */
+
+//! Sensor counter type names matching the enum
+const char *sensorCounterTypeName[] = {
+    "[unused]",
+    "summation",
+    "average"
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static useconds_t next_sleep_duration_usec = DEFAULT_SENSOR_SLEEP_DURATION_USEC;
+static sensorResourceCache *sensor_state = NULL;
+static sem *state_sem = NULL;
+static sem *hyp_sem = NULL;
+static int (*sensor_update_euca_config) (void) = NULL;
+static long long seq_num = 0L;
+
+#ifdef _UNIT_TEST
+static long long ts = 0;
+static void *competitor_function_writer(void *ptr);
+static void *competitor_function_reader(void *ptr);
+static long long _sn = -1;
+static double val = 0.0;
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function) (void));
+int sensor_config(int new_history_size, long long new_collection_interval_time_ms);
+int sensor_suspend_polling(void);
+int sensor_resume_polling(void);
+int sensor_set_hyp_sem(sem * sem);
+int sensor_get_config(int *history_size, long long *collection_interval_time_ms);
+int sensor_get_num_resources(void);
+sensorCounterType sensor_str2type(const char *counterType);
+const char *sensor_type2str(sensorCounterType type);
+int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen);
+int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen);
+int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom);
+int sensor_add_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
+                     const long long timestampMs, const boolean available, const double value);
+int sensor_get_value(const char *instanceId, const char *metricName, const int counterType, const char *dimensionName, long long *sequenceNum,
+                     long long *timestampMs, boolean * available, double *value, long long *intervalMs, int *valLen);
+int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen);
+int sensor_add_resource(const char *resourceName, const char *resourceType, const char *resourceUuid);
+int sensor_set_resource_alias(const char *resourceName, const char *resourceAlias);
+int sensor_remove_resource(const char *resourceName);
+int sensor_shift_metric(const char *resourceName, const char *metricName);
+int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName, const char *dimensionAlias);
+int sensor_set_volume(const char *instanceId, const char *volumeId, const char *guestDev);
+int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size);
+int sensor_validate_resources(sensorResource ** srs, int srsLen);
+
+#ifdef _UNIT_TEST
+int main(int argc, char **argv);
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static void getstat_free(getstat ** stats);
+static getstat *getstat_find(getstat ** stats, const char *instanceId);
+static int getstat_ninstances(getstat ** stats);
+static int getstat_generate(getstat *** pstats);
+static void sensor_bottom_half(void);
+static void *sensor_thread(void *arg);
+static void init_state(int resources_size);
+static __inline__ boolean is_empty_sr(const sensorResource * sr);
+static int sensor_expire_cache_entries(void);
+#ifdef _UNIT_TEST
+static void log_sensor_resources(const char *name, sensorResource ** srs, int srsLen);
+#endif /* _UNIT_TEST */
+static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *resourceName, const char *resourceType, const char *resourceUuid);
+static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * sr, const char *metricName);
+static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const sensorCounterType counterType);
+static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter * sc, const char *dimensionName);
+
+#ifdef _UNIT_TEST
+static void dump_sensor_cache(void);
+static void clear_srs(sensorResource ** srs, int srsLen);
+static void *competitor_function_reader(void *ptr);
+static void *competitor_function_writer(void *ptr);
+#endif /* _UNIT_TEST */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in] stats
+//!
 static void getstat_free(getstat ** stats)
 {
     if (stats == NULL)
@@ -109,19 +270,27 @@ static void getstat_free(getstat ** stats)
         getstat *gs_next;
         for (; gs != NULL; gs = gs_next) {
             gs_next = gs->next;
-            free(gs);
+            EUCA_FREE(gs);
         }
     }
-    free(stats);
+    EUCA_FREE(stats);
 }
 
+//!
+//!
+//!
+//! @param[in] stats
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return a pointer to the stats structure
+//!
 static getstat *getstat_find(getstat ** stats, const char *instanceId)
 {
     getstat *gs = NULL;
 
     if (stats) {
         for (int i = 0; (gs = stats[i]) != NULL; i++) {
-            if (instanceId == NULL) // special case, for testing, return first thing in the list
+            if (instanceId == NULL)    // special case, for testing, return first thing in the list
                 break;
             if (strcmp(gs->instanceId, instanceId) == 0)
                 break;
@@ -131,6 +300,13 @@ static getstat *getstat_find(getstat ** stats, const char *instanceId)
     return gs;
 }
 
+//!
+//!
+//!
+//! @param[in] stats
+//!
+//! @return number of instances
+//!
 static int getstat_ninstances(getstat ** stats)
 {
     int ninstances = 0;
@@ -144,7 +320,13 @@ static int getstat_ninstances(getstat ** stats)
     return ninstances;
 }
 
-// obtain stats from the getstats script
+//!
+//! obtain stats from the getstats script
+//!
+//! @param[in,out] pstats
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 static int getstat_generate(getstat *** pstats)
 {
     assert(sensor_state != NULL && state_sem != NULL);
@@ -163,20 +345,20 @@ static int getstat_generate(getstat *** pstats)
             snprintf(getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
         }
         output = system_output(getstats_cmd);   // invoke th Perl script
-        logprintfl(EUCATRACE, "getstats_net.pl output:\n%s\n", output);
+        LOGTRACE("getstats_net.pl output:\n%s\n", output);
     } else if (!strcmp(euca_this_component_name, "nc")) {
         // Right now !CC means the NC.
         output = system_output("euca_rootwrap getstats.pl");    // invoke th Perl script
-        logprintfl(EUCATRACE, "getstats.pl output:\n%s\n", output);
+        LOGTRACE("getstats.pl output:\n%s\n", output);
     } else {
         // output will be NULL, so we'll return with an error
-        errno = EBADSLT;        // using an obscure errno to mean internal error
+        errno = EBADSLT;               // using an obscure errno to mean internal error
     }
     if (hyp_sem)
         sem_v(hyp_sem);
 
-    int ret = ERROR;
-    if (output) {               // output is a string with one line per measurement, with tab-delimited fields
+    int ret = EUCA_ERROR;
+    if (output) {                      // output is a string with one line per measurement, with tab-delimited fields
         char *token, *subtoken;
         char *saveptr1, *saveptr2;
         char *str1 = output;
@@ -187,31 +369,34 @@ static int getstat_generate(getstat *** pstats)
             token = strtok_r(str1, "\n", &saveptr1);    // token points to a whole line
             if (token == NULL)
                 break;
-            getstat *gs = calloc(1, sizeof(getstat));   // new lines means new data record
+            getstat *gs = EUCA_ZALLOC(1, sizeof(getstat));  // new lines means new data record
             if (gs == NULL)
                 goto bail;
 
             char *str2 = token;
             for (int j = 1;; j++, str2 = NULL) {    // iterate over tab-separated entries in the line
                 subtoken = strtok_r(str2, "\t", &saveptr2);
-                if (subtoken == NULL)
+                if (subtoken == NULL) {
+                    if(j == 1)
+                        free(gs);
                     break;
+                }
 
                 // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
                 switch (j) {
-                case 1:{       // first entry is instance ID
+                case 1:{              // first entry is instance ID
                         getstat *gsp = getstat_find(*pstats, subtoken);
                         if (gsp == NULL) {  // first record for this instance => expand pointer array
                             ninst++;
-                            gss = realloc(gss, (ninst + 1) * sizeof(getstat *));
+                            gss = EUCA_REALLOC(gss, (ninst + 1), sizeof(getstat *));
                             gss[ninst - 1] = gs;
                             gss[ninst] = NULL;  // NULL-terminate the array
                             *pstats = gss;
-                        } else {    // not first record
+                        } else {       // not first record
                             for (; gsp->next != NULL; gsp = gsp->next) ;    // walk the linked list to the end
                             gsp->next = gs; // add the new record
                         }
-                        safe_strncpy(gs->instanceId, subtoken, sizeof(gs->instanceId));
+                        euca_strncpy(gs->instanceId, subtoken, sizeof(gs->instanceId));
                         break;
                     }
                 case 2:{
@@ -219,53 +404,56 @@ static int getstat_generate(getstat *** pstats)
                         errno = 0;
                         gs->timestamp = strtoll(subtoken, &endptr, 10);
                         if (errno != 0 && *endptr != '\0') {
-                            logprintfl(EUCAERROR, "unexpected input from getstats.pl (could not convert timestamp with strtoll())\n");
+                            LOGERROR("unexpected input from getstats.pl (could not convert timestamp with strtoll())\n");
                             goto bail;
                         }
                         break;
                     }
                 case 3:
-                    safe_strncpy(gs->metricName, subtoken, sizeof(gs->metricName));
+                    euca_strncpy(gs->metricName, subtoken, sizeof(gs->metricName));
                     break;
                 case 4:
                     gs->counterType = sensor_str2type(subtoken);
                     break;
                 case 5:
-                    safe_strncpy(gs->dimensionName, subtoken, sizeof(gs->dimensionName));
+                    euca_strncpy(gs->dimensionName, subtoken, sizeof(gs->dimensionName));
                     break;
                 case 6:{
                         char *endptr;
                         errno = 0;
                         gs->value = strtod(subtoken, &endptr);
                         if (errno != 0 && *endptr != '\0') {
-                            logprintfl(EUCAERROR, "unexpected input from getstats.pl (could not convert value with strtod())\n");
+                            LOGERROR("unexpected input from getstats.pl (could not convert value with strtod())\n");
                             goto bail;
                         }
                         break;
                     }
                 default:
-                    logprintfl(EUCAERROR, "unexpected input from getstats.pl (too many fields)\n");
+                    LOGERROR("unexpected input from getstats.pl (too many fields)\n");
                     goto bail;
                 }
             }
         }
-        ret = OK;
+        ret = EUCA_OK;
         goto done;
 
 bail:
         getstat_free(*pstats);
+
 done:
-        free(output);
+        EUCA_FREE(output);
     } else {
-        logprintfl(EUCAWARN, "failed to invoke getstats for sensor data (%s)\n", strerror(errno));
+        LOGWARN("failed to invoke getstats for sensor data (%s)\n", strerror(errno));
     }
 
     return ret;
 }
 
-// Never-returning function that performs polling of sensors and updates
-// their 'resources' while holding the 'sem'. This may be called from
-// sensor_init() directly or via a thread
+//!
+//! Never-returning function that performs polling of sensors and updates
+//! their 'resources' while holding the 'sem'. This may be called from
+//! sensor_init() directly or via a thread
+//!
 static void sensor_bottom_half(void)
 {
     assert(sensor_state != NULL && state_sem != NULL);
@@ -281,48 +469,69 @@ static void sensor_bottom_half(void)
         usleep(next_sleep_duration_usec);
 
         if (sensor_update_euca_config) {
-            logprintfl(EUCATRACE, "calling sensor_update_euca_config()...\n");
+            LOGTRACE("calling sensor_update_euca_config() after sleeping %u usec\n", next_sleep_duration_usec);
             sensor_update_euca_config();
         } else {
-            logprintfl(EUCATRACE, "NOT calling sensor_update_euca_config()...\n");
+            LOGTRACE("NOT calling sensor_update_euca_config() after sleeping %u usec\n", next_sleep_duration_usec);
         }
         boolean skip = FALSE;
         sem_p(state_sem);
-        if (sensor_state->collection_interval_time_ms == 0 || sensor_state->history_size == 0) {
+        if (sensor_state->collection_interval_time_ms == 0 || sensor_state->history_size == 0 || sensor_state->suspend_polling) {
             skip = TRUE;
+        } else {
+            next_sleep_duration_usec = sensor_state->collection_interval_time_ms * 1000;
         }
         sem_v(state_sem);
 
         if (skip)
             continue;
 
-        // refresh local copy of resource names & aliases
+        // obtain the list of current resources and their aliases from the cache
+        // (they had to have been added explicitly with sensor_add_resource)
+        // and only query the OS for those resources/instances
+        useconds_t start_usec = time_usec();
         sem_p(state_sem);
         for (int i = 0; i < sensor_state->max_resources && i < MAX_SENSOR_RESOURCES; i++) {
-            safe_strncpy(resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
-            safe_strncpy(resourceAliases[i], sensor_state->resources[i].resourceAlias, MAX_SENSOR_NAME_LEN);
+            euca_strncpy(resourceNames[i], sensor_state->resources[i].resourceName, MAX_SENSOR_NAME_LEN);
+            euca_strncpy(resourceAliases[i], sensor_state->resources[i].resourceAlias, MAX_SENSOR_NAME_LEN);
             if (strlen(resourceNames[i]) && strlen(resourceAliases[i])) {
-                logprintfl(EUCATRACE, "Found alias '%s' for resource '%s'\n", resourceAliases[i], resourceNames[i]);
+                LOGTRACE("Found alias '%s' for resource '%s'\n", resourceAliases[i], resourceNames[i]);
             }
         }
 
         sem_v(state_sem);
-
         sensor_refresh_resources(resourceNames, resourceAliases, MAX_SENSOR_RESOURCES);
+        useconds_t stop_usec = time_usec();
+
+        // adjust the next sleep time to account for how long sensor refresh took
+        next_sleep_duration_usec = next_sleep_duration_usec - (stop_usec - start_usec);
+        if (next_sleep_duration_usec < SENSOR_SYSTEM_POLL_INTERVAL_MINIMUM_USEC)
+            next_sleep_duration_usec = SENSOR_SYSTEM_POLL_INTERVAL_MINIMUM_USEC;
     }
 }
 
+//!
+//!
+//!
+//! @param[in] arg
+//!
+//! @return Always return NULL
+//!
 static void *sensor_thread(void *arg)
 {
-    logprintfl(EUCADEBUG, "spawning sensor thread\n");
+    LOGDEBUG("spawning sensor thread\n");
     sensor_bottom_half();
     return NULL;
 }
 
+//!
+//!
+//!
+//! @param[in] resources_size
+//!
 static void init_state(int resources_size)
 {
-    logprintfl(EUCADEBUG, "initializing sensor shared memory (%d KB)...\n",
-               (sizeof(sensorResourceCache) + sizeof(sensorResource) * (resources_size - 1)) / 1024);
+    LOGDEBUG("initializing sensor shared memory (%lu KB)...\n", (sizeof(sensorResourceCache) + sizeof(sensorResource) * (resources_size - 1)) / 1024);
     sensor_state->max_resources = resources_size;
     sensor_state->collection_interval_time_ms = 0;
     sensor_state->history_size = 0;
@@ -332,46 +541,55 @@ static void init_state(int resources_size)
         sensorResource *sr = sensor_state->resources + i;
         bzero(sr, sizeof(sensorResource));
     }
-    sensor_state->initialized = TRUE;   // inter-process init done
-    logprintfl(EUCADEBUG, "initialized sensor shared memory\n");
+    sensor_state->initialized = TRUE;  // inter-process init done
+    LOGINFO("initialized sensor shared memory\n");
 }
 
-__inline__ static boolean is_empty_sr(const sensorResource * sr)
+//!
+//! Checks wether or not a sensor resource is in use
+//!
+//! @param[in] sr pointer to the sensor resource to evaluate
+//!
+//! @return TRUE if the given sensor is not created/initialized or FALSE otherwise
+//!
+static __inline__ boolean is_empty_sr(const sensorResource * sr)
 {
     return (sr == NULL || sr->resourceName[0] == '\0');
 }
 
-// This must be called from within a state_sem lock--it doesn't do its
-// own locking.
+//!
+//! This must be called from within a state_sem lock--it doesn't do its
+//! own locking.
+//!
+//! @return the number of sensor that has their cache timeout expired
+//!
 static int sensor_expire_cache_entries(void)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return 1;
 
-    logprintfl(EUCADEBUG, "invoked\n");
+    LOGDEBUG("invoked\n");
 
-    int ret = 0;                // returns the number of cache entries expired.
+    int ret = 0;                       // returns the number of cache entries expired.
     time_t t = time(NULL);
 
     for (int r = 0; r < sensor_state->max_resources; r++) {
         sensorResource *sr = sensor_state->resources + r;
-
         if (is_empty_sr(sr))
             continue;
-
         if (!sr->timestamp) {
-            logprintfl(EUCATRACE, "resource %s does not yet have an update timestamp, skipping...\n", sr->resourceName);
+            LOGDEBUG("resource %s does not yet have an update timestamp, skipping expiration...\n", sr->resourceName);
             continue;
         }
-        time_t timestamp_age = t - sr->timestamp;
-        time_t cache_timeout = sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;
+        time_t timestamp_age = t - sr->timestamp;   // time, in sec, elapsed since an update (to any sensor) for the resource
+        time_t cache_timeout = sensor_state->collection_interval_time_ms / 1000 // expected time, in sec, between updates
+            + sensor_state->interval_polled * CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL;    // extra time for upstream to pick up last values before expiration
 
-        logprintfl(EUCATRACE, "resource %ss, timestamp %ds, timeout (%ds * %ds), age %ds\n", sr->resourceName, sr->timestamp,
-                   sensor_state->interval_polled, CACHE_EXPIRY_MULTIPLE_OF_POLLING_INTERVAL, timestamp_age);
+        LOGTRACE("resource %ss, timestamp %ds, poll interval %lds, timeout %lds, age %lds\n", sr->resourceName, sr->timestamp,
+                 sensor_state->interval_polled, cache_timeout, timestamp_age);
 
-        if (timestamp_age > cache_timeout) {
-            logprintfl(EUCAINFO, "expiring resource %s from sensor cache, no update in %d seconds, timeout is %d seconds\n", sr->resourceName,
-                       timestamp_age, cache_timeout);
+        if (cache_timeout && (timestamp_age > cache_timeout)) {
+            LOGINFO("expiring resource %s from sensor cache, no update in %ld seconds, timeout is %ld seconds\n", sr->resourceName, timestamp_age, cache_timeout);
             sr->resourceName[0] = '\0'; // marks the slot as empty
             ret++;
         }
@@ -379,28 +597,39 @@ static int sensor_expire_cache_entries(void)
     return ret;
 }
 
-// Sensor subsystem initialization routine, which must be called before
-// all state-full sensor_* functions. If 'sem' and 'resources' are set,
-// this function will use them. Otherwise, this function will allocate
-// memory and will perform data collection in a thread. If run_bottom_half
-// is TRUE, the logic normally running in a background thread will be
-// executed synchronously, causing sensor_init() to never return.
+//!
+//! Sensor subsystem initialization routine, which must be called before
+//! all state-full sensor_* functions. If 'sem' and 'resources' are set,
+//! this function will use them. Otherwise, this function will allocate
+//! memory and will perform data collection in a thread. If run_bottom_half
+//! is TRUE, the logic normally running in a background thread will be
+//! executed synchronously, causing sensor_init() to never return.
+//!
+//! @param[in] sem
+//! @param[in] resources
+//! @param[in] resources_size
+//! @param[in] run_bottom_half
+//! @param[in] update_euca_config_function
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_THREAD_ERROR and EUCA_MEMORY_ERROR.
+//!
 int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, boolean run_bottom_half, int (*update_euca_config_function) (void))
 {
     int use_resources_size = MAX_SENSOR_RESOURCES;
 
-    if (sem || resources) {     // we will use an externally allocated semaphore and memory region
+    if (sem || resources) {            // we will use an externally allocated semaphore and memory region
         if (sem == NULL || resources == NULL || resources_size < 1) {   // all must be set
-            return ERROR;
+            return (EUCA_ERROR);
         }
 
-        if (sensor_state != NULL) { // already invoked this in this process
+        if (sensor_state != NULL) {    // already invoked this in this process
             if (sensor_state != resources || state_sem != sem) {    // but with different params?!
-                return ERROR;
+                return (EUCA_ERROR);
             } else {
-                return OK;
+                return (EUCA_OK);
             }
-        } else {                // first invocation in this process, so set the static pointers
+        } else {                       // first invocation in this process, so set the static pointers
             sensor_state = resources;
             state_sem = sem;
         }
@@ -410,62 +639,70 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
         if (!sensor_state->initialized) {
             init_state(resources_size);
         }
-        logprintfl(EUCADEBUG, "setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
+        LOGDEBUG("setting sensor_update_euca_config: %s\n", update_euca_config_function ? "TRUE" : "NULL");
         sensor_update_euca_config = update_euca_config_function;
         sem_v(state_sem);
 
         if (!run_bottom_half)
-            return OK;
+            return (EUCA_OK);
 
-        sensor_bottom_half();   // never to return
+        sensor_bottom_half();          // never to return
 
-    } else {                    // we will allocate a memory region and a semaphore in this process
+    } else {                           // we will allocate a memory region and a semaphore in this process
         if (resources_size > 0) {
             use_resources_size = resources_size;
         }
 
         if (sensor_state != NULL || state_sem != NULL)  // already initialized
-            return OK;
+            return (EUCA_OK);
 
         state_sem = sem_alloc(1, "mutex");
         if (state_sem == NULL) {
-            logprintfl(EUCAFATAL, "failed to allocate semaphore for sensor\n");
-            return ERROR_FATAL;
+            LOGFATAL("failed to allocate semaphore for sensor\n");
+            return (EUCA_MEMORY_ERROR);
         }
 
-        sensor_state = calloc(sizeof(sensorResourceCache) + sizeof(sensorResource), (use_resources_size - 1));
+        sensor_state = EUCA_ZALLOC(sizeof(sensorResourceCache) + sizeof(sensorResource), (use_resources_size - 1));
         if (sensor_state == NULL) {
-            logprintfl(EUCAFATAL, "failed to allocate memory for sensor data\n");
-            sem_free(state_sem);
-            return ERROR_FATAL;
+            LOGFATAL("failed to allocate memory for sensor data\n");
+            SEM_FREE(state_sem);
+            return (EUCA_MEMORY_ERROR);
         }
 
         init_state(use_resources_size);
 
-        {                       // start the sensor thread
+        {                              // start the sensor thread
             pthread_t tcb;
             if (pthread_create(&tcb, NULL, sensor_thread, NULL)) {
-                logprintfl(EUCAFATAL, "failed to spawn a sensor thread\n");
-                return ERROR_FATAL;
+                LOGFATAL("failed to spawn a sensor thread\n");
+                return (EUCA_THREAD_ERROR);
             }
             if (pthread_detach(tcb)) {
-                logprintfl(EUCAFATAL, "failed to detach the sensor thread\n");
-                return ERROR_FATAL;
+                LOGFATAL("failed to detach the sensor thread\n");
+                return (EUCA_THREAD_ERROR);
             }
         }
     }
 
-    return OK;
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in] new_history_size
+//! @param[in] new_collection_interval_time_ms
+//!
+//! @return EUCA_OK on success
+//!
 int sensor_config(int new_history_size, long long new_collection_interval_time_ms)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return 1;
     if (new_history_size < 0)
-        return 2;               // nonsense value
+        return 2;                      // nonsense value
     if (new_history_size > MAX_SENSOR_VALUES)
-        return 3;               // static data struct too small
+        return 3;                      // static data struct too small
     if (new_collection_interval_time_ms < MIN_COLLECTION_INTERVAL_MS)
         return 4;
     if (new_collection_interval_time_ms > MAX_COLLECTION_INTERVAL_MS)
@@ -473,41 +710,101 @@ int sensor_config(int new_history_size, long long new_collection_interval_time_m
 
     sem_p(state_sem);
     if (sensor_state->history_size != new_history_size)
-        logprintfl(EUCAINFO, "setting sensor history size to %d\n", new_history_size);
+        LOGINFO("setting sensor history size to %d\n", new_history_size);
     if (sensor_state->collection_interval_time_ms != new_collection_interval_time_ms)
-        logprintfl(EUCAINFO, "setting sensor collection interval time to %lld\n", new_collection_interval_time_ms);
+        LOGINFO("setting sensor collection interval time to %lld milliseconds\n", new_collection_interval_time_ms);
     sensor_state->history_size = new_history_size;
     sensor_state->collection_interval_time_ms = new_collection_interval_time_ms;
     sem_v(state_sem);
 
-    return 0;
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int sensor_suspend_polling(void)
+{
+    if ((sensor_state == NULL) || (sensor_state->initialized == FALSE))
+        return (EUCA_ERROR);
+
+    sem_p(state_sem);
+    {
+        sensor_state->suspend_polling = TRUE;
+    }
+    sem_v(state_sem);
+
+    LOGDEBUG("sensor polling suspended\n");
+    return (EUCA_OK);
+}
+
+//!
+//!
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int sensor_resume_polling(void)
+{
+    if (sensor_state == NULL || sensor_state->initialized == FALSE)
+        return (EUCA_ERROR);
+
+    sem_p(state_sem);
+    {
+        sensor_state->suspend_polling = FALSE;
+    }
+    sem_v(state_sem);
+
+    LOGDEBUG("sensor polling resumed\n");
+    return (EUCA_OK);
+}
+
+//!
+//!
+//!
+//! @param[in] sem
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int sensor_set_hyp_sem(sem * sem)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
     sem_p(state_sem);
     hyp_sem = sem;
     sem_v(state_sem);
 
-    return 0;
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[out] history_size
+//! @param[out] collection_interval_time_ms
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int sensor_get_config(int *history_size, long long *collection_interval_time_ms)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
     sem_p(state_sem);
     *history_size = sensor_state->history_size;
     *collection_interval_time_ms = sensor_state->collection_interval_time_ms;
     sem_v(state_sem);
 
-    return 0;
+    return (EUCA_OK);
 }
 
+//!
+//! Retrieves the number of used resources
+//!
+//! @return the  number of used resources
+//!
 int sensor_get_num_resources(void)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
@@ -521,24 +818,47 @@ int sensor_get_num_resources(void)
     return num_resources;
 }
 
-int sensor_str2type(const char *counterType)
+//!
+//! Converts a readable string to a sensor counter type
+//!
+//! @param[in] counterType the string representation of a counter type value
+//!
+//! @return The matching counter type value or -1 if the parameter is invalid
+//!
+sensorCounterType sensor_str2type(const char *counterType)
 {
-    for (int i = 0; i < (sizeof(sensorCounterTypeName) / sizeof(char *)); i++) {
+    for (u_int i = 0; i < (sizeof(sensorCounterTypeName) / sizeof(char *)); i++) {
         if (strcmp(sensorCounterTypeName[i], counterType) == 0)
             return i;
     }
-    logprintfl(EUCAERROR, "internal error (sensor counter type out of range)\n");
+    LOGERROR("internal error (sensor counter type out of range)\n");
     return -1;
 }
 
-const char *sensor_type2str(int type)
+//!
+//! Converts a sensor counter type to readable string
+//!
+//! @param[in] type the sensor type
+//!
+//! @return a string matching the sensor type
+//!
+const char *sensor_type2str(sensorCounterType type)
 {
-    if (type >= 0 && type < (sizeof(sensorCounterTypeName) / sizeof(char *)))
-        return sensorCounterTypeName[type];
-    else
-        return "[invalid]";
+    if ((((signed)type) >= 0) && (type < (sizeof(sensorCounterTypeName) / sizeof(char *))))
+        return (sensorCounterTypeName[type]);
+    return ("[invalid]");
 }
 
+//!
+//!
+//!
+//! @param[in] buf
+//! @param[in] bufLen
+//! @param[in] srs
+//! @param[in] srsLen
+//!
+//! @return EUCA_OK on success
+//!
 int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
 {
     char *s = buf;
@@ -549,8 +869,7 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
         const sensorResource *sr = srs[r];
         if (is_empty_sr(sr))
             continue;
-        printed =
-            snprintf(s, left, "resource: %s uuid: %s type: %s metrics: %d\n", sr->resourceName, sr->resourceUuid, sr->resourceType, sr->metricsLen);
+        printed = snprintf(s, left, "resource: %s uuid: %s type: %s metrics: %d\n", sr->resourceName, sr->resourceUuid, sr->resourceType, sr->metricsLen);
 #define MAYBE_BAIL s = s + printed; left = left - printed; if (left < 1) return (bufLen - left);
         MAYBE_BAIL for (int m = 0; m < sr->metricsLen; m++) {
             const sensorMetric *sm = sr->metrics + m;
@@ -562,16 +881,12 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
                              sc->collectionIntervalMs, sc->sequenceNum, sc->dimensionsLen);
                 MAYBE_BAIL for (int d = 0; d < sc->dimensionsLen; d++) {
                     const sensorDimension *sd = sc->dimensions + d;
-                    printed =
-                        snprintf(s, left, "\t\t\tdimension: %s values: %d firstValueIndex: %d\n", sd->dimensionName, sd->valuesLen,
-                                 sd->firstValueIndex);
+                    printed = snprintf(s, left, "\t\t\tdimension: %s values: %d firstValueIndex: %d\n", sd->dimensionName, sd->valuesLen, sd->firstValueIndex);
                     MAYBE_BAIL for (int v = 0; v < sd->valuesLen; v++) {
                         const int i = (sd->firstValueIndex + v) % MAX_SENSOR_VALUES;
                         const sensorValue *sv = sd->values + i;
                         const long long sn = sc->sequenceNum + v;
-                        printed =
-                            snprintf(s, left, "\t\t\t\t[%02d] %05lld %014lld %s %f\n", i, sn, sv->timestampMs, sv->available ? "YES" : " NO",
-                                     sv->available ? sv->value : -1);
+                        printed = snprintf(s, left, "\t\t\t\t[%02d] %05lld %014lld %s %f\n", i, sn, sv->timestampMs, sv->available ? "YES" : " NO", sv->available ? sv->value : -1);
                     MAYBE_BAIL}
                 }
             }
@@ -579,20 +894,41 @@ int sensor_res2str(char *buf, int bufLen, sensorResource ** srs, int srsLen)
     }
     *s = '\0';
 
-    return 0;
+    return EUCA_OK;
 }
 
-static void log_sensor_resources(const char *name, const sensorResource ** srs, int srsLen)
+#ifdef _UNIT_TEST
+//!
+//!
+//!
+//! @param[in] name
+//! @param[in] srs
+//! @param[in] srsLen
+//!
+static void log_sensor_resources(const char *name, sensorResource ** srs, int srsLen)
 {
     char buf[1024 * 1024];
     if (sensor_res2str(buf, sizeof(buf), srs, srsLen) != 0) {
-        logprintfl(EUCAERROR, "failed to print sensor resources (%s)\n", name);
+        LOGERROR("failed to print sensor resources (%s)\n", name);
     } else {
-        logprintfl(EUCAINFO, "sensor resources (%s) BEGIN\n%ssensor resources END\n", name, buf);
+        LOGDEBUG("sensor resources (%s) BEGIN\n%ssensor resources END\n", name, buf);
     }
 }
+#endif /* _UNIT_TEST */
 
-int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen)   // TODO3.2: move this into _UNIT_TEST
+//!
+//!
+//!
+//! @param[in] sn
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] sensorIds
+//! @param[in] sensorIdsLen
+//! @param[in] srs
+//! @param[in] srsLen
+//!
+//! @return EUCA_OK on success
+//!
+int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** srs, int srsLen)   //! @TODO 3.2: move this into _UNIT_TEST
 {
     sensorResource example = {
         .resourceName = "i-23456",
@@ -670,16 +1006,26 @@ int sensor_get_dummy_instance_data(long long sn, const char *instanceId, const c
     assert(srsLen > 0);
     sensorResource *sr = srs[0];
     memcpy(sr, &example, sizeof(sensorResource));
-    safe_strncpy(sr->resourceName, instanceId, sizeof(sr->resourceName));
+    euca_strncpy(sr->resourceName, instanceId, sizeof(sr->resourceName));
 
-    return 0;
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in] do_alloc
+//! @param[in] resourceName
+//! @param[in] resourceType
+//! @param[in] resourceUuid
+//!
+//! @return a pointer to the sensor resource or NULL on failure
+//!
 static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *resourceName, const char *resourceType, const char *resourceUuid)
 {
     // sanity check
     if (sensor_state->max_resources < 0 || sensor_state->max_resources > MAX_SENSOR_RESOURCES_HARD) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (max_resources=%d for %s)\n", sensor_state->max_resources, resourceName);
+        LOGERROR("inconsistency in sensor database (max_resources=%d for %s)\n", sensor_state->max_resources, resourceName);
         return NULL;
     }
 
@@ -687,7 +1033,7 @@ static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *reso
     for (int r = 0; r < sensor_state->max_resources; r++) {
         sensorResource *sr = sensor_state->resources + r;
 
-        if (is_empty_sr(sr)) {  // unused slot
+        if (is_empty_sr(sr)) {         // unused slot
             // remember the first unused slot in case we do not find this resource
             if (unused_sr == NULL) {
                 unused_sr = sr;
@@ -707,29 +1053,42 @@ static sensorResource *find_or_alloc_sr(const boolean do_alloc, const char *reso
 
     if (!do_alloc)
         return NULL;
-    if (resourceType == NULL)   // must be set for allocation
+    if (resourceType == NULL)          // must be set for allocation
         return NULL;
 
     // fill out the new slot
     if (unused_sr != NULL) {
         bzero(unused_sr, sizeof(sensorResource));
-        safe_strncpy(unused_sr->resourceName, resourceName, sizeof(unused_sr->resourceName));
+        euca_strncpy(unused_sr->resourceName, resourceName, sizeof(unused_sr->resourceName));
         if (resourceType)
-            safe_strncpy(unused_sr->resourceType, resourceType, sizeof(unused_sr->resourceType));
+            euca_strncpy(unused_sr->resourceType, resourceType, sizeof(unused_sr->resourceType));
         if (resourceUuid)
-            safe_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
+            euca_strncpy(unused_sr->resourceUuid, resourceUuid, sizeof(unused_sr->resourceUuid));
+        unused_sr->timestamp = time(NULL);
         sensor_state->used_resources++;
-        logprintfl(EUCADEBUG, "allocated new sensor resource %s\n", resourceName);
+        LOGINFO("allocated new sensor resource %s\n", resourceName);
     }
 
     return unused_sr;
 }
 
+//!
+//!
+//!
+//! @param[in] do_alloc
+//! @param[in] sr
+//! @param[in] metricName
+//!
+//! @return a pointer to the sensor metric or NULL on failure
+//!
 static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * sr, const char *metricName)
 {
     // sanity check
     if (sr->metricsLen < 0 || sr->metricsLen > MAX_SENSOR_METRICS) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
+        LOGWARN("inconsistency in sensor database (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
+        char trace[8172] = "";         // print stack trace to see which invocation led to this erroneous condition
+        log_dump_trace(trace, sizeof(trace));
+        LOGTRACE("%s", trace);
         return NULL;
     }
 
@@ -739,25 +1098,34 @@ static sensorMetric *find_or_alloc_sm(const boolean do_alloc, sensorResource * s
             return sm;
         }
     }
-    if (!do_alloc               // did not find it
+    if (!do_alloc                      // did not find it
         || sr->metricsLen == MAX_SENSOR_METRICS)    // out of room
         return NULL;
 
     // fill out the new slot
     sensorMetric *sm = sr->metrics + sr->metricsLen;
     bzero(sm, sizeof(sensorMetric));
-    safe_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
+    euca_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
     sr->metricsLen++;
-    logprintfl(EUCADEBUG, "allocated new sensor metric %s:%s\n", sr->resourceName, sm->metricName);
+    LOGDEBUG("allocated new sensor metric %s:%s\n", sr->resourceName, sm->metricName);
 
     return sm;
 }
 
-static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const int counterType)
+//!
+//!
+//!
+//! @param[in] do_alloc
+//! @param[in] sm
+//! @param[in] counterType
+//!
+//! @return a pointer to the sensor counter or NULL on failure
+//!
+static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm, const sensorCounterType counterType)
 {
     // sanity check
     if (sm->countersLen < 0 || sm->countersLen > MAX_SENSOR_COUNTERS) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (countersLen=%d for %s)\n", sm->countersLen, sm->metricName);
+        LOGWARN("inconsistency in sensor database (countersLen=%d for %s)\n", sm->countersLen, sm->metricName);
         return NULL;
     }
 
@@ -768,7 +1136,7 @@ static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm
         }
     }
 
-    if (!do_alloc               // did not find it
+    if (!do_alloc                      // did not find it
         || sm->countersLen == MAX_SENSOR_COUNTERS)  // out of room
         return NULL;
 
@@ -777,16 +1145,25 @@ static sensorCounter *find_or_alloc_sc(const boolean do_alloc, sensorMetric * sm
     bzero(sc, sizeof(sensorCounter));
     sc->type = counterType;
     sm->countersLen++;
-    logprintfl(EUCADEBUG, "allocated new sensor counter %s:%s\n", sm->metricName, sensor_type2str(sc->type));
+    LOGDEBUG("allocated new sensor counter %s:%s\n", sm->metricName, sensor_type2str(sc->type));
 
     return sc;
 }
 
+//!
+//!
+//!
+//! @param[in] do_alloc
+//! @param[in] sc
+//! @param[in] dimensionName
+//!
+//! @return a pointer to the sensor dimension structure or NULL on failure.
+//!
 static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter * sc, const char *dimensionName)
 {
     // sanity check
     if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
-        logprintfl(EUCAERROR, "inconsistency in sensor database (dimensionsLen=%d for %s)\n", sc->dimensionsLen, sensor_type2str(sc->type));
+        LOGWARN("inconsistency in sensor database (dimensionsLen=%d for %s)\n", sc->dimensionsLen, sensor_type2str(sc->type));
         return NULL;
     }
 
@@ -796,45 +1173,53 @@ static sensorDimension *find_or_alloc_sd(const boolean do_alloc, sensorCounter *
             return sd;
         }
     }
-    if (!do_alloc               // did not find it
+    if (!do_alloc                      // did not find it
         || sc->dimensionsLen == MAX_SENSOR_DIMENSIONS)  // out of room
         return NULL;
 
     // fill out the new slot
     sensorDimension *sd = sc->dimensions + sc->dimensionsLen;
     bzero(sd, sizeof(sensorDimension));
-    safe_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
+    euca_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
     sc->dimensionsLen++;
-    logprintfl(EUCADEBUG, "allocated new sensor dimension %s:%s\n", sensor_type2str(sc->type), sd->dimensionName);
+    LOGDEBUG("allocated new sensor dimension %s:%s\n", sensor_type2str(sc->type), sd->dimensionName);
 
     return sd;
 }
 
-// Merges records in srs[] array of pointers (of length srsLen)
-// into records in the in-memory sensor values cache.  The merge
-// adds new entries at all levels, if necessary (i.e., if the sensor
-// is new, if the metric is new, etc.) and skips over values that
-// are already in the cache. So it is safe to call it many times
-// with the same data - all but the first invocations will have no
-// effect.
-int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_on_oom)
+//!
+//! Merges records in srs[] array of pointers (of length srsLen)
+//! into records in the in-memory sensor values cache.  The merge
+//! adds new entries at all levels, if necessary (i.e., if the sensor
+//! is new, if the metric is new, etc.) and skips over values that
+//! are already in the cache. So it is safe to call it many times
+//! with the same data - all but the first invocations will have no
+//! effect.
+//!
+//! @param[in] srs
+//! @param[in] srsLen
+//! @param[in] fail_on_oom
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int sensor_merge_records(sensorResource * srs[], int srsLen, boolean fail_on_oom)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
-    // log_sensor_resources ("sensor_merge_records", srs, srsLen);
+    LOGTRACE("invoked with srsLen=%d fail_on_oom=%d\n", srsLen, fail_on_oom);
 
-    logprintfl(EUCADEBUG, "invoked\n");
-
-    int ret = 1;
+    int ret = EUCA_ERROR;
+    int num_merged = 0;
     sem_p(state_sem);
     for (int r = 0; r < srsLen; r++) {
         const sensorResource *sr = srs[r];
+        LOGTRACE("merging results for resource %s [%d]\n", sr->resourceName, r);
         if (is_empty_sr(sr))
             continue;
         sensorResource *cache_sr = find_or_alloc_sr(TRUE, sr->resourceName, sr->resourceType, sr->resourceUuid);
         if (cache_sr == NULL) {
-            logprintfl(EUCAWARN, "failed to find space in sensor cache for resource %s\n", sr->resourceName);
+            LOGWARN("failed to find space in sensor cache for resource %s\n", sr->resourceName);
             if (fail_on_oom)
                 goto bail;
             continue;
@@ -844,7 +1229,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
             const sensorMetric *sm = sr->metrics + m;
             sensorMetric *cache_sm = find_or_alloc_sm(TRUE, cache_sr, sm->metricName);
             if (cache_sm == NULL) {
-                logprintfl(EUCAWARN, "failed to find space in sensor cache for metric %s:%s\n", sr->resourceName, sm->metricName);
+                LOGWARN("failed to find space in sensor cache for metric %s:%s\n", sr->resourceName, sm->metricName);
                 if (fail_on_oom)
                     goto bail;
                 continue;
@@ -854,8 +1239,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                 const sensorCounter *sc = sm->counters + c;
                 sensorCounter *cache_sc = find_or_alloc_sc(TRUE, cache_sm, sc->type);
                 if (cache_sc == NULL) {
-                    logprintfl(EUCAWARN, "failed to find space in sensor cache for counter %s:%s:%s\n", sr->resourceName, sm->metricName,
-                               sensor_type2str(sc->type));
+                    LOGWARN("failed to find space in sensor cache for counter %s:%s:%s\n", sr->resourceName, sm->metricName, sensor_type2str(sc->type));
                     if (fail_on_oom)
                         goto bail;
                     continue;
@@ -871,22 +1255,21 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                     const sensorDimension *sd = sc->dimensions + d;
                     sensorDimension *cache_sd = find_or_alloc_sd(TRUE, cache_sc, sd->dimensionName);
                     if (cache_sd == NULL) {
-                        logprintfl(EUCAWARN, "failed to find space in sensor cache for dimension %s:%s:%s:%s\n", sr->resourceName, sm->metricName,
-                                   sensor_type2str(sc->type), sd->dimensionName);
+                        LOGWARN("failed to find space in sensor cache for dimension %s:%s:%s:%s\n", sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                         if (fail_on_oom)
                             goto bail;
                         continue;
                     }
 
+                    if (cache_sd->valuesLen < 0 || cache_sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
+                        LOGWARN("inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
+                                cache_sd->valuesLen, cache_sr->resourceName, cache_sm->metricName, sensor_type2str(cache_sc->type), cache_sd->dimensionName);
+                        goto bail;
+                    }
+
                     if (sd->valuesLen < 1)  // no values in this dimension at all
                         continue;
 
-                    if (cache_sd->valuesLen < 0 || cache_sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
-                        logprintfl(EUCAERROR, "inconsistency in sensor database (valuesLen=%d for %s)\n",
-                                   cache_sd->valuesLen, cache_sr->resourceName, cache_sm->metricName, sensor_type2str(cache_sc->type),
-                                   cache_sd->dimensionName);
-                        goto bail;
-                    }
                     // correlate new values with values already in the cache:
                     // phase 1: go backwards through sequence numbers of new and old
 
@@ -901,13 +1284,12 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                             // this can happen when sensor resets; if, additionally,
                             // network outage prevented delivery for a while, there
                             // may also be a gap in numbers, rather than a reset to 0
-                            logprintfl(EUCAINFO, "reset in sensor values detected, clearing history for %s:%s:%s:%s\n", sr->resourceName,
-                                       sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
-                            logprintfl(EUCADEBUG, "cached valuesLen=%d seq=%lld+%d vs new valuesLen=%d seq=%lld+%d\n", cache_sd->valuesLen,
-                                       cache_sc->sequenceNum, iov, sd->valuesLen, sc->sequenceNum, inv);
+                            LOGINFO("reset in sensor values detected, clearing history for %s:%s:%s:%s\n", sr->resourceName,
+                                    sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                            LOGDEBUG("cached valuesLen=%d seq=%lld+%d vs new valuesLen=%d seq=%lld+%d\n", cache_sd->valuesLen,
+                                     cache_sc->sequenceNum, iov, sd->valuesLen, sc->sequenceNum, inv);
                             inv_start = 0;  // copy all new values
                             iov_start = 0;  // overwrite what is in cache
-                            cache_sc->sequenceNum = sc->sequenceNum;    // reset the seq number to the new value
                             break;
                         }
 
@@ -916,7 +1298,7 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                             continue;
                         }
 
-                        if (iov < 0)    // no more old, cached data to compare against
+                        if (iov < 0)   // no more old, cached data to compare against
                             continue;
 
                         // the rest of this is for internal checking - the old and new values must match
@@ -925,8 +1307,8 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                         if ((sd->values[vn_adj].timestampMs != cache_sd->values[vo_adj].timestampMs)
                             || (sd->values[vn_adj].available != cache_sd->values[vo_adj].available)
                             || (sd->values[vn_adj].value != cache_sd->values[vo_adj].value)) {
-                            logprintfl(EUCAWARN, "mismatch in sensor data being merged into in-memory cache, clearing history for %s:%s:%s:%s\n",
-                                       sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                            LOGWARN("mismatch in sensor data being merged into in-memory cache, clearing history for %s:%s:%s:%s\n",
+                                    sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
                             inv_start = 0;
                             iov_start = 0;
                             break;
@@ -947,6 +1329,24 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                             cache_sd->values[vo_adj].timestampMs = sd->values[vn_adj].timestampMs;
                             cache_sd->values[vo_adj].available = sd->values[vn_adj].available;
                             cache_sd->values[vo_adj].value = sd->values[vn_adj].value;
+
+                            // if this is the first value for a SUMMATION-type counter (seq num is zero),
+                            // set the shift to the negative of the value so that values go back to zero, too
+                            // (this is easier than maintaining shift_value, which is also used to compensate
+                            // for value resets due to instance rebooting, across component restarts)
+                            if ((sc->sequenceNum + iov) == 0 && copied == 0 && sc->type == SENSOR_SUMMATION) {
+                                if (sd->values[vn_adj].value != 0) {
+                                    cache_sd->shift_value = -sd->values[vn_adj].value;  // TODO: deal with the case when available is FALSE?
+                                    LOGTRACE("at seq 0, setting shift for %s:%s:%s:%s to %f\n",
+                                             sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, cache_sd->shift_value);
+                                }
+                            } else {
+                                sensorValue *sv = cache_sd->values + vo_adj;
+                                LOGTRACE("merging sensor value %s:%s:%s:%s %05lld %014lld %s %f\n",
+                                         sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sc->sequenceNum + inv,
+                                         sv->timestampMs, sv->available ? "YES" : " NO", sv->available ? sv->value : -1);
+                            }
+                            num_merged++;
                             copied++;
                         }
                         // adjust the length capping it at array size
@@ -954,13 +1354,13 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                         if (cache_sd->valuesLen > MAX_SENSOR_VALUES) {
                             cache_sd->valuesLen = MAX_SENSOR_VALUES;
                         }
-                        // shift the first entry's seq number up if the values wrapped
-                        seq = seq + (iov_start + copied) - cache_sd->valuesLen;
-
                         // shift the first entry's index up if the values wrapped
                         cache_sd->firstValueIndex = (cache_sd->firstValueIndex + (iov_start + copied) - cache_sd->valuesLen) % MAX_SENSOR_VALUES;
 
-                        // update the interval now (TODO: should we base it on the delta between the last two values?)
+                        // set the sequence number by counting back from the seq num of the last value copied in
+                        seq = (sc->sequenceNum + sd->valuesLen) - cache_sd->valuesLen;
+
+                        //! update the interval now (@TODO should we base it on the delta between the last two values?)
                         cache_sc->collectionIntervalMs = sensor_state->collection_interval_time_ms;
                     }
                     // record sequence number for possible later adjustment across dimensions
@@ -970,7 +1370,8 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
                     }
                 }
 
-                if (largest_seq > cache_sc->sequenceNum) {  // will have to change the sequence number
+                // will have to change the sequence number
+                if (largest_seq != cache_sc->sequenceNum) {
                     cache_sc->sequenceNum = largest_seq;
                     for (int d = 0; d < sc->dimensionsLen; d++) {
                         if (dimension_seq[d] < largest_seq) {
@@ -986,21 +1387,37 @@ int sensor_merge_records(const sensorResource * srs[], int srsLen, boolean fail_
             }
         }
         cache_sr->timestamp = time(NULL);
-        logprintfl(EUCATRACE, "updated %s cache timestamp to %d\n", cache_sr->resourceName, cache_sr->timestamp);
+        LOGTRACE("updated %s cache timestamp to %d\n", cache_sr->resourceName, cache_sr->timestamp);
     }
-    ret = 0;
+    ret = EUCA_OK;
 
 bail:
 
     sem_v(state_sem);
+    LOGDEBUG("completed: merged %d values, ret=%d\n", num_merged, ret);
 
-    return ret;
+    return (ret);
 }
 
-// Adds a single value into the in-memory sensor cache. This is
-// implemented by constructing a whole big sensorResource record
-// just for one value and merging it. The advantage of this
-// approach is that all additions are done by the merging code.
+//!
+//! Adds a single value into the in-memory sensor cache. This is
+//! implemented by constructing a whole big sensorResource record
+//! just for one value and merging it. The advantage of this
+//! approach is that all additions are done by the merging code.
+//!
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] metricName
+//! @param[in] counterType
+//! @param[in] dimensionName
+//! @param[in] sequenceNum
+//! @param[in] timestampMs
+//! @param[in] available
+//! @param[in] value
+//!
+//! @return the result of the sensor_merge_records() call
+//!
+//! @see sensor_merge_records()
+//!
 int sensor_add_value(const char *instanceId,
                      const char *metricName, const int counterType, const char *dimensionName, const long long sequenceNum,
                      const long long timestampMs, const boolean available, const double value)
@@ -1026,40 +1443,55 @@ int sensor_add_value(const char *instanceId,
                      }
                     }
     };
-    safe_strncpy(sr.resourceName, instanceId, sizeof(sr.resourceName));
-    sensorMetric *sm = sr.metrics;  // use array entry [0]
-    safe_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
-    sensorCounter *sc = sm->counters;   // use array entry [0]
+    euca_strncpy(sr.resourceName, instanceId, sizeof(sr.resourceName));
+    sensorMetric *sm = sr.metrics;     // use array entry [0]
+    euca_strncpy(sm->metricName, metricName, sizeof(sm->metricName));
+    sensorCounter *sc = sm->counters;  // use array entry [0]
     sc->type = counterType;
     sensorDimension *sd = sc->dimensions;   // use array entry [0]
-    safe_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
-    sensorValue *sv = sd->values;   // use array entry [0]
+    euca_strncpy(sd->dimensionName, dimensionName, sizeof(sd->dimensionName));
+    sensorValue *sv = sd->values;      // use array entry [0]
     sv->timestampMs = timestampMs;
     sv->value = value;
     sv->available = available;
 
     sensorResource *srs[1] = { &sr };
 
-    logprintfl(EUCADEBUG, "adding %s:%s:%s:%s %05lld %014lld %s %f\n",
-               sr.resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sequenceNum, sv->timestampMs,
-               sv->available ? "YES" : " NO", sv->available ? sv->value : -1);
+    LOGTRACE("adding sensor value %s:%s:%s:%s %05lld %014lld %s %f\n",
+             sr.resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, sequenceNum, sv->timestampMs,
+             sv->available ? "YES" : " NO", sv->available ? sv->value : -1);
     return sensor_merge_records(srs, 1, TRUE);
 }
 
-// A function for getting the latest value for a particular
-// (resource x metric x counter x dimension) value, along with
-// various related values, such as intervalMs and total number
-// of values in the cache. Given that most users will prefer
-// the bulk retrieval funcion sensor_get_instance_data(), this
-// one is more likely of use only for debugging.
+//!
+//! A function for getting the latest value for a particular
+//! (resource x metric x counter x dimension) value, along with
+//! various related values, such as intervalMs and total number
+//! of values in the cache. Given that most users will prefer
+//! the bulk retrieval funcion sensor_get_instance_data(), this
+//! one is more likely of use only for debugging.
+//!
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] metricName
+//! @param[in] counterType
+//! @param[in] dimensionName
+//! @param[in] sequenceNum
+//! @param[in] timestampMs
+//! @param[in] available
+//! @param[in] value
+//! @param[in] intervalMs
+//! @param[in] valLen
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int sensor_get_value(const char *instanceId,
                      const char *metricName,
                      const int counterType, const char *dimensionName, long long *sequenceNum, long long *timestampMs, boolean * available,
                      double *value, long long *intervalMs, int *valLen)
 {
-    int ret = 1;
+    int ret = EUCA_ERROR;
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
     sem_p(state_sem);
     sensorResource *cache_sr = find_or_alloc_sr(FALSE, instanceId, "instance", NULL);
@@ -1078,7 +1510,7 @@ int sensor_get_value(const char *instanceId,
     if (cache_sd == NULL)
         goto bail;
 
-    if (cache_sd->valuesLen < 1)    // no values in this dimension at all
+    if (cache_sd->valuesLen < 1)       // no values in this dimension at all
         goto bail;
 
     *sequenceNum = cache_sc->sequenceNum + cache_sd->valuesLen - 1;
@@ -1089,7 +1521,7 @@ int sensor_get_value(const char *instanceId,
     *timestampMs = sv->timestampMs;
     *available = sv->available;
     *value = sv->value;
-    ret = 0;
+    ret = EUCA_OK;
 
 bail:
 
@@ -1097,45 +1529,56 @@ bail:
     return ret;
 }
 
-int sensor_get_instance_data(const char *instanceId, const char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen)
+//!
+//!
+//!
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] sensorIds
+//! @param[in] sensorIdsLen
+//! @param[in] sr_out
+//! @param[in] srLen
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int sensor_get_instance_data(const char *instanceId, char **sensorIds, int sensorIdsLen, sensorResource ** sr_out, int srLen)
 {
-    int ret = 1;
+    int ret = EUCA_ERROR;
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
-    logprintfl(EUCATRACE, "sensor_get_instance_data() called for instance %s\n", instanceId == NULL ? "NULL" : instanceId);
+    LOGTRACE("sensor_get_instance_data() called for instance %s\n", instanceId == NULL ? "NULL" : instanceId);
 
     sem_p(state_sem);
-    time_t this_interval = 0;   // For determining polling interval.
-    int sri = 0;                // index into output array sr_out[]
+    time_t this_interval = 0;          // For determining polling interval.
+    int sri = 0;                       // index into output array sr_out[]
     for (int r = 0; r < sensor_state->max_resources; r++) {
         sensorResource *sr = sensor_state->resources + r;
 
-        if (is_empty_sr(sr))    // unused slot in cache, skip it
+        if (is_empty_sr(sr))           // unused slot in cache, skip it
             continue;
 
-        if ((instanceId != NULL)    // we are looking for a specific instance (rather than all)
+        if ((instanceId != NULL)       // we are looking for a specific instance (rather than all)
             && (strcmp(sr->resourceName, instanceId) != 0)) // and this is not the one
             continue;
 
-        if (sensorIdsLen > 0)   // TODO: implement support for sensorIds[]
+        if (sensorIdsLen > 0)          //! @todo implement support for sensorIds[]
             goto bail;
 
-        if (sri >= srLen)       // out of room in output
-            goto bail;          // FIXME: Log something here?
+        if (sri >= srLen)              // out of room in output
+            goto bail;                 //! @fixme Log something here?
 
-        memcpy(sr_out[sri], sr, sizeof(sensorResource));    // TODO: run through the data, do not just copy
+        memcpy(sr_out[sri], sr, sizeof(sensorResource));    //! @todo run through the data, do not just copy
         sri++;
 
-        if (instanceId != NULL) // only one instance to copy
+        if (instanceId != NULL)        // only one instance to copy
             break;
     }
-    if (sri > 0)                // we have at least one result
-        ret = 0;
+    if (sri > 0)                       // we have at least one result
+        ret = EUCA_OK;
 
 bail:
 
-    if (sensor_state->last_polled) {    // Ensure this isn't the first one.
+    if (sensor_state->last_polled) {   // Ensure this isn't the first one.
         time_t t = time(NULL);
         this_interval = t - sensor_state->last_polled;
         // The interval since the last poll must exceed a minimum
@@ -1146,25 +1589,23 @@ bail:
         // seconds, or 1 below the current minimum NC_POLLING_FREQUENCY
         // value (which is a period rather than a frequency).
         if (this_interval <= 5) {
-            logprintfl(EUCATRACE, "NOT adjusting measured upstream polling interval from %d to %d (which is below threshold)\n",
-                       sensor_state->interval_polled, this_interval);
+            LOGTRACE("NOT adjusting measured upstream polling interval from %ld to %ld (which is below threshold)\n", sensor_state->interval_polled, this_interval);
             sensor_state->last_polled = t;
         } else {
             if (this_interval == sensor_state->interval_polled) {
-                logprintfl(EUCATRACE, "maintaining measured upstream polling interval of %d\n", sensor_state->interval_polled);
+                LOGTRACE("maintaining measured upstream polling interval of %ld\n", sensor_state->interval_polled);
             } else {
                 if (sensor_state->interval_polled) {
-                    logprintfl(EUCATRACE, "adjusting measured upstream polling interval from %d to %d\n", sensor_state->interval_polled,
-                               this_interval);
+                    LOGTRACE("adjusting measured upstream polling interval from %ld to %ld\n", sensor_state->interval_polled, this_interval);
                 } else {
-                    logprintfl(EUCATRACE, "setting measured upstream polling interval to %d\n", this_interval);
+                    LOGTRACE("setting measured upstream polling interval to %ld\n", this_interval);
                 }
                 sensor_state->interval_polled = this_interval;
             }
             sensor_state->last_polled = t;
         }
     } else {
-        logprintfl(EUCATRACE, "first poll--setting baseline for measuring upstream polling interval\n");
+        LOGTRACE("first poll--setting baseline for measuring upstream polling interval\n");
         sensor_state->last_polled = time(NULL);
     }
     if (this_interval > 5) {
@@ -1173,7 +1614,7 @@ bail:
         // one polling cycle when we get clumped requests.
         int num_expired = sensor_expire_cache_entries();
         if (num_expired) {
-            logprintfl(EUCAINFO, "%d resource entries expired from sensor cache\n", num_expired);
+            LOGINFO("%d resource entries expired from sensor cache\n", num_expired);
         }
     }
 
@@ -1181,69 +1622,194 @@ bail:
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] resourceName
+//! @param[in] resourceType
+//! @param[in] resourceUuid
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int sensor_add_resource(const char *resourceName, const char *resourceType, const char *resourceUuid)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
-    int ret = 1;
+    int ret = (EUCA_ERROR);
     sem_p(state_sem);
     if (find_or_alloc_sr(TRUE, resourceName, resourceType, resourceUuid) != NULL) {
-        ret = 0;
+        ret = EUCA_OK;
     }
     sem_v(state_sem);
 
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] resourceName
+//! @param[in] resourceAlias
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int sensor_set_resource_alias(const char *resourceName, const char *resourceAlias)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
-    int ret = 1;
+    int ret = EUCA_ERROR;
     sem_p(state_sem);
     sensorResource *sr = find_or_alloc_sr(FALSE, resourceName, NULL, NULL);
     if (sr != NULL) {
         if (resourceAlias) {
             if (strcmp(sr->resourceAlias, resourceAlias) != 0) {
-                safe_strncpy(sr->resourceAlias, resourceAlias, sizeof(sr->resourceAlias));
-                logprintfl(EUCADEBUG, "set alias for sensor resource %s to %s\n", resourceName, resourceAlias);
+                euca_strncpy(sr->resourceAlias, resourceAlias, sizeof(sr->resourceAlias));
+                LOGDEBUG("set alias for sensor resource %s to %s\n", resourceName, resourceAlias);
             }
         } else {
-            logprintfl(EUCATRACE, "clearing alias for resource '%s'\n", resourceName);
+            LOGTRACE("clearing alias for resource '%s'\n", resourceName);
             sr->resourceAlias[0] = '\0';    // clears the alias
         }
-        ret = 0;
+        ret = EUCA_OK;
     }
     sem_v(state_sem);
 
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] resourceName
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int sensor_remove_resource(const char *resourceName)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
-    int ret = 1;
+    int ret = EUCA_ERROR;
     sem_p(state_sem);
     sensorResource *sr = find_or_alloc_sr(FALSE, resourceName, NULL, NULL);
     if (sr != NULL) {
-        sr->resourceName[0] = '\0'; // marks the slot as empty
-        ret = 0;
+        sr->resourceName[0] = '\0';    // marks the slot as empty
+        ret = EUCA_OK;
     }
     sem_v(state_sem);
 
     return ret;
 }
 
-int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName,
-                               const char *dimensionAlias)
+//!
+//!
+//!
+//! @param[in] resourceName
+//! @param[in] metricName
+//!
+//! @return
+//!
+int sensor_shift_metric(const char *resourceName, const char *metricName)
 {
-    int ret = 1;
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
+        return (EUCA_ERROR);
+
+    int ret = EUCA_ERROR;
+    sem_p(state_sem);
+
+    sensorResource *sr = find_or_alloc_sr(FALSE, resourceName, NULL, NULL);
+    if (sr == NULL)
+        goto bail;
+
+    sensorMetric *sm = find_or_alloc_sm(FALSE, sr, metricName);
+    if (sm == NULL)
+        goto bail;
+
+    if (sm->countersLen < 0 || sm->countersLen > MAX_SENSOR_COUNTERS) {
+        LOGERROR("invalid resource array: counterLen out of bounds (countersLen=%d for %s:%s)\n", sm->countersLen, sr->resourceName, sm->metricName);
+        goto bail;
+    }
+
+    for (int c = 0; c < sm->countersLen; c++) {
+        const sensorCounter *sc = sm->counters + c;
+        if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
+            LOGERROR("invalid resource array: [%d] sensorCounter out of bounds (dimensionsLen=%d for %s:%s:%s)\n", c,
+                     sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+            goto bail;
+        }
+
+        if (sc->type != SENSOR_SUMMATION)   // shifting numbers only makes sense for summation counters
+            continue;
+
+        for (int d = 0; d < sc->dimensionsLen; d++) {
+            sensorDimension *sd = ((sensorDimension *) sc->dimensions + d);
+
+            if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {   // sanity check
+                LOGERROR("inconsistency in sensor database (valuesLen=%d for %s:%s:%s:%s)\n",
+                         sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                goto bail;
+            }
+
+            if (sd->valuesLen < 1)     // no values in this dimension at all
+                continue;
+
+            // find the latest value in the history (TODO: use the latest available, not just latest value?)
+            int i_last_logical = sd->valuesLen - 1; // logical index for the latest value
+            int i_last_actual = (i_last_logical + sd->firstValueIndex) % MAX_SENSOR_VALUES; // actual index, adjusted for offset and wrap
+            double offset = sd->values[i_last_actual].value;
+
+            // increment the shift by the latest value: this way the next measurement can reset to zero,
+            // while DescribeSensors() can continue reporting a strictly growing set of numbers
+            sd->shift_value += offset;
+            LOGTRACE("increasing shift for %s:%s:%s:%s by %f to %f\n", sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName, offset, sd->shift_value);
+
+            // adjust the history to reflect the shift so that these pre-shift values
+            // continue being reported correctly after the shift
+            for (int i = 0; i < sd->valuesLen; i++) {
+                int i_actual = (i + sd->firstValueIndex) % MAX_SENSOR_VALUES;
+                if (sd->values[i_actual].available) {
+                    sd->values[i_actual].value -= offset;
+
+                    // sanity check
+                    if (sd->values[i_actual].value > 0) {
+                        LOGERROR("inconsistency in sensor database (positive history value after shift: %f for %s:%s:%s:%s)\n",
+                                 sd->values[i_actual].value, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                    }
+                }
+            }
+        }
+    }
+
+    ret = EUCA_OK;
+
+bail:
+    sem_v(state_sem);
+    return (ret);
+}
+
+//!
+//!
+//!
+//! @param[in] resourceName
+//! @param[in] metricName
+//! @param[in] counterType
+//! @param[in] dimensionName
+//! @param[in] dimensionAlias
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int sensor_set_dimension_alias(const char *resourceName, const char *metricName, const int counterType, const char *dimensionName, const char *dimensionAlias)
+{
+    int ret = EUCA_ERROR;
+    if (sensor_state == NULL || sensor_state->initialized == FALSE)
+        return (EUCA_ERROR);
+
+    if (resourceName == NULL || strlen(resourceName) < 1 || strlen(resourceName) > MAX_SENSOR_NAME_LEN) {
+        LOGWARN("sensor_set_dimension_alias() invoked with invalid resourceName (%s)\n", resourceName);
         return 1;
+    }
 
     sem_p(state_sem);
 
@@ -1269,7 +1835,7 @@ int sensor_set_dimension_alias(const char *resourceName, const char *metricName,
     boolean changed = FALSE;
     if (dimensionAlias) {
         if (strcmp(sd->dimensionAlias, dimensionAlias) != 0) {
-            safe_strncpy(sd->dimensionAlias, dimensionAlias, sizeof(sd->dimensionAlias));
+            euca_strncpy(sd->dimensionAlias, dimensionAlias, sizeof(sd->dimensionAlias));
             changed = TRUE;
         }
     } else {
@@ -1279,11 +1845,10 @@ int sensor_set_dimension_alias(const char *resourceName, const char *metricName,
         }
     }
     if (changed) {
-        logprintfl(EUCADEBUG, "set alias for sensor dimension %s:%s:%s:%s to '%s'\n", resourceName, metricName, sensor_type2str(counterType),
-                   dimensionName, sd->dimensionAlias);
+        LOGDEBUG("set alias for sensor dimension %s:%s:%s:%s to '%s'\n", resourceName, metricName, sensor_type2str(counterType), dimensionName, sd->dimensionAlias);
     }
 
-    ret = 0;
+    ret = EUCA_OK;
 
 bail:
 
@@ -1291,6 +1856,15 @@ bail:
     return ret;
 }
 
+//!
+//!
+//!
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] volumeId the volume identifier string (vol-XXXXXXXX)
+//! @param[in] guestDev
+//!
+//! @return 0 or the number of sensor that we fail to update
+//!
 int sensor_set_volume(const char *instanceId, const char *volumeId, const char *guestDev)
 {
     int ret = 0;
@@ -1305,21 +1879,29 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
     return ret;
 }
 
-// request to explicitly refresh sensor values for a
-// particular resource (useful for getting data between
-// poll events in bottom_half(), which may be spaced far
-// apart)
-int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], const char resourceAliases[][MAX_SENSOR_NAME_LEN], int size)
+//!
+//! request to explicitly refresh sensor values for a
+//! particular resource (useful for getting data between
+//! poll events in bottom_half(), which may be spaced far
+//! apart)
+//!
+//! @param[in] resourceNames
+//! @param[in] resourceAliases
+//! @param[in] size
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char resourceAliases[][MAX_SENSOR_NAME_LEN], int size)
 {
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
-        return 1;
+        return (EUCA_ERROR);
 
     getstat **stats = NULL;
-    if (getstat_generate(&stats) != OK) {
-        logprintfl(EUCAWARN, "failed to invoke getstats for sensor data\n");
-        return 1;
+    if (getstat_generate(&stats) != EUCA_OK) {
+        LOGWARN("failed to invoke getstats for sensor data\n");
+        return (EUCA_ERROR);
     } else {
-        logprintfl(EUCADEBUG, "polled statistics for %d instance(s)\n", getstat_ninstances(stats));
+        LOGDEBUG("polled statistics for %d instance(s)\n", getstat_ninstances(stats));
     }
 
     boolean found_values = FALSE;
@@ -1334,22 +1916,18 @@ int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], co
             head = getstat_find(stats, alias);
         }
         for (getstat * s = head; s != NULL; s = s->next) {
-            sensor_add_value(name, s->metricName, s->counterType, s->dimensionName, sn, s->timestamp, TRUE, s->value);
+            sensor_add_value(name, s->metricName, s->counterType, s->dimensionName, seq_num, s->timestamp, TRUE, s->value);
             found_values = TRUE;
         }
         if (head == NULL) {
             // OK, can't find this thing anywhere.
-            logprintfl(EUCADEBUG,
-                       "unable to get metrics for instance %s (which is OK if it was terminated--the instance should soon expire from the cache)\n",
-                       name);
-            // TODO3.2: decide what to do when some metrics for an instance
-            // aren't available
-            //
-            // On possibility is that the CLC isn't actively polling us, which
-            // means we've not cleaned up the sensor cache recently...and
-            // stale/terminated resources have accumulated in it. So force a
-            // cache-expiration run.
-            sem_p(state_sem);   // Must set semaphore for sensor_expire_cache_entries() call.
+            LOGDEBUG("unable to get metrics for instance %s (OK if it was terminated---should soon expire from the cache)\n", name);
+            //! @TODO 3.2: decide what to do when some metrics for an instance aren't available.
+            //! One possibility is that the CLC isn't actively polling us, which
+            //! means we've not cleaned up the sensor cache recently...and
+            //! stale/terminated resources have accumulated in it. So force a
+            //! cache-expiration run.
+            sem_p(state_sem);          // Must set semaphore for sensor_expire_cache_entries() call.
             time_t t = time(NULL);
             time_t this_interval = t - sensor_state->last_polled;
             if (this_interval > 5) {
@@ -1358,78 +1936,99 @@ int sensor_refresh_resources(const char resourceNames[][MAX_SENSOR_NAME_LEN], co
                 // in one polling cycle when we get clumped requests.
                 int num_expired = sensor_expire_cache_entries();
                 if (num_expired) {
-                    logprintfl(EUCAINFO, "%d resource entries expired from sensor cache\n", num_expired);
+                    LOGINFO("%d resource entries expired from sensor cache\n", num_expired);
                 }
             }
             sem_v(state_sem);
-
         }
     }
     getstat_free(stats);
     if (found_values)
-        sn++;
+        seq_num++;
 
-    return (0);
+    return (EUCA_OK);
 }
 
+//!
+//!
+//!
+//! @param[in] srs
+//! @param[in] srsLen
+//!
+//! @return EUCA_OK on success or the number of errors on failure
+//!
 int sensor_validate_resources(sensorResource ** srs, int srsLen)
 {
+    int errors = EUCA_OK;
+
     for (int i = 0; i < srsLen; i++) {
         sensorResource *sr = srs[i];
         if (sr == NULL) {
-            logprintfl(EUCAERROR, "invalid resource array: empty slot in position %d\n", i);
-            return 1;
+            LOGERROR("invalid resource array: [%d] empty slot\n", i);
+            errors++;
+            continue;
         }
         if (sr->metricsLen < 0 || sr->metricsLen > MAX_SENSOR_METRICS) {
-            logprintfl(EUCAERROR, "invalid resource array: metricsLen out of bounds (metricsLen=%d for %s)\n", sr->metricsLen, sr->resourceName);
-            return 1;
+            LOGERROR("invalid resource array: [%d] metricsLen out of bounds (metricsLen=%d for %s)\n", i, sr->metricsLen, sr->resourceName);
+            errors++;
+            continue;
         }
         for (int m = 0; m < sr->metricsLen; m++) {
             const sensorMetric *sm = sr->metrics + m;
             if (sm->countersLen < 0 || sm->countersLen > MAX_SENSOR_COUNTERS) {
-                logprintfl(EUCAERROR, "invalid resource array: counterLen out of bounds (countersLen=%d for %s:%s)\n", sm->countersLen,
-                           sr->resourceName, sm->metricName);
-                return 1;
+                LOGERROR("invalid resource array: [%d:%d] counterLen out of bounds (countersLen=%d for %s:%s)\n", i, m, sm->countersLen, sr->resourceName, sm->metricName);
+                errors++;
+                goto next_resource;
             }
             for (int c = 0; c < sm->countersLen; c++) {
                 const sensorCounter *sc = sm->counters + c;
                 if (sc->dimensionsLen < 0 || sc->dimensionsLen > MAX_SENSOR_DIMENSIONS) {
-                    logprintfl(EUCAERROR, "invalid resource array: sensorCounter out of bounds (dimensionsLen=%d for %s:%s:%s)\n",
-                               sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
-                    return 1;
+                    LOGERROR("invalid resource array: [%d:%d:%d] sensorCounter out of bounds (dimensionsLen=%d for %s:%s:%s)\n", i, m, c,
+                             sc->dimensionsLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type));
+                    errors++;
+                    goto next_resource;
                 }
                 for (int d = 0; d < sc->dimensionsLen; d++) {
                     const sensorDimension *sd = sc->dimensions + d;
                     if (sd->valuesLen < 0 || sd->valuesLen > MAX_SENSOR_VALUES) {
-                        logprintfl(EUCAERROR, "invalid resource array: valuesLen out of bounds (valuesLen=%d for %s:%s:%s:%s)\n",
-                                   sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
-                        return 1;
+                        LOGERROR("invalid resource array: [%d:%d:%d:%d] valuesLen out of bounds (valuesLen=%d for %s:%s:%s:%s)\n", i, m,
+                                 c, d, sd->valuesLen, sr->resourceName, sm->metricName, sensor_type2str(sc->type), sd->dimensionName);
+                        errors++;
+                        goto next_resource;
                     }
                     for (int v = 0; v < sd->valuesLen; v++) {
-                        // TODO: anything to verify in values?
+                        //! @TODO anything to verify in values?
                     }
                 }
             }
         }
+next_resource:
+        continue;                      // label so we can bail out of loops, continue to keep gcc happy
     }
 
-    return 0;
+    return errors;
 }
 
-/////////////////////////////////////////////// unit testing code ///////////////////////////////////////////////////
-
 #ifdef _UNIT_TEST
-
+//!
+//!
+//!
 static void dump_sensor_cache(void)
 {
-    sensorResource **srs = calloc(sensor_state->max_resources, sizeof(sensorResource *));
+    sensorResource **srs = EUCA_ZALLOC(sensor_state->max_resources, sizeof(sensorResource *));
     for (int i = 0; i < sensor_state->max_resources; i++) {
         srs[i] = &(sensor_state->resources[i]);
     }
     log_sensor_resources("whole cache", srs, sensor_state->max_resources);
-    free(srs);
+    EUCA_FREE(srs);
 }
 
+//!
+//!
+//!
+//! @param[out] srs
+//! @param[in]  srsLen
+//!
 static void clear_srs(sensorResource ** srs, int srsLen)
 {
     for (int i = 0; i < srsLen; i++) {
@@ -1437,12 +2036,14 @@ static void clear_srs(sensorResource ** srs, int srsLen)
     }
 }
 
-const char *euca_this_component_name = "ignore";
-const char *euca_client_component_name = "ignore";
-static long long ts = 0;
-static void *competitor_function_writer(void *ptr);
-static void *competitor_function_reader(void *ptr);
-
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
 int main(int argc, char **argv)
 {
     int errors = 0;
@@ -1450,7 +2051,7 @@ int main(int argc, char **argv)
     ts = time_usec() / 1000;
     logfile(NULL, EUCATRACE, 4);
     log_prefix_set("%T %L %t9 %m-24 %F-33 |");
-    logprintfl(EUCADEBUG, "testing sensor.c with cache of size 2 and MAX_SENSOR_VALUES=%d\n", MAX_SENSOR_VALUES);
+    LOGDEBUG("testing sensor.c with cache of size 2 and MAX_SENSOR_VALUES=%d\n", MAX_SENSOR_VALUES);
 
     long long intervalMs = 50000;
     assert(sensor_init(NULL, NULL, 2, FALSE, NULL) == 0);
@@ -1473,15 +2074,15 @@ int main(int argc, char **argv)
         } else {
             euca_this_component_name = "cc";
         }
-        assert(getstat_generate(&stats) == OK);
+        assert(getstat_generate(&stats) == EUCA_OK);
         getstat *gs = getstat_find(stats, NULL);
         if (gs != NULL) {
             char id[MAX_SENSOR_NAME_LEN];
-            safe_strncpy(id, gs->instanceId, sizeof(id));
-            assert(sensor_refresh_resources(id, "", 1) == OK);
+            euca_strncpy(id, gs->instanceId, sizeof(id));
+            assert(sensor_refresh_resources(id, "", 1) == EUCA_OK);
         }
         if (i % 101 == 0 || i % 102 == 0) {
-            logprintfl(EUCADEBUG, "getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances(stats));
+            LOGDEBUG("getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances(stats));
         }
     }
     char *anInstanceId = NULL;
@@ -1493,7 +2094,7 @@ int main(int argc, char **argv)
 
     euca_this_component_name = "ignore";    // set component name so that getstats won't get involved and won't put real sensor readings into sensor state
     getstat_free(stats);
-    init_state(2);              // clear out sensor state after previous experiments
+    init_state(2);                     // clear out sensor state after previous experiments
     assert(0 == sensor_config(3, intervalMs));
 
     // test sensor_add_value and sensor_get_value
@@ -1519,13 +2120,11 @@ int main(int argc, char **argv)
                 long long last_intervalMs;
                 int last_valLen;
 
-                assert(0 ==
-                       sensor_get_value("i-555", "CPUUtilization", SENSOR_AVERAGE, "default", &last_sn, &last_ts, &last_available, &last_val,
-                                        &last_intervalMs, &last_valLen));
+                assert(0 == sensor_get_value("i-555", "CPUUtilization", SENSOR_AVERAGE, "default", &last_sn, &last_ts, &last_available, &last_val, &last_intervalMs, &last_valLen));
                 assert(last_sn == sn);
                 assert(last_ts == ts);
                 if (!(last_intervalMs == intervalMs)) {
-                    logprintfl(EUCAERROR, "bad\n");
+                    LOGERROR("bad\n");
                 }
                 assert(last_available == (sn % 2) ? TRUE : FALSE);
                 assert(last_val == val);
@@ -1537,10 +2136,10 @@ int main(int argc, char **argv)
     }
 
     // add the "dummy" struct as a second resource
-    sensorResource **srs = calloc(sensor_state->max_resources, sizeof(sensorResource *));
+    sensorResource **srs = EUCA_ZALLOC(sensor_state->max_resources, sizeof(sensorResource *));
     assert(srs);
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        srs[i] = calloc(1, sizeof(sensorResource));
+        srs[i] = EUCA_ZALLOC(1, sizeof(sensorResource));
         assert(srs[i]);
     }
     assert(0 == sensor_get_dummy_instance_data(0L, "i-666", NULL, 0, srs, sensor_state->max_resources));
@@ -1559,7 +2158,7 @@ int main(int argc, char **argv)
     assert(0 == sensor_merge_records(srs, sensor_state->max_resources, TRUE));
     assert(0 == sensor_merge_records(srs, sensor_state->max_resources, TRUE));  // should be a no-op
 
-    {                           // verify the last value
+    {                                  // verify the last value
         long long last_sn;
         long long last_ts;
         boolean last_available;
@@ -1567,9 +2166,7 @@ int main(int argc, char **argv)
         long long last_intervalMs;
         int last_valLen;
 
-        assert(0 ==
-               sensor_get_value("i-666", "DiskReadOps", SENSOR_SUMMATION, "root", &last_sn, &last_ts, &last_available, &last_val, &last_intervalMs,
-                                &last_valLen));
+        assert(0 == sensor_get_value("i-666", "DiskReadOps", SENSOR_SUMMATION, "root", &last_sn, &last_ts, &last_available, &last_val, &last_intervalMs, &last_valLen));
         assert(last_sn == 8L);
         assert(last_available == TRUE);
     }
@@ -1583,13 +2180,13 @@ int main(int argc, char **argv)
     dump_sensor_cache();
 
     int srsLen = sensor_state->max_resources;
-    logprintfl(EUCADEBUG, "testing sensor_get_instance_data() function\n");
-    clear_srs(srs, srsLen);     // clear out the array of structs to use it to retrieve data
+    LOGDEBUG("testing sensor_get_instance_data() function\n");
+    clear_srs(srs, srsLen);            // clear out the array of structs to use it to retrieve data
     assert(0 == sensor_get_instance_data(NULL, NULL, 0, srs, srsLen));
     assert(0 == sensor_get_instance_data(NULL, NULL, 0, srs, srsLen));  // same
-    clear_srs(srs, srsLen);     // clear out the array of structs to use it to retrieve data
+    clear_srs(srs, srsLen);            // clear out the array of structs to use it to retrieve data
     assert(0 == sensor_get_instance_data(NULL, NULL, 0, srs, srsLen));
-    clear_srs(srs, srsLen);     // clear out the array of structs to use it to retrieve data
+    clear_srs(srs, srsLen);            // clear out the array of structs to use it to retrieve data
     assert(0 != sensor_get_instance_data("i-777", NULL, 0, srs, srsLen));
     assert(0 != sensor_get_instance_data("i-555", "foo", 1, srs, srsLen));
     assert(0 == sensor_get_instance_data("i-555", NULL, 0, srs, srsLen));
@@ -1597,47 +2194,54 @@ int main(int argc, char **argv)
     log_sensor_resources("values read from cache", srs, srsLen);
 
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        free(srs[i]);
+        EUCA_FREE(srs[i]);
     }
-    free(srs);
+    EUCA_FREE(srs);
 
     dump_sensor_cache();
-    logprintfl(EUCADEBUG, "********************************\n");
-    logprintfl(EUCADEBUG, "testing with competitive threads\n");
-    logprintfl(EUCADEBUG, "********************************\n");
+    LOGDEBUG("********************************\n");
+    LOGDEBUG("testing with competitive threads\n");
+    LOGDEBUG("********************************\n");
 #define COMPETITIVE_PARTICIPANTS 5
 #define COMPETITIVE_ITERATIONS 66666
-    logprintfl(EUCAINFO, "spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
+    LOGINFO("spawning %d competing threads\n", COMPETITIVE_PARTICIPANTS);
     pthread_t threads[COMPETITIVE_PARTICIPANTS];
     long long thread_par[COMPETITIVE_PARTICIPANTS];
     int thread_par_sum = 0;
     for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
-        thread_par[j] = 0;      // pass param to thread, if any
+        thread_par[j] = 0;             // pass param to thread, if any
         pthread_create(&threads[j], NULL, (j % 2 == 0) ? competitor_function_writer : competitor_function_reader, (void *)&thread_par[j]);
     }
     for (int j = 0; j < COMPETITIVE_PARTICIPANTS; j++) {
         pthread_join(threads[j], NULL);
         thread_par_sum += (int)thread_par[j];
     }
-    logprintfl(EUCAINFO, "waited for all competing threads (returned sum=%d)\n", thread_par_sum);
+    LOGINFO("waited for all competing threads (returned sum=%d)\n", thread_par_sum);
     dump_sensor_cache();
     assert(thread_par_sum == 0);
 
     return 0;
 }
 
+//!
+//!
+//!
+//! @param[in] ptr
+//!
+//! @return Always return NULL
+//!
 static void *competitor_function_reader(void *ptr)
 {
     long long param = *(long long *)ptr;
     int errors = 0;
 
-    logprintfl(EUCADEBUG, "competitor reader running with param=%lld\n", param);
+    LOGDEBUG("competitor reader running with param=%lld\n", param);
 
-    sensorResource **srs = calloc(sensor_state->max_resources, sizeof(sensorResource *));
+    sensorResource **srs = EUCA_ZALLOC(sensor_state->max_resources, sizeof(sensorResource *));
     int srsLen = sensor_state->max_resources;
     assert(srs);
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        srs[i] = calloc(1, sizeof(sensorResource));
+        srs[i] = EUCA_ZALLOC(1, sizeof(sensorResource));
         assert(srs[i]);
     }
 
@@ -1648,29 +2252,33 @@ static void *competitor_function_reader(void *ptr)
     }
 
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        free(srs[i]);
+        EUCA_FREE(srs[i]);
     }
-    free(srs);
+    EUCA_FREE(srs);
 
     *(long long *)ptr = errors;
     return NULL;
 }
 
-static long long _sn = -1;
-static double val = 0.0;
-
+//!
+//!
+//!
+//! @param[in] ptr
+//!
+//! @return Always return NULL
+//!
 static void *competitor_function_writer(void *ptr)
 {
     long long param = *(long long *)ptr;
     int errors = 0;
 
-    logprintfl(EUCADEBUG, "competitor writer running with param=%lld\n", param);
+    LOGDEBUG("competitor writer running with param=%lld\n", param);
 
     // add the "dummy" struct as a second resource
-    sensorResource **srs = calloc(sensor_state->max_resources, sizeof(sensorResource *));
+    sensorResource **srs = EUCA_ZALLOC(sensor_state->max_resources, sizeof(sensorResource *));
     assert(srs);
     for (int i = 0; i < sensor_state->max_resources; i++) {
-        srs[i] = calloc(1, sizeof(sensorResource));
+        srs[i] = EUCA_ZALLOC(1, sizeof(sensorResource));
         assert(srs[i]);
     }
 
@@ -1686,7 +2294,7 @@ static void *competitor_function_writer(void *ptr)
             err = sensor_add_value(r, "CPUUtilization", SENSOR_AVERAGE, "default", _sn, ts, TRUE, val);
         }
         if (err) {
-            logprintfl(EUCAERROR, "sensor_add_value failed err=%d\n", err);
+            LOGERROR("sensor_add_value failed err=%d\n", err);
             errors++;
         }
     }
@@ -1694,4 +2302,4 @@ static void *competitor_function_writer(void *ptr)
     *(long long *)ptr = errors;
     return NULL;
 }
-#endif
+#endif /* _UNIT_TEST */

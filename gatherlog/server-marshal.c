@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,58 +63,151 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file gatherlog/server-marshal.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <eucalyptus.h>
 #include <server-marshal.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_t * env);
+adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_t * env);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Server side of the get logs service request
+//!
+//! @param[in] getLogs pointer to the request structure
+//! @param[in] env pointer to the AXIS2 environment
+//!
+//! @return A pointer to the response structure
+//!
 adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_t * env)
 {
+    int rc = EUCA_OK;
+    axis2_bool_t status = AXIS2_TRUE;
+    char *userId = NULL;
+    char *correlationId = NULL;
+    char *service = NULL;
+    char statusMessage[256] = { 0 };
+    char *outCCLog = NULL;
+    char *outNCLog = NULL;
+    char *outHTTPDLog = NULL;
+    char *outAxis2Log = NULL;
     adb_GetLogsResponse_t *ret = NULL;
     adb_getLogsResponseType_t *response = NULL;
-
     adb_getLogsType_t *request = NULL;
 
-    int rc;
-    axis2_bool_t status;
-    char *userId, *correlationId, *service, statusMessage[256];
-    char *outCCLog, *outNCLog, *outHTTPDLog, *outAxis2Log;
-
     request = adb_GetLogs_get_GetLogs(getLogs, env);
-
     userId = adb_getLogsType_get_userId(request, env);
     correlationId = adb_getLogsType_get_correlationId(request, env);
     service = adb_getLogsType_get_serviceTag(request, env);
-
     response = adb_getLogsResponseType_create(env);
 
-    status = AXIS2_TRUE;
-    rc = doGetLogs(service, &outCCLog, &outNCLog, &outHTTPDLog, &outAxis2Log);
-    if (rc) {
+    if ((rc = doGetLogs(service, &outCCLog, &outNCLog, &outHTTPDLog, &outAxis2Log)) != EUCA_OK) {
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
-
         if (outCCLog) {
             adb_getLogsResponseType_set_CCLog(response, env, outCCLog);
-            free(outCCLog);
+            EUCA_FREE(outCCLog);
         }
+
         if (outNCLog) {
             adb_getLogsResponseType_set_NCLog(response, env, outNCLog);
-            free(outNCLog);
+            EUCA_FREE(outNCLog);
         }
+
         if (outHTTPDLog) {
             adb_getLogsResponseType_set_httpdLog(response, env, outHTTPDLog);
-            free(outHTTPDLog);
+            EUCA_FREE(outHTTPDLog);
         }
+
         if (outAxis2Log) {
             adb_getLogsResponseType_set_axis2Log(response, env, outAxis2Log);
-            free(outAxis2Log);
+            EUCA_FREE(outAxis2Log);
         }
     }
-    adb_getLogsResponseType_set_serviceTag(response, env, service);
 
+    adb_getLogsResponseType_set_serviceTag(response, env, service);
     adb_getLogsResponseType_set_userId(response, env, userId);
     adb_getLogsResponseType_set_correlationId(response, env, correlationId);
     adb_getLogsResponseType_set_return(response, env, status);
@@ -121,43 +217,49 @@ adb_GetLogsResponse_t *GetLogsMarshal(adb_GetLogs_t * getLogs, const axutil_env_
 
     ret = adb_GetLogsResponse_create(env);
     adb_GetLogsResponse_set_GetLogsResponse(ret, env, response);
-
     return (ret);
 }
 
+//!
+//! Server side of the get keys service request
+//!
+//! @param[in] getKeys pointer to the request structure
+//! @param[in] env pointer to the AXIS2 environment
+//!
+//! @return A pointer to the response structure
+//!
 adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_t * env)
 {
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char *userId = NULL;
+    char *correlationId = NULL;
+    char *service = NULL;
+    char statusMessage[256] = { 0 };
+    char *outCCCert = NULL;
+    char *outNCCert = NULL;
     adb_GetKeysResponse_t *ret = NULL;
     adb_getKeysResponseType_t *response = NULL;
-
     adb_getKeysType_t *request = NULL;
 
-    int rc;
-    axis2_bool_t status;
-    char *userId, *correlationId, *service, statusMessage[256];
-    char *outCCCert, *outNCCert;
-
     request = adb_GetKeys_get_GetKeys(getKeys, env);
-
     userId = adb_getKeysType_get_userId(request, env);
     correlationId = adb_getKeysType_get_correlationId(request, env);
     service = adb_getKeysType_get_serviceTag(request, env);
-
     response = adb_getKeysResponseType_create(env);
 
-    status = AXIS2_TRUE;
-    rc = doGetKeys(service, &outCCCert, &outNCCert);
-    if (rc) {
+    if ((rc = doGetKeys(service, &outCCCert, &outNCCert)) != EUCA_OK) {
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
         if (outCCCert) {
             adb_getKeysResponseType_set_CCcert(response, env, outCCCert);
-            free(outCCCert);
+            EUCA_FREE(outCCCert);
         }
+
         if (outNCCert) {
             adb_getKeysResponseType_set_NCcert(response, env, outNCCert);
-            free(outNCCert);
+            EUCA_FREE(outNCCert);
         }
     }
 
@@ -172,6 +274,5 @@ adb_GetKeysResponse_t *GetKeysMarshal(adb_GetKeys_t * getKeys, const axutil_env_
 
     ret = adb_GetKeysResponse_create(env);
     adb_GetKeysResponse_set_GetKeysResponse(ret, env, response);
-
     return (ret);
 }

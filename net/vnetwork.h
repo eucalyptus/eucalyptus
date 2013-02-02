@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,24 +63,65 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+#ifndef INCLUDE_VNETWORK_H
+#define INCLUDE_VNETWORK_H
+
+//!
+//! @file
+//! Defines the Virtual Network library.
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <string.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <eucalyptus.h>
 #include <linux/limits.h>
 
-#ifndef INCLUDE_VNETWORK_H
-#define INCLUDE_VNETWORK_H
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #ifndef MAX_PATH
-#define MAX_PATH 4096
-#endif
+#define MAX_PATH                                 4096
+#endif /* ! MAX_PATH */
 
-#define NUMBER_OF_VLANS 4096
-#define NUMBER_OF_HOSTS_PER_VLAN 2048
-#define NUMBER_OF_PUBLIC_IPS 2048
-#define NUMBER_OF_CCS 8
-#define MAX_ETH_DEV_PATH 16
+#define NUMBER_OF_VLANS                          4096
+#define NUMBER_OF_HOSTS_PER_VLAN                 2048
+#define NUMBER_OF_PUBLIC_IPS                     2048
+#define NUMBER_OF_CCS                               8
+#define MAX_ETH_DEV_PATH                           16
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+enum {
+    NC,
+    CC,
+    CLC
+};
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 typedef struct netEntry_t {
     unsigned char mac[6];
@@ -94,8 +138,13 @@ typedef struct userEntry_t {
 typedef struct networkEntry_t {
     int numhosts;
     char active;
-    uint32_t nw, nm, bc, dns, router;
+    uint32_t nw;
+    uint32_t nm;
+    uint32_t bc;
+    uint32_t dns;
+    uint32_t router;
     netEntry addrs[NUMBER_OF_HOSTS_PER_VLAN];
+    time_t createTime;
 } networkEntry;
 
 typedef struct publicip_t {
@@ -124,9 +173,11 @@ typedef struct vnetConfig_t {
     char bridgedev[32];
     char mode[32];
     char macPrefix[6];
-    //  char localIp[32];
     uint32_t localIps[32];
-    uint32_t nw, nm, euca_ns, cloudIp;
+    uint32_t nw;
+    uint32_t nm;
+    uint32_t euca_ns;
+    uint32_t cloudIp;
     char euca_domainname[256];
     int role;
     int enabled;
@@ -143,106 +194,132 @@ typedef struct vnetConfig_t {
     char iptables[4194304];
 } vnetConfig;
 
-enum { NC, CC, CLC };
-int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucapath, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs,
-             char *network, char *netmask, char *broadcast, char *dns, char *domainname, char *router, char *daemon, char *dhcpuser, char *bridgedev,
-             char *localIp, char *macPrefix);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
-int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
-int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
-int vnetStopInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs,
+             char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser,
+             char *bridgedev, char *localIp, char *macPrefix);
+
+int vnetSetMetadataRedirect(vnetConfig * vnetconfig);
+int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig);
+
+int vnetInitTunnels(vnetConfig * vnetconfig);
+
 int vnetAddHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
-int vnetRefreshHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetDelHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
+int vnetRefreshHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
 int vnetEnableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
 int vnetDisableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
-int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
 
-int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip);
-
-int vnetAddDev(vnetConfig * vnetconfig, char *dev);
-int vnetDelDev(vnetConfig * vnetconfig, char *dev);
-int vnetAddLocalIP(vnetConfig * vnetconfig, uint32_t ip);
-int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip);
-int vnetCountLocalIP(vnetConfig * vnetconfig);
-
-int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts);
-int vnetKickDHCP(vnetConfig * vnetconfig);
+int vnetDeleteChain(vnetConfig * vnetconfig, char *userName, char *netName);
+int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName);
+int vnetSaveTablesToMemory(vnetConfig * vnetconfig);
+int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig);
+int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName);
+int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule);
+int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule);
+int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
+                  char *protocol, int minPort, int maxPort);
 
 int vnetSetVlan(vnetConfig * vnetconfig, int vlan, char *uuid, char *user, char *network);
 int vnetGetVlan(vnetConfig * vnetconfig, char *user, char *network);
 int vnetGetAllVlans(vnetConfig * vnetconfig, char ***outusers, char ***outnets, int *len);
 
-int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen);
+int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, int nidx, char *outmac, char *outpubip, char *outprivip);
+int vnetGetNextHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan, int idx);
+int vnetCountLocalIP(vnetConfig * vnetconfig);
+int vnetCheckLocalIP(vnetConfig * vnetconfig, uint32_t ip);
+int vnetAddLocalIP(vnetConfig * vnetconfig, uint32_t ip);
+
+int vnetAddDev(vnetConfig * vnetconfig, char *dev);
+int vnetDelDev(vnetConfig * vnetconfig, char *dev);
+
+int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts);
+int vnetKickDHCP(vnetConfig * vnetconfig);
+
 int vnetAddCCS(vnetConfig * vnetconfig, uint32_t cc);
 int vnetDelCCS(vnetConfig * vnetconfig, uint32_t cc);
+int vnetSetCCS(vnetConfig * vnetconfig, char **ccs, int ccsLen);
 
-int vnetInitTunnels(vnetConfig * vnetconfig);
-int vnetSetupTunnels(vnetConfig * vnetconfig);
-int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig);
-int vnetTeardownTunnels(vnetConfig * vnetconfig);
-int vnetTeardownTunnelsVTUN(vnetConfig * vnetconfig);
+int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
+int vnetStopInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, char *privateIp, char *macaddr);
+int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
+
 int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
 int vnetDetachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname);
+int vnetTeardownTunnels(vnetConfig * vnetconfig);
+int vnetTeardownTunnelsVTUN(vnetConfig * vnetconfig);
+int vnetSetupTunnels(vnetConfig * vnetconfig);
+int vnetSetupTunnelsVTUN(vnetConfig * vnetconfig);
 
-int vnetTableRule(vnetConfig * vnetconfig, char *type, char *destUserName, char *destName, char *sourceUserName, char *sourceNet, char *sourceNetName,
-                  char *protocol, int minPort, int maxPort);
-int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName);
-int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName);
-int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig);
-int vnetSaveTablesToMemory(vnetConfig * vnetconfig);
+int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
+int vnetApplyArpTableRules(vnetConfig * vnetconfig);
+int vnetDelGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
 
-int vnetAddPublicIP(vnetConfig * vnetconfig, char *ip);
+int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
+int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
+
+int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip);
+int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip);
+int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst);
 int vnetAllocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
 int vnetDeallocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
 int vnetSetPublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip, int setval);
-int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
-
-int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst);
 int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *dst);
 int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst);
 
-int vnetAddGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
-int vnetDelGatewayIP(vnetConfig * vnetconfig, int vlan, char *devname, int localIpId);
-
-// linux managed mode driver
-int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char *userName, char *netName, char **outbrname);
-int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
-
-// helper functions
-int vnetSaveIPTables(vnetConfig * vnetconfig);
-int vnetLoadIPTables(vnetConfig * vnetconfig);
-int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule);
-int vnetApplyArpTableRules(vnetConfig * vnetconfig);
-int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule);
-int vnetSetMetadataRedirect(vnetConfig * vnetconfig);
-int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig);
-
-char *host2ip(char *host);
-char *hex2dot(uint32_t in);
-uint32_t dot2hex(char *in);
-int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip);
-int ip2mac(vnetConfig * vnetconfig, char *ip, char **mac);
-void mac2hex(char *in, unsigned char out[6]);
-void hex2mac(unsigned char in[6], char **out);
-int maczero(unsigned char in[6]);
-int machexcmp(char *ina, unsigned char inb[6]);
-char *ipdot2macdot(char *ip, char *macprefix);
+int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName);
 
 int instId2mac(vnetConfig * vnetconfig, char *instId, char *outmac);
-int zeromac(unsigned char in[6]);
-int maccmp(char *ina, unsigned char inb[6]);
+int ip2mac(vnetConfig * vnetconfig, char *ip, char **mac);
+int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip);
+uint32_t dot2hex(char *in);
 int getdevinfo(char *dev, uint32_t ** outips, uint32_t ** outnms, int *len);
+void hex2mac(unsigned char in[6], char **out);
+void mac2hex(char *in, unsigned char out[6]);
+int maczero(unsigned char in[6]);
+int machexcmp(char *ina, unsigned char inb[6]);
+char *hex2dot(uint32_t in);
+char *ipdot2macdot(char *ip, char *macprefix);
+int vnetLoadIPTables(vnetConfig * vnetconfig);
 
 int check_chain(vnetConfig * vnetconfig, char *userName, char *netName);
-int check_device(char *dev);
 int check_deviceup(char *dev);
-int check_bridge(char *dev);
-int check_bridgedev(char *br, char *dev);
+int check_device(char *dev);
 int check_bridgestp(char *br);
+int check_bridgedev(char *br, char *dev);
+int check_bridge(char *brname);
 int check_tablerule(vnetConfig * vnetconfig, char *table, char *rule);
 int check_isip(char *ip);
+char *host2ip(char *host);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! INCLUDE_VNETWORK_H */

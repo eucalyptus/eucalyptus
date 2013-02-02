@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,149 +63,176 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_MISC_H
-#define INCLUDE_MISC_H
+#ifndef _INCLUDE_MISC_H_
+#define _INCLUDE_MISC_H_
+
+//!
+//! @file util/misc.h
+//! Defines a variety of utility tools
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <unistd.h>             // ssize_t
-#include <sys/types.h>          // mode_t
+#include <unistd.h>                    // ssize_t
+#include <sys/types.h>                 // mode_t
 #include <linux/limits.h>
-#include <stdint.h>             // uint32_t
+#include <stdint.h>                    // uint32_t
 
-// these must be defined by each euca component
-extern const char *euca_client_component_name;
-extern const char *euca_this_component_name;
+#include <eucalyptus.h>
 
-typedef unsigned char boolean;
-#define TRUE 1
-#define FALSE 0
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#include "log.h"                // so everyone picks up the logging functions
+//! @{
+//! @name Definition of the boolean values TRUE and FALSE
+
+#define TRUE                                     1  //!< Defines the "TRUE" boolean value
+#define FALSE                                    0  //!< Defines the "FALSE" boolean value
+
+//! @}
 
 #ifndef MAX_PATH
-#define MAX_PATH 4096
-#endif
+#define MAX_PATH                                 4096
+#endif /* ! MAX_PATH */
 
-#define TIMERSTART(a) double a;                                 \
-  {                                                             \
-    struct timeval UBERSTART;                                   \
-    gettimeofday(&UBERSTART, NULL);                             \
-    a = UBERSTART.tv_sec + (UBERSTART.tv_usec / 1000000.0);     \
-  }
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#define TIMERSTOP(a) {					      \
-    struct timeval UBERSTOP;				      \
-    double b;						      \
-    gettimeofday(&UBERSTOP, NULL);			      \
-    b = UBERSTOP.tv_sec + (UBERSTOP.tv_usec / 1000000.0);     \
-    logprintfl(EUCADEBUG, "OP TIME (%s): %f\n", #a, b - a);   \
-  }
+typedef unsigned char boolean;         //!< @todo move this somewhere more global?
 
-#define SP(a) a ? a : "UNSET"
-#define RANDALPHANUM rand()%2 ? rand()%26+97 : rand()%2 ? rand()%26+65 : rand()%10+48
+#include "log.h"                       // so everyone picks up the logging functions
 
-char *replace_string(char **stringp, char *source, char *destination);
-int sscanf_lines(char *lines, char *format, void *varp);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! @{
+//! @name These must be defined by each euca component
+extern const char *euca_client_component_name;
+extern const char *euca_this_component_name;
+//! @}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int verify_helpers(char **helpers, char **helpers_path, int num_helpers);
+int timeread(int fd, void *buf, size_t bytes, int timeout);
+int add_euca_to_path(const char *euca_home_supplied);
+pid_t timewait(pid_t pid, int *status, int timeout_sec);
+int param_check(const char *func, ...);
+int check_process(pid_t pid, char *search);
+int check_directory(const char *dir);
+int check_file_newer_than(const char *file, time_t mtime);
+int check_block(const char *file);
+int check_file(const char *file);
+int check_path(const char *path);
+int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
 char *fp2str(FILE * fp);
 char *system_output(char *shell_command);
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
-
-/**
- * Search in file #path# for a variable named #name#. It will put
- * whatever after the = in value (which will need to be freed by the
- * caller).
- *
- * Returns -1 on error (open file, out of memory, parse error ...)
- *          0 if variable not found in file
- *          1 if found and value is indeed valid
- *
- * Examples of parsed line:
- * TEST="test uno due tre"
- *      TEST = prova
- * TEST=prova
- */
 int get_conf_var(const char *path, const char *name, char **value);
-
-/**
- * The next 2 functions deal with turning a variable values (that is a
- * string) into a NULL terminated array of strings (char **). Example:
- * 	var="hostname1 hostname2"
- * it will return
- * 	()[0] = hostname1
- * 	()[1] = hostname2
- * 	()[2] = NULL
- *
- * the return array needs to be freed and you can use free_char_list() to
- * do so.
- *
- * Return NULL if something went wrong (probably out of memory, or an
- * array of strings. Notice that if something is wrong in the parsing
- * (the variable contains only spaces) you'll get back an array with only
- * one element and the element is NULL.
- */
 void free_char_list(char **value);
-
-char **from_var_to_char_list(const char *var);
-
-// dan's functions
-int check_process(pid_t pid, char *search);
-int check_directory(const char *dir);
-int check_file(const char *file);
-int check_block(const char *file);
-int check_path(const char *path);
-int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
-int check_file_newer_than(char *file, time_t mtime);
-
-// safe version of common fuctions
-char *safe_mkdtemp(char *);
-int safe_mkstemp(char *);
-char *safe_strncpy(char *s1, const char *s2, size_t len);
-
-int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
-char parse_boolean(const char *s);
-
-// argument checker
-int param_check(char *func, ...);
-// end of dan't functions
-
+char **from_var_to_char_list(const char *v);
 int hash_code(const char *s);
 int hash_code_bin(const char *buf, int buf_size);
 char *get_string_stats(const char *s);
-int daemonrun(char *cmd, char *pidfile);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
-int run(const char *arg1, ...);
-int vrun(const char *fmt, ...);
+int daemonrun(char *incmd, char *pidfile);
+int vrun(const char *fmt, ...) _attribute_format_(1, 2);
 int cat(const char *file_name);
 int touch(const char *path);
 int diff(const char *path1, const char *path2);
 long long dir_size(const char *path);
-char *file2strn(const char *path, const ssize_t limit);
-char *file2str(const char *path);   /* read file 'path' into a new string */
-char *file2str_seek(char *file, size_t size, int mode); /* read file into new string, length 'size', either from beginning (0) or end (1) of the file */
 int write2file(const char *path, char *str);
-char *str2str(const char *str, const char *begin, const char *end);
-long long str2longlong(const char *str, const char *begin, const char *end);    /* extract integer from str bound by 'begin' and 'end' */
-pid_t timewait(pid_t pid, int *status, int timeout);
-int timeread(int fd, void *buf, size_t bytes, int timeout);
+char *file2strn(const char *path, const ssize_t limit);
+char *file2str(const char *path);
+char *file2str_seek(char *file, size_t size, int mode);
 int uint32compar(const void *ina, const void *inb);
-int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
-int add_euca_to_path(const char *euca_home_supplied);
-int verify_helpers(char **helpers, char **helpers_path, int LASTHELPER);
+int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int maxint(int a, int b);
 int minint(int a, int b);
 int copy_file(const char *src, const char *dst);
 long long file_size(const char *file_path);
-char *strduplc(const char *s);
 char *xpath_content(const char *xml, const char *xpath);
-int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
-char *strdupcat(char *original, char *new);
+int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
 int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec(void);
 long long time_ms(void);
+char *safe_mkdtemp(char *template);
+int safe_mkstemp(char *template);
+int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
+char parse_boolean(const char *s);
 int drop_privs(void);
 int timeshell(char *command, char *stdout_str, char *stderr_str, int max_size, int timeout);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! Macro to print a string that might be NULL. If NULL the string "UNSET" is returned.
+#define SP(_a)                                   (((_a) != NULL) ? (_a) : "UNSET")
+
+//! Macro to generate a randum alphanumeric number.
+#define RANDALPHANUM()                           ((rand() % 2) ? (rand() % 26 + 97) : ((rand() % 2) ? (rand() % 26 + 65) : (rand() % 10 + 48)))
+
+//! @{
+//! @name MIN and MAX macros
+
+#undef MIN
+#undef MAX
+#define MIN(_a, _b)                              (((_a) < (_b)) ? (_a) : (_b))
+#define MAX(_a, _b)                              (((_a) > (_b)) ? (_a) : (_b))
+#if 0
+// Faster min/max macros
+#define MIN(_a, _b)                              ((_b) + (((_a) - (_b)) & -((_a) < (_b))))
+#define MAX(_a, _b)                              ((_a) - (((_a) - (_b)) & -((_a) < (_b))))
+#endif /* 0 */
+
+//! @}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_MISC_H_ */

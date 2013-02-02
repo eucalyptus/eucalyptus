@@ -180,7 +180,11 @@ public class VolumeManager {
         return reply;
       } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
-        if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
+        if ( ( ex.getMessage().contains("VolumeSizeExceededException") ) ) {
+          String[] msg = ex.getMessage().split(":");
+          String parsedMsg = msg[7].trim() + msg[8].substring(0,13);
+          throw new EucalyptusCloudException( "Failed to create volume because of: " + parsedMsg);
+        } else if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
           throw ex;
         } else {
           lastEx = ex;

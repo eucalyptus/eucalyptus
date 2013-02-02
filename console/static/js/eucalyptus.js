@@ -44,15 +44,14 @@
           if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)
-              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port; // + '/?hostname='+out.hostname;
+              newLocation = location.protocol + '//' + out.ipaddr + ':' + location.port; 
             else 
-              newLocation = location.protocol + '//' + out.ipaddr; // + '/?hostname='+out.hostname;
+              newLocation = location.protocol + '//' + out.ipaddr; 
             location.href = newLocation;
             redirected = true;
           }
         },
         error: function(jqXHR, textStatus, errorThrown){
-          //TODO: should present error screen; can we use notification?
           notifyError($.i18n.prop('server_unavailable'));
           logout();
         }
@@ -113,6 +112,9 @@
 	          $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
                   eucalyptus.help({'language':out.global_session.language}); // loads help files
                   args.onSuccess($.eucaData); // call back to login UI
+                  if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
+                    IMG_OPT_PARAMS = '&Owner=self';
+                  }
                 },
                 error: function(jqXHR, textStatus, errorThrown){
                   var $container = $('html body').find(DOM_BINDING['main']);

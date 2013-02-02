@@ -77,6 +77,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -268,6 +269,8 @@ public class ImageManager {
       LOG.trace( ex );
       reply.set_return( false );
       return reply;
+    } catch ( InstanceNotTerminatedException re ) {
+      throw new EucalyptusCloudException( re );
     } finally {
       db.commit( );
     }
@@ -351,7 +354,26 @@ public class ImageManager {
     }
     return reply;
   }
-  
+
+	public void verifyUserIds(final List<String> userIds) throws EucalyptusCloudException {
+		for (int i = 0; i < userIds.size(); i++) {
+			String userId = userIds.get(i);
+			try {
+				final Account account = Accounts.lookupAccountById(userId);
+			} catch (final Exception e) {
+				try {
+					final User user = Accounts.lookupUserById(userId);
+				} catch (AuthException ex) {
+					try {
+						final User user = Accounts.lookupUserByAccessKeyId(userId);
+					} catch (AuthException ex1) {
+						throw new EucalyptusCloudException("Not a valid userId : " + userId);
+					}
+				}
+			}
+		}
+	}
+
   public ModifyImageAttributeResponseType modifyImageAttribute( ModifyImageAttributeType request ) throws EucalyptusCloudException {
     ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );
@@ -362,17 +384,6 @@ public class ImageManager {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {
-      String accountId = null;
-      try {
-      	 if (request.getQueryUserGroup( ).isEmpty( ) && request.getQueryUserId( ).isEmpty( ) )
-      		 throw new EucalyptusCloudException( "No AccountId provided");      		 
-      	 for ( int i = 0; i < request.getQueryUserId( ).size( ); i++ ) {
-      		 accountId = request.getQueryUserId( ).get( i );
-      		 Accounts.lookupAccountById( accountId );
-    	 }
-      }  catch ( AuthException e ) {
-           throw new EucalyptusCloudException( "Not a valid AccountId : " + accountId );
-      }
       imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
@@ -384,14 +395,22 @@ public class ImageManager {
         imgInfo.addProductCode( productCode );
       }
       // Launch permissions
-      if ( request.getAttribute( ) != null ) {
+      if ( "launchPermission".equals( request.getAttribute( ) ) ) {
+        if (request.getQueryUserGroup( ).isEmpty( ) && request.getQueryUserId( ).isEmpty( ) )
+          throw new EucalyptusCloudException( "No userId provided" );
         if ( ADD.equals( request.getOperationType( ) ) ) {
+        	this.verifyUserIds( request.getQueryUserId( ) );
           imgInfo.addPermissions( request.getQueryUserId( ) );
           // Only "all" is valid
           if ( !request.getQueryUserGroup( ).isEmpty( ) ) {
             imgInfo.setImagePublic( true );
           }
         } else {
+          for ( int i = 0; i < request.getQueryUserId( ).size( ); i++ ) {
+        		String accountId = request.getQueryUserId( ).get( i );
+        		if(!imgInfo.checkPermission( accountId ) )
+        		throw new EucalyptusCloudException( "No existing launch permission for userId " + accountId );
+          }
           imgInfo.removePermissions( request.getQueryUserId( ) );
           // Only "all" is valid
           if ( !request.getQueryUserGroup( ).isEmpty( ) ) {
@@ -415,14 +434,12 @@ public class ImageManager {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    final User requestUser = ctx.getUser( );
-    final String action = PolicySpec.requestToAction( request );
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( request.getImageId( ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
-               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
+               RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         imgInfo.resetPermission( );
         db.commit( );
       } else {

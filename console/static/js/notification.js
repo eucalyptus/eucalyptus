@@ -24,7 +24,6 @@
     },
     _init : function() {
       var thisObj = this;
-      // the 'x' box should be an image. text is added here for testing
       this.element.find('#euca-notification-close').find('a').remove();
       this.element.find('#euca-notification-close').append(
         $('<a>').attr('href','#').text('X').click( function(evt) {
@@ -58,9 +57,6 @@
        var percent = args.percent;
        var desc = args.desc;
        var error = args.error;
-
-      //  if (id !== thisObj.element.attr('progress-id'))
-      //   return; 
 
        percent = Math.min(100, percent);
        percent = Math.max(0, percent);

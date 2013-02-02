@@ -71,7 +71,14 @@
             {
               "bVisible": false,
               "fnRender": function(oObj) { 
-                return oObj.aData.instance_id ? 'assigned' : 'unassigned' 
+                if (! oObj.aData.instance_id)
+                  return 'unassigned';
+                else if (oObj.aData.instance_id.indexOf('available') >= 0)
+                  return 'unassigned';
+                else if (oObj.aData.instance_id.indexOf('nobody') >= 0)
+                  return 'unallocated';
+                else
+                  return 'assigned'
               } 
             },
             {
@@ -415,7 +422,7 @@
       });
     },
 
-    _initAssociateDialog : function(dfd) {  // should resolve dfd object
+    _initAssociateDialog : function(dfd) {  
       var thisObj = this;
       var $selector = thisObj.associateDialog.find('#associate-selected-value').html('');
       if(! thisObj.options.from_instance){ 
@@ -512,7 +519,6 @@
       this.allocateDialog.eucadialog('open');
     },
     close: function() {
-//      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },

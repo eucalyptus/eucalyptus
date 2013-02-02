@@ -601,7 +601,11 @@ public class DASManager implements LogicalStorageManager {
 	}
 
 
-	public List<String> createSnapshot(String volumeId, String snapshotId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+	public List<String> createSnapshot(String volumeId, String snapshotId, String snapshotPointId, Boolean shouldTransferSnapshot) throws EucalyptusCloudException {
+		if(snapshotPointId != null) {
+			throw new EucalyptusCloudException("Synchronous snapshot points not supported in DAS storage manager");			
+		}
+		
 		updateVolumeGroup();
 		VolumeEntityWrapperManager volumeManager = new VolumeEntityWrapperManager();
 		LVMVolumeInfo foundLVMVolumeInfo = volumeManager.getVolumeInfo(volumeId);
@@ -1224,5 +1228,17 @@ public class DASManager implements LogicalStorageManager {
 	public List<CheckerTask> getCheckers() {
 		List<CheckerTask> checkers = new ArrayList<CheckerTask>();
 		return checkers;
+	}
+
+	@Override
+	public String createSnapshotPoint(String volumeId, String snapshotId)
+			throws EucalyptusCloudException {
+		return null;
+	}
+
+	@Override
+	public void deleteSnapshotPoint(String volumeId, String snapshotId, String snapshotPointId)
+			throws EucalyptusCloudException {
+		throw new EucalyptusCloudException("Synchronous snapshot points not supported in DAS storage manager");
 	}
 }

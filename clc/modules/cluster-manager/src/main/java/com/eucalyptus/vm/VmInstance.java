@@ -1047,11 +1047,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public void updatePublicAddress( final String publicAddr ) {
-    if ( !VmNetworkConfig.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr )
-         && ( publicAddr != null ) ) {
+    if ( !VmNetworkConfig.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr ) && ( publicAddr != null ) ) {
       this.getNetworkConfig( ).setPublicAddress( publicAddr );
+    } else if ( VmState.STOPPED.equals(this.getState( ) ) ) {
+        this.getNetworkConfig( ).setPublicAddress( publicAddr );
     } else {
-      this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.DEFAULT_IP );
+        this.getNetworkConfig( ).setPublicAddress( VmNetworkConfig.DEFAULT_IP );
     }
     this.getNetworkConfig( ).updateDns( );
   }
@@ -1059,6 +1060,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void updatePrivateAddress( final String privateAddr ) {
     if ( !VmNetworkConfig.DEFAULT_IP.equals( privateAddr ) && !"".equals( privateAddr ) && ( privateAddr != null ) ) {
       this.getNetworkConfig( ).setPrivateAddress( privateAddr );
+    } else if ( VmState.STOPPED.equals(this.getState( ) ) ) {
+        this.getNetworkConfig( ).setPrivateAddress( privateAddr );
     }
     this.getNetworkConfig( ).updateDns( );
   }

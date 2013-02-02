@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,40 +63,144 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
-// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+//!
+//! @file util/config.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <errno.h>
+#include <sys/errno.h>
 #include <assert.h>
-#include "string.h"
+#include <string.h>
+#include "eucalyptus.h"
 #include "misc.h"
 #include "config.h"
 
-static int configRestartLen = 0, configNoRestartLen = 0;
-static char *configValuesRestart[256], *configValuesNoRestart[256];
-static configEntry *configKeysRestart, *configKeysNoRestart;
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static int configRestartLen = 0;
+static int configNoRestartLen = 0;
+static char *configValuesRestart[256];
+static char *configValuesNoRestart[256];
+static configEntry *configKeysRestart;
+static configEntry *configKeysNoRestart;
 static time_t lastConfigMtime = 0;
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);
+int isConfigModified(char configFiles[][MAX_PATH], int numFiles);
+char *configFileValue(const char *key);
+boolean configFileValueLong(const char *key, long *val);
+int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
+void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Initialize our local configuration key parameters
+//!
+//! @param[in] newConfigKeysRestart
+//! @param[in] newConfigKeysNoRestart
+//!
 void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[])
 {
     configKeysRestart = newConfigKeysRestart;
     configKeysNoRestart = newConfigKeysNoRestart;
 }
 
+//!
+//! Checks wether or not a given list of configuration file has been modified since we
+//! last read them.
+//!
+//! @param[in] configFiles the list of configuration file names.
+//! @param[in] numFiles the number of file names in the list
+//!
+//! @return 0 if the configuration files were not modified; 1 if the configuration files were
+//!         modified; and -1 if an error occured while poking at the configuration files.
+//!
 int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
 {
-    struct stat statbuf;
+    int i = 0;
     time_t configMtime = 0;
+    struct stat statbuf = { 0 };
 
-    for (int i = 0; i < numFiles; i++) {
+    for (i = 0; i < numFiles; i++) {
         // stat the config file, update modification time
         if (stat(configFiles[i], &statbuf) == 0) {
-            if (statbuf.st_mtime > 0 || statbuf.st_ctime > 0) {
+            if ((statbuf.st_mtime > 0) || (statbuf.st_ctime > 0)) {
                 if (statbuf.st_ctime > statbuf.st_mtime) {
                     configMtime = statbuf.st_ctime;
                 } else {
@@ -102,87 +209,126 @@ int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
             }
         }
     }
+
     if (configMtime == 0) {
-        logprintfl(EUCAERROR, "could not stat config files (%s,%s)\n", configFiles[0], configFiles[1]);
-        return -1;
+        LOGERROR("could not stat config files (%s,%s)\n", configFiles[0], configFiles[1]);
+        return (-1);
     }
 
     if (lastConfigMtime != configMtime) {
-        logprintfl(EUCADEBUG, "current mtime=%d, stored mtime=%d\n", configMtime, lastConfigMtime);
+        LOGDEBUG("current mtime=%ld, stored mtime=%ld\n", configMtime, lastConfigMtime);
         lastConfigMtime = configMtime;
-        return 1;
+        return (1);
     }
-    return 0;
+    return (0);
 }
 
+//!
+//! Retrieves a configuration value based on the given keyname.
+//!
+//! @param[in] key the name of the key for which we're looking for its paired value
+//!
+//! @return a string copy of the value matching the provided keyname or NULL if the
+//!         key is not found. The caller of this function is responsible to free the
+//!         returned string value.
+//!
 char *configFileValue(const char *key)
 {
-    int i;
-    for (i = 0; i < configRestartLen; i++) {
-        if (configKeysRestart[i].key) {
-            if (!strcmp(configKeysRestart[i].key, key)) {   // have a match among values that restart
-                if (configValuesRestart[i])
-                    return strdup(configValuesRestart[i]);
-                else if (configKeysRestart[i].defaultValue)
-                    return strdup(configKeysRestart[i].defaultValue);
-                else
-                    return NULL;
+    int i = 0;
+
+    if (key != NULL) {
+        for (i = 0; i < configRestartLen; i++) {
+            if (configKeysRestart[i].key) {
+                if (!strcmp(configKeysRestart[i].key, key)) {
+                    // have a match among values that restart
+                    if (configValuesRestart[i])
+                        return (strdup(configValuesRestart[i]));
+
+                    if (configKeysRestart[i].defaultValue)
+                        return (strdup(configKeysRestart[i].defaultValue));
+
+                    return (NULL);
+                }
             }
         }
-    }
-    for (i = 0; i < configNoRestartLen; i++) {
-        if (configKeysNoRestart[i].key) {
-            if (!strcmp(configKeysNoRestart[i].key, key)) {
-                if (configValuesNoRestart[i])
-                    return strdup(configValuesNoRestart[i]);
-                else if (configKeysNoRestart[i].defaultValue)
-                    return strdup(configKeysNoRestart[i].defaultValue);
-                else
-                    return NULL;
+
+        for (i = 0; i < configNoRestartLen; i++) {
+            if (configKeysNoRestart[i].key) {
+                if (!strcmp(configKeysNoRestart[i].key, key)) {
+                    if (configValuesNoRestart[i])
+                        return (strdup(configValuesNoRestart[i]));
+
+                    if (configKeysNoRestart[i].defaultValue)
+                        return (strdup(configKeysNoRestart[i].defaultValue));
+
+                    return (NULL);
+                }
             }
         }
     }
 
-    return NULL;
+    return (NULL);
 }
 
-int configFileValueLong(const char *key, long *val)
+//!
+//! Retrieves a "long" integer value from the configuration entry.
+//!
+//! @param[in]  key the name of the key for which we're looking for its paired value
+//! @param[out] val the matching long value to be set if 'key' is found
+//!
+//! @return TRUE if the key was found and the matching value was a valid long integer and
+//!         the 'val' value is set appropriately, otherwise FALSE is returned.
+//!
+boolean configFileValueLong(const char *key, long *val)
 {
-    int found = 0;
+    long v = 0;
+    boolean found = FALSE;
+    char *endptr = NULL;
     char *tmpstr = configFileValue(key);
-    if (tmpstr != NULL) {
-        char *endptr;
+
+    if ((tmpstr != NULL) && (val != NULL)) {
         errno = 0;
-        long v = strtoll(tmpstr, &endptr, 10);
-        if (errno == 0 && *endptr == '\0') {    // successful complete conversion
+        v = strtoll(tmpstr, &endptr, 10);
+        if ((errno == 0) && ((*endptr) == '\0')) {
+            // successful complete conversion
             *val = v;
-            found = 1;
+            found = TRUE;
         }
-        free(tmpstr);
+
+        EUCA_FREE(tmpstr);
     }
-    return found;
+
+    return (found);
 }
 
+//!
+//! Reads a list of configuration files and fill in our configuration holders
+//!
+//! @param[in] configFiles a list of configuration file path
+//! @param[in] numFiles the number of configuration files in the list
+//!
+//! @return the number of configuration files parsed
+//!
 int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
 {
-    int i, ret = 0;
-    char *old = NULL, *new = NULL;
+    int i = 0;
+    int ret = 0;
+    char *old = NULL;
+    char *new = NULL;
 
     for (i = 0; configKeysRestart[i].key; i++) {
         old = configValuesRestart[i];
         new = getConfString(configFiles, numFiles, configKeysRestart[i].key);
         if (configRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                logprintfl(EUCAWARN,
-                           "configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change will take effect!\n",
-                           configKeysRestart[i].key, SP(old), SP(new));
+                LOGWARN("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change "
+                        "will take effect!\n", configKeysRestart[i].key, SP(old), SP(new));
             }
-            if (new)
-                free(new);
+
+            EUCA_FREE(new);
         } else {
-            logprintfl(EUCAINFO, "read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
-            if (configValuesRestart[i])
-                free(configValuesRestart[i]);
+            LOGINFO("read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
+            EUCA_FREE(configValuesRestart[i]);
             configValuesRestart[i] = new;
             ret++;
         }
@@ -195,20 +341,16 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
 
         if (configNoRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                logprintfl(EUCAINFO, "configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n",
-                           configKeysNoRestart[i].key, SP(old), SP(new));
+                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", configKeysNoRestart[i].key, SP(old), SP(new));
                 ret++;
-                if (configValuesNoRestart[i])
-                    free(configValuesNoRestart[i]);
+                EUCA_FREE(configValuesNoRestart[i]);
                 configValuesNoRestart[i] = new;
             } else {
-                if (new)
-                    free(new);
+                EUCA_FREE(new);
             }
         } else {
-            logprintfl(EUCAINFO, "read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
-            if (configValuesNoRestart[i])
-                free(configValuesNoRestart[i]);
+            LOGINFO("read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
+            EUCA_FREE(configValuesNoRestart[i]);
             configValuesNoRestart[i] = new;
             ret++;
         }
@@ -218,17 +360,25 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
     return (ret);
 }
 
-// helper for reading log-related params from eucalyptus.conf
+//!
+//! Helper for reading log-related params from eucalyptus.conf
+//!
+//! @param[out] log_level_out
+//! @param[out] log_roll_number_out
+//! @param[out] log_max_size_bytes_out
+//! @param[out] log_prefix
+//!
 void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix)
 {
+    long l = 0;
     char *s = configFileValue("LOGLEVEL");
-    assert(s != NULL);          // configFileValue should return default
-    *log_level_out = log_level_int(s);
-    free(s);
 
-    long l;
+    assert(s != NULL);                 // configFileValue should return default
+
+    *log_level_out = log_level_int(s);
+
     configFileValueLong("LOGROLLNUMBER", &l);
-    *log_roll_number_out = (int)l;
+    *log_roll_number_out = ((int)l);
 
     configFileValueLong("LOGMAXSIZE", log_max_size_bytes_out);
 

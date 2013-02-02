@@ -66,7 +66,6 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
@@ -174,9 +173,9 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
   }
   
   /**
-   * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
    * @param clusterOrPartition
    * @return
+   * @see com.eucalyptus.util.async.Request#dispatch(java.lang.String)
    */
   @Override
   public CheckedListenableFuture<R> dispatch( String clusterOrPartition ) {//TODO:GRZE:ASAP: get rid of this method, must only use service configuration here
@@ -316,7 +315,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public Request<Q, R> then( UnconditionalCallback callback ) {
+  public Request<Q, R> then( UnconditionalCallback<? super R> callback ) {
     this.callbackSequence.addCallback( callback );
     return this;
   }
@@ -327,7 +326,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public Request<Q, R> then( Callback.Completion callback ) {
+  public Request<Q, R> then( Callback.Completion<? super R> callback ) {
     this.callbackSequence.addCallback( callback );
     return this;
   }
@@ -338,7 +337,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public Request<Q, R> then( Callback.Failure<R> callback ) {
+  public Request<Q, R> then( Callback.Failure<? super R> callback ) {
     this.callbackSequence.addFailureCallback( callback );
     return this;
   }
@@ -349,7 +348,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
    * @return
    */
   @Override
-  public Request<Q, R> then( Callback.Success<R> callback ) {
+  public Request<Q, R> then( Callback.Success<? super R> callback ) {
     this.callbackSequence.addSuccessCallback( callback );
     return this;
   }

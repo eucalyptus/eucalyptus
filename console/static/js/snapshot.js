@@ -479,7 +479,6 @@
 
 /**** Public Methods ****/
     close: function() {
-//      this.tableWrapper.eucatable('close');
       cancelRepeat(tableRefreshCallback);
       this._super('close');
     },
@@ -499,8 +498,6 @@
       on_open.callback.push(openCallback);
       this.createDialog.eucadialog('option', 'on_open', on_open);
       this.createDialog.eucadialog('open');
-      //if(volume)
-       // this.createDialog.eucadialog('enableButton',thisObj.createSnapButtonId); 
     },
 
 /**** End of Public Methods ****/

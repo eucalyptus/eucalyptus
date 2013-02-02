@@ -100,7 +100,7 @@ import com.eucalyptus.util.fsm.StateMachine;
 
 @Entity
 @javax.persistence.Entity
-@PersistenceContext( name = "eucalyptus_conf" )
+@PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_component_base" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @Inheritance( strategy = InheritanceType.SINGLE_TABLE )

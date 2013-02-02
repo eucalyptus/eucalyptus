@@ -136,9 +136,9 @@ public class NetworkGroups {
   @ConfigurableField( description = "Default min vlan tag." )
   public static Integer       GLOBAL_MIN_NETWORK_TAG        = 1;
   @ConfigurableField( description = "Minutes before a pending tag allocation timesout and is released." )
-  public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 5;
+  public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
-  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 5;
+  public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
@@ -317,7 +317,7 @@ public class NetworkGroups {
               if ( Reference.State.EXTANT.equals( exNet.getState( ) ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.PENDING.equals( exNet.getState( ) )
-                              && exNet.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
+                              && exNet.lastUpdateMillis( ) > 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.RELEASING.equals( exNet.getState( ) ) ) {
                 exNet.teardown( );

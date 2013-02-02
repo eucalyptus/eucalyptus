@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file cluster/handlers-state.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -73,6 +87,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
+#include <eucalyptus.h>
 #include "axis2_skel_EucalyptusCC.h"
 
 #include <server-marshal.h>
@@ -90,48 +105,147 @@
 #include <euca_auth.h>
 #include <handlers-state.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
 extern ccConfig *config;
-extern ccInstanceCache *instanceCache;
-extern ccResourceCache *resourceCache;
-extern ccResourceCache *resourceCacheStage;
 extern vnetConfig *vnetconfig;
 
-int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen)
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen);
+int doStartService(ncMetadata * pMeta);
+int doStopService(ncMetadata * pMeta);
+int doEnableService(ncMetadata * pMeta);
+int doDisableService(ncMetadata * pMeta);
+int doShutdownService(ncMetadata * pMeta);
+
+int validCmp(ccInstance * inst, void *in);
+int instIpSync(ccInstance * inst, void *in);
+int instNetParamsSet(ccInstance * inst, void *in);
+int instNetReassignAddrs(ccInstance * inst, void *in);
+int clean_network_state(void);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//!
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  serviceIds a list of service info.
+//! @param[in]  serviceIdsLen the number of service info in the serviceIds list
+//! @param[out] outStatuses list of service status
+//! @param[out] outStatusesLen number of service status in the outStatuses list
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int serviceIdsLen, serviceStatusType ** outStatuses, int *outStatusesLen)
 {
-    int i, rc, ret = 0;
+    int rc = 0;
+    int i = 0;
+    int j = 0;
+    int port = 0;
+    char uri[MAX_PATH] = { 0 };
+    char uriType[32] = { 0 };
+    char host[MAX_PATH] = { 0 };
+    char path[MAX_PATH] = { 0 };
     serviceStatusType *myStatus = NULL;
 
-    rc = initialize(ccMeta);
+    rc = initialize(pMeta);
     if (rc) {
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s, serviceIdsLen=%d\n", SP(ccMeta ? ccMeta->userId : "UNSET"), serviceIdsLen);
+    LOGDEBUG("invoked: userId=%s, serviceIdsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), serviceIdsLen);
 
-    // TODO: for now, return error if list of services is passed in as parameter
+    //! @TODO for now, return error if list of services is passed in as parameter
     /*
        if (serviceIdsLen > 0) {
-       logprintfl(EUCAERROR, "DescribeServices(): received non-zero number of input services, returning fail\n");
+       LOGERROR("DescribeServices(): received non-zero number of input services, returning fail\n");
        *outStatusesLen = 0;
        *outStatuses = NULL;
        return(1);
        }
      */
     sem_mywait(CONFIG);
-    if (!strcmp(config->ccStatus.serviceId.name, "self")) {
-        for (i = 0; i < serviceIdsLen; i++) {
-            logprintfl(EUCADEBUG, "received input serviceId[%d]\n", i);
-            if (strlen(serviceIds[i].type)) {
-                if (!strcmp(serviceIds[i].type, "cluster")) {
-                    char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
-                    int port;
-                    snprintf(uri, MAX_PATH, "%s", serviceIds[i].uris[0]);
-                    rc = tokenize_uri(uri, uriType, host, &port, path);
-                    if (strlen(host)) {
-                        logprintfl(EUCADEBUG, "setting local serviceId to input serviceId (type=%s name=%s partition=%s)\n", SP(serviceIds[i].type),
-                                   SP(serviceIds[i].name), SP(serviceIds[i].partition));
-                        memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
+    {
+        if (!strcmp(config->ccStatus.serviceId.name, "self")) {
+            for (i = 0; i < serviceIdsLen; i++) {
+                LOGDEBUG("received input serviceId[%d]\n", i);
+                if (strlen(serviceIds[i].type)) {
+                    if (!strcmp(serviceIds[i].type, "cluster")) {
+                        snprintf(uri, MAX_PATH, "%s", serviceIds[i].uris[0]);
+                        rc = tokenize_uri(uri, uriType, host, &port, path);
+                        if (strlen(host)) {
+                            LOGDEBUG("setting local serviceId to input serviceId (type=%s name=%s partition=%s)\n",
+                                     SP(serviceIds[i].type), SP(serviceIds[i].name), SP(serviceIds[i].partition));
+                            memcpy(&(config->ccStatus.serviceId), &(serviceIds[i]), sizeof(serviceInfoType));
+                        }
                     }
                 }
             }
@@ -140,48 +254,45 @@ int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int se
     sem_mypost(CONFIG);
 
     for (i = 0; i < 16; i++) {
-        int j;
         if (strlen(config->services[i].type)) {
-            logprintfl(EUCADEBUG, "internal serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->services[i].type,
-                       config->services[i].name, config->services[i].partition, config->services[i].urisLen);
+            LOGDEBUG("internal serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->services[i].type,
+                     config->services[i].name, config->services[i].partition, config->services[i].urisLen);
             for (j = 0; j < 8; j++) {
                 if (strlen(config->services[i].uris[j])) {
-                    logprintfl(EUCADEBUG, "internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
+                    LOGDEBUG("internal serviceInfos\t uri[%d]:%s\n", j, config->services[i].uris[j]);
                 }
             }
         }
     }
 
     for (i = 0; i < 16; i++) {
-        int j;
         if (strlen(config->disabledServices[i].type)) {
-            logprintfl(EUCADEBUG, "internal disabled serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->disabledServices[i].type,
-                       config->disabledServices[i].name, config->disabledServices[i].partition, config->disabledServices[i].urisLen);
+            LOGDEBUG("internal disabled serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->disabledServices[i].type,
+                     config->disabledServices[i].name, config->disabledServices[i].partition, config->disabledServices[i].urisLen);
             for (j = 0; j < 8; j++) {
                 if (strlen(config->disabledServices[i].uris[j])) {
-                    logprintfl(EUCADEBUG, "internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
+                    LOGDEBUG("internal disabled serviceInfos\t uri[%d]:%s\n", j, config->disabledServices[i].uris[j]);
                 }
             }
         }
     }
 
     for (i = 0; i < 16; i++) {
-        int j;
         if (strlen(config->notreadyServices[i].type)) {
-            logprintfl(EUCADEBUG, "internal not ready serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->notreadyServices[i].type,
-                       config->notreadyServices[i].name, config->notreadyServices[i].partition, config->notreadyServices[i].urisLen);
+            LOGDEBUG("internal not ready serviceInfos type=%s name=%s partition=%s urisLen=%d\n", config->notreadyServices[i].type,
+                     config->notreadyServices[i].name, config->notreadyServices[i].partition, config->notreadyServices[i].urisLen);
             for (j = 0; j < 8; j++) {
                 if (strlen(config->notreadyServices[i].uris[j])) {
-                    logprintfl(EUCADEBUG, "internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);
+                    LOGDEBUG("internal not ready serviceInfos\t uri[%d]:%s\n", j, config->notreadyServices[i].uris[j]);
                 }
             }
         }
     }
 
     *outStatusesLen = 1;
-    *outStatuses = malloc(sizeof(serviceStatusType));
+    *outStatuses = EUCA_ZALLOC(1, sizeof(serviceStatusType));
     if (!*outStatuses) {
-        logprintfl(EUCAFATAL, "out of memory!\n");
+        LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }
 
@@ -191,103 +302,144 @@ int doDescribeServices(ncMetadata * ccMeta, serviceInfoType * serviceIds, int se
     myStatus->localEpoch = config->ccStatus.localEpoch;
     memcpy(&(myStatus->serviceId), &(config->ccStatus.serviceId), sizeof(serviceInfoType));
 
-    logprintfl(EUCAINFO, "done\n");
+    LOGTRACE("done\n");
     return (0);
 }
 
-int doStartService(ncMetadata * ccMeta)
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doStartService(ncMetadata * pMeta)
 {
-    int i, rc, ret = 0;
+    int rc = 0;
+    int ret = 0;
 
-    rc = initialize(ccMeta);
+    rc = initialize(pMeta);
     if (rc) {
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     // this is actually a NOP
     sem_mywait(CONFIG);
-    if (config->ccState == SHUTDOWNCC) {
-        logprintfl(EUCAWARN, "attempt to start a shutdown CC, skipping.\n");
-        ret++;
-    } else if (ccCheckState(0)) {
-        logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
-        ret++;
-    } else {
-        logprintfl(EUCADEBUG, "starting service\n");
-        ret = 0;
-        config->kick_enabled = 0;
-        ccChangeState(DISABLED);
+    {
+        if (config->ccState == SHUTDOWNCC) {
+            LOGWARN("attempt to start a shutdown CC, skipping.\n");
+            ret++;
+        } else if (ccCheckState(0)) {
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
+            ret++;
+        } else {
+            LOGINFO("starting service\n");
+            ret = 0;
+            config->kick_enabled = 0;
+            ccChangeState(DISABLED);
+        }
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
+    LOGTRACE("done\n");
 
     return (ret);
 }
 
-int doStopService(ncMetadata * ccMeta)
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doStopService(ncMetadata * pMeta)
 {
-    int i, rc, ret = 0;
+    int rc = 0;
+    int ret = 0;
 
-    rc = initialize(ccMeta);
+    rc = initialize(pMeta);
     if (rc) {
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
-    if (config->ccState == SHUTDOWNCC) {
-        logprintfl(EUCAWARN, "attempt to stop a shutdown CC, skipping.\n");
-        ret++;
-    } else if (ccCheckState(0)) {
-        logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
-        ret++;
-    } else {
-        logprintfl(EUCADEBUG, "stopping service\n");
-        ret = 0;
-        config->kick_enabled = 0;
-        ccChangeState(STOPPED);
+    {
+        if (config->ccState == SHUTDOWNCC) {
+            LOGWARN("attempt to stop a shutdown CC, skipping.\n");
+            ret++;
+        } else if (ccCheckState(0)) {
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
+            ret++;
+        } else {
+            LOGINFO("stopping service\n");
+            ret = 0;
+            config->kick_enabled = 0;
+            ccChangeState(STOPPED);
+        }
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
+    LOGTRACE("done\n");
 
     return (ret);
 }
 
-int doEnableService(ncMetadata * ccMeta)
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doEnableService(ncMetadata * pMeta)
 {
-    int i, rc, ret = 0, done = 0;
+    int i = 0;
+    int rc = 0;
+    int ret = 0;
+    int done = 0;
 
-    rc = initialize(ccMeta);
+    rc = initialize(pMeta);
     if (rc) {
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
-    if (config->ccState == SHUTDOWNCC) {
-        logprintfl(EUCAWARN, "attempt to enable a shutdown CC, skipping.\n");
-        ret++;
-    } else if (ccCheckState(0)) {
-        logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
-        ret++;
-    } else if (config->ccState != ENABLED) {
-        logprintfl(EUCADEBUG, "enabling service\n");
-        ret = 0;
-        // tell monitor thread to (re)enable  
-        config->kick_monitor_running = 0;
-        config->kick_network = 1;
-        config->kick_dhcp = 1;
-        config->kick_enabled = 1;
-        ccChangeState(ENABLED);
+    {
+        if (config->ccState == SHUTDOWNCC) {
+            LOGWARN("attempt to enable a shutdown CC, skipping.\n");
+            ret++;
+        } else if (ccCheckState(0)) {
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
+            ret++;
+        } else if (config->ccState != ENABLED) {
+            LOGDEBUG("enabling service\n");
+            ret = 0;
+            // tell monitor thread to (re)enable
+            config->kick_monitor_running = 0;
+            config->kick_network = 1;
+            config->kick_dhcp = 1;
+            config->kick_enabled = 1;
+            ccChangeState(ENABLED);
+        }
     }
     sem_mypost(CONFIG);
 
@@ -296,76 +448,114 @@ int doEnableService(ncMetadata * ccMeta)
         done = 0;
         for (i = 0; i < 60 && !done; i++) {
             sem_mywait(CONFIG);
-            if (config->kick_monitor_running) {
-                done++;
+            {
+                if (config->kick_monitor_running) {
+                    done++;
+                }
             }
             sem_mypost(CONFIG);
+
             if (!done) {
-                logprintfl(EUCADEBUG, "waiting for monitor to re-initialize (%d/60)\n", i);
+                LOGDEBUG("waiting for monitor to re-initialize (%d/60)\n", i);
                 sleep(1);
             }
         }
     }
 
-    logprintfl(EUCAINFO, "done\n");
-
+    LOGTRACE("done\n");
     return (ret);
 }
 
-int doDisableService(ncMetadata * ccMeta)
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doDisableService(ncMetadata * pMeta)
 {
-    int i, rc, ret = 0;
+    int rc = 0;
+    int ret = 0;
 
-    rc = initialize(ccMeta);
+    rc = initialize(pMeta);
     if (rc) {
         return (1);
     }
 
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     sem_mywait(CONFIG);
-    if (config->ccState == SHUTDOWNCC) {
-        logprintfl(EUCAWARN, "attempt to disable a shutdown CC, skipping.\n");
-        ret++;
-    } else if (ccCheckState(0)) {
-        logprintfl(EUCAWARN, "ccCheckState() returned failures, skipping.\n");
-        ret++;
-    } else {
-        logprintfl(EUCADEBUG, "disabling service\n");
-        ret = 0;
+    {
+        if (config->ccState == SHUTDOWNCC) {
+            LOGWARN("attempt to disable a shutdown CC, skipping.\n");
+            ret++;
+        } else if (ccCheckState(0)) {
+            LOGWARN("ccCheckState() returned failures, skipping.\n");
+            ret++;
+        } else {
+            LOGINFO("disabling service\n");
+            ret = 0;
+            config->kick_enabled = 0;
+            ccChangeState(DISABLED);
+        }
+    }
+    sem_mypost(CONFIG);
+
+    LOGTRACE("done\n");
+    return (ret);
+}
+
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doShutdownService(ncMetadata * pMeta)
+{
+    int rc = 0;
+    int ret = 0;
+
+    rc = initialize(pMeta);
+    if (rc) {
+        return (1);
+    }
+
+    LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
+
+    sem_mywait(CONFIG);
+    {
         config->kick_enabled = 0;
-        ccChangeState(DISABLED);
+        ccChangeState(SHUTDOWNCC);
     }
     sem_mypost(CONFIG);
 
-    logprintfl(EUCAINFO, "done\n");
-
+    LOGTRACE("done\n");
     return (ret);
 }
 
-int doShutdownService(ncMetadata * ccMeta)
-{
-    int i, rc, ret = 0;
-
-    rc = initialize(ccMeta);
-    if (rc) {
-        return (1);
-    }
-
-    logprintfl(EUCAINFO, "invoked\n");
-    logprintfl(EUCADEBUG, "params: userId=%s\n", SP(ccMeta ? ccMeta->userId : "UNSET"));
-
-    sem_mywait(CONFIG);
-    config->kick_enabled = 0;
-    ccChangeState(SHUTDOWNCC);
-    sem_mypost(CONFIG);
-
-    logprintfl(EUCAINFO, "done\n");
-
-    return (ret);
-}
-
+//!
+//!
+//!
+//! @param[in] inst a pointer to the instance structure
+//! @param[in] in a transparent pointer (unused)
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int validCmp(ccInstance * inst, void *in)
 {
     if (!inst) {
@@ -379,15 +569,21 @@ int validCmp(ccInstance * inst, void *in)
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] inst a pointer to the instance structure
+//! @param[in] in a transparent pointer (unused)
+//!
+//! @return
+//!
+//! @pre The inst pointer must not be NULL.
+//!
+//! @note
+//!
 int instIpSync(ccInstance * inst, void *in)
 {
     int ret = 0;
-
-    /*
-       if ( (strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant")) || !strcmp(inst->ccState, "ccTeardown")) {
-       return(0);
-       }
-     */
 
     if (!inst) {
         return (1);
@@ -395,15 +591,13 @@ int instIpSync(ccInstance * inst, void *in)
         return (0);
     }
 
-    logprintfl(EUCADEBUG,
-               "instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s NCvlan=%d NCnetworkIndex=%d\n",
-               inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan, inst->ccnet.networkIndex,
-               inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
+    LOGDEBUG("instanceId=%s CCpublicIp=%s CCprivateIp=%s CCprivateMac=%s CCvlan=%d CCnetworkIndex=%d NCpublicIp=%s NCprivateIp=%s NCprivateMac=%s "
+             "NCvlan=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan,
+             inst->ccnet.networkIndex, inst->ncnet.publicIp, inst->ncnet.privateIp, inst->ncnet.privateMac, inst->ncnet.vlan, inst->ncnet.networkIndex);
 
-    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0'
-        && inst->ccnet.privateMac[0] == '\0') {
+    if (inst->ccnet.vlan == 0 && inst->ccnet.networkIndex == 0 && inst->ccnet.publicIp[0] == '\0' && inst->ccnet.privateIp[0] == '\0' && inst->ccnet.privateMac[0] == '\0') {
         // ccnet is completely empty, make a copy of ncnet
-        logprintfl(EUCADEBUG, "ccnet is empty, copying ncnet\n");
+        LOGDEBUG("ccnet is empty, copying ncnet\n");
         memcpy(&(inst->ccnet), &(inst->ncnet), sizeof(netConfig));
         return (1);
     }
@@ -421,45 +615,40 @@ int instIpSync(ccInstance * inst, void *in)
     if ((inst->ccnet.publicIp[0] == '\0' || !strcmp(inst->ccnet.publicIp, "0.0.0.0"))
         && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
         // case 2
-        logprintfl(EUCADEBUG, "CC publicIp is empty, NC publicIp is set\n");
+        LOGDEBUG("CC publicIp is empty, NC publicIp is set\n");
         snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
         ret++;
-    } else
-        if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
-             && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
-            && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
+    } else if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
+                && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
+               && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
         // case 4
-        logprintfl(EUCADEBUG, "CC publicIp and NC publicIp differ\n");
+        LOGDEBUG("CC publicIp and NC publicIp differ\n");
         snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
         ret++;
     }
     // VLAN cases
     if (inst->ccnet.vlan != inst->ncnet.vlan) {
         // problem
-        logprintfl(EUCAERROR, "CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
+        LOGERROR("CC and NC vlans differ instanceId=%s CCvlan=%d NCvlan=%d\n", inst->instanceId, inst->ccnet.vlan, inst->ncnet.vlan);
     }
     inst->ccnet.vlan = inst->ncnet.vlan;
     if (inst->ccnet.vlan >= 0) {
         if (!vnetconfig->networks[inst->ccnet.vlan].active) {
-            logprintfl(EUCAWARN,
-                       "detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n",
-                       inst->ccnet.vlan);
+            LOGWARN("detected instance from NC that is running in a currently inactive network; will attempt to re-activate network '%d'\n", inst->ccnet.vlan);
             ret++;
         }
     }
     // networkIndex cases
     if (inst->ccnet.networkIndex != inst->ncnet.networkIndex) {
         // problem
-        logprintfl(EUCAERROR, "CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId,
-                   inst->ccnet.networkIndex, inst->ncnet.networkIndex);
+        LOGERROR("CC and NC networkIndicies differ instanceId=%s CCnetworkIndex=%d NCnetworkIndex=%d\n", inst->instanceId, inst->ccnet.networkIndex, inst->ncnet.networkIndex);
     }
     inst->ccnet.networkIndex = inst->ncnet.networkIndex;
 
     // mac addr cases
     if (strcmp(inst->ccnet.privateMac, inst->ncnet.privateMac)) {
         // problem;
-        logprintfl(EUCAERROR, "CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac,
-                   inst->ncnet.privateMac);
+        LOGERROR("CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
     }
     snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
 
@@ -472,10 +661,24 @@ int instIpSync(ccInstance * inst, void *in)
     return (ret);
 }
 
+//!
+//!
+//!
+//! @param[in] inst a pointer to the instance structure
+//! @param[in] in a transparent pointer (unused)
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int instNetParamsSet(ccInstance * inst, void *in)
 {
-    int rc, ret = 0, i;
-    char userToken[64], *cleanGroupName = NULL;
+    int rc = 0;
+    int ret = 0;
+    char userToken[64] = { 0 };
+    char *cleanGroupName = NULL;
 
     if (!inst) {
         return (1);
@@ -483,8 +686,8 @@ int instNetParamsSet(ccInstance * inst, void *in)
         return (0);
     }
 
-    logprintfl(EUCADEBUG, "instanceId=%s publicIp=%s privateIp=%s privateMac=%s vlan=%d\n", inst->instanceId, inst->ccnet.publicIp,
-               inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan);
+    LOGDEBUG("instanceId=%s publicIp=%s privateIp=%s privateMac=%s vlan=%d\n", inst->instanceId, inst->ccnet.publicIp,
+             inst->ccnet.privateIp, inst->ccnet.privateMac, inst->ccnet.vlan);
 
     if (inst->ccnet.vlan >= 0) {
         // activate network
@@ -505,10 +708,9 @@ int instNetParamsSet(ccInstance * inst, void *in)
             if ((vnetconfig->users[inst->ccnet.vlan].netName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].netName, cleanGroupName))
                 || (vnetconfig->users[inst->ccnet.vlan].userName[0] != '\0' && strcmp(vnetconfig->users[inst->ccnet.vlan].userName, inst->accountId))) {
                 // this means that there is a pre-existing network with the passed in vlan tag, but with a different netName or userName
-                logprintfl(EUCAERROR,
-                           "input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n",
-                           vnetconfig->users[inst->ccnet.vlan].userName, vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan,
-                           inst->accountId, cleanGroupName, inst->ccnet.vlan);
+                LOGERROR("input instance vlan<->user<->netname mapping is incompatible with internal state. Internal - userName=%s netName=%s "
+                         "vlan=%d.  Instance - userName=%s netName=%s vlan=%d\n", vnetconfig->users[inst->ccnet.vlan].userName,
+                         vnetconfig->users[inst->ccnet.vlan].netName, inst->ccnet.vlan, inst->accountId, cleanGroupName, inst->ccnet.vlan);
                 ret = 1;
             } else {
                 //  snprintf(vnetconfig->users[inst->ccnet.vlan].netName, 32, "%s", inst->groupNames[0]);
@@ -529,20 +731,32 @@ int instNetParamsSet(ccInstance * inst, void *in)
     }
 
     if (ret) {
-        logprintfl(EUCADEBUG, "sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
-                   inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
+        LOGDEBUG("sync of network cache with instance data FAILED (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
+                 inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
     } else {
-        logprintfl(EUCADEBUG,
-                   "sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
-                   inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
+        LOGDEBUG("sync of network cache with instance data SUCCESS (instanceId=%s, publicIp=%s, privateIp=%s, vlan=%d, networkIndex=%d\n",
+                 inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp, inst->ccnet.vlan, inst->ccnet.networkIndex);
     }
 
     return (0);
 }
 
+//!
+//!
+//!
+//! @param[in] inst a pointer to the instance structure
+//! @param[in] in a transparent pointer (unused)
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int instNetReassignAddrs(ccInstance * inst, void *in)
 {
-    int rc, ret = 0, i;
+    int rc = 0;
+    int ret = 0;
 
     if (!inst) {
         return (1);
@@ -550,13 +764,13 @@ int instNetReassignAddrs(ccInstance * inst, void *in)
         return (0);
     }
 
-    logprintfl(EUCADEBUG, "instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+    LOGDEBUG("instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
     if (!strcmp(inst->ccnet.publicIp, "0.0.0.0") || !strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
-        logprintfl(EUCAWARN, "ignoring instance with unset publicIp/privateIp\n");
+        LOGWARN("ignoring instance with unset publicIp/privateIp\n");
     } else {
         rc = vnetReassignAddress(vnetconfig, "UNSET", inst->ccnet.publicIp, inst->ccnet.privateIp);
         if (rc) {
-            logprintfl(EUCAERROR, "cannot reassign address\n");
+            LOGERROR("cannot reassign address\n");
             ret = 1;
         }
     }
@@ -564,16 +778,29 @@ int instNetReassignAddrs(ccInstance * inst, void *in)
     return (0);
 }
 
+//!
+//!
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
 int clean_network_state(void)
 {
-    int rc, i;
-    char cmd[MAX_PATH], file[MAX_PATH], rootwrap[MAX_PATH], *pidstr = NULL, *ipstr = NULL;
-    struct stat statbuf;
-    vnetConfig *tmpvnetconfig;
+    int rc = 0;
+    int i = 0;
+    char cmd[MAX_PATH] = { 0 };
+    char file[MAX_PATH] = { 0 };
+    char rootwrap[MAX_PATH] = { 0 };
+    char *pidstr = NULL;
+    char *ipstr = NULL;
+    vnetConfig *tmpvnetconfig = NULL;
 
-    tmpvnetconfig = malloc(sizeof(vnetConfig));
+    tmpvnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
     if (!tmpvnetconfig) {
-        logprintfl(EUCAERROR, "out of memory\n");
+        LOGERROR("out of memory\n");
         return -1;
     }
 
@@ -581,24 +808,22 @@ int clean_network_state(void)
 
     rc = vnetUnsetMetadataRedirect(tmpvnetconfig);
     if (rc) {
-        logprintfl(EUCAWARN, "failed to unset metadata redirect\n");
+        LOGWARN("failed to unset metadata redirect\n");
     }
 
     for (i = 1; i < NUMBER_OF_PUBLIC_IPS; i++) {
         if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
             ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
-            logprintfl(EUCADEBUG, "running command '%s'\n", cmd);
+            LOGDEBUG("running command '%s'\n", cmd);
             rc = system(cmd);
             rc = rc >> 8;
             if (rc && rc != 2) {
-                logprintfl(EUCAERROR, "running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
+                LOGERROR("running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
             }
-            if (ipstr)
-                free(ipstr);
+            EUCA_FREE(ipstr);
         }
     }
-    //  logprintfl(EUCADEBUG, "clean_network_state(): finished clearing public IPs\n");
 
     // dhcp
     snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
@@ -608,25 +833,26 @@ int clean_network_state(void)
         if (pidstr) {
             rc = safekillfile(file, tmpvnetconfig->dhcpdaemon, 9, rootwrap);
             if (rc) {
-                logprintfl(EUCAERROR, "could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
+                LOGERROR("could not terminate dhcpd (%s)\n", tmpvnetconfig->dhcpdaemon);
             }
-            free(pidstr);
+            EUCA_FREE(pidstr);
         }
     }
 
     sem_mywait(VNET);
-    // stop all running networks
-    for (i = 2; i < NUMBER_OF_VLANS; i++) {
-        if (vnetconfig->networks[i].active) {
-            rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
-            if (rc) {
-                logprintfl(EUCADEBUG, "failed to tear down network %d\n");
+    {
+        // stop all running networks
+        for (i = 2; i < NUMBER_OF_VLANS; i++) {
+            if (vnetconfig->networks[i].active) {
+                rc = vnetStopNetwork(vnetconfig, i, vnetconfig->users[i].userName, vnetconfig->users[i].netName);
+                if (rc) {
+                    LOGDEBUG("failed to tear down network rc=%d\n", rc);
+                }
             }
         }
+        // clear stored cloudIP
+        vnetconfig->cloudIp = 0;
     }
-    // clear stored cloudIP
-    vnetconfig->cloudIp = 0;
-
     sem_mypost(VNET);
 
     if (!strcmp(tmpvnetconfig->mode, "MANAGED") || !strcmp(tmpvnetconfig->mode, "MANAGED-NOVLAN")) {
@@ -646,14 +872,6 @@ int clean_network_state(void)
         }
     }
 
-    /*
-       // tunnels
-       rc = vnetSetCCS(tmpvnetconfig, NULL, 0);
-       if (rc) {
-       }
-     */
-
-    if (tmpvnetconfig)
-        free(tmpvnetconfig);
+    EUCA_FREE(tmpvnetconfig);
     return (0);
 }

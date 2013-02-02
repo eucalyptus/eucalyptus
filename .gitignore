@@ -88,3 +88,4 @@ node/test
 node/test_hooks
 node/test_nc
 util/euca-generate-fault
+/.settings

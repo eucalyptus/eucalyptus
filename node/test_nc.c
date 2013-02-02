@@ -33,7 +33,7 @@
  *   following conditions are met:
  *
  *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *     notice, this list of conditions and te following disclaimer.
  *
  *     Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer
@@ -63,19 +63,108 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file node/test_nc.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
-#include "misc.h"
-#include "eucalyptus.h"
-#include "diskutil.h"
 
-#define MAXDOMS 1024
+#include <eucalyptus.h>
+#include <misc.h>
+#include <diskutil.h>
 
-const char *euca_this_component_name = "nc";
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
+#define MAXDOMS                    1024 //!< Maximum number of domains
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int main(int argc, char *argv[]);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+static void print_libvirt_error(void);
+static char *find_conf_value(const char *eucahome, const char *param);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Prints any libvirt error to console.
+//!
 static void print_libvirt_error(void)
 {
     virError *verr = virGetLastError();
@@ -85,8 +174,15 @@ static void print_libvirt_error(void)
     }
 }
 
-// find value of the given param in the eucalyptus.conf (e.g., /usr/bin/euca-bundle-upload for NC_BUNDLE_UPLOAD_PATH)
-// return NULL if the param is commented out
+//!
+//! find value of the given param in the eucalyptus.conf (e.g., /usr/bin/euca-bundle-upload for NC_BUNDLE_UPLOAD_PATH)
+//! return NULL if the param is commented out
+//!
+//! @param[in] eucahome the path where Eucalyptus is installed
+//! @param[in] param the parameter value we're looking for
+//!
+//! @return the matching value or NULL
+//!
 static char *find_conf_value(const char *eucahome, const char *param)
 {
     char conf_path[1024];
@@ -112,7 +208,7 @@ static char *find_conf_value(const char *eucahome, const char *param)
                 char *pch = strtok(line, "=");  // again assume '=' can't appear in the middle of value
                 pch = strtok(NULL, "=");
                 if (pch && strlen(pch) > 0) {
-                    value = calloc(strlen(pch) + 1, 1);
+                    value = EUCA_ZALLOC(strlen(pch) + 1, 1);
                     if (!value) {
                         fclose(f_conf);
                         return NULL;
@@ -152,6 +248,14 @@ static char *find_conf_value(const char *eucahome, const char *param)
     return value;
 }
 
+//!
+//! Main entry point of the application
+//!
+//! @param[in] argc the number of parameter passed on the command line
+//! @param[in] argv the list of arguments
+//!
+//! @return Always return 0
+//!
 int main(int argc, char *argv[])
 {
     virConnectPtr conn = NULL;
@@ -189,7 +293,7 @@ int main(int argc, char *argv[])
 
     eucahome = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!eucahome) {
-        eucahome = strdup("");  // root by default
+        eucahome = strdup("");         // root by default
     } else {
         eucahome = strdup(eucahome);
     }
@@ -197,7 +301,7 @@ int main(int argc, char *argv[])
     add_euca_to_path(eucahome);
 
     fprintf(stderr, "looking for system utilities...\n");
-    if (diskutil_init(FALSE))   // NC does not require GRUB for now
+    if (diskutil_init(FALSE))          // NC does not require GRUB for now
         exit(1);
 
     // check if euca2ools commands for bundle-instance are available
@@ -208,7 +312,7 @@ int main(int argc, char *argv[])
         "euca-delete-bundle"
     };
 
-    char *helpers_path[3];      // load paths from eucalyptus.conf or set to NULL
+    char *helpers_path[3];             // load paths from eucalyptus.conf or set to NULL
     helpers_path[0] = find_conf_value(eucahome, "NC_BUNDLE_UPLOAD_PATH");
     helpers_path[1] = find_conf_value(eucahome, "NC_CHECK_BUCKET_PATH");
     helpers_path[2] = find_conf_value(eucahome, "NC_DELETE_BUNDLE_PATH");

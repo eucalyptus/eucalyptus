@@ -1,3 +1,6 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
@@ -60,38 +63,131 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#define _FILE_OFFSET_BITS 64    // so large-file support works on 32-bit systems
+//!
+//! @file util/windows-bundle.c
+//! Need to provide description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define _FILE_OFFSET_BITS 64           // so large-file support works on 32-bit systems
 #include <stdio.h>
 #include <stdlib.h>
 #define __USE_GNU
-#include <string.h>             /* strlen, strcpy */
+#include <string.h>                    /* strlen, strcpy */
 #include <time.h>
-#include <limits.h>             /* INT_MAX */
-#include <sys/types.h>          /* fork */
-#include <sys/wait.h>           /* waitpid */
+#include <limits.h>                    /* INT_MAX */
+#include <sys/types.h>                 /* fork */
+#include <sys/wait.h>                  /* waitpid */
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <signal.h>             /* SIGINT */
+#include <signal.h>                    /* SIGINT */
 #include <linux/limits.h>
 #ifndef MAX_PATH
-#define MAX_PATH 4096
-#endif
+#define MAX_PATH                4096
+#endif /* ! MAX_PATH */
 
 #include <data.h>
 #include <windows-bundle.h>
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/* Should preferably be handled in header file */
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+int allocate_bundleTask(bundleTask * out, char *instanceId, char *state);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Initialize a new bundle task with the given instance identifier and state
+//!
+//! @param[in] out optional pointer to the bundle task to initialize
+//! @param[in] instanceId the optional instance identifier string (i-XXXXXXXX)
+//! @param[in] state the optional state of the bundle task
+//!
+//! @return Always returns EUCA_OK
+//!
+//! @note If the out parameter is NULL, then nothing will happen.
+//!
 int allocate_bundleTask(bundleTask * out, char *instanceId, char *state)
 {
     if (out != NULL) {
         bzero(out, sizeof(bundleTask));
         if (instanceId)
             snprintf(out->instanceId, CHAR_BUFFER_SIZE, "%s", instanceId);
+
         if (state)
             snprintf(out->state, CHAR_BUFFER_SIZE, "%s", state);
     }
-    return (0);
+    return (EUCA_OK);
 }

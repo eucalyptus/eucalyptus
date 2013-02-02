@@ -22,7 +22,6 @@
   eucalyptus.main= function(args) {
     $('html body').eucaevent();
 
-    // TODO: is this the right place to check online status?
     $('html body').eucadata();
     $.when( 
       (function(){ 
@@ -57,7 +56,6 @@
                                                                    }});
       $('html body').find(DOM_BINDING['footer']).footer();
     }).fail(function(){
-        //TODO: what's the appropriate error message and the popup?
         errorAndLogout();
       }
     );

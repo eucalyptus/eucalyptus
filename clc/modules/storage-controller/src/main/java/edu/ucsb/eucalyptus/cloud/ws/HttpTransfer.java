@@ -67,6 +67,7 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.util.Date;
 
+import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.commons.httpclient.methods.DeleteMethod;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -75,6 +76,7 @@ import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Storage;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 
 
@@ -83,7 +85,9 @@ import com.eucalyptus.util.StorageProperties;
 public class HttpTransfer {
 	
 	private static Logger LOG = Logger.getLogger(HttpTransfer.class);
-
+	protected HttpClient httpClient;
+	protected HttpMethodBase method;
+		
 	public HttpMethodBase constructHttpMethod(String verb, String addr, String eucaOperation, String eucaHeader) {
 		String date = new Date().toString();
 		String httpVerb = verb;
@@ -128,6 +132,13 @@ public class HttpTransfer {
 			LOG.error(ex, ex);
 		}
 		return method;
+	}
+	
+	public void abortTransfer() throws EucalyptusCloudException {
+		if(httpClient != null && method != null) {
+			method.abort();
+			method.releaseConnection();
+		}
 	}
 
 	public HttpTransfer() {}

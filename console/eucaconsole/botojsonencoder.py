@@ -37,9 +37,17 @@ from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
+# these things came in with boto 2.6
+try:
+    from boto.ec2.instance import InstanceState
+    from boto.ec2.instance import InstancePlacement
+except ImportError:
+    pass
+from boto.ec2.tag import Tag
 from boto.ec2.securitygroup import GroupOrCIDR
 from boto.ec2.securitygroup import IPPermissions
 from boto.ec2.volume import AttachmentSet
+from boto.s3.bucket import Bucket
 from .response import ClcError
 from .response import Response
 from esapi.codecs.html_entity import HTMLEntityCodec
@@ -75,17 +83,18 @@ class BotoJsonEncoder(JSONEncoder):
         'progress',
         'ip_protocol',
         'fingerprint',
-        'output',
     ];
     
     def __sanitize_and_copy__(self, dict):
         try:
             ret = copy.copy(dict)
-            for key in ret.keys():
-                if key in self.FIELD_WHITELIST:
-                    continue
-                if isinstance(ret[key], basestring):
-                    ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
+            # Don't sanitize. We're doing this in the browser now!
+            # Leave this code in for now... 
+            #for key in ret.keys():
+            #    if key in self.FIELD_WHITELIST:
+            #        continue
+            #    if isinstance(ret[key], basestring):
+            #        ret[key] = self.codec.encode(self.IMMUNE_HTML, ret[key])
             return ret
         except Exception, e:
             logging.error(e)
@@ -134,6 +143,23 @@ class BotoJsonEncoder(JSONEncoder):
             values['connection'] = None
             values['__obj_name__'] = 'BlockDeviceType'
             return (values)
+        elif isinstance(obj, Tag):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'Tag'
+            return (values)
+        elif isinstance(obj, Bucket):
+            values = {'name':obj.name}
+            values['__obj_name__'] = 'Bucket'
+            return (values)
+        if isinstance(obj, InstanceState):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'InstanceState'
+            return (values)
+        elif isinstance(obj, InstancePlacement):
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['__obj_name__'] = 'InstancePlacement'
+            return (values)
+        print obj.__class__.__name__
         return super(BotoJsonEncoder, self).default(obj)
 
 class BotoJsonDecoder(JSONDecoder):

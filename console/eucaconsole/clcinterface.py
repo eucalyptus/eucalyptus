@@ -31,13 +31,13 @@
 #
 class ClcInterface(object):
 
-    def get_all_zones(self, callback=None):
+    def get_all_zones(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     ##
     # Image methods
     ##
-    def get_all_images(self, owners, callback=None):
+    def get_all_images(self, owners, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns list of image attributes
@@ -55,7 +55,7 @@ class ClcInterface(object):
     ##
     # Instance methods
     ##
-    def get_all_instances(self, callback=None):
+    def get_all_instances(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     def run_instances(self, image_id, min_count=1, max_count=1,
@@ -101,7 +101,7 @@ class ClcInterface(object):
     ##
     # Elastic IP methods
     ##
-    def get_all_addresses(self, callback=None):
+    def get_all_addresses(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns address info
@@ -124,7 +124,7 @@ class ClcInterface(object):
     # Keypair methods
     ##
     # return list of keypairs
-    def get_all_key_pairs(self, callback=None):
+    def get_all_key_pairs(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns keypair info and key
@@ -142,7 +142,7 @@ class ClcInterface(object):
     ##
     # Security Group methods
     ##
-    def get_all_security_groups(self, callback=None):
+    def get_all_security_groups(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns True if successful
@@ -174,7 +174,7 @@ class ClcInterface(object):
     ##
     # Volume methods
     ##
-    def get_all_volumes(self, callback=None):
+    def get_all_volumes(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns volume info
@@ -196,7 +196,7 @@ class ClcInterface(object):
     ##
     # Snapshot methods
     ##
-    def get_all_snapshots(self, callback=None):
+    def get_all_snapshots(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 
     # returns snapshot info
@@ -220,4 +220,18 @@ class ClcInterface(object):
         raise NotImplementedError("Are you sure you're using the right class?")
     
     def register_image(self, name, image_location=None, description=None, architecture=None, kernel_id=None, ramdisk_id=None, root_dev_name=None, block_device_map=None, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    ##
+    # Tag methods
+    ##
+    def get_all_tags(self, filters, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns tag info
+    def create_tags(self, resourceIds, tags, callback):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
+    # returns True if successful
+    def delete_tags(self, resourceIds, tags, callback):
         raise NotImplementedError("Are you sure you're using the right class?")
