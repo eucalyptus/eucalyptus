@@ -40,6 +40,7 @@ from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.elb.healthcheck import HealthCheck
 from boto.exception import EC2ResponseError
 from boto.exception import S3ResponseError
 from boto.exception import BotoServerError
@@ -134,7 +135,7 @@ class ScaleHandler(BaseAPIHandler):
             raise tornado.web.HTTPError(401, "not authorized")
         if not(self.user_session.scaling):
             if self.should_use_mock():
-                pass #self.user_session.walrus = MockScaleInterface()
+                self.user_session.scaling = MockScaleInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
                 if self.user_session.host_override:
@@ -250,6 +251,92 @@ class ScaleHandler(BaseAPIHandler):
                 max_records = self.get_argument("MaxRecords", None)
                 next_token = self.get_argument("NextToken", None)
                 self.user_session.scaling.get_all_launch_configurations(config_names, max_records, next_token, self.callback)
+
+        except Exception as ex:
+            logging.error("Could not fulfill request, exception to follow")
+            logging.error("Since we got here, client likely not notified either!")
+            logging.exception(ex)
+
+class BalanceHandler(BaseAPIHandler):
+    #json_encoder = BotoJsonBalanceEncoder
+
+    def get_listeners(self):
+        pass
+
+    ##
+    # This is the main entry point for API calls for AutoScaling from the browser
+    # other calls are delegated to handler methods based on resource type
+    #
+    @tornado.web.asynchronous
+    def post(self):
+        if not self.authorized():
+            raise tornado.web.HTTPError(401, "not authorized")
+        if not(self.user_session.scaling):
+            if self.should_use_mock():
+                self.user_session.elb = MockBalanceInterface()
+            else:
+                host = eucaconsole.config.get('server', 'clchost')
+                if self.user_session.host_override:
+                    host = self.user_session.host_override
+                self.user_session.elb = BotoBalanceInterface(host,
+                                                         self.user_session.access_key,
+                                                         self.user_session.secret_key,
+                                                         self.user_session.session_token)
+            # could make this conditional, but add caching always for now
+            self.user_session.elb = CachingBalanceInterface(self.user_session.elb, eucaconsole.config)
+
+        self.user_session.session_lifetime_requests += 1
+
+        try:
+            action = self.get_argument("Action")
+            if action.find('Get') == -1:
+                self.user_session.session_last_used = time.time()
+                self.check_xsrf_cookie()
+
+            if action == 'CreateLoadBalancer':
+                azones = self.get_argument_list('AvailabilityZones.member')
+                listeners = self.get_listeners()
+                name = self.get_argument('LoadBalancerName')
+                scheme = self.get_argument('Scheme', 'internet-facing')
+                groups = self.get_argument_list('SecurityGroups.member')
+                subnets = self.get_argument_list('Subnets.member')
+                self.user_session.elb.create_load_balancer(name, azones, listeners, subnets, groups, scheme, self.callback)
+            elif action == 'DeleteLoadBalancer':
+                name = self.get_argument('LoadBalancerName')
+                self.user_session.elb.delete_load_balancer(name, self.callback)
+            elif action == 'DescribeLoadBalancers':
+                names = self.get_argument_list('LoadBalancerNames.member')
+                self.user_session.elb.describe_load_balancers(names, self.callback)
+            elif action == 'DeregisterInstancesFromLoadBalancer':
+                name = self.get_argument('LoadBalancerName')
+                instances = self.get_argument_list('Instances.member')
+                self.user_session.elb.deregister_instances(name, instances, self.callback)
+            elif action == 'RegisterInstancesWithLoadBalancer':
+                name = self.get_argument('LoadBalancerName')
+                instances = self.get_argument_list('Instances.member')
+                self.user_session.elb.register_instances(name, instances, self.callback)
+            elif action == 'CreateLoadBalancerListeners':
+                name = self.get_argument('LoadBalancerName')
+                listeners = self.get_listeners()
+                self.user_session.elb.create_load_balancer_listeners(name, listeners, self.callback)
+            elif action == 'DeleteLoadBalancerListeners':
+                name = self.get_argument('LoadBalancerName')
+                ports = self.get_argument_list('LoadBalancerPorts.member')
+                self.user_session.elb.delete_load_balancer_listeners(name, ports, self.callback)
+            elif action == 'ConfigureHealthCheck':
+                name = self.get_argument('LoadBalancerName')
+                timeout = self.get_argument('HealthCheck.Timeout')
+                target = self.get_argument('HealthCheck.Target')
+                interval = self.get_argument('HealthCheck.Interval')
+                unhealthy = self.get_argument('HealthCheck.UnhealthyThreshold')
+                healthy = self.get_argument('HealthCheck.HealthyThreshold')
+                hc = HealthCheck(timeout=timeout, target=target, interval=interval,
+                                 unhealthy_threshold=unhealthy, healthy_threshold=healthy)
+                self.user_session.elb.configure_health_check(name, hc, self.callback)
+            elif action == 'DescribeInstanceHealth':
+                name = self.get_argument('LoadBalancerName')
+                instances = self.get_argument_list('Instances.member')
+                self.user_session.elb.describe_instance_health(name, instances, self.callback)
 
         except Exception as ex:
             logging.error("Could not fulfill request, exception to follow")

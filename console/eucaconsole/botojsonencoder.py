@@ -48,6 +48,7 @@ from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.launchconfig import InstanceMonitoring
 from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.elb import ELBConnection
 # these things came in with boto 2.6
 try:
     from boto.ec2.instance import InstanceState
@@ -172,6 +173,13 @@ class BotoJsonEncoder(JSONEncoder):
             return (values)
         return super(BotoJsonEncoder, self).default(obj)
 
+#        try:
+#        except TypeError:
+#            if obj.__dict__:
+#                return obj.__dict__
+#            else:
+#                return []
+
 class BotoJsonWatchEncoder(JSONEncoder):
     def default(self, obj):
         if issubclass(obj.__class__, EC2Object):
@@ -195,6 +203,22 @@ class BotoJsonWatchEncoder(JSONEncoder):
             values['__obj_name__'] = 'Metric'
             return (values)
         return super(BotoJsonWatchEncoder, self).default(obj)
+
+class BotoJsonBalanceEncoder(JSONEncoder):
+    def default(self, obj):
+        if issubclass(obj.__class__, EC2Object):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = obj.__class__.__name__
+            return (values)
+        elif isinstance(obj, RegionInfo):
+            return []
+        elif isinstance(obj, ClcError):
+            return copy.copy(obj.__dict__)
+        elif isinstance(obj, Response):
+            return obj.__dict__
+        elif isinstance(obj, ELBConnection):
+            return []
+        return super(BotoJsonBalanceEncoder, self).default(obj)
 
 class BotoJsonScaleEncoder(JSONEncoder):
     def default(self, obj):
@@ -231,7 +255,7 @@ class BotoJsonScaleEncoder(JSONEncoder):
             values['__obj_name__'] = 'InstanceMonitoring'
             return (values)
         print obj.__class__.__name__
-        return super(BotoJsonWatchEncoder, self).default(obj)
+        return super(BotoJsonScaleEncoder, self).default(obj)
 
 class BotoJsonDecoder(JSONDecoder):
     # if we need to map classes to specific boto objects, we'd do that here
