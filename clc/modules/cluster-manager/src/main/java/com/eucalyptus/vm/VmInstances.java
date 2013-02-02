@@ -75,6 +75,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nonnull;
@@ -93,6 +94,8 @@ import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -112,6 +115,9 @@ import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.ImageInfo;
+import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -124,6 +130,7 @@ import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Callbacks;
 import com.eucalyptus.util.async.DelegatingRemoteCallback;
@@ -142,6 +149,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
@@ -710,6 +718,7 @@ public class VmInstances {
       db.commit( );
       return Lists.newArrayList( vms );
     } catch ( final Exception ex ) {
+      LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
       return Lists.newArrayList( );
     } finally {
@@ -878,9 +887,118 @@ public class VmInstances {
     }
   }
 
+  private static <T> Set<T> blockDeviceSet( final VmInstance instance,
+                                            final Function<? super VmVolumeAttachment,T> transform ) {
+    return Sets.newHashSet( Iterables.transform(
+        Iterables.concat(
+            instance.getBootRecord( ).getPersistentVolumes( ),
+            instance.getTransientVolumeState( ).getAttachments( ) ),
+        transform ) );
+  }
+
+  private static <T> Set<T> networkGroupSet( final VmInstance instance,
+                                             final Function<? super NetworkGroup,T> transform ) {
+    return instance.getNetworkGroups() != null ?
+        Sets.newHashSet( Iterables.transform( instance.getNetworkGroups(), transform ) ) :
+        Collections.<T>emptySet();
+  }
+
   public static class VmInstanceFilterSupport extends FilterSupport<VmInstance> {
     public VmInstanceFilterSupport() {
-      super( builderFor( VmInstance.class ).withTagFiltering( VmInstanceTag.class, "instance" ) );
+      super( builderFor( VmInstance.class )
+          .withTagFiltering( VmInstanceTag.class, "instance" )
+          .withStringProperty( "architecture", VmInstanceFilterFunctions.ARCHITECTURE )
+          .withStringProperty( "availability-zone", VmInstanceFilterFunctions.AVAILABILITY_ZONE )
+          .withDateSetProperty( "block-device-mapping.attach-time", VmInstanceDateSetFilterFunctions.BLOCK_DEVICE_MAPPING_ATTACH_TIME )
+          .withBooleanSetProperty( "block-device-mapping.delete-on-termination", VmInstanceBooleanSetFilterFunctions.BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATE )
+          .withStringSetProperty( "block-device-mapping.device-name", VmInstanceStringSetFilterFunctions.BLOCK_DEVICE_MAPPING_DEVICE_NAME )
+          .withStringSetProperty( "block-device-mapping.status", VmInstanceStringSetFilterFunctions.BLOCK_DEVICE_MAPPING_STATUS )
+          .withStringSetProperty( "block-device-mapping.volume-id", VmInstanceStringSetFilterFunctions.BLOCK_DEVICE_MAPPING_VOLUME_ID )
+          .withUnsupportedProperty( "client-token" )
+          .withStringProperty( "dns-name", VmInstanceFilterFunctions.DNS_NAME )
+          .withStringSetProperty( "group-id", VmInstanceStringSetFilterFunctions.GROUP_ID )
+          .withStringSetProperty( "group-name", VmInstanceStringSetFilterFunctions.GROUP_NAME )
+          .withStringProperty( "image-id", VmInstanceFilterFunctions.IMAGE_ID )
+          .withStringProperty( "instance-id", CloudMetadatas.toDisplayName() )
+          .withConstantProperty( "instance-lifecycle", "" )
+          .withIntegerProperty( "instance-state-code", VmInstanceIntegerFilterFunctions.INSTANCE_STATE_CODE )
+          .withStringProperty( "instance-state-name", VmInstanceFilterFunctions.INSTANCE_STATE_NAME )
+          .withStringProperty( "instance-type", VmInstanceFilterFunctions.INSTANCE_TYPE )
+          .withUnsupportedProperty( "instance.group-id" )
+          .withUnsupportedProperty( "instance.group-name" )
+          .withStringProperty( "ip-address", VmInstanceFilterFunctions.IP_ADDRESS )
+          .withStringProperty( "kernel-id", VmInstanceFilterFunctions.KERNEL_ID )
+          .withStringProperty( "key-name", VmInstanceFilterFunctions.KEY_NAME )
+          .withStringProperty( "launch-index", VmInstanceFilterFunctions.LAUNCH_INDEX )
+          .withDateProperty( "launch-time", VmInstanceDateFilterFunctions.LAUNCH_TIME )
+          .withUnsupportedProperty( "monitoring-state" )
+          .withStringProperty( "owner-id", VmInstanceFilterFunctions.OWNER_ID )
+          .withUnsupportedProperty( "placement-group-name" )
+          .withStringProperty( "platform", VmInstanceFilterFunctions.PLATFORM )
+          .withStringProperty( "private-dns-name", VmInstanceFilterFunctions.PRIVATE_DNS_NAME )
+          .withStringProperty( "private-ip-address", VmInstanceFilterFunctions.PRIVATE_IP_ADDRESS )
+          .withUnsupportedProperty( "product-code" )
+          .withUnsupportedProperty( "product-code.type" )
+          .withStringProperty( "ramdisk-id", VmInstanceFilterFunctions.RAMDISK_ID )
+          .withStringProperty( "reason", VmInstanceFilterFunctions.REASON )
+          .withUnsupportedProperty( "requester-id" )
+          .withStringProperty( "reservation-id", VmInstanceFilterFunctions.RESERVATION_ID )
+          .withStringProperty( "root-device-name", VmInstanceFilterFunctions.ROOT_DEVICE_NAME )
+          .withStringProperty( "root-device-type", VmInstanceFilterFunctions.ROOT_DEVICE_TYPE )
+          .withUnsupportedProperty( "source-dest-check" )
+          .withUnsupportedProperty( "spot-instance-request-id" )
+          .withUnsupportedProperty( "state-reason-code" )
+          .withUnsupportedProperty( "state-reason-message" )
+          .withUnsupportedProperty( "subnet-id" )
+          .withUnsupportedProperty( "virtualization-type" )
+          .withUnsupportedProperty( "vpc-id" )
+          .withUnsupportedProperty( "hypervisor" )
+          .withUnsupportedProperty( "network-interface.description" )
+          .withUnsupportedProperty( "network-interface.subnet-id" )
+          .withUnsupportedProperty( "network-interface.vpc-id" )
+          .withUnsupportedProperty( "network-interface.network-interface.id" )
+          .withUnsupportedProperty( "network-interface.owner-id" )
+          .withUnsupportedProperty( "network-interface.availability-zone" )
+          .withUnsupportedProperty( "network-interface.requester-id" )
+          .withUnsupportedProperty( "network-interface.requester-managed" )
+          .withUnsupportedProperty( "network-interface.status" )
+          .withUnsupportedProperty( "network-interface.mac-address" )
+          .withUnsupportedProperty( "network-interface-private-dns-name" )
+          .withUnsupportedProperty( "network-interface.source-destination-check" )
+          .withUnsupportedProperty( "network-interface.group-id" )
+          .withUnsupportedProperty( "network-interface.group-name" )
+          .withUnsupportedProperty( "network-interface.attachment.attachment-id" )
+          .withUnsupportedProperty( "network-interface.attachment.instance-id" )
+          .withUnsupportedProperty( "network-interface.attachment.instance-owner-id" )
+          .withUnsupportedProperty( "network-interface.addresses.private-ip-address" )
+          .withUnsupportedProperty( "network-interface.attachment.device-index" )
+          .withUnsupportedProperty( "network-interface.attachment.status" )
+          .withUnsupportedProperty( "network-interface.attachment.attach-time" )
+          .withUnsupportedProperty( "network-interface.attachment.delete-on-termination" )
+          .withUnsupportedProperty( "network-interface.addresses.primary" )
+          .withUnsupportedProperty( "network-interface.addresses.association.public-ip" )
+          .withUnsupportedProperty( "network-interface.addresses.association.ip-owner-id" )
+          .withUnsupportedProperty( "association.public-ip" )
+          .withUnsupportedProperty( "association.ip-owner-id" )
+          .withUnsupportedProperty( "association.allocation-id" )
+          .withUnsupportedProperty( "association.association-id" )
+          .withPersistenceAlias( "bootRecord.machineImage", "image" )
+          .withPersistenceAlias( "networkGroups", "networkGroups" )
+          .withPersistenceAlias( "bootRecord.vmType", "vmType" )
+          .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet("bootRecord.machineImage"), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
+          .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
+          .withPersistenceFilter( "group-id", "networkGroups.groupId" )
+          .withPersistenceFilter( "group-name", "networkGroups.displayName" )
+          .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )
+          .withPersistenceFilter( "instance-id", "displayName" )
+          .withPersistenceFilter( "instance-type", "vmType.name", Sets.newHashSet("bootRecord.vmType")  )
+          .withPersistenceFilter( "kernel-id", "image.kernelId", Sets.newHashSet("bootRecord.machineImage") )
+          .withPersistenceFilter( "launch-index", "launchRecord.launchIndex", Collections.<String>emptySet(), PersistenceFilter.Type.Integer )
+          .withPersistenceFilter( "launch-time", "launchRecord.launchTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
+          .withPersistenceFilter( "owner-id", "ownerAccountNumber" )
+          .withPersistenceFilter( "ramdisk-id", "image.ramdiskId", Sets.newHashSet("bootRecord.machineImage") )
+          .withPersistenceFilter( "reservation-id", "vmId.reservationId", Collections.<String>emptySet() )
+      );
     }
   }
 
@@ -920,9 +1038,9 @@ public class VmInstances {
           .withPersistenceFilter( "progress", "runtimeState.bundleTask.progress", Collections.<String>emptySet(), ProgressToInteger.INSTANCE )
           .withPersistenceFilter( "s3-bucket", "runtimeState.bundleTask.bucket", Collections.<String>emptySet() )
           .withPersistenceFilter( "s3-prefix", "runtimeState.bundleTask.prefix", Collections.<String>emptySet() )
-          //.withPersistenceFilter( "start-time", "runtimeState.bundleTask.startTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "start-time", "runtimeState.bundleTask.startTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
           .withPersistenceFilter( "state", "runtimeState.bundleTask.state", Collections.<String>emptySet(), Enums.valueOfFunction( VmBundleTask.BundleState.class ) )
-          //.withPersistenceFilter( "update-time", "runtimeState.bundleTask.updateTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+          .withPersistenceFilter( "update-time", "runtimeState.bundleTask.updateTime", Collections.<String>emptySet(), PersistenceFilter.Type.Date )
       );
     }
   }
@@ -989,6 +1107,242 @@ public class VmInstances {
       @Override
       public String apply( final VmBundleTask bundleTask ) {
         return bundleTask.getState().name();
+      }
+    },
+  }
+
+  private enum VmVolumeAttachmentBooleanFilterFunctions implements Function<VmVolumeAttachment,Boolean> {
+    DELETE_ON_TERMINATE {
+      @Override
+      public Boolean apply( final VmVolumeAttachment volumeAttachment ) {
+        return volumeAttachment.getDeleteOnTerminate();
+      }
+    },
+  }
+
+  private enum VmVolumeAttachmentDateFilterFunctions implements Function<VmVolumeAttachment,Date> {
+    ATTACH_TIME {
+      @Override
+      public Date apply( final VmVolumeAttachment volumeAttachment ) {
+        return volumeAttachment.getAttachTime();
+      }
+    },
+  }
+
+  private enum VmVolumeAttachmentFilterFunctions implements Function<VmVolumeAttachment,String> {
+    DEVICE_NAME {
+      @Override
+      public String apply( final VmVolumeAttachment volumeAttachment ) {
+        return volumeAttachment.getDevice();
+      }
+    },
+    STATUS {
+      @Override
+      public String apply( final VmVolumeAttachment volumeAttachment ) {
+        return volumeAttachment.getStatus();
+      }
+    },
+    VOLUME_ID {
+      @Override
+      public String apply( final VmVolumeAttachment volumeAttachment ) {
+        return volumeAttachment.getVolumeId();
+      }
+    },
+  }
+
+  private enum VmInstanceStringSetFilterFunctions implements Function<VmInstance,Set<String>> {
+    BLOCK_DEVICE_MAPPING_DEVICE_NAME {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return blockDeviceSet( instance, VmVolumeAttachmentFilterFunctions.DEVICE_NAME );
+      }
+    },
+    BLOCK_DEVICE_MAPPING_STATUS {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return blockDeviceSet( instance, VmVolumeAttachmentFilterFunctions.STATUS );
+      }
+    },
+    BLOCK_DEVICE_MAPPING_VOLUME_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return blockDeviceSet( instance, VmVolumeAttachmentFilterFunctions.VOLUME_ID );
+      }
+    },
+    GROUP_ID {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkGroupSet( instance, NetworkGroups.groupId() );
+      }
+    },
+    GROUP_NAME {
+      @Override
+      public Set<String> apply( final VmInstance instance ) {
+        return networkGroupSet( instance, CloudMetadatas.toDisplayName() );
+      }
+    },
+  }
+
+  private enum VmInstanceBooleanSetFilterFunctions implements Function<VmInstance,Set<Boolean>> {
+    BLOCK_DEVICE_MAPPING_DELETE_ON_TERMINATE {
+      @Override
+      public Set<Boolean> apply( final VmInstance instance ) {
+        return blockDeviceSet( instance, VmVolumeAttachmentBooleanFilterFunctions.DELETE_ON_TERMINATE );
+      }
+    },
+  }
+
+  private enum VmInstanceDateFilterFunctions implements Function<VmInstance,Date> {
+    LAUNCH_TIME {
+      @Override
+      public Date apply( final VmInstance instance ) {
+        return instance.getLaunchRecord().getLaunchTime();
+      }
+    },
+  }
+
+  private enum VmInstanceDateSetFilterFunctions implements Function<VmInstance,Set<Date>> {
+    BLOCK_DEVICE_MAPPING_ATTACH_TIME {
+      @Override
+      public Set<Date> apply( final VmInstance instance ) {
+        return blockDeviceSet( instance, VmVolumeAttachmentDateFilterFunctions.ATTACH_TIME );
+      }
+    },
+  }
+
+  private enum VmInstanceIntegerFilterFunctions implements Function<VmInstance,Integer> {
+    INSTANCE_STATE_CODE {
+      @Override
+      public Integer apply( final VmInstance instance ) {
+        return instance.getDisplayState().getCode();
+      }
+    },
+  }
+
+  private enum VmInstanceFilterFunctions implements Function<VmInstance,String> {
+    ARCHITECTURE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        final BootableImageInfo imageInfo = instance.getBootRecord().getMachine();
+        return imageInfo instanceof ImageInfo ?
+            Strings.toString( ( (ImageInfo) imageInfo ).getArchitecture() ):
+            null;
+      }
+    },
+    AVAILABILITY_ZONE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getPartition();
+      }
+    },
+    DNS_NAME {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getDisplayPublicDnsName();
+      }
+    },
+    IMAGE_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getImageId();
+      }
+    },
+    INSTANCE_STATE_NAME {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getDisplayState( ) == null ? 
+            null : 
+            instance.getDisplayState( ).getName( );
+      }
+    },
+    INSTANCE_TYPE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getVmType() == null ?
+            null :
+            instance.getVmType().getName( );
+      }
+    },
+    IP_ADDRESS {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getDisplayPublicAddress();
+      }
+    },
+    KERNEL_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getKernelId();
+      }
+    },
+    KEY_NAME {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return CloudMetadatas.toDisplayName().apply( instance.getKeyPair() );
+      }
+    },
+    LAUNCH_INDEX {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return Strings.toString( instance.getLaunchRecord().getLaunchIndex() );
+      }
+    },
+    OWNER_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getOwnerAccountNumber();
+      }
+    },
+    PLATFORM {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return "windows".equals( instance.getPlatform() ) ? "windows" : "";
+      }
+    },
+    PRIVATE_DNS_NAME {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getDisplayPrivateDnsName();
+      }
+    },
+    PRIVATE_IP_ADDRESS {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getDisplayPrivateAddress();
+      }
+    },
+    RAMDISK_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getRamdiskId();
+      }
+    },
+    REASON {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getRuntimeState() == null ?
+            null :
+            instance.getRuntimeState().getReason();
+      }
+    },
+    RESERVATION_ID {
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getReservationId();
+      }
+    },
+    ROOT_DEVICE_NAME {
+      @Override
+      public String apply( final VmInstance instance ) {
+        final BootableImageInfo imageInfo = instance.getBootRecord().getMachine();
+        return imageInfo == null ? null : imageInfo.getRootDeviceName();
+      }
+    },
+    ROOT_DEVICE_TYPE {
+      @Override
+      public String apply( final VmInstance instance ) {
+        final BootableImageInfo imageInfo = instance.getBootRecord().getMachine();
+        return imageInfo == null ? null : imageInfo.getRootDeviceType();
       }
     },
   }

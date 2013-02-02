@@ -76,6 +76,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.util.ReplyQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import static com.eucalyptus.util.Parameters.checkParam;
@@ -215,8 +216,25 @@ public class Contexts {
     }
   }
 
-  @SuppressWarnings( "unchecked" )
   public static void response( BaseMessage responseMessage ) {
+    response( responseMessage, responseMessage );
+  }
+
+  /**
+   * Respond with the given supplier.
+   * 
+   * <p>This allows a response with associated details such as an HTTP status
+   * code.</p>
+   * 
+   * @param responseMessageSupplier The supplier to use
+   */
+  public static void response( final BaseMessageSupplier responseMessageSupplier ) {
+    response( responseMessageSupplier, responseMessageSupplier.getBaseMessage() );  
+  }
+  
+  @SuppressWarnings( "unchecked" )
+  private static void response( final Object message,
+                                final BaseMessage responseMessage ) {
     if ( responseMessage instanceof ExceptionResponseType ) {
       Logs.exhaust( ).trace( responseMessage );
     }
@@ -226,7 +244,7 @@ public class Contexts {
       EventRecord.here( ServiceContext.class, EventType.MSG_REPLY, responseMessage.getCorrelationId( ), responseMessage.getClass( ).getSimpleName( ),
                         String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
       Channel channel = ctx.getChannel( );
-      Channels.write( channel, responseMessage );
+      Channels.write( channel, message );
       clear( ctx );
     } catch ( NoSuchContextException e ) {
       LOG.warn( "Received a reply for absent client:  No channel to write response message: " + e.getMessage( ) );

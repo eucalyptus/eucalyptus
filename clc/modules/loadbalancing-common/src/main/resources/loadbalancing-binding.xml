@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<binding name="elasticloadbalancing_amazonaws_com_doc_2012_06_01" xmlns:tns="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/" force-classes="true" add-constructors="true">
+  <namespace uri="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/" prefix="tns" default="elements"/>
+  <mapping class="com.eucalyptus.loadbalancing.ResponseMetadata" abstract="true">
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Error" abstract="true">
+    <value name="Type" field="type" usage="required"/>
+    <value name="Code" field="code" usage="required"/>
+    <value name="Message" field="message" usage="required"/>
+    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.loadbalancing.ErrorDetail"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.loadbalancing.ErrorResponse">
+    <collection field="error">
+      <structure name="Error" type="com.eucalyptus.loadbalancing.Error"/>
+    </collection>
+    <value name="RequestId" field="requestId" usage="required"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerPolicyTypes" class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPolicyTypesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="PolicyTypeNames" field="policyTypeNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyTypeNames"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerPolicyTypesResponse" class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPolicyTypesResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DescribeLoadBalancerPolicyTypesResult" field="describeLoadBalancerPolicyTypesResult" usage="required" type="com.eucalyptus.loadbalancing.DescribeLoadBalancerPolicyTypesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPolicyTypesResult" abstract="true">
+    <structure name="PolicyTypeDescriptions" field="policyTypeDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.PolicyTypeDescriptions"/>
+  </mapping>
+  <mapping name="ConfigureHealthCheck" class="com.eucalyptus.loadbalancing.ConfigureHealthCheckType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="HealthCheck" field="healthCheck" usage="required" type="com.eucalyptus.loadbalancing.HealthCheck"/>
+  </mapping>
+  <mapping name="ConfigureHealthCheckResponse" class="com.eucalyptus.loadbalancing.ConfigureHealthCheckResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="ConfigureHealthCheckResult" field="configureHealthCheckResult" usage="required" type="com.eucalyptus.loadbalancing.ConfigureHealthCheckResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.ConfigureHealthCheckResult" abstract="true">
+    <structure name="HealthCheck" field="healthCheck" usage="optional" type="com.eucalyptus.loadbalancing.HealthCheck"/>
+  </mapping>
+  <mapping name="DetachLoadBalancerFromSubnets" class="com.eucalyptus.loadbalancing.DetachLoadBalancerFromSubnetsType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Subnets" field="subnets" usage="required" type="com.eucalyptus.loadbalancing.Subnets"/>
+  </mapping>
+  <mapping name="DetachLoadBalancerFromSubnetsResponse" class="com.eucalyptus.loadbalancing.DetachLoadBalancerFromSubnetsResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DetachLoadBalancerFromSubnetsResult" field="detachLoadBalancerFromSubnetsResult" usage="required" type="com.eucalyptus.loadbalancing.DetachLoadBalancerFromSubnetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DetachLoadBalancerFromSubnetsResult" abstract="true">
+    <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.Subnets"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerPolicies" class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPoliciesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
+    <structure name="PolicyNames" field="policyNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancerPoliciesResponse" class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPoliciesResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DescribeLoadBalancerPoliciesResult" field="describeLoadBalancerPoliciesResult" usage="required" type="com.eucalyptus.loadbalancing.DescribeLoadBalancerPoliciesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPoliciesResult" abstract="true">
+    <structure name="PolicyDescriptions" field="policyDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.PolicyDescriptions"/>
+  </mapping>
+  <mapping name="SetLoadBalancerPoliciesOfListener" class="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesOfListenerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="LoadBalancerPort" field="loadBalancerPort" usage="required"/>
+    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.loadbalancing.PolicyNames"/>
+  </mapping>
+  <mapping name="SetLoadBalancerPoliciesOfListenerResponse" class="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesOfListenerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="SetLoadBalancerPoliciesOfListenerResult" field="setLoadBalancerPoliciesOfListenerResult" usage="required" type="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesOfListenerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesOfListenerResult" abstract="true"/>
+  <mapping name="DisableAvailabilityZonesForLoadBalancer" class="com.eucalyptus.loadbalancing.DisableAvailabilityZonesForLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.loadbalancing.AvailabilityZones"/>
+  </mapping>
+  <mapping name="DisableAvailabilityZonesForLoadBalancerResponse" class="com.eucalyptus.loadbalancing.DisableAvailabilityZonesForLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DisableAvailabilityZonesForLoadBalancerResult" field="disableAvailabilityZonesForLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.DisableAvailabilityZonesForLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DisableAvailabilityZonesForLoadBalancerResult" abstract="true">
+    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.AvailabilityZones"/>
+  </mapping>
+  <mapping name="DescribeInstanceHealth" class="com.eucalyptus.loadbalancing.DescribeInstanceHealthType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.Instances"/>
+  </mapping>
+  <mapping name="DescribeInstanceHealthResponse" class="com.eucalyptus.loadbalancing.DescribeInstanceHealthResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DescribeInstanceHealthResult" field="describeInstanceHealthResult" usage="required" type="com.eucalyptus.loadbalancing.DescribeInstanceHealthResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DescribeInstanceHealthResult" abstract="true">
+    <structure name="InstanceStates" field="instanceStates" usage="optional" type="com.eucalyptus.loadbalancing.InstanceStates"/>
+  </mapping>
+  <mapping name="DeleteLoadBalancerPolicy" class="com.eucalyptus.loadbalancing.DeleteLoadBalancerPolicyType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteLoadBalancerPolicyResponse" class="com.eucalyptus.loadbalancing.DeleteLoadBalancerPolicyResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DeleteLoadBalancerPolicyResult" field="deleteLoadBalancerPolicyResult" usage="required" type="com.eucalyptus.loadbalancing.DeleteLoadBalancerPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DeleteLoadBalancerPolicyResult" abstract="true"/>
+  <mapping name="CreateLoadBalancerPolicy" class="com.eucalyptus.loadbalancing.CreateLoadBalancerPolicyType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="PolicyTypeName" field="policyTypeName" usage="required"/>
+    <structure name="PolicyAttributes" field="policyAttributes" usage="optional" type="com.eucalyptus.loadbalancing.PolicyAttributes"/>
+  </mapping>
+  <mapping name="CreateLoadBalancerPolicyResponse" class="com.eucalyptus.loadbalancing.CreateLoadBalancerPolicyResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="CreateLoadBalancerPolicyResult" field="createLoadBalancerPolicyResult" usage="required" type="com.eucalyptus.loadbalancing.CreateLoadBalancerPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.CreateLoadBalancerPolicyResult" abstract="true"/>
+  <mapping name="EnableAvailabilityZonesForLoadBalancer" class="com.eucalyptus.loadbalancing.EnableAvailabilityZonesForLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="required" type="com.eucalyptus.loadbalancing.AvailabilityZones"/>
+  </mapping>
+  <mapping name="EnableAvailabilityZonesForLoadBalancerResponse" class="com.eucalyptus.loadbalancing.EnableAvailabilityZonesForLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="EnableAvailabilityZonesForLoadBalancerResult" field="enableAvailabilityZonesForLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.EnableAvailabilityZonesForLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.EnableAvailabilityZonesForLoadBalancerResult" abstract="true">
+    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.AvailabilityZones"/>
+  </mapping>
+  <mapping name="CreateLoadBalancerListeners" class="com.eucalyptus.loadbalancing.CreateLoadBalancerListenersType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Listeners" field="listeners" usage="required" type="com.eucalyptus.loadbalancing.Listeners"/>
+  </mapping>
+  <mapping name="CreateLoadBalancerListenersResponse" class="com.eucalyptus.loadbalancing.CreateLoadBalancerListenersResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="CreateLoadBalancerListenersResult" field="createLoadBalancerListenersResult" usage="required" type="com.eucalyptus.loadbalancing.CreateLoadBalancerListenersResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.CreateLoadBalancerListenersResult" abstract="true"/>
+  <mapping name="CreateLoadBalancer" class="com.eucalyptus.loadbalancing.CreateLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Listeners" field="listeners" usage="required" type="com.eucalyptus.loadbalancing.Listeners"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.AvailabilityZones"/>
+    <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.Subnets"/>
+    <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.SecurityGroups"/>
+    <value name="Scheme" field="scheme" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLoadBalancerResponse" class="com.eucalyptus.loadbalancing.CreateLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="CreateLoadBalancerResult" field="createLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.CreateLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.CreateLoadBalancerResult" abstract="true">
+    <value name="DNSName" field="dnsName" usage="optional"/>
+  </mapping>
+  <mapping name="DeleteLoadBalancer" class="com.eucalyptus.loadbalancing.DeleteLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+  </mapping>
+  <mapping name="DeleteLoadBalancerResponse" class="com.eucalyptus.loadbalancing.DeleteLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DeleteLoadBalancerResult" field="deleteLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.DeleteLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DeleteLoadBalancerResult" abstract="true"/>
+  <mapping name="SetLoadBalancerPoliciesForBackendServer" class="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesForBackendServerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="InstancePort" field="instancePort" usage="required"/>
+    <structure name="PolicyNames" field="policyNames" usage="required" type="com.eucalyptus.loadbalancing.PolicyNames"/>
+  </mapping>
+  <mapping name="SetLoadBalancerPoliciesForBackendServerResponse" class="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesForBackendServerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="SetLoadBalancerPoliciesForBackendServerResult" field="setLoadBalancerPoliciesForBackendServerResult" usage="required" type="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesForBackendServerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.SetLoadBalancerPoliciesForBackendServerResult" abstract="true"/>
+  <mapping name="DeleteLoadBalancerListeners" class="com.eucalyptus.loadbalancing.DeleteLoadBalancerListenersType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="LoadBalancerPorts" field="loadBalancerPorts" usage="required" type="com.eucalyptus.loadbalancing.Ports"/>
+  </mapping>
+  <mapping name="DeleteLoadBalancerListenersResponse" class="com.eucalyptus.loadbalancing.DeleteLoadBalancerListenersResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DeleteLoadBalancerListenersResult" field="deleteLoadBalancerListenersResult" usage="required" type="com.eucalyptus.loadbalancing.DeleteLoadBalancerListenersResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DeleteLoadBalancerListenersResult" abstract="true"/>
+  <mapping name="DeregisterInstancesFromLoadBalancer" class="com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Instances" field="instances" usage="required" type="com.eucalyptus.loadbalancing.Instances"/>
+  </mapping>
+  <mapping name="DeregisterInstancesFromLoadBalancerResponse" class="com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DeregisterInstancesFromLoadBalancerResult" field="deregisterInstancesFromLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResult" abstract="true">
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.Instances"/>
+  </mapping>
+  <mapping name="SetLoadBalancerListenerSSLCertificate" class="com.eucalyptus.loadbalancing.SetLoadBalancerListenerSSLCertificateType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="LoadBalancerPort" field="loadBalancerPort" usage="required"/>
+    <value name="SSLCertificateId" field="sslCertificateId" usage="required"/>
+  </mapping>
+  <mapping name="SetLoadBalancerListenerSSLCertificateResponse" class="com.eucalyptus.loadbalancing.SetLoadBalancerListenerSSLCertificateResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="SetLoadBalancerListenerSSLCertificateResult" field="setLoadBalancerListenerSSLCertificateResult" usage="required" type="com.eucalyptus.loadbalancing.SetLoadBalancerListenerSSLCertificateResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.SetLoadBalancerListenerSSLCertificateResult" abstract="true"/>
+  <mapping name="CreateLBCookieStickinessPolicy" class="com.eucalyptus.loadbalancing.CreateLBCookieStickinessPolicyType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="CookieExpirationPeriod" field="cookieExpirationPeriod" usage="optional"/>
+  </mapping>
+  <mapping name="CreateLBCookieStickinessPolicyResponse" class="com.eucalyptus.loadbalancing.CreateLBCookieStickinessPolicyResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="CreateLBCookieStickinessPolicyResult" field="createLBCookieStickinessPolicyResult" usage="required" type="com.eucalyptus.loadbalancing.CreateLBCookieStickinessPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.CreateLBCookieStickinessPolicyResult" abstract="true"/>
+  <mapping name="AttachLoadBalancerToSubnets" class="com.eucalyptus.loadbalancing.AttachLoadBalancerToSubnetsType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Subnets" field="subnets" usage="required" type="com.eucalyptus.loadbalancing.Subnets"/>
+  </mapping>
+  <mapping name="AttachLoadBalancerToSubnetsResponse" class="com.eucalyptus.loadbalancing.AttachLoadBalancerToSubnetsResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="AttachLoadBalancerToSubnetsResult" field="attachLoadBalancerToSubnetsResult" usage="required" type="com.eucalyptus.loadbalancing.AttachLoadBalancerToSubnetsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.AttachLoadBalancerToSubnetsResult" abstract="true">
+    <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.Subnets"/>
+  </mapping>
+  <mapping name="CreateAppCookieStickinessPolicy" class="com.eucalyptus.loadbalancing.CreateAppCookieStickinessPolicyType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <value name="PolicyName" field="policyName" usage="required"/>
+    <value name="CookieName" field="cookieName" usage="required"/>
+  </mapping>
+  <mapping name="CreateAppCookieStickinessPolicyResponse" class="com.eucalyptus.loadbalancing.CreateAppCookieStickinessPolicyResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="CreateAppCookieStickinessPolicyResult" field="createAppCookieStickinessPolicyResult" usage="required" type="com.eucalyptus.loadbalancing.CreateAppCookieStickinessPolicyResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.CreateAppCookieStickinessPolicyResult" abstract="true"/>
+  <mapping name="RegisterInstancesWithLoadBalancer" class="com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="Instances" field="instances" usage="required" type="com.eucalyptus.loadbalancing.Instances"/>
+  </mapping>
+  <mapping name="RegisterInstancesWithLoadBalancerResponse" class="com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="RegisterInstancesWithLoadBalancerResult" field="registerInstancesWithLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerResult" abstract="true">
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.Instances"/>
+  </mapping>
+  <mapping name="ApplySecurityGroupsToLoadBalancer" class="com.eucalyptus.loadbalancing.ApplySecurityGroupsToLoadBalancerType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
+    <structure name="SecurityGroups" field="securityGroups" usage="required" type="com.eucalyptus.loadbalancing.SecurityGroups"/>
+  </mapping>
+  <mapping name="ApplySecurityGroupsToLoadBalancerResponse" class="com.eucalyptus.loadbalancing.ApplySecurityGroupsToLoadBalancerResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="ApplySecurityGroupsToLoadBalancerResult" field="applySecurityGroupsToLoadBalancerResult" usage="required" type="com.eucalyptus.loadbalancing.ApplySecurityGroupsToLoadBalancerResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.ApplySecurityGroupsToLoadBalancerResult" abstract="true">
+    <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.SecurityGroups"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancers" class="com.eucalyptus.loadbalancing.DescribeLoadBalancersType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="LoadBalancerNames" field="loadBalancerNames" usage="optional" type="com.eucalyptus.loadbalancing.LoadBalancerNames"/>
+    <value name="Marker" field="marker" usage="optional"/>
+  </mapping>
+  <mapping name="DescribeLoadBalancersResponse" class="com.eucalyptus.loadbalancing.DescribeLoadBalancersResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="DescribeLoadBalancersResult" field="describeLoadBalancersResult" usage="required" type="com.eucalyptus.loadbalancing.DescribeLoadBalancersResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.DescribeLoadBalancersResult" abstract="true">
+    <structure name="LoadBalancerDescriptions" field="loadBalancerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.LoadBalancerDescriptions"/>
+    <value name="NextMarker" field="nextMarker" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.InstanceState" abstract="true">
+    <value name="InstanceId" field="instanceId" usage="optional"/>
+    <value name="State" field="state" usage="optional"/>
+    <value name="ReasonCode" field="reasonCode" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyTypeDescription" abstract="true">
+    <value name="PolicyTypeName" field="policyTypeName" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+    <structure name="PolicyAttributeTypeDescriptions" field="policyAttributeTypeDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.PolicyAttributeTypeDescriptions"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.SourceSecurityGroup" abstract="true">
+    <value name="OwnerAlias" field="ownerAlias" usage="optional"/>
+    <value name="GroupName" field="groupName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyTypeNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Instance" abstract="true">
+    <value name="InstanceId" field="instanceId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.AppCookieStickinessPolicies" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.AppCookieStickinessPolicy"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyAttributeTypeDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.PolicyAttributeTypeDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyAttributeDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.PolicyAttributeDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.LoadBalancerDescription" abstract="true">
+    <value name="LoadBalancerName" field="loadBalancerName" usage="optional"/>
+    <value name="DNSName" field="dnsName" usage="optional"/>
+    <value name="CanonicalHostedZoneName" field="canonicalHostedZoneName" usage="optional"/>
+    <value name="CanonicalHostedZoneNameID" field="canonicalHostedZoneNameID" usage="optional"/>
+    <structure name="ListenerDescriptions" field="listenerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.ListenerDescriptions"/>
+    <structure name="Policies" field="policies" usage="optional" type="com.eucalyptus.loadbalancing.Policies"/>
+    <structure name="BackendServerDescriptions" field="backendServerDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.BackendServerDescriptions"/>
+    <structure name="AvailabilityZones" field="availabilityZones" usage="optional" type="com.eucalyptus.loadbalancing.AvailabilityZones"/>
+    <structure name="Subnets" field="subnets" usage="optional" type="com.eucalyptus.loadbalancing.Subnets"/>
+    <value name="VPCId" field="vpcId" usage="optional"/>
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.Instances"/>
+    <structure name="HealthCheck" field="healthCheck" usage="optional" type="com.eucalyptus.loadbalancing.HealthCheck"/>
+    <structure name="SourceSecurityGroup" field="sourceSecurityGroup" usage="optional" type="com.eucalyptus.loadbalancing.SourceSecurityGroup"/>
+    <structure name="SecurityGroups" field="securityGroups" usage="optional" type="com.eucalyptus.loadbalancing.SecurityGroups"/>
+    <value name="CreatedTime" field="createdTime" usage="optional"/>
+    <value name="Scheme" field="scheme" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.PolicyDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyAttributeDescription" abstract="true">
+    <value name="AttributeName" field="attributeName" usage="optional"/>
+    <value name="AttributeValue" field="attributeValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Listeners" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.Listener"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Listener" abstract="true">
+    <value name="Protocol" field="protocol" usage="required"/>
+    <value name="LoadBalancerPort" field="loadBalancerPort" usage="required"/>
+    <value name="InstanceProtocol" field="instanceProtocol" usage="optional"/>
+    <value name="InstancePort" field="instancePort" usage="required"/>
+    <value name="SSLCertificateId" field="sslCertificateId" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyTypeDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.PolicyTypeDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.LoadBalancerDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.LoadBalancerDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Subnets" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Instances" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.Instance"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.LoadBalancerNames" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyAttribute" abstract="true">
+    <value name="AttributeName" field="attributeName" usage="optional"/>
+    <value name="AttributeValue" field="attributeValue" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.AppCookieStickinessPolicy" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="CookieName" field="cookieName" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.InstanceStates" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.InstanceState"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyAttributes" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.PolicyAttribute"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyDescription" abstract="true">
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="PolicyTypeName" field="policyTypeName" usage="optional"/>
+    <structure name="PolicyAttributeDescriptions" field="policyAttributeDescriptions" usage="optional" type="com.eucalyptus.loadbalancing.PolicyAttributeDescriptions"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PolicyAttributeTypeDescription" abstract="true">
+    <value name="AttributeName" field="attributeName" usage="optional"/>
+    <value name="AttributeType" field="attributeType" usage="optional"/>
+    <value name="Description" field="description" usage="optional"/>
+    <value name="DefaultValue" field="defaultValue" usage="optional"/>
+    <value name="Cardinality" field="cardinality" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.AvailabilityZones" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.BackendServerDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.BackendServerDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.LBCookieStickinessPolicies" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.LBCookieStickinessPolicy"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Ports" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.HealthCheck" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="Target" field="target" usage="required"/>
+    <value name="Interval" field="interval" usage="required"/>
+    <value name="Timeout" field="timeout" usage="required"/>
+    <value name="UnhealthyThreshold" field="unhealthyThreshold" usage="required"/>
+    <value name="HealthyThreshold" field="healthyThreshold" usage="required"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.BackendServerDescription" abstract="true">
+    <value name="InstancePort" field="instancePort" usage="optional"/>
+    <structure name="PolicyNames" field="policyNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.ListenerDescriptions" abstract="true">
+    <collection field="member">
+      <structure name="member" type="com.eucalyptus.loadbalancing.ListenerDescription"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.SecurityGroups" abstract="true">
+    <collection field="member">
+      <value name="member" type="java.lang.String"/>
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.ListenerDescription" abstract="true">
+    <structure name="Listener" field="listener" usage="optional" type="com.eucalyptus.loadbalancing.Listener"/>
+    <structure name="PolicyNames" field="policyNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.LBCookieStickinessPolicy" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="PolicyName" field="policyName" usage="optional"/>
+    <value name="CookieExpirationPeriod" field="cookieExpirationPeriod" usage="optional"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.Policies" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="AppCookieStickinessPolicies" field="appCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.AppCookieStickinessPolicies"/>
+    <structure name="LBCookieStickinessPolicies" field="lbCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.LBCookieStickinessPolicies"/>
+    <structure name="OtherPolicies" field="otherPolicies" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.LoadBalancingMessage" abstract="true"/>
+</binding>

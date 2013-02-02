@@ -65,6 +65,7 @@ package com.eucalyptus.auth;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
@@ -84,7 +85,9 @@ import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * The authorization provider based on database storage. This class includes all the APIs to
@@ -294,8 +297,25 @@ public class DatabaseAuthProvider implements AccountProvider {
       Debugging.logError( LOG, e, "Failed to delete account " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
     }
-  }  
-  
+  }
+
+  @Override
+  public Set<String> resolveAccountNumbersForName( final String accountNameLike ) throws AuthException {
+    final Set<String> results = Sets.newHashSet( );
+    final EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    try {
+      for ( final AccountEntity account : db.query( new AccountEntity( accountNameLike ) ) ) {
+        results.add( account.getAccountNumber() );        
+      }
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to resolve account numbers" );
+      throw new AuthException( "Failed to resolve account numbers", e );
+    } finally {
+      db.rollback();
+    }
+    return results;
+  }
+
   @Override
   public List<User> listAllUsers( ) throws AuthException {
     List<User> results = Lists.newArrayList( );

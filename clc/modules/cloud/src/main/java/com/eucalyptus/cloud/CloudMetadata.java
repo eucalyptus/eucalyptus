@@ -111,4 +111,7 @@ public interface CloudMetadata extends RestrictedType {
 
   @PolicyResourceType( "tag" )
   public interface TagMetadata extends CloudMetadata {}
+  
+  @PolicyResourceType("loadbalancing")
+  public interface LoadBalancingMetadata extends CloudMetadata {}
 }

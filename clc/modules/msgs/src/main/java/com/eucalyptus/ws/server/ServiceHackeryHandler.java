@@ -84,6 +84,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
 
@@ -119,6 +120,8 @@ public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDown
         } else {
           ctx.sendDownstream( msge );
         }
+      } else if ( msge.getMessage( ) instanceof BaseMessageSupplier ) {// Handle single request-response MEP
+        ctx.sendDownstream( msge );
       } else if ( msge.getMessage( ) instanceof Throwable ) {
         ctx.sendDownstream( e );
       } else {

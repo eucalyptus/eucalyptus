@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.tags;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityTransaction;
@@ -27,10 +28,15 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 /**
  * Utility functions for Tag
@@ -66,10 +72,27 @@ public class Tags {
                                 final Predicate<? super Tag> filter,
                                 final Criterion criterion,
                                 final Map<String,String> aliases ) throws NoSuchMetadataException {
+    return list( Tag.withOwner( ownerFullName ), filter, criterion, aliases );
+  }
+
+  /**
+   * List tags matching the given example and criteria.
+   *
+   * @param example The tag example
+   * @param filter Predicate to restrict the results
+   * @param criterion The database criterion to restrict the results
+   * @param aliases Aliases for the database criterion
+   * @return The list of tags.
+   * @throws NoSuchMetadataException If an error occurs
+   */
+  public static List<Tag> list( final Tag example,
+                                final Predicate<? super Tag> filter,
+                                final Criterion criterion,
+                                final Map<String,String> aliases ) throws NoSuchMetadataException {
     try {
-      return Transactions.filter( Tag.withOwner(ownerFullName), filter, criterion, aliases );
+      return Transactions.filter( example, filter, criterion, aliases );
     } catch ( Exception e ) {
-      throw new NoSuchMetadataException( "Failed to find tags for " + ownerFullName, e );
+      throw new NoSuchMetadataException( "Failed to find tags for " + LogUtil.dumpObject(example), e );
     }
   }
 
@@ -125,6 +148,23 @@ public class Tags {
     return result;
   }
 
+  /**
+   * Add transformed tags to a collection.
+   * 
+   * @param target The target collection
+   * @param targetItemType The target item class
+   * @param tags The tags to add
+   * @param <T> The target item type
+   */
+  public static <T> void addFromTags( final Collection<? super T> target,
+                                      final Class<T> targetItemType,
+                                      final Iterable<Tag> tags ) {
+    Iterables.addAll( target,
+        Iterables.transform(
+            tags,
+            TypeMappers.lookup( Tag.class, targetItemType ) ) );
+  }
+
   private static Tag lookup( final Tag example ) throws NoSuchMetadataException {
     try {
       final List<Tag> result = Transactions.filter( example,
@@ -177,5 +217,15 @@ public class Tags {
         return tag.getValue();
       }
     },
+  }
+
+  @TypeMapper
+  public enum TagToResourceTag implements Function<Tag, ResourceTag> {
+    INSTANCE;
+
+    @Override
+    public ResourceTag apply( final Tag tag ) {
+      return new ResourceTag( tag.getKey(), tag.getValue() );
+    }
   }
 }
