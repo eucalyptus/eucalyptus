@@ -4048,14 +4048,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
         goto out;
     }
 
-    LOGINFO("migrating instance: from %s to %s\n", SP(resourceCacheLocal.resources[src_index].hostname), SP(resourceCacheLocal.resources[dst_index].hostname));
-//    timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
-//    rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncModifyNode",
-//                      stateName); // no need to pass nodeName as ncClientCall sets that up for all NC requests
-//    if (rc) {
-//        ret = 1;
-//        goto out;
-//    }
+    LOGINFO("migrating from %s to %s\n", SP(resourceCacheLocal.resources[src_index].hostname), SP(resourceCacheLocal.resources[dst_index].hostname));
 
     // find an instance running on the host
     int found_instance = 0;
@@ -4100,13 +4093,13 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
     }
 
     // notify source
-    LOGINFO("migrating instance [%s]: migrate source %s\n",
+    LOGINFO("[%s] migrate source %s\n",
     		SP(nc_instance.instanceId),
     		SP(resourceCacheLocal.resources[src_index].hostname));
     timeout = ncGetTimeout(time(NULL), OP_TIMEOUT, 1, 0);
     rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[src_index].lockidx, resourceCacheLocal.resources[src_index].ncURL, "ncMigrateInstance",
                       &nc_instance, resourceCacheLocal.resources[src_index].hostname, resourceCacheLocal.resources[dst_index].hostname, NULL);
- 	LOGINFO("migrating instance [%s]: started migration from %s to %s\n",
+ 	LOGINFO("[%s] started migration from %s to %s\n",
  			SP(nc_instance.instanceId),
  			SP(resourceCacheLocal.resources[src_index].hostname),
  			SP(resourceCacheLocal.resources[dst_index].hostname));
@@ -4120,7 +4113,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *nodeName)
 
     LOGTRACE("done\n");
 
-//    shawn();
+    shawn();
 
     return (ret);
 }

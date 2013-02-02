@@ -1990,25 +1990,23 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
         }
     }
 
-    LOGERROR("Hello, %d", __LINE__);
     mirt = adb_migrateInstancesResponseType_create(env);
-    LOGERROR("Hello, %d", __LINE__);
     adb_migrateInstancesResponseType_set_return(mirt, env, status);
-    LOGERROR("Hello, %d", __LINE__);
     if (status == AXIS2_FALSE) {
         adb_migrateInstancesResponseType_set_statusMessage(mirt, env, statusMessage);
     }
-    LOGERROR("Hello, %d", __LINE__);
 
     adb_migrateInstancesResponseType_set_correlationId(mirt, env, ccMeta.correlationId);
-    LOGERROR("Hello, %d", __LINE__);
     adb_migrateInstancesResponseType_set_userId(mirt, env, ccMeta.userId);
 
-    LOGERROR("Hello, %d", __LINE__);
     ret = adb_MigrateInstancesResponse_create(env);
-    LOGERROR("Hello, %d", __LINE__);
+    if ( ret == NULL ) {
+    	LOGERROR("adb_MigrateInstancesResponse_create LIES!");
+    }
+    if ( mirt == NULL ) {
+    	LOGERROR("adb_MigrateInstancesResponse_create LIES!");
+    }
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
-    LOGERROR("Hello, %d", __LINE__);
     return (ret);
 }
