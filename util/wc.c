@@ -352,7 +352,7 @@ static char *c_wcappendn(char *dst, const char *src, size_t src_limit)
 //! @note caller is responsible to free the returned string
 //!
 //! @todo This currently will not sub any variables if it can't sub *all* variables. This is unfriendly:
-// !      it should sub what it can.
+//!       it should sub what it can.
 //!
 wchar_t *varsub(const wchar_t * s, const wchar_map * vars[])
 {

@@ -114,7 +114,6 @@
 #include <fault.h>
 #include <log.h>
 #include <euca_string.h>
-#include <windows-bundle.h>
 
 #define HANDLERS_FANOUT
 #include "handlers.h"

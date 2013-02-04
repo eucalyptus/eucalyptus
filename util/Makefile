@@ -64,7 +64,7 @@ include ../Makedefs
 
 EFENCE=-lefence
 #DEBUGS = -DDEBUG # -DDEBUG1
-all: euca_string.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o windows-bundle.o euca_rootwrap euca_mountwrap euca-generate-fault
+all: euca_string.o utf8.o log.o config.o fault.o misc.o wc.o hash.o data.o sensor.o euca_auth.o euca_axis.o ipc.o euca_rootwrap euca_mountwrap euca-generate-fault
 
 build: all
 
