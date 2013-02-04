@@ -55,7 +55,7 @@ public class BlockStorageAvailabilityEventListener implements EventListener<Cloc
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( Storage.class ) && Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+    if ( Topology.isEnabledLocally( Storage.class ) && Bootstrap.isFinished() ) {
       final List<Availability> resourceAvailability = Lists.newArrayList();
       final Set<String> partitions =
           Sets.newHashSet( Iterables.transform( Clusters.getInstance().listValues(), HasFullName.GET_PARTITION ) );
