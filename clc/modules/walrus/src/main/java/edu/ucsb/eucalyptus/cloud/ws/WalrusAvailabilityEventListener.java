@@ -47,7 +47,7 @@ public class WalrusAvailabilityEventListener implements EventListener<ClockTick>
 
   @Override
   public void fireEvent( final ClockTick event ) {
-    if ( Topology.isEnabledLocally( Walrus.class ) && Bootstrap.isFinished() && Hosts.isCoordinator() ) {
+    if ( Topology.isEnabledLocally( Walrus.class ) && Bootstrap.isFinished() ) {
       try {
 
       	WalrusInfo wInfo = WalrusInfo.getWalrusInfo();
