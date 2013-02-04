@@ -81,7 +81,12 @@
               "iDataSort": 12,
               "fnRender": function(oObj) { 
                  var state = oObj.aData.state;
-                 state = state.replace('-','');  // '-' has an issue with Messages.properties; shutting-down -> shuttingdown
+                 if (state == undefined) {
+                    state = oObj.aData._state.name;
+                 }
+                 if (state != undefined) {
+                    state = state.replace('-','');  // '-' has an issue with Messages.properties; shutting-down -> shuttingdown
+                 }
                  return '<div class="table-row-status status-'+state+'">&nbsp;</div>';
                },
             },
@@ -108,7 +113,13 @@
             },
             {
               "bVisible": false,
-              "mDataProp":"state"
+              "fnRender": function(oObj) { 
+                 var state = oObj.aData.state;
+                 if (state == undefined) {
+                    state = oObj.aData._state.name;
+                 }
+                 return state
+               },
             },
             {
               "asSorting" : [ 'desc', 'asc' ],
