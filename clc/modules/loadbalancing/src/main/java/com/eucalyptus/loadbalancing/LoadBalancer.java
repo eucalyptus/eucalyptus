@@ -161,6 +161,14 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return this.findListener(lbPort)!=null;
 	}
 	
+	public Collection<LoadBalancerListener> getListeners(){
+		return this.listeners;
+	}
+	
+	public Collection<LoadBalancerZone> getZones(){
+		return this.zones;
+	}
+	
 	void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
 		throws IllegalArgumentException
 	{

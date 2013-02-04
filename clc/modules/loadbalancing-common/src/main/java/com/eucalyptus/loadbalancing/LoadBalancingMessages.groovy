@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import java.lang.reflect.Field
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
@@ -41,6 +42,17 @@ public class CreateLoadBalancerType extends LoadBalancingMessage {
 
 @ComponentId.ComponentMessage(LoadBalancing.class)
 public class LoadBalancingMessage extends BaseMessage {
+	@Override
+	def <TYPE extends BaseMessage> TYPE getReply() {
+	  TYPE type = super.getReply()
+	  try {
+		Field responseMetadataField = type.class.getDeclaredField("responseMetadata")
+		responseMetadataField.setAccessible( true )
+		((ResponseMetadata) responseMetadataField.get( type )).requestId = getCorrelationId()
+	  } catch ( Exception e ) {
+	  }
+	  return type
+	}
 }
 public class CreateLoadBalancerResponseType extends LoadBalancingMessage {
   public CreateLoadBalancerResponseType() {  }

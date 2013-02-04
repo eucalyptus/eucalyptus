@@ -474,12 +474,78 @@ public class LoadBalancingService {
     }; 
     Set<String> allowedLBNames = Entities.asTransaction( LoadBalancer.class, lookupLBNames ).apply( requestedNames );
     
+    final Function<String, LoadBalancer> getLoadBalancer = new Function<String, LoadBalancer>(){
+    	@Override
+    	public LoadBalancer apply(final String lbName){
+    		try{
+    			return Entities.uniqueResult(LoadBalancer.named(ownerFullName, lbName));
+    		}catch(NoSuchElementException ex){
+    			return null;
+    		}catch(Exception ex){
+    			LOG.warn("faied to retrieve the loadbalancer-"+lbName, ex);
+    			return null;
+    		}
+    	}
+    };
+    
     final Function<Set<String>, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<Set<String>, Set<LoadBalancerDescription>> () {
     	public Set<LoadBalancerDescription> apply (final Set<String> input){
     		final Set<LoadBalancerDescription> descs = Sets.newHashSet();
     		for (String lbName : input){
     			LoadBalancerDescription desc = new LoadBalancerDescription();
-    			desc.setLoadBalancerName(lbName);
+    			final LoadBalancer lb = Entities.asTransaction(LoadBalancer.class, getLoadBalancer).apply(lbName);
+    			if(lb==null) // loadbalancer not found
+    				continue;
+    			desc.setLoadBalancerName(lbName); /// loadbalancer name
+    			desc.setCreatedTime(lb.getCreationTimestamp());/// createdtime
+    			desc.setDnsName(lb.getDnsAddress());           /// dns name
+    			                                  /// instances
+    			if(lb.getBackendInstances().size()>0){
+    				desc.setInstances(new Instances());
+    				desc.getInstances().setMember(new ArrayList<Instance>(
+    		    		Collections2.transform(lb.getBackendInstances(), new Function<LoadBalancerBackendInstance, Instance>(){
+    		    			@Override
+    		    			public Instance apply(final LoadBalancerBackendInstance be){
+    		    				Instance instance = new Instance();
+    		    				instance.setInstanceId(be.getInstanceId());
+    		    				return instance;
+    		    			}
+    		    		})));
+    			}
+    			/// availability zones
+    			if(lb.getZones().size()>0){
+    				desc.setAvailabilityZones(new AvailabilityZones());
+    				desc.getAvailabilityZones().setMember(new ArrayList<String>(
+    						Collections2.transform(lb.getZones(), new Function<LoadBalancerZone, String>(){
+    							@Override
+    							public String apply(final LoadBalancerZone zone){
+    								return zone.getName();
+    							}
+    						})));
+    			}
+    			                                  /// listeners
+    			if(lb.getListeners().size()>0){
+    				desc.setListenerDescriptions(new ListenerDescriptions());
+    				desc.getListenerDescriptions().setMember(new ArrayList<ListenerDescription>(
+    						Collections2.transform(lb.getListeners(), new Function<LoadBalancerListener, ListenerDescription>(){
+    							@Override
+    							public ListenerDescription apply(final LoadBalancerListener input){
+    								ListenerDescription desc = new ListenerDescription();
+    								Listener listener = new Listener();
+    								listener.setLoadBalancerPort(input.getLoadbalancerPort());
+    								listener.setInstancePort(input.getInstancePort());
+    								if(input.getInstanceProtocol() != PROTOCOL.NONE)
+    									listener.setInstanceProtocol(input.getInstanceProtocol().name());
+    								listener.setProtocol(input.getProtocol().name());
+    								if(input.getCertificateId()!=null)
+    									listener.setSslCertificateId(input.getCertificateId());
+    								desc.setListener(listener);
+    								return desc;
+    							}
+    						})));
+    			}
+    			                                  /// health check
+    			                                  /// (backend server description)
     			descs.add(desc);
     		}
     		return descs;

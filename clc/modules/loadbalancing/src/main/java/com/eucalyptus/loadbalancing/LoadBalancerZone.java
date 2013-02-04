@@ -79,6 +79,10 @@ public class LoadBalancerZone extends AbstractPersistent {
 		return String.format("%s-zone-%s", this.loadbalancer.getDisplayName(), this.zoneName);
 	}
 	
+	public String getName(){
+		return this.zoneName;
+	}
+	
 	@Override
 	public int hashCode( ) {
 	    final int prime = 31;
@@ -106,5 +110,9 @@ public class LoadBalancerZone extends AbstractPersistent {
 			return false;
 		}
 		return true;
-  }
+    }
+	@Override
+	public String toString(){
+		return this.uniqueName;
+	}
 }
