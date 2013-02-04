@@ -86,7 +86,11 @@
 	      // Display the status of the instance in the main table
               "iDataSort": 12,
               "fnRender": function(oObj) { 
-                 return eucatableDisplayColumnTypeInstanceStatus(oObj.aData.state);
+                 var state = oObj.aData.state;
+                 if (state == undefined) {
+                   state = oObj.aData._state.name;
+                 }
+                 return eucatableDisplayColumnTypeInstanceStatus(state);
 	      },
             },
             { 
@@ -131,7 +135,13 @@
             {
 	      // Hidden column for the status of the instance
               "bVisible": false,
-              "mDataProp":"state"
+              "fnRender": function(oObj) { 
+                 var state = oObj.aData.state;
+                 if (state == undefined) {
+                   state = oObj.aData._state.name;
+                 }
+                 return state;
+               }
             },
             {
 	      // Hidden column for the launch time of the instance
