@@ -130,12 +130,25 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static int configRestartLen = 0;
-static int configNoRestartLen = 0;
-static char *configValuesRestart[256];
-static char *configValuesNoRestart[256];
-static configEntry *configKeysRestart;
-static configEntry *configKeysNoRestart;
+//! @{
+//! @name Manages the configurations parameters that are only picked on application restart
+
+static u32 configRestartLen = 0;       //!< Number of items present in the restart list
+static configEntry *aConfigKeysRestart = NULL;  //!< The key pair list of items where key is the config parameter name and value is the default value
+static char *asConfigValuesRestart[256] = { NULL }; //!< The list of modified values for each items in the list
+
+//! @}
+
+//! @{
+//! @name Manages the configurations parameters that are only picked at all time during the application lifecycle
+
+static u32 configNoRestartLen = 0;     //!< Number of items present in the no-restart list
+static configEntry *aConfigKeysNoRestart = NULL;    //!< The key pair list of items where key is the config parameter name and value is the default value
+static char *asConfigValuesNoRestart[256] = { NULL };   //!< The list of modified values for each items in the list
+
+//! @}
+
+//! Hold the timestamp of when we last processed the config files
 static time_t lastConfigMtime = 0;
 
 /*----------------------------------------------------------------------------*\
@@ -144,12 +157,12 @@ static time_t lastConfigMtime = 0;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[]);
-int isConfigModified(char configFiles[][MAX_PATH], int numFiles);
-char *configFileValue(const char *key);
-boolean configFileValueLong(const char *key, long *val);
-int readConfigFile(char configFiles[][MAX_PATH], int numFiles);
-void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix);
+void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfigKeysNoRestart[]);
+int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles);
+char *configFileValue(const char *sKey);
+boolean configFileValueLong(const char *sKey, long *pVal);
+int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles);
+void configReadLogParams(int *pLogLevel, int *pLogRollNumber, long *pLogMaxSizeBytes, char **psLogPrefix);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -172,34 +185,46 @@ void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log
 //!
 //! Initialize our local configuration key parameters
 //!
-//! @param[in] newConfigKeysRestart
-//! @param[in] newConfigKeysNoRestart
+//! @param[in] aNewConfigKeysRestart the list of configuration keys available on restart
+//! @param[in] aNewConfigKeysNoRestart the list of configuration keys available while the system is up
 //!
-void configInitValues(configEntry newConfigKeysRestart[], configEntry newConfigKeysNoRestart[])
+//! @pre \li Both aNewConfigKeysRestart and aNewConfigKeysNoRestart fields must not be NULL
+//!      \li Both aNewConfigKeysRestart and aNewConfigKeysNoRestart must be arrays
+//!
+//! @post The local aNewConfigKeysRestart and aNewConfigKeysNoRestart fields are set.
+//!
+void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfigKeysNoRestart[])
 {
-    configKeysRestart = newConfigKeysRestart;
-    configKeysNoRestart = newConfigKeysNoRestart;
+    aConfigKeysRestart = aNewConfigKeysRestart;
+    aConfigKeysNoRestart = aNewConfigKeysNoRestart;
 }
 
 //!
 //! Checks wether or not a given list of configuration file has been modified since we
 //! last read them.
 //!
-//! @param[in] configFiles the list of configuration file names.
+//! @param[in] asConfigFiles the list of configuration file names.
 //! @param[in] numFiles the number of file names in the list
 //!
 //! @return 0 if the configuration files were not modified; 1 if the configuration files were
 //!         modified; and -1 if an error occured while poking at the configuration files.
 //!
-int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
+//! @pre \li The configFiles field must not be NULL
+//!      \li The configFiles field must be an array of config files name with a max length of MAX_PATH
+//!      \li The configFiles field must contain numFiles elements
+//!      \li The numFiles field must be equal to 1 at the very least
+//!
+//! @post On success, the lastConfigMtime field is updated
+//!
+int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
 {
-    int i = 0;
+    u32 i = 0;
     time_t configMtime = 0;
     struct stat statbuf = { 0 };
 
     for (i = 0; i < numFiles; i++) {
         // stat the config file, update modification time
-        if (stat(configFiles[i], &statbuf) == 0) {
+        if (stat(asConfigFiles[i], &statbuf) == 0) {
             if ((statbuf.st_mtime > 0) || (statbuf.st_ctime > 0)) {
                 if (statbuf.st_ctime > statbuf.st_mtime) {
                     configMtime = statbuf.st_ctime;
@@ -211,7 +236,7 @@ int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
     }
 
     if (configMtime == 0) {
-        LOGERROR("could not stat config files (%s,%s)\n", configFiles[0], configFiles[1]);
+        LOGERROR("could not stat config files (%s,%s)\n", asConfigFiles[0], asConfigFiles[1]);
         return (-1);
     }
 
@@ -226,41 +251,56 @@ int isConfigModified(char configFiles[][MAX_PATH], int numFiles)
 //!
 //! Retrieves a configuration value based on the given keyname.
 //!
-//! @param[in] key the name of the key for which we're looking for its paired value
+//! @param[in] sKey the name of the key for which we're looking for its paired value
 //!
 //! @return a string copy of the value matching the provided keyname or NULL if the
 //!         key is not found. The caller of this function is responsible to free the
 //!         returned string value.
 //!
-char *configFileValue(const char *key)
+//! @pre \li The key field should not be NULL.
+//!      \li The key field should exist in the configKeysRestart list or the configKeysNoRestart list
+//!
+//! @post a duplicate string the allocated for the element matching the key.
+//!
+//! @note the caller is responsible for freeing the allocated memory
+//!
+char *configFileValue(const char *sKey)
 {
-    int i = 0;
+    u32 i = 0;
 
-    if (key != NULL) {
+    // Make sure our parameters are valid
+    if (sKey != NULL) {
+        // Scan our configKeysRestart list first
         for (i = 0; i < configRestartLen; i++) {
-            if (configKeysRestart[i].key) {
-                if (!strcmp(configKeysRestart[i].key, key)) {
-                    // have a match among values that restart
-                    if (configValuesRestart[i])
-                        return (strdup(configValuesRestart[i]));
+            if (aConfigKeysRestart[i].key) {
+                if (!strcmp(aConfigKeysRestart[i].key, sKey)) {
+                    // Do we have a known value?
+                    if (asConfigValuesRestart[i])
+                        return (strdup(asConfigValuesRestart[i]));
 
-                    if (configKeysRestart[i].defaultValue)
-                        return (strdup(configKeysRestart[i].defaultValue));
+                    // Do we have a default value?
+                    if (aConfigKeysRestart[i].defaultValue)
+                        return (strdup(aConfigKeysRestart[i].defaultValue));
 
+                    // Doh!!
                     return (NULL);
                 }
             }
         }
 
+        // Scan our configKeysNoRestart list second if not found in configKeysRestart
         for (i = 0; i < configNoRestartLen; i++) {
-            if (configKeysNoRestart[i].key) {
-                if (!strcmp(configKeysNoRestart[i].key, key)) {
-                    if (configValuesNoRestart[i])
-                        return (strdup(configValuesNoRestart[i]));
+            if (aConfigKeysNoRestart[i].key) {
+                if (!strcmp(aConfigKeysNoRestart[i].key, sKey)) {
+                    // Do we have a known value?
+                    if (asConfigValuesNoRestart[i])
+                        return (strdup(asConfigValuesNoRestart[i]));
 
-                    if (configKeysNoRestart[i].defaultValue)
-                        return (strdup(configKeysNoRestart[i].defaultValue));
+                    // Do we have a default value?
+                    if (aConfigKeysNoRestart[i].defaultValue)
+                        return (strdup(aConfigKeysNoRestart[i].defaultValue));
 
+                    // Doh!!
                     return (NULL);
                 }
             }
@@ -273,31 +313,36 @@ char *configFileValue(const char *key)
 //!
 //! Retrieves a "long" integer value from the configuration entry.
 //!
-//! @param[in]  key the name of the key for which we're looking for its paired value
-//! @param[out] val the matching long value to be set if 'key' is found
+//! @param[in]  sKey the name of the key for which we're looking for its paired value
+//! @param[out] pVal the matching long value to be set if 'key' is found
 //!
 //! @return TRUE if the key was found and the matching value was a valid long integer and
 //!         the 'val' value is set appropriately, otherwise FALSE is returned.
 //!
-boolean configFileValueLong(const char *key, long *val)
+//! @pre \li The key field should not be NULL
+//!      \li The val field must not be NULL
+//!      \li The key must match a config value in our lists and be of type "long"
+//!
+//! @post The matching value is converted to a long integer and assigned to val and TRUE is returned.
+//!
+boolean configFileValueLong(const char *sKey, long *pVal)
 {
     long v = 0;
-    boolean found = FALSE;
     char *endptr = NULL;
-    char *tmpstr = configFileValue(key);
+    char *tmpstr = configFileValue(sKey);
+    boolean found = FALSE;
 
-    if ((tmpstr != NULL) && (val != NULL)) {
+    if ((tmpstr != NULL) && (pVal != NULL)) {
         errno = 0;
-        v = strtoll(tmpstr, &endptr, 10);
+        v = (long)strtoll(tmpstr, &endptr, 10);
         if ((errno == 0) && ((*endptr) == '\0')) {
             // successful complete conversion
-            *val = v;
+            (*pVal) = v;
             found = TRUE;
         }
-
-        EUCA_FREE(tmpstr);
     }
-
+    // make sure we free out temp string
+    EUCA_FREE(tmpstr);
     return (found);
 }
 
@@ -307,51 +352,55 @@ boolean configFileValueLong(const char *key, long *val)
 //! @param[in] configFiles a list of configuration file path
 //! @param[in] numFiles the number of configuration files in the list
 //!
-//! @return the number of configuration files parsed
+//! @return the number of configuration parameteres that were actually updated.
 //!
-int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
+//! @pre The asConfigFiles list must not be NULL and should contain as least 1 item
+//!
+//! @post our local asConfigValuesRestart and asConfigValuesNoRestart lists are being updated.
+//!
+int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles)
 {
-    int i = 0;
+    u32 i = 0;
     int ret = 0;
     char *old = NULL;
     char *new = NULL;
 
-    for (i = 0; configKeysRestart[i].key; i++) {
-        old = configValuesRestart[i];
-        new = getConfString(configFiles, numFiles, configKeysRestart[i].key);
+    for (i = 0; aConfigKeysRestart[i].key; i++) {
+        old = asConfigValuesRestart[i];
+        new = getConfString(asConfigFiles, numFiles, aConfigKeysRestart[i].key);
         if (configRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
                 LOGWARN("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): clean restart is required before this change "
-                        "will take effect!\n", configKeysRestart[i].key, SP(old), SP(new));
+                        "will take effect!\n", aConfigKeysRestart[i].key, SP(old), SP(new));
             }
 
             EUCA_FREE(new);
         } else {
-            LOGINFO("read (%s=%s, default=%s)\n", configKeysRestart[i].key, SP(new), SP(configKeysRestart[i].defaultValue));
-            EUCA_FREE(configValuesRestart[i]);
-            configValuesRestart[i] = new;
+            LOGINFO("read (%s=%s, default=%s)\n", aConfigKeysRestart[i].key, SP(new), SP(aConfigKeysRestart[i].defaultValue));
+            EUCA_FREE(asConfigValuesRestart[i]);
+            asConfigValuesRestart[i] = new;
             ret++;
         }
     }
     configRestartLen = i;
 
-    for (i = 0; configKeysNoRestart[i].key; i++) {
-        old = configValuesNoRestart[i];
-        new = getConfString(configFiles, numFiles, configKeysNoRestart[i].key);
+    for (i = 0; aConfigKeysNoRestart[i].key; i++) {
+        old = asConfigValuesNoRestart[i];
+        new = getConfString(asConfigFiles, numFiles, aConfigKeysNoRestart[i].key);
 
         if (configNoRestartLen) {
             if ((!old && new) || (old && !new) || ((old && new) && strcmp(old, new))) {
-                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", configKeysNoRestart[i].key, SP(old), SP(new));
+                LOGINFO("configuration file changed (KEY=%s, ORIGVALUE=%s, NEWVALUE=%s): change will take effect immediately.\n", aConfigKeysNoRestart[i].key, SP(old), SP(new));
                 ret++;
-                EUCA_FREE(configValuesNoRestart[i]);
-                configValuesNoRestart[i] = new;
+                EUCA_FREE(asConfigValuesNoRestart[i]);
+                asConfigValuesNoRestart[i] = new;
             } else {
                 EUCA_FREE(new);
             }
         } else {
-            LOGINFO("read (%s=%s, default=%s)\n", configKeysNoRestart[i].key, SP(new), SP(configKeysNoRestart[i].defaultValue));
-            EUCA_FREE(configValuesNoRestart[i]);
-            configValuesNoRestart[i] = new;
+            LOGINFO("read (%s=%s, default=%s)\n", aConfigKeysNoRestart[i].key, SP(new), SP(aConfigKeysNoRestart[i].defaultValue));
+            EUCA_FREE(asConfigValuesNoRestart[i]);
+            asConfigValuesNoRestart[i] = new;
             ret++;
         }
     }
@@ -363,24 +412,37 @@ int readConfigFile(char configFiles[][MAX_PATH], int numFiles)
 //!
 //! Helper for reading log-related params from eucalyptus.conf
 //!
-//! @param[out] log_level_out
-//! @param[out] log_roll_number_out
-//! @param[out] log_max_size_bytes_out
-//! @param[out] log_prefix
+//! @param[out] pLogLevel a pointer to the memory location where to store the log level value
+//! @param[out] pLogRollNumber a pointer to the memory location where to store the log roll number value
+//! @param[out] pLogMaxSizeBytes a pointer to the memory location where to store the maximum log size in bytes value
+//! @param[out] psLogPrefix a pointer to the memory location where to store the log prefix string value
 //!
-void configReadLogParams(int *log_level_out, int *log_roll_number_out, long *log_max_size_bytes_out, char **log_prefix)
+//! @pre The given parameters should not be NULL. This function will check for provided NULL pointers. If any parameter
+//!      is NULL, we simply won't set the value. The parameters we're looking for should also be present in the config
+//!      files.
+//!
+//! @post For any non-NULL provided parameters and assuming that we have the information in the config
+//!       files, the values will be set accordingly.
+//!
+void configReadLogParams(int *pLogLevel, int *pLogRollNumber, long *pLogMaxSizeBytes, char **psLogPrefix)
 {
     long l = 0;
-    char *s = configFileValue("LOGLEVEL");
+    char *sLogLevel = configFileValue("LOGLEVEL");
 
-    assert(s != NULL);                 // configFileValue should return default
+    sLogLevel = configFileValue("LOGLEVEL");
+    assert(sLogLevel != NULL);
 
-    *log_level_out = log_level_int(s);
+    if (pLogLevel)
+        (*pLogLevel) = log_level_int(sLogLevel);
 
-    configFileValueLong("LOGROLLNUMBER", &l);
-    *log_roll_number_out = ((int)l);
+    if (pLogRollNumber) {
+        configFileValueLong("LOGROLLNUMBER", &l);
+        (*pLogRollNumber) = ((int)l);
+    }
 
-    configFileValueLong("LOGMAXSIZE", log_max_size_bytes_out);
+    if (pLogMaxSizeBytes)
+        configFileValueLong("LOGMAXSIZE", pLogMaxSizeBytes);
 
-    *log_prefix = configFileValue("LOGPREFIX");
+    if (psLogPrefix)
+        (*psLogPrefix) = configFileValue("LOGPREFIX");
 }

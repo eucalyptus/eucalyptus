@@ -266,11 +266,10 @@ ncResource *allocate_resource(const char *sNodeStatus, const char *sIQN, int mem
 void free_resource(ncResource ** ppresource);
 
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
-                      const char *sStateName);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 
-bundleTask *allocate_bundleTask(ncInstance *pInstance) _attribute_wur_;
+bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -449,7 +448,7 @@ void free_metadata(ncMetadata ** ppMeta)
 //! @param[in] sKeyName the SSH key name to use
 //! @param[in] sUserData user data string to pass to the instance
 //! @param[in] sLaunchIndex the instance's launch index
-//! @param[in] sPlatform the instance's platform ty[e
+//! @param[in] sPlatform the instance's platform type
 //! @param[in] expiryTime the instance's expiration time before it reaches running
 //! @param[in] asGroupNames an array list of group name string
 //! @param[in] groupNamesSize the number of group name in the groupNames list
@@ -567,7 +566,7 @@ int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
     bunchOfInstances *pLast = NULL;
 
     // Make sure our paramters are valid
-    if((ppHead == NULL) || (pInstance == NULL))
+    if ((ppHead == NULL) || (pInstance == NULL))
         return (EUCA_INVALID_ERROR);
 
     // Try to allocate memory for our instance list node
@@ -669,7 +668,7 @@ int for_each_instance(bunchOfInstances ** ppHead, void (*pFunction) (bunchOfInst
     bunchOfInstances *pHead = NULL;
 
     // Make sure our parameters aren't NULL
-    if(ppHead && pFunction) {
+    if (ppHead && pFunction) {
         for (pHead = *ppHead; pHead; pHead = pHead->next) {
             pFunction(ppHead, pHead->instance, pParam);
         }
@@ -719,7 +718,7 @@ ncInstance *get_instance(bunchOfInstances ** ppHead)
 
     // advance static variable, wrapping to head if at the end
     if (pCurrent == NULL)
-        pCurrent = ((ppHead == NULL) ? NULL: (*ppHead));
+        pCurrent = ((ppHead == NULL) ? NULL : (*ppHead));
     else
         pCurrent = pCurrent->next;
 
@@ -740,7 +739,7 @@ ncInstance *get_instance(bunchOfInstances ** ppHead)
 //!
 int total_instances(bunchOfInstances ** ppHead)
 {
-    if(ppHead) {
+    if (ppHead) {
         if (*ppHead)
             return ((*ppHead)->count);
     }
@@ -844,7 +843,7 @@ static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId)
     register u32 i = 0;
 
     // Make sure our given parameters aren't NULL
-    if((pInstance != NULL) && (sVolumeId != NULL)) {
+    if ((pInstance != NULL) && (sVolumeId != NULL)) {
         for (i = 0, pVol = pInstance->volumes; i < EUCA_MAX_VOLUMES; i++, pVol++) {
             // look for matches
             if (!strncmp(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE)) {
@@ -873,7 +872,7 @@ static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId)
         return (pAvail);
     }
 
-    return(NULL);
+    return (NULL);
 }
 
 //
@@ -975,7 +974,6 @@ ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId)
     if ((pVol = find_volume(pInstance, sVolumeId)) == NULL) {
         return (NULL);
     }
-
     // Make sure this is the volume we're looking for
     if (strncmp(pVol->volumeId, sVolumeId, CHAR_BUFFER_SIZE)) {
         return (NULL);
@@ -1007,22 +1005,21 @@ ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId)
 //!
 //! @note The caller is responsible for freeing the allocated memory
 //!
-bundleTask *allocate_bundleTask(ncInstance *pInstance)
+bundleTask *allocate_bundleTask(ncInstance * pInstance)
 {
     bundleTask *pBundle = NULL;
 
     // Make sure out given parameter is valid
-    if(pInstance != NULL) {
+    if (pInstance != NULL) {
         if ((pBundle = EUCA_ZALLOC(1, sizeof(bundleTask))) == NULL) {
             LOGERROR("out of memory\n");
             return (NULL);
         }
-
         // initialize our newly allocated structure.
         snprintf(pBundle->instanceId, CHAR_BUFFER_SIZE, "%s", pInstance->instanceId);
         snprintf(pBundle->state, CHAR_BUFFER_SIZE, "%s", pInstance->bundleTaskStateName);
         return (pBundle);
     }
 
-    return(NULL);
+    return (NULL);
 }

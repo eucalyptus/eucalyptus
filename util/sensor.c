@@ -377,11 +377,10 @@ static int getstat_generate(getstat *** pstats)
             for (int j = 1;; j++, str2 = NULL) {    // iterate over tab-separated entries in the line
                 subtoken = strtok_r(str2, "\t", &saveptr2);
                 if (subtoken == NULL) {
-                    if(j == 1)
+                    if (j == 1)
                         free(gs);
                     break;
                 }
-
                 // e.g. line: i-760B43A1      1347407243789   NetworkIn       summation       total   2112765752
                 switch (j) {
                 case 1:{              // first entry is instance ID

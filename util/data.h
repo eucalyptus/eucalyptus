@@ -206,7 +206,7 @@ typedef enum instance_error_codes_t {
 
 //! Bundle task structure
 typedef struct bundleTask_t {
-    char instanceId[CHAR_BUFFER_SIZE]; //!< the instance indentifier for this bundle task
+    char instanceId[CHAR_BUFFER_SIZE]; //!< the instance indentifier string (i-XXXXXXXX) for this bundle task
     char state[CHAR_BUFFER_SIZE];      //!< the state of the bundling task
 } bundleTask;
 
@@ -223,7 +223,7 @@ typedef struct serviceInfoType_t {
     char name[32];                     //!< Service name string field
     char partition[32];                //!< Assigned partition name
     char uris[8][512];                 //!< Service URI list
-    int urisLen;                       //!< Number of service URI in the list
+    int urisLen;                       //!< Number of service URI in the list (a value of -1 indicates an error with the URIS)
 } serviceInfoType;
 
 //! Structure defining the service status
@@ -242,15 +242,15 @@ typedef struct ncMetadata_t {
     serviceInfoType services[16];      //!< List of services available
     serviceInfoType disabledServices[16];   //!< List of disabled services
     serviceInfoType notreadyServices[16];   //!< List of unavailable services
-    int servicesLen;                   //!< Number of available services in the available list
-    int disabledServicesLen;           //!< Number of disabled services in the disabled list
-    int notreadyServicesLen;           //!< Number of unavailable services in the unavailable list
+    int servicesLen;                   //!< Number of available services in the available list (a value of -1 indicates an error with the services)
+    int disabledServicesLen;           //!< Number of disabled services in the disabled list (a value of -1 indicates an error with the services)
+    int notreadyServicesLen;           //!< Number of unavailable services in the not ready list (a value of -1 indicates an error with the services)
 } ncMetadata;
 
 //! Structure defining the virtual boot record
 typedef struct virtualBootRecord_t {
     //! @{
-    //! @name first six fields arrive in requests (RunInstance, {Attach|Detach}Volume)
+    //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long size;                    //!< Size of the boot record in bytes
@@ -344,7 +344,7 @@ typedef struct ncInstance_t {
     int createImagePid;                //!< Image creationg task PID value
     int createImageCanceled;           //!< Boolean indicating if the image creation task has been cancelled
 
-    char keyName[CHAR_BUFFER_SIZE * 4];
+    char keyName[CHAR_BUFFER_SIZE * 4]; //!< Name of the key to use for this instance
     char privateDnsName[CHAR_BUFFER_SIZE];  //!< Private DNS name
     char dnsName[CHAR_BUFFER_SIZE];    //!< DNS name
     int launchTime;                    //!< timestamp of RunInstances request arrival
@@ -374,11 +374,11 @@ typedef struct ncInstance_t {
 
     //! @{
     //! @name passed into NC via runInstances for safekeeping
-    char userData[CHAR_BUFFER_SIZE * 32];
-    char launchIndex[CHAR_BUFFER_SIZE];
-    char platform[CHAR_BUFFER_SIZE];
-    char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE];
-    int groupNamesSize;
+    char userData[CHAR_BUFFER_SIZE * 32];   //!< user data to pass to the instance
+    char launchIndex[CHAR_BUFFER_SIZE]; //!< the launch index for this instance
+    char platform[CHAR_BUFFER_SIZE];   //!< the platform used for this instance (typically 'windows' or 'linux')
+    char groupNames[EUCA_MAX_GROUPS][CHAR_BUFFER_SIZE]; //!< Network groups assigned to this instance.
+    int groupNamesSize;                //!< Number of network groups.
     //! @}
 
     //! @{
@@ -479,14 +479,13 @@ void free_resource(ncResource ** ppresource);
 //! @{
 //! @name Volumes APIs
 boolean is_volume_used(const ncVolume * pVolume);
-ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal,
-                      const char *sStateName);
+ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char *sRemoteDev, const char *sLocalDev, const char *sLocalDevReal, const char *sStateName);
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 //! @}
 
 //! @{
 //! @name Bundling Task APIs
-bundleTask *allocate_bundleTask(ncInstance *pInstance) _attribute_wur_;
+bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
 //! @}
 
 /*----------------------------------------------------------------------------*\
