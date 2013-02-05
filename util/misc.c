@@ -971,7 +971,7 @@ char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
 //! @pre \li The path, name and value fields must not be NULL.
 //!      \li The path field must be a valid path name.
 //!      \li The name field must not be 0 length.
-//!      \li The value field should be set to NULL. If not NULL, it'll be freed.
+//!      \li The value field should be set to NULL or potential memory leak will occur.
 //!
 //! @post On success, the value field is updated.
 //!
