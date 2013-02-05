@@ -294,8 +294,8 @@ static ncVolume *find_volume(ncInstance * pInstance, const char *sVolumeId);
 //!
 //! Initialize a virtual machine structure from another
 //!
-//! @param[out] out a pointer to the resulting virtual machine structure
-//! @param[in]  in a pointer to the virtual machine structure to duplicate
+//! @param[out] pVirtMachineOut a pointer to the resulting virtual machine structure
+//! @param[in]  pVirtMachingIn a pointer to the virtual machine structure to duplicate
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
@@ -410,7 +410,7 @@ ncMetadata *allocate_metadata(const char *sCorrelationId, const char *sUserId)
 //!
 //! Frees an allocated metadata structure.
 //!
-//! @param[in,out] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in,out] ppMeta a pointer to the node controller (NC) metadata structure
 //!
 //! @see allocate_metadata()
 //!
@@ -758,7 +758,7 @@ int total_instances(bunchOfInstances ** ppHead)
 //! @param[in] diskSizeAvailable the current amount of disk space available on this node
 //! @param[in] numberOfCoresMax the maximum number of cores available on this node
 //! @param[in] numberOfCoresAvailable the current number of cores available on this node
-//! @param[in] publicSubnets the available public subnet for this node
+//! @param[in] sPublicSubnets the available public subnet for this node
 //!
 //! @return a pointer to the newly allocated resource structure or NULL if any error occured.
 //!

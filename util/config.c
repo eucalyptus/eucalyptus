@@ -349,7 +349,7 @@ boolean configFileValueLong(const char *sKey, long *pVal)
 //!
 //! Reads a list of configuration files and fill in our configuration holders
 //!
-//! @param[in] configFiles a list of configuration file path
+//! @param[in] asConfigFiles a list of configuration file path
 //! @param[in] numFiles the number of configuration files in the list
 //!
 //! @return the number of configuration parameteres that were actually updated.

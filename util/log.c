@@ -707,7 +707,7 @@ int logprintfl(const char *func, const char *file, int line, log_level_e level, 
 {
     int offset = 0;
     boolean custom_spec = FALSE;
-    char buf[LOGLINEBUF] = { 0 };
+    char buf[LOGLINEBUF] = "";
     const char *prefix_spec = NULL;
 
     // return if level is invalid or below the threshold
