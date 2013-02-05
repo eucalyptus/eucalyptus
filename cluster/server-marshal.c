@@ -2000,12 +2000,6 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     adb_migrateInstancesResponseType_set_userId(mirt, env, ccMeta.userId);
 
     ret = adb_MigrateInstancesResponse_create(env);
-    if ( ret == NULL ) {
-    	LOGERROR("adb_MigrateInstancesResponse_create LIES!");
-    }
-    if ( mirt == NULL ) {
-    	LOGERROR("adb_MigrateInstancesResponse_create LIES!");
-    }
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
     return (ret);

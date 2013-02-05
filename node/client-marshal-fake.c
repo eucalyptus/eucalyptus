@@ -940,7 +940,7 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
 //!
 //! @return Always returns EUCA_OK
 //!
-int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
+int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     return (EUCA_OK);
 }

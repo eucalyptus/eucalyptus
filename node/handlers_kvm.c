@@ -171,7 +171,7 @@ static int doInitialize(struct nc_state_t *nc);
 static void *rebooting_thread(void *arg);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials);
+static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -619,9 +619,13 @@ static void *migrating_thread(void *arg)
 //!                                                                                                                                                                              
 //! TODO: doxygen
 //!
-static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance_req, char * sourceNodeName, char * destNodeName, char * credentials)
+static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     int ret = EUCA_OK;
+    assert (instancesLen>0);
+    ncInstance * instance_req = instances[0];
+    char * sourceNodeName = instance_req->migration_src;
+    char * destNodeName = instance_req->migration_dst;
 
     if (!strcmp(pMeta->nodeName, sourceNodeName)) {
 

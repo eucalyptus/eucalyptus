@@ -280,7 +280,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char * stateName);
-int doMigrateInstance(ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials);
+int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 ncInstance *find_global_instance(const char *instanceId);
 
 /*----------------------------------------------------------------------------*\
@@ -2843,20 +2843,22 @@ int doModifyNode(ncMetadata * pMeta, char * stateName)
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! TODO: doxygen
 
-int doMigrateInstance(ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
+int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
    int ret = EUCA_OK;
 
     if (init())
         return (EUCA_ERROR);
 
-    LOGDEBUG("invoked (instId=%s sourceNodeName=%s destNodeName=%s credentials=%s)\n",
-               instance->instanceId, sourceNodeName, destNodeName, (credentials==NULL)?("unavailable"):("present"));
+    LOGDEBUG("invoked (action=%s instance[0].{id=%s src=%s dst=%s) creds=%s\n",
+             action, 
+             instances[0]->instanceId, instances[0]->migration_src, instances[0]->migration_dst,
+             (credentials==NULL)?("unavailable"):("present"));
     
     if (nc_state.H->doMigrateInstance) {
-        ret = nc_state.H->doMigrateInstance(&nc_state, pMeta, instance, sourceNodeName, destNodeName, credentials);
+        ret = nc_state.H->doMigrateInstance(&nc_state, pMeta, instances, instancesLen, action, credentials);
     } else {
-        ret = nc_state.D->doMigrateInstance(&nc_state, pMeta, instance, sourceNodeName, destNodeName, credentials);
+        ret = nc_state.D->doMigrateInstance(&nc_state, pMeta, instances, instancesLen, action, credentials);
     }
 
     return ret;
