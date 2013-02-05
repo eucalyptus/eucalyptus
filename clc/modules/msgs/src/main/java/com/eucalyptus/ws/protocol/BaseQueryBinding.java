@@ -66,24 +66,30 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import edu.emory.mathcs.backport.java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
@@ -130,13 +136,13 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     this.possibleParams = Arrays.asList( operationParam.getDeclaringClass( ).getEnumConstants( ) );
   }
   
-  private final String extractOperationName( final MappingHttpRequest httpRequest ) {
+  private String extractOperationName( final MappingHttpRequest httpRequest ) {
     if ( httpRequest.getParameters( ).containsKey( this.operationParam.toString( ) ) ) {
       return httpRequest.getParameters( ).get( this.operationParam.toString( ) );
     } else {
       for ( final T param : this.altOperationParams ) {
         if ( httpRequest.getParameters( ).containsKey( param.toString( ) ) ) {
-          return httpRequest.getParameters( ).get( this.operationParam.toString( ) );
+          return httpRequest.getParameters( ).get( param.toString( ) );
         }
       }
     }
@@ -153,30 +159,18 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       httpRequest.getParameters( ).remove( op.name( ) );
     final Map<String, String> params = httpRequest.getParameters( );
     
-    BaseMessage eucaMsg = null;
-    Map<String, String> fieldMap = null;
-    Class<?> targetType = null;
-    Binding currentBinding = null;
+    BaseMessage eucaMsg;
+    Map<String, String> fieldMap;
+    Binding currentBinding;
     try {
-      if ( this.getBinding( ).hasElementClass( operationName ) ) {
-        currentBinding = this.getBinding( );
-        targetType = currentBinding.getElementClass( operationName );
-      } else if ( this.getBinding( ).hasElementClass( operationNameType ) ) {
-        currentBinding = this.getBinding( );
-        targetType = currentBinding.getElementClass( operationNameType );
-      } else if ( this.getDefaultBinding( ).hasElementClass( operationName ) ) {
-        currentBinding = this.getDefaultBinding( );
-        targetType = currentBinding.getElementClass( operationName );
-      } else if ( this.getDefaultBinding( ).hasElementClass( operationNameType ) ) {
-        currentBinding = this.getDefaultBinding( );
-        targetType = currentBinding.getElementClass( operationNameType );
-      } else if ( BindingManager.getDefaultBinding( ).hasElementClass( operationName ) ) {
-        currentBinding = BindingManager.getDefaultBinding( );
-        targetType = currentBinding.getElementClass( operationName );
-      } else if ( BindingManager.getDefaultBinding( ).hasElementClass( operationNameType ) ) {
-        currentBinding = BindingManager.getDefaultBinding( );
-        targetType = currentBinding.getElementClass( operationNameType );
-      } else {//this will necessarily fault.
+      currentBinding = getBindingWithElementClass( operationName );
+      Class<?> targetType = currentBinding==null ? null : currentBinding.getElementClass( operationName );
+      if ( currentBinding == null ) {
+        currentBinding = getBindingWithElementClass( operationNameType );
+        targetType = currentBinding==null ? null : currentBinding.getElementClass( operationNameType );
+      }
+      if ( currentBinding == null ) {
+        //this will necessarily fault.
         try {
           targetType = this.getBinding( ).getElementClass( operationName );
         } catch ( final BindingException ex ) {
@@ -204,38 +198,53 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         errMsg.append( f.getKey( ) ).append( " = " ).append( f.getValue( ) ).append( '\n' );
       throw new BindingException( errMsg.toString( ) );
     }
+
+    validateBinding( currentBinding, operationName, params, eucaMsg );
     
+    return eucaMsg;
+  }
+
+  protected Binding getBindingWithElementClass( final String operationName ) throws BindingException {
+    Binding binding = null;
+    if ( this.getBinding( ).hasElementClass( operationName ) ) {
+      binding = this.getBinding( );
+    } else if ( this.getDefaultBinding().hasElementClass( operationName ) ) {
+      binding = this.getDefaultBinding();
+    } else if ( BindingManager.getDefaultBinding().hasElementClass( operationName ) ) {
+      binding = BindingManager.getDefaultBinding();
+    }
+    return binding;
+  }
+
+  protected void validateBinding( final Binding currentBinding, 
+                                  final String operationName,
+                                  final Map<String, String> params, 
+                                  final BaseMessage eucaMsg ) throws BindingException {
     try {
       currentBinding.toOM( eucaMsg, this.getNamespace( ) );
     } catch ( final RuntimeException e ) {
       LOG.error( "Falling back to default (unvalidated) binding for: " + operationName + " with params=" + params );
       LOG.error( "Failed to build a valid message: " + e.getMessage( ), e );
       try {
-        BindingManager.getDefaultBinding( ).toOM( eucaMsg, BindingManager.defaultBindingNamespace( ) );
+        BindingManager.getDefaultBinding().toOM( eucaMsg, BindingManager.defaultBindingNamespace( ) );
       } catch ( final RuntimeException ex ) {
         throw new BindingException( "Default binding failed to build a valid message: " + ex.getMessage( ), ex );
       }
     }
-    return eucaMsg;
   }
-  
+
   private static Field getRecursiveField( Class<?> clazz, final String fieldName ) throws Exception {
-    Field ret = null;
     Exception e = null;
-    while ( !BaseMessage.class.equals( clazz ) || !Object.class.equals( clazz ) ) {
+    while ( !BaseMessage.class.equals( clazz ) && !Object.class.equals( clazz ) ) {
       try {
-        ret = clazz.getDeclaredField( fieldName );
-        return ret;
+        return clazz.getDeclaredField( fieldName );
       } catch ( final Exception e1 ) {
-        e = e1;
-        
+        e = e1;        
       }
       clazz = clazz.getSuperclass( );
     }
-    if ( ret == null ) {
-      throw e;
-    }
-    return ret;
+    if ( e == null ) throw new Exception("Class not supported: " + clazz);
+    throw e;
   }
   
   private List<String> populateObject( final GroovyObject obj, final Map<String, String> paramFieldMap, final Map<String, String> params ) {
@@ -251,14 +260,12 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       }
     }
     
-    Class<?> declaredType = null;
-    
     for ( final Map.Entry<String, String> e : paramFieldMap.entrySet( ) ) {
-      
+      Class<?> declaredType = null;
       try {
         declaredType = getRecursiveField( obj.getClass( ), e.getValue( ) ).getType( );
       } catch ( final Exception e2 ) {
-        e2.printStackTrace( );
+        LOG.debug( "Field not found: " + e.getValue(), e2 );
       }
       
       if ( params.containsKey( e.getKey( ) )
@@ -267,8 +274,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       } else if ( ( declaredType != null )
                   && EucalyptusData.class.isAssignableFrom( declaredType ) ) {
         try {
-          final Map<String, String> fieldMap = this
-                                                   .buildFieldMap( declaredType );
+          final Map<String, String> fieldMap = this.buildFieldMap( declaredType );
           final Object newInstance = declaredType.newInstance( );
           final Map<String, String> subParams = Maps.newHashMap( );
           
@@ -281,8 +287,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           this.populateObject( ( GroovyObject ) newInstance, fieldMap, subParams );
           obj.setProperty( e.getValue( ), newInstance );
         } catch ( final Exception e1 ) {
-          // TODO Auto-generated catch block
-          e1.printStackTrace( );
+          LOG.debug( "Error binding object", e1 );
         }
       } else {
         failedMappings.remove( e.getKey( ) );
@@ -296,26 +301,45 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
   private boolean populateObjectField( final GroovyObject obj, final Map.Entry<String, String> paramFieldPair, final Map<String, String> params ) {
     try {
       final Class<?> declaredType = getRecursiveField( obj.getClass( ), paramFieldPair.getValue( ) ).getType( );
-      if ( declaredType.equals( String.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), params.remove( paramFieldPair.getKey( ) ) );
-      else if ( declaredType.getName( ).equals( "int" ) )
-        obj.setProperty( paramFieldPair.getValue( ), Integer.parseInt( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.equals( Integer.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), new Integer( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.getName( ).equals( "boolean" ) )
-        obj.setProperty( paramFieldPair.getValue( ), Boolean.parseBoolean( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.equals( Boolean.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), new Boolean( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.getName( ).equals( "long" ) )
-        obj.setProperty( paramFieldPair.getValue( ), Long.parseLong( params.remove( paramFieldPair.getKey( ) ) ) );
-      else if ( declaredType.equals( Long.class ) )
-        obj.setProperty( paramFieldPair.getValue( ), new Long( params.remove( paramFieldPair.getKey( ) ) ) );
-      else return false;
-      return true;
+      final Object value = convertToType( new Supplier<String>(){
+        @Override
+        public String get() {
+          return params.remove( paramFieldPair.getKey() );
+        }
+      }, declaredType );
+
+      if ( value != null )
+        obj.setProperty( paramFieldPair.getValue( ), value );
       
+      return !params.containsKey( paramFieldPair.getKey() );
     } catch ( final Exception e1 ) {
       return false;
     }
+  }
+  
+  private Object convertToType( final Supplier<String> value, final Class<?> targetType ) throws Exception {
+    if ( targetType.equals( String.class ) )
+      return value.get();
+    else if ( targetType.getName( ).equals( "int" ) )
+      return Integer.parseInt( value.get() );
+    else if ( targetType.equals( Integer.class ) )
+      return Integer.valueOf( value.get() );
+    else if ( targetType.getName( ).equals( "boolean" ) )
+      return Boolean.parseBoolean( value.get() );
+    else if ( targetType.equals( Boolean.class ) )
+      return Boolean.valueOf( value.get() );
+    else if ( targetType.getName( ).equals( "long" ) )
+      return Long.parseLong( value.get() );
+    else if ( targetType.equals( Long.class ) )
+      return Long.valueOf( value.get() );
+    else if ( targetType.getName( ).equals( "double" ) )
+      return Double.parseDouble( value.get() );
+    else if ( targetType.equals( Double.class ) )
+      return Double.valueOf( value.get() );
+    else if ( targetType.equals( Date.class ) )
+      return Timestamps.parseIso8601Timestamp( value.get() );
+    else 
+      return null;
   }
   
   @SuppressWarnings( "rawtypes" )
@@ -326,19 +350,28 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
       final ArrayList theList = ( ArrayList ) obj.getProperty( paramFieldPair.getValue( ) );
       final Class genericType = ( Class ) ( ( ParameterizedType ) declaredField.getGenericType( ) ).getActualTypeArguments( )[0];
       // :: simple case: FieldName.# :://
-      if ( String.class.equals( genericType ) ) {
+      if ( String.class.equals( genericType ) ||
+           Boolean.class.equals( genericType ) ||
+           Integer.class.equals( genericType ) ||
+           Long.class.equals( genericType ) ||
+           Double.class.equals( genericType ) ||
+           Date.class.equals( genericType ) ) {
         if ( params.containsKey( paramFieldPair.getKey( ) ) ) {
-          theList.add( params.remove( paramFieldPair.getKey( ) ) );
+          theList.add( convertToType( Suppliers.ofInstance(params.remove( paramFieldPair.getKey() )), genericType ) );
         } else {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
-          for ( final String k : keys ) {
-            if ( k.matches( paramFieldPair.getKey( ) + "\\.\\d*" ) ) {
-              theList.add( params.remove( k ) );
+          final Pattern paramPattern = Pattern.compile( Pattern.quote(paramFieldPair.getKey( )) + "\\.([1-9][0-9]*)" );
+          final Map<String,Object> indexToValueMap = new TreeMap<String,Object>( Ordering.natural().onResultOf( FunctionToInteger.INSTANCE ) );
+          for ( final String k : keys ) {    
+            final Matcher matcher = paramPattern.matcher( k );
+            if ( matcher.matches() ) {
+              indexToValueMap.put( matcher.group(1), convertToType( Suppliers.ofInstance(params.remove( k )), genericType )  );
             }
           }
+          theList.addAll( indexToValueMap.values() );
         }
       } else if ( declaredField.isAnnotationPresent( HttpEmbedded.class ) ) {
-        final HttpEmbedded annoteEmbedded = ( HttpEmbedded ) declaredField.getAnnotation( HttpEmbedded.class );
+        final HttpEmbedded annoteEmbedded = declaredField.getAnnotation( HttpEmbedded.class );
         // :: build the parameter map and call populate object recursively :://
         if ( annoteEmbedded.multiple( ) ) {
           final List<String> keys = Lists.newArrayList( params.keySet( ) );
