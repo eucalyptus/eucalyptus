@@ -368,7 +368,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     struct stat statbuf = { 0 };
     struct timeval tv = { 0 };
 
-    EUCA_FREE(*consoleOutput);
+    *consoleOutput = NULL;
 
     // find the instance record
     sem_p(inst_sem);
