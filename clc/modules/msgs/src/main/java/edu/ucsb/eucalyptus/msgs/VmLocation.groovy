@@ -89,7 +89,7 @@ public class EvacuateNodeType extends CloudTopologyMessage {
 }
 public class EvacuateNodeResponseType extends CloudTopologyMessage {}
 public class MigrateInstancesType extends CloudTopologyMessage {
-  String host;
+  String sourceHost;
 }
 public class MigrateInstancesResponseType extends CloudTopologyMessage {}
 /** *******************************************************************************/

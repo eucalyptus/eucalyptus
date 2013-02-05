@@ -151,7 +151,7 @@ public class ClusterEndpoint implements Startable {
           //5. send the operation down
           AsyncRequests.sendSync( c, new MigrateInstancesType( ) {
             {
-              this.setHost( request.getHost( ) );
+		this.setSourceHost( request.getHost( ) );
             }
           } );
           //5.a. when the above returns that means that:

@@ -67,7 +67,7 @@
   </mapping>
   <mapping name="MigrateInstances" class="edu.ucsb.eucalyptus.msgs.MigrateInstancesType" extends="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
-    <value name="nodeName" get-method="getServiceTag" usage="required" />
+    <value name="sourceHost" field="sourceHost" usage="required" />
   </mapping>
   <mapping name="MigrateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.MigrateInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
