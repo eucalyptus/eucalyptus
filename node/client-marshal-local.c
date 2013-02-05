@@ -505,38 +505,3 @@ int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance * insta
 {
     return (EUCA_OK);
 }
-
-//!
-//! Handles the node controller modification request.
-//!
-//! @param[in]  pStub a pointer to the node controller (NC) stub structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  stateName the next state for the node controller
-//! 
-//! @return the result of doModifyNode() (either EUCA_OK or EUCA_ERROR)
-//!
-//! @see doModifyNode()
-//!
-int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
-{
-    return (EUCA_OK);
-}
-
-//!
-//! Handles the instance migration request, with different behavior on source and destination.
-//!
-//! @param[in]  pStub a pointer to the node controller (NC) stub structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  instanceId the ID of the instance to migrate to destination
-//! @param[in]  sourceNodeName IP of the source Node Controller
-//! @param[in]  destNodeName IP of the destination Node Controller
-//! @param[in]  credentials credentials that enable the migration
-//!
-//! @return the result of doMigrateInstance() (either EUCA_OK or EUCA_ERROR)
-//!
-//! @see doMigrateInstance()
-//!
-int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char * instanceId, char * sourceNodeName, char * destNodeName, char * credentials)
-{
-    return (EUCA_OK);
-}

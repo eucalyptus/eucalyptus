@@ -675,7 +675,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         // set up networking
         char *brname = NULL;
         if ((error = vnetStartNetwork(nc->vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != EUCA_OK) {
-            logprintfl(EUCAERROR, "[%s] start network failed for instance, terminating it\n", instance->instanceId);
+            LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
             EUCA_FREE(brname);
             goto failed_dest;
         }
@@ -686,7 +686,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         instance->do_inject_key = nc->do_inject_key;
 
         if ((error = create_instance_backing(instance))) {
-            logprintfl(EUCAERROR, "[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
+            LOGERROR("[%s] failed to prepare images for instance (error=%d)\n", instance->instanceId, error);
             goto failed_dest;
         }
 
@@ -788,7 +788,7 @@ static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInst
         EUCA_FREE(instance);
 
     } else {
-        logprintfl(EUCAERROR, "unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
+        LOGERROR("unexpected migration request (node %s is neither source nor destination)\n", pMeta->nodeName);
         ret = EUCA_ERROR;
     }
 

@@ -204,7 +204,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
     if (!DONOTHING) {
         rc = doAttachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev);
         if (rc) {
-            logprintfl(EUCAERROR, "doAttachVolume() failed\n");
+            LOGERROR("doAttachVolume() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -272,7 +272,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
     if (!DONOTHING) {
         rc = doDetachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev, force);
         if (rc) {
-            logprintfl(EUCAERROR, "doDetachVolume() failed\n");
+            LOGERROR("doDetachVolume() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -338,7 +338,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     if (!DONOTHING) {
         rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
         if (rc) {
-            logprintfl(EUCAERROR, "doBundleInstance() failed\n");
+            LOGERROR("doBundleInstance() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -393,7 +393,7 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
     status = AXIS2_TRUE;
     if (!DONOTHING) {
         if ((rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
-            logprintfl(EUCAERROR, "doBundleRestartInstance() failed\n");
+            LOGERROR("doBundleRestartInstance() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -445,7 +445,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
     if (!DONOTHING) {
         rc = doCancelBundleTask(&ccMeta, instanceId);
         if (rc) {
-            logprintfl(EUCAERROR, "doCancelBundleTask() failed\n");
+            LOGERROR("doCancelBundleTask() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -615,7 +615,7 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
     if (!DONOTHING) {
         rc = doStopNetwork(&ccMeta, accountId, netName, vlan);
         if (rc) {
-            logprintfl(EUCAERROR, "doStopNetwork() failed\n");
+            LOGERROR("doStopNetwork() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -686,7 +686,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     if (!DONOTHING) {
         rc = doDescribeNetworks(&ccMeta, nameserver, clusterControllers, clusterControllersLen, outvnetConfig);
         if (rc) {
-            logprintfl(EUCAERROR, "doDescribeNetworks() failed with %d\n", rc);
+            LOGERROR("doDescribeNetworks() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
@@ -871,7 +871,7 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
     if (!DONOTHING) {
         rc = doAssignAddress(&ccMeta, uuid, src, dst);
         if (rc) {
-            logprintfl(EUCAERROR, "doAssignAddress() failed\n");
+            LOGERROR("doAssignAddress() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -926,7 +926,7 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
     if (!DONOTHING) {
         rc = doUnassignAddress(&ccMeta, src, dst);
         if (rc) {
-            logprintfl(EUCAERROR, "doUnassignAddress() failed\n");
+            LOGERROR("doUnassignAddress() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -999,7 +999,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     done = 0;
     destNameLast = strdup("EUCAFIRST");
     if (!destNameLast) {
-        logprintfl(EUCAERROR, "out of memory\n");
+        LOGERROR("out of memory\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
         return ret;
@@ -1021,7 +1021,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
         EUCA_FREE(destNameLast);
         destNameLast = strdup(destName);
         if (!destNameLast) {
-            logprintfl(EUCAERROR, "out of memory\n");
+            LOGERROR("out of memory\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
             return ret;
@@ -1079,7 +1079,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     EUCA_FREE(destNameLast);
 
     if (done) {
-        logprintfl(EUCAERROR, "doConfigureNetwork() failed with %d\n", rc);
+        LOGERROR("doConfigureNetwork() failed with %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1135,7 +1135,7 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     if (!DONOTHING) {
         rc = doGetConsoleOutput(&ccMeta, instId, &output);
         if (rc) {
-            logprintfl(EUCAERROR, "doGetConsoleOutput() failed with %d\n", rc);
+            LOGERROR("doGetConsoleOutput() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
@@ -1212,7 +1212,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     if (!DONOTHING) {
         rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
         if (rc) {
-            logprintfl(EUCAERROR, "doStartNetwork() failed with %d\n", rc);
+            LOGERROR("doStartNetwork() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -1382,7 +1382,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
 
     EUCA_FREE(instIds);
     if (rc) {
-        logprintfl(EUCAERROR, "doDescribeInstances() failed %d\n", rc);
+        LOGERROR("doDescribeInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1639,7 +1639,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     }
 
     if (rc) {
-        logprintfl(EUCAERROR, "doRunInstances() failed %d\n", rc);
+        LOGERROR("doRunInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1716,7 +1716,7 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
 
     rirt = adb_rebootInstancesResponseType_create(env);
     if (rc) {
-        logprintfl(EUCAERROR, "doRebootInstances() failed %d\n", rc);
+        LOGERROR("doRebootInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1791,7 +1791,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
 
     tirt = adb_terminateInstancesResponseType_create(env);
     if (rc) {
-        logprintfl(EUCAERROR, "doTerminateInstances() failed %d\n", rc);
+        LOGERROR("doTerminateInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1857,7 +1857,7 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
 
     cirt = adb_createImageResponseType_create(env);
     if (rc) {
-        logprintfl(EUCAERROR, "doCreateImage() failed %d\n", rc);
+        LOGERROR("doCreateImage() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1929,7 +1929,7 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
     if (!DONOTHING) {
         rc = doModifyNode(&ccMeta, nodeName, stateName);
         if (rc) {
-            logprintfl(EUCAERROR, "doModifyNode() failed\n");
+            LOGERROR("doModifyNode() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }

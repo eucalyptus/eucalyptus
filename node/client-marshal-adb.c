@@ -1415,12 +1415,12 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 
     // do it
     if ((output = axis2_stub_op_EucalyptusNC_ncModifyNode (stub, env, input)) == NULL) {
-        logprintfl (EUCAERROR, NULL_ERROR_MSG);
+        LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
         response = adb_ncModifyNodeResponse_get_ncModifyNodeResponse (output, env);
         if ( adb_ncModifyNodeResponseType_get_return(response, env) == AXIS2_FALSE ) {
-            logprintfl (EUCAERROR, "returned an error\n");
+            LOGERROR("returned an error\n");
             status = 1;
         }
         // no output other than success/failure
@@ -1477,12 +1477,12 @@ int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance * instan
 
     // do it
     if ((output = axis2_stub_op_EucalyptusNC_ncMigrateInstance (stub, env, input)) == NULL) {
-        logprintfl (EUCAERROR, NULL_ERROR_MSG);
+        LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
         response = adb_ncMigrateInstanceResponse_get_ncMigrateInstanceResponse (output, env);
         if ( adb_ncMigrateInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
-            logprintfl (EUCAERROR, "returned an error\n");
+            LOGERROR("returned an error\n");
             status = 1;
         }
         // no output other than success/failure
