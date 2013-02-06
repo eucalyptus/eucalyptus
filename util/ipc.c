@@ -413,7 +413,6 @@ int sem_prolaag(sem * pSem, boolean doLog)
     return (-1);
 }
 
-//
 //!
 //! The semaphore increment (aka lock acquisition) function used throughout.
 //!
