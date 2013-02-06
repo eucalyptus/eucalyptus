@@ -99,12 +99,16 @@ public class PolicySpec {
   public static final String VENDOR_EC2 = "ec2";
   public static final String VENDOR_S3 = "s3";
   public static final String VENDOR_STS = "sts";
-
+  public static final String VENDOR_AUTOSCALING = "autoscaling";
+  public static final String VENDOR_CLOUDWATCH = "cloudwatch";
+  
   public static final Set<String> VENDORS = ImmutableSet.of(
     VENDOR_IAM,
     VENDOR_EC2,
     VENDOR_S3,
-    VENDOR_STS
+    VENDOR_STS,
+    VENDOR_AUTOSCALING,
+    VENDOR_CLOUDWATCH
   );
 
   public static final String ALL_ACTION = "*";
@@ -397,16 +401,90 @@ public class PolicySpec {
       .add( STS_GET_SESSION_TOKEN )
       .build();
 
+  // Auto Scaling actions, based on API Reference (API Version 2011-01-01)
+  public static final String AUTOSCALING_CREATEAUTOSCALINGGROUP = "createautoscalinggroup";
+  public static final String AUTOSCALING_CREATELAUNCHCONFIGURATION = "createlaunchconfiguration";
+  public static final String AUTOSCALING_CREATEORUPDATETAGS = "createorupdatetags";
+  public static final String AUTOSCALING_DELETEAUTOSCALINGGROUP = "deleteautoscalinggroup";
+  public static final String AUTOSCALING_DELETELAUNCHCONFIGURATION = "deletelaunchconfiguration";
+  public static final String AUTOSCALING_DELETENOTIFICATIONCONFIGURATION = "deletenotificationconfiguration";
+  public static final String AUTOSCALING_DELETEPOLICY = "deletepolicy";
+  public static final String AUTOSCALING_DELETESCHEDULEDACTION = "deletescheduledaction";
+  public static final String AUTOSCALING_DELETETAGS = "deletetags";
+  public static final String AUTOSCALING_DESCRIBEADJUSTMENTTYPES = "describeadjustmenttypes";
+  public static final String AUTOSCALING_DESCRIBEAUTOSCALINGGROUPS = "describeautoscalinggroups";
+  public static final String AUTOSCALING_DESCRIBEAUTOSCALINGINSTANCES = "describeautoscalinginstances";
+  public static final String AUTOSCALING_DESCRIBEAUTOSCALINGNOTIFICATIONTYPES = "describeautoscalingnotificationtypes";
+  public static final String AUTOSCALING_DESCRIBELAUNCHCONFIGURATIONS = "describelaunchconfigurations";
+  public static final String AUTOSCALING_DESCRIBEMETRICCOLLECTIONTYPES = "describemetriccollectiontypes";
+  public static final String AUTOSCALING_DESCRIBENOTIFICATIONCONFIGURATIONS = "describenotificationconfigurations";
+  public static final String AUTOSCALING_DESCRIBEPOLICIES = "describepolicies";
+  public static final String AUTOSCALING_DESCRIBESCALINGACTIVITIES = "describescalingactivities";
+  public static final String AUTOSCALING_DESCRIBESCALINGPROCESSTYPES = "describescalingprocesstypes";
+  public static final String AUTOSCALING_DESCRIBESCHEDULEDACTIONS = "describescheduledactions";
+  public static final String AUTOSCALING_DESCRIBETAGS = "describetags";
+  public static final String AUTOSCALING_DESCRIBETERMINATIONPOLICYTYPES = "describeterminationpolicytypes";
+  public static final String AUTOSCALING_DISABLEMETRICSCOLLECTION = "disablemetricscollection";
+  public static final String AUTOSCALING_ENABLEMETRICSCOLLECTION = "enablemetricscollection";
+  public static final String AUTOSCALING_EXECUTEPOLICY = "executepolicy";
+  public static final String AUTOSCALING_PUTNOTIFICATIONCONFIGURATION = "putnotificationconfiguration";
+  public static final String AUTOSCALING_PUTSCALINGPOLICY = "putscalingpolicy";
+  public static final String AUTOSCALING_PUTSCHEDULEDUPDATEGROUPACTION = "putscheduledupdategroupaction";
+  public static final String AUTOSCALING_RESUMEPROCESSES = "resumeprocesses";
+  public static final String AUTOSCALING_SETDESIREDCAPACITY = "setdesiredcapacity";
+  public static final String AUTOSCALING_SETINSTANCEHEALTH = "setinstancehealth";
+  public static final String AUTOSCALING_SUSPENDPROCESSES = "suspendprocesses";
+  public static final String AUTOSCALING_TERMINATEINSTANCEINAUTOSCALINGGROUP = "terminateinstanceinautoscalinggroup";
+  public static final String AUTOSCALING_UPDATEAUTOSCALINGGROUP = "updateautoscalinggroup";
+
+  public static final Set<String> AUTOSCALING_ACTIONS = new ImmutableSet.Builder<String>()
+      .add( AUTOSCALING_CREATEAUTOSCALINGGROUP )
+      .add( AUTOSCALING_CREATELAUNCHCONFIGURATION )
+      .add( AUTOSCALING_CREATEORUPDATETAGS )
+      .add( AUTOSCALING_DELETEAUTOSCALINGGROUP )
+      .add( AUTOSCALING_DELETELAUNCHCONFIGURATION )
+      .add( AUTOSCALING_DELETENOTIFICATIONCONFIGURATION )
+      .add( AUTOSCALING_DELETEPOLICY )
+      .add( AUTOSCALING_DELETESCHEDULEDACTION )
+      .add( AUTOSCALING_DELETETAGS )
+      .add( AUTOSCALING_DESCRIBEADJUSTMENTTYPES )
+      .add( AUTOSCALING_DESCRIBEAUTOSCALINGGROUPS )
+      .add( AUTOSCALING_DESCRIBEAUTOSCALINGINSTANCES )
+      .add( AUTOSCALING_DESCRIBEAUTOSCALINGNOTIFICATIONTYPES )
+      .add( AUTOSCALING_DESCRIBELAUNCHCONFIGURATIONS )
+      .add( AUTOSCALING_DESCRIBEMETRICCOLLECTIONTYPES )
+      .add( AUTOSCALING_DESCRIBENOTIFICATIONCONFIGURATIONS )
+      .add( AUTOSCALING_DESCRIBEPOLICIES )
+      .add( AUTOSCALING_DESCRIBESCALINGACTIVITIES )
+      .add( AUTOSCALING_DESCRIBESCALINGPROCESSTYPES )
+      .add( AUTOSCALING_DESCRIBESCHEDULEDACTIONS )
+      .add( AUTOSCALING_DESCRIBETAGS )
+      .add( AUTOSCALING_DESCRIBETERMINATIONPOLICYTYPES )
+      .add( AUTOSCALING_DISABLEMETRICSCOLLECTION )
+      .add( AUTOSCALING_ENABLEMETRICSCOLLECTION )
+      .add( AUTOSCALING_EXECUTEPOLICY )
+      .add( AUTOSCALING_PUTNOTIFICATIONCONFIGURATION )
+      .add( AUTOSCALING_PUTSCALINGPOLICY )
+      .add( AUTOSCALING_PUTSCHEDULEDUPDATEGROUPACTION )
+      .add( AUTOSCALING_RESUMEPROCESSES )
+      .add( AUTOSCALING_SETDESIREDCAPACITY )
+      .add( AUTOSCALING_SETINSTANCEHEALTH )
+      .add( AUTOSCALING_SUSPENDPROCESSES )
+      .add( AUTOSCALING_TERMINATEINSTANCEINAUTOSCALINGGROUP )
+      .add( AUTOSCALING_UPDATEAUTOSCALINGGROUP )
+      .build();
+
   // Map vendor to actions
   public static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
   .put( VENDOR_IAM, IAM_ACTIONS )
   .put( VENDOR_EC2, EC2_ACTIONS )
   .put( VENDOR_S3, S3_ACTIONS )
   .put( VENDOR_STS, STS_ACTIONS )
+  .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
   .build();
   
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_AUTOSCALING + "):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";

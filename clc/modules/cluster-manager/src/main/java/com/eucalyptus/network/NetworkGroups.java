@@ -79,6 +79,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -535,7 +536,11 @@ public class NetworkGroups {
       throw new NoSuchMetadataException( "Failed to find security group: " + groupNamePattern + " for " + ownerFullName, ex );
     }
   }
-  
+
+  public static Function<NetworkGroup,String> groupId() {
+    return FilterFunctions.GROUP_ID;
+  }
+
   static void createDefault( final OwnerFullName ownerFullName ) throws MetadataException {
     try {
       try {
@@ -732,9 +737,10 @@ public class NetworkGroups {
   public static class NetworkGroupFilterSupport extends FilterSupport<NetworkGroup> {
     public NetworkGroupFilterSupport() {
       super( builderFor( NetworkGroup.class )
+          .withTagFiltering( NetworkGroupTag.class, "networkGroup" )
           .withStringProperty( "description", FilterFunctions.DESCRIPTION )
-          .withUnsupportedProperty( "group-id" ) //TODO:STEVE:Add when we have security group IDS (also persistent version below)
-          .withStringProperty( "group-name", FilterFunctions.NAME )
+          .withStringProperty( "group-id", FilterFunctions.GROUP_ID )
+          .withStringProperty( "group-name", CloudMetadatas.toDisplayName() )
           .withStringSetProperty( "ip-permission.cidr", FilterSetFunctions.PERMISSION_CIDR )
           .withStringSetProperty( "ip-permission.from-port", FilterSetFunctions.PERMISSION_FROM_PORT )
           .withStringSetProperty( "ip-permission.group-name", FilterSetFunctions.PERMISSION_GROUP )
@@ -744,9 +750,10 @@ public class NetworkGroups {
           .withStringProperty( "owner-id", FilterFunctions.ACCOUNT_ID )
           .withPersistenceAlias( "networkRules", "networkRules" )
           .withPersistenceFilter( "description" )
+          .withPersistenceFilter( "group-id", "groupId" )
           .withPersistenceFilter( "group-name", "displayName" )
           .withPersistenceFilter( "ip-permission.from-port", "networkRules.lowPort", PersistenceFilter.Type.Integer )
-          .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction(NetworkRule.Protocol.class) )
+          .withPersistenceFilter( "ip-permission.protocol", "networkRules.protocol", Enums.valueOfFunction( NetworkRule.Protocol.class ) )
           .withPersistenceFilter( "ip-permission.to-port", "networkRules.highPort", PersistenceFilter.Type.Integer )
           .withPersistenceFilter( "owner-id", "ownerAccountNumber" ) );
     }
@@ -765,12 +772,12 @@ public class NetworkGroups {
         return group.getDescription();
       }
     },
-    NAME {
+    GROUP_ID {
       @Override
       public String apply( final NetworkGroup group ) {
-        return group.getDisplayName();
+        return group.getGroupId();
       }
-    }
+    },
   }
 
   private enum FilterSetFunctions implements Function<NetworkGroup,Set<String>> {
