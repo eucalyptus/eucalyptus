@@ -137,9 +137,12 @@ const char *euca_this_component_name = "test";
 \*----------------------------------------------------------------------------*/
 
 void test_sem_fork(void);
+
 void *thread_a(void *arg);
 void *thread_b(void *arg);
+
 void test_sem_pthreads(void);
+
 int main(int argc, char *argv[]);
 
  /*----------------------------------------------------------------------------*\
