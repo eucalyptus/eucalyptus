@@ -1443,7 +1443,7 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 //!
 //! @see ncMigrateInstance()
 //!
-int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
+int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1466,11 +1466,12 @@ int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance * instan
     }
 
     // set op-specific input fields
-    adb_instanceType_t *instance_adb = adb_instanceType_create(env);
-    copy_instance_to_adb(instance_adb, env, instance);
-    adb_ncMigrateInstanceType_set_instance(request, env, instance_adb);
-    adb_ncMigrateInstanceType_set_sourceNodeName(request, env, sourceNodeName);
-    adb_ncMigrateInstanceType_set_destNodeName(request, env, destNodeName);
+    for (int i=0; i<instancesLen; i++) {
+        adb_instanceType_t *instance_adb = adb_instanceType_create(env);
+        copy_instance_to_adb(instance_adb, env, instances[i]);
+        adb_ncMigrateInstanceType_set_instance(request, env, instance_adb);
+    }
+    adb_ncMigrateInstanceType_set_action(request, env, action);
     if (credentials != NULL)
         adb_ncMigrateInstanceType_set_credentials(request, env, credentials);
     adb_ncMigrateInstance_set_ncMigrateInstance(input, env, request);

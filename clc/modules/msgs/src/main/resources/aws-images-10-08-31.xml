@@ -140,6 +140,11 @@
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
       </collection>
     </structure>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
+      </collection>
+    </structure>
   </mapping>
 
   <mapping name="DescribeImages" class="edu.ucsb.eucalyptus.msgs.DescribeImagesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

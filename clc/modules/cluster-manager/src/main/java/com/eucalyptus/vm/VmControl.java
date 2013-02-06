@@ -73,6 +73,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
@@ -102,6 +103,9 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.tags.Tag;
+import com.eucalyptus.tags.TagSupport;
+import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -146,6 +150,7 @@ import edu.ucsb.eucalyptus.msgs.RebootInstancesType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType;
 import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
@@ -209,7 +214,13 @@ public class VmControl {
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
-      for ( final VmInstance vm : VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible ) ) {
+      final List<VmInstance> instances =
+          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible );
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
+              Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
+
+      for ( final VmInstance vm : instances ) {
         if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
@@ -247,6 +258,9 @@ public class VmControl {
       for ( ReservationInfoType r : reservations.values( ) ) {
         Collection<RunningInstancesItemType> instanceSet = instanceMap.get( r.getReservationId( ) );
         if ( !instanceSet.isEmpty( ) ) {
+          for ( final RunningInstancesItemType instancesItemType : instanceSet ) {
+            Tags.addFromTags( instancesItemType.getTagSet(), ResourceTag.class, tagsMap.get( instancesItemType.getInstanceId() ) );
+          }
           r.getInstancesSet( ).addAll( instanceSet );
           replyReservations.add( r );
         }

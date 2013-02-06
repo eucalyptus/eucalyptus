@@ -329,8 +329,8 @@ static inline void copy_vm_type_from_adb(virtualMachine * params, adb_virtualMac
                 LOGTRACE("resource location: %s\n", params->virtualBootRecord[i].resourceLocation);
                 euca_strncpy(params->virtualBootRecord[i].guestDeviceName, adb_virtualBootRecordType_get_guestDeviceName(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("   guest dev name: %s\n", params->virtualBootRecord[i].guestDeviceName);
-                params->virtualBootRecord[i].size = (long long)adb_virtualBootRecordType_get_size(vbr_type, env);
-                LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].size);
+                params->virtualBootRecord[i].sizeBytes = (long long)adb_virtualBootRecordType_get_size(vbr_type, env);
+                LOGTRACE("             size: %lld\n", params->virtualBootRecord[i].sizeBytes);
                 euca_strncpy(params->virtualBootRecord[i].formatName, adb_virtualBootRecordType_get_format(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
                 LOGTRACE("           format: %s\n", params->virtualBootRecord[i].formatName);
                 euca_strncpy(params->virtualBootRecord[i].id, adb_virtualBootRecordType_get_id(vbr_type, env), SMALL_CHAR_BUFFER_SIZE);
@@ -370,7 +370,7 @@ static inline adb_virtualMachineType_t *copy_vm_type_to_adb(const axutil_env_t *
                     if ((vbr_type = adb_virtualBootRecordType_create(env)) != NULL) {
                         adb_virtualBootRecordType_set_resourceLocation(vbr_type, env, vbr->resourceLocation);
                         adb_virtualBootRecordType_set_guestDeviceName(vbr_type, env, vbr->guestDeviceName);
-                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t)vbr->size / 1024L); //! @TODO remove this when VBR_SIZE_SCALING is removed
+                        adb_virtualBootRecordType_set_size(vbr_type, env, (int64_t)vbr->sizeBytes);
                         adb_virtualBootRecordType_set_format(vbr_type, env, vbr->formatName);
                         adb_virtualBootRecordType_set_id(vbr_type, env, vbr->id);
                         adb_virtualBootRecordType_set_type(vbr_type, env, vbr->typeName);
@@ -836,6 +836,9 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
     adb_instanceType_set_launchTime(instance, env, dt);
     adb_instanceType_set_blkbytes(instance, env, outInst->blkbytes);
     adb_instanceType_set_netbytes(instance, env, outInst->netbytes);
+    adb_instanceType_set_migrationStateName(instance, env, migration_state_names[outInst->migration_state]);
+    adb_instanceType_set_migrationSource(instance, env, outInst->migration_src);
+    adb_instanceType_set_migrationDestination(instance, env, outInst->migration_dst);
 
     // passed into RunInstances for safekeeping by NC
     adb_instanceType_set_userData(instance, env, outInst->userData);
@@ -922,6 +925,9 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);
+    outInst->migration_state = migration_state_from_string(adb_instanceType_get_migrationStateName(instance, env));
+    euca_strncpy(outInst->migration_src, adb_instanceType_get_migrationSource(instance, env), HOSTNAME_SIZE);
+    euca_strncpy(outInst->migration_dst, adb_instanceType_get_migrationDestination(instance, env), HOSTNAME_SIZE);
 
     if ((dt = adb_instanceType_get_launchTime(instance, env)) != NULL) {
         outInst->launchTime = datetime_to_unix(dt, env);

@@ -94,6 +94,7 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
+#define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 
 //! @}
 
@@ -248,7 +249,7 @@ typedef struct virtualBootRecord_t {
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach}Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
-    long long size;                    //!< Size of the boot record in bytes
+    long long sizeBytes;                    //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
     char id[SMALL_CHAR_BUFFER_SIZE];   //!< emi|eki|eri|vol|none
     char typeName[SMALL_CHAR_BUFFER_SIZE];  //!< machine|kernel|ramdisk|ephemeral|ebs
@@ -338,6 +339,10 @@ typedef struct ncInstance_t {
     createImage_progress createImageTaskState;  //!< Image creation task progress state
     int createImagePid;                //!< Image creationg task PID value
     int createImageCanceled;           //!< Boolean indicating if the image creation task has been cancelled
+
+    migration_states migration_state;  //!< Migration state
+    char migration_src[HOSTNAME_SIZE]; //!< Name of the host from which the instance is being or needs to be migrated
+    char migration_dst[HOSTNAME_SIZE]; //!< Name of the host to which the instance is being or needs to be migrated
 
     char keyName[CHAR_BUFFER_SIZE * 4];
     char privateDnsName[CHAR_BUFFER_SIZE];  //!< Private DNS name
@@ -465,6 +470,7 @@ void free_resource(ncResource ** resp);
 boolean is_volume_used(const ncVolume * v);
 ncVolume *save_volume(ncInstance * instance, const char *volumeId, const char *remoteDev, const char *localDev, const char *localDevReal, const char *stateName);
 ncVolume *free_volume(ncInstance * instance, const char *volumeId);
+migration_states migration_state_from_string(const char *migration_state_name);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

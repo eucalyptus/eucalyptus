@@ -1949,3 +1949,57 @@ adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const
 
     return (ret);
 }
+
+//!
+//! Unmarshalls request to modify a node controller, executes, responds.
+//!
+//! @param[in] modifyNode a pointer to the request message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t * migrateInstances, const axutil_env_t * env)
+{
+    adb_MigrateInstancesResponse_t *ret = NULL;
+    adb_migrateInstancesResponseType_t *mirt = NULL;
+    adb_migrateInstancesType_t *mit = NULL;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256] = { 0 };
+    char *nodeName = NULL;
+    ncMetadata ccMeta = { 0 };
+
+    mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
+
+    EUCA_MESSAGE_UNMARSHAL(migrateInstancesType, mit, (&ccMeta));
+
+    nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
+
+    status = AXIS2_TRUE;
+    if (!DONOTHING) {
+        rc = doMigrateInstances(&ccMeta, nodeName);
+        if (rc) {
+            LOGERROR("doMigrateInstances() failed\n");
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+        }
+    }
+
+    mirt = adb_migrateInstancesResponseType_create(env);
+    adb_migrateInstancesResponseType_set_return(mirt, env, status);
+    if (status == AXIS2_FALSE) {
+        adb_migrateInstancesResponseType_set_statusMessage(mirt, env, statusMessage);
+    }
+
+    adb_migrateInstancesResponseType_set_correlationId(mirt, env, ccMeta.correlationId);
+    adb_migrateInstancesResponseType_set_userId(mirt, env, ccMeta.userId);
+
+    ret = adb_MigrateInstancesResponse_create(env);
+    adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
+
+    return (ret);
+}

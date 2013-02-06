@@ -1801,3 +1801,42 @@ int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stu
     printf("modifyNode returned status %d\n", adb_modifyNodeResponseType_get_return(snrt, env));
     return (0);
 }
+//!
+//! Marshalls and invokes the node controller modification request
+//!
+//! @param[in] nodeName the IP of the Node Controller to affect
+//! @param[in] stateName the state to transition the NC into
+//! @param[in] env pointer to the AXIS2 environment structure
+//! @param[in] pStub a pointer to the AXIS2 stub structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int cc_migrateInstances(char *nodeName, axutil_env_t * env, axis2_stub_t * pStub)
+{
+    adb_MigrateInstances_t *input = NULL;
+    adb_MigrateInstancesResponse_t *output = NULL;
+    adb_migrateInstancesType_t *sn = NULL;
+    adb_migrateInstancesResponseType_t *snrt = NULL;
+
+    sn = adb_migrateInstancesType_create(env);
+    input = adb_MigrateInstances_create(env);
+
+    EUCA_MESSAGE_MARSHAL(migrateInstancesType, sn, (&mymeta));
+
+    adb_migrateInstancesType_set_sourceHost(sn, env, nodeName);
+
+    adb_MigrateInstances_set_MigrateInstances(input, env, sn);
+
+    output = axis2_stub_op_EucalyptusCC_MigrateInstances(pStub, env, input);
+    if (!output) {
+        printf("ERROR: migrateInstances returned NULL\n");
+        return (1);
+    }
+    snrt = adb_MigrateInstancesResponse_get_MigrateInstancesResponse(output, env);
+    printf("migrateInstances returned status %d\n", adb_migrateInstancesResponseType_get_return(snrt, env));
+    return (0);
+}

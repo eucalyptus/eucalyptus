@@ -72,7 +72,7 @@
   <include path="classpath:cc-services.xml" />
   <include path="classpath:broker-types.xml"/>
   <include path="classpath:cc-sensors.xml"/>
-  <include path="classpath:cc-modifynode.xml"/>
+  <include path="classpath:cc-evacuate.xml"/>
 
   <mapping class="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" abstract="true" extends="edu.ucsb.eucalyptus.msgs.BaseMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />

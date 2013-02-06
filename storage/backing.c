@@ -986,7 +986,17 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
             }
         }
     }
-
+    // there may be iSCSI targets for volumes if instance disappeared or was migrated
+    for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
+        ncVolume *volume = &instance->volumes[i];
+        if (!is_volume_used(volume))
+            continue;
+        
+        if (disconnect_iscsi_target(volume->remoteDev) != 0) {
+            LOGERROR("[%s][%s] failed to disconnet iscsi target\n", instance->instanceId, volume->volumeId);
+        }
+    }
+    
     // see if instance directory is there (sometimes startup fails before it is created)
     set_path(path, sizeof(path), instance, NULL);
     if (check_path(path))

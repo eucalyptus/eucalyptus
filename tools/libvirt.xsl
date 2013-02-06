@@ -169,6 +169,7 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:attribute name="type">
                             <xsl:value-of select="@sourceType"/>
                         </xsl:attribute>
+                        <driver cache="none"/>
                         <source>
                             <xsl:choose>
                                 <xsl:when test="@sourceType = 'file'">
@@ -294,7 +295,7 @@ that describes a Eucalyptus instance to be launched.
 
     <xsl:template match="/volume">
       <disk type="block">
-	<driver>
+	<driver cache="none">
 	  <xsl:choose> 
 	    <xsl:when test="/volume/hypervisor/@type='xen'">
 	      <xsl:attribute name="name">phy</xsl:attribute>

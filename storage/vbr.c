@@ -108,8 +108,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define VBR_SIZE_SCALING                         1024   //!< @TODO remove this adjustment after CLC sends bytes instead of KBs
-
 #define ART_SIG_MAX                              262144 //!< must be big enough for a digest and then some
 
 #define FIND_BLOB_TIMEOUT_USEC                   50000LL    //!< @TODO: use 100 or less to induce rare timeouts
@@ -133,8 +131,8 @@
 #define COMPETITIVE_ITERATIONS                   3
 
 #define TOTAL_VMS                                1 + SERIAL_ITERATIONS + COMPETITIVE_ITERATIONS * COMPETITIVE_PARTICIPANTS
-#define VBR_SIZE                                 ( 2LL * MEGABYTE ) / VBR_SIZE_SCALING
-#define EKI_SIZE                                 ( 1024LL ) / VBR_SIZE_SCALING
+#define VBR_SIZE                                 ( 2LL * MEGABYTE )
+#define EKI_SIZE                                 ( 1024LL )
 #endif /* _UNIT_TEST */
 
 /*----------------------------------------------------------------------------*\
@@ -368,7 +366,7 @@ int vbr_add_ascii(const char *spec_str, virtualMachine * vm_type)
         LOGERROR("invalid 'size' specification in VBR '%s'\n", spec_str);
         goto out_error;
     }
-    vbr->size = atoi(size_spec);
+    vbr->sizeBytes = atoi(size_spec);
 
     if (format_spec == NULL) {
         LOGERROR("invalid 'format' specification in VBR '%s'\n", spec_str);
@@ -601,14 +599,14 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
         return EUCA_ERROR;
     }
     if (vbr->type == NC_RESOURCE_EPHEMERAL || vbr->type == NC_RESOURCE_SWAP) {  //! @TODO should we allow ephemeral/swap that reside remotely?
-        if (vbr->size < 1) {
-            LOGERROR("invalid size '%lld' for ephemeral resource '%s'\n", vbr->size, vbr->resourceLocation);
+        if (vbr->sizeBytes < 1) {
+            LOGERROR("invalid size '%lld' bytes for ephemeral resource '%s'\n", vbr->sizeBytes, vbr->resourceLocation);
             return EUCA_ERROR;
         }
     } else {
-        //            if (vbr->size!=1 || vbr->format!=NC_FORMAT_NONE) { //! @TODO check for size!=-1
+        //            if (vbr->sizeBytes!=1 || vbr->format!=NC_FORMAT_NONE) { //! @TODO check for sizeBytes!=-1
         if (vbr->format != NC_FORMAT_NONE) {
-            LOGERROR("invalid size '%lld' or format '%s' for non-ephemeral resource '%s'\n", vbr->size, vbr->formatName, vbr->resourceLocation);
+            LOGERROR("invalid format '%s' for non-ephemeral resource '%s'\n", vbr->formatName, vbr->resourceLocation);
             return EUCA_ERROR;
         }
     }
@@ -724,7 +722,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
         virtualBootRecord *vbr = &(params->virtualBootRecord[i]);
         if (strlen(vbr->resourceLocation) > 0) {
             LOGDEBUG("[%s]                VBR[%d] type=%s id=%s dev=%s size=%lld format=%s %s\n",
-                     instanceId, i, vbr->typeName, vbr->id, vbr->guestDeviceName, vbr->size, vbr->formatName, vbr->resourceLocation);
+                     instanceId, i, vbr->typeName, vbr->id, vbr->guestDeviceName, vbr->sizeBytes, vbr->formatName, vbr->resourceLocation);
             if (!strcmp(vbr->typeName, "machine"))
                 found_image = 1;
             if (!strcmp(vbr->typeName, "kernel"))
@@ -753,7 +751,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 euca_strncpy(vbr->guestDeviceName, "sda1", sizeof(vbr->guestDeviceName));
                 euca_strncpy(vbr->id, imageId, sizeof(vbr->id));
                 euca_strncpy(vbr->typeName, "machine", sizeof(vbr->typeName));
-                vbr->size = -1;
+                vbr->sizeBytes = -1;
                 euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
@@ -763,7 +761,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 euca_strncpy(vbr->guestDeviceName, "sda2", sizeof(vbr->guestDeviceName));
                 euca_strncpy(vbr->id, "none", sizeof(vbr->id));
                 euca_strncpy(vbr->typeName, "ephemeral0", sizeof(vbr->typeName));
-                vbr->size = 524288;    // we cannot compute it here, so pick something
+                vbr->sizeBytes = 536870912;    // we cannot compute it here, so pick something
                 euca_strncpy(vbr->formatName, "ext2", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
@@ -773,7 +771,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
                 euca_strncpy(vbr->guestDeviceName, "sda3", sizeof(vbr->guestDeviceName));
                 euca_strncpy(vbr->id, "none", sizeof(vbr->id));
                 euca_strncpy(vbr->typeName, "swap", sizeof(vbr->typeName));
-                vbr->size = 524288;
+                vbr->sizeBytes = 536870912;
                 euca_strncpy(vbr->formatName, "swap", sizeof(vbr->formatName));
                 params->virtualBootRecordLen++;
             }
@@ -794,7 +792,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
             euca_strncpy(vbr->guestDeviceName, "none", sizeof(vbr->guestDeviceName));
             euca_strncpy(vbr->id, kernelId, sizeof(vbr->id));
             euca_strncpy(vbr->typeName, "kernel", sizeof(vbr->typeName));
-            vbr->size = -1;
+            vbr->sizeBytes = -1;
             euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
             params->virtualBootRecordLen++;
         }
@@ -814,7 +812,7 @@ int vbr_legacy(const char *instanceId, virtualMachine * params, char *imageId, c
             euca_strncpy(vbr->guestDeviceName, "none", sizeof(vbr->guestDeviceName));
             euca_strncpy(vbr->id, ramdiskId, sizeof(vbr->id));
             euca_strncpy(vbr->typeName, "ramdisk", sizeof(vbr->typeName));
-            vbr->size = -1;
+            vbr->sizeBytes = -1;
             euca_strncpy(vbr->formatName, "none", sizeof(vbr->formatName));
             params->virtualBootRecordLen++;
         }
@@ -850,7 +848,7 @@ static void update_vbr_with_backing_info(artifact * a)
         euca_strncpy(vbr->backingPath, blockblob_get_file(a->bb), sizeof(vbr->backingPath));
         vbr->backingType = SOURCE_TYPE_FILE;
     }
-    vbr->size = a->bb->size_bytes;
+    vbr->sizeBytes = a->bb->size_bytes;
 }
 
 //!
@@ -1724,7 +1722,7 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
             long long bb_size_bytes = euca_strtoll(blob_sig, "<size>", "</size>");  // pull size from the digest
             if (bb_size_bytes < 1)
                 goto u_out;
-            vbr->size = bb_size_bytes; // record size in VBR now that we know it
+            vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
 
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
@@ -1751,7 +1749,7 @@ u_out:
                 LOGERROR("[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
                 goto w_out;
             }
-            vbr->size = bb_size_bytes; // record size in VBR now that we know it
+            vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
 
             // generate ID of the artifact (append -##### hash of sig)
             char art_id[48];
@@ -1779,18 +1777,16 @@ w_out:
         }
 
     case NC_LOCATION_NONE:{
-            assert(vbr->size > 0L);
-
-            vbr->size = vbr->size * VBR_SIZE_SCALING;   //! @TODO remove this adjustment (CLC sends size in KBs)
+            assert(vbr->sizeBytes > 0L);
 
             char art_sig[ART_SIG_MAX]; // signature for this artifact based on its salient characteristics
-            if (snprintf(art_sig, sizeof(art_sig), "id=%s size=%lld format=%s\n\n", vbr->id, vbr->size, vbr->formatName) >= sizeof(art_sig))    // output was truncated
+            if (snprintf(art_sig, sizeof(art_sig), "id=%s size=%lld format=%s\n\n", vbr->id, vbr->sizeBytes, vbr->formatName) >= sizeof(art_sig))    // output was truncated
                 break;
 
             char buf[32];              // first part of artifact ID
             char *art_pref;
             if (strcmp(vbr->id, "none") == 0) {
-                if (snprintf(buf, sizeof(buf), "prt-%05lld%s", vbr->size / 1048576, vbr->formatName) >= sizeof(buf))    // output was truncated
+                if (snprintf(buf, sizeof(buf), "prt-%05lld%s", vbr->sizeBytes / 1048576, vbr->formatName) >= sizeof(buf))    // output was truncated
                     break;
                 art_pref = buf;
             } else {
@@ -1801,7 +1797,7 @@ w_out:
             if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
                 break;
 
-            a = art_alloc(art_id, art_sig, vbr->size, TRUE, must_be_file, FALSE, partition_creator, vbr);
+            a = art_alloc(art_id, art_sig, vbr->sizeBytes, TRUE, must_be_file, FALSE, partition_creator, vbr);
             break;
         }
     default:
@@ -2504,14 +2500,14 @@ static blobstore *create_teststore(int size_blocks, const char *base, const char
 //! @note
 //!
 static void add_vbr(virtualMachine * vm,
-                    long long size,
+                    long long sizeBytes,
                     ncResourceFormatType format,
                     char *formatName,
                     const char *id, ncResourceType type, ncResourceLocationType locationType, int diskNumber, int partitionNumber,
                     libvirtBusType guestDeviceBus, char *preparedResourceLocation)
 {
     virtualBootRecord *vbr = vm->virtualBootRecord + vm->virtualBootRecordLen++;
-    vbr->size = size;
+    vbr->sizeBytes = sizeBytes;
     if (formatName)
         euca_strncpy(vbr->formatName, formatName, sizeof(vbr->formatName));
     if (id)

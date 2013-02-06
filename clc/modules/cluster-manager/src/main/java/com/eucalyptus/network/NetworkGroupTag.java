@@ -104,7 +104,7 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
 
   public static final class NetworkGroupTagSupport extends TagSupport {
     public NetworkGroupTagSupport() {
-      super( NetworkGroupMetadata.class, "sg" );
+      super( NetworkGroup.class, "sg", "groupId", "networkGroup" );
     }
 
     @Override
@@ -115,6 +115,11 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
     @Override
     public Tag example( @Nonnull final CloudMetadata metadata, @Nonnull final OwnerFullName ownerFullName, final String key, final String value ) {
       return NetworkGroupTag.namedWithValue( (NetworkGroup) metadata, ownerFullName, key, value );
+    }
+
+    @Override
+    public Tag example( @Nonnull final OwnerFullName ownerFullName ) {
+      return example( new NetworkGroupTag(), ownerFullName );
     }
 
     @Override

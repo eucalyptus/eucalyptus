@@ -104,7 +104,7 @@ public class VolumeTag extends Tag<VolumeTag> {
   
   public static final class VolumeTagSupport extends TagSupport {
     public VolumeTagSupport() {
-      super( VolumeMetadata.class, "vol" );
+      super( Volume.class, "vol", "displayName", "volume" );
     } 
     
     @Override
@@ -115,6 +115,11 @@ public class VolumeTag extends Tag<VolumeTag> {
     @Override
     public Tag example( @Nonnull final CloudMetadata metadata, @Nonnull final OwnerFullName ownerFullName, final String key, final String value ) {
       return VolumeTag.namedWithValue( (Volume) metadata, ownerFullName, key, value );
+    }
+
+    @Override
+    public Tag example( @Nonnull final OwnerFullName ownerFullName ) {
+      return example( new VolumeTag(), ownerFullName );
     }
 
     @Override

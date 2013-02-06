@@ -129,6 +129,7 @@ struct nc_state_t {
     int save_instance_files;
     char uri[CHAR_BUFFER_SIZE];
     char iqn[CHAR_BUFFER_SIZE];
+    char ip[HOSTNAME_SIZE];
     virConnectPtr conn;
     boolean convert_to_disk;
     boolean do_inject_key;
@@ -209,7 +210,7 @@ struct handlers {
     int (*doDescribeSensors) (struct nc_state_t * nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                               int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
     int (*doModifyNode) (struct nc_state_t * nc, ncMetadata * pMeta, char * stateName);
-    int (*doMigrateInstance) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials);
+    int (*doMigrateInstance) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 };
 
  //! bundling structure
@@ -279,7 +280,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char * stateName);
-int doMigrateInstance(ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials);
+int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
@@ -302,6 +303,8 @@ int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
 int find_and_terminate_instance(struct nc_state_t *nc_state, ncMetadata * pMeta, char *instanceId, int force, ncInstance ** instance_p, char destroy);
 void copy_instances(void);
+int is_migration_dst(const ncInstance * instance);
+int is_migration_src(const ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -210,6 +210,15 @@ const char *createImage_progress_names[] = {
     "cancelled"
 };
 
+//! String value of each migrate-related state enumeration entry
+const char *migration_state_names[] = {
+    "migration-none",
+    "migration-preparing",
+    "migration-ready",
+    "migration-migrating",
+    "migration-cleaning"
+};
+
 //! String value of each error enumeration entry
 const char *euca_error_names[] = {
     "ok",
@@ -318,7 +327,7 @@ int allocate_virtualMachine(virtualMachine * out, const virtualMachine * in)
             strncpy(out_r->guestDeviceName, in_r->guestDeviceName, sizeof(out_r->guestDeviceName));
             strncpy(out_r->id, in_r->id, sizeof(out_r->id));
             strncpy(out_r->typeName, in_r->typeName, sizeof(out_r->typeName));
-            out_r->size = in_r->size;
+            out_r->sizeBytes = in_r->sizeBytes;
             strncpy(out_r->formatName, in_r->formatName, sizeof(out_r->formatName));
         }
 
@@ -852,4 +861,21 @@ ncVolume *free_volume(ncInstance * instance, const char *volumeId)
     }
 
     return (v);
+}
+
+//!
+//! Converts string representation of migration state into enum / int
+//!
+//! @param[in] migration_state_name the name of the state to convert
+//!
+//! @return enum of migration state or -1
+//!
+migration_states migration_state_from_string(const char *migration_state_name)
+{
+    for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
+        if (! strcmp(migration_state_names[i], migration_state_name)) {
+            return i;
+        }
+    }
+    return -1;
 }

@@ -489,6 +489,12 @@ int main(int argc, char **argv)
                 printf("cc_modifyNode() failed: error=%d\n", rc);
                 exit(1);
             }
+        } else if (!strcmp(argv[2], "migrateInstances")) {
+            rc = cc_migrateInstances(argv[3],  env, stub);
+            if (rc != 0) {
+                printf("cc_migrateInstances() failed: error=%d\n", rc);
+                exit(1);
+            }
         } else {
             printf("unrecognized operation '%s'\n", argv[2]);
             exit(1);

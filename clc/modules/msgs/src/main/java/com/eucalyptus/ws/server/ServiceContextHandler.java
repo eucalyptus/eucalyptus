@@ -76,6 +76,7 @@ import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.IdleStateEvent;
 import com.eucalyptus.component.ServiceOperations;
@@ -95,6 +96,7 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.util.RequestQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 @ChannelPipelineCoverage( "one" )
@@ -119,7 +121,7 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
     if ( Logs.isExtrrreeeme( ) ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     BaseMessage reply = BaseMessage.extractMessage( e );
-    if ( reply instanceof BaseMessage ) {
+    if ( reply != null ) {
       MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );
       ctx.sendDownstream( newEvent );
     } else if ( e instanceof ExceptionEvent ) {
@@ -156,19 +158,28 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
       final MappingHttpResponse response = new MappingHttpResponse( request.getProtocolVersion( ) );
       final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
       response.setMessage( reply );
+      setStatus( response, e );
       return newEvent;
-//      Contexts.clear( reqCtx );
     } else {
-      final MappingHttpResponse response = new MappingHttpResponse( HttpVersion.HTTP_1_1 ) {
-        {
-          setMessage( new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), "Received a NULL reply" ) );
-        }
-      };
-      final DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
-      return newEvent;
+      final MappingHttpResponse response = new MappingHttpResponse( HttpVersion.HTTP_1_1 );
+      response.setMessage( new EucalyptusErrorMessageType( this.getClass( ).getSimpleName( ), "Received a NULL reply" ) );
+      setStatus( response, e );
+      return new DownstreamMessageEvent( ctx.getChannel( ), e.getFuture( ), response, null );
     }
   }
   
+  private void setStatus( final MappingHttpResponse response, final ChannelEvent e ) {
+    if ( e instanceof MessageEvent ) {
+      final MessageEvent msge = ( MessageEvent ) e;
+      if ( msge.getMessage( ) instanceof BaseMessageSupplier ) {
+        final HttpResponseStatus status = ((BaseMessageSupplier) msge.getMessage()).getStatus();
+        if ( status != null ) {
+          response.setStatus( status );  
+        }
+      }
+    }
+  }
+
   @Override
   public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
     final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );

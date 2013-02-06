@@ -73,4 +73,14 @@ class UnavailableImageInfo implements BootableImageInfo {
   public Set<String> getProductCodes() {
     return Collections.emptySet();
   }
+
+  @Override
+  public String getRootDeviceName() {
+    return "";
+  }
+
+  @Override
+  public String getRootDeviceType() {
+    return "";
+  }
 }

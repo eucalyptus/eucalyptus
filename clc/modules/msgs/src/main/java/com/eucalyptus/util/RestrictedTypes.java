@@ -73,6 +73,7 @@ import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -235,7 +236,7 @@ public class RestrictedTypes {
       if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
         throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
       } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
-        throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+        throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
       }
     }
     return runAllocator( quantity, allocator, ( Predicate ) Predicates.alwaysTrue( ) );
@@ -277,7 +278,7 @@ public class RestrictedTypes {
           if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
             throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
           } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
-            throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+            throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
           }
         } catch ( AuthException ex ) {
           throw ex;
@@ -313,7 +314,7 @@ public class RestrictedTypes {
         if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
           throw new AuthException( "Not authorized to create: " + type + " by user: " + ctx.getUserFullName( ) );
         } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), amount ) ) {
-          throw new AuthException( "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
+          throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type + " by user: " + ctx.getUserFullName( ) );
         }
       } catch ( AuthException ex ) {
         throw ex;

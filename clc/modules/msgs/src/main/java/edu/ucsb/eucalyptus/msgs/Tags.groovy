@@ -6,6 +6,14 @@ import com.eucalyptus.binding.HttpEmbedded
 public class ResourceTag extends EucalyptusData {
   String key;
   String value;
+
+  public ResourceTag() {
+  }
+
+  public ResourceTag( String key, String value ) {
+    this.key = key;
+    this.value = value;
+  }
 }
 
 public class DeleteResourceTag extends EucalyptusData {

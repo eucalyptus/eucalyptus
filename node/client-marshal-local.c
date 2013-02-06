@@ -501,7 +501,7 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
 //!
 //! @see doMigrateInstance()
 //!
-int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance * instance, char * sourceNodeName, char * destNodeName, char * credentials)
+int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     return (EUCA_OK);
 }
