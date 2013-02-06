@@ -198,7 +198,7 @@ int hexjenkins(char *sBuf, u32 bufSize, const char *sValue);
 int hash_b64enc_string(const char *in, char **out)
 {
     u8 *md5ret = NULL;
-    u8 hash[MD5_DIGEST_LENGTH + 1] = { 0 };  // +1 for NULL termination.
+    u8 hash[MD5_DIGEST_LENGTH + 1] = { 0 }; // +1 for NULL termination.
 
     // Make sure our given parameters are valid
     if (!in || !out) {
@@ -246,10 +246,10 @@ int str2md5str(char *sBuf, u32 bufSize, const char *sValue)
 {
     u32 i = 0;
     char *pBuf = NULL;
-    u8 md5digest[MD5_DIGEST_LENGTH + 1] = { 0 }; // +1 for NULL termination.
+    u8 md5digest[MD5_DIGEST_LENGTH + 1] = { 0 };    // +1 for NULL termination.
 
     // Make sure our parameters are valid
-    if(!sBuf || !sValue)
+    if (!sBuf || !sValue)
         return (EUCA_INVALID_ERROR);
 
     // Make sure we have enough space to write the hash in the given buffer
@@ -322,12 +322,10 @@ char *file2md5str(const char *path)
                     }
                 }
             }
-
             // Don't forget to free mapped memory
             munmap(buf, mystat.st_size);
         }
     }
-
     // Don't forget to close our file
     close(fd);
     return (md5string);

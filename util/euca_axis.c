@@ -276,7 +276,7 @@ axis2_status_t __euca_authenticate(const axutil_env_t * pEnv, axis2_msg_ctx_t * 
     if ((pSoapHeader = axiom_soap_envelope_get_header(pSoapEnvelope, pEnv)) == NULL)
         NO_U_FAIL("SOAP header cannot be found.");
 
-    if ((pSecNode = rampart_get_security_header(pEnv, pMsgCtx, pSoapHeader)) == NULL) // <---- here it is!
+    if ((pSecNode = rampart_get_security_header(pEnv, pMsgCtx, pSoapHeader)) == NULL)   // <---- here it is!
         NO_U_FAIL("No node wsse:Security -- required: ws-security");
 
     // Find the wsse:Reference to the BinarySecurityToken

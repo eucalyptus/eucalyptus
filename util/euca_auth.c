@@ -154,8 +154,8 @@ int euca_init_cert(void);
 
 char *euca_get_cert(u8 options);
 
-char *base64_enc(u8 *in, int size);
-char *base64_dec(u8 *in, int size);
+char *base64_enc(u8 * in, int size);
+char *base64_dec(u8 * in, int size);
 
 char *euca_sign_url(const char *verb, const char *date, const char *url);
 
@@ -269,7 +269,7 @@ char *euca_get_cert(u8 options)
                 if (sCert[got] == '\n')
                     continue;
             } else {
-                if (options & INDENT_CERT) { // indent lines 2 through N with TABs
+                if (options & INDENT_CERT) {    // indent lines 2 through N with TABs
                     if (sCert[got] == '\n')
                         sCert[++got] = '\t';
                 }
@@ -312,18 +312,18 @@ char *euca_get_cert(u8 options)
 //!
 //! @note caller must free the returned string
 //!
-char *base64_enc(u8 *sIn, int size)
+char *base64_enc(u8 * sIn, int size)
 {
     BIO *pBio64 = NULL;
     BIO *pBioMem = NULL;
     char *sEncVal = NULL;
     BUF_MEM *pBuffer = NULL;
 
-    if((sIn != NULL) && (size > 0)) {
+    if ((sIn != NULL) && (size > 0)) {
         if ((pBio64 = BIO_new(BIO_f_base64())) == NULL) {
             LOGERROR("BIO_new(BIO_f_base64()) failed\n");
         } else {
-            BIO_set_flags(pBio64, BIO_FLAGS_BASE64_NO_NL);   // no long-line wrapping
+            BIO_set_flags(pBio64, BIO_FLAGS_BASE64_NO_NL);  // no long-line wrapping
             if ((pBioMem = BIO_new(BIO_s_mem())) == NULL) {
                 LOGERROR("BIO_new(BIO_s_mem()) failed\n");
             } else {
@@ -342,7 +342,7 @@ char *base64_enc(u8 *sIn, int size)
                 }
             }
 
-            BIO_free_all(pBio64);           // frees both bio64 and biomem
+            BIO_free_all(pBio64);      // frees both bio64 and biomem
         }
     }
     return (sEncVal);
@@ -362,7 +362,7 @@ char *base64_enc(u8 *sIn, int size)
 //!
 //! @note caller must free the returned string
 //!
-char *base64_dec(u8 *sIn, int size)
+char *base64_dec(u8 * sIn, int size)
 {
     BIO *pBio64 = NULL;
     BIO *pBioMem = NULL;
@@ -372,7 +372,7 @@ char *base64_dec(u8 *sIn, int size)
         if ((pBio64 = BIO_new(BIO_f_base64())) == NULL) {
             LOGERROR("BIO_new(BIO_f_base64()) failed\n");
         } else {
-            BIO_set_flags(pBio64, BIO_FLAGS_BASE64_NO_NL);   /* no long-line wrapping */
+            BIO_set_flags(pBio64, BIO_FLAGS_BASE64_NO_NL);  /* no long-line wrapping */
 
             if ((pBioMem = BIO_new_mem_buf(sIn, size)) == NULL) {
                 LOGERROR("BIO_new_mem_buf() failed\n");
@@ -443,7 +443,7 @@ char *euca_sign_url(const char *sVerb, const char *sDate, const char *sURL)
             LOGERROR("failed to read private key file %s\n", sPrivKeyFileName);
         } else {
 #if 0
-            RSA_print_fp (stdout, rsa, 0); // (for debugging)
+            RSA_print_fp(stdout, rsa, 0);   // (for debugging)
 #endif /* 0 */
             if ((sSigBuffer = EUCA_ALLOC(RSA_size(pRSA), sizeof(u8))) == NULL) {
                 LOGERROR("out of memory (for RSA key)\n");
@@ -454,7 +454,7 @@ char *euca_sign_url(const char *sVerb, const char *sDate, const char *sURL)
                 snprintf(sInput, BUFSIZE, "%s\n%s\n%s\n", sVerb, sDate, sURL);
                 LOGEXTREME("signing input %s\n", get_string_stats(sInput));
 
-                SHA1(((u8 *)sInput), strlen(sInput), sSHA1);
+                SHA1(((u8 *) sInput), strlen(sInput), sSHA1);
                 if ((ret = RSA_sign(NID_sha1, sSHA1, SHA_DIGEST_LENGTH, sSigBuffer, &siglen, pRSA)) != 1) {
                     LOGERROR("RSA_sign() failed\n");
                 } else {

@@ -127,8 +127,8 @@ int euca_init_cert(void);
 
 char *euca_get_cert(u8 options);
 
-char *base64_enc(u8 *in, int size);
-char *base64_dec(u8 *in, int size);
+char *base64_enc(u8 * in, int size);
+char *base64_dec(u8 * in, int size);
 
 char *euca_sign_url(const char *verb, const char *date, const char *url);
 

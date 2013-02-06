@@ -109,15 +109,15 @@
 
 //! Semaphore structure
 typedef struct sem_struct {
-    int sysv;
-    sem_t *posix;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    int usemutex;
-    int mutwaiters;
-    int mutcount;
-    char *name;
-    int flags;
+    int sysv;                          // reference to the SYS V semaphore
+    sem_t *posix;                      // reference to the posix semaphore information
+    pthread_mutex_t mutex;             // reference to the mutex semaphore
+    pthread_cond_t cond;               // the mutex semaphore consitional information
+    int usemutex;                      // boolean indicating if this is a mutex semaphore
+    int mutwaiters;                    // number of currently mutex waiters
+    int mutcount;                      // the current mutex count
+    char *name;                        // the name of the semaphore
+    u32 flags;                         // the kernel flags for SYS V semaphores
 } sem;
 
 #include "misc.h"                      // MUST be after this structure for boolean inclusion
@@ -134,14 +134,25 @@ typedef struct sem_struct {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! @{
+//! @name Semaphore allocation/initialization/destroy APIs
 sem *sem_alloc(const int val, const char *name);
-sem *sem_realloc(const int val, const char *name, int flags);
-sem *sem_alloc_posix(sem_t * external_lock);
-int sem_prolaag(sem * s, boolean do_log);
-int sem_p(sem * s);
-int sem_verhogen(sem * s, boolean do_log);
-int sem_v(sem * s);
-void sem_free(sem * s);
+sem *sem_realloc(const int val, const char *name, u32 flags);
+sem *sem_alloc_posix(sem_t * pExternalLock);
+void sem_free(sem * pSem);
+//! @}
+
+//! @{
+//! @name Semaphore acquisition APIs
+int sem_prolaag(sem * pSem, boolean doLog);
+int sem_p(sem * pSem);
+//! @}
+
+//! @{
+//! @name Semaphore release APIs
+int sem_verhogen(sem * pSem, boolean doLog);
+int sem_v(sem * pSem);
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
