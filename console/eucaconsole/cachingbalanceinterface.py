@@ -47,73 +47,124 @@ class CachingBalanceInterface(BalanceInterface):
         except ConfigParser.NoOptionError:
             freq = pollfreq
         self.balancers = Cache(freq)
+        try:
+            freq = config.getint('server', 'pollfreq.elb_instances')
+        except ConfigParser.NoOptionError:
+            freq = pollfreq
+        self.instances = Cache(freq)
 
     ##
     # elb methods
     ##
     def create_load_balancer(self, name, zones, listeners, subnets=None,
-                             security_groups=None, scheme='internet-facing'):
+                             security_groups=None, scheme='internet-facing', callback=None):
+        self.balancers.expireCache()
+        params = {'name':name, 'zones':zones, 'listeners':listeners, 'subnets':subnets,
+                  'security_groups':security_groups, 'scheme':scheme}
+        Threads.instance().runThread(self.__create_load_balancer_cb__, (params, callback))
     
-    def delete_load_balancer(self, name):
-
-    def get_all_load_balancers(self, load_balancer_names=None):
-
-    def deregister_instances(self, load_balancer_name, instances):
-
-    def register_instances(self, load_balancer_name, instances):
-
-    def create_load_balancer_listeners(self, name, listeners):
-
-    def delete_load_balancer_listeners(self, name, ports):
-
-    def configure_health_check(self, name, health_check):
-
-    def describe_instance_health(self, load_balancer_name, instances=None):
-
-    
-    def get_metric_statistics(self, period, start_time, end_time, metric_name, namespace, statistics, dimensions=None, unit=None, callback=None):
-        params = {'period':period, 'start_time':start_time, 'end_time':end_time, 'metric_name':metric_name,
-                  'namespace':namespace, 'statistics':statistics, 'dimensions':dimensions, 'unit':unit}
-        Threads.instance().runThread(self.__get_metric_statistics_cb__, (params, callback))
-
-    def __get_metric_statistics_cb__(self, kwargs, callback):
+    def __create_load_balancer_cb__(self, kwargs, callback):
         try:
-            ret = self.bal.get_metric_statistics(kwargs['period'], kwargs['start_time'], kwargs['end_time'],
-                            kwargs['metric_name'], kwargs['namespace'], kwargs['statistics'],
-                            kwargs['dimensions'], kwargs['unit'])
+            ret = self.bal.create_load_balancer(kwargs['name'], kwargs['zones'], kwargs['listeners'],
+                                    kwargs['subnets'], kwargs['security_groups'], kwargs['scheme'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def list_metrics(self, next_token=None, dimensions=None, metric_name=None, namespace=None, callback=None):
-        if self.metrics.isCacheStale():
-            params = {'next_token':next_token, 'dimensions':dimensions, 'metric_name':metric_name, 'namespace':namespace}
-            Threads.instance().runThread(self.__list_metrics_cb__, (params, callback))
+    def delete_load_balancer(self, name, callback=None):
+        self.balancers.expireCache()
+        params = {'name':name}
+        Threads.instance().runThread(self.__delete_load_balancer_cb__, (params, callback))
+
+    def __delete_load_balancer_cb__(self, kwargs, callback):
+        try:
+            ret = self.bal.delete_load_balancer(kwargs['name'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_load_balancers(self, load_balancer_names=None, callback=None):
+        if self.balancers.isCacheStale():
+            params = {'load_balancer_names':load_balancer_names}
+            Threads.instance().runThread(self.__get_all_load_balancers_cb__, (params, callback))
         else:
-            callback(Response(data=self.metrics.values))
+            callback(Response(data=self.balancers.values))
 
-    def __list_metrics_cb__(self, kwargs, callback):
+    def __get_all_load_balancers_cb__(self, kwargs, callback):
         try:
-            self.metrics.values = self.bal.list_metrics(kwargs['next_token'], kwargs['dimensions'],
-                                       kwargs['metric_name'], kwargs['namespace'])
-            Threads.instance().invokeCallback(callback, Response(data=self.metrics.values))
+            self.balancers.values = self.bal.get_all_load_balancers(kwargs['load_balancer_names'])
+            Threads.instance().invokeCallback(callback, Response(data=self.balancers.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
-    def put_metric_data(self, namespace, name, value=None, timestamp=None, unit=None, dimensions=None, statistics=None, callback=None):
-        params = {'namespace':namespace, 'name':name, 'value':value, 'timestamp':timestamp,
-                  'unit':unit, 'dimensions':dimensions, 'statistics':statistics}
-        Threads.instance().runThread(self.__put_metric_data_cb__, (params, callback))
+    def deregister_instances(self, load_balancer_name, instances, callback=None):
+        params = {'load_balancer_name':load_balancer_name, 'instances':instances}
+        Threads.instance().runThread(self.__deregister_instances_cb__, (params, callback))
 
-    def __put_metric_data_cb__(self, kwargs, callback):
+    def __deregister_instances_cb__(self, kwargs, callback):
         try:
-            ret = self.bal.put_metric_data(kwargs['namespace'], kwargs['name'], kwargs['value'],
-                                       kwargs['timestamp'], kwargs['unit'], kwargs['dimensions'],
-                                       kwargs['statistics'])
+            ret = self.bal.deregister_instances(kwargs['load_balancer_name'], kwargs['instances'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
+    def register_instances(self, load_balancer_name, instances, callback=None):
+        params = {'load_balancer_name':load_balancer_name, 'instances':instances}
+        Threads.instance().runThread(self.__register_instances_cb__, (params, callback))
+
+    def __register_instances_cb__(self, kwargs, callback):
+        try:
+            ret = self.bal.register_instances(kwargs['load_balancer_name'], kwargs['instances'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def create_load_balancer_listeners(self, name, listeners, callback=None):
+        params = {'name':name, 'listeners':listeners}
+        Threads.instance().runThread(self.__create_load_balancer_listeners_cb__, (params, callback))
+
+    def __create_load_balancer_listeners_cb__(self, kwargs, callback):
+        try:
+            ret = self.bal.create_load_balancer_listeners(kwargs['name'], kwargs['listeners'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def delete_load_balancer_listeners(self, name, ports, callback=None):
+        params = {'name':name, 'ports':ports}
+        Threads.instance().runThread(self.__delete_load_balancer_listeners_cb__, (params, callback))
+
+    def __delete_load_balancer_listeners_cb__(self, kwargs, callback):
+        try:
+            ret = self.bal.delete_load_balancer_listeners(kwargs['name'], kwargs['ports'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def configure_health_check(self, name, health_check, callback=None):
+        params = {'name':name, 'health_check':health_check}
+        Threads.instance().runThread(self.__configure_health_check_cb__, (params, callback))
+
+    def __configure_health_check_cb__(self, kwargs, callback):
+        try:
+            ret = self.bal.configure_health_check(kwargs['name'], kwargs['health_check'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
+        if self.instances.isCacheStale():
+            params = {'load_balancer_name':load_balancer_name, 'instances':instances}
+            Threads.instance().runThread(self.__describe_instance_health_cb__, (params, callback))
+        else:
+            callback(Response(data=self.instancesalancers.values))
+
+    def __describe_instance_health_cb__(self, kwargs, callback):
+        try:
+            ret = self.bal.describe_instance_health(kwargs['load_balancer_name'], kwargs['instances'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
 
 class Response(object):
     data = None

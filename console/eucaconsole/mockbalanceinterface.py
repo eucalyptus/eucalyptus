@@ -1,4 +1,4 @@
-# Copyright 2013 Eucalyptus Systems, Inc.
+# Copyright 2012 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -23,42 +23,66 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#
-# This class defines an interface that must be extended for either talking
-# to the CLC itself or for a testing mock
-#
-# NOTE: all methods are expected to return boto value objects.
-#
-class BalanceInterface(object):
+import boto
+import copy
+import json
+import os
+import datetime
 
-    ##
-    # elb methods
-    ##
+from operator import itemgetter
+from boto.ec2.image import Image
+from boto.ec2.instance import Instance
+from boto.ec2.keypair import KeyPair
+
+from .botojsonencoder import BotoJsonDecoder
+from .balanceinterface import BalanceInterface
+from .configloader import ConfigLoader
+
+# This class provides an implmentation of the clcinterface using canned json
+# strings. Might be better to represent as object graph so we can modify
+# values in the mock.
+class MockBalanceInterface(BalanceInterface):
+    balancers = None
+    instances = None
+
+    # load saved state to simulate CLC
+    def __init__(self):
+        self.config = ConfigLoader().getParser()
+        if self.config.has_option('server', 'mockpath'):
+            self.mockpath = self.config.get('server', 'mockpath')
+        else:
+            self.mockpath = 'mockdata'
+
+        with open(os.path.join(self.mockpath, 'ELB_Balancers.json')) as f:
+            self.balancers = json.load(f, cls=BotoJsonDecoder)
+        with open(os.path.join(self.mockpath, 'ELB_Instances.json')) as f:
+            self.instances = json.load(f, cls=BotoJsonDecoder)
+
     def create_load_balancer(self, name, zones, listeners, subnets=None,
                              security_groups=None, scheme='internet-facing', callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
     
     def delete_load_balancer(self, name, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
 
     def get_all_load_balancers(self, load_balancer_names=None, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return self.balancers
 
     def deregister_instances(self, load_balancer_name, instances, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
 
     def register_instances(self, load_balancer_name, instances, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
 
     def create_load_balancer_listeners(self, name, listeners, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
 
     def delete_load_balancer_listeners(self, name, ports, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
 
     def configure_health_check(self, name, health_check, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return None
 
     def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
-        raise NotImplementedError("Are you sure you're using the right class?")
+        return self.instances
 

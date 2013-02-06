@@ -141,6 +141,9 @@ class UIProxyClient(object):
     def __make_scale_request__(self, action, params):
         return self.__make_request__(action, params, 'autoscaling')
 
+    def __make_elb_request__(self, action, params):
+        return self.__make_request__(action, params, 'elb')
+
     ##
     # Zone methods
     ##
@@ -671,3 +674,94 @@ class UIProxyClient(object):
         return self.__make_scale_request__('DescribeLaunchConfigurations', params) 
     
     
+    ##
+    # elb methods
+    ##
+    def create_load_balancer(self, name, zones, listeners, subnets=None,
+                             security_groups=None, scheme='internet-facing', callback=None):
+        params = {'LoadBalancerName': name,
+                  'Scheme': scheme}
+        for index, listener in enumerate(listeners):
+            i = index + 1
+            protocol = listener[2].upper()
+            params['Listeners.member.%d.LoadBalancerPort' % i] = listener[0]
+            params['Listeners.member.%d.InstancePort' % i] = listener[1]
+            params['Listeners.member.%d.Protocol' % i] = listener[2]
+            if protocol == 'HTTPS' or protocol == 'SSL':
+                params['Listeners.member.%d.SSLCertificateId' % i] = listener[3]
+        if zones:
+            self.__build_list_params__(params, zones, 'AvailabilityZones.member.%d')
+
+        if subnets:
+            self.__build_list_params__(params, subnets, 'Subnets.member.%d')
+
+        if security_groups:
+            self.__build_list_params__(params, security_groups,
+                                    'SecurityGroups.member.%d')
+
+        return self.__make_elb_request__('CreateLoadBalancer', params) 
+    
+    def delete_load_balancer(self, name, callback=None):
+        params = {'LoadBalancerName': name}
+        return self.__make_elb_request__('DeleteLoadBalancer', params) 
+
+    def get_all_load_balancers(self, load_balancer_names=None, callback=None):
+        params = {}
+        if load_balancer_names:
+            self.build_list_params(params, load_balancer_names,
+                                   'LoadBalancerNames.member.%d')
+        return self.__make_elb_request__('DescribeLoadBalancers', params) 
+
+    def deregister_instances(self, load_balancer_name, instances, callback=None):
+        params = {'LoadBalancerName': load_balancer_name}
+        self.build_list_params(params, instances,
+                               'Instances.member.%d.InstanceId')
+        return self.__make_elb_request__('DeregisterInstancesFromLoadBalancer', params) 
+
+    def register_instances(self, load_balancer_name, instances, callback=None):
+        params = {'LoadBalancerName': load_balancer_name}
+        self.build_list_params(params, instances,
+                               'Instances.member.%d.InstanceId')
+        return self.__make_elb_request__('RegisterInstancesFromLoadBalancer', params) 
+
+    def create_load_balancer_listeners(self, name, listeners, callback=None):
+        params = {'LoadBalancerName': name,
+                  'Scheme': scheme}
+        for index, listener in enumerate(listeners):
+            i = index + 1
+            protocol = listener[2].upper()
+            params['Listeners.member.%d.LoadBalancerPort' % i] = listener[0]
+            params['Listeners.member.%d.InstancePort' % i] = listener[1]
+            params['Listeners.member.%d.Protocol' % i] = listener[2]
+            if protocol == 'HTTPS' or protocol == 'SSL':
+                params['Listeners.member.%d.SSLCertificateId' % i] = listener[3]
+        if zones:
+            self.build_list_params(params, zones, 'AvailabilityZones.member.%d')
+
+        if subnets:
+            self.build_list_params(params, subnets, 'Subnets.member.%d')
+
+        if security_groups:
+            self.build_list_params(params, security_groups,
+                                    'SecurityGroups.member.%d')
+        return self.__make_elb_request__('CreateLoadBalancer', params) 
+    
+    def delete_load_balancer_listeners(self, name, ports, callback=None):
+        params = {'LoadBalancerName': name}
+        return self.__make_elb_request__('DeleteLoadBalancer', params) 
+
+    def configure_health_check(self, name, health_check, callback=None):
+        params = {'LoadBalancerName': name,
+                  'HealthCheck.Timeout': health_check.timeout,
+                  'HealthCheck.Target': health_check.target,
+                  'HealthCheck.Interval': health_check.interval,
+                  'HealthCheck.UnhealthyThreshold': health_check.unhealthy_threshold,
+                  'HealthCheck.HealthyThreshold': health_check.healthy_threshold}
+        return self.__make_elb_request__('ConfigureHealthCheck', params) 
+
+    def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
+        params = {'LoadBalancerName': load_balancer_name}
+        if instances:
+            self.build_list_params(params, instances,
+                                   'Instances.member.%d.InstanceId')
+        return self.__make_elb_request__('DescribeInstanceHealth', params) 

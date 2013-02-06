@@ -49,6 +49,8 @@ from boto.ec2.autoscale.launchconfig import InstanceMonitoring
 from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
 from boto.ec2.elb import ELBConnection
+from boto.ec2.elb.loadbalancer import LoadBalancer
+from boto.ec2.elb.healthcheck import HealthCheck
 # these things came in with boto 2.6
 try:
     from boto.ec2.instance import InstanceState
@@ -218,6 +220,15 @@ class BotoJsonBalanceEncoder(JSONEncoder):
             return obj.__dict__
         elif isinstance(obj, ELBConnection):
             return []
+        elif isinstance(obj, LoadBalancer):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'LoadBalancer'
+            return (values)
+        elif isinstance(obj, HealthCheck):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'HealthCheck'
+            return (values)
+        print obj.__class__.__name__
         return super(BotoJsonBalanceEncoder, self).default(obj)
 
 class BotoJsonScaleEncoder(JSONEncoder):

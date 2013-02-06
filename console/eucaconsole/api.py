@@ -41,24 +41,30 @@ from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.group import AutoScalingGroup
 from boto.ec2.elb.healthcheck import HealthCheck
+from boto.ec2.elb.listener import Listener
 from boto.exception import EC2ResponseError
 from boto.exception import S3ResponseError
 from boto.exception import BotoServerError
 from eucaconsole.threads import Threads
 
 from .botoclcinterface import BotoClcInterface
+from .botobalanceinterface import BotoBalanceInterface
 from .botowalrusinterface import BotoWalrusInterface
 from .botowatchinterface import BotoWatchInterface
 from .botoscaleinterface import BotoScaleInterface
 from .botojsonencoder import BotoJsonEncoder
+from .botojsonencoder import BotoJsonBalanceEncoder
 from .botojsonencoder import BotoJsonWatchEncoder
 from .botojsonencoder import BotoJsonScaleEncoder
 from .cachingclcinterface import CachingClcInterface
+from .cachingbalanceinterface import CachingBalanceInterface
 from .cachingwalrusinterface import CachingWalrusInterface
 from .cachingwatchinterface import CachingWatchInterface
 from .cachingscaleinterface import CachingScaleInterface
 from .mockclcinterface import MockClcInterface
+from .mockbalanceinterface import MockBalanceInterface
 from .mockwatchinterface import MockWatchInterface
+from .mockscaleinterface import MockScaleInterface
 from .response import ClcError
 from .response import Response
 
@@ -258,10 +264,31 @@ class ScaleHandler(BaseAPIHandler):
             logging.exception(ex)
 
 class BalanceHandler(BaseAPIHandler):
-    #json_encoder = BotoJsonBalanceEncoder
+    json_encoder = BotoJsonBalanceEncoder
 
-    def get_listeners(self):
-        pass
+    def get_listener_args(self):
+        ret = []
+        index = 1
+        key_p = 'Listeners.member.%d.%s'
+        done = False
+        while not(done):
+            balancer_port = self.get_argument(key_p % (index, 'LoadBalancerPort'), None)
+            instance_port = self.get_argument(key_p % (index, 'InstancePort'), 0)
+            protocol = self.get_argument(key_p % (index, 'Protocol'), '')
+            upper_proto = protocol.upper()
+            ssl_cert_id = None
+            if upper_proto == 'HTTPS' or upper_proto == 'SSL':
+                ssl_cert_id = self.get_argument(key_p % (index, 'SSLCertificateId'), None)
+
+            if not(balancer_port):
+                done = True
+                break
+            ret.append(Listener(load_balancer_port=balancer_port, instance_port=instance_port,
+                                protocol=protocol, ssl_certificate_id=ssl_cert_id))
+            index += 1
+
+        return ret
+
 
     ##
     # This is the main entry point for API calls for AutoScaling from the browser
@@ -295,7 +322,7 @@ class BalanceHandler(BaseAPIHandler):
 
             if action == 'CreateLoadBalancer':
                 azones = self.get_argument_list('AvailabilityZones.member')
-                listeners = self.get_listeners()
+                listeners = self.get_listener_args()
                 name = self.get_argument('LoadBalancerName')
                 scheme = self.get_argument('Scheme', 'internet-facing')
                 groups = self.get_argument_list('SecurityGroups.member')
@@ -306,7 +333,7 @@ class BalanceHandler(BaseAPIHandler):
                 self.user_session.elb.delete_load_balancer(name, self.callback)
             elif action == 'DescribeLoadBalancers':
                 names = self.get_argument_list('LoadBalancerNames.member')
-                self.user_session.elb.describe_load_balancers(names, self.callback)
+                self.user_session.elb.get_all_load_balancers(names, self.callback)
             elif action == 'DeregisterInstancesFromLoadBalancer':
                 name = self.get_argument('LoadBalancerName')
                 instances = self.get_argument_list('Instances.member')
@@ -317,7 +344,7 @@ class BalanceHandler(BaseAPIHandler):
                 self.user_session.elb.register_instances(name, instances, self.callback)
             elif action == 'CreateLoadBalancerListeners':
                 name = self.get_argument('LoadBalancerName')
-                listeners = self.get_listeners()
+                listeners = self.get_listener_args()
                 self.user_session.elb.create_load_balancer_listeners(name, listeners, self.callback)
             elif action == 'DeleteLoadBalancerListeners':
                 name = self.get_argument('LoadBalancerName')
