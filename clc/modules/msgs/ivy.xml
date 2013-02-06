@@ -1,0 +1,9 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-msgs"/>
+    <publications>
+        <artifact name="eucalyptus-msgs" type="jar" ext="jar"/>
+    </publications>
+    <dependencies>
+    </dependencies>
+</ivy-module>
+
