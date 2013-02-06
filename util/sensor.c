@@ -2045,10 +2045,8 @@ static void clear_srs(sensorResource ** srs, int srsLen)
 //!
 int main(int argc, char **argv)
 {
-    int errors = 0;
-
     ts = time_usec() / 1000;
-    logfile(NULL, EUCATRACE, 4);
+    logfile(NULL, EUCA_LOG_TRACE, 4);
     log_prefix_set("%T %L %t9 %m-24 %F-33 |");
     LOGDEBUG("testing sensor.c with cache of size 2 and MAX_SENSOR_VALUES=%d\n", MAX_SENSOR_VALUES);
 
@@ -2076,9 +2074,10 @@ int main(int argc, char **argv)
         assert(getstat_generate(&stats) == EUCA_OK);
         getstat *gs = getstat_find(stats, NULL);
         if (gs != NULL) {
-            char id[MAX_SENSOR_NAME_LEN];
-            euca_strncpy(id, gs->instanceId, sizeof(id));
-            assert(sensor_refresh_resources(id, "", 1) == EUCA_OK);
+            char id[1][MAX_SENSOR_NAME_LEN] = { "" };
+            char res[1][MAX_SENSOR_NAME_LEN] = { "" };
+            euca_strncpy(id[0], gs->instanceId, sizeof(id[0]));
+            assert(sensor_refresh_resources(id, res, 1) == EUCA_OK);
         }
         if (i % 101 == 0 || i % 102 == 0) {
             LOGDEBUG("getstat_refresh() iteration %d/%d found %d instances\n", i, GETSTAT_ITERS, getstat_ninstances(stats));
@@ -2187,7 +2186,11 @@ int main(int argc, char **argv)
     assert(0 == sensor_get_instance_data(NULL, NULL, 0, srs, srsLen));
     clear_srs(srs, srsLen);            // clear out the array of structs to use it to retrieve data
     assert(0 != sensor_get_instance_data("i-777", NULL, 0, srs, srsLen));
-    assert(0 != sensor_get_instance_data("i-555", "foo", 1, srs, srsLen));
+
+    {
+        char *sensorId = "foo";
+        assert(0 != sensor_get_instance_data("i-555", &sensorId, 1, srs, srsLen));
+    }
     assert(0 == sensor_get_instance_data("i-555", NULL, 0, srs, srsLen));
     assert(0 == sensor_get_instance_data("i-555", NULL, 0, srs, srsLen));   // same
     log_sensor_resources("values read from cache", srs, srsLen);

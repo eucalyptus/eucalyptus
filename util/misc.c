@@ -2649,7 +2649,6 @@ int main(int argc, char **argv)
 {
     int p = 0;
     int ret = 0;
-    int errors = 0;
     char cwd[1024] = { 0 };
     char *s = NULL;
     FILE *fp = NULL;
@@ -2658,7 +2657,11 @@ int main(int argc, char **argv)
     char dev_path[32] = { 0 };
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
 
-    getcwd(cwd, sizeof(cwd));
+    if(getcwd(cwd, sizeof(cwd)) == NULL) {
+        printf("Failed to retrieve the current working directory information.\n");
+        return(1);
+    }
+
     srandom(time(NULL));
 
     printf("testing system_output() in misc.c\n");

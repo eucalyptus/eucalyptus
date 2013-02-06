@@ -77,10 +77,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>                    /* usleep */
+#include <string.h>
 #include <pthread.h>
+
+#include "eucalyptus.h"
 #include "ipc.h"
+#include "euca_string.h"
 #include "misc.h"
 #include "data.h"
+#include <diskutil.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -151,7 +156,9 @@ int main(int argc, char *argv[]);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#ifdef EUCA_DEPRECATED_API
 static void test_volumes(void);
+#endif /* EUCA_DEPRECATED_API */
 
  /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -200,9 +207,11 @@ void test_sem_fork(void)
             {
                 if (i % 16 == 0)
                     printf("\n");
-                write(1, &c, 1);
+                if(write(1, &c, 1) <= 0)
+                    printf("Failed to write to stdout\n");
                 usleep(100);
-                write(1, &c, 1);
+                if(write(1, &c, 1) <= 0)
+                    printf("Failed to write to stdout\n");
             }
             sem_v(s);
         }
@@ -222,9 +231,11 @@ void test_sem_fork(void)
         for (i = 0; i < ITER; i++) {
             sem_p(s);
             {
-                write(1, &c, 1);
+                if(write(1, &c, 1) <= 0)
+                    printf("Failed to write to stdout\n");
                 usleep(100);
-                write(1, &c, 1);
+                if(write(1, &c, 1) <= 0)
+                    printf("Failed to write to stdout\n");
             }
             sem_v(s);
         }
@@ -264,9 +275,11 @@ void *thread_a(void *arg)
         {
             if (i % 16 == 0)
                 printf("\n");
-            write(1, &c, 1);
+            if(write(1, &c, 1) <= 0)
+                printf("Failed to write to stdout\n");
             usleep(100);
-            write(1, &c, 1);
+            if(write(1, &c, 1) <= 0)
+                printf("Failed to write to stdout\n");
         }
         sem_v(s);
     }
@@ -299,9 +312,11 @@ void *thread_b(void *arg)
     for (i = 0; i < ITER; i++) {
         sem_p(s);
         {
-            write(1, &c, 1);
+            if(write(1, &c, 1) <= 0)
+                printf("Failed to write to stdout\n");
             usleep(100);
-            write(1, &c, 1);
+            if(write(1, &c, 1) <= 0)
+                printf("Failed to write to stdout\n");
         }
         sem_v(s);
     }
@@ -328,6 +343,7 @@ void test_sem_pthreads(void)
     SEM_FREE(s);
 }
 
+#ifdef EUCA_DEPRECATED_API
 //!
 //!
 //!
@@ -336,8 +352,8 @@ static void test_volumes(void)
     int i = 0;
     int j = 0;
     int pivot = 0;
-    char id[100] = { 0 };
-    ncInstance inst = { 0 };
+    char id[100] = "";
+    ncInstance inst = { {0} };
     ncVolume *vols[EUCA_MAX_VOLUMES + 1] = { NULL };
     ncVolume *v = NULL;
     ncVolume *v2 = NULL;
@@ -413,6 +429,7 @@ static void test_volumes(void)
         }
     }
 }
+#endif /* EUCA_DEPRECATED_API */
 
 //!
 //! Main entry point of the application
@@ -439,7 +456,9 @@ int main(int argc, char *argv[])
     if (vrun("ls / /etc >/dev/null"))
         EXIT();
 
+#if EUCA_DEPRECATED_API
     test_volumes();
+#endif /* EUCA_DEPRECATED_API */
 
     printf("all tests passed!\n");
     if (argc == 1)
