@@ -1,9 +1,6 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus"
         module="eucalyptus-euare-common"/>
-    <publications>
-        <artifact name="eucalyptus-euare-common" type="jar" ext="jar"/>
-    </publications>
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-msgs" rev="latest.integration"/>
     </dependencies>

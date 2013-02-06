@@ -1,0 +1,7 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-dns"/>
+    <dependencies>
+    	<dependency org="com.eucalyptus" name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
+    </dependencies>
+</ivy-module>
+
