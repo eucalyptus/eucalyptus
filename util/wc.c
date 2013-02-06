@@ -152,6 +152,7 @@ char_map **c_m = NULL;
 
 static wchar_t *find_valn(const wchar_map * vars[], const wchar_t * name, size_t name_len);
 static char *c_find_valn(const char_map * vars[], const char *name, size_t name_len);
+
 static wchar_t *wcappendn(wchar_t * dst, const wchar_t * src, size_t src_limit);
 static char *c_wcappendn(char *dst, const char *src, size_t src_limit);
 
@@ -164,6 +165,7 @@ static char *c_wcappendn(char *dst, const char *src, size_t src_limit);
 wchar_t *varsub(const wchar_t * s, const wchar_map * vars[]);
 wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * val);
 void varmap_free(wchar_map ** map);
+
 char *c_varsub(const char *s, const char_map * vars[]);
 char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val);
 void c_varmap_free(char_map ** map);

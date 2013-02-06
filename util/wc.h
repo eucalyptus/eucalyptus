@@ -129,6 +129,7 @@ typedef struct char_map_struct {
 wchar_t *varsub(const wchar_t * s, const wchar_map * vars[]);
 wchar_map **varmap_alloc(wchar_map ** map, const wchar_t * key, const wchar_t * val);
 void varmap_free(wchar_map ** map);
+
 char *c_varsub(const char *s, const char_map * vars[]);
 char_map **c_varmap_alloc(char_map ** map, const char *key, const char *val);
 void c_varmap_free(char_map ** map);
