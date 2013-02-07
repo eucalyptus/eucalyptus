@@ -2,6 +2,8 @@
     <info organisation="com.eucalyptus" module="eucalyptus-walrus"/>
     <dependencies>
     	<dependency org="com.eucalyptus" name="eucalyptus-troubleshooting" rev="latest.integration"/>
+    	<dependency org="com.eucalyptus" name="eucalyptus-storage-common" rev="latest.integration"/>
+    	<dependency org="com.eucalyptus" name="eucalyptus-cluster-manager" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
