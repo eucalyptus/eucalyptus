@@ -307,9 +307,9 @@
           $td = $('<td>');
           if (resources.hideColumn == j){
             $td.css('display', 'none');
-            $td.append(val);
+            $td.text(val);			// BEFORE XSS: $td.append(val);		NEEDS TO VERIFY	020313 
           } else
-            $td.append($('<span>').attr('title', val).html(addEllipsis(val,maxLimit)));
+            $td.append($('<span>').attr('title', val).text(addEllipsis(val,maxLimit)));
           $tr.append($td);
         });
         $body.append($tr);
@@ -333,6 +333,8 @@
       // insert the additional notes in place of the div id=div_id;
       var $div = this.element.find('#'+div_id);
       if(!$div) return;
+      // XSS Note:: Will directly render HTML code from 'note'
+      // Callers must take care of the encoding of HTML if user-input is used
       $div.html(note);
       this._note_divs.push(div_id);
     },
@@ -425,11 +427,11 @@
     get_validate_value : function(val_name, pattern, msg) {
       var val = this.getValue('#'+val_name);
       if (pattern.test(val)) {
-        this.element.find("#"+val_name+"-error").html("");
+        this.element.find("#"+val_name+"-error").text("");
         return val;
       }
       else {
-        this.element.find("#"+val_name+"-error").html(msg);
+        this.element.find("#"+val_name+"-error").text(msg);
         return null;
       }
     },
@@ -437,7 +439,7 @@
     getValue : function(fieldSelector) {
       var field = this.element.find(fieldSelector);
       if (field) {
-        return asText($.trim(field.val()));
+        return $.trim(field.val());
       } else {
         return undefined;
       }
@@ -465,6 +467,7 @@
       }
     },
 
+    // XSS Note:: 'error' will be displayed as HTML. Callers must encode any user-input if used directly
     showFieldError : function(fieldSelector, error) {
       var $input = this.element.find(fieldSelector);
       $next = $input.next();
@@ -475,6 +478,7 @@
       }
     },
 
+    // XSS Note:: 'error' will be displayed as HTML. Callers must encode any user-input if used directly
     showError : function(error, append){
       if(!append)
         this.$error_div.children().detach();

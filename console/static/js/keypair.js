@@ -64,11 +64,17 @@
             },
             { 
 	      // Display the fingerprint of the keypair in the main table
-	      "mDataProp": "fingerprint", "bSortable": false 
+	      "bSortable": false,
+	      "fnRender": function(oObj) {      
+		return DefaultEncoder().encodeForHTML(oObj.aData.fingerprint);
+	      },
 	    },
             { 
-	      // Create an invisible column for the name of the keypair
-	      "mDataProp": "name", "bVisible": false
+	      // Create an invisible column for the name of the keypair, used for sort
+	      "bVisible": false,
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.name);
+              },	
 	    },
           ],
         },
@@ -169,8 +175,8 @@
         title: keypair_dialog_import_title,
         buttons: { 
         'create': { domid: createButtonId, text: keypair_dialog_import_btn, disabled: true,  click: function() {
-                      var keyName = $.trim(asText($import_dialog.find('#key-name').val()));
-                      var keyContents = $.trim(asText($import_dialog.find('#key-import-contents').val()));
+                      var keyName = $.trim($import_dialog.find('#key-name').val());
+                      var keyContents = $.trim($import_dialog.find('#key-import-contents').val());
                       if (KEY_PATTERN.test(keyName)){
                         thisObj._importKeyPair(keyName, keyContents);
                         $import_dialog.eucadialog("close"); 
@@ -236,16 +242,16 @@
               _xsrf     : $.cookie('_xsrf'),
               script    : '/ec2?Action=GetKeyPairFile'
             });
-            notifySuccess(null, $.i18n.prop('keypair_create_success', addEllipsis(keyName, 75)));
+            notifySuccess(null, $.i18n.prop('keypair_create_success', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))));
             thisObj.tableWrapper.eucatable('refreshTable');
             thisObj.tableWrapper.eucatable('glowRow', keyName);
           } else {
-            notifyError($.i18n.prop('keypair_create_error', addEllipsis(keyName, 75)), undefined_error);
+            notifyError($.i18n.prop('keypair_create_error', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))), undefined_error);
           }
         },
         error:
         function(jqXHR, textStatus, errorThrown){
-          notifyError($.i18n.prop('keypair_create_error', addEllipsis(keyName, 75)), getErrorMessage(jqXHR));
+          notifyError($.i18n.prop('keypair_create_error', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))), getErrorMessage(jqXHR));
         }
      });
        
@@ -285,6 +291,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('keypair_delete_progress', all));
               else {
+	        // XSS Node:: 'keypair_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('keypair_delete_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -314,17 +323,17 @@
         (function(keyName) {
           return function(data, textStatus, jqXHR){
             if (data.results && data.results.fingerprint) {
-              notifySuccess(null, $.i18n.prop('keypair_import_success', addEllipsis(keyName, 75)));
+              notifySuccess(null, $.i18n.prop('keypair_import_success', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))));
               thisObj.tableWrapper.eucatable('refreshTable');
             } else {
-              notifyError($.i18n.prop('keypair_import_error', keyName), undefined_error);
+              notifyError($.i18n.prop('keypair_import_error', DefaultEncoder().encodeForHTML(keyName)), undefined_error);
             }
          }
         })(keyName),
         error:
         (function(keyName) {
           return function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('keypair_import_error', addEllipsis(keyName, 75)), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('keypair_import_error', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))), getErrorMessage(jqXHR));
           }
         })(keyName, keyContents)
       });

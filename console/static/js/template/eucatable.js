@@ -136,7 +136,7 @@
 
     _drawCallback : function(oSettings) {
       var thisObj = this;
-      $('#table_' + this.options.id + '_count').html($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
+      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
       this.element.find('table thead tr').each(function(index, tr){
         var $checkAll = $(tr).find(':input[type="checkbox"]');
         if(! $checkAll.data('events') || !('click' in $checkAll.data('events'))){
@@ -442,7 +442,7 @@
           var itemCls = 'legend-'+val;
           textId = thisObj.options.id+'_legend_'+val.replace('-','_');
           var text = $.i18n.map[textId] ? $.i18n.map[textId] : val;
-          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).html(text));
+          $itemWrapper.append($('<span>').addClass('legend-item').addClass(itemCls).text(text));
         });
         $legend.append($itemWrapper);
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);

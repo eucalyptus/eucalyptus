@@ -73,7 +73,8 @@
 		},
               "iDataSort": 6,
             },
-            { // protocol to appear in search result
+            { 
+	      // Invisible column for storing the protocol variable, used in search
               "bVisible": false,
               "fnRender" : function(oObj){
                  var groupName = oObj.aData.name;
@@ -99,10 +100,11 @@
                        ;
                    }*/
                 });
-                return protocol;
+                return DefaultEncoder().encodeForHTML(protocol);
               },
             },  
-            { // port to appear in search result
+            { 
+	      // Invisible Column for storing the port varible, used in search
               "bVisible": false,
               "fnRender" : function(oObj){
                  var groupName = oObj.aData.name;
@@ -123,10 +125,11 @@
                    if(rule['to_port'])
                      port += rule['to_port']+';';
                  });
-                 return port;
+                 return DefaultEncoder().encodeForHTML(port);
                }
             },
-            { // source to appear in search result
+            { 
+	      // Invisible Column for storing the source variable, used in search
               "bVisible": false,
               "fnRender" : function(oObj){
                  var groupName = oObj.aData.name;
@@ -146,17 +149,29 @@
                      for(i in rule.grants){
                        var grant = rule.grants[i];
                        if(grant['cidr_ip'])
-                         src += grant['cidr_ip'].replace('&#x2f;','/') + ';';
+                         src += grant['cidr_ip'] + ';';
                        else if(grant['groupName'] && grant['owner_id'])
                          src += grant['owner_id'] + '/' + grant['groupName'] +';';
                      }
                    } 
                  });
-                 return src;
+                 return DefaultEncoder().encodeForHTML(src);
                }
             },
-            { "mDataProp": "description", "bVisible": false },
-            { "mDataProp": "name", "bVisible": false },
+	    {
+	      // Invisible column for storing the description variable, used for sorting 
+	      "bVisible": false,
+	      "fnRender" : function(oObj){
+		return DefaultEncoder().encodeForHTML(oObj.aData.description);
+	       }
+	    },
+	    { 
+	      // Invisible column for storing the name variable, used for sorting
+	      "bVisible": false,
+	      "fnRender" : function(oObj){
+		return DefaultEncoder().encodeForHTML(oObj.aData.name);
+	       }
+	    },
           ],
         },
         text : {
@@ -278,21 +293,21 @@
                   success: function (data, textstatus, jqXHR) {
                       if (data.results && data.results.status == true) {
                           if (fromPort.length > 0) {
-                              notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
+                              notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
                               thisObj._getTableWrapper().eucatable('refreshTable');
                           }
                           else {
-                              notifySuccess(null, $.i18n.prop('sgroup_create_success', name));
+                              notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
                               thisObj._getTableWrapper().eucatable('refreshTable');
                               thisObj._getTableWrapper().eucatable('glowRow', name);
                           }
                       } else {
-                          notifyError($.i18n.prop('sgroup_add_rule_error', name), getErrorMessage(jqXHR));
+                          notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                       }
                   },
                   error: function (jqXHR, textStatus, errorThrown) {
-                    notifyError($.i18n.prop('sgroup_create_error', name), getErrorMessage(jqXHR));
+                    notifyError($.i18n.prop('sgroup_create_error', DefaultEncoder().encodeForHTML(name)), getErrorMessage(jqXHR));
                   }
               });
             }},
@@ -444,7 +459,7 @@
       dialog.eucadialog('onChange', 'sgroup-template', 'unused', function () {
          var thediv = dialog.find('#sgroup-more-rules');
          var sel = dialog.find('#sgroup-template');
-         var templ = asText(sel.val());
+         var templ = sel.val();
          if (templ == 'none') {
             thediv.css('display','none')
             thisDialog.find('#sgroup-ports').val('');
@@ -534,11 +549,11 @@
       }
       if (enable == true) {
         var $button = dialog.parent().find('#' + createButtonId);
-        var template = asText(dialog.find('#sgroup-template').val());
-        var ports = asText(dialog.find('#sgroup-ports').val());
-        var type = asText(dialog.find('#sgroup-type').val());
-        var allow_ip = asText(dialog.find('#allow-ip').val());
-        var allow_group = asText(dialog.find('#allow-group').val());
+        var template = dialog.find('#sgroup-template').val();
+        var ports = dialog.find('#sgroup-ports').val();
+        var type = dialog.find('#sgroup-type').val();
+        var allow_ip = dialog.find('#allow-ip').val();
+        var allow_group = dialog.find('#allow-group').val();
         dialog.find('#sgroup-ports-error').text("");
         if (template.indexOf('TCP') > -1 || template.indexOf('UDP') > -1) {
           if (ports == '') {
@@ -641,12 +656,12 @@
             }
         }
         if (rule.protocol == 'icmp') {
-            var icmp_type = asText(dialog.find('#sgroup-type').val());
+            var icmp_type = dialog.find('#sgroup-type').val();
             rule.from_port = icmp_type;
             rule.to_port = icmp_type;
         }
         else { // gather port details
-            var port_range = asText(dialog.find('#sgroup-ports').val());
+            var port_range = dialog.find('#sgroup-ports').val();
             // if no port named, don't save
             if (port_range == '')
                 return;
@@ -655,10 +670,10 @@
             rule.to_port = ports[ports.length-1];
         }
         if (dialog.find("input[name='allow-radio']:checked").val() == 'ip') {
-            rule.ipaddr = asText(dialog.find('#allow-ip').val());
+            rule.ipaddr = dialog.find('#allow-ip').val();
         }
         else if (dialog.find("input[name='allow-radio']:checked").val() == 'group') {
-            rule.group = asText(dialog.find('#allow-group').val());
+            rule.group = dialog.find('#allow-group').val();
             var user_group = rule.group.split('/');
             if (user_group.length > 1) {
                 rule.user = user_group[0];
@@ -684,14 +699,13 @@
                 if (this.rulesList[rule].from_port != this.rulesList[rule].to_port) {
                     ports += "-"+this.rulesList[rule].to_port;
                 }
-                msg += "<li><a href='#' id='sgroup-rule-number-"+i+"'>"+delete_label+"</a>"+rule_label+"&nbsp;"+this.rulesList[rule].protocol+
-                            " ("+ ports+"), "
+                msg += "<li><a href='#' id='sgroup-rule-number-"+i+"'>"+DefaultEncoder().encodeForHTML(delete_label)+"</a>"+DefaultEncoder().encodeForHTML(rule_label)+"&nbsp;"+DefaultEncoder().encodeForHTML(this.rulesList[rule].protocol)+" ("+ DefaultEncoder().encodeForHTML(ports) +"), "
 
                 if (this.rulesList[rule].group) {
                     if (this.rulesList[rule].user) {
-                        msg += this.rulesList[rule].user+"/";
+                        msg += DefaultEncoder().encodeForHTML(this.rulesList[rule].user)+"/";
                     }
-                    msg += DefaultEncoder().encodeForHTML(this.rulesList[rule].group)
+                    msg += DefaultEncoder().encodeForHTML(this.rulesList[rule].group);
                 }
                 else {
                     msg += DefaultEncoder().encodeForHTML(this.rulesList[rule].ipaddr);
@@ -777,6 +791,9 @@
               if(done < all)
                 notifyMulti(100*(done/all), $.i18n.prop('sgroup_delete_progress', all));
               else {
+	        // XSS Node:: 'sgroup_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('sgroup_delete_done', (all-error.length), all)));
                 if (error.length > 0)
@@ -815,13 +832,13 @@
         async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', addEllipsis(sgroupName, 75)));
+                notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', DefaultEncoder().encodeForHTML(addEllipsis(sgroupName, 75))));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_add_rule_error', addEllipsis(sgroupName, 75)), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('sgroup_add_rule_error', DefaultEncoder().encodeForHTML(addEllipsis(sgroupName, 75))), getErrorMessage(jqXHR));
             }
         })(sgroupName),
       });
@@ -856,13 +873,13 @@
         async:"true",
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
-                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', addEllipsis(sgroupName, 75)));
+                notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', DefaultEncoder().encodeForHTML(addEllipsis(sgroupName, 75))));
                 thisObj._getTableWrapper().eucatable('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
             return function(jqXHR, textStatus, errorThrown){
-                notifyError($.i18n.prop('sgroup_revoke_rule_error', addEllipsis(sgroupName, 75)), getErrorMessage(jqXHR));
+                notifyError($.i18n.prop('sgroup_revoke_rule_error', DefaultEncoder().encodeForHTML(addEllipsis(sgroupName, 75))), getErrorMessage(jqXHR));
             }
         })(sgroupName),
       });
@@ -890,7 +907,7 @@
     _createAction : function() {
       var thisObj = this;
       thisObj.rulesList=null;
-      $('#sgroup-rules-list').html('');
+      $('#sgroup-rules-list').text('');
       thisObj.addDialog.find('#sgroup-description').val('');
       thisObj.addDialog.eucadialog('open');
       thisObj.addDialog.find('input[id=sgroup-name]').focus();
@@ -900,10 +917,10 @@
       thisObj.addDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.addDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
       thisObj.addDialog.find('#sgroup-more-rules').css('display','none')
-      thisObj.addDialog.find("#sgroup-name-error").html("");
-      thisObj.addDialog.find("#sgroup-description-error").html("");
-      thisObj.addDialog.find('#sgroup-ports-error').html("");
-      thisObj.addDialog.find('#allow-ip-error').html("");
+      thisObj.addDialog.find("#sgroup-name-error").text("");
+      thisObj.addDialog.find("#sgroup-description-error").text("");
+      thisObj.addDialog.find('#sgroup-ports-error').text("");
+      thisObj.addDialog.find('#allow-ip-error').text("");
 
       group_ids = [];
       var results = describe('sgroup');
@@ -932,16 +949,16 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-      thisObj.editDialog.find('#sgroups-edit-group-name').html($('<span>').html(addEllipsis(firstRow.name, 70)));
-      thisObj.editDialog.find('#sgroups-hidden-name').html(firstRow.name);
+      thisObj.editDialog.find('#sgroups-edit-group-name').append($('<span>').html(addEllipsis(firstRow.name, 70)));
+      thisObj.editDialog.find('#sgroups-hidden-name').text(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').html($('<span>').html(addEllipsis(firstRow.description, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-desc').append($('<span>').html(addEllipsis(firstRow.description, 70)));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
       thisObj.editDialog.find('#sgroup-more-rules').css('display','none')
-      thisObj.editDialog.find('#sgroup-ports-error').html("");
-      thisObj.editDialog.find('#allow-ip-error').html("");
+      thisObj.editDialog.find('#sgroup-ports-error').text("");
+      thisObj.editDialog.find('#allow-ip-error').text("");
       thisObj._refreshRulesList(thisObj.editDialog);
       // set autocomplete based on list containing groups other than current group
       group_ids = [];
@@ -1041,7 +1058,7 @@
     dialogAddGroup : function(callback) {
       var thisObj = this;
       thisObj.rulesList=null; 
-      $('#sgroup-rules-list').html(''); 
+      $('#sgroup-rules-list').text(''); 
       thisObj.addDialog.find('#sgroup-description').val('');
       if(callback)
         thisObj.addDialog.data('eucadialog').option('on_close', {callback: callback});

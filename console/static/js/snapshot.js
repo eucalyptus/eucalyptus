@@ -63,7 +63,9 @@
             },
             { 
 	       // Display the id of the snapshot in the main table
-	       "mDataProp": "id" 
+	       "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+              },
 	    },
             {
 	      // Display the status of the snapshot in the main table
@@ -77,11 +79,15 @@
             },
             { 
 	      // Display the volume size of the snapshot in the main table
-	      "mDataProp": "volume_size"
+	      "fnRender": function(oObj) {
+                return escape(oObj.aData.volume_size);		// failed to display when encodeForHTML		011330
+              },
 	    },
             {
 	      // Display the volume id of the snapshot in the main table
-	      "mDataProp": "volume_id"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.volume_id);
+              },
 	    },
             {
 	      // Display the description of the snapshot in the main table
@@ -98,18 +104,24 @@
             {
 	      // Hidden column for the status of the snapshot
               "bVisible": false,
-              "mDataProp": "status"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.status);
+              },
             },
             {
 	      // Hidden column for the unprocessed creation time/start time of the snapshot
               "bVisible": false,
-              "mDataProp": "start_time",
+	      "fnRender": function(oObj) {
+                return oObj.aData.start_time;			// sort fails when encoded	011330 -- needs to verify
+              },
               "sType": "date"
             },
             {
 	      // Hidden column for the uncut description of the snapshot
               "bVisible": false,
-              "mDataProp": "description"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.description);
+              },
             },
           ],
         },
@@ -167,9 +179,9 @@
          title: snapshot_create_dialog_title,
          buttons: {
            'create': { domid: thisObj.createSnapButtonId, text: snapshot_create_dialog_create_btn, disabled: true, click: function() { 
-                volumeId = $.trim(asText($snapshot_dialog.find('#snapshot-create-volume-id').val()));
+                volumeId = $.trim($snapshot_dialog.find('#snapshot-create-volume-id').val());
                 if (VOL_ID_PATTERN.test(volumeId)) {
-                  description = toBase64(asText($.trim($snapshot_dialog.find('#snapshot-create-description').val())));
+                  description = toBase64($.trim($snapshot_dialog.find('#snapshot-create-description').val()));
                   $snapshot_dialog.eucadialog("close");
                   thisObj._createSnapshot(volumeId, description);
                 } else {
@@ -188,7 +200,7 @@
        });
       var $vol_selector = this.createDialog.find('#snapshot-create-volume-id');
       this.createDialog.eucadialog('buttonOnFocus', $vol_selector, thisObj.createSnapButtonId, function(){
-        return VOL_ID_PATTERN.test(asText($vol_selector.val()));
+        return VOL_ID_PATTERN.test($vol_selector.val());
       });
       this.createDialog.eucadialog('validateOnType', '#snapshot-create-description', function(description) {
         if (description && description.length>MAX_DESCRIPTION_LEN)
@@ -208,12 +220,12 @@
          title: snapshot_register_dialog_title,
          buttons: {
            'register': {domid: registerBtnId, text: snapshot_dialog_reg_btn, click: function() {
-               var name = asText(thisObj.regDialog.find('#snapshot-register-image-name').val());
+               var name = thisObj.regDialog.find('#snapshot-register-image-name').val();
                if(!name || name.length <= 0) {
                  thisObj.regDialog.eucadialog('showError',snapshot_register_dialog_noname);
                  return; 
                } 
-               var desc = toBase64(asText(thisObj.regDialog.find('#snapshot-register-image-desc').val()));
+               var desc = toBase64(thisObj.regDialog.find('#snapshot-register-image-desc').val());
                var $checkbox = thisObj.regDialog.find('#snapshot-register-image-os');
                var windows = $checkbox.is(':checked') ? true : false; 
                thisObj._registerSnapshots(name, desc, windows);
@@ -350,6 +362,9 @@
               if(done < numberToDelete)
                 notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_image_progress', numberToDelete));
               else {
+	        // XSS Node:: 'snapshot_delete_image_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_image_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
@@ -390,6 +405,9 @@
               if(done < numberToDelete)
                 notifyMulti(100*(done/numberToDelete), $.i18n.prop('snapshot_delete_progress', numberToDelete));
               else {
+	        // XSS Node:: 'snapshot_delete_fail' would contain a chunk HTML code in the failure description string.
+	     	// Message Example - Failed to send release request to Cloud for {0} IP address(es). <a href="#">Click here for details. </a>
+	        // For this reason, the message string must be rendered as html()
                 var $msg = $('<div>').addClass('multiop-summary').append(
                   $('<div>').addClass('multiop-summary-success').html($.i18n.prop('snapshot_delete_done', (numberToDelete-error.length), numberToDelete)));
                 if (error.length > 0)
@@ -416,16 +434,16 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               var snapId = data.results.id;
-              notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));
+              notifySuccess(null, $.i18n.prop('snapshot_create_success', DefaultEncoder().encodeForHTML(snapId), DefaultEncoder().encodeForHTML(volumeId)));
               thisObj.tableWrapper.eucatable('refreshTable');
               thisObj.tableWrapper.eucatable('glowRow', snapId);
             } else {
-              notifyError($.i18n.prop('snapshot_create_error', volumeId), undefined_error);
+              notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('snapshot_create_error', DefaultEncoder().encodeForHTML(volumeId)), getErrorMessage(jqXHR));
           }
       });
     },
@@ -481,14 +499,14 @@
         success:
           function(data, textStatus, jqXHR){
             if ( data.results ) {
-              notifySuccess(null, $.i18n.prop('snapshot_register_success', snapshot, data.results));  
+              notifySuccess(null, $.i18n.prop('snapshot_register_success', DefaultEncoder().encodeForHTML(snapshot.toString()), DefaultEncoder().encodeForHTML(data.results)));  
             } else {
-              notifyError($.i18n.prop('snapshot_register_error', snapshot), undefined_error);
+              notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), undefined_error);
             }
           },
         error:
           function(jqXHR, textStatus, errorThrown){
-            notifyError($.i18n.prop('snapshot_register_error', snapshot), getErrorMessage(jqXHR));
+            notifyError($.i18n.prop('snapshot_register_error', DefaultEncoder().encodeForHTML(snapshot.toString())), getErrorMessage(jqXHR));
           }
       });
     },

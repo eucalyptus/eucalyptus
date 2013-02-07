@@ -110,7 +110,7 @@ if( !Array.prototype.indexOf ) {
 function addEllipsis(input, maxLen){
   if (input == undefined)
     return input;
-  input = DefaultEncoder().encodeForHTML(input);
+//  input = DefaultEncoder().encodeForHTML(input);
   if (input.length < maxLen)
     return input;
   input = input.substring(0, maxLen);
@@ -593,14 +593,14 @@ function trim (str) {
 //
 //----------------------------------------------------------------------------
 
+
 // For displaying the type 'twist', which is defined in CSS, in eucatable
 function eucatableDisplayColumnTypeTwist (title, str, limit) {
 	if( str == null ){
 		return "ERROR!";
 	}
-	sanitizedTitle = $('<div>').text(title).text();
-	shortStr = $('<div>').text(addEllipsis(str, limit)).text();
-	$html = "<a href='#' title='" + sanitizedTitle + "' class='twist' >" + shortStr + "</a>";
+	shortStr = addEllipsis(str, limit);
+	$html = $('<a>').attr('title', title).addClass('twist').text(shortStr);
 	return asHTML($html); 
 }
 
@@ -609,9 +609,8 @@ function eucatableDisplayColumnTypeText (title, str, limit){
 	if( str == null ){
 		return "";
 	}
-	sanitizedTitle = $('<div>').text(title).text();
-        shortStr = $('<div>').text(addEllipsis(str, limit)).text();
-        $html = "<span title='" + sanitizedTitle + "'>" + shortStr + "</span>";
+	shortStr = addEllipsis(str, limit); 
+	$html = $('<span>').attr('title', title).text(shortStr);
         return asHTML($html);
 }
 
@@ -619,33 +618,28 @@ function eucatableDisplayColumnTypeText (title, str, limit){
 function eucatableDisplayColumnTypeInstanceStatus (iStatus){
         // '-' has an issue with Messages.properties; shutting-down -> shuttingdown
         iStatusProcessed = iStatus.replace('-','');
-        sanitizedStatus = escape(iStatusProcessed);
-        $html = $('<div>').addClass('table-row-status').addClass('status-'+sanitizedStatus).append('&nbsp;');
+        $html = $('<div>').addClass('table-row-status').addClass('status-'+iStatusProcessed).append('&nbsp;');
         return asHTML($html);
 }
 
 // For displaying the volume status icon in eucatable
 function eucatableDisplayColumnTypeVolumeStatus (vStatus){
-	sanitizedStatus = escape(vStatus);
-	$html = $('<div>').addClass('table-row-status').addClass('status-'+sanitizedStatus).append('&nbsp;');
+	$html = $('<div>').addClass('table-row-status').addClass('status-'+vStatus).append('&nbsp;');
 	return asHTML($html);
 }
 
 // For displaying the snapshot statuis icon in eucatable
 function eucatableDisplayColumnTypeSnapshotStatus (snStatus, snProgress){
-        sanitizedStatus = escape(snStatus);
-	sanitizedProgress = $('<div>').text(snProgress).text();
-	$html = $('<div>').addClass('table-row-status').addClass('status-'+sanitizedStatus).append(snStatus=='pending' ?  sanitizedProgress : '&nbsp;');
+	$html = $('<div>').addClass('table-row-status').addClass('status-'+snStatus).append(snStatus=='pending' ?  snProgress : '&nbsp;');
         return asHTML($html);
 }
 
 // For displaying the launch instance button in eucatable
 function eucatableDisplayColumnTypeLaunchInstanceButton (imageID){
-	sanitizedID = escape(imageID);
-	sanitizedButton = $('<div>').text(image_launch_btn).text();		// Where is this value coming from ? 	KYO	012313
-	$html = '<a href="#" class="button table-button"';
-	$html = $html + ' onClick="startLaunchWizard({image:\'' + sanitizedID + '\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;"';
-	$html = $html + ' >' + sanitizedButton + '</a>';
+	sanitizedID =  DefaultEncoder().encodeForJavaScript(imageID);
+	onclick_code = 'startLaunchWizard({image:\'' + sanitizedID + '\'}); $(\'html body\').trigger(\'click\', \'create-new\'); return false;';
+	// is image_launch_btn a global variable?
+	$html = $('<a>').attr('onclick', onclick_code).addClass('button table-button').attr('href', '#').text(image_launch_btn);
 	return asHTML($html);
 };
 

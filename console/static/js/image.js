@@ -56,19 +56,27 @@
             },
             { 
 	      // Display the id of the image in eucatable
-	      "mDataProp": "id"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+              },
 	    },
             { 
 	      // Display the artitecture of the image in eucatable
-	      "mDataProp": "architecture"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.architecture);
+              },
 	    },
             {
 	      // Display the description of the image in eucatable
-	      "mDataProp": "description"
+	      "fnRender": function(oObj) {
+                return eucatableDisplayColumnTypeText (oObj.aData.description, oObj.aData.description, 30);
+              },
 	    },
             { 
 	      // Display the root device type of the image in eucatable
-	      "mDataProp": "root_device_type"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.root_device_type);
+              },
 	    },
             {
 	      // Display the launch instance button for the image in eucatable
@@ -82,30 +90,38 @@
             {
 	      // Hidden column for the state of the image
               "bVisible": false,
-              "mDataProp": "state"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.state);
+              },
             },
             {
 	      // Hidden column for the type of the image
               "bVisible": false,
-              "mDataProp": "type"
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.type);
+              },
             },
             { 
 	      // Hidden column for the id of the image
               "bVisible": false,
-              "mDataProp": "id",
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.id);
+              },
             },
             { 
 	      // Hidden column for the platform/OS of the image
 	      // idx = 9
               "bVisible" : false,
               "fnRender" : function(oObj) {
-                return oObj.aData.platform ? oObj.aData.platform : 'linux';
+                return oObj.aData.platform ? DefaultEncoder().encodeForHTML(oObj.aData.platform) : 'linux';
               }
             },
             {
 	      // Hidden column for the location of the image
               "bVisible" : false,
-              "mDataProp" : "location",
+	      "fnRender": function(oObj) {
+                return DefaultEncoder().encodeForHTML(oObj.aData.location);
+              },
             },
             {
 	      // Hidden column for the ownership of the image ?
@@ -200,7 +216,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                              $('<div>').addClass('expanded-value').text(image['owner_id'])),
                            $('<li>').append(
                              $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                             $('<div>').addClass('expanded-value').text(image['location'].replace('&#x2f;','/')))))));
+                             $('<div>').addClass('expanded-value').text(image['location']))))));
 
       var $kernelInfo = null;
       if(kernel){
@@ -219,10 +235,10 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                 $('<div>').addClass('expanded-value').text(kernel['architecture'])),
                               $('<li>').append(
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                $('<div>').addClass('expanded-value').text(kernel['location'].replace('&#x2f;','/'))),
+                                $('<div>').addClass('expanded-value').text(kernel['location'])),
                               $('<li>').append(
                                 $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
-                                $('<div>').addClass('expanded-value').html(kernel['description'] ? kernel['description'] : '&nbsp;'))))));
+                                $('<div>').addClass('expanded-value').text(kernel['description'] ? kernel['description'] : '&nbsp;'))))));
       }
       var $ramdiskInfo = null;
       if(ramdisk){
@@ -241,10 +257,10 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
                                  $('<div>').addClass('expanded-value').text(ramdisk['architecture'])),
                                $('<li>').append(
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_manifest),
-                                 $('<div>').addClass('expanded-value').text(ramdisk['location'].replace('&#x2f;','/'))),
+                                 $('<div>').addClass('expanded-value').text(ramdisk['location'])),
                                $('<li>').append(
                                  $('<div>').addClass('expanded-title').text(image_table_expanded_desc),
-                                 $('<div>').addClass('expanded-value').html(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'))))));
+                                 $('<div>').addClass('expanded-value').text(ramdisk['description'] ? ramdisk['description'] : '&nbsp;'))))));
       }
       $wrapper.append($imgInfo);
       if($kernelInfo)

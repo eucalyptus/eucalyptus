@@ -90,6 +90,7 @@
             thisObj.errorDialog.eucadialog('open');
             var msgdiv = thisObj.errorDialog.find("#login-error-message p")
             if (args.search("Timeout")>-1) {
+	      // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
               msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
               msgdiv.find('a').click( function(e){
                 if(thisObj.options.support_url.indexOf('mailto') >= 0)
@@ -115,6 +116,7 @@
         }
         $form.find('input[name=login]').removeAttr('disabled');
       }
+      // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
       $login.find("#password-help").html($.i18n.prop('login_pwd_help', '<a href="#">'+cloud_admin+'</a>'));
       $login.find('#password-help a').click(function(e){
         if(thisObj.options.support_url.indexOf('mailto') >= 0)

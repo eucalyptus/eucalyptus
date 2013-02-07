@@ -51,7 +51,11 @@
        args.percent : percentage of the progress
        args.desc : message after progress (e.g., 95/100 volumes deleted. Failed to delete 5 vollumes)
        args.error: : [ {id:.., reason:.., code: }, {id:.., reason: .., code: } ]
+
+       XSS Note:: args.desc will be rendered in HTML form. Callers of this function must encode any user-input if used as part of 'desc'
+                  args.error will be rendered in TEXT form, thus no HTML tags will be allowed.
     */
+
     multi : function(args) {
        var thisObj = this;
        var percent = args.percent;
@@ -62,7 +66,9 @@
        percent = Math.max(0, percent);
        thisObj.element.find('#euca-notification-progress').progressbar({value: percent});
        thisObj.element.find('#euca-notification-progress').show();
-       thisObj.element.find('#euca-notification-title').html('');
+       thisObj.element.find('#euca-notification-title').text('');
+	// XSS Note:: 'desc' is an object that contains html content, which is to be displayed on the notification box.
+	// Any caller for this function must ensure that the html content in the object 'desc' is properly encoded when user-input is used directly
        if(desc)
          thisObj.element.find('#euca-notification-desc').html(desc);
 
@@ -89,7 +95,7 @@
              });
              thisObj.element.find('#euca-notification-desc').append(
                $('<div>').addClass('euca-notification-error').append(
-                 $('<textarea>').attr('id','euca-notification-error-list').attr('readonly','true').html(errorMsg)));
+                 $('<textarea>').attr('id','euca-notification-error-list').attr('readonly','true').text(errorMsg)));
            }else
              thisObj.element.find('#euca-notification-desc .euca-notification-error').detach();
          });
@@ -122,6 +128,9 @@
        args.title : title of the notification 
        args.desc : textual description of the notification
        args.code : error code (optional)
+
+       XSS Note:: args.title will be rendered as TEXT.
+                  args.desc will be rendered as HTML. Callers to this function must encode any user-input if used as part of 'desc'
     */ 
     notify : function(args) {
       var thisObj = this;
@@ -130,13 +139,13 @@
       thisObj.element.find('#euca-notification-progress').hide();
 
       if(args.title){
-        this.element.find('#euca-notification-title').html(args.title);
+        this.element.find('#euca-notification-title').text(args.title);
         this.element.find('#euca-notification-title').show();
       }
       else
         this.element.find('#euca-notification-title').hide();
       
-      var desc = args.code ? args.desc + ' (code: '+args.code+')' : args.desc;
+      var desc = args.code ? args.desc + ' (code: '+DefaultEncoder().encodeForHTML(args.code)+')' : args.desc;
       if(args.desc){
         this.element.find('#euca-notification-desc').html(desc);
         this.element.find('#euca-notification-desc').show();

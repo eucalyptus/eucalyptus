@@ -406,6 +406,7 @@
       $.each(filters, function (idx, filter){
         var $filter = $section.find('#'+filter['name']+'-filter');
         $filter.addClass('euca-table-filter');
+          // XSS Note:: No need to encode the input "filter['name']" since it can only be static, pre-defined string - Kyo 
           $filter.append(
             $('<select>').attr('title', $.i18n.prop('launch_instance_'+filter['name']+'_select_tip')).attr('id',filter['name']+'-selector'));
           var $selector = $filter.find('#'+filter['name']+'-selector');
@@ -685,7 +686,7 @@
           var $rule = $section.find('div#launch-wizard-security-sg-detail');
           $rule.children().detach();
           $rule.append(
-            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',groupName)));
+            $('<div>').addClass('launcher-sgroup-details-label').html($.i18n.prop('launch_instance_security_group_rule',DefaultEncoder().encodeForHTML(groupName))));
           var results = describe('sgroup');
           var group = null;
           for(i in results){
@@ -1422,13 +1423,14 @@
               inst_ids.push(instance.id);
             }
             var instances = inst_ids.join(' ');
-            notifySuccess(null, $.i18n.prop('instance_run_success', instances));
+            notifySuccess(null, $.i18n.prop('instance_run_success', DefaultEncoder().encodeForHTML(instances)));
             //TODO: move to instance page?
             var $container = $('html body').find(DOM_BINDING['main']);
             $container.maincontainer("clearSelected");
             $container.maincontainer("changeSelected",null, {selected:'instance'});
             $container.instance('glowNewInstance', inst_ids);
           } else {
+            // XSS Note:: No need to encode "undefined_error" since it is a static string from the file "messages.properties" - Kyo
             notifyError($.i18n.prop('instance_run_error'), undefined_error);
             //TODO: clear launch-instance wizard?
             var $container = $('html body').find(DOM_BINDING['main']);
@@ -1437,6 +1439,7 @@
           }
         },
         error: function (jqXHR, textStatus, errorthrown) {
+          // XSS Note:: Cannot encode 'getErrorMessage(jqXHR) since the type is unknown, can be HTML or TEXT
           notifyError($.i18n.prop('instance_run_error'), getErrorMessage(jqXHR));
           var $container = $('html body').find(DOM_BINDING['main']);
           $container.maincontainer("clearSelected");
