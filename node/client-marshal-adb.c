@@ -1465,11 +1465,13 @@ int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** insta
       EUCA_MESSAGE_MARSHAL(ncMigrateInstanceType, request, pMeta);
     }
 
+    LOGDEBUG("marshalling %d instance(s) [0].id=%s with action %s\n", instancesLen, instances[0]->instanceId, action);
+
     // set op-specific input fields
     for (int i=0; i<instancesLen; i++) {
         adb_instanceType_t *instance_adb = adb_instanceType_create(env);
         copy_instance_to_adb(instance_adb, env, instances[i]);
-        adb_ncMigrateInstanceType_set_instance(request, env, instance_adb);
+        adb_ncMigrateInstanceType_add_instance(request, env, instance_adb);
     }
     adb_ncMigrateInstanceType_set_action(request, env, action);
     if (credentials != NULL)
