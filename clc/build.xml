@@ -109,8 +109,8 @@
 	</macrodef>
 	<!--================================== build targets ==================================-->
 	<target name="build">
-		<ant dir="." inheritall="false" target="build-all" />
-		<ant dir="." inheritall="false" target="jar" />
+		<ant inheritall="false" target="build-all" />
+		<ant inheritall="false" target="jar" />
 	</target>
 	
 	<target name="build-all">
