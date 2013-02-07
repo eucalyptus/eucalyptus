@@ -1,9 +1,9 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-www"/>
     <dependencies>
-    	<dependency org="com.eucalyptus" name="eucalyptus-autoscaling-common" rev="latest.integration"/>
-    	<dependency org="com.eucalyptus" name="eucalyptus-reporting" rev="latest.integration"/>
-    	<dependency org="com.eucalyptus" name="eucalyptus-storage-controller" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-autoscaling-common" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-reporting" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-storage-controller" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 
