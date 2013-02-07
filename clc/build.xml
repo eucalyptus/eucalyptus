@@ -60,7 +60,7 @@
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
 
-<project name="eucalyptus" default="build-all" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="eucalyptus" default="build" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
 	<property environment="localenv" />
 	<property name="euca.home.0" value="${localenv.EUCALYPTUS}" />
 	<condition property="euca.home" value="/opt/eucalyptus" else="${localenv.EUCALYPTUS}">
