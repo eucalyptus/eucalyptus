@@ -379,8 +379,8 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
           for ( final String k : keys ) {            
             if ( k.startsWith( paramFieldPair.getKey( ) + "." ) ) {
               final String currentValue = params.remove( k );
-              final String setKey = k.replaceAll( paramFieldPair.getKey( ) + "\\.(\\d+)\\..*", "$1" );
-              final String subKey = k.replaceAll( paramFieldPair.getKey( ) + "\\.\\d+\\." , "" );
+              final String setKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.(\\d+)\\..*", "$1" );
+              final String subKey = k.replaceAll( "^"+ paramFieldPair.getKey( ) + "\\.\\d+\\." , "" );
               Map<String,String> subMap = subParamMaps.get( setKey );
               if ( subMap == null ) {
                 subParamMaps.put( setKey, subMap = Maps.newHashMap() );  

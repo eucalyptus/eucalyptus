@@ -33,10 +33,13 @@ public class DescribeAlarmsType extends CloudWatchMessage {
 }
 public class Dimensions extends EucalyptusData {
   public Dimensions() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<Dimension> member = new ArrayList<Dimension>();
 }
 public class PutMetricDataType extends CloudWatchMessage {
   String namespace;
+  @HttpEmbedded(multiple=true)
   MetricData metricData;
   public PutMetricDataType() {  }
 }
@@ -109,8 +112,10 @@ public class DescribeAlarmsResponseType extends CloudWatchMessage {
   DescribeAlarmsResult describeAlarmsResult = new DescribeAlarmsResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class MetricData extends CloudWatchMessage {
+public class MetricData extends EucalyptusData {
   public MetricData() {  }
+  @HttpEmbedded(multiple=true)
+  @HttpParameterMapping(parameter="member")
   ArrayList<MetricDatum> member = new ArrayList<MetricDatum>();
 }
 public class EnableAlarmActionsType extends CloudWatchMessage {
@@ -150,6 +155,7 @@ public class ResourceList extends EucalyptusData {
 }
 public class MetricDatum extends EucalyptusData {
   String metricName;
+  @HttpEmbedded(multiple=true)
   Dimensions dimensions;
   Date timestamp;
   Double value;
@@ -157,6 +163,7 @@ public class MetricDatum extends EucalyptusData {
   String unit;
   public MetricDatum() {  }
 }
+
 public class StatisticSet extends EucalyptusData {
   Double sampleCount;
   Double sum;

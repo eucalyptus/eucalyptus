@@ -268,8 +268,7 @@
     <value name="Threshold" field="threshold" usage="optional"/>
     <value name="ComparisonOperator" field="comparisonOperator" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricData" abstract="true" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.MetricData" abstract="true">
     <collection field="member">
       <structure name="member" type="com.eucalyptus.cloudwatch.MetricDatum"/>
     </collection>
