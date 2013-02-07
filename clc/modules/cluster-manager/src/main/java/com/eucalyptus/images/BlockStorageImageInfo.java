@@ -148,5 +148,14 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   public boolean hasRamdisk( ) {
     return this.getRamdiskId( ) != null;
   }
-  
+
+  @Override
+  public String getRootDeviceName( ) {
+    return "/dev/sda1";
+  }
+
+  @Override
+  public String getRootDeviceType( ) {
+    return "ebs";
+  }
 }

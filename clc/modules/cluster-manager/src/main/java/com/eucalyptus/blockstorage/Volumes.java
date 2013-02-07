@@ -472,7 +472,7 @@ public class Volumes {
 				  .withStringProperty("volume-id", FilterStringFunctions.VOLUME_ID)
 				  .withConstantProperty("volume-type", "standard")
 				  .withPersistenceFilter( "availability-zone", "partition" )
-				   //.withPersistenceFilter( "create-time", "creationTimestamp", PersistenceFilter.Type.Date ) //TODO:STEVE: Not working, fails to match due to dropped millis? (lost by timestamps parser)
+				  .withPersistenceFilter( "create-time", "creationTimestamp", PersistenceFilter.Type.Date )
 				  .withPersistenceFilter( "size", "size", PersistenceFilter.Type.Integer )
 				  .withPersistenceFilter( "snapshot-id", "parentSnapshot" )
 				  .withPersistenceFilter( "volume-id", "displayName" ) );

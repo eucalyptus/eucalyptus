@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -94,6 +95,9 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.VolumeEvent;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.tags.Tag;
+import com.eucalyptus.tags.TagSupport;
+import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
@@ -104,7 +108,6 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -124,6 +127,7 @@ import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 public class VolumeManager {
   private static final int VOL_CREATE_RETRIES = 10;
@@ -288,7 +292,6 @@ public class VolumeManager {
           Volume foundVol = Entities.uniqueResult( Volume.named( ownerFullName, input ) );
           if ( State.ANNIHILATED.equals( foundVol.getState( ) ) ) {
             Entities.delete( foundVol );
-            //Volumes.fireUsageEvent( foundVol, VolumeEvent.forVolumeDelete() );
             reply.getVolumeSet( ).add( foundVol.morph( new edu.ucsb.eucalyptus.msgs.Volume( ) ) );
             return foundVol;
           } else if ( RestrictedTypes.filterPrivileged( ).apply( foundVol ) ) {
@@ -320,11 +323,18 @@ public class VolumeManager {
     };
     for ( String volId : allowedVolumeIds ) {
       try {
-        Volume vol = Entities.asTransaction( Volume.class, lookupVolume ).apply( volId );
+        Entities.asTransaction( Volume.class, lookupVolume ).apply( volId );
       } catch ( Exception ex ) {
         Logs.extreme( ).debug( ex, ex );
       }
     }
+
+    final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( Volume.class )
+        .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ), allowedVolumeIds );
+    for ( final edu.ucsb.eucalyptus.msgs.Volume volume : reply.getVolumeSet() ) {
+      Tags.addFromTags( volume.getTagSet(), ResourceTag.class, tagsMap.get( volume.getVolumeId() ) );
+    }
+
     return reply;
   }
   

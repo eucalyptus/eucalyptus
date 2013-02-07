@@ -73,6 +73,11 @@
     <collection name="attachmentSet" field="attachmentSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.AttachedVolume" />
     </collection>
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
+      </collection>
+    </structure>
   </mapping>
   <mapping abstract="true" class="edu.ucsb.eucalyptus.msgs.AttachedVolume" ordered="false">
     <value name="volumeId" field="volumeId" usage="required" />
