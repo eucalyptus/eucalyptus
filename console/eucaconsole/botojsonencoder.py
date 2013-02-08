@@ -51,6 +51,10 @@ from boto.ec2.autoscale.group import AutoScalingGroup
 from boto.ec2.elb import ELBConnection
 from boto.ec2.elb.loadbalancer import LoadBalancer
 from boto.ec2.elb.healthcheck import HealthCheck
+from boto.ec2.elb.listener import Listener
+from boto.ec2.elb.policies import Policies
+from boto.ec2.elb.securitygroup import SecurityGroup
+from boto.ec2.elb.instancestate import InstanceState
 # these things came in with boto 2.6
 try:
     from boto.ec2.instance import InstanceState
@@ -208,6 +212,8 @@ class BotoJsonWatchEncoder(JSONEncoder):
 
 class BotoJsonBalanceEncoder(JSONEncoder):
     def default(self, obj):
+#        print obj.__class__.__name__
+#        print obj.__dict__.keys()
         if issubclass(obj.__class__, EC2Object):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = obj.__class__.__name__
@@ -222,13 +228,31 @@ class BotoJsonBalanceEncoder(JSONEncoder):
             return []
         elif isinstance(obj, LoadBalancer):
             values = copy.copy(obj.__dict__)
+            values['connection'] = None
             values['__obj_name__'] = 'LoadBalancer'
             return (values)
         elif isinstance(obj, HealthCheck):
             values = copy.copy(obj.__dict__)
+            values['access_point'] = None
             values['__obj_name__'] = 'HealthCheck'
             return (values)
-        print obj.__class__.__name__
+        elif isinstance(obj, Listener):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Listener'
+            return (values)
+        elif isinstance(obj, Policies):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'Policies'
+            return (values)
+        elif isinstance(obj, SecurityGroup):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'SecurityGroup'
+            return (values)
+        elif isinstance(obj, InstanceState):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'InstanceState'
+            return (values)
         return super(BotoJsonBalanceEncoder, self).default(obj)
 
 class BotoJsonScaleEncoder(JSONEncoder):
