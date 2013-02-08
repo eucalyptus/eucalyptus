@@ -770,7 +770,7 @@ int main(int argc, char **argv)
         }
 
     /***********************************************************/
-    } else if (!strcmp(command, "migrateInstance")) {
+    } else if (!strcmp(command, "migrateInstances")) {
         CHECK_PARAM(instance_id, "instance ID");
         CHECK_PARAM(src_node_name, "source node name");
         CHECK_PARAM(dst_node_name, "destination node name");
@@ -782,9 +782,9 @@ int main(int argc, char **argv)
         strncpy(instance.instanceId, instance_id, sizeof(instance.instanceId));
         strncpy(instance.migration_src, src_node_name, sizeof(instance.migration_src));
         strncpy(instance.migration_dst, dst_node_name, sizeof(instance.migration_dst));
-        rc = ncMigrateInstanceStub(stub, &meta, &instances, 1, "prepare", migration_creds);
+        rc = ncMigrateInstancesStub(stub, &meta, &instances, 1, "prepare", migration_creds);
         if (rc != 0) {
-            printf("ncMigrateInstance() failed: error=%d\n", rc);
+            printf("ncMigrateInstances() failed: error=%d\n", rc);
             exit(1);
         }
 

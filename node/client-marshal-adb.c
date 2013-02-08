@@ -1441,48 +1441,48 @@ int ncModifyNodeStub (ncStub *pStub, ncMetadata *pMeta, char *stateName)
 //!
 //! @return 0 for success, non-zero for error
 //!
-//! @see ncMigrateInstance()
+//! @see ncMigrateInstances()
 //!
-int ncMigrateInstanceStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+int ncMigrateInstancesStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     int status = 0;
     axutil_env_t *env = NULL;
     axis2_stub_t *stub = NULL;
-    adb_ncMigrateInstance_t *input = NULL;
-    adb_ncMigrateInstanceType_t *request = NULL;
-    adb_ncMigrateInstanceResponse_t *output = NULL;
-    adb_ncMigrateInstanceResponseType_t *response = NULL;
+    adb_ncMigrateInstances_t *input = NULL;
+    adb_ncMigrateInstancesType_t *request = NULL;
+    adb_ncMigrateInstancesResponse_t *output = NULL;
+    adb_ncMigrateInstancesResponseType_t *response = NULL;
 
     env = pStub->env;
     stub = pStub->stub;
-    input = adb_ncMigrateInstance_create (env);
-    request = adb_ncMigrateInstanceType_create (env);
+    input = adb_ncMigrateInstances_create (env);
+    request = adb_ncMigrateInstancesType_create (env);
 
     // set standard input fields
-    adb_ncMigrateInstanceType_set_nodeName(request, env, pStub->node_name);
+    adb_ncMigrateInstancesType_set_nodeName(request, env, pStub->node_name);
     if (pMeta) {
       if (pMeta->correlationId) { pMeta->correlationId = NULL; }
-      EUCA_MESSAGE_MARSHAL(ncMigrateInstanceType, request, pMeta);
+      EUCA_MESSAGE_MARSHAL(ncMigrateInstancesType, request, pMeta);
     }
 
     // set op-specific input fields
     for (int i=0; i<instancesLen; i++) {
         adb_instanceType_t *instance_adb = adb_instanceType_create(env);
         copy_instance_to_adb(instance_adb, env, instances[i]);
-        adb_ncMigrateInstanceType_set_instance(request, env, instance_adb);
+        adb_ncMigrateInstancesType_set_instances(request, env, instance_adb);
     }
-    adb_ncMigrateInstanceType_set_action(request, env, action);
+    adb_ncMigrateInstancesType_set_action(request, env, action);
     if (credentials != NULL)
-        adb_ncMigrateInstanceType_set_credentials(request, env, credentials);
-    adb_ncMigrateInstance_set_ncMigrateInstance(input, env, request);
+        adb_ncMigrateInstancesType_set_credentials(request, env, credentials);
+    adb_ncMigrateInstances_set_ncMigrateInstances(input, env, request);
 
     // do it
-    if ((output = axis2_stub_op_EucalyptusNC_ncMigrateInstance (stub, env, input)) == NULL) {
+    if ((output = axis2_stub_op_EucalyptusNC_ncMigrateInstances (stub, env, input)) == NULL) {
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
-        response = adb_ncMigrateInstanceResponse_get_ncMigrateInstanceResponse (output, env);
-        if ( adb_ncMigrateInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+        response = adb_ncMigrateInstancesResponse_get_ncMigrateInstancesResponse (output, env);
+        if ( adb_ncMigrateInstancesResponseType_get_return(response, env) == AXIS2_FALSE ) {
             LOGERROR("returned an error\n");
             status = 1;
         }
