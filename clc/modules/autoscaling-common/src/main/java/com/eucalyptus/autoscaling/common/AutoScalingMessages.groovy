@@ -284,7 +284,7 @@ public class Alarms extends EucalyptusData {
   ArrayList<Alarm> member = new ArrayList<Alarm>()
 }
 public class DescribeAutoScalingInstancesResult extends EucalyptusData {
-  AutoScalingInstances autoScalingInstances
+  AutoScalingInstances autoScalingInstances = new AutoScalingInstances()
   String nextToken
   public DescribeAutoScalingInstancesResult() {  }
 }
@@ -530,6 +530,13 @@ public class DescribeAutoScalingInstancesType extends AutoScalingMessage {
   Integer maxRecords
   String nextToken
   public DescribeAutoScalingInstancesType() {  }
+  public List<String> instanceIds() {
+    List<String> names = Lists.newArrayList()
+    if ( instanceIds != null ) {
+      names = instanceIds.getMember()
+    }
+    return names
+  }
 }
 public class DeleteTagsType extends AutoScalingMessage {
   @HttpEmbedded

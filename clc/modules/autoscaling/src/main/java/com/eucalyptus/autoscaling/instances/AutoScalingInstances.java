@@ -20,9 +20,12 @@
 package com.eucalyptus.autoscaling.instances;
 
 import java.util.List;
+import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Strings;
+import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
@@ -51,6 +54,23 @@ public abstract class AutoScalingInstances {
 
   public static Function<AutoScalingInstance,String> launchConfigurationName() {
     return AutoScalingInstanceProperties.LAUNCH_CONFIGURATION_NAME;  
+  }
+  
+  @TypeMapper
+  public enum AutoScalingInstanceTransform implements Function<AutoScalingInstance, AutoScalingInstanceDetails> {
+    INSTANCE;
+
+    @Override
+    public AutoScalingInstanceDetails apply( final AutoScalingInstance autoScalingInstance ) {
+      final AutoScalingInstanceDetails details = new AutoScalingInstanceDetails();      
+      details.setAutoScalingGroupName( autoScalingInstance.getAutoScalingGroupName() );
+      details.setAvailabilityZone( autoScalingInstance.getAvailabilityZone() );
+      details.setHealthStatus( Strings.toString( autoScalingInstance.getHealthStatus() ) );
+      details.setInstanceId( autoScalingInstance.getInstanceId() );
+      details.setLaunchConfigurationName( autoScalingInstance.getLaunchConfigurationName() );
+      details.setLifecycleState( Strings.toString( autoScalingInstance.getLifecycleState() ) );      
+      return details; 
+    }
   }
   
   private enum AutoScalingInstanceProperties implements Function<AutoScalingInstance,String> {

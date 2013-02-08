@@ -72,6 +72,14 @@ import com.eucalyptus.autoscaling.common.ScalingPolicyType
 import com.eucalyptus.autoscaling.common.DeletePolicyType
 import com.eucalyptus.autoscaling.common.ExecutePolicyType
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
+import com.eucalyptus.autoscaling.instances.AutoScalingInstances
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance
+import com.eucalyptus.autoscaling.instances.HealthStatus
+import com.eucalyptus.autoscaling.instances.LifecycleState
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesType
+import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesResponseType
 
 /**
  * 
@@ -295,11 +303,51 @@ class AutoScalingServiceTest {
             .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
   }
 
-  AutoScalingService service() {
+  @SuppressWarnings("GroovyAssignabilityCheck")
+  @Test
+  void testDescribeInstances() {
+    Accounts.setAccountProvider( accountProvider() )
+    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( AutoScalingInstances.AutoScalingInstanceTransform.class )
+    AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
+      new AutoScalingInstance( 
+          ownerAccountNumber: '000000000000', 
+          displayName: 'i-00000001', 
+          availabilityZone: 'Zone1', 
+          autoScalingGroupName: 'Group1', 
+          launchConfigurationName: 'Config1', 
+          healthStatus: HealthStatus.Healthy, 
+          lifecycleState: LifecycleState.InService )    
+    ] ), scalingPolicyStore() ) 
+    Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
+
+    DescribeAutoScalingInstancesResponseType describeAutoScalingInstancesResponseType =
+      service.describeAutoScalingInstances( new DescribeAutoScalingInstancesType() )
+
+    List<AutoScalingInstanceDetails> instanceDetails =
+      describeAutoScalingInstancesResponseType.describeAutoScalingInstancesResult.autoScalingInstances.member
+
+    assertEquals( "Group count", 1, instanceDetails.size() )
+    AutoScalingInstanceDetails details = instanceDetails.get( 0 )
+    assertEquals( "Instance identifier", "i-00000001", details.instanceId )
+    assertEquals( "Auto scaling group name", "Group1", details.autoScalingGroupName )
+    assertEquals( "Launch configuration name", "Config1",  details.launchConfigurationName )
+    assertEquals( "Availability zone", "Zone1",  details.availabilityZone )
+    assertEquals( "Health status", "Healthy",  details.healthStatus )
+    assertEquals( "Lifecycle state", "InService",  details.lifecycleState )    
+  }  
+  
+  AutoScalingService service( 
+      launchConfigurationStore = launchConfigurationStore(),
+      autoScalingGroupStore = autoScalingGroupStore(),
+      autoScalingInstanceStore = autoScalingInstanceStore(),
+      scalingPolicyStore = scalingPolicyStore()    
+  ) {
     new AutoScalingService( 
-        launchConfigurationStore(),         
-        autoScalingGroupStore(), 
-        scalingPolicyStore() )
+        launchConfigurationStore,         
+        autoScalingGroupStore, 
+        autoScalingInstanceStore,
+        scalingPolicyStore )
   }
   
   AccountProvider accountProvider() {
@@ -428,12 +476,12 @@ class AutoScalingServiceTest {
     new AutoScalingGroups() {
       @Override
       List<AutoScalingGroup> list(OwnerFullName ownerFullName) {
-        groups.findAll { group -> group.ownerAccountNumber.equals( ownerFullName.accountNumber ) }
+        groups.findAll { group -> group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber ) }
       }
 
       @Override
       List<AutoScalingGroup> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingGroup> filter) {
-        groups.findAll { group -> filter.apply( group ) } as List
+        list( ownerFullName ).findAll { group -> filter.apply( group ) } as List
       }
 
       @Override
@@ -476,9 +524,52 @@ class AutoScalingServiceTest {
     }
   }
   
-  ScalingPolicies scalingPolicyStore() {
-    List<ScalingPolicy> policies = []
-    
+  AutoScalingInstances autoScalingInstanceStore( List<AutoScalingInstance> instances = [] ) {
+    new AutoScalingInstances(){
+      @Override
+      List<AutoScalingInstance> list(OwnerFullName ownerFullName) {
+        instances.findAll { instance -> instance.getClass().getMethod("getOwnerAccountNumber").invoke( instance ).equals( ownerFullName.accountNumber ) }
+      }
+
+      @Override
+      List<AutoScalingInstance> list(OwnerFullName ownerFullName, Predicate<? super AutoScalingInstance> filter) {
+        list( ownerFullName ).findAll { instance -> filter.apply( instance ) } as List
+      }
+
+      @Override
+      List<AutoScalingInstance> listByGroup(OwnerFullName ownerFullName, String groupName) {
+        list( ownerFullName, { AutoScalingInstance instance -> groupName.equals(instance.autoScalingGroupName) } as Predicate )
+      }
+
+      @Override
+      AutoScalingInstance lookup(OwnerFullName ownerFullName, String instanceId) {
+        list( ownerFullName ).find { instance -> instanceId.equals( instance.instanceId ) }
+      }
+
+      @Override
+      AutoScalingInstance update(OwnerFullName ownerFullName, 
+                                 String instanceId, 
+                                 Callback<AutoScalingInstance> instanceUpdateCallback) {
+        AutoScalingInstance instance = lookup( ownerFullName, instanceId )
+        instanceUpdateCallback.fire( instance )
+        instance
+      }
+
+      @Override
+      boolean delete(AutoScalingInstance autoScalingInstance) {
+        instances.remove( 0 ) != null
+      }
+
+      @Override
+      AutoScalingInstance save(AutoScalingInstance autoScalingInstance) {
+        autoScalingInstance.setId( "1" )
+        instances.add( autoScalingInstance )
+        autoScalingInstance
+      }
+    }
+  }
+  
+  ScalingPolicies scalingPolicyStore( List<ScalingPolicy> policies = [] ) {
     new ScalingPolicies() {
       @Override
       List<ScalingPolicy> list(final OwnerFullName ownerFullName) {

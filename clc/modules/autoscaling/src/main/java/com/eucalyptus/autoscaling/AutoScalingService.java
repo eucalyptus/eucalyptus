@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling;
 
+import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidResourceNameException;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
@@ -30,6 +31,8 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.common.BlockDeviceMappingType;
@@ -111,6 +114,9 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.HealthCheckType;
 import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
+import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
@@ -140,20 +146,24 @@ public class AutoScalingService {
   private static final Logger logger = Logger.getLogger( AutoScalingService.class );
   private final LaunchConfigurations launchConfigurations;
   private final AutoScalingGroups autoScalingGroups;
+  private final AutoScalingInstances autoScalingInstances;
   private final ScalingPolicies scalingPolicies;
   
   public AutoScalingService() {
     this( 
         new PersistenceLaunchConfigurations( ),
         new PersistenceAutoScalingGroups( ),
+        new PersistenceAutoScalingInstances( ),
         new PersistenceScalingPolicies( ) );
   }
 
   protected AutoScalingService( final LaunchConfigurations launchConfigurations,
                                 final AutoScalingGroups autoScalingGroups,
+                                final AutoScalingInstances autoScalingInstances,
                                 final ScalingPolicies scalingPolicies ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
+    this.autoScalingInstances = autoScalingInstances;
     this.scalingPolicies = scalingPolicies;
   }
 
@@ -492,8 +502,30 @@ public class AutoScalingService {
     return reply;
   }
 
-  public DescribeAutoScalingInstancesResponseType describeAutoScalingInstances(DescribeAutoScalingInstancesType request) throws EucalyptusCloudException {
-    DescribeAutoScalingInstancesResponseType reply = request.getReply( );
+  public DescribeAutoScalingInstancesResponseType describeAutoScalingInstances( final DescribeAutoScalingInstancesType request ) throws EucalyptusCloudException {
+    final DescribeAutoScalingInstancesResponseType reply = request.getReply( );
+
+    //TODO:STEVE: MaxRecords / NextToken support for DescribeAutoScalingInstances
+
+    final Context ctx = Contexts.lookup( );
+    final boolean showAll = request.instanceIds().remove( "verbose" );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    final Predicate<AutoScalingInstanceMetadata> requestedAndAccessible =
+        AutoScalingMetadatas.filterPrivilegesById( request.instanceIds() );
+
+    try {
+      final List<AutoScalingInstanceDetails> results = 
+          reply.getDescribeAutoScalingInstancesResult().getAutoScalingInstances().getMember();
+      for ( final AutoScalingInstance autoScalingInstance : autoScalingInstances.list( ownerFullName, requestedAndAccessible ) ) {
+        results.add( TypeMappers.transform( autoScalingInstance, AutoScalingInstanceDetails.class ) );
+      }
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+
     return reply;
   }
 
