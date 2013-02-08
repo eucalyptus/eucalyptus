@@ -1,0 +1,442 @@
+[
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkIn", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "StatusCheckFailed_System", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkOut", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeReadBytes", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeQueueLength", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeWriteOps", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "CPUUtilization", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkIn", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkIn", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "CPUUtilization", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "StatusCheckFailed", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "StatusCheckFailed_Instance", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeReadOps", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkOut", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "CPUUtilization", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "CPUUtilization", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeIdleTime", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeTotalWriteTime", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkOut", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkOut", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadOps", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceId": [
+        "i-2023dc50"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "NetworkIn", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "ImageId": [
+        "ami-1624987f"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskReadBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "InstanceType": [
+        "t1.micro"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeWriteBytes", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "DiskWriteBytes", 
+    "namespace": "AWS/EC2", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {}
+  }, 
+  {
+    "__obj_name__": "Metric", 
+    "name": "VolumeTotalReadTime", 
+    "namespace": "AWS/EBS", 
+    "member": "\n      ", 
+    "connection": [], 
+    "dimensions": {
+      "VolumeId": [
+        "vol-37615e49"
+      ]
+    }
+  }
+]

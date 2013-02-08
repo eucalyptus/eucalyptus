@@ -50,16 +50,26 @@
           },
           "aoColumns": [
             {
+              // Display the checkbox button in the main table
               "bSortable": false,
               "fnRender": function(oObj) { return '<input type="checkbox"/>' },
               "sClass": "checkbox-cell",
             },
             {
-              "fnRender": function(oObj) { return oObj.aData.name == null ? "" : "<span title='"+oObj.aData.name+"'>"+addEllipsis(oObj.aData.name, 75)+"</span>" },
+	      // Display the name of the keypair in the main table
+              "fnRender": function(oObj) { 
+		return eucatableDisplayColumnTypeText (oObj.aData.name, oObj.aData.name, 75);
+	      },
               "iDataSort": 3,
             },
-            { "mDataProp": "fingerprint", "bSortable": false },
-            { "mDataProp": "name", "bVisible": false },
+            { 
+	      // Display the fingerprint of the keypair in the main table
+	      "mDataProp": "fingerprint", "bSortable": false 
+	    },
+            { 
+	      // Create an invisible column for the name of the keypair
+	      "mDataProp": "name", "bVisible": false
+	    },
           ],
         },
         text : {
