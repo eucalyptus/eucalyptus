@@ -655,7 +655,7 @@ int sensor_init(sem * sem, sensorResourceCache * resources, int resources_size, 
         if (sensor_state != NULL || state_sem != NULL)  // already initialized
             return (EUCA_OK);
 
-        state_sem = sem_alloc(1, "mutex");
+        state_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
         if (state_sem == NULL) {
             LOGFATAL("failed to allocate semaphore for sensor\n");
             return (EUCA_MEMORY_ERROR);

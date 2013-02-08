@@ -409,7 +409,7 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
     }
     // set the initial value of the semaphore to the number of 
     // disk-intensive operations that can run in parallel on this node
-    if (nc_state.concurrent_disk_ops && ((disk_sem = sem_alloc(nc_state.concurrent_disk_ops, "mutex")) == NULL)) {
+    if (nc_state.concurrent_disk_ops && ((disk_sem = sem_alloc(nc_state.concurrent_disk_ops, IPC_MUTEX_SEMAPHORE)) == NULL)) {
         LOGERROR("failed to create and initialize disk semaphore\n");
         return (EUCA_PERMISSION_ERROR);
     }

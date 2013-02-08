@@ -122,6 +122,7 @@ typedef enum log_level_e {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! To convert the various log level IDs to a readable format
 extern const char *log_level_names[];
 
 //!

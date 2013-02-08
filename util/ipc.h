@@ -89,6 +89,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! A mutex type semaphore uses the "mutex" type name
+#define IPC_MUTEX_SEMAPHORE                      "mutex"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -136,8 +139,8 @@ typedef struct sem_struct {
 
 //! @{
 //! @name Semaphore allocation/initialization/destroy APIs
-sem *sem_alloc(const int val, const char *name);
-sem *sem_realloc(const int val, const char *name, u32 flags);
+sem *sem_alloc(const int val, const char *typeName);
+sem *sem_realloc(const int val, const char *typeName, u32 flags);
 sem *sem_alloc_posix(sem_t * pExternalLock);
 void sem_free(sem * pSem);
 //! @}

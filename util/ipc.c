@@ -142,8 +142,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-sem *sem_alloc(const int val, const char *name);
-sem *sem_realloc(const int val, const char *name, u32 flags);
+sem *sem_alloc(const int val, const char *typeName);
+sem *sem_realloc(const int val, const char *typeName, u32 flags);
 sem *sem_alloc_posix(sem_t * pExternalLock);
 void sem_free(sem * pSem);
 
@@ -177,8 +177,8 @@ int sem_v(sem * pSem);
 //! Allocate a new semaphore with the given name and mutex starting value.
 //!
 //! @param[in] val  the starting mutex count
-//! @param[in] name the type of semaphore ('mutex' = pthread mutex; 'semaphore' = semaphore) if any other
-//!                 name, then SYS V IPC semaphore is implied.
+//! @param[in] typeName the type of semaphore ('mutex' = pthread mutex; 'semaphore' = semaphore) if any other
+//!                     name, then SYS V IPC semaphore is implied.
 //!
 //! @return a pointer to the newly allocated semaphore or NULL if a failure occured
 //!
@@ -193,18 +193,18 @@ int sem_v(sem * pSem);
 //! @note Caller is responsible to free allocated memory for this semaphore. Call to sem_free() is
 //!       prefered for this operation
 //!
-sem *sem_alloc(const int val, const char *name)
+sem *sem_alloc(const int val, const char *typeName)
 {
-    return (sem_realloc(val, name, O_EXCL));
+    return (sem_realloc(val, typeName, O_EXCL));
 }
 
 //!
 //! Allocate a new semaphore with the given name and mutex starting value.
 //!
 //! @param[in] val   the starting mutex count
-//! @param[in] name  the type of semaphore. If 'mutex' then pthread mutexis used if any other
-//!                  name then posix named semaphore is used if an empty name then SYS V IPC
-//!                  semaphore is implied.
+//! @param[in] typeName  the type of semaphore. If 'mutex' then pthread mutexis used if any other
+//!                      name then posix named semaphore is used if an empty name then SYS V IPC
+//!                      semaphore is implied.
 //! @param[in] flags Kernel encoding of open mode
 //!
 //! @return a pointer to the newly allocated semaphore or NULL if a failure occured
@@ -218,14 +218,14 @@ sem *sem_alloc(const int val, const char *name)
 //! @note Caller is responsible to free allocated memory for this semaphore. Call to sem_free() is
 //!       prefered for this operation
 //!
-sem *sem_realloc(const int val, const char *name, u32 flags)
+sem *sem_realloc(const int val, const char *typeName, u32 flags)
 {
     sem *pSem = NULL;
     char addr[24] = "";
     DECLARE_ARG;
 
     // Validate the name parameter
-    assert(name);
+    assert(typeName);
 
     // Check if we can allocate memory for our zemaphore
     if ((pSem = EUCA_ZALLOC(1, sizeof(sem))) == NULL)
@@ -241,7 +241,7 @@ sem *sem_realloc(const int val, const char *name, u32 flags)
     //
     // Initialize our semphore base on the requested type
     //
-    if (!strcmp(name, "mutex")) {
+    if (!strcmp(typeName, IPC_MUTEX_SEMAPHORE)) {
         // use pthread mutex
         pSem->usemutex = 1;
         pSem->mutcount = val;
@@ -251,21 +251,21 @@ sem *sem_realloc(const int val, const char *name, u32 flags)
 
         // In this case we'll use the address of the semaphore rather than the name
         pSem->name = strdup(addr);
-    } else if (strlen(name) > 0) {
+    } else if (strlen(typeName) > 0) {
         // named semaphores
         if (pSem->flags & O_EXCL) {
             // clean up in case previous sem holder crashed
-            if (sem_unlink(name) == 0) {
-                LOGINFO("cleaning up old semaphore %s\n", name);
+            if (sem_unlink(typeName) == 0) {
+                LOGINFO("cleaning up old semaphore %s\n", typeName);
             }
         }
         // Create a new semaphore with this name.
-        if ((pSem->posix = sem_open(name, O_CREAT | flags, 0644, val)) == SEM_FAILED) {
+        if ((pSem->posix = sem_open(typeName, O_CREAT | flags, 0644, val)) == SEM_FAILED) {
             EUCA_FREE(pSem);
             return (NULL);
         }
 
-        pSem->name = strdup(name);
+        pSem->name = strdup(typeName);
     } else {
         // SYS V IPC semaphores
         if ((pSem->sysv = semget(IPC_PRIVATE, 1, (IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR))) < 0) {

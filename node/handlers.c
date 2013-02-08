@@ -1784,11 +1784,11 @@ static int init(void)
     //// from now on we have unrecoverable failure, so no point in retrying to re-init ////
     initialized = -1;
 
-    hyp_sem = sem_alloc(1, "mutex");
-    inst_sem = sem_alloc(1, "mutex");
-    inst_copy_sem = sem_alloc(1, "mutex");
-    addkey_sem = sem_alloc(1, "mutex");
-    log_sem = sem_alloc(1, "mutex");
+    hyp_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    inst_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    inst_copy_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    addkey_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
+    log_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
     if (!hyp_sem || !inst_sem || !inst_copy_sem || !addkey_sem || !log_sem) {
         LOGFATAL("failed to create and initialize semaphores\n");
         return (EUCA_FATAL_ERROR);

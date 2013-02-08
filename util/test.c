@@ -207,10 +207,10 @@ void test_sem_fork(void)
             {
                 if (i % 16 == 0)
                     printf("\n");
-                if(write(1, &c, 1) <= 0)
+                if (write(1, &c, 1) <= 0)
                     printf("Failed to write to stdout\n");
                 usleep(100);
-                if(write(1, &c, 1) <= 0)
+                if (write(1, &c, 1) <= 0)
                     printf("Failed to write to stdout\n");
             }
             sem_v(s);
@@ -231,10 +231,10 @@ void test_sem_fork(void)
         for (i = 0; i < ITER; i++) {
             sem_p(s);
             {
-                if(write(1, &c, 1) <= 0)
+                if (write(1, &c, 1) <= 0)
                     printf("Failed to write to stdout\n");
                 usleep(100);
-                if(write(1, &c, 1) <= 0)
+                if (write(1, &c, 1) <= 0)
                     printf("Failed to write to stdout\n");
             }
             sem_v(s);
@@ -275,10 +275,10 @@ void *thread_a(void *arg)
         {
             if (i % 16 == 0)
                 printf("\n");
-            if(write(1, &c, 1) <= 0)
+            if (write(1, &c, 1) <= 0)
                 printf("Failed to write to stdout\n");
             usleep(100);
-            if(write(1, &c, 1) <= 0)
+            if (write(1, &c, 1) <= 0)
                 printf("Failed to write to stdout\n");
         }
         sem_v(s);
@@ -312,10 +312,10 @@ void *thread_b(void *arg)
     for (i = 0; i < ITER; i++) {
         sem_p(s);
         {
-            if(write(1, &c, 1) <= 0)
+            if (write(1, &c, 1) <= 0)
                 printf("Failed to write to stdout\n");
             usleep(100);
-            if(write(1, &c, 1) <= 0)
+            if (write(1, &c, 1) <= 0)
                 printf("Failed to write to stdout\n");
         }
         sem_v(s);
