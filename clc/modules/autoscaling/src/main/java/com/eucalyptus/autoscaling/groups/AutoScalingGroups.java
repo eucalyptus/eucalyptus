@@ -49,6 +49,8 @@ public abstract class AutoScalingGroups {
   public abstract List<AutoScalingGroup> list( OwnerFullName ownerFullName,
                                                Predicate<? super AutoScalingGroup> filter ) throws AutoScalingMetadataException;
 
+  public abstract List<AutoScalingGroup> listRequiringScaling( ) throws AutoScalingMetadataException;
+
   public abstract AutoScalingGroup lookup( OwnerFullName ownerFullName,
                                            String autoScalingGroupName ) throws AutoScalingMetadataException;
 

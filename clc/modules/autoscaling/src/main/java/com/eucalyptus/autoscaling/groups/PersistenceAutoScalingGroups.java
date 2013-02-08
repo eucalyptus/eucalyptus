@@ -21,11 +21,12 @@ package com.eucalyptus.autoscaling.groups;
 
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistentsWithResourceNameSupport;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 
 /**
  *
@@ -43,6 +44,11 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
   public List<AutoScalingGroup> list( final OwnerFullName ownerFullName, 
                                       final Predicate<? super AutoScalingGroup> filter ) throws AutoScalingMetadataException {
     return persistenceSupport.list( ownerFullName, filter );
+  }
+
+  @Override
+  public List<AutoScalingGroup> listRequiringScaling() throws AutoScalingMetadataException {
+    return persistenceSupport.listByExample( AutoScalingGroup.requiringScaling(), Predicates.alwaysTrue() );
   }
 
   @Override
@@ -67,7 +73,7 @@ public class PersistenceAutoScalingGroups extends AutoScalingGroups {
     return persistenceSupport.save( autoScalingGroup );
   }
 
-  private static class PersistenceSupport extends AbstractOwnedPersistents<AutoScalingGroup> {
+  private static class PersistenceSupport extends AbstractOwnedPersistentsWithResourceNameSupport<AutoScalingGroup> {
     private PersistenceSupport() {
       super( AutoScalingResourceName.Type.autoScalingGroup );
     }

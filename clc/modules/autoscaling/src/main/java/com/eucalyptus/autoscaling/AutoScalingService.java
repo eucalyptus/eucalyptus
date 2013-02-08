@@ -545,7 +545,8 @@ public class AutoScalingService {
 
   public DeleteAutoScalingGroupResponseType deleteAutoScalingGroup( final DeleteAutoScalingGroupType request ) throws EucalyptusCloudException {
     final DeleteAutoScalingGroupResponseType reply = request.getReply( );
-
+    
+    //TODO:STEVE: force group delete - the Auto Scaling group will be deleted along with all instances associated with the group, without waiting for all instances to be terminated.  
     final Context ctx = Contexts.lookup( );
     try {
       final AutoScalingGroup autoScalingGroup = autoScalingGroups.lookup(

@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import java.util.Comparator;
 import java.util.List;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -53,5 +54,29 @@ public class CollectionUtils {
     };
   }
   
+  public static <T> T reduce( final Iterable<T> iterable, 
+                              final T initialValue, 
+                              final Function<T,Function<T,T>> reducer ) {
+    T value = initialValue;
+    for ( T item : iterable ) {
+      value = reducer.apply( value ).apply( item );      
+    }    
+    return value;
+  } 
   
+  public static <T> Function<T,Function<T,T>> comparator( final Comparator<T> comparator ) {
+    return new Function<T,Function<T,T>>() {
+      @Override
+      public Function<T, T> apply( final T t1 ) {
+        return new Function<T,T>() {
+          @Override
+          public T apply( final T t2 ) {
+            return comparator.compare( t1, t2 ) < 0 ?
+                t1 : 
+                t2;
+          }
+        };
+      }
+    };
+  }
 }

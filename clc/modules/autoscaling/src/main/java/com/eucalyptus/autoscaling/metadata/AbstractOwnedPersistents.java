@@ -19,51 +19,38 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.metadata;
 
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingMetadataWithResourceName;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
-import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
+import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 /**
  *
  */
-public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersistent & AutoScalingMetadataWithResourceName> {
+public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersistent> {
 
-  private final String typeDescription;
-  private final AutoScalingResourceName.Type type;
-  @Nullable
-  private final AutoScalingResourceName.Type scopeType;
+  protected final String typeDescription;
 
-  protected AbstractOwnedPersistents( final AutoScalingResourceName.Type type ) {
-    this( type, null );
+  protected AbstractOwnedPersistents( final String typeDescription ) {
+    this.typeDescription = typeDescription;
   }
 
-  protected AbstractOwnedPersistents( final AutoScalingResourceName.Type type,
-                                      @Nullable final AutoScalingResourceName.Type scopeType ) {
-    this.type = type;
-    this.scopeType = scopeType;
-    this.typeDescription = type.describe();
-  }
-
-  public final AOP lookup( final OwnerFullName ownerFullName,
-                           final String nameOrArn ) throws AutoScalingMetadataException {
-    return lookup( ownerFullName, null, nameOrArn );
-  }
-
-
-  public final AOP lookup( final OwnerFullName ownerFullName,
-                           @Nullable final String scopeNameOrArn,
-                           final String nameOrArn ) throws AutoScalingMetadataException {
-    if ( AutoScalingResourceName.isResourceName().apply( nameOrArn ) ) {
-      return lookupByUuid( AutoScalingResourceName.parse( nameOrArn, type ).getUuid() );
-    } else {
-      final String scopeName = getNameFromScopeNameOrArn( scopeNameOrArn );
-      return lookupByName( ownerFullName, scopeName, nameOrArn );
+  public AOP lookupByExample( final AOP example,
+                              @Nullable final OwnerFullName ownerFullName,
+                              final String key ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.find( example );
+    } catch ( NoSuchElementException e ) {
+      throw new AutoScalingMetadataNotFoundException( qualifyOwner("Unable to find "+typeDescription+" '"+key+"'", ownerFullName), e );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException(  qualifyOwner("Error finding "+typeDescription+" '"+key+"'", ownerFullName), e );
     }
   }
 
@@ -84,40 +71,25 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
-  public AOP update( final OwnerFullName ownerFullName,
-                     final String nameOrArn,
-                     final Callback<AOP> updateCallback ) throws AutoScalingMetadataException {
-     return update( ownerFullName, null, nameOrArn, updateCallback );
+  public List<AOP> listByExample( final AOP example,
+                                  final Predicate<? super AOP> filter ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.filter( example, filter );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Failed to find "+typeDescription+"s by example: " + LogUtil.dumpObject(example), e );
+    }
   }
 
-  public AOP update( final OwnerFullName ownerFullName,
-                      @Nullable final String scopeNameOrArn,
-                      final String nameOrArn,
-                      final Callback<AOP> updateCallback ) throws AutoScalingMetadataException {
-    final AOP example;
-    if ( AutoScalingResourceName.isResourceName().apply( nameOrArn ) ) {
-      example = exampleWithUuid( AutoScalingResourceName.parse( nameOrArn, type ).getUuid() );
-    } else {
-      final String scopeName = getNameFromScopeNameOrArn( scopeNameOrArn );
-      example = exampleWithName( ownerFullName, scopeName, nameOrArn );
-    }
-  
+  public AOP updateByExample( final AOP example,
+                              final OwnerFullName ownerFullName,
+                              final String key,
+                              final Callback<AOP> updateCallback ) throws AutoScalingMetadataException {
     try {
       return Transactions.one( example, updateCallback );
     } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Unable to find "+typeDescription+" '"+nameOrArn+"' for " + ownerFullName, e );
+      throw new AutoScalingMetadataNotFoundException( "Unable to find "+typeDescription+" '"+key+"' for " + ownerFullName, e );
     } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error updating "+typeDescription+" '"+nameOrArn+"' for " + ownerFullName, e );
-    }
-  }
-
-  public boolean delete( final AOP metadata ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.delete( exampleWithUuid( metadata.getNaturalId() ) );
-    } catch ( NoSuchElementException e ) {
-      return false;
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+metadata.getArn()+"'", e );
+      throw new AutoScalingMetadataException( "Error updating "+typeDescription+" '"+key+"' for " + ownerFullName, e );
     }
   }
 
@@ -129,51 +101,41 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
+  public boolean delete( final AOP metadata ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.delete( exampleWithUuid( metadata.getNaturalId() ) );
+    } catch ( NoSuchElementException e ) {
+      return false;
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+describe(metadata)+"'", e );
+    }
+  }
+
+  public static Function<AutoScalingInstance,Date> createdDate() {
+    return AbstractOwnedPersistentDateProperties.CREATED;  
+  }
+  
+  protected String describe( final AOP metadata ) {
+    return metadata.getDisplayName();  
+  }      
+  
+  protected abstract AOP exampleWithUuid( String uuid );
+
   protected abstract AOP exampleWithOwner( OwnerFullName ownerFullName );
 
   protected abstract AOP exampleWithName( OwnerFullName ownerFullName, String name );
 
-  protected AOP exampleWithName( OwnerFullName ownerFullName, String scope, String name ) {
-    return exampleWithName( ownerFullName, name );
-  }
-
-  protected abstract AOP exampleWithUuid( String uuid );
-
-  protected AOP lookupByName( final OwnerFullName ownerFullName, 
-                              final String scope, 
-                              final String name ) throws AutoScalingMetadataException {
-    return lookupByExample( exampleWithName( ownerFullName, scope, name ), ownerFullName, name );
-  }
-
-  protected AOP lookupByUuid( final String uuid ) throws AutoScalingMetadataException {
-    return lookupByExample( exampleWithUuid( uuid ), null, uuid );
-  }
-
-  private AOP lookupByExample( final AOP example,
-                               @Nullable final OwnerFullName ownerFullName,
-                               final String key ) throws AutoScalingMetadataException {
-    try {
-      return Transactions.find( example );
-    } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( qualifyOwner("Unable to find "+typeDescription+" '"+key+"'", ownerFullName), e );
-    } catch ( Exception e ) {
-      throw new AutoScalingMetadataException(  qualifyOwner("Error finding "+typeDescription+" '"+key+"'", ownerFullName), e );
-    }
-  }
-
-  private String getNameFromScopeNameOrArn( final String scopeNameOrArn ) {
-    final String scopeName;
-    if ( scopeNameOrArn != null &&
-        scopeType != null &&
-        AutoScalingResourceName.isResourceName().apply( scopeNameOrArn ) ) {
-      scopeName = AutoScalingResourceName.parse( scopeNameOrArn, type ).getName( scopeType );
-    } else {
-      scopeName = scopeNameOrArn;
-    }
-    return scopeName;
-  }
-
-  private String qualifyOwner( final String text, final OwnerFullName ownerFullName ) {
+  protected final String qualifyOwner( final String text, final OwnerFullName ownerFullName ) {
     return ownerFullName == null ? text : text + " for " + ownerFullName;
   }
+
+  private enum AbstractOwnedPersistentDateProperties implements Function<AutoScalingInstance,Date> {
+    CREATED {
+      @Override
+      public Date apply( final AutoScalingInstance autoScalingInstance ) {
+        return autoScalingInstance.getCreationTimestamp();
+      }
+    }
+  }
+
 }

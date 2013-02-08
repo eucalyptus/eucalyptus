@@ -437,6 +437,11 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      List<AutoScalingGroup> listRequiringScaling() {
+        []
+      }
+
+      @Override
       AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
           group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue

@@ -35,6 +35,10 @@ import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
+import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 /**
  *
@@ -129,6 +133,39 @@ public abstract class LaunchConfigurations {
     }
   }
 
+  @TypeMapper
+  public enum LaunchConfigurationToRunInstances implements Function<LaunchConfiguration,RunInstancesType> {
+    INSTANCE;
+
+    @Override
+    public RunInstancesType apply( final LaunchConfiguration launchConfiguration ) {
+      final RunInstancesType runInstances = new RunInstancesType();
+      runInstances.setKernelId( launchConfiguration.getKernelId() );
+      runInstances.setRamdiskId( launchConfiguration.getRamdiskId() );
+      runInstances.setImageId( launchConfiguration.getImageId() );
+      runInstances.setInstanceType( launchConfiguration.getInstanceType() );
+      runInstances.setMinCount( 1 );
+      runInstances.setMaxCount( 1 );
+      for ( final BlockDeviceMapping mapping : launchConfiguration.getBlockDeviceMappings() ) {
+        final BlockDeviceMappingItemType type = new BlockDeviceMappingItemType();
+        type.setDeviceName( mapping.getDeviceName() );
+        type.setVirtualName( mapping.getVirtualName() );
+        final EbsParameters ebsParameters = mapping.getEbsParameters();
+        if ( ebsParameters != null ) {
+          final EbsDeviceMapping ebsType = new EbsDeviceMapping();
+          ebsType.setSnapshotId( ebsParameters.getSnapshotId() );
+          ebsType.setVolumeSize( ebsParameters.getVolumeSize() );
+          ebsType.setDeleteOnTermination( true );
+          type.setEbs( ebsType );
+        }
+        runInstances.getBlockDeviceMapping().add( type );
+      }
+      runInstances.setKeyName( launchConfiguration.getKeyName() );
+      runInstances.setGroupSet( Lists.newArrayList( launchConfiguration.getSecurityGroups() ) );
+      return runInstances;
+    }
+  }
+  
   @RestrictedTypes.QuantityMetricFunction( LaunchConfigurationMetadata.class )
   public enum CountLaunchConfigurations implements Function<OwnerFullName, Long> {
     INSTANCE;
