@@ -19,9 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.util.Collection;
+
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -66,6 +71,14 @@ public class LoadBalancerZone extends AbstractPersistent {
 
 	@Column(name="zone_name", nullable=false)
 	private String zoneName = null;
+
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "zone")
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerServoInstance> servoInstances = null;
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "zone")
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+	private Collection<LoadBalancerBackendInstance> backendInstances = null;
 	
 	@Column(name="metadata_unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
@@ -81,6 +94,10 @@ public class LoadBalancerZone extends AbstractPersistent {
 	
 	public String getName(){
 		return this.zoneName;
+	}
+	
+	public LoadBalancer getLoadbalancer(){
+		return this.loadbalancer;
 	}
 	
 	@Override

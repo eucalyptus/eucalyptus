@@ -21,10 +21,33 @@ package com.eucalyptus.loadbalancing;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+
+import com.eucalyptus.cloudwatch.MetricData;
 import java.lang.reflect.Field
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+
+public class PutServoStatesType extends LoadBalancingMessage {
+	String instanceId;
+	
+	@HttpEmbedded
+	Instances instances;
+	
+	@HttpEmbedded
+	MetricData metricData;
+	public PutServoceStatesType(){}
+}
+
+public class PutServoStatesResponseType extends LoadBalancingMessage {
+	public PutServoStatesResponseType() { }
+	PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
+	ResponseMetadata responseMetadata = new ResponseMetadata();
+}
+
+public class PutServoStatesResult extends EucalyptusData {
+	public PutServoStatesResult() { }
+}
 
 public class CreateLoadBalancerType extends LoadBalancingMessage {
   String loadBalancerName;

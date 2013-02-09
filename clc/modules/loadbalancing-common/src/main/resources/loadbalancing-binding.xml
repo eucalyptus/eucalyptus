@@ -17,6 +17,19 @@
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
+  <mapping name="PutServoStates" class="com.eucalyptus.loadbalancing.PutServoStatesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <value name="InstanceId" field="instanceId" usage="required"/>
+    <structure name="Instances" field="instances" usage="optional" type="com.eucalyptus.loadbalancing.Instances"/>
+  <!--  <structure name="MetricData" field="metricData" usage="optional" type="com.eucalyptus.cloudwatch.MetricData"/> -->
+  </mapping>
+  <mapping name="PutServoStatesResponse" class="com.eucalyptus.loadbalancing.PutServoStatesResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+    <structure name="PutServoStatesResult" field="putServoStatesResult" usage="required" type="com.eucalyptus.loadbalancing.PutServoStatesResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.loadbalancing.ResponseMetadata"/>
+  </mapping>
+  <mapping class="com.eucalyptus.loadbalancing.PutServoStatesResult" abstract="true">
+  </mapping>
   <mapping name="DescribeLoadBalancerPolicyTypes" class="com.eucalyptus.loadbalancing.DescribeLoadBalancerPolicyTypesType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
     <structure name="PolicyTypeNames" field="policyTypeNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyTypeNames"/>

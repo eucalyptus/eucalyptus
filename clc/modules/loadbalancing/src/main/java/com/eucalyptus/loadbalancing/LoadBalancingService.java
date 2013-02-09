@@ -80,6 +80,12 @@ import com.google.common.collect.Sets;
  */
 public class LoadBalancingService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingService.class );
+  
+  public PutServoStatesResponseType putServoStates(PutServoStatesType request){
+	  PutServoStatesResponseType reply = request.getReply();
+	  return reply;
+  }
+  
   public DescribeLoadBalancerPolicyTypesResponseType describeLoadBalancerPolicyTypes(DescribeLoadBalancerPolicyTypesType request) throws EucalyptusCloudException {
     DescribeLoadBalancerPolicyTypesResponseType reply = request.getReply( );
     return reply;

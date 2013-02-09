@@ -59,6 +59,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     @ManyToOne
     @JoinColumn( name = "metadata_loadbalancer_fk" )
 	private LoadBalancer loadbalancer = null;
+
+    @ManyToOne
+    @JoinColumn( name = "metadata_zone_fk")
+    private LoadBalancerZone zone = null;
         
     @Transient
     private VmInstance vmInstance = null;
@@ -118,7 +122,15 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
     public void setReasonCode(final String reason){
     	this.reasonCode = reason;
     }
+    
+    public void setAvailabilityZone(final LoadBalancerZone zone){
+    	this.zone = zone;
+    }
    
+    public LoadBalancerZone getAvailabilityZone(){
+    	return this.zone;
+    }
+    
 	@Override
 	public String getPartition() {
 		// TODO Auto-generated method stub
