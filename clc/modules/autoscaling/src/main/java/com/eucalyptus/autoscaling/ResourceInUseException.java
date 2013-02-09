@@ -17,13 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.instances;
+package com.eucalyptus.autoscaling;
+
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  *
  */
-public enum LifecycleState {
+@QueryBindingInfo( statusCode = 400 )
+public class ResourceInUseException extends AutoScalingException {
+  private static final long serialVersionUID = 1L;
 
-  Pending, Quarantined, InService, Terminating, Terminated
-
+  public ResourceInUseException( final String message ) {
+    super( "ResourceInUse", Role.Sender, message );
+  }
 }

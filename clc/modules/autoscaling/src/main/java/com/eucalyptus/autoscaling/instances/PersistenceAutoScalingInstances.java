@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.instances;
 
 import java.util.List;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistents;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
@@ -50,15 +51,23 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
                                                 final String groupName ) throws AutoScalingMetadataException {
     final AutoScalingInstance example = AutoScalingInstance.withOwner( ownerFullName );
     example.setAutoScalingGroupName( groupName );
+    return persistenceSupport.listByExample( example, Predicates.alwaysTrue( ) );
+  }
+
+  @Override
+  public List<AutoScalingInstance> listByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = AutoScalingInstance.withOwner( group.getOwner() );
+    example.clearUserIdentity();
+    example.setAutoScalingGroupName( group.getAutoScalingGroupName() );
     return persistenceSupport.listByExample( example, Predicates.alwaysTrue() );
   }
 
   @Override
   public AutoScalingInstance lookup( final OwnerFullName ownerFullName, 
                                      final String instanceId ) throws AutoScalingMetadataException {
-    return persistenceSupport.lookupByExample( 
-        persistenceSupport.exampleWithName( ownerFullName, instanceId ), 
-        ownerFullName, 
+    return persistenceSupport.lookupByExample(
+        persistenceSupport.exampleWithName( ownerFullName, instanceId ),
+        ownerFullName,
         instanceId );
   }
 
@@ -68,14 +77,22 @@ public class PersistenceAutoScalingInstances extends AutoScalingInstances {
                                      final Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException {
     return persistenceSupport.updateByExample(
         persistenceSupport.exampleWithName( ownerFullName, instanceId ),
-        ownerFullName, 
-        instanceId, 
+        ownerFullName,
+        instanceId,
         instanceUpdateCallback );
   }
 
   @Override
   public boolean delete( final AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException {
     return persistenceSupport.delete( autoScalingInstance );
+  }
+
+  @Override
+  public boolean deleteByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException {
+    final AutoScalingInstance example = AutoScalingInstance.withOwner( group.getOwner() );
+    example.clearUserIdentity();
+    example.setAutoScalingGroupName( group.getAutoScalingGroupName() );
+    return !persistenceSupport.deleteByExample( example ).isEmpty();
   }
 
   @Override

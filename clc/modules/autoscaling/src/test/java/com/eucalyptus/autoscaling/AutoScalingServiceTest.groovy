@@ -76,10 +76,19 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstances
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance
 import com.eucalyptus.autoscaling.instances.HealthStatus
 import com.eucalyptus.autoscaling.instances.LifecycleState
-import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesType
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesResponseType
+import com.eucalyptus.autoscaling.activities.ActivityManager
+import com.eucalyptus.autoscaling.activities.ScalingActivities
+import com.eucalyptus.autoscaling.groups.HealthCheckType
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResult
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.Activity
+import com.eucalyptus.autoscaling.activities.ScalingActivity
+import com.eucalyptus.autoscaling.activities.ActivityStatusCode
+import com.eucalyptus.crypto.util.Timestamps
+import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResponseType
 
 /**
  * 
@@ -335,19 +344,76 @@ class AutoScalingServiceTest {
     assertEquals( "Availability zone", "Zone1",  details.availabilityZone )
     assertEquals( "Health status", "Healthy",  details.healthStatus )
     assertEquals( "Lifecycle state", "InService",  details.lifecycleState )    
-  }  
-  
+  }
+
+  @SuppressWarnings("GroovyAssignabilityCheck")
+  @Test
+  void testTerminateInstances() {
+    Accounts.setAccountProvider( accountProvider() )
+    TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
+    discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
+    AutoScalingGroup group;
+    AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore( [
+        group = new AutoScalingGroup(
+            naturalId: '88777c80-7248-11e2-bcfd-0800200c9a66',
+            ownerAccountNumber: '000000000000',
+            displayName: 'Group1',
+            availabilityZones: [ 'Zone1' ] as Set,
+            maxSize: 1,
+            minSize: 1,
+            desiredCapacity: 1,
+            capacity: 1,
+            scalingRequired: false,
+            defaultCooldown: 300,
+            healthCheckType: HealthCheckType.EC2,
+        )    
+    ] ), autoScalingInstanceStore( [
+        new AutoScalingInstance(
+            ownerAccountNumber: '000000000000',
+            displayName: 'i-00000001',
+            availabilityZone: 'Zone1',
+            autoScalingGroup: group,
+            autoScalingGroupName: 'Group1',
+            launchConfigurationName: 'Config1',
+            healthStatus: HealthStatus.Healthy,
+            lifecycleState: LifecycleState.InService,
+        )
+    ] ), scalingPolicyStore() )
+    Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
+
+    TerminateInstanceInAutoScalingGroupResponseType terminateInstanceInAutoScalingGroupResponseType =
+      service.terminateInstanceInAutoScalingGroup( new TerminateInstanceInAutoScalingGroupType(
+        instanceId: 'i-00000001',
+        shouldDecrementDesiredCapacity: true,
+      ) )
+
+    Activity activity =
+      terminateInstanceInAutoScalingGroupResponseType.terminateInstanceInAutoScalingGroupResult.activity;
+
+    assertNotNull( "Activity", activity )
+    assertEquals( "Activity identifier", 'b7717740-7246-11e2-bcfd-0800200c9a66', activity.activityId )
+    assertEquals( "Activity group name", "Group1", activity.autoScalingGroupName )
+    assertEquals( "Activity cause", "Some cause", activity.cause )
+    assertEquals( "Activity start time", date( "2013-02-01T12:34:56.789Z" ), activity.startTime )
+    assertEquals( "Activity status code", "InProgress", activity.statusCode )
+    assertEquals( "Activity description", "Description", activity.description )
+    assertEquals( "Activity details", "Details", activity.details )
+    assertEquals( "Activity progress", 13, activity.progress )
+  }
+
   AutoScalingService service( 
       launchConfigurationStore = launchConfigurationStore(),
       autoScalingGroupStore = autoScalingGroupStore(),
       autoScalingInstanceStore = autoScalingInstanceStore(),
-      scalingPolicyStore = scalingPolicyStore()    
+      scalingPolicyStore = scalingPolicyStore(),
+      activityManager = activityManager()
   ) {
     new AutoScalingService( 
         launchConfigurationStore,         
         autoScalingGroupStore, 
         autoScalingInstanceStore,
-        scalingPolicyStore )
+        scalingPolicyStore,
+        activityManager )
   }
   
   AccountProvider accountProvider() {
@@ -470,9 +536,7 @@ class AutoScalingServiceTest {
     }
   } 
   
-  AutoScalingGroups autoScalingGroupStore() {
-    List<AutoScalingGroup> groups = []
-
+  AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [] ) {
     new AutoScalingGroups() {
       @Override
       List<AutoScalingGroup> list(OwnerFullName ownerFullName) {
@@ -492,8 +556,9 @@ class AutoScalingServiceTest {
       @Override
       AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
-          group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
-              group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber )
+          group.getClass().getMethod("getArn").invoke( group ).equals( autoScalingGroupName ) ||
+          ( group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
+            group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber ) )
         }
         if ( group == null ) {
           throw new AutoScalingMetadataNotFoundException("Group not found: " + autoScalingGroupName)
@@ -528,7 +593,9 @@ class AutoScalingServiceTest {
     new AutoScalingInstances(){
       @Override
       List<AutoScalingInstance> list(OwnerFullName ownerFullName) {
-        instances.findAll { instance -> instance.getClass().getMethod("getOwnerAccountNumber").invoke( instance ).equals( ownerFullName.accountNumber ) }
+        ownerFullName == null ?
+          instances :
+          instances.findAll { instance -> instance.getClass().getMethod("getOwnerAccountNumber").invoke( instance ).equals( ownerFullName.accountNumber ) }
       }
 
       @Override
@@ -542,8 +609,15 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      List<AutoScalingInstance> listByGroup(AutoScalingGroup group) {
+        listByGroup( group.getOwner(), group.getAutoScalingGroupName() )
+      }
+
+      @Override
       AutoScalingInstance lookup(OwnerFullName ownerFullName, String instanceId) {
-        list( ownerFullName ).find { instance -> instanceId.equals( instance.instanceId ) }
+        list( ownerFullName ).find { instance -> 
+          instance.getClass().getMethod("getInstanceId").invoke( instance ).equals( instanceId ) 
+        }
       }
 
       @Override
@@ -558,6 +632,11 @@ class AutoScalingServiceTest {
       @Override
       boolean delete(AutoScalingInstance autoScalingInstance) {
         instances.remove( 0 ) != null
+      }
+
+      @Override
+      boolean deleteByGroup(AutoScalingGroup group) {
+        instances.removeAll( instances.findAll { instance -> group.autoScalingGroupName.equals( instance.autoScalingGroupName ) } )
       }
 
       @Override
@@ -612,5 +691,33 @@ class AutoScalingServiceTest {
         scalingPolicy
       }
     }
+  }
+  
+  ActivityManager activityManager() {
+    new ActivityManager() {
+      @Override
+      void doScaling() {
+      }
+
+      @Override
+      ScalingActivity terminateInstances( AutoScalingGroup group, 
+                                          Collection<AutoScalingInstance> instances ) {
+        new ScalingActivity(
+          naturalId: 'b7717740-7246-11e2-bcfd-0800200c9a66',
+          group: group,
+          autoScalingGroupName: group.getClass().getMethod("getAutoScalingGroupName").invoke( group ),
+          activityStatusCode: ActivityStatusCode.InProgress,
+          cause: "Some cause",
+          creationTimestamp: date( "2013-02-01T12:34:56.789Z" ),
+          description: "Description",
+          details:  "Details",
+          progress: 13
+        );
+      }
+    }
+  }
+  
+  Date date( String timestamp ) {
+    Timestamps.parseIso8601Timestamp( timestamp )        
   }
 }

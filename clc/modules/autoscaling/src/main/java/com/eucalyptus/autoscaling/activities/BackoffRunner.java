@@ -50,13 +50,19 @@ public class BackoffRunner {
   private static final long maxBackoff = TimeUnit.MINUTES.toMillis( 10 );
   private static final long initialBackoff = TimeUnit.SECONDS.toMillis( 9 );
   
-  private final ConcurrentMap<String,TaskInfo> tasksInProgress = Maps.newConcurrentMap();
+  private static final ConcurrentMap<String,TaskInfo> tasksInProgress = Maps.newConcurrentMap();
 
-  BackoffRunner(){    
+  private static final BackoffRunner instance = new BackoffRunner();
+  
+  static BackoffRunner getInstance() {
+    return instance; 
   }
   
-  void runTask( final TaskWithBackOff task ) {
-    if ( !scalingEnabled() ) return;
+  private BackoffRunner(){    
+  }
+  
+  boolean runTask( final TaskWithBackOff task ) {
+    if ( !scalingEnabled() && task.isScalingTask() ) return false;
       
     final long timestamp = timestamp();
     boolean run = false;
@@ -76,6 +82,8 @@ public class BackoffRunner {
     } else {
       logger.info( "Not running task " + task );
     }
+    
+    return run;
   }
   
   private boolean scalingEnabled() {
@@ -96,6 +104,13 @@ public class BackoffRunner {
       this.uniqueKey = uniqueKey;
       this.backoffGroup = backoffGroup;
       this.future = Futures.newGenericeFuture();
+    }
+
+    /**
+     * Tasks such as user initiated instance termination are not scaling tasks. 
+     */
+    boolean isScalingTask(){
+      return true;
     }
     
     final String getUniqueKey() {

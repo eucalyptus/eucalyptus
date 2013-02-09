@@ -21,6 +21,8 @@ package com.eucalyptus.autoscaling.instances;
 
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
+import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
+import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
@@ -41,6 +43,8 @@ public abstract class AutoScalingInstances {
   public abstract List<AutoScalingInstance> listByGroup( OwnerFullName ownerFullName,
                                                          String groupName ) throws AutoScalingMetadataException;
 
+  public abstract List<AutoScalingInstance> listByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;
+
   public abstract AutoScalingInstance lookup( OwnerFullName ownerFullName,
                                               String instanceId ) throws AutoScalingMetadataException;
 
@@ -50,12 +54,22 @@ public abstract class AutoScalingInstances {
 
   public abstract boolean delete( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
 
+  public abstract boolean deleteByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;
+
   public abstract AutoScalingInstance save( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
+
+  public static Function<AutoScalingInstance,String> instanceId() {
+    return AutoScalingMetadatas.toDisplayName();
+  }
 
   public static Function<AutoScalingInstance,String> launchConfigurationName() {
     return AutoScalingInstanceProperties.LAUNCH_CONFIGURATION_NAME;  
   }
-  
+
+  public static Function<AutoScalingInstance,String> groupArn() {
+    return AutoScalingInstanceProperties.GROUP_ARN;
+  }
+
   @TypeMapper
   public enum AutoScalingInstanceTransform implements Function<AutoScalingInstance, AutoScalingInstanceDetails> {
     INSTANCE;
@@ -74,6 +88,12 @@ public abstract class AutoScalingInstances {
   }
   
   private enum AutoScalingInstanceProperties implements Function<AutoScalingInstance,String> {
+    GROUP_ARN {
+      @Override
+      public String apply( final AutoScalingInstance autoScalingInstance ) {
+        return AutoScalingMetadatas.toArn().apply( autoScalingInstance.getAutoScalingGroup() ); 
+      }
+    },
     LAUNCH_CONFIGURATION_NAME {
       @Override
       public String apply( final AutoScalingInstance autoScalingInstance ) {

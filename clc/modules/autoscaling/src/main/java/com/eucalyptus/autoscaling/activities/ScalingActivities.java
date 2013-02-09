@@ -20,9 +20,13 @@
 package com.eucalyptus.autoscaling.activities;
 
 import java.util.List;
+import com.eucalyptus.autoscaling.common.Activity;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.Strings;
+import com.eucalyptus.util.TypeMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 
 /**
@@ -44,5 +48,29 @@ public abstract class ScalingActivities {
   public abstract boolean delete( ScalingActivity scalingActivity ) throws AutoScalingMetadataException;
 
   public abstract ScalingActivity save( ScalingActivity scalingActivity ) throws AutoScalingMetadataException;
+
+
+  @TypeMapper
+  public enum ScalingActivityTransform implements Function<ScalingActivity, Activity> {
+    INSTANCE;
+
+    @Override
+    public Activity apply( final ScalingActivity activity ) {
+      final Activity type = new Activity();
+
+      type.setActivityId( activity.getActivityId() );      
+      type.setAutoScalingGroupName( activity.getAutoScalingGroupName() );
+      type.setCause( activity.getCause() );
+      type.setDescription( activity.getDescription() );
+      type.setDetails( activity.getDetails() );
+      type.setEndTime( activity.getEndTime() );
+      type.setProgress( activity.getProgress() );
+      type.setStartTime( activity.getCreationTimestamp() );
+      type.setStatusCode( Strings.toString( activity.getActivityStatusCode() ) );
+      //type.setStatusMessage( ); //TODO:STEVE: message for each status code?
+
+      return type;
+    }
+  }
 
 }

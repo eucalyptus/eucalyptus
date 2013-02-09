@@ -20,10 +20,13 @@
 package com.eucalyptus.autoscaling.activities;
 
 import static com.eucalyptus.autoscaling.activities.BackoffRunner.TaskWithBackOff;
+import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
@@ -48,6 +51,7 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
@@ -78,7 +82,7 @@ public class ActivityManager {
   private final ScalingActivities scalingActivities;
   private final AutoScalingGroups autoScalingGroups;
   private final AutoScalingInstances autoScalingInstances;
-  private final BackoffRunner runner = new BackoffRunner();
+  private final BackoffRunner runner = BackoffRunner.getInstance( );
   
   public ActivityManager() {
     this(
@@ -88,8 +92,8 @@ public class ActivityManager {
   }
 
   protected ActivityManager( final ScalingActivities scalingActivities, 
-                          final AutoScalingGroups autoScalingGroups, 
-                          final AutoScalingInstances autoScalingInstances ) {
+                             final AutoScalingGroups autoScalingGroups, 
+                             final AutoScalingInstances autoScalingInstances ) {
     this.scalingActivities = scalingActivities;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;
@@ -97,6 +101,7 @@ public class ActivityManager {
   
   public void doScaling() {
     timeoutScalingActivities( );
+    //TODO:STEVE: Describe all EC2 auto scaling instances (by tag), terminate unknown instances
     try {
       for ( final AutoScalingGroup group : autoScalingGroups.listRequiringScaling() ) {
         int compareResult = group.getCapacity().compareTo( group.getDesiredCapacity() );  //TODO:STEVE: verify capacity against autoscaling instances here?
@@ -110,6 +115,66 @@ public class ActivityManager {
       logger.error( e, e );  
     }
     //TODO:STEVE: When do we delete old scaling activities?
+  }
+  
+  @Nullable
+  public ScalingActivity terminateInstances( final AutoScalingGroup group, 
+                                             final Collection<AutoScalingInstance> instances ) {
+    final String arn = group.getArn();
+    final Set<String> arnSet = Sets.newHashSet( Iterables.transform( instances, AutoScalingInstances.groupArn() ) );
+    if ( arnSet.size()!=1 || !arnSet.iterator().next().equals( arn ) ) {
+      throw new IllegalArgumentException( "Instances for termination must belong to the given group." );
+    }
+    
+    final ScalingActivity[] activityHolder = new ScalingActivity[1];
+    runner.runTask( new TaskWithBackOff( arn, "UserTermination" ) {
+      @Override
+      boolean isScalingTask() {
+        return false;
+      }
+
+      @Override
+      void runTask() {
+        logger.info("Running user terminate instances activity for " + group.getArn() );
+
+        boolean processInitiated = false;
+        try {
+          final String userId = Accounts.lookupAccountById( group.getOwnerAccountNumber() )
+              .lookupUserByName( User.ACCOUNT_ADMIN ).getUserId();
+
+          final EucalyptusClient client = new EucalyptusClient( userId );
+          final ScalingActivity activity = ScalingActivity.create( group, "UserTerminate" );
+          activityHolder[0] = scalingActivities.save( activity );
+          processInitiated = true;
+
+          client.dispatch(
+              terminateInstances( group, instances.size(), instances ),
+              new Callback.Checked<TerminateInstancesResponseType>() {
+                @Override
+                public void fireException( final Throwable e ) {
+                  // error, assume no instances terminated for now
+                  failure();
+                  logger.error( "Error terminating instances", e ); //TODO:STEVE: Remove termination failure logging and record in scaling activity details/description
+                  setScalingActivityFinalStatus( ActivityStatusCode.Failed, activity );
+                }
+
+                @Override
+                public void fire( final TerminateInstancesResponseType response ) {
+                  success();
+                  setScalingActivityFinalStatus( ActivityStatusCode.Successful, activity );
+                }
+              } );
+        } catch ( final Exception e ) {
+          logger.error( e, e );
+        } finally {
+          if ( !processInitiated ) {
+            failure();
+          }
+        }
+      }
+    } );
+    
+    return activityHolder[0];
   }
   
   private TaskWithBackOff perhapsLaunchInstances( final AutoScalingGroup group,
@@ -284,14 +349,21 @@ public class ActivityManager {
 
   private TerminateInstancesType terminateInstances( final AutoScalingGroup group, 
                                                      final int terminateCount,
-                                                     final List<AutoScalingInstance> currentInstances ) {
-    final List<AutoScalingInstance> remainingInstances = Lists.newArrayList( currentInstances );
+                                                     final Collection<AutoScalingInstance> currentInstances ) {
     final List<String> instancesToTerminate = Lists.newArrayList();
-    for ( int i=0; i<terminateCount && remainingInstances.size()>=1; i++ ) {
-      final AutoScalingInstance instanceForTermination = 
-          TerminationPolicyType.selectForTermination( group.getTerminationPolicies(), remainingInstances );
-      remainingInstances.remove( instanceForTermination );
-      instancesToTerminate.add( instanceForTermination.getInstanceId() );          
+    
+    if ( currentInstances.size() == terminateCount ) {
+      Iterables.addAll( 
+          instancesToTerminate, 
+          Iterables.transform( currentInstances, AutoScalingInstances.instanceId()) );  
+    } else {
+      final List<AutoScalingInstance> remainingInstances = Lists.newArrayList( currentInstances );
+      for ( int i=0; i<terminateCount && remainingInstances.size()>=1; i++ ) {
+        final AutoScalingInstance instanceForTermination = 
+            TerminationPolicyType.selectForTermination( group.getTerminationPolicies(), remainingInstances );
+        remainingInstances.remove( instanceForTermination );
+        instancesToTerminate.add( instanceForTermination.getInstanceId() );          
+      }
     }
 
     final TerminateInstancesType terminateInstances = new TerminateInstancesType();

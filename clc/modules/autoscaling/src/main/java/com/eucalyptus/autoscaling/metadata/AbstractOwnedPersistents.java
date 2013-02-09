@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.LogUtil;
@@ -103,11 +104,24 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
 
   public boolean delete( final AOP metadata ) throws AutoScalingMetadataException {
     try {
-      return Transactions.delete( exampleWithUuid( metadata.getNaturalId() ) );
+      return Transactions.delete( exampleWithUuid( metadata.getNaturalId( ) ) );
     } catch ( NoSuchElementException e ) {
       return false;
     } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+describe(metadata)+"'", e );
+      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+" '"+describe( metadata )+"'", e );
+    }
+  }
+
+  public List<AOP> deleteByExample( final AOP example ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.each( example, new Callback<AOP>(){
+        @Override
+        public void fire( final AOP input ) {
+          Entities.delete( input );
+        }
+      } );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Error deleting "+typeDescription+"s by example: "+LogUtil.dumpObject( example ), e );
     }
   }
 

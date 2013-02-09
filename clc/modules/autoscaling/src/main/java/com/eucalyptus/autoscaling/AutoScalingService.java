@@ -30,9 +30,11 @@ import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.autoscaling.activities.ActivityManager;
+import com.eucalyptus.autoscaling.activities.ScalingActivity;
+import com.eucalyptus.autoscaling.common.Activity;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
-import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.common.AutoScalingResourceName;
 import com.eucalyptus.autoscaling.common.BlockDeviceMappingType;
@@ -140,6 +142,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class AutoScalingService {
@@ -148,23 +151,27 @@ public class AutoScalingService {
   private final AutoScalingGroups autoScalingGroups;
   private final AutoScalingInstances autoScalingInstances;
   private final ScalingPolicies scalingPolicies;
+  private final ActivityManager activityManager;
   
   public AutoScalingService() {
     this( 
         new PersistenceLaunchConfigurations( ),
         new PersistenceAutoScalingGroups( ),
         new PersistenceAutoScalingInstances( ),
-        new PersistenceScalingPolicies( ) );
+        new PersistenceScalingPolicies( ),
+        new ActivityManager() );
   }
 
   protected AutoScalingService( final LaunchConfigurations launchConfigurations,
                                 final AutoScalingGroups autoScalingGroups,
                                 final AutoScalingInstances autoScalingInstances,
-                                final ScalingPolicies scalingPolicies ) {
+                                final ScalingPolicies scalingPolicies,
+                                final ActivityManager activityManager ) {
     this.launchConfigurations = launchConfigurations;
     this.autoScalingGroups = autoScalingGroups;
     this.autoScalingInstances = autoScalingInstances;
     this.scalingPolicies = scalingPolicies;
+    this.activityManager = activityManager;
   }
 
   public DescribeAutoScalingGroupsResponseType describeAutoScalingGroups( final DescribeAutoScalingGroupsType request ) throws EucalyptusCloudException {
@@ -302,7 +309,7 @@ public class AutoScalingService {
     try {
       RestrictedTypes.allocateUnitlessResource( allocator );
     } catch ( Exception e ) {
-      handleException( e );
+      handleException( e, true );
     }
 
     return reply;
@@ -438,7 +445,7 @@ public class AutoScalingService {
         final ScalingPolicy scalingPolicy = RestrictedTypes.allocateUnitlessResource( allocator );
         reply.getPutScalingPolicyResult().setPolicyARN( scalingPolicy.getArn() );
       } catch ( Exception exception ) {
-        handleException( exception );
+        handleException( exception, true );
       }
 
     } catch ( Exception e ) {
@@ -569,7 +576,7 @@ public class AutoScalingService {
     try {
       RestrictedTypes.allocateUnitlessResource( allocator );
     } catch ( Exception e ) {
-      handleException( e );
+      handleException( e, true );
     }
 
     return reply;
@@ -578,13 +585,20 @@ public class AutoScalingService {
   public DeleteAutoScalingGroupResponseType deleteAutoScalingGroup( final DeleteAutoScalingGroupType request ) throws EucalyptusCloudException {
     final DeleteAutoScalingGroupResponseType reply = request.getReply( );
     
-    //TODO:STEVE: force group delete - the Auto Scaling group will be deleted along with all instances associated with the group, without waiting for all instances to be terminated.  
     final Context ctx = Contexts.lookup( );
     try {
       final AutoScalingGroup autoScalingGroup = autoScalingGroups.lookup(
           ctx.getUserFullName( ).asAccountFullName( ),
           request.getAutoScalingGroupName() );
       if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
+        // Terminate instances first if requested (but don't wait for success ...)
+        if ( Objects.firstNonNull( request.getForceDelete(), Boolean.FALSE ) ) {
+          final List<AutoScalingInstance> instances = autoScalingInstances.listByGroup( autoScalingGroup ); 
+          if ( activityManager.terminateInstances( autoScalingGroup, instances )==null ) {
+            throw new ScalingActivityInProgressException("Scaling activity in progress");
+          }
+          autoScalingInstances.deleteByGroup( autoScalingGroup );
+        }                
         autoScalingGroups.delete( autoScalingGroup );
       } // else treat this as though the group does not exist
     } catch ( AutoScalingMetadataNotFoundException e ) {
@@ -734,12 +748,59 @@ public class AutoScalingService {
     return reply;
   }
 
-  public TerminateInstanceInAutoScalingGroupResponseType terminateInstanceInAutoScalingGroup(TerminateInstanceInAutoScalingGroupType request) throws EucalyptusCloudException {
-    TerminateInstanceInAutoScalingGroupResponseType reply = request.getReply( );
+  public TerminateInstanceInAutoScalingGroupResponseType terminateInstanceInAutoScalingGroup( final TerminateInstanceInAutoScalingGroupType request ) throws EucalyptusCloudException {
+    final TerminateInstanceInAutoScalingGroupResponseType reply = request.getReply( );
+    
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final AutoScalingInstance instance = 
+          autoScalingInstances.lookup( ownerFullName, request.getInstanceId() );
+      
+      final ScalingActivity activity = 
+          activityManager.terminateInstances( instance.getAutoScalingGroup(), Lists.newArrayList( instance ) );
+      if ( activity == null ) {
+        throw new ScalingActivityInProgressException("Scaling activity in progress");
+      }
+      reply.getTerminateInstanceInAutoScalingGroupResult().setActivity( 
+        TypeMappers.transform( activity, Activity.class )  
+      );
+
+      autoScalingInstances.delete( instance ); //TODO:STEVE: This should be part of the scaling activity
+      
+      final String groupArn = instance.getAutoScalingGroup().getArn();
+      final Callback<AutoScalingGroup> groupCallback = new Callback<AutoScalingGroup>() {
+        @Override
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          autoScalingGroup.setCapacity( autoScalingGroup.getCapacity() - 1 );
+          if ( Objects.firstNonNull( request.getShouldDecrementDesiredCapacity(), Boolean.FALSE ) ) {
+            autoScalingGroup.setDesiredCapacity( autoScalingGroup.getDesiredCapacity() - 1 );
+          }
+        }
+      };
+
+      autoScalingGroups.update(
+          ctx.getUserFullName().asAccountFullName(),
+          groupArn,
+          groupCallback);
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new InvalidParameterValueException( "Auto scaling instance not found: " + request.getInstanceId( ) );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+    
     return reply;
   }
 
   private static void handleException( final Exception e ) throws AutoScalingException {
+    handleException( e, false );
+  }
+  
+  private static void handleException( final Exception e, 
+                                       final boolean isCreate ) throws AutoScalingException {
     final AutoScalingException cause = Exceptions.findCause( e, AutoScalingException.class );
     if ( cause != null ) {
       throw cause;
@@ -753,7 +814,9 @@ public class AutoScalingService {
     final ConstraintViolationException constraintViolationException = 
         Exceptions.findCause( e, ConstraintViolationException.class );
     if ( constraintViolationException != null ) {
-      throw new AlreadyExistsException( "Resource already exists" );
+      throw isCreate ? 
+          new AlreadyExistsException( "Resource already exists" ):
+          new ResourceInUseException( "Resource in use" );
     }
 
     final InvalidResourceNameException invalidResourceNameException =

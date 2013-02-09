@@ -64,6 +64,11 @@ public class AbstractOwnedPersistent extends AbstractPersistent {
     setDisplayName( displayName );
   }
 
+  public void clearUserIdentity() {
+    this.ownerUserId = null;
+    this.ownerUserName = null;
+  }
+  
   public String getDisplayName() {
     return displayName;
   }
