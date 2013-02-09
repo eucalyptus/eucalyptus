@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.instances;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.persistence.Column;
 import javax.persistence.EnumType;
@@ -37,6 +38,7 @@ import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Objects;
 
 /**
  *
@@ -134,6 +136,12 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     this.lifecycleState = lifecycleState;
   }
 
+  public boolean healthStatusGracePeriodExpired() {
+    final long gracePeriodMillis = TimeUnit.SECONDS.toMillis( 
+        Objects.firstNonNull( getAutoScalingGroup( ).getHealthCheckGracePeriod(), 300 ) );
+    return System.currentTimeMillis() - getCreationTimestamp().getTime() > gracePeriodMillis;
+  }
+  
   /**
    * Create an example AutoScalingInstance for the given owner. 
    *

@@ -118,6 +118,7 @@ import com.eucalyptus.autoscaling.groups.PersistenceAutoScalingGroups;
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
+import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
@@ -489,8 +490,35 @@ public class AutoScalingService {
     return reply;
   }
 
-  public SetInstanceHealthResponseType setInstanceHealth(SetInstanceHealthType request) throws EucalyptusCloudException {
-    SetInstanceHealthResponseType reply = request.getReply( );
+  public SetInstanceHealthResponseType setInstanceHealth(final SetInstanceHealthType request) throws EucalyptusCloudException {
+    final SetInstanceHealthResponseType reply = request.getReply( );
+
+    final Context ctx = Contexts.lookup( );
+    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) ?
+        null :
+        ctx.getUserFullName( ).asAccountFullName( );
+
+    try {
+      final Callback<AutoScalingInstance> instanceUpdateCallback = new Callback<AutoScalingInstance>() {
+        @Override
+        public void fire( final AutoScalingInstance instance ) {
+          if ( RestrictedTypes.filterPrivileged().apply( instance ) ) {
+            if ( !Objects.firstNonNull( request.getShouldRespectGracePeriod(), Boolean.FALSE ) ||
+                instance.healthStatusGracePeriodExpired() ) {
+              instance.setHealthStatus( Enums.valueOfFunction( HealthStatus.class ).apply( request.getHealthStatus( ) ) );
+            }
+          } else {
+            throw Exceptions.toUndeclared( new AutoScalingMetadataNotFoundException("Instance not found") );
+          }
+        }
+      };      
+      autoScalingInstances.update( ownerFullName, request.getInstanceId(), instanceUpdateCallback );
+    } catch ( AutoScalingMetadataNotFoundException e ) {
+      throw new InvalidParameterValueException( "Auto scaling instance not found: " + request.getInstanceId( ) );
+    } catch ( Exception e ) {
+      handleException( e );
+    }
+    
     return reply;
   }
 
@@ -759,6 +787,9 @@ public class AutoScalingService {
     try {
       final AutoScalingInstance instance = 
           autoScalingInstances.lookup( ownerFullName, request.getInstanceId() );
+      if ( !RestrictedTypes.filterPrivileged().apply( instance ) ) {
+        throw new AutoScalingMetadataNotFoundException("Instance not found");
+      }
       
       final ScalingActivity activity = 
           activityManager.terminateInstances( instance.getAutoScalingGroup(), Lists.newArrayList( instance ) );
