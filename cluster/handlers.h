@@ -402,7 +402,6 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *nodeState);
 int doMigrateInstances(ncMetadata * pMeta, char *nodeName);
-
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta);
 int ccIsEnabled(void);

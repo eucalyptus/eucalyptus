@@ -210,7 +210,7 @@ struct handlers {
     int (*doDescribeSensors) (struct nc_state_t * nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                               int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
     int (*doModifyNode) (struct nc_state_t * nc, ncMetadata * pMeta, char * stateName);
-    int (*doMigrateInstance) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+    int (*doMigrateInstances) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 };
 
  //! bundling structure
@@ -280,7 +280,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char * stateName);
-int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
+int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);

@@ -197,6 +197,7 @@ void usage(void)
             "\t\t-h \t\t- this help information\n"
             "\t\t-w [host:port] \t- Walrus endpoint\n"
             "\t\t-n [host:port] \t- NC endpoint\n"
+            "\t\t-B -n host \t- VB endpoint\n"
             "\t\t-i [str] \t- instance ID\n"
             "\t\t-e [str] \t- reservation ID\n"
             "\t\t-v [type:id:size:format:guestDeviceName:resourceLocation]\n"
@@ -301,6 +302,7 @@ int main(int argc, char **argv)
     virtualMachine params = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, {}, 0 };
     char *nc_hostport = DEFAULT_NC_HOSTPORT;
     char *walrus_hostport = DEFAULT_WALRUS_HOSTPORT;
+    char *nc_endpoint = NC_ENDPOINT;
     char *instance_id = NULL;
     char *image_id = NULL;
     char *image_manifest = NULL;
@@ -331,7 +333,7 @@ int main(int argc, char **argv)
     int ch = 0;
     int rc = 0;
 
-    while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:")) != -1) {
+    while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B")) != -1) {
         switch (ch) {
         case 'c':
             count = atoi(optarg);
@@ -446,6 +448,9 @@ int main(int argc, char **argv)
         case 'h':
             usage();                   // will exit
             break;
+        case 'B':
+            nc_endpoint = "/services/EucalyptusBroker";
+            break;
         case '?':
         default:
             fprintf(stderr, "ERROR: unknown parameter (try -h)\n");
@@ -490,7 +495,7 @@ int main(int argc, char **argv)
     }
 
     char nc_url[BUFSIZE];
-    snprintf(nc_url, BUFSIZE, "http://%s%s", nc_hostport, NC_ENDPOINT);
+    snprintf(nc_url, BUFSIZE, "http://%s%s", nc_hostport, nc_endpoint);
     if (debug)
         printf("connecting to NC at %s\n", nc_url);
     stub = ncStubCreate(nc_url, "NCclient.log", NULL);
@@ -765,7 +770,7 @@ int main(int argc, char **argv)
         }
 
     /***********************************************************/
-    } else if (!strcmp(command, "migrateInstance")) {
+    } else if (!strcmp(command, "migrateInstances")) {
         CHECK_PARAM(instance_id, "instance ID");
         CHECK_PARAM(src_node_name, "source node name");
         CHECK_PARAM(dst_node_name, "destination node name");
@@ -777,9 +782,9 @@ int main(int argc, char **argv)
         strncpy(instance.instanceId, instance_id, sizeof(instance.instanceId));
         strncpy(instance.migration_src, src_node_name, sizeof(instance.migration_src));
         strncpy(instance.migration_dst, dst_node_name, sizeof(instance.migration_dst));
-        rc = ncMigrateInstanceStub(stub, &meta, &instances, 1, "prepare", migration_creds);
+        rc = ncMigrateInstancesStub(stub, &meta, &instances, 1, "prepare", migration_creds);
         if (rc != 0) {
-            printf("ncMigrateInstance() failed: error=%d\n", rc);
+            printf("ncMigrateInstances() failed: error=%d\n", rc);
             exit(1);
         }
 

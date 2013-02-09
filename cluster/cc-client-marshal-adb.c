@@ -1801,7 +1801,6 @@ int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stu
     printf("modifyNode returned status %d\n", adb_modifyNodeResponseType_get_return(snrt, env));
     return (0);
 }
-
 //!
 //! Marshalls and invokes the node controller modification request
 //!

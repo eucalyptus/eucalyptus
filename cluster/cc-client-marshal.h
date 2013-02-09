@@ -154,7 +154,6 @@ int cc_shutdownService(axutil_env_t * env, axis2_stub_t * pStub);
 int cc_modifyNode(char *nodeName, char *stateName, axutil_env_t * env, axis2_stub_t * pStub);
 int cc_migrateInstances(char *nodeName, axutil_env_t * env, axis2_stub_t * pStub);
 
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

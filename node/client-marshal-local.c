@@ -497,11 +497,11 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char * stateName)
 //! @param[in]  destNodeName IP of the destination Node Controller
 //! @param[in]  credentials credentials that enable the migration
 //!
-//! @return the result of doMigrateInstance() (either EUCA_OK or EUCA_ERROR)
+//! @return the result of doMigrateInstances() (either EUCA_OK or EUCA_ERROR)
 //!
-//! @see doMigrateInstance()
+//! @see doMigrateInstances()
 //!
-int ncMigrateInstanceStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
 {
     return (EUCA_OK);
 }

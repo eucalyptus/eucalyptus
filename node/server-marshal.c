@@ -1388,12 +1388,12 @@ adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNod
 //!
 //! Unmarshals, executes, responds to the instance migration request.
 //!
-//! @param[in] ncMigrateInstance a pointer to the instance migration request parameters
+//! @param[in] ncMigrateInstances a pointer to the instance migration request parameters
 //! @param[in] env pointer to the AXIS2 environment structure
 //!
 //! @return a pointer to the request's response structure
 //!
-adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_t * ncMigrateInstance, const axutil_env_t * env)
+adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstances_t * ncMigrateInstances, const axutil_env_t * env)
 {
     int error = EUCA_OK;
     ncMetadata meta = { 0 };
@@ -1404,29 +1404,29 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
     int instancesLen = 0;
     axis2_char_t *action = NULL;
     axis2_char_t *credentials = NULL;
-    adb_ncMigrateInstanceType_t *input = NULL;
-    adb_ncMigrateInstanceResponse_t *response = NULL;
-    adb_ncMigrateInstanceResponseType_t *output = NULL;
+    adb_ncMigrateInstancesType_t *input = NULL;
+    adb_ncMigrateInstancesResponse_t *response = NULL;
+    adb_ncMigrateInstancesResponseType_t *output = NULL;
 
     pthread_mutex_lock(&ncHandlerLock);
     {
-        input = adb_ncMigrateInstance_get_ncMigrateInstance(ncMigrateInstance, env);
-        response = adb_ncMigrateInstanceResponse_create(env);
-        output = adb_ncMigrateInstanceResponseType_create(env);
+        input = adb_ncMigrateInstances_get_ncMigrateInstances(ncMigrateInstances, env);
+        response = adb_ncMigrateInstancesResponse_create(env);
+        output = adb_ncMigrateInstancesResponseType_create(env);
 
         // get standard fields from input
-        correlationId = adb_ncMigrateInstanceType_get_correlationId(input, env);
-        userId = adb_ncMigrateInstanceType_get_userId(input, env);
-        nodeName = adb_ncMigrateInstanceType_get_nodeName(input, env);
+        correlationId = adb_ncMigrateInstancesType_get_correlationId(input, env);
+        userId = adb_ncMigrateInstancesType_get_userId(input, env);
+        nodeName = adb_ncMigrateInstancesType_get_nodeName(input, env);
 
         // get operation-specific fields from input
-        instancesLen = adb_ncMigrateInstanceType_sizeof_instance(input, env);
+        instancesLen = adb_ncMigrateInstancesType_sizeof_instance(input, env);
         if ((instances = EUCA_ZALLOC(instancesLen, sizeof(ncInstance *))) == NULL) {
             LOGERROR("out of memory\n");
             goto mi_error;
         }
         for (int i = 0; i < instancesLen; i++) {
-            adb_instanceType_t *instance_adb = adb_ncMigrateInstanceType_get_instance_at(input, env, i);
+            adb_instanceType_t *instance_adb = adb_ncMigrateInstancesType_get_instance_at(input, env, i);
             ncInstance * instance = copy_instance_from_adb(instance_adb, env);
             if (instance == NULL) {
                 LOGERROR("out of memory\n");
@@ -1434,31 +1434,31 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
             }
             instances [i] = instance;
         }
-        action = adb_ncMigrateInstanceType_get_action(input, env);
-        credentials = adb_ncMigrateInstanceType_get_credentials(input, env);
+        action = adb_ncMigrateInstancesType_get_action(input, env);
+        credentials = adb_ncMigrateInstancesType_get_credentials(input, env);
         
-        eventlog("NC", userId, correlationId, "MigrateInstance", "begin");
+        eventlog("NC", userId, correlationId, "MigrateInstances", "begin");
 
         // do it
         meta.correlationId = correlationId;
         meta.userId = userId;
         meta.nodeName = nodeName;
 
-        error = doMigrateInstance (&meta, instances, instancesLen, action, credentials);
+        error = doMigrateInstances (&meta, instances, instancesLen, action, credentials);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
         mi_error:
-            adb_ncMigrateInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+            adb_ncMigrateInstancesResponseType_set_return(output, env, AXIS2_FALSE);
         } else {
             // set standard fields in output
-            adb_ncMigrateInstanceResponseType_set_return(output, env, AXIS2_TRUE);
-            adb_ncMigrateInstanceResponseType_set_correlationId(output, env, correlationId);
-            adb_ncMigrateInstanceResponseType_set_userId(output, env, userId);
+            adb_ncMigrateInstancesResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncMigrateInstancesResponseType_set_correlationId(output, env, correlationId);
+            adb_ncMigrateInstancesResponseType_set_userId(output, env, userId);
             // no operation-specific fields in output
         }
 
         // set response to output
-        adb_ncMigrateInstanceResponse_set_ncMigrateInstanceResponse(response, env, output);
+        adb_ncMigrateInstancesResponse_set_ncMigrateInstancesResponse(response, env, output);
 
         // free what we allocated
         for (int i = 0; i < instancesLen; i++) {
@@ -1468,7 +1468,7 @@ adb_ncMigrateInstanceResponse_t *ncMigrateInstanceMarshal(adb_ncMigrateInstance_
     }
     pthread_mutex_unlock(&ncHandlerLock);
 
-    eventlog("NC", userId, correlationId, "MigrateInstance", "end");
+    eventlog("NC", userId, correlationId, "MigrateInstances", "end");
     return (response);
 }
 
