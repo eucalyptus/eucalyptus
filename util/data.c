@@ -210,6 +210,15 @@ const char *createImage_progress_names[] = {
     "cancelled"
 };
 
+//! String value of each migrate-related state enumeration entry
+const char *migration_state_names[] = {
+    "migration-none",
+    "migration-preparing",
+    "migration-ready",
+    "migration-migrating",
+    "migration-cleaning"
+};
+
 //! String value of each error enumeration entry
 const char *euca_error_names[] = {
     "ok",
@@ -253,6 +262,7 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
                               int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
+ncInstance *clone_instance(const ncInstance *old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
 int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
@@ -270,6 +280,8 @@ ncVolume *save_volume(ncInstance * pInstance, const char *sVolumeId, const char 
 ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 
 bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
+
+migration_states migration_state_from_string(const char *migration_state_name);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -330,7 +342,7 @@ int allocate_virtualMachine(virtualMachine * pVirtMachineOut, const virtualMachi
             strncpy(pVbrOut->guestDeviceName, pVbrIn->guestDeviceName, sizeof(pVbrOut->guestDeviceName));
             strncpy(pVbrOut->id, pVbrIn->id, sizeof(pVbrOut->id));
             strncpy(pVbrOut->typeName, pVbrIn->typeName, sizeof(pVbrOut->typeName));
-            pVbrOut->size = pVbrIn->size;
+            pVbrOut->sizeBytes = pVbrIn->sizeBytes;
             strncpy(pVbrOut->formatName, pVbrIn->formatName, sizeof(pVbrOut->formatName));
         }
 
@@ -521,6 +533,35 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
     euca_strncpy(pInstance->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
     pInstance->expiryTime = expiryTime;
     return (pInstance);
+}
+
+//!
+//! Clones an existing instance structure
+//!
+//! @param[in] old_instance a pointer to the instance to duplicate
+//!
+//! @return A clone of the existing instance of NULL on failure
+//!
+//! @see free_instance(), allocate_instance()
+//!
+//! @pre The old_instance field must not be NULL
+//!
+//! @post A clone of our existing instance is created.
+//!
+//! @note The caller is responsible to free the allocated instance using the free_instance() API.
+//!
+ncInstance *clone_instance(const ncInstance *old_instance)
+{
+    ncInstance *new_instance;
+    
+    // zeroed out for cleaner-looking checkpoints and strings that are empty unless set
+    if ((new_instance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL)
+        return (NULL);   
+
+    //! @TODO do not just copy everything
+    memcpy (new_instance, old_instance, sizeof(ncInstance));
+
+    return new_instance;
 }
 
 //!
@@ -1022,4 +1063,21 @@ bundleTask *allocate_bundleTask(ncInstance * pInstance)
     }
 
     return (NULL);
+}
+
+//!
+//! Converts string representation of migration state into enum / int
+//!
+//! @param[in] migration_state_name the name of the state to convert
+//!
+//! @return enum of migration state or -1
+//!
+migration_states migration_state_from_string(const char *migration_state_name)
+{
+    for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
+        if (! strcmp(migration_state_names[i], migration_state_name)) {
+            return i;
+        }
+    }
+    return -1;
 }

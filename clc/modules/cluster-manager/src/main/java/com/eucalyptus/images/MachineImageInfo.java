@@ -136,4 +136,14 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public String getManifestLocation( ) {
     return super.getManifestLocation( );
   }
+
+  @Override
+  public String getRootDeviceName( ) {
+    return "/dev/sda1";
+  }
+
+  @Override
+  public String getRootDeviceType( ) {
+    return "instance-store";
+  }
 }

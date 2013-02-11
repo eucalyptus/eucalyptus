@@ -341,15 +341,34 @@ public class Transactions {
       pop( );
     }
   }
-  
+
+  /**
+   * Save a new entity.
+   * 
+   * <p>Unlike {@link #save} this method will never update an existing entity.</p>
+   * 
+   * @param saveMe The new entity to save.
+   * @param <T> The entity type.
+   * @return The persistent entity
+   * @throws TransactionException If an error occurs
+   */
+  public static <T> T saveDirect( T saveMe ) throws TransactionException {
+    checkParam( saveMe, notNullValue() );
+    final EntityTransaction db = Transactions.get( saveMe );
+    try {
+      final T entity = Entities.persist( saveMe );
+      db.commit( );
+      return entity;
+    } catch ( Exception t ) {
+      throw Transactions.transformException( t );
+    } finally {
+      if ( db.isActive() ) db.rollback();
+      pop( );
+    }
+  }
+
   public static <T> boolean delete( T search ) throws TransactionException {
-    return delete( search, new Predicate<T>( ) {
-      
-      @Override
-      public boolean apply( T input ) {
-        return false;
-      }
-    } );
+    return delete( search, Predicates.alwaysTrue() );
   }
   
   public static <T> boolean delete( T search, Predicate<? super T> precondition ) throws TransactionException {

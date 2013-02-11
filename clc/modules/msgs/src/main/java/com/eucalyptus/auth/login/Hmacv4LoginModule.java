@@ -82,7 +82,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
     if ( !MessageDigest.isEqual( computedSig, providedSig ) ) {
       final String canonicalStringNoPath = this.makeSubjectString( credentials, signatureCredential, authorizationParameters, date, true );
       final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath );
-      return MessageDigest.isEqual( computedSigNoPath, providedSig );
+      if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) return false;
     }
     super.setCredential( credentials.getQueryIdCredential() );
     super.setPrincipal( user );

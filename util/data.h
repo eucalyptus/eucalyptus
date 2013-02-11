@@ -94,6 +94,7 @@
 #define SMALL_CHAR_BUFFER_SIZE                     64   //!< Small string buffer size
 #define CHAR_BUFFER_SIZE                          512   //!< Regular string buffer size
 #define BIG_CHAR_BUFFER_SIZE                     1024   //!< Large string buffer size
+#define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 
 //! @}
 
@@ -238,6 +239,7 @@ typedef struct serviceStatusType_t {
 typedef struct ncMetadata_t {
     char *correlationId;               //!< Request Correlation Identifier
     char *userId;                      //!< User identifier
+    char *nodeName;                    //!< Name/IP of the node the request is bound for (optional)
     int epoch;                         //!< Request timestamp in EPOCH format
     serviceInfoType services[16];      //!< List of services available
     serviceInfoType disabledServices[16];   //!< List of disabled services
@@ -253,7 +255,7 @@ typedef struct virtualBootRecord_t {
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
     char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
-    long long size;                    //!< Size of the boot record in bytes
+    long long sizeBytes;                    //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
     char id[SMALL_CHAR_BUFFER_SIZE];   //!< emi|eki|eri|vol|none
     char typeName[SMALL_CHAR_BUFFER_SIZE];  //!< machine|kernel|ramdisk|ephemeral|ebs
@@ -343,6 +345,10 @@ typedef struct ncInstance_t {
     createImage_progress createImageTaskState;  //!< Image creation task progress state
     int createImagePid;                //!< Image creationg task PID value
     int createImageCanceled;           //!< Boolean indicating if the image creation task has been cancelled
+
+    migration_states migration_state;  //!< Migration state
+    char migration_src[HOSTNAME_SIZE]; //!< Name of the host from which the instance is being or needs to be migrated
+    char migration_dst[HOSTNAME_SIZE]; //!< Name of the host to which the instance is being or needs to be migrated
 
     char keyName[CHAR_BUFFER_SIZE * 4]; //!< Name of the key to use for this instance
     char privateDnsName[CHAR_BUFFER_SIZE];  //!< Private DNS name
@@ -460,6 +466,7 @@ ncInstance *allocate_instance(const char *sUUID, const char *sInstanceId, const 
                               const char *sStateName, int stateCode, const char *sUserId, const char *sOwnerId, const char *sAccountId,
                               netConfig * pNetCfg, const char *sKeyName, const char *sUserData, const char *sLaunchIndex, const char *sPlatform,
                               int expiryTime, char **asGroupNames, int groupNamesSize) _attribute_wur_;
+ncInstance *clone_instance(const ncInstance *old_instance);
 void free_instance(ncInstance ** ppInstance);
 int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
 int remove_instance(bunchOfInstances ** ppHead, ncInstance * pInstance);
@@ -487,6 +494,8 @@ ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 //! @name Bundling Task APIs
 bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
 //! @}
+
+migration_states migration_state_from_string(const char *migration_state_name);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

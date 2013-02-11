@@ -80,6 +80,8 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
@@ -87,6 +89,8 @@ import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.empyrean.DisableServiceType;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.VmType;
 import com.eucalyptus.vm.VmTypes;
 import com.google.common.base.Function;
@@ -102,6 +106,9 @@ import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeRegionsType;
+import edu.ucsb.eucalyptus.msgs.EvacuateNodeResponseType;
+import edu.ucsb.eucalyptus.msgs.EvacuateNodeType;
+import edu.ucsb.eucalyptus.msgs.MigrateInstancesType;
 import edu.ucsb.eucalyptus.msgs.NodeCertInfo;
 import edu.ucsb.eucalyptus.msgs.NodeLogInfo;
 import edu.ucsb.eucalyptus.msgs.RegionInfoType;
@@ -129,7 +136,43 @@ public class ClusterEndpoint implements Startable {
   public void start( ) throws MuleException {
     Clusters.getInstance( );
   }
-  
+
+  public EvacuateNodeResponseType evacuateNode( final EvacuateNodeType request ) {
+    EvacuateNodeResponseType reply = request.getReply( );
+    String serviceTag = request.getServiceTag( );
+    for ( ServiceConfiguration c : Topology.enabledServices( ClusterController.class ) ) {
+      if ( Clusters.lookup( c ).getNodeMap( ).containsKey( serviceTag ) ) {
+        try {
+          //0. gate this cluster
+          //1. describe resources
+          //2. describe nodes
+          //3. find all vms running on NC@serviceTag 
+          //4. authorize all NCs to attach volumes which are attached to vms from #3
+          //5. send the operation down
+          AsyncRequests.sendSync( c, new MigrateInstancesType( ) {
+            {
+		this.setSourceHost( request.getHost( ) );
+            }
+          } );
+          //5.a. when the above returns that means that:
+          // - the request has been accepted and can be executed
+          // - the other state interrogating operations (DescribeResources) will reflect the resources committed to the evacuation.
+          //6. describe resources
+//        c.getStateMachine( ).transition( c.getStateMachine( ).getState( ) );
+          //10. ungate the cluster
+          //7. wait to determine migration schedule
+          //8. wait for migration to complete
+          //8.a. migration schedule will say where vms from #3 are moving
+          //9. authorize volume attachments only for the NCs which now host the vms from #3
+          return reply.markWinning( );
+        } catch ( Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      }
+    }
+    return reply.markFailed( );
+  }
+
   public DescribeAvailabilityZonesResponseType DescribeAvailabilityZones( DescribeAvailabilityZonesType request ) throws EucalyptusCloudException {
     final DescribeAvailabilityZonesResponseType reply = ( DescribeAvailabilityZonesResponseType ) request.getReply( );
     final List<String> args = request.getAvailabilityZoneSet( );

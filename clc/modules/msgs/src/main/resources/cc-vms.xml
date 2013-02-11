@@ -108,6 +108,9 @@
     <value name="createImageStateName" field="createImageStateName" usage="optional" />
     <value name="blkbytes" field="blockBytes" usage="optional" />
     <value name="netbytes" field="networkBytes" usage="optional" />
+    <value name="migrationStateName" field="migrationStateName" usage="optional" />
+    <value name="migrationSource" field="migrationSource" usage="optional" />
+    <value name="migrationDestination" field="migrationDestination" usage="optional" />
     <structure usage="optional">
       <collection field="groupNames" factory="org.jibx.runtime.Utility.arrayListFactory">
         <value name="groupNames" type="java.lang.String" />

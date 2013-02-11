@@ -987,7 +987,7 @@ int get_conf_var(const char *path, const char *name, char **value)
     char *ret = NULL;
     int len = 0;
 
-    /* sanity check */
+    // sanity check
     if ((path == NULL) || (path[0] == '\0') || (name == NULL) || (name[0] == '\0') || (value == NULL)) {
         return -1;
     }

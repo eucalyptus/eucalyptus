@@ -102,6 +102,9 @@
 	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	  <xs:element minOccurs="0" name="migrationStateName" type="xs:string" />
+	  <xs:element minOccurs="0" name="migrationSource" type="xs:string" />
+	  <xs:element minOccurs="0" name="migrationDestination" type="xs:string" />
 	  
 	  <!-- <xs:element minOccurs="0" name="networkIndex" type="xs:int"/> -->
 	  <xs:element minOccurs="0" maxOccurs="unbounded" name="groupNames" type="xs:string"/>
@@ -147,7 +150,7 @@
 	<xs:sequence>
 	  <xs:element minOccurs="0" name="resourceLocation" type="xs:string"/>
 	  <xs:element minOccurs="0" name="guestDeviceName" type="xs:string"/>
-	  <xs:element minOccurs="0" name="size" type="xs:int"/>
+	  <xs:element minOccurs="0" name="size" type="xs:long"/>
 	  <xs:element minOccurs="0" name="format" type="xs:string"/>
 	  <xs:element minOccurs="0" name="id" type="xs:string"/>
 	  <xs:element minOccurs="0" name="type" type="xs:string"/>
@@ -191,7 +194,7 @@
        <xs:complexType abstract="true" name="metricCounterType">
         <xs:sequence>
 	  <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1" />
-	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>>
+	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>
 	  <xs:element name="sequenceNum" type="xs:long" minOccurs="1" maxOccurs="1" />
 	  <xs:element name="dimensions" type="tns:metricDimensionsType" maxOccurs="unbounded" minOccurs="1"/>
         </xs:sequence>
@@ -232,7 +235,7 @@
           <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
-    <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
     	</xs:sequence>
       </xs:complexType>
 
@@ -841,6 +844,47 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+
+      <xs:complexType name="modifyNodeType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="stateName" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="modifyNodeResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="migrateInstancesType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="sourceHost" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="destinationHost" type="xs:string"/>
+	      <xs:element minOccurs="0" maxOccurs="1" name="allowHosts" type="xs:boolean"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="migrateInstancesResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
       
       <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
       <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
@@ -862,6 +906,12 @@
 
       <xs:element name="ShutdownService" nillable="true" type="tns:shutdownServiceType"/>
       <xs:element name="ShutdownServiceResponse" nillable="true" type="tns:shutdownServiceResponseType"/>
+
+      <xs:element name="ModifyNode" nillable="true" type="tns:modifyNodeType"/>
+      <xs:element name="ModifyNodeResponse" nillable="true" type="tns:modifyNodeResponseType"/>
+
+      <xs:element name="MigrateInstances" nillable="true" type="tns:migrateInstancesType"/>
+      <xs:element name="MigrateInstancesResponse" nillable="true" type="tns:migrateInstancesResponseType"/>
       
       <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
       <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>
@@ -955,6 +1005,16 @@
 
   <wsdl:message name="ShutdownServiceResponse">
     <wsdl:part element="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ModifyNodeResponse">
+    <wsdl:part element="tns:ModifyNodeResponse" name="ModifyNodeResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="MigrateInstancesResponse">
+    <wsdl:part element="tns:MigrateInstancesResponse" name="MigrateInstancesResponse">
     </wsdl:part>
   </wsdl:message>
   
@@ -1085,6 +1145,16 @@
 
   <wsdl:message name="ShutdownService">
     <wsdl:part element="tns:ShutdownService" name="ShutdownService">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="ModifyNode">
+    <wsdl:part element="tns:ModifyNode" name="ModifyNode">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="MigrateInstances">
+    <wsdl:part element="tns:MigrateInstances" name="MigrateInstances">
     </wsdl:part>
   </wsdl:message>
 
@@ -1238,6 +1308,20 @@
       <wsdl:input message="tns:ShutdownService" name="ShutdownService">
       </wsdl:input>
       <wsdl:output message="tns:ShutdownServiceResponse" name="ShutdownServiceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ModifyNode">
+      <wsdl:input message="tns:ModifyNode" name="ModifyNode">
+      </wsdl:input>
+      <wsdl:output message="tns:ModifyNodeResponse" name="ModifyNodeResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="MigrateInstances">
+      <wsdl:input message="tns:MigrateInstances" name="MigrateInstances">
+      </wsdl:input>
+      <wsdl:output message="tns:MigrateInstancesResponse" name="MigrateInstancesResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1454,6 +1538,26 @@
       </wsdl:input>
       <wsdl:output name="ShutdownServiceResponse">
 	<soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ModifyNode">
+      <soap:operation soapAction="EucalyptusCC#ModifyNode" style="document"/>
+      <wsdl:input name="ModifyNode">
+  <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="ModifyNodeResponse">
+  <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="MigrateInstances">
+      <soap:operation soapAction="EucalyptusCC#MigrateInstances" style="document"/>
+      <wsdl:input name="MigrateInstances">
+  <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="MigrateInstancesResponse">
+  <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
 

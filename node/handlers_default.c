@@ -218,6 +218,8 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+static int doModifyNode(struct nc_state_t * nc, ncMetadata * pMeta, char * stateName);
+static int doMigrateInstance(struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -246,6 +248,8 @@ struct handlers default_libvirt_handlers = {
     .doCancelBundleTask = doCancelBundleTask,
     .doDescribeBundleTasks = doDescribeBundleTasks,
     .doDescribeSensors = doDescribeSensors,
+    .doModifyNode = doModifyNode,
+    .doMigrateInstance = doMigrateInstance
 };
 
 /*----------------------------------------------------------------------------*\
@@ -882,7 +886,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 
     char *tagBuf;
     char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[32];
+    char localDevReal[32], localDevTag[256], remoteDevReal[132];
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
@@ -946,12 +950,12 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             remoteDevReal[0] = '\0';
         } else {
             LOGDEBUG("[%s][%s] attached iSCSI target of host device '%s'\n", instanceId, volumeId, remoteDevStr);
-            snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+            snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
             have_remote_device = 1;
         }
         EUCA_FREE(remoteDevStr);
     } else {
-        snprintf(remoteDevReal, 32, "%s", remoteDev);
+        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDev);
         have_remote_device = 1;
     }
 
@@ -1091,7 +1095,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
 
     char *tagBuf;
     char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[32];
+    char localDevReal[32], localDevTag[256], remoteDevReal[132];
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
@@ -1157,12 +1161,12 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
             LOGERROR("[%s][%s] failed to get local name of host iscsi device\n", instanceId, volumeId);
             remoteDevReal[0] = '\0';
         } else {
-            snprintf(remoteDevReal, 32, "%s", remoteDevStr);
+            snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDevStr);
             have_remote_device = 1;
         }
         EUCA_FREE(remoteDevStr);
     } else {
-        snprintf(remoteDevReal, 32, "%s", remoteDev);
+        snprintf(remoteDevReal, sizeof(remoteDevReal), "%s", remoteDev);
         have_remote_device = 1;
     }
 
@@ -1903,7 +1907,7 @@ static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char
 //!
 //! @param[in]  nc a pointer to the NC state structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  historySize teh size of the data history to retrieve
+//! @param[in]  historySize the size of the data history to retrieve
 //! @param[in]  collectionIntervalTimeMs the data collection interval in milliseconds
 //! @param[in]  instIds the list of instance identifiers string
 //! @param[in]  instIdsLen the number of instance identifiers in the instIds list
@@ -1975,4 +1979,30 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
 
     LOGDEBUG("found %d resource(s)\n", k);
     return EUCA_OK;
+}
+
+//!
+//! Handles the node modification request.
+//!
+//! @param[in]  nc a pointer to the NC state structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+//!
+static int doModifyNode (struct nc_state_t * nc, ncMetadata * pMeta, char * stateName)
+{
+    LOGINFO("node state change to %s\n", stateName);
+    return EUCA_OK;
+}
+
+//!
+//! Handles the instance migration request.
+//!
+//! @param[in]  nc a pointer to the NC state structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+//!
+static int doMigrateInstance (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+{
+    LOGERROR("no default for %s!\n", __func__);
+    return (EUCA_UNSUPPORTED_ERROR);   
 }

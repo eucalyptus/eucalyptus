@@ -115,6 +115,7 @@ import org.jibx.binding.model.ValidationContext;
 import org.jibx.runtime.JiBXException;
 import org.jibx.util.ClasspathUrlExtender;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -527,7 +528,8 @@ public class BindingCache {
       }
       if ( !classNames.contains( klass.getName( ) ) ) {
         classNames.add( klass.getName( ) );
-        String mapping = new RootObjectTypeBinding( klass ).process( );
+        final String namespace = getInternalNamespaceIfCustomized( klass );
+        final String mapping = new RootObjectTypeBinding( klass, namespace ).process( );
         this.out.write( mapping );
         this.out.flush( );
       } else {
@@ -535,6 +537,24 @@ public class BindingCache {
       }
     }
     
+    private String getInternalNamespaceIfCustomized( final Class klass ) {
+      String namespace = null;
+      final ComponentId.ComponentMessage componentMessage = 
+          Ats.inClassHierarchy( klass ).get( ComponentId.ComponentMessage.class );
+      if ( componentMessage != null ) {
+        try {
+          final String namespaceSuffix = 
+              componentMessage.value().newInstance().getInternalNamespaceSuffix();
+          if ( namespaceSuffix != null ) {
+            namespace = ns + namespaceSuffix;  
+          }
+        } catch ( Exception e ) {
+          Logs.extreme().error( e, e );
+        } 
+      }
+      return namespace;
+    }
+
     public void close( ) {
       try {
         this.out.flush( );
@@ -583,11 +603,13 @@ public class BindingCache {
     
     class RootObjectTypeBinding extends TypeBinding {
       private Class   type;
+      private String  namespace;
       private boolean abs;
       
-      public RootObjectTypeBinding( Class type ) {
+      public RootObjectTypeBinding( Class type, String namespace ) {
         InternalSoapBindingGenerator.this.indent = 2;
         this.type = type;
+        this.namespace = namespace;
         if ( Object.class.equals( type.getSuperclass( ) ) ) {
           this.abs = true;
         } else if ( type.getSuperclass( ).getSimpleName( ).equals( "EucalyptusData" ) ) {
@@ -607,12 +629,21 @@ public class BindingCache {
 //          new RuntimeException( "Ignoring anonymous class: " + this.type ).printStackTrace( );
         } else {
           this.elem( Elem.mapping );
+          boolean defineNamespace = false;
           if ( this.abs ) {
             this.attr( "abstract", "true" );
           } else {
-            this.attr( "name", this.type.getSimpleName( ) ).attr( "extends", this.type.getSuperclass( ).getCanonicalName( ) );
+            this.attr( "name", this.type.getSimpleName( ) );
+            if ( namespace != null ) {
+              defineNamespace = true;
+              this.attr( "ns", namespace );
+            }
+            this.attr( "extends", this.type.getSuperclass( ).getCanonicalName( ) );
           }
           this.attr( "class", this.type.getCanonicalName( ) );
+          if ( defineNamespace ) {
+            this.elem( Elem.namespace ).attr( "uri", namespace ).attr( "default", "elements" ).attr( "prefix", "eucans" ).end();
+          }
           if ( BindingFileSearch.INSTANCE.MSG_BASE_CLASS.isAssignableFrom( this.type.getSuperclass( ) )
                || BindingFileSearch.INSTANCE.MSG_DATA_CLASS.isAssignableFrom( this.type.getSuperclass( ) ) ) {
             this.elem( Elem.structure ).attr( "map-as", this.type.getSuperclass( ).getCanonicalName( ) ).end( );
@@ -804,7 +835,7 @@ public class BindingCache {
     private Deque<ElemItem> elemStack = new LinkedList<ElemItem>( );
     
     enum Elem {
-      structure, collection, value, mapping, binding
+      structure, collection, value, mapping, binding, namespace
     }
     
     class IgnoredTypeBinding extends NoopTypeBinding {

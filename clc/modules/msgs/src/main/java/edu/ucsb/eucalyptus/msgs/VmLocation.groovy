@@ -80,6 +80,19 @@ public class CloudTopologyMessage extends EucalyptusMessage{
   }
 }
 /** *******************************************************************************/
+public class EvacuateNodeType extends CloudTopologyMessage {
+  String host;
+
+  public String getServiceTag( ) {
+    return "http://" + this.getHost() + ":8775/axis2/services/EucalyptusNC";//construct bullshit service tag
+  }
+}
+public class EvacuateNodeResponseType extends CloudTopologyMessage {}
+public class MigrateInstancesType extends CloudTopologyMessage {
+  String sourceHost;
+}
+public class MigrateInstancesResponseType extends CloudTopologyMessage {}
+/** *******************************************************************************/
 public class DescribeAvailabilityZonesType extends CloudTopologyMessage {
   //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "ZoneName")

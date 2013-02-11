@@ -140,30 +140,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-void adb_InitService(void);
-adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolume, const axutil_env_t * env);
-adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolume, const axutil_env_t * env);
-adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundleInstance, const axutil_env_t * env);
-adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRestartInstance_t * bundleInstance, const axutil_env_t * env);
-adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t * cancelBundleTask, const axutil_env_t * env);
-adb_DescribeSensorsResponse_t *DescribeSensorsMarshal(adb_DescribeSensors_t * describeSensors, const axutil_env_t * env);
-adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, const axutil_env_t * env);
-adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t * describeNetworks, const axutil_env_t * env);
-adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_DescribePublicAddresses_t * describePublicAddresses, const axutil_env_t * env);
-adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAddress, const axutil_env_t * env);
-adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * unassignAddress, const axutil_env_t * env);
-adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t * configureNetwork, const axutil_env_t * env);
-adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t * getConsoleOutput, const axutil_env_t * env);
-adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwork, const axutil_env_t * env);
-adb_DescribeResourcesResponse_t *DescribeResourcesMarshal(adb_DescribeResources_t * describeResources, const axutil_env_t * env);
-adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_t * describeInstances, const axutil_env_t * env);
-int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axutil_env_t * env);
-adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstances, const axutil_env_t * env);
-adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * rebootInstances, const axutil_env_t * env);
-adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstances_t * terminateInstances, const axutil_env_t * env);
-adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, const axutil_env_t * env);
-void print_adb_ccInstanceType(adb_ccInstanceType_t * in);
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC PROTOTYPES                             |
@@ -228,7 +204,7 @@ adb_AttachVolumeResponse_t *AttachVolumeMarshal(adb_AttachVolume_t * attachVolum
     if (!DONOTHING) {
         rc = doAttachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev);
         if (rc) {
-            logprintf("ERROR: doAttachVolume() returned FAIL\n");
+            LOGERROR("doAttachVolume() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -296,7 +272,7 @@ adb_DetachVolumeResponse_t *DetachVolumeMarshal(adb_DetachVolume_t * detachVolum
     if (!DONOTHING) {
         rc = doDetachVolume(&ccMeta, volumeId, instanceId, remoteDev, localDev, force);
         if (rc) {
-            logprintf("ERROR: doDetachVolume() returned FAIL\n");
+            LOGERROR("doDetachVolume() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -362,7 +338,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     if (!DONOTHING) {
         rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
         if (rc) {
-            logprintf("ERROR: doBundleInstance() returned FAIL\n");
+            LOGERROR("doBundleInstance() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -417,7 +393,7 @@ adb_BundleRestartInstanceResponse_t *BundleRestartInstanceMarshal(adb_BundleRest
     status = AXIS2_TRUE;
     if (!DONOTHING) {
         if ((rc = doBundleRestartInstance(&ccMeta, instanceId)) != 0) {
-            logprintf("ERROR: doBundleRestartInstance() returned FAIL\n");
+            LOGERROR("doBundleRestartInstance() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -469,7 +445,7 @@ adb_CancelBundleTaskResponse_t *CancelBundleTaskMarshal(adb_CancelBundleTask_t *
     if (!DONOTHING) {
         rc = doCancelBundleTask(&ccMeta, instanceId);
         if (rc) {
-            logprintf("ERROR: doCancelBundleTask() returned FAIL\n");
+            LOGERROR("doCancelBundleTask() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -639,7 +615,7 @@ adb_StopNetworkResponse_t *StopNetworkMarshal(adb_StopNetwork_t * stopNetwork, c
     if (!DONOTHING) {
         rc = doStopNetwork(&ccMeta, accountId, netName, vlan);
         if (rc) {
-            logprintf("ERROR: doStopNetwork() returned FAIL\n");
+            LOGERROR("doStopNetwork() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -710,7 +686,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     if (!DONOTHING) {
         rc = doDescribeNetworks(&ccMeta, nameserver, clusterControllers, clusterControllersLen, outvnetConfig);
         if (rc) {
-            logprintf("ERROR: doDescribeNetworks() returned fail %d\n", rc);
+            LOGERROR("doDescribeNetworks() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
@@ -893,8 +869,9 @@ adb_AssignAddressResponse_t *AssignAddressMarshal(adb_AssignAddress_t * assignAd
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        if ((rc = doAssignAddress(&ccMeta, uuid, src, dst)) != EUCA_OK) {
-            logprintf("doAssignAddress() returned FAIL\n");
+        rc = doAssignAddress(&ccMeta, uuid, src, dst);
+        if (rc) {
+            LOGERROR("doAssignAddress() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -949,7 +926,7 @@ adb_UnassignAddressResponse_t *UnassignAddressMarshal(adb_UnassignAddress_t * un
     if (!DONOTHING) {
         rc = doUnassignAddress(&ccMeta, src, dst);
         if (rc) {
-            logprintf("ERROR: doUnassignAddress() returned FAIL\n");
+            LOGERROR("doUnassignAddress() failed\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -1022,7 +999,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     done = 0;
     destNameLast = strdup("EUCAFIRST");
     if (!destNameLast) {
-        logprintf("ERROR: out of memory\n");
+        LOGERROR("out of memory\n");
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
         return ret;
@@ -1044,7 +1021,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
         EUCA_FREE(destNameLast);
         destNameLast = strdup(destName);
         if (!destNameLast) {
-            logprintf("ERROR: out of memory\n");
+            LOGERROR("out of memory\n");
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
             return ret;
@@ -1102,7 +1079,7 @@ adb_ConfigureNetworkResponse_t *ConfigureNetworkMarshal(adb_ConfigureNetwork_t *
     EUCA_FREE(destNameLast);
 
     if (done) {
-        logprintf("ERROR: doConfigureNetwork() returned fail %d\n", rc);
+        LOGERROR("doConfigureNetwork() failed with %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1158,7 +1135,7 @@ adb_GetConsoleOutputResponse_t *GetConsoleOutputMarshal(adb_GetConsoleOutput_t *
     if (!DONOTHING) {
         rc = doGetConsoleOutput(&ccMeta, instId, &output);
         if (rc) {
-            logprintf("ERROR: doGetConsoleOutput() returned fail %d\n", rc);
+            LOGERROR("doGetConsoleOutput() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
@@ -1235,7 +1212,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     if (!DONOTHING) {
         rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, nameserver, clusterControllers, clusterControllersLen);
         if (rc) {
-            logprintf("ERROR: doStartNetwork() returned fail %d\n", rc);
+            LOGERROR("doStartNetwork() failed with %d\n", rc);
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         }
@@ -1405,7 +1382,7 @@ adb_DescribeInstancesResponse_t *DescribeInstancesMarshal(adb_DescribeInstances_
 
     EUCA_FREE(instIds);
     if (rc) {
-        logprintf("ERROR: doDescribeInstances() failed %d\n", rc);
+        LOGERROR("doDescribeInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1662,7 +1639,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     }
 
     if (rc) {
-        logprintf("ERROR: doRunInstances() failed %d\n", rc);
+        LOGERROR("doRunInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1739,7 +1716,7 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
 
     rirt = adb_rebootInstancesResponseType_create(env);
     if (rc) {
-        logprintf("ERROR: doRebootInstances() failed %d\n", rc);
+        LOGERROR("doRebootInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1814,7 +1791,7 @@ adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstanc
 
     tirt = adb_terminateInstancesResponseType_create(env);
     if (rc) {
-        logprintf("ERROR: doTerminateInstances() failed %d\n", rc);
+        LOGERROR("doTerminateInstances() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1880,7 +1857,7 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
 
     cirt = adb_createImageResponseType_create(env);
     if (rc) {
-        logprintf("ERROR: doCreateImage() failed %d\n", rc);
+        LOGERROR("doCreateImage() failed %d\n", rc);
         status = AXIS2_FALSE;
         snprintf(statusMessage, 255, "ERROR");
     } else {
@@ -1915,4 +1892,115 @@ adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, c
 void print_adb_ccInstanceType(adb_ccInstanceType_t * in)
 {
 
+}
+
+//!
+//! Unmarshalls request to modify a node controller, executes, responds.
+//!
+//! @param[in] modifyNode a pointer to the request message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const axutil_env_t * env)
+{
+    adb_ModifyNodeResponse_t *ret = NULL;
+    adb_modifyNodeResponseType_t *mnrt = NULL;
+    adb_modifyNodeType_t *mnt = NULL;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256] = { 0 };
+    char *nodeName = NULL;
+    char *stateName = NULL;
+    ncMetadata ccMeta = { 0 };
+
+    mnt = adb_ModifyNode_get_ModifyNode(modifyNode, env);
+
+    EUCA_MESSAGE_UNMARSHAL(modifyNodeType, mnt, (&ccMeta));
+
+    stateName = adb_modifyNodeType_get_stateName(mnt, env);
+    nodeName = adb_modifyNodeType_get_nodeName(mnt, env);
+
+    status = AXIS2_TRUE;
+    if (!DONOTHING) {
+        rc = doModifyNode(&ccMeta, nodeName, stateName);
+        if (rc) {
+            LOGERROR("doModifyNode() failed\n");
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+        }
+    }
+
+    mnrt = adb_modifyNodeResponseType_create(env);
+    adb_modifyNodeResponseType_set_return(mnrt, env, status);
+    if (status == AXIS2_FALSE) {
+        adb_modifyNodeResponseType_set_statusMessage(mnrt, env, statusMessage);
+    }
+
+    adb_modifyNodeResponseType_set_correlationId(mnrt, env, ccMeta.correlationId);
+    adb_modifyNodeResponseType_set_userId(mnrt, env, ccMeta.userId);
+
+    ret = adb_ModifyNodeResponse_create(env);
+    adb_ModifyNodeResponse_set_ModifyNodeResponse(ret, env, mnrt);
+
+    return (ret);
+}
+
+
+//!
+//! Unmarshalls request to modify a node controller, executes, responds.
+//!
+//! @param[in] modifyNode a pointer to the request message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t * migrateInstances, const axutil_env_t * env)
+{
+    adb_MigrateInstancesResponse_t *ret = NULL;
+    adb_migrateInstancesResponseType_t *mirt = NULL;
+    adb_migrateInstancesType_t *mit = NULL;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256] = { 0 };
+    char *nodeName = NULL;
+    ncMetadata ccMeta = { 0 };
+
+    mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
+
+    EUCA_MESSAGE_UNMARSHAL(migrateInstancesType, mit, (&ccMeta));
+
+    nodeName = adb_migrateInstancesType_get_sourceHost(mit, env);
+
+    status = AXIS2_TRUE;
+    if (!DONOTHING) {
+        rc = doMigrateInstances(&ccMeta, nodeName);
+        if (rc) {
+            LOGERROR("doMigrateInstances() failed\n");
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+        }
+    }
+
+    mirt = adb_migrateInstancesResponseType_create(env);
+    adb_migrateInstancesResponseType_set_return(mirt, env, status);
+    if (status == AXIS2_FALSE) {
+        adb_migrateInstancesResponseType_set_statusMessage(mirt, env, statusMessage);
+    }
+
+    adb_migrateInstancesResponseType_set_correlationId(mirt, env, ccMeta.correlationId);
+    adb_migrateInstancesResponseType_set_userId(mirt, env, ccMeta.userId);
+
+    ret = adb_MigrateInstancesResponse_create(env);
+    adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
+
+    return (ret);
 }
