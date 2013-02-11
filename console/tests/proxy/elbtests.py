@@ -26,19 +26,32 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from boto.ec2.elb.listener import Listener
+from boto.ec2.elb.healthcheck import HealthCheck
 from uiproxyclient import UIProxyClient
 
 if __name__ == "__main__":
+    instance_id = 'i-2023dc50'
     # make some calls to proxy class to test things out
     client = UIProxyClient()
     client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'SECRET')
     print "=== Getting Load Balancers ==="
     print client.get_all_load_balancers()
     print "=== Create Load Balancer ==="
-    listener = Listener(load_balancer_port='80', instance_port='8888', protocol='HTTP')
-    print client.create_load_balancer("testbalancer", ['us-east-1a'], [listener])
+    listener = '80', '8888', 'HTTP'
+    print client.create_load_balancer('testbalancer', ['us-east-1d'], [listener])
     print client.get_all_load_balancers()
+    print "=== Registering Instance ==="
+    print client.register_instances('testbalancer', [instance_id])
+    print "=== Configuring Health Check ==="
+    print client.configure_health_check('testbalancer', HealthCheck(target='HTTP:80/hc/test'))
+    print "=== Create LB liistener ==="
+    listener = '2022', '8022', 'TCP'
+    print client.create_load_balancer_listeners('testbalancer', [listener])
     print "=== Getting Instance Health ==="
     print client.describe_instance_health('testbalancer')
+    print "=== Delete LB liistener ==="
+    print client.delete_load_balancer_listeners('testbalancer', ['443'])
+    print "=== Deregistering Instance ==="
+    print client.deregister_instances('testbalancer', [instance_id])
     print "=== Delete Load Balancer ==="
     print client.delete_load_balancer('testbalancer')

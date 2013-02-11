@@ -38,6 +38,7 @@ from boto.ec2.blockdevicemapping import BlockDeviceType
 from boto.ec2.image import ImageAttribute
 from boto.ec2.instance import ConsoleOutput
 from boto.ec2.instance import Group
+from boto.ec2.instanceinfo import InstanceInfo
 from boto.ec2.cloudwatch import CloudWatchConnection
 from boto.ec2.cloudwatch.dimension import Dimension
 from boto.ec2.cloudwatch.metric import Metric
@@ -249,9 +250,13 @@ class BotoJsonBalanceEncoder(JSONEncoder):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'SecurityGroup'
             return (values)
-        elif isinstance(obj, InstanceState):
+        elif isinstance(obj, boto.ec2.elb.InstanceState):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'InstanceState'
+            return (values)
+        elif isinstance(obj, InstanceInfo):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'InstanceInfo'
             return (values)
         return super(BotoJsonBalanceEncoder, self).default(obj)
 

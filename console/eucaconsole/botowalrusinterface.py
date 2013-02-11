@@ -38,7 +38,7 @@ class BotoWalrusInterface(WalrusInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        boto.set_stream_logger('foo')
+        #boto.set_stream_logger('foo')
         path='/services/Walrus'
         port=8773
         try:
@@ -50,7 +50,7 @@ class BotoWalrusInterface(WalrusInterface):
             pass
         self.conn = S3Connection(access_id, secret_key, host=clc_host,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):

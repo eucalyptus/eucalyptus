@@ -351,7 +351,6 @@ class LoginProcessor(ProxyProcessor):
             access_id = user
             secret_key = passwd
             session_token = None
-            print "ec2: %s, %s, %s" %(ec2_endpoint, access_id, secret_key)
         if ec2_endpoint == None:
             if config.getboolean('test', 'usemock') == False:
                 auth = TokenAuthenticator(config.get('server', 'clchost'),
