@@ -11,7 +11,8 @@
     <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.loadbalancing.ErrorDetail"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.ErrorDetail" abstract="true"/>
-  <mapping name="ErrorResponse" class="com.eucalyptus.loadbalancing.ErrorResponse">
+  <mapping name="ErrorResponse" class="com.eucalyptus.loadbalancing.ErrorResponse" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
+    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
     <collection field="error">
       <structure name="Error" type="com.eucalyptus.loadbalancing.Error"/>
     </collection>
@@ -411,8 +412,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.Subnets" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.Subnets" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
@@ -431,8 +431,7 @@
     <value name="AttributeName" field="attributeName" usage="optional"/>
     <value name="AttributeValue" field="attributeValue" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.AppCookieStickinessPolicy" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.AppCookieStickinessPolicy" abstract="true">
     <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="CookieName" field="cookieName" usage="optional"/>
   </mapping>
@@ -478,8 +477,7 @@
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.HealthCheck" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.HealthCheck" abstract="true">
     <value name="Target" field="target" usage="required"/>
     <value name="Interval" field="interval" usage="required"/>
     <value name="Timeout" field="timeout" usage="required"/>
@@ -504,13 +502,11 @@
     <structure name="Listener" field="listener" usage="optional" type="com.eucalyptus.loadbalancing.Listener"/>
     <structure name="PolicyNames" field="policyNames" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.LBCookieStickinessPolicy" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.LBCookieStickinessPolicy" abstract="true">
     <value name="PolicyName" field="policyName" usage="optional"/>
     <value name="CookieExpirationPeriod" field="cookieExpirationPeriod" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.loadbalancing.Policies" abstract="true" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
-    <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
+  <mapping class="com.eucalyptus.loadbalancing.Policies" abstract="true">
     <structure name="AppCookieStickinessPolicies" field="appCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.AppCookieStickinessPolicies"/>
     <structure name="LBCookieStickinessPolicies" field="lbCookieStickinessPolicies" usage="optional" type="com.eucalyptus.loadbalancing.LBCookieStickinessPolicies"/>
     <structure name="OtherPolicies" field="otherPolicies" usage="optional" type="com.eucalyptus.loadbalancing.PolicyNames"/>

@@ -199,7 +199,7 @@ public class EnableAvailabilityZonesForLoadBalancerResponseType extends LoadBala
   EnableAvailabilityZonesForLoadBalancerResult enableAvailabilityZonesForLoadBalancerResult = new EnableAvailabilityZonesForLoadBalancerResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class Subnets extends LoadBalancingMessage {
+public class Subnets extends EucalyptusData {
   public Subnets() {  }  
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>();
@@ -300,7 +300,7 @@ public class SetLoadBalancerPoliciesOfListenerResponseType extends LoadBalancing
   SetLoadBalancerPoliciesOfListenerResult setLoadBalancerPoliciesOfListenerResult = new SetLoadBalancerPoliciesOfListenerResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class HealthCheck extends LoadBalancingMessage {
+public class HealthCheck extends EucalyptusData {
   String target;
   BigInteger interval;
   BigInteger timeout;
@@ -330,7 +330,7 @@ public class DescribeLoadBalancersResponseType extends LoadBalancingMessage {
   DescribeLoadBalancersResult describeLoadBalancersResult = new DescribeLoadBalancersResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class AppCookieStickinessPolicy extends LoadBalancingMessage {
+public class AppCookieStickinessPolicy extends EucalyptusData {
   String policyName;
   String cookieName;
   public AppCookieStickinessPolicy() {  }
@@ -528,7 +528,7 @@ public class SetLoadBalancerListenerSSLCertificateResponseType extends LoadBalan
   SetLoadBalancerListenerSSLCertificateResult setLoadBalancerListenerSSLCertificateResult = new SetLoadBalancerListenerSSLCertificateResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class Policies extends LoadBalancingMessage {
+public class Policies extends EucalyptusData {
   @HttpEmbedded
   AppCookieStickinessPolicies appCookieStickinessPolicies;
   @HttpEmbedded
@@ -551,7 +551,7 @@ public class CreateLBCookieStickinessPolicyResponseType extends LoadBalancingMes
   CreateLBCookieStickinessPolicyResult createLBCookieStickinessPolicyResult = new CreateLBCookieStickinessPolicyResult();
   ResponseMetadata responseMetadata = new ResponseMetadata();
 }
-public class LBCookieStickinessPolicy extends LoadBalancingMessage {
+public class LBCookieStickinessPolicy extends EucalyptusData {
   String policyName;
   Long cookieExpirationPeriod;
   public LBCookieStickinessPolicy() {  }
