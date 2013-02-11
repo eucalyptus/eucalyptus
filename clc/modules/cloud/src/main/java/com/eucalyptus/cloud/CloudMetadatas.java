@@ -73,10 +73,9 @@ import com.google.common.collect.Lists;
 public class CloudMetadatas {
   public static <T extends CloudMetadata> Function<T, String> toDisplayName( ) {
     return new Function<T, String>( ) {
-      
       @Override
       public String apply( T arg0 ) {
-        return arg0.getDisplayName( );
+        return arg0 == null ? null : arg0.getDisplayName( );
       }
     };
   }
@@ -86,8 +85,7 @@ public class CloudMetadatas {
   } 
    
   public static <T extends CloudMetadata> Predicate<T> filterByProperty( final Collection<String> requestedValues,
-	                                                                           final Function<? super T,String> extractor ) {
-
+                                                                         final Function<? super T,String> extractor ) {
    return new Predicate<T>( ) {
       @Override
       public boolean apply( T input ) {

@@ -193,6 +193,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           try {//use request binding
             this.binding.toStream( byteOut, message );
           } catch ( BindingException ex ) {
+            Logs.extreme( ).error( ex, ex );
             try {//use default binding with request namespace
               BindingManager.getDefaultBinding( ).toStream( byteOut, message, this.namespace );
             } catch ( BindingException ex1 ) {//use default binding

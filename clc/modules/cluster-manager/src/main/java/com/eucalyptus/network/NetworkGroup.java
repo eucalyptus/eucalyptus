@@ -153,7 +153,11 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this.description = groupDescription;
     this.groupId = Crypto.generateId( Integer.toHexString(groupName.hashCode()), "sg" );
   }
-  
+
+  public static NetworkGroup withOwner( final OwnerFullName ownerFullName ) {
+    return new NetworkGroup( ownerFullName );
+  }
+
   public static NetworkGroup named( final OwnerFullName ownerFullName, final String groupName ) {
     return new NetworkGroup( ownerFullName, groupName );
   }

@@ -62,24 +62,28 @@
 
 package com.eucalyptus.network;
 
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.CloudMetadatas.FilterBuilder;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.Filter;
 import com.eucalyptus.tags.Filters;
+import com.eucalyptus.tags.Tag;
+import com.eucalyptus.tags.TagSupport;
+import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
@@ -91,6 +95,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -100,6 +105,7 @@ import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
+import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
@@ -157,52 +163,50 @@ public class NetworkGroupManager {
     return reply;
   }
   
-  private enum GetGroupId implements Function<NetworkGroup, String> {
-    EXTRACT_GROUP_ID;
-      
-      public String apply(NetworkGroup networkGroup) {
-        return networkGroup.getGroupId();
-      }
-    }
-
-  public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException {
+  public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException, TransactionException {
       final DescribeSecurityGroupsResponseType reply = request.getReply( );
-      final Context ctx = Contexts.lookup( );
-      boolean showAll = request.getSecurityGroupSet( ).remove( "verbose" );
-      NetworkGroups.createDefault( ctx.getUserFullName( ) );//ensure the default group exists to cover some old broken installs
-     
-      final List<String> groupNames = request.getSecurityGroupSet( );
-      final Predicate<NetworkGroup> argListFilter = new Predicate<NetworkGroup>( ) {
-        @Override
-        public boolean apply( final NetworkGroup arg0 ) {
-          return groupNames.isEmpty( ) || groupNames.contains( arg0.getDisplayName( ) ) || groupNames.contains(arg0.getGroupId( ) );
-       
-        }
-      };
-      
-      Predicate<NetworkGroup> netFilter = Predicates.and( argListFilter, RestrictedTypes.filterPrivileged( ) );
-      OwnerFullName ownerFn = AccountFullName.getInstance( ctx.getAccount( ) );
-      if ( Contexts.lookup( ).hasAdministrativePrivileges( ) ) {
-        if ( showAll ) {
-          ownerFn = null;
-        }
-        netFilter = argListFilter;
+      final Context ctx = Contexts.lookup();
+      final Set<String> nameOrIdSet = Sets.newHashSet();
+      nameOrIdSet.addAll( request.getSecurityGroupSet( ) );
+      nameOrIdSet.addAll( request.getSecurityGroupIdSet() );
+      boolean showAll = nameOrIdSet.remove( "verbose" );
+      NetworkGroups.createDefault( ctx.getUserFullName( ) ); //ensure the default group exists to cover some old broken installs
+
+      final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
+      final Predicate<? super NetworkGroup> requestedAndAccessible =
+          CloudMetadatas.filteringFor( NetworkGroup.class )
+              .byPredicate( Predicates.or(
+                  CloudMetadatas.filterById( nameOrIdSet ),
+                  CloudMetadatas.filterByProperty( nameOrIdSet, NetworkGroups.groupId() ) ) )
+              .byPredicate( filter.asPredicate( ) )
+              .byPredicate( Contexts.lookup().hasAdministrativePrivileges( ) ?
+                  Predicates.<NetworkGroup>alwaysTrue( ) :
+                  RestrictedTypes.<NetworkGroup>filterPrivileged( ) )
+              .buildPredicate();
+
+      final OwnerFullName ownerFn = Contexts.lookup( ).hasAdministrativePrivileges( ) && showAll ?
+          null :
+          AccountFullName.getInstance( ctx.getAccount( ) );
+
+      final Iterable<SecurityGroupItemType> securityGroupItems = Transactions.filteredTransform(
+          NetworkGroup.withOwner( ownerFn ),
+          filter.asCriterion(),
+          filter.getAliases(),
+          requestedAndAccessible,
+          TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
+
+      final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( NetworkGroup.class )
+          .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount( ) ),
+              Iterables.transform( securityGroupItems, SecurityGroupItemToGroupId.INSTANCE ) );
+      for ( final SecurityGroupItemType securityGroupItem : securityGroupItems ) {
+        Tags.addFromTags( securityGroupItem.getTagSet(), ResourceTag.class, tagsMap.get( securityGroupItem.getGroupId() ) );
       }
-      
-      final EntityTransaction db = Entities.get( NetworkGroup.class );
-      try {
-        final List<NetworkGroup> networks = Entities.query( NetworkGroup.named( ownerFn, null ) );
-        final Iterable<NetworkGroup> matches = Iterables.filter( networks, netFilter );
-        final Iterable<SecurityGroupItemType> transformed = Iterables.transform( matches, TypeMappers.lookup( NetworkGroup.class, SecurityGroupItemType.class ) );
-        Iterables.addAll( reply.getSecurityGroupInfo( ), transformed );
-        db.commit( );
-      } catch ( final Exception ex ) {
-        db.rollback( );
-      }
-      
+
+      Iterables.addAll( reply.getSecurityGroupInfo( ), securityGroupItems );
+
       return reply;
   }
-  
+
   public RevokeSecurityGroupIngressResponseType revoke( final RevokeSecurityGroupIngressType request ) throws EucalyptusCloudException, MetadataException {
       
       final Context ctx = Contexts.lookup( );
@@ -317,6 +321,15 @@ public class NetworkGroupManager {
       Logs.exhaust( ).error( ex, ex );
       db.rollback( );
       throw ex;
+    }
+  }
+
+  private enum SecurityGroupItemToGroupId implements Function<SecurityGroupItemType, String> {
+    INSTANCE {
+      @Override
+      public String apply( SecurityGroupItemType securityGroupItemType ) {
+        return securityGroupItemType.getGroupId();
+      }
     }
   }
 }

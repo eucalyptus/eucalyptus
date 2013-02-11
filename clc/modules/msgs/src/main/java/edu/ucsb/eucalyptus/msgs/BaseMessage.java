@@ -80,6 +80,7 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -274,7 +275,7 @@ public class BaseMessage {
       msgClass = msgClass.getSuperclass( );
     }
     TYPE reply = null;
-    String replyType = msgClass.getName( ).replaceAll( "Type", "" ) + "ResponseType";
+    String replyType = msgClass.getName( ).replaceAll( "Type$", "" ) + "ResponseType";
     try {
       Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
       reply = ( TYPE ) responseClass.newInstance( );
@@ -340,6 +341,9 @@ public class BaseMessage {
       } else if ( msge.getMessage( ) instanceof MappingHttpMessage
                   && ( msgHttp = ( MappingHttpMessage ) msge.getMessage( ) ).getMessage( ) instanceof BaseMessage ) {
         return ( T ) msgHttp.getMessage( );
+      } else if ( msge.getMessage( ) instanceof Supplier
+          && ( ( Supplier ) msge.getMessage( ) ).get( ) instanceof BaseMessage ) {
+        return ( T ) ( ( Supplier ) msge.getMessage( ) ).get( );
       } else {
         return null;
       }

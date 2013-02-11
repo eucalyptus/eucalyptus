@@ -27,7 +27,7 @@ start() {
     fi
 
     echo -n $"Starting $SERVICE: "
-    daemon --user=$CONSOLEUSER --pidfile=$PIDFILE $PROCESS -d
+    daemon --user=$CONSOLEUSER --pidfile=$PIDFILE $PROCESS -d -p $PIDFILE
     RETVAL=$?
     echo
     [ $RETVAL -eq 0 ] && touch $LOCKFILE

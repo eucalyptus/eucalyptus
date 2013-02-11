@@ -20,6 +20,7 @@
 package com.eucalyptus.tags;
 
 import static com.eucalyptus.tags.FilterSupport.PersistenceFilter.persistenceFilter;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -273,6 +274,14 @@ public abstract class FilterSupport<RT> {
       return this;
     }
 
+    public Builder<RT> withLikeExplodedProperty( final String filterName,
+                                                 final Function<? super RT, ?> extractor,
+                                                 final Function<String, Collection> explodeFunction ) {
+      predicateFunctions.put( filterName, 
+          FilterSupport.<RT>explodedLiteralFilter( extractor, likeWildFunction( explodeFunction ) ) );
+      return this;
+    }
+    
     /**
      * Declare a constant valued string property.
      *
@@ -428,6 +437,28 @@ public abstract class FilterSupport<RT> {
       return this;
     }
 
+    /**
+     * Declare a property filterable at the persistence layer after expansion.
+     *
+     * <p>The given function will be passed a expression containing like
+     * wildcards and is expected to explode to a collection of literal values
+     * to match.</p>
+     * 
+     * @param filterName The name of the filter
+     * @param fieldName The path to the field (dot separated)
+     * @param explodeFunction Function to expand a given like expression
+     * @return This builder for call chaining
+     */
+    public Builder<RT> withLikeExplodingPersistenceFilter( final String filterName,
+                                                           final String fieldName,
+                                                           final Function<String, Collection> explodeFunction ) {
+      persistenceFilters.put( filterName, persistenceFilter( 
+          fieldName, 
+          aliases( fieldName ), 
+          likeWildFunction( explodeFunction ) ) );
+      return this;
+    }
+    
     private Set<String> aliases( final String fieldPath ) {
       final Set<String> aliases = Sets.newHashSet();
       final Iterator<String> aliasIterator = Splitter.on( "." ).split( fieldPath ).iterator();
@@ -522,9 +553,7 @@ public abstract class FilterSupport<RT> {
           if ( persistentValue != null ) {
             for ( final String alias : persistenceFilter.getAliases() ) aliases.put( alias, this.aliases.get( alias ) );
             disjunction.add( buildRestriction( persistenceFilter.getProperty(), persistentValue ) );
-          } else {
-            disjunction.add( Restrictions.not( Restrictions.conjunction() ) ); // always false
-          }
+          } // else, there is no valid DB filter for the given value (e.g. wildcard for integer value)
         }
       }
       conjunction.add( disjunction );
@@ -532,7 +561,7 @@ public abstract class FilterSupport<RT> {
 
     // Construct database filter and aliases for tags
     boolean tagPresent = false;
-    final Junction tagConjunction = Restrictions.conjunction();
+    final List<Junction> tagJunctions = Lists.newArrayList();
     for ( final Map.Entry<String,Set<String>> filter : Iterables.filter( filters.entrySet(), isTagFilter() ) ) {
       tagPresent = true;
       final Junction disjunction = Restrictions.disjunction();
@@ -546,9 +575,9 @@ public abstract class FilterSupport<RT> {
           disjunction.add( buildTagRestriction( filterName.substring(4), value, false ) );
         }
       }
-      tagConjunction.add( disjunction );
+      tagJunctions.add( disjunction );
     }
-    if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagConjunction ) );
+    if ( tagPresent ) conjunction.add( tagCriterion( accountId, tagJunctions ) );
 
     return new Filter( aliases, conjunction, Predicates.and( and ), tagPresent );
   }
@@ -557,8 +586,35 @@ public abstract class FilterSupport<RT> {
     return supportByClass.get( metadataClass );
   }
 
+  /**
+   * Will the given like expression match any value?
+   * 
+   * @param expression The expression to test
+   * @return True if fully wild
+   */
+  public static boolean isTotallyWildLikeExpression( final String expression ) {
+    return expression.replace("%","").isEmpty();  
+  }
+  
   private static <T> Function<? super String, Predicate<? super T>> falseFilter() {
     return Functions.<Predicate<? super T>>constant( Predicates.alwaysFalse() );
+  }
+
+
+  private static <T> Function<? super String, Predicate<? super T>> explodedLiteralFilter( final Function<? super T,?> extractor,
+                                                                                           final Function<String, Collection> explodeFunction ) {
+    return new Function<String,Predicate<? super T>>() {
+      @SuppressWarnings( "unchecked" )
+      @Override
+      public Predicate<T> apply( final String filterValue ) {
+        Collection values = explodeFunction.apply( filterValue );        
+        return values == null ?
+            Predicates.<T>alwaysTrue() :
+            Predicates.compose( 
+              Predicates.<Object>in( values ), 
+              Functions.compose( extractor, Functions.<T>identity() ) );
+      }
+    };
   }
 
   private static <T> Function<? super String, Predicate<? super T>> stringFilter( final Function<? super T, String> extractor ) {
@@ -655,6 +711,22 @@ public abstract class FilterSupport<RT> {
       }
     };
   }
+
+  private static <T> Function<String,T> likeWildFunction( final Function<String,T> delegate ) {
+    return new Function<String, T>() {
+      @Override
+      public T apply( final String expression ) {
+        final StringBuilder likeValueBuilder = new StringBuilder();
+        translateWildcards( expression, likeValueBuilder, "_", "%", SyntaxEscape.Like );
+        final String likeExpression = likeValueBuilder.toString();
+        if ( isTotallyWildLikeExpression( likeExpression ) ) {
+          return null;
+        } else {
+          return delegate.apply( likeExpression );
+        }
+      }
+    };
+  }  
 
   private boolean isTagFilter( final String filter ) {
     return isTagFilteringEnabled() && (
@@ -776,34 +848,55 @@ public abstract class FilterSupport<RT> {
   private Criterion buildRestriction( final String property, final Object persistentValue ) {
     final Object valueObject;
     if ( persistentValue instanceof String ) {
+      final String value = persistentValue.toString();
       final StringBuilder likeValueBuilder = new StringBuilder();
-      if ( translateWildcards( persistentValue.toString(), likeValueBuilder, "_", "%", SyntaxEscape.Like ) ) {
-        return Restrictions.like( property, likeValueBuilder.toString() );
+      translateWildcards( value, likeValueBuilder, "_", "%", SyntaxEscape.Like );
+      final String likeValue = likeValueBuilder.toString();
+      
+      if ( !value.equals( likeValue ) ) { // even if no regex, may contain \ escapes that must be removed
+        return Restrictions.like( property, likeValue );
       }
-
-      // even if no regex, may contain \ escapes that must be removed
-      valueObject = likeValueBuilder.toString();
+      
+      valueObject = persistentValue;
     } else {
       valueObject = persistentValue;
     }
 
-    return Restrictions.eq( property, valueObject );
+    if ( persistentValue instanceof Collection ) {
+      if ( ((Collection) persistentValue).isEmpty() ) {
+        return Restrictions.not( Restrictions.conjunction() ); // always false
+      } else {
+        return Restrictions.in( property, (Collection) persistentValue );
+      }
+    } else {    
+      return Restrictions.eq( property, valueObject );
+    }
   }
 
   Map<String, PersistenceFilter> getPersistenceFilters() {
     return persistenceFilters;
   }
 
+  Map<String, String> getAliases() {
+    return aliases;
+  }
+
   /**
-   * Build a criterion that uses a sub-select to match the given tag restrictions
+   * Build a criterion that uses sub-selects to match the given tag restrictions
    */
   private Criterion tagCriterion( final String accountId,
-                                  final Criterion criterion ) {
-    final DetachedCriteria criteria = DetachedCriteria.forClass( tagClass )
-        .add( Restrictions.eq( "ownerAccountNumber", accountId ) )
-        .add( criterion )
-        .setProjection( Projections.property( resourceFieldName ) );
-    return Property.forName( tagFieldName ).in( criteria );
+                                  final List<Junction> junctions ) {
+    final Junction conjunction = Restrictions.conjunction();
+    
+    for ( final Junction criterion : junctions ) {
+      final DetachedCriteria criteria = DetachedCriteria.forClass( tagClass )
+          .add( Restrictions.eq( "ownerAccountNumber", accountId ) )
+          .add( criterion )
+          .setProjection( Projections.property( resourceFieldName ) );
+      conjunction.add( Property.forName( tagFieldName ).in( criteria ) );
+    }
+    
+    return conjunction;
   }
 
   /**
@@ -962,7 +1055,7 @@ public abstract class FilterSupport<RT> {
         boolean matches( final Object targetValue, final Object resourceValue ) {
           boolean match = false;
           if ( resourceValue instanceof Date && targetValue instanceof Date ) {
-            match = (((Date) resourceValue).getTime()/1000L) == (((Date) targetValue).getTime()/1000L); //TODO:STEVE: match to second only?
+            match = ((Date) resourceValue).getTime() == ((Date) targetValue).getTime();
           }
           return match;
         }

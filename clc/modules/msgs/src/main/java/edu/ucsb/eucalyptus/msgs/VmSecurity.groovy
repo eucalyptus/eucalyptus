@@ -137,6 +137,8 @@ public class SecurityGroupItemType extends EucalyptusData {
   String groupDescription;
   String groupId;
   ArrayList<IpPermissionType> ipPermissions = new ArrayList<IpPermissionType>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  
   public SecurityGroupItemType( ) {
     super( );
   }
