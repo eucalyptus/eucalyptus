@@ -1175,8 +1175,7 @@
       $tabspace = $('<div>').eucatabspace(); 
       $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
       $tabspace.eucatabspace('addTabPage', 'Volume', $volInfo);
-      $tabspace.eucatabspace('addTabPage', 'Tag', $('<div>').addClass('tag_body').html('Tag: [tag_here]'));
-     
+      $tabspace.eucatabspace('addTabPage', 'Tag', $('<div>').euca_resource_tag({resource: 'instance', resource_id: instance.id}));
       $wrapper.append($tabspace);
 /*
       $wrapper.append(
