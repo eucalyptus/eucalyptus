@@ -74,17 +74,13 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import org.rhq.helpers.pluginAnnotations.agent.Units;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.component.ComponentIds;
@@ -94,7 +90,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.SnapShotEvent;
