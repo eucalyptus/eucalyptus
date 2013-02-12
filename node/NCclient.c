@@ -218,7 +218,9 @@ void usage(void)
             "\t\t-F \t\t- force VolumeDetach\n"
             "\t\t-U [string] \t- user data to store with instance\n" "\t\t-I [string] \t- launch index to store with instance\n"
             "\t\t-G [str:str: ] \t- group names to store with instance\n"
-            "\t\t-s [stateName] \t- name of state for NC to enter {REGULAR|EVACUATE}\n"
+            "\t\t-s [stateName] \t- name of state\n"
+            "\t\t\t\tUse {Enabled|Disabled} for modifyNode operation\n"
+            "\t\t\t\tUse {Prepare|Commit|Rollback} for migrateInstance opration\n"
             "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
 
     exit(1);
@@ -774,6 +776,7 @@ int main(int argc, char **argv)
         CHECK_PARAM(instance_id, "instance ID");
         CHECK_PARAM(src_node_name, "source node name");
         CHECK_PARAM(dst_node_name, "destination node name");
+        CHECK_PARAM(state_name, "state name");
         // migration creds can be NULL
 
         ncInstance instance;
@@ -782,7 +785,7 @@ int main(int argc, char **argv)
         strncpy(instance.instanceId, instance_id, sizeof(instance.instanceId));
         strncpy(instance.migration_src, src_node_name, sizeof(instance.migration_src));
         strncpy(instance.migration_dst, dst_node_name, sizeof(instance.migration_dst));
-        rc = ncMigrateInstancesStub(stub, &meta, &instances, 1, "prepare", migration_creds);
+        rc = ncMigrateInstancesStub(stub, &meta, &instances, 1, state_name, migration_creds);
         if (rc != 0) {
             printf("ncMigrateInstances() failed: error=%d\n", rc);
             exit(1);

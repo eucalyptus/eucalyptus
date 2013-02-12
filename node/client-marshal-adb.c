@@ -1469,9 +1469,9 @@ int ncMigrateInstancesStub (ncStub *pStub, ncMetadata *pMeta, ncInstance ** inst
 
     // set op-specific input fields
     for (int i=0; i<instancesLen; i++) {
-        adb_instanceType_t *instances_adb = adb_instanceType_create(env);
-        copy_instance_to_adb(instances_adb, env, instances[i]);
-        adb_ncMigrateInstancesType_set_instances(request, env, instances_adb);
+        adb_instanceType_t *instance_adb = adb_instanceType_create(env);
+        copy_instance_to_adb(instance_adb, env, instances[i]);
+        adb_ncMigrateInstancesType_add_instances(request, env, instance_adb);
     }
     adb_ncMigrateInstancesType_set_action(request, env, action);
     if (credentials != NULL)
