@@ -114,6 +114,7 @@
         });
         $instObj.find('#dashboard-instance-running span').text(numRunning);
         $instObj.find('#dashboard-instance-stopped span').text(numStopped);
+        $instObj.find('#dashboard-scaling-groups span').text('0');
       }); 
       $('html body').eucadata('refresh','instance');
 
@@ -127,6 +128,12 @@
         $('<a>').attr('href','#').click( function(evt){
             thisObj._trigger('select', evt, {selected:'instance', filter:'stopped'});
             $('html body').trigger('click', 'navigator:instance');
+            return false;
+      }));
+      $instObj.find('#dashboard-scaling-groups').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+            thisObj._trigger('select', evt, {selected:'scaling', filter:'stopped'});
+            $('html body').trigger('click', 'navigator:scaling');
             return false;
       }));
     },
@@ -164,6 +171,14 @@
           return false;
       }));
 
+      $storageObj.find('#dashboard-storage-buckets span').text('1');
+      $storageObj.find('#dashboard-storage-buckets').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+          thisObj._trigger('select', evt, {selected:'bucket'});
+          $('html body').trigger('click', 'navigator:bucket');
+          return false;
+      }));
+
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $storageObj.find('#dashboard-storage-volume').prepend(
         $('<img>').attr('src','images/dots32.gif'));
@@ -173,6 +188,13 @@
   
     _setNetSecSummary : function($netsecObj) {
       var thisObj = this;
+      $netsecObj.find('#dashboard-netsec-load-balancer span').text('1');
+      $netsecObj.find('#dashboard-netsec-load-balancer').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+          thisObj._trigger('select', evt, {selected:'balancer'});
+          $('html body').trigger('click', 'navigator:balancer');
+          return false;
+      }));
       $('html body').eucadata('addCallback', 'sgroup', 'dashboard-summary', function(){
         var results = describe('sgroup');
         var numGroups = results ? results.length : 0;

@@ -217,6 +217,11 @@
                   <span></span> {{!>dashboard_instance_stopped}}
                 </div>
               </div>
+              <div id="dashboard-scaling-groups" class="db-instances-scaling clearfix" title="{{!: dashboard_instances_scaling_tip }}">
+                <div class="status-readout">
+                  <span></span> {{!>dashboard_instance_scaling}}
+                </div>
+              </div>
               <div id="dashboard-instance-launch">
                 <a href="#" class="xlarge-button" title="{{!: dashboard_instance_launch_tip }}">{{!>dashboard_launch_new_instance}}</a>
               </div> 
@@ -230,10 +235,16 @@
               <div id="dashboard-storage-snapshot" class="status-readout" title="{{!: dashboard_snapshots_tip }}">
                 <span></span> {{!>snapshots_label}}
               </div>
+              <div id="dashboard-storage-buckets" class="status-readout" title="{{!: dashboard_buckets_tip }}">
+                <span></span> {{!>buckets_label}}
+              </div>
             </div>
             <div class="netsec inner-box clearfix">
               <h3>{{!>netsec_label}}</h3>
               <div id="dashboard-netsec-img"></div>
+              <div id="dashboard-netsec-load-balancer" class="status-readout" title="{{!: dashboard_balancer_tip }}">
+                <span></span> {{!>balancers_label}}
+              </div>
               <div id="dashboard-netsec-sgroup" class="status-readout" title="{{!: dashboard_sgroup_tip }}">
                 <span></span> {{!>sgroups_label}}
               </div>
