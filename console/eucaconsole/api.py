@@ -56,6 +56,7 @@ from .botojsonencoder import BotoJsonEncoder
 from .botojsonencoder import BotoJsonBalanceEncoder
 from .botojsonencoder import BotoJsonWatchEncoder
 from .botojsonencoder import BotoJsonScaleEncoder
+from .botojsonencoder import BotoJsonStorageEncoder
 from .cachingclcinterface import CachingClcInterface
 from .cachingbalanceinterface import CachingBalanceInterface
 from .cachingwalrusinterface import CachingWalrusInterface
@@ -384,7 +385,7 @@ class WatchHandler(BaseAPIHandler):
             raise tornado.web.HTTPError(401, "not authorized")
         if not(self.user_session.cw):
             if self.should_use_mock():
-                self.user_session.walrus = MockWatchInterface()
+                self.user_session.cw = MockWatchInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
                 if self.user_session.host_override:
@@ -431,8 +432,7 @@ class WatchHandler(BaseAPIHandler):
             logging.exception(ex)
 
 class StorageHandler(BaseAPIHandler):
-#    def __init__(self):
-#        self.json_encoder = JsonBotoStorageEncoder
+    json_encoder = BotoJsonStorageEncoder
 
     ##
     # This is the main entry point for API calls for S3(Walrus) from the browser

@@ -49,6 +49,7 @@ from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.launchconfig import InstanceMonitoring
 from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.autoscale.instance import Instance
 from boto.ec2.elb import ELBConnection
 from boto.ec2.elb.loadbalancer import LoadBalancer
 from boto.ec2.elb.healthcheck import HealthCheck
@@ -166,10 +167,6 @@ class BotoJsonEncoder(JSONEncoder):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = 'Tag'
             return (values)
-        elif isinstance(obj, Bucket):
-            values = {'name':obj.name}
-            values['__obj_name__'] = 'Bucket'
-            return (values)
         if isinstance(obj, InstanceState):
             values = self.__sanitize_and_copy__(obj.__dict__)
             values['__obj_name__'] = 'InstanceState'
@@ -186,6 +183,26 @@ class BotoJsonEncoder(JSONEncoder):
 #                return obj.__dict__
 #            else:
 #                return []
+
+class BotoJsonStorageEncoder(JSONEncoder):
+    def default(self, obj):
+        if issubclass(obj.__class__, EC2Object):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = obj.__class__.__name__
+            return (values)
+        elif isinstance(obj, RegionInfo):
+            return []
+        elif isinstance(obj, ClcError):
+            return copy.copy(obj.__dict__)
+        elif isinstance(obj, Response):
+            return obj.__dict__
+        elif isinstance(obj, CloudWatchConnection):
+            return []
+        elif isinstance(obj, Bucket):
+            values = {'name':obj.name}
+            values['__obj_name__'] = 'Bucket'
+            return (values)
+        return super(BotoJsonWatchEncoder, self).default(obj)
 
 class BotoJsonWatchEncoder(JSONEncoder):
     def default(self, obj):
@@ -283,6 +300,11 @@ class BotoJsonScaleEncoder(JSONEncoder):
         elif isinstance(obj, LaunchConfiguration):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'LaunchConfiguration'
+            return (values)
+        elif isinstance(obj, boto.ec2.autoscale.Instance):
+            values = copy.copy(obj.__dict__)
+            values['connection'] = None
+            values['__obj_name__'] = 'Instance'
             return (values)
         elif isinstance(obj, Request):
             values = copy.copy(obj.__dict__)
