@@ -169,6 +169,12 @@ public class AutoScalingInstance extends AbstractOwnedPersistent implements Auto
     example.setNaturalId( uuid );
     return example;
   }
+  
+  public static AutoScalingInstance withHealthStatus( final HealthStatus healthStatus ) {
+    final AutoScalingInstance example = new AutoScalingInstance();
+    example.setHealthStatus( healthStatus );
+    return example;
+  }
 
   public static AutoScalingInstance create( @Nonnull final OwnerFullName ownerFullName,
                                             @Nonnull final String instanceId,

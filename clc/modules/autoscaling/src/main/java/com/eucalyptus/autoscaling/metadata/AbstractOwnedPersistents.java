@@ -21,8 +21,10 @@ package com.eucalyptus.autoscaling.metadata;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
+import org.hibernate.criterion.Criterion;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
@@ -51,7 +53,7 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     } catch ( NoSuchElementException e ) {
       throw new AutoScalingMetadataNotFoundException( qualifyOwner("Unable to find "+typeDescription+" '"+key+"'", ownerFullName), e );
     } catch ( Exception e ) {
-      throw new AutoScalingMetadataException(  qualifyOwner("Error finding "+typeDescription+" '"+key+"'", ownerFullName), e );
+      throw new AutoScalingMetadataException( qualifyOwner("Error finding "+typeDescription+" '"+key+"'", ownerFullName), e );
     }
   }
 
@@ -59,7 +61,7 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     try {
       return Transactions.findAll( exampleWithOwner( ownerFullName ) );
     } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find "+typeDescription+"s for " + ownerFullName, e );
+      throw new AutoScalingMetadataException( qualifyOwner( "Failed to find "+typeDescription+"s", ownerFullName ), e );
     }
   }
 
@@ -68,7 +70,7 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     try {
       return Transactions.filter( exampleWithOwner( ownerFullName ), filter );
     } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Failed to find "+typeDescription+"s for " + ownerFullName, e );
+      throw new AutoScalingMetadataException( qualifyOwner( "Failed to find "+typeDescription+"s", ownerFullName ), e );
     }
   }
 
@@ -81,6 +83,17 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     }
   }
 
+  public List<AOP> listByExample( final AOP example,
+                                  final Predicate<? super AOP> filter,
+                                  final Criterion criterion,
+                                  final Map<String,String> aliases ) throws AutoScalingMetadataException {
+    try {
+      return Transactions.filter( example, filter, criterion, aliases );
+    } catch ( Exception e ) {
+      throw new AutoScalingMetadataException( "Failed to find "+typeDescription+"s by example: " + LogUtil.dumpObject(example), e );
+    }
+  }
+
   public AOP updateByExample( final AOP example,
                               final OwnerFullName ownerFullName,
                               final String key,
@@ -88,9 +101,9 @@ public abstract class AbstractOwnedPersistents<AOP extends AbstractOwnedPersiste
     try {
       return Transactions.one( example, updateCallback );
     } catch ( NoSuchElementException e ) {
-      throw new AutoScalingMetadataNotFoundException( "Unable to find "+typeDescription+" '"+key+"' for " + ownerFullName, e );
+      throw new AutoScalingMetadataNotFoundException( qualifyOwner( "Unable to find "+typeDescription+" '"+key+"'", ownerFullName ), e );
     } catch ( Exception e ) {
-      throw new AutoScalingMetadataException( "Error updating "+typeDescription+" '"+key+"' for " + ownerFullName, e );
+      throw new AutoScalingMetadataException( qualifyOwner( "Error updating "+typeDescription+" '"+key+"'", ownerFullName ), e );
     }
   }
 

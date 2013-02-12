@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -67,14 +68,14 @@ public class BackoffRunner {
     final long timestamp = timestamp();
     boolean run = false;
     final TaskInfo previous = 
-        tasksInProgress.putIfAbsent( task.getUniqueKey(), new TaskInfo( task, timestamp, 0 ) );
+        tasksInProgress.putIfAbsent( task.getUniqueKey(), task.info( new TaskInfo( task, timestamp, 0 ) ) );
     if ( previous == null ) {
       run = true;  
     } else if ( previous.canFollow( timestamp, task.getBackoffGroup() ) && 
         tasksInProgress.remove( task.getUniqueKey(), previous ) && 
         tasksInProgress.putIfAbsent( 
             task.getUniqueKey(),
-            new TaskInfo( task, timestamp, previous.getNextFailureCount( task.getBackoffGroup() )  ) )==null ) {
+            task.info( new TaskInfo( task, timestamp, previous.getNextFailureCount( task.getBackoffGroup() ) ) ) )==null ) {
       run = true;
     }
     if ( run ) {
@@ -98,12 +99,22 @@ public class BackoffRunner {
     private final String uniqueKey;
     private final String backoffGroup;
     private final CheckedListenableFuture<Boolean> future;
+    private volatile TaskInfo taskInfo;
 
     TaskWithBackOff( final String uniqueKey, 
                      final String backoffGroup ) {
       this.uniqueKey = uniqueKey;
       this.backoffGroup = backoffGroup;
       this.future = Futures.newGenericeFuture();
+    }
+
+    TaskInfo info( final TaskInfo taskInfo ) {
+      return this.taskInfo = taskInfo;  
+    }
+
+    @Nullable
+    TaskWithBackOff onSuccess() {
+      return null;
     }
 
     /**
@@ -128,7 +139,18 @@ public class BackoffRunner {
     abstract void runTask( );
     
     final void success() {
-      future.set(true);      
+      final TaskWithBackOff onSuccess = onSuccess();
+      if ( onSuccess != null ) {
+        if (!tasksInProgress.replace( getUniqueKey(), taskInfo, onSuccess.info( new TaskInfo( onSuccess, System.currentTimeMillis(), 0 ) ) ) ) {
+          logger.info( "Unable to create activity: " + onSuccess.getBackoffGroup() + " for " + onSuccess.getUniqueKey() );
+        } else {
+          future.set( true );
+          onSuccess.runTask();
+        }
+      }
+      if ( !future.isDone() ) {
+        future.set( true );
+      }
     }
     
     final void failure() {

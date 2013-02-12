@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.instances;
 
+import java.util.Collection;
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
@@ -43,7 +44,9 @@ public abstract class AutoScalingInstances {
   public abstract List<AutoScalingInstance> listByGroup( OwnerFullName ownerFullName,
                                                          String groupName ) throws AutoScalingMetadataException;
 
-  public abstract List<AutoScalingInstance> listByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;
+  public abstract List<AutoScalingInstance> listByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
+
+  public abstract List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) throws AutoScalingMetadataException;
 
   public abstract AutoScalingInstance lookup( OwnerFullName ownerFullName,
                                               String instanceId ) throws AutoScalingMetadataException;
@@ -52,6 +55,8 @@ public abstract class AutoScalingInstances {
                                               String instanceId,
                                               Callback<AutoScalingInstance> instanceUpdateCallback ) throws AutoScalingMetadataException;
 
+  public abstract void markMissingInstancesUnhealthy( AutoScalingGroup group, Collection<String> instanceIds ) throws AutoScalingMetadataException;
+  
   public abstract boolean delete( AutoScalingInstance autoScalingInstance ) throws AutoScalingMetadataException;
 
   public abstract boolean deleteByGroup( final AutoScalingGroup group ) throws AutoScalingMetadataException;

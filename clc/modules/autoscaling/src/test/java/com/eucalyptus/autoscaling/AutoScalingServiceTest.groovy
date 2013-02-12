@@ -82,7 +82,6 @@ import com.eucalyptus.autoscaling.common.DescribeAutoScalingInstancesResponseTyp
 import com.eucalyptus.autoscaling.activities.ActivityManager
 import com.eucalyptus.autoscaling.activities.ScalingActivities
 import com.eucalyptus.autoscaling.groups.HealthCheckType
-import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupResult
 import com.eucalyptus.autoscaling.common.TerminateInstanceInAutoScalingGroupType
 import com.eucalyptus.autoscaling.common.Activity
 import com.eucalyptus.autoscaling.activities.ScalingActivity
@@ -554,6 +553,16 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      List<AutoScalingGroup> listRequiringInstanceReplacement() {
+        []
+      }
+
+      @Override
+      List<AutoScalingGroup> listRequiringMonitoring(long interval) {
+        []
+      }
+
+      @Override
       AutoScalingGroup lookup(OwnerFullName ownerFullName, String autoScalingGroupName) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
           group.getClass().getMethod("getArn").invoke( group ).equals( autoScalingGroupName ) ||
@@ -614,6 +623,11 @@ class AutoScalingServiceTest {
       }
 
       @Override
+      List<AutoScalingInstance> listUnhealthyByGroup( AutoScalingGroup group ) {
+        []
+      }
+
+      @Override
       AutoScalingInstance lookup(OwnerFullName ownerFullName, String instanceId) {
         list( ownerFullName ).find { instance -> 
           instance.getClass().getMethod("getInstanceId").invoke( instance ).equals( instanceId ) 
@@ -627,6 +641,11 @@ class AutoScalingServiceTest {
         AutoScalingInstance instance = lookup( ownerFullName, instanceId )
         instanceUpdateCallback.fire( instance )
         instance
+      }
+
+      @Override
+      void markMissingInstancesUnhealthy(AutoScalingGroup group, 
+                                         Collection<String> instanceIds) {
       }
 
       @Override

@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
@@ -54,6 +55,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.Filter;
+import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -101,7 +106,8 @@ public class ActivityManager {
   
   public void doScaling() {
     timeoutScalingActivities( );
-    //TODO:STEVE: Describe all EC2 auto scaling instances (by tag), terminate unknown instances
+
+    // Launch and terminate
     try {
       for ( final AutoScalingGroup group : autoScalingGroups.listRequiringScaling() ) {
         int compareResult = group.getCapacity().compareTo( group.getDesiredCapacity() );  //TODO:STEVE: verify capacity against autoscaling instances here?
@@ -114,7 +120,27 @@ public class ActivityManager {
     } catch ( Exception e ) {
       logger.error( e, e );  
     }
-    //TODO:STEVE: When do we delete old scaling activities?
+    
+    // Replace unhealthy
+    try {
+      for ( final AutoScalingGroup group : autoScalingGroups.listRequiringInstanceReplacement() ) {
+        runner.runTask( perhapsReplaceInstances( group ) ) ;        
+      }
+    } catch ( Exception e ) {
+      logger.error( e, e );
+    }
+    
+    // Monitor instances
+    try {
+      for ( final AutoScalingGroup group : autoScalingGroups.listRequiringMonitoring( 10000L ) ) {
+        runner.runTask( ec2Monitoring( group ) );
+      }
+    } catch ( Exception e ) {
+      logger.error( e, e );
+    }
+
+    //TODO:STEVE: When do we delete old scaling activities? (retain 6 weeks of activities by default as per AWS)
+    //TODO:STEVE: Do we need to find running instances with auto scaling tags that we are not tracking and terminate them?
   }
   
   @Nullable
@@ -147,8 +173,13 @@ public class ActivityManager {
           activityHolder[0] = scalingActivities.save( activity );
           processInitiated = true;
 
+          final List<String> instancesToTerminate = Lists.newArrayList();
+          Iterables.addAll(
+              instancesToTerminate,
+              Iterables.transform( instances, AutoScalingInstances.instanceId()) );
+
           client.dispatch(
-              terminateInstances( group, instances.size(), instances ),
+              terminateInstances( instancesToTerminate ),
               new Callback.Checked<TerminateInstancesResponseType>() {
                 @Override
                 public void fireException( final Throwable e ) {
@@ -183,6 +214,10 @@ public class ActivityManager {
     return new TaskWithBackOff( arn, "Launch" ) {
       @Override
       void runTask() {
+        if ( launchCount == 0 ) {
+          success();
+        }
+        
         logger.info("Running launch instances activity for " + group.getArn() );
         
         //TODO:STEVE: decide on an AZ to launch instances into  
@@ -256,12 +291,26 @@ public class ActivityManager {
     };    
   }
 
-  private TaskWithBackOff perhapsTerminateInstances( final AutoScalingGroup group,
-                                                     final int terminateCount ) {
-    final String arn = group.getArn();
+  private TaskWithBackOff terminateInstances( final AutoScalingGroup group,
+                                              final List<String> instanceIds,
+                                              final boolean replace ) {
+    final String arn = group.getArn();    
     return new TaskWithBackOff( arn, "Terminate" ) {
+      private final AtomicInteger terminated = new AtomicInteger(0);
+
+      @Override
+      TaskWithBackOff onSuccess() {
+        return replace ? 
+            perhapsLaunchInstances( group, terminated.get() ) :
+            null;
+      }
+
       @Override
       void runTask() {
+        if ( instanceIds.isEmpty() ) {
+          success();          
+        }
+        
         logger.info("Running terminate instances activity for " + group.getArn() );
 
         boolean processInitiated = false;
@@ -276,8 +325,9 @@ public class ActivityManager {
           scalingActivities.save( activity );
           processInitiated = true;
 
+          final AtomicInteger terminated = this.terminated;
           client.dispatch(
-              terminateInstances( group, terminateCount, currentInstances ),
+              terminateInstances( instanceIds ),
               new Callback.Checked<TerminateInstancesResponseType>() {
                 @Override
                 public void fireException( final Throwable e ) {
@@ -289,30 +339,132 @@ public class ActivityManager {
 
                 @Override
                 public void fire( final TerminateInstancesResponseType response ) {
-                  success();
-                  int terminatedCount = 0;
-                  for ( final TerminateInstancesItemType item : response.getInstancesSet() ) {
-                    terminatedCount++;
+                  try {
+                    int terminatedCount = 0;
+                    for ( final TerminateInstancesItemType item : response.getInstancesSet() ) {
+                      terminatedCount++;
+                      try {
+                        final AutoScalingInstance instance = autoScalingInstances.lookup(
+                            group.getOwner(),
+                            item.getInstanceId() );
+                        autoScalingInstances.delete( instance );
+                      } catch ( AutoScalingMetadataNotFoundException e ) {
+                        // no need to delete it then
+                      } catch ( AutoScalingMetadataException e ) {
+                        logger.error( e, e );
+                      }
+                    }
+  
                     try {
-                      final AutoScalingInstance instance = autoScalingInstances.lookup(
-                          group.getOwner(),
-                          item.getInstanceId() );
-                      autoScalingInstances.delete( instance );
-                    } catch ( AutoScalingMetadataNotFoundException e ) {
-                      // no need to delete it then
+                      terminated.set( terminatedCount );
+                      autoScalingGroups.update( group.getOwner(), group.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
+                        @Override
+                        public void fire( final AutoScalingGroup autoScalingGroup ) {
+                          autoScalingGroup.setCapacity( currentInstances.size() - terminated.get() );
+                        }
+                      } );
                     } catch ( AutoScalingMetadataException e ) {
                       logger.error( e, e );
+                    }
+                    setScalingActivityFinalStatus( ActivityStatusCode.Successful, activity );
+                  } finally {
+                    success();
+                  }
+                }
+              } );
+        } catch ( final Exception e ) {
+          logger.error( e, e );
+        } finally {
+          if ( !processInitiated ) {
+            failure();
+          }
+        }
+      }
+    };  
+  }
+  
+  private TaskWithBackOff perhapsTerminateInstances( final AutoScalingGroup group,
+                                                     final int terminateCount ) {
+    final List<String> instancesToTerminate = Lists.newArrayList();
+    try {  
+      final List<AutoScalingInstance> currentInstances =
+          autoScalingInstances.listByGroup( group.getOwner(), group.getAutoScalingGroupName() );
+      if ( currentInstances.size() == terminateCount ) {
+        Iterables.addAll(
+            instancesToTerminate,
+            Iterables.transform( currentInstances, AutoScalingInstances.instanceId()) );
+      } else {
+        final List<AutoScalingInstance> remainingInstances = Lists.newArrayList( currentInstances );
+        for ( int i=0; i<terminateCount && remainingInstances.size()>=1; i++ ) {
+          final AutoScalingInstance instanceForTermination =
+              TerminationPolicyType.selectForTermination( group.getTerminationPolicies(), remainingInstances );
+          remainingInstances.remove( instanceForTermination );
+          instancesToTerminate.add( instanceForTermination.getInstanceId() );
+        }
+      }
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+    }
+    return terminateInstances( group, instancesToTerminate, false );
+  }
+
+  private TaskWithBackOff perhapsReplaceInstances( final AutoScalingGroup group ) {
+    final List<String> instancesToTerminate = Lists.newArrayList();
+    try {
+      final List<AutoScalingInstance> currentInstances =
+          autoScalingInstances.listUnhealthyByGroup( group );
+      Iterables.addAll(
+            instancesToTerminate,
+            Iterables.limit(   
+              Iterables.transform( currentInstances, AutoScalingInstances.instanceId()),
+                Math.min( maxLaunchIncrement, currentInstances.size() ) ) );
+    } catch ( final Exception e ) {
+      logger.error( e, e );
+    }
+    return terminateInstances( group, instancesToTerminate, true );
+  }
+  
+  private TaskWithBackOff ec2Monitoring( final AutoScalingGroup group ) {
+    final String arn = group.getArn();
+    return new TaskWithBackOff( arn, "Monitor" ) {
+      @Override
+      void runTask() {
+        logger.info("Running EC2 monitoring activity for " + group.getArn() );
+
+        boolean processInitiated = false;
+        try {
+          final String userId = Accounts.lookupAccountById( group.getOwnerAccountNumber() )
+              .lookupUserByName( User.ACCOUNT_ADMIN ).getUserId();
+
+          final EucalyptusClient client = new EucalyptusClient( userId );
+          final ScalingActivity activity = ScalingActivity.create( group, "Monitor" );
+          scalingActivities.save( activity );
+          processInitiated = true;
+
+          client.dispatch(
+              monitorInstances( group.getAutoScalingGroupName() ),
+              new Callback.Checked<DescribeInstancesResponseType>() {
+                @Override
+                public void fireException( final Throwable e ) {
+                  // error, assume everything is ok for now
+                  failure();
+                  logger.error( "Error monitoring instances", e ); //TODO:STEVE: Remove monitoring failure logging and record in scaling activity details/description
+                  setScalingActivityFinalStatus( ActivityStatusCode.Failed, activity );
+                }
+
+                @Override
+                public void fire( final DescribeInstancesResponseType response ) {
+                  success();
+                  
+                  final List<String> runningInstanceIds = Lists.newArrayList();
+                  for ( final ReservationInfoType reservation : response.getReservationSet() ){
+                    for ( final RunningInstancesItemType instance : reservation.getInstancesSet() ) {
+                      runningInstanceIds.add( instance.getInstanceId() );
                     }
                   }
 
                   try {
-                    final int terminated = terminatedCount;
-                    autoScalingGroups.update( group.getOwner(), group.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
-                      @Override
-                      public void fire( final AutoScalingGroup autoScalingGroup ) {
-                        autoScalingGroup.setCapacity( currentInstances.size() - terminated );
-                      }
-                    } );
+                    autoScalingInstances.markMissingInstancesUnhealthy( group, runningInstanceIds );
                   } catch ( AutoScalingMetadataException e ) {
                     logger.error( e, e );
                   }
@@ -326,10 +478,10 @@ public class ActivityManager {
             failure();
           }
         }
-      }        
+      }
     };
   }
-
+  
   private RunInstancesType runInstances( final AutoScalingGroup group, 
                                          final int attemptToLaunch ) {
     final LaunchConfiguration launchConfiguration = group.getLaunchConfiguration();
@@ -347,28 +499,24 @@ public class ActivityManager {
     return createTags;
   }
 
-  private TerminateInstancesType terminateInstances( final AutoScalingGroup group, 
-                                                     final int terminateCount,
-                                                     final Collection<AutoScalingInstance> currentInstances ) {
-    final List<String> instancesToTerminate = Lists.newArrayList();
-    
-    if ( currentInstances.size() == terminateCount ) {
-      Iterables.addAll( 
-          instancesToTerminate, 
-          Iterables.transform( currentInstances, AutoScalingInstances.instanceId()) );  
-    } else {
-      final List<AutoScalingInstance> remainingInstances = Lists.newArrayList( currentInstances );
-      for ( int i=0; i<terminateCount && remainingInstances.size()>=1; i++ ) {
-        final AutoScalingInstance instanceForTermination = 
-            TerminationPolicyType.selectForTermination( group.getTerminationPolicies(), remainingInstances );
-        remainingInstances.remove( instanceForTermination );
-        instancesToTerminate.add( instanceForTermination.getInstanceId() );          
-      }
-    }
-
+  private TerminateInstancesType terminateInstances( final Collection<String> instancesToTerminate ) {
     final TerminateInstancesType terminateInstances = new TerminateInstancesType();
     terminateInstances.getInstancesSet().addAll( instancesToTerminate );
     return terminateInstances;
+  }
+  
+  private DescribeInstancesType monitorInstances( final String autoScalingGroupName ) {
+    final DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+    describeInstancesType.getFilterSet().add( filter( "tag:aws:autoscaling:groupName", autoScalingGroupName ) );    
+    describeInstancesType.getFilterSet().add( filter( "instance-state-name", "running" ) );    
+    return describeInstancesType;
+  }
+  
+  private Filter filter( final String name, final String value ) {
+    final Filter filter = new Filter();
+    filter.setName( name );
+    filter.getValueSet().add( value );
+    return filter;
   }
 
   private void setScalingActivityFinalStatus( final ActivityStatusCode status, final ScalingActivity activity ) {

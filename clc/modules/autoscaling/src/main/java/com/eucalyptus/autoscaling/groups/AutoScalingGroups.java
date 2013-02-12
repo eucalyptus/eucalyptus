@@ -51,6 +51,10 @@ public abstract class AutoScalingGroups {
 
   public abstract List<AutoScalingGroup> listRequiringScaling( ) throws AutoScalingMetadataException;
 
+  public abstract List<AutoScalingGroup> listRequiringInstanceReplacement( ) throws AutoScalingMetadataException;
+
+  public abstract List<AutoScalingGroup> listRequiringMonitoring( long interval ) throws AutoScalingMetadataException;
+  
   public abstract AutoScalingGroup lookup( OwnerFullName ownerFullName,
                                            String autoScalingGroupName ) throws AutoScalingMetadataException;
 

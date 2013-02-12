@@ -162,6 +162,7 @@ public abstract class LaunchConfigurations {
       }
       runInstances.setKeyName( launchConfiguration.getKeyName() );
       runInstances.setGroupSet( Lists.newArrayList( launchConfiguration.getSecurityGroups() ) );
+      runInstances.setMonitoring( launchConfiguration.getInstanceMonitoring() );
       return runInstances;
     }
   }
