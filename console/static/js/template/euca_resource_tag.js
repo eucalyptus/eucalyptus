@@ -8,12 +8,13 @@
     options: { 
       resource: null,
       resource_id: null,
+      tag_data: null,
     },
  
     // Set up the widget
     _create: function() {
       var thisObj = this;
-      var mainDiv = $('<div>').addClass('resource_tag__main_div_class').attr('id', 'resource_tag_main_div_id')
+      var mainDiv = $('<div>').addClass('resource_tag_main_div_class').attr('id', 'resource_tag_main_div_id')
       mainDiv.text('RESOURCE TAG PLACE HOLDER ::: RESOURCE: ' + this.options.resource + " RESOURCE_ID: " + this.options.resource_id);
       thisObj.element.append(mainDiv);
       thisObj._getAllResourceTags();
@@ -35,30 +36,67 @@
       this._super( "_setOption", key, value );
     },
 
+    _renderResourceTags: function(){
+       var thisObj = this;
+       var mainResourceTagDiv = thisObj.element.find('#resource_tag_main_div_id.resource_tag_main_div_class');
+       // Clean up the default text
+       mainResourceTagDiv.text("");
+       // Append p block for a few sentences on resource tagging
+       mainResourceTagDiv.append($('<p>').text('RESOURCE: ' + this.options.resource + " RESOURCE_ID: " + this.options.resource_id));
+       // Create a table
+       var tableResourceTag = $('<table>').addClass('resource-tag-table');
+       // Create a header
+       var trHeadResourceTag = $('<tr>').addClass('resource-tag-table-tr');
+       trHeadResourceTag.append($('<th>').text("INDEX")); 
+       trHeadResourceTag.append($('<th>').text("KEY"));
+       trHeadResourceTag.append($('<th>').text("VALUE"));
+       trHeadResourceTag.append($('<th>').text("BUTTON"));
+       tableResourceTag.append(trHeadResourceTag);
+       var tag_count = 0;
+       // if tag_data exists
+       if(thisObj.options.tag_data){
+              $.each(thisObj.options.tag_data, function(idx, tag){
+                var trResourceTag = $('<tr>').addClass('resource-tag-table-tr');
+                trResourceTag.append($('<td>').text("TAG" + idx));
+                trResourceTag.append($('<td>').text(tag.name));
+                trResourceTag.append($('<td>').text(tag.value));
+                trResourceTag.append($('<td>').text("button"));
+                tableResourceTag.append(trResourceTag);
+                tag_count++;
+              });
+       };
+	var trResourceTag = $('<tr>').addClass('resource-tag-table-tr');
+	trResourceTag.append($('<td>').text("TAG" + tag_count));
+	trResourceTag.append($('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">'));
+	trResourceTag.append($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="128">'));
+        trResourceTag.append($('<td>').text("button"));
+	tableResourceTag.append(trResourceTag);
+        // Append the table to the main resource tag div
+        mainResourceTagDiv.append(tableResourceTag);
+ //      alert("_renderResourceTags: " + message);
+    },
+
     _getAllResourceTags: function(){
       var thisObj = this;
       $.ajax({
           type:"POST",
-          url:"/ec2?Action=DescribeInstances",
-          data:"_xsrf="+$.cookie('_xsrf'),
+          url:"/ec2?Action=DescribeTags",
+          data:"_xsrf="+$.cookie('_xsrf')+"&Filter.1.Name=resource-id&Filter.1.Value.1="+thisObj.options.resource_id,
           dataType:"json",
           async:true,
           success: function(data, textStatus, jqXHR){
             if(data.results){
               var message = "";
-              var exists_instance_id = 0;
-              $.each(data.results, function(idx, instance){
-                message += instance.id + " ";
-                if( thisObj.options.resource_id == instance.id)
-                  exists_instance_id = 1;
+              $.each(data.results, function(idx, tag){
+		message += idx + "::";
+                for(key in tag) {
+                  message += key + "=" + tag[key] + "&";
+                };
+                message +="::";
               });
-              if(exists_instance_id == 1){
-                notifySuccess(null, message);
-//                thisObj.tableWrapper.eucatable('refreshTable');
-                thisObj._setOption('resource_id', thisObj.options.resource_id + '-MOD');
-              }else{
-                notifyError('failed to find the instance id');
-              }
+//              notifySuccess(null, message);
+              thisObj._setOption('tag_data', data.results);
+              thisObj._renderResourceTags();
             }else
               notifyError('no data results returned');
           },
@@ -81,5 +119,5 @@
 
   });
 
-}( jQuery ) );
+})( jQuery, window.eucalyptus ? window.eucalyptus : window.eucalyptus = {} );
 

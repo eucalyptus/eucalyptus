@@ -1172,10 +1172,13 @@
 
 //        $wrapper.append($volInfo);
 
-      $tabspace = $('<div>').eucatabspace(); 
+      // Create a widget object for displaying the resource tag information
+      $tagInfo = $('<div>').addClass('resource-tag-table-expanded-instance').addClass('clearfix').euca_resource_tag({resource: 'instance', resource_id: instance.id});
+
+      $tabspace = $('<div>').addClass('eucatabspace-main-div').eucatabspace(); 
       $tabspace.eucatabspace('addTabPage', 'Instance', $instInfo);
       $tabspace.eucatabspace('addTabPage', 'Volume', $volInfo);
-      $tabspace.eucatabspace('addTabPage', 'Tag', $('<div>').euca_resource_tag({resource: 'instance', resource_id: instance.id}));
+      $tabspace.eucatabspace('addTabPage', 'Tag', $tagInfo);
       $wrapper.append($tabspace);
 /*
       $wrapper.append(

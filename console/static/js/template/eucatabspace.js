@@ -13,7 +13,7 @@
     _create: function() {
       var thisObj = this;
       var tabspaceTopDiv = $('<div>').addClass('tabspace_top_div_class').attr('id', 'tabspace_top_div_id').text('top-div-place-holder');
-      var tabspaceUi = $('<ui>').addClass('tabspace_ui_class').attr('id', 'tabspace_ui_id').text('ui-place-holder');
+      var tabspaceUi = $('<ul>').addClass('tabspace_ul_class').attr('id', 'tabspace_ul_id').text('ul-place-holder');
       var tabspaceContentDiv = $('<div>').addClass('tabspace_content_div_class').attr('id', 'tabspace_content_div_id').text('div-place-holder');
      tabspaceTopDiv.append(tabspaceUi);
      tabspaceTopDiv.append(tabspaceContentDiv);
@@ -40,7 +40,7 @@
       var thisObj = this;
 
       // Hide all existing tabs
-      var tabsapceAllPageContentDivs = thisObj.element.find('#tabspace_content_div_id.tabspace_content_div_class').find('.tabsapce_content_page_div');
+      var tabsapceAllPageContentDivs = thisObj.element.find('#tabspace_content_div_id.tabspace_content_div_class').find('.tabspace_content_page_div');
       tabsapceAllPageContentDivs.each(function(index, div){
          $(div).hide();
       });
@@ -68,7 +68,7 @@
       //
       // Create the Tab and Append to the Tabspace UI
       //
-      var tabspaceUi = thisObj.element.find('#tabspace_ui_id.tabspace_ui_class');
+      var tabspaceUi = thisObj.element.find('#tabspace_ul_id.tabspace_ul_class');
       var tabspaceTabLi = $('<li>').addClass('tabspace_li').attr('id', tab);
       // Create a callback function that allows switching among the tabs
       tabspaceTabLi.append($('<a>').addClass('button tabspace-top-tab').attr('id', tab).text(tab).click(function(){
@@ -81,12 +81,12 @@
       // Create the Tabspace Page Content Div Block and Append to the Tabspace Content Div Block
       //
       var tabspaceContentDiv = thisObj.element.find('#tabspace_content_div_id.tabspace_content_div_class');
-      var tabspacePageContentDiv = $('<div>').addClass('tabsapce_content_page_div').attr('id', 'tabspace-content-page-' + tab).text('content-page-' + tab + '-palce-holder');
+      var tabspacePageContentDiv = $('<div>').addClass('tabspace_content_page_div').attr('id', 'tabspace-content-page-' + tab).text('content-page-' + tab + '-palce-holder');
       // Error Check: Make sure that the input 'obj' contains an object.
       if( obj != null )
-        tabspacePageContentDiv.append(obj.clone());
+        tabspacePageContentDiv.append(obj);
       // Show the first tab by default while hiding the rest
-      if( tabspaceContentDiv.find('.tabsapce_content_page_div').length > 0 )
+      if( tabspaceContentDiv.find('.tabspace_content_page_div').length > 0 )
         tabspacePageContentDiv.hide();
       else
         tabspacePageContentDiv.show();
@@ -96,5 +96,5 @@
 
   });
 
-}( jQuery ) );
+})( jQuery, window.eucalyptus ? window.eucalyptus : window.eucalyptus = {} );
 
