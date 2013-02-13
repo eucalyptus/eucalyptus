@@ -166,7 +166,7 @@
           $expand = thisObj.options.expand_callback(row);
           if($expand === null){
             var text = $currentRow.find('a.twist').text(); 
-            $currentRow.find('a.twist').parent().append(text);
+            $currentRow.find('a.twist').parent().text(text);
             $currentRow.find('a.twist').remove();
           }
         }

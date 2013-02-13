@@ -852,15 +852,15 @@
           req_params += "&IpPermissions."+(i+1)+".FromPort=" + fromPort[i];
           req_params += "&IpPermissions."+(i+1)+".ToPort=" + toPort[i];
           if (cidr[i]) {
-              var tmp = $("<div/>").html(cidr[i]).text();
+              var tmp = $("<div/>").text(cidr[i]).text();
               req_params += "&IpPermissions."+(i+1)+".IpRanges.1.CidrIp=" + tmp;
           }
           if (fromGroup[i]) {
-              var tmp = $("<div/>").html(fromGroup[i]).text();
+              var tmp = $("<div/>").text(fromGroup[i]).text();
               req_params += "&IpPermissions."+(i+1)+".Groups.1.GroupName=" + tmp
           }
           if (fromUser[i]) {
-              var tmp = $("<div/>").html(fromUser[i]).text();
+              var tmp = $("<div/>").text(fromUser[i]).text();
               req_params += "&IpPermissions."+(i+1)+".Groups.1.UserId=" + tmp;
           }
       }
@@ -949,10 +949,10 @@
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
-      thisObj.editDialog.find('#sgroups-edit-group-name').append($('<span>').html(addEllipsis(firstRow.name, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-name').append($('<span>').text(addEllipsis(firstRow.name, 70)));
       thisObj.editDialog.find('#sgroups-hidden-name').text(firstRow.name);
       thisObj.editDialog.find('#sgroup-template').val('none');
-      thisObj.editDialog.find('#sgroups-edit-group-desc').append($('<span>').html(addEllipsis(firstRow.description, 70)));
+      thisObj.editDialog.find('#sgroups-edit-group-desc').append($('<span>').text(addEllipsis(firstRow.description, 70)));
       thisObj.editDialog.find('input[id=allow-ip]').prop('disabled', false);
       thisObj.editDialog.find('input[id=allow-group]').prop('disabled', true);
       thisObj.editDialog.find('input[id=sgroup-allow-ip]').prop('checked', 'yes');
