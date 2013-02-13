@@ -62,6 +62,12 @@ public class BackoffRunner {
   private BackoffRunner(){    
   }
   
+  boolean taskInProgress( final String uniqueKey ) {
+    final long timestamp = timestamp();
+    final TaskInfo taskInfo = tasksInProgress.get( uniqueKey );
+    return taskInfo != null && !taskInfo.isDone( timestamp );
+  }
+  
   boolean runTask( final TaskWithBackOff task ) {
     if ( !scalingEnabled() && task.isScalingTask() ) return false;
       

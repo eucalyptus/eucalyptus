@@ -22,6 +22,7 @@ package com.eucalyptus.autoscaling.groups;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Set;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -37,6 +38,8 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
@@ -70,6 +73,10 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private LaunchConfiguration launchConfiguration;
 
+  @Column(name = "metadata_capacity_timestamp", nullable = false )
+  @Temporal( TemporalType.TIMESTAMP)
+  Date capacityTimestamp;
+  
   @Column( name = "metadata_default_cooldown", nullable = false )
   private Integer defaultCooldown;
 
@@ -167,6 +174,14 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
 
   public void setLaunchConfiguration( final LaunchConfiguration launchConfiguration ) {
     this.launchConfiguration = launchConfiguration;
+  }
+
+  public Date getCapacityTimestamp() {
+    return capacityTimestamp;
+  }
+
+  public void setCapacityTimestamp( final Date capacityTimestamp ) {
+    this.capacityTimestamp = capacityTimestamp;
   }
 
   public Integer getDefaultCooldown() {
@@ -315,6 +330,9 @@ public class AutoScalingGroup extends AbstractOwnedPersistent implements AutoSca
   @PreUpdate
   private void preUpdate() {
     scalingRequired = capacity == null || !capacity.equals( desiredCapacity );
+    if ( capacityTimestamp == null ) {
+      capacityTimestamp = new Date();
+    }
   }  
   
   protected static abstract class BaseBuilder<T extends BaseBuilder<T>> {

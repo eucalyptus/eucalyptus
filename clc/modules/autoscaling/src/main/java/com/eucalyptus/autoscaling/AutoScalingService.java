@@ -24,8 +24,10 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.AuthQuotaException;
@@ -356,8 +358,6 @@ public class AutoScalingService {
   public ExecutePolicyResponseType executePolicy(final ExecutePolicyType request) throws EucalyptusCloudException {
     final ExecutePolicyResponseType reply = request.getReply( );
     
-    //TODO:STEVE: cooldown support
-
     final Context ctx = Contexts.lookup( );
     final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
     try {
@@ -369,18 +369,23 @@ public class AutoScalingService {
           request.getPolicyName() );        
       } catch ( AutoScalingMetadataNotFoundException e ) {
         throw new InvalidParameterValueException( "Scaling policy not found: " + request.getPolicyName() );
-      } 
-      
+      }
+
       autoScalingGroups.update( accountFullName, request.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
         @Override
-        public void fire( final AutoScalingGroup autoScalingGroup ) {          
-          autoScalingGroup.setDesiredCapacity( scalingPolicy.getAdjustmentType().adjustCapacity( 
-            autoScalingGroup.getDesiredCapacity(), //TODO:STEVE: should be actual capacity ...
-            scalingPolicy.getScalingAdjustment(),
-            Objects.firstNonNull( scalingPolicy.getMinAdjustmentStep(), 0),
-            Objects.firstNonNull( autoScalingGroup.getMinSize(), 0 ),
-            Objects.firstNonNull( autoScalingGroup.getMaxSize(), Integer.MAX_VALUE )
-          ) );
+        public void fire( final AutoScalingGroup autoScalingGroup ) {
+          failIfScaling( activityManager, autoScalingGroup );
+          setDesiredCapacityWithCooldown(
+              autoScalingGroup,
+              request.getHonorCooldown(),
+              scalingPolicy.getCooldown(),
+              scalingPolicy.getAdjustmentType().adjustCapacity(
+                  autoScalingGroup.getDesiredCapacity(),
+                  scalingPolicy.getScalingAdjustment(),
+                  Objects.firstNonNull( scalingPolicy.getMinAdjustmentStep(), 0 ),
+                  Objects.firstNonNull( autoScalingGroup.getMinSize(), 0 ),
+                  Objects.firstNonNull( autoScalingGroup.getMaxSize(), Integer.MAX_VALUE )
+              ) );
         }
       } );
     } catch( Exception e ) {
@@ -637,7 +642,9 @@ public class AutoScalingService {
             throw new ScalingActivityInProgressException("Scaling activity in progress");
           }
           autoScalingInstances.deleteByGroup( autoScalingGroup );
-        }                
+        } else {
+          failIfScaling( activityManager, autoScalingGroup );
+        }
         autoScalingGroups.delete( autoScalingGroup );
       } // else treat this as though the group does not exist
     } catch ( AutoScalingMetadataNotFoundException e ) {
@@ -769,11 +776,16 @@ public class AutoScalingService {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
-            autoScalingGroup.setDesiredCapacity( Numbers.intValue( request.getDesiredCapacity() ) );
+            failIfScaling( activityManager, autoScalingGroup );
+            setDesiredCapacityWithCooldown( 
+                autoScalingGroup, 
+                request.getHonorCooldown(), 
+                null, 
+                Numbers.intValue( request.getDesiredCapacity() ) );
           } 
         }
       };
-      
+
       autoScalingGroups.update(
           ctx.getUserFullName().asAccountFullName(),
           request.getAutoScalingGroupName(),
@@ -835,6 +847,27 @@ public class AutoScalingService {
     }
     
     return reply;
+  }
+
+  private static void failIfScaling( final ActivityManager activityManager,
+                                     final AutoScalingGroup group ) {
+    if ( activityManager.scalingInProgress( group ) ) {
+      throw Exceptions.toUndeclared( new ScalingActivityInProgressException("Scaling activity in progress") );      
+    }
+  }
+
+  private static void setDesiredCapacityWithCooldown( final AutoScalingGroup autoScalingGroup,
+                                                      final Boolean honorCooldown,
+                                                      final Integer cooldown,
+                                                      final int capacity ) {
+    final long cooldownMs = TimeUnit.SECONDS.toMillis( Objects.firstNonNull( cooldown, autoScalingGroup.getDefaultCooldown() ) );
+    if ( !Objects.firstNonNull( honorCooldown, Boolean.FALSE ) ||
+        ( System.currentTimeMillis() - autoScalingGroup.getCapacityTimestamp().getTime() ) > cooldownMs ) {
+      autoScalingGroup.setDesiredCapacity( capacity );
+      autoScalingGroup.setCapacityTimestamp( new Date() );
+    } else {
+      throw Exceptions.toUndeclared( new InternalFailureException("Group is in cooldown") );
+    }
   }
 
   private static void handleException( final Exception e ) throws AutoScalingException {

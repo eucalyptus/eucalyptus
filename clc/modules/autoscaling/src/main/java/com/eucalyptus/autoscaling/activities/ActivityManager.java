@@ -143,6 +143,11 @@ public class ActivityManager {
     //TODO:STEVE: Do we need to find running instances with auto scaling tags that we are not tracking and terminate them?
   }
   
+  public boolean scalingInProgress( final AutoScalingGroup group ) {
+    final String arn = group.getArn();
+    return runner.taskInProgress( arn );
+  }
+  
   @Nullable
   public ScalingActivity terminateInstances( final AutoScalingGroup group, 
                                              final Collection<AutoScalingInstance> instances ) {
