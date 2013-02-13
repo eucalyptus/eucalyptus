@@ -88,6 +88,8 @@ import com.eucalyptus.autoscaling.common.EnableMetricsCollectionResponseType;
 import com.eucalyptus.autoscaling.common.EnableMetricsCollectionType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyType;
+import com.eucalyptus.autoscaling.common.Instance;
+import com.eucalyptus.autoscaling.common.Instances;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.PutNotificationConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.PutNotificationConfigurationType;
@@ -192,7 +194,16 @@ public class AutoScalingService {
     try {
       final List<AutoScalingGroupType> results = reply.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
       for ( final AutoScalingGroup autoScalingGroup : autoScalingGroups.list( ownerFullName, requestedAndAccessible ) ) {
-        results.add( TypeMappers.transform( autoScalingGroup, AutoScalingGroupType.class ) );
+        final AutoScalingGroupType type = TypeMappers.transform( autoScalingGroup, AutoScalingGroupType.class );
+        final Instances instances = new Instances();
+        Iterables.addAll( instances.getMember(), 
+            Iterables.transform( 
+                autoScalingInstances.listByGroup( autoScalingGroup ), 
+                TypeMappers.lookup( AutoScalingInstance.class, Instance.class ) ) );        
+        if ( !instances.getMember().isEmpty() ) {
+          type.setInstances( instances );
+        }
+        results.add( type );
       }
     } catch ( Exception e ) {
       handleException( e );

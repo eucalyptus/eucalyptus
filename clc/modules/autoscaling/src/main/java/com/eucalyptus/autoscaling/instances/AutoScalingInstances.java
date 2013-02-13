@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import com.eucalyptus.autoscaling.common.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
+import com.eucalyptus.autoscaling.common.Instance;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;
@@ -89,6 +90,22 @@ public abstract class AutoScalingInstances {
       details.setLaunchConfigurationName( autoScalingInstance.getLaunchConfigurationName() );
       details.setLifecycleState( Strings.toString( autoScalingInstance.getLifecycleState() ) );      
       return details; 
+    }
+  }
+
+  @TypeMapper
+  public enum AutoScalingInstanceSummaryTransform implements Function<AutoScalingInstance, Instance> {
+    INSTANCE;
+
+    @Override
+    public Instance apply( final AutoScalingInstance autoScalingInstance ) {
+      final Instance details = new Instance();
+      details.setAvailabilityZone( autoScalingInstance.getAvailabilityZone() );
+      details.setHealthStatus( Strings.toString( autoScalingInstance.getHealthStatus() ) );
+      details.setInstanceId( autoScalingInstance.getInstanceId() );
+      details.setLaunchConfigurationName( autoScalingInstance.getLaunchConfigurationName() );
+      details.setLifecycleState( Strings.toString( autoScalingInstance.getLifecycleState() ) );
+      return details;
     }
   }
   
