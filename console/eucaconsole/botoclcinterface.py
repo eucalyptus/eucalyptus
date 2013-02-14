@@ -301,3 +301,7 @@ class BotoClcInterface(ClcInterface):
     # returns True if successful
     def delete_tags(self, resourceIds, tags):
         return self.conn.delete_tags(resourceIds, tags)
+
+    def get_all_vmtypes(self):
+        return self.conn.get_all_vmtypes()
+

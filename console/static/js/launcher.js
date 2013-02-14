@@ -526,11 +526,10 @@
       }
 
       var instType ={};
-      instType['m1.small'] = $.eucaData.g_session['instance_type']['m1.small'];
-      instType['c1.medium'] = $.eucaData.g_session['instance_type']['c1.medium'];
-      instType['m1.large'] = $.eucaData.g_session['instance_type']['m1.large'];
-      instType['m1.xlarge'] = $.eucaData.g_session['instance_type']['m1.xlarge'];
-      instType['c1.xlarge'] = $.eucaData.g_session['instance_type']['c1.xlarge'];
+      itypes = $.eucaData.g_session['instance_type'];
+      $.each(itypes, function(type, value) {
+        instType[type] = value;
+      });
 
       $.each(instType, function(type, size){
         $list.append(

@@ -40,6 +40,7 @@ import uuid
 from datetime import datetime
 from datetime import timedelta
 
+from .botoclcinterface import BotoClcInterface
 from token import TokenAuthenticator
 
 sessions = {}
@@ -105,7 +106,8 @@ class UserSession(object):
 
 class GlobalSession(object):
     def __init__(self):
-        pass
+        self.vmtypes = ""
+
     def get_value(self, scope, key, default_val = None):
         value = None
         try:
@@ -120,13 +122,18 @@ class GlobalSession(object):
             items[k] = v
         return items
 
+    def parse_vmtypes(self, vmtypes):
+        self.vmtypes = {}
+        for vmt in vmtypes:
+            self.vmtypes[vmt.name] = [vmt.cores, vmt.memory, vmt.disk]
+
     @property
     def language(self):
         return self.get_value('locale', 'language')
 
     @property
     def version(self):
-        return '3.2.0'
+        return '3.3.0'
     
     @property
     def admin_console_url(self):
@@ -146,20 +153,7 @@ class GlobalSession(object):
 
     @property
     def instance_type(self):
-        '''
-        m1.small:1 128 2
-        c1.medium: 2 128 5 74
-        ... 
-        '''
-        m1_small = [self.get_value('instance_type','m1.small.cpu','1'),self.get_value('instance_type','m1.small.mem','128'),self.get_value('instance_type','m1.small.disk','2')]; 
-        c1_medium = [self.get_value('instance_type','c1.medium.cpu','2'),self.get_value('instance_type','c1.medium.mem', '128'),self.get_value('instance_type','c1.medium.disk', '5')]; 
-        m1_large = [self.get_value('instance_type','m1.large.cpu', '2'),self.get_value('instance_type','m1.large.mem', '512'),self.get_value('instance_type','m1.large.disk', '10')];
-        m1_xlarge = [self.get_value('instance_type','m1.xlarge.cpu', '2'),self.get_value('instance_type','m1.xlarge.mem', '1024'),self.get_value('instance_type','m1.xlarge.disk', '10')]; 
-        c1_xlarge = [self.get_value('instance_type','c1.xlarge.cpu', '4'),self.get_value('instance_type','c1.xlarge.mem', '2048'),self.get_value('instance_type','c1.xlarge.disk', '10')]; 
-        m3_xlarge = [self.get_value('instance_type','m3.xlarge.cpu', '4'),self.get_value('instance_type','m3.xlarge.mem', '15360'),self.get_value('instance_type','m3.xlarge.disk', '0')]; 
-        m3_2xlarge = [self.get_value('instance_type','m3.2xlarge.cpu', '8'),self.get_value('instance_type','m3.2xlarge.mem', '30720'),self.get_value('instance_type','m3.2xlarge.disk', '0')]; 
-
-        return {'m1.small':m1_small, 'c1.medium':c1_medium, 'm1.large':m1_large, 'm1.xlarge':m1_xlarge, 'c1.xlarge':c1_xlarge, 'm3.xlarge':m3_xlarge, 'm3.2xlarge':m3_2xlarge};
+        return self.vmtypes
 
     # return the collection of global session info
     def get_session(self):
@@ -342,13 +336,13 @@ class LoginProcessor(ProxyProcessor):
         account, user, passwd = auth_decoded.split(':', 2)
         remember = web_req.get_argument("remember")
 
+        # this hack allows login with AWS creds if account is set to aws endpoint
         ec2_endpoint = None
         if account[len(account)-13:] == 'amazonaws.com':
             ec2_endpoint = account
             access_id = user
             secret_key = passwd
             session_token = None
-            print "ec2: %s, %s, %s" %(ec2_endpoint, access_id, secret_key)
         if ec2_endpoint == None:
             if config.getboolean('test', 'usemock') == False:
                 auth = TokenAuthenticator(config.get('server', 'clchost'),
@@ -434,6 +428,13 @@ class LoginResponse(ProxyResponse):
         global global_session
         if not global_session:
             global_session = GlobalSession()
+
+        host = config.get('server', 'clchost')
+        clc = BotoClcInterface(host, self.user_session.access_key,
+                               self.user_session.secret_key,
+                               self.user_session.session_token)
+        vmtypes = clc.get_all_vmtypes()
+        global_session.parse_vmtypes(vmtypes)
 
         return {'global_session': global_session.get_session(),
                 'user_session': self.user_session.get_session()}
