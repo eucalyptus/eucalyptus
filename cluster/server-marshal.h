@@ -140,6 +140,8 @@ adb_RebootInstancesResponse_t *RebootInstancesMarshal(adb_RebootInstances_t * re
 adb_TerminateInstancesResponse_t *TerminateInstancesMarshal(adb_TerminateInstances_t * terminateInstances, const axutil_env_t * env);
 adb_CreateImageResponse_t *CreateImageMarshal(adb_CreateImage_t * createImage, const axutil_env_t * env);
 void print_adb_ccInstanceType(adb_ccInstanceType_t * in);
+adb_ModifyNodeResponse_t *ModifyNodeMarshal(adb_ModifyNode_t * modifyNode, const axutil_env_t * env);
+adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t * migrateInstances, const axutil_env_t * env);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

@@ -782,6 +782,85 @@ out:
 }
 
 //!
+//! Implement the backing store for a the target of migration
+//!
+//! @param[in] instance pointer to the instance
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+//! @pre The instance parameter must not be NULL.
+//!
+//! @post
+//!
+int create_migration_backing(ncInstance * instance)
+{
+    int rc = 0;
+    int ret = EUCA_ERROR;
+    virtualMachine *vm = &(instance->params);
+    artifact *sentinel = NULL;
+    char work_prefix[1024] = { 0 }; // {userId}/{instanceId}
+
+    // ensure instance directory exists
+    set_path(instance->instancePath, sizeof(instance->instancePath), instance, NULL);
+    if (ensure_directories_exist(instance->instancePath, 0, NULL, "root", BACKING_DIRECTORY_PERM) == -1)
+        goto out;
+
+    // set various instance-directory-relative paths in the instance struct
+    set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
+    set_path(instance->libvirtFilePath, sizeof(instance->libvirtFilePath), instance, INSTANCE_LIBVIRT_FILE_NAME);
+    set_path(instance->consoleFilePath, sizeof(instance->consoleFilePath), instance, INSTANCE_CONSOLE_FILE_NAME);
+    if (strstr(instance->platform, "windows")) {
+        // generate the floppy file for windows instances
+        if (makeWindowsFloppy(nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {
+            LOGERROR("[%s] could not create windows bootup script floppy\n", instance->instanceId);
+            goto out;
+        } else {
+            set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
+        }
+    }
+
+    set_id(instance, NULL, work_prefix, sizeof(work_prefix));
+
+    // compute tree of dependencies
+    sentinel = vbr_alloc_tree(vm,   // the struct containing the VBR
+                              FALSE,    // for Xen and KVM we do not need to make disk bootable
+                              TRUE, // make working copy of runtime-modifiable files
+                              (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
+                              instance->instanceId);    // ID is for logging
+    if (sentinel == NULL) {
+        LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
+        goto out;
+    }
+
+    // convert top-level artifacts into simple blobs and prune children
+    for (int i = 0; i < MAX_ARTIFACT_DEPS && sentinel->deps[i]; i++) {
+        // TODO:....
+    }
+
+    sem_p(disk_sem);
+    {
+        // download/create/combine the dependencies
+        rc = art_implement_tree(sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC);
+    }
+    sem_v(disk_sem);
+
+    if (rc != EUCA_OK) {
+        LOGERROR("[%s] failed to implement migration backing for instance\n", instance->instanceId);
+        goto out;
+    }
+
+    if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
+        goto out;
+
+    ret = EUCA_OK;
+
+out:
+    if (sentinel)
+        art_free(sentinel);
+    return (ret);
+}
+
+//!
 //! Do a clone of an instance backing store to another location.
 //!
 //! @param[in] instance pointer to the instance
@@ -907,7 +986,17 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
             }
         }
     }
-
+    // there may be iSCSI targets for volumes if instance disappeared or was migrated
+    for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
+        ncVolume *volume = &instance->volumes[i];
+        if (!is_volume_used(volume))
+            continue;
+        
+        if (disconnect_iscsi_target(volume->remoteDev) != 0) {
+            LOGERROR("[%s][%s] failed to disconnet iscsi target\n", instance->instanceId, volume->volumeId);
+        }
+    }
+    
     // see if instance directory is there (sometimes startup fails before it is created)
     set_path(path, sizeof(path), instance, NULL);
     if (check_path(path))

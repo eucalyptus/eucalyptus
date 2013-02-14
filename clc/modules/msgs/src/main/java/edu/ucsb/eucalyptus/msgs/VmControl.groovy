@@ -266,6 +266,8 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String rootDeviceType = "instance-store";
   String rootDeviceName = "/dev/sda1";
   ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+
   @Override
   public int compareTo( RunningInstancesItemType that ) {
     return this.instanceId.compareTo( that.instanceId );

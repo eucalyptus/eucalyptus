@@ -104,7 +104,7 @@ public class SnapshotTag extends Tag<SnapshotTag> {
 
   public static final class SnapshotTagSupport extends TagSupport {
     public SnapshotTagSupport() {
-      super( SnapshotMetadata.class, "snap" );
+      super( Snapshot.class, "snap", "displayName", "snapshot" );
     }
     
     @Override
@@ -115,6 +115,11 @@ public class SnapshotTag extends Tag<SnapshotTag> {
     @Override
     public Tag example( @Nonnull final CloudMetadata metadata, @Nonnull final OwnerFullName ownerFullName, final String key, final String value ) {
       return SnapshotTag.namedWithValue( (Snapshot) metadata, ownerFullName, key, value );
+    }
+
+    @Override
+    public Tag example( @Nonnull final OwnerFullName ownerFullName ) {
+      return example( new SnapshotTag(), ownerFullName );
     }
 
     @Override

@@ -99,6 +99,10 @@
 #ifndef MAX_PATH
 #define MAX_PATH               4096    //!< Max path string length
 #endif /*  ! MAX_PATH */
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <eucalyptus.h>
 #include <eucalyptus-config.h>
@@ -275,6 +279,8 @@ int doDescribeBundleTasks(ncMetadata * pMeta, char **instIds, int instIdsLen, bu
 int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds, int instIdsLen, char **sensorIds,
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
+int doModifyNode(ncMetadata * pMeta, char * stateName);
+int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials);
 ncInstance *find_global_instance(const char *instanceId);
 
 /*----------------------------------------------------------------------------*\
@@ -303,7 +309,7 @@ static int init(void);
 \*----------------------------------------------------------------------------*/
 
 //!
-//! Utilitarian functions used in the lower level handlers. This scans teh string buffer
+//! Utilitarian functions used in the lower level handlers. This scans the string buffer
 //! 's' for a matching parameter 'name' to fill in the 'valp' value.
 //!
 //! @param[in]  s a non NULL string buffer
@@ -756,6 +762,13 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
             LOGINFO("[%s] detected disappearance of createImage domain\n", instance->instanceId);
             change_state(instance, CREATEIMAGE_SHUTOFF);
         } else if (old_state == RUNNING || old_state == BLOCKED || old_state == PAUSED || old_state == SHUTDOWN) {
+            // if we just finished migration, then this is normal
+            if (is_migration_src(instance)) {
+                LOGINFO("[%s] migration completed, cleaning up\n", instance->instanceId);
+                change_state(instance, SHUTOFF);
+                return;
+            }
+
             // most likely the user has shut it down from the inside
             invalidate_hypervisor_conn();   // to rule out libvirt badness, we'll restart the connection
             if (instance->retries) {
@@ -793,9 +806,21 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     case RUNNING:
     case BLOCKED:
     case PAUSED:
+        // migration-related logic
+        if (is_migration_dst(instance)) {
+            if (new_state == RUNNING || new_state == BLOCKED) {
+                instance->migration_state = NOT_MIGRATING; // done!
+                LOGINFO("[%s] incoming migration complete\n", instance->instanceId);
+            } else if (new_state == SHUTOFF || new_state == SHUTDOWN) {
+                // this is normal at the beginning of incoming migration, before a domain is created in PAUSED state
+                break;
+            }
+        }
+
         if (new_state == SHUTOFF || new_state == SHUTDOWN || new_state == CRASHED) {
             LOGWARN("[%s] hypervisor reported previously running domain as %s\n", instance->instanceId, instance_state_names[new_state]);
         }
+
         // change to state, whatever it happens to be
         change_state(instance, new_state);
         break;
@@ -2136,6 +2161,34 @@ static int init(void)
         }
     }
 
+    { // find and set IP
+        char hostname [HOSTNAME_SIZE];
+        if (gethostname (hostname, sizeof(hostname)) != 0) {
+            LOGFATAL("failed to find hostname\n");
+            return (EUCA_FATAL_ERROR);
+        }
+
+        struct hostent *he;
+        if ((he = gethostbyname(hostname)) == NULL) {
+            LOGFATAL("failed to obtain host information for %s\n", hostname);
+            return (EUCA_FATAL_ERROR);
+        }
+
+        int found = 0;
+        struct in_addr **addr_list = (struct in_addr **)he->h_addr_list;
+        for (int i = 0; !found && addr_list[i] != NULL; i++) {
+            if (! found) {
+                strncpy (nc_state.ip, inet_ntoa(*addr_list[i]), sizeof(nc_state.ip));
+                found = 1;
+            }
+        }
+        if (!found) {
+            LOGFATAL("failed to obtain IP for %s\n", hostname);
+            return (EUCA_FATAL_ERROR);
+        }
+        LOGINFO("using IP %s\n", nc_state.ip);
+    }
+
     {                                  // start the monitoring thread
         pthread_t tcb;
         if (pthread_create(&tcb, NULL, monitoring_thread, &nc_state)) {
@@ -2730,7 +2783,7 @@ int doCreateImage(ncMetadata * pMeta, char *instanceId, char *volumeId, char *re
 //! Handles the describe sensors request.
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  historySize teh size of the data history to retrieve
+//! @param[in]  historySize the size of the data history to retrieve
 //! @param[in]  collectionIntervalTimeMs the data collection interval in milliseconds
 //! @param[in]  instIds the list of instance identifiers string
 //! @param[in]  instIdsLen the number of instance identifiers in the instIds list
@@ -2761,6 +2814,57 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 }
 
 //!
+//! Handles the modify node request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+
+int doModifyNode(ncMetadata * pMeta, char * stateName)
+{
+   int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    LOGDEBUG("invoked (stateName=%s)\n", stateName);
+
+    if (nc_state.H->doModifyNode) {
+        ret = nc_state.H->doModifyNode(&nc_state, pMeta, stateName);
+    } else {
+        ret = nc_state.D->doModifyNode(&nc_state, pMeta, stateName);
+    }
+
+    return ret;
+}
+
+//!
+//! Handles the instance migration request.
+//!
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! TODO: doxygen
+
+int doMigrateInstance(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char * action, char * credentials)
+{
+   int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    LOGDEBUG("invoked (action=%s instance[0].{id=%s src=%s dst=%s) creds=%s\n",
+             action, 
+             instances[0]->instanceId, instances[0]->migration_src, instances[0]->migration_dst,
+             (credentials==NULL)?("unavailable"):("present"));
+    
+    if (nc_state.H->doMigrateInstance) {
+        ret = nc_state.H->doMigrateInstance(&nc_state, pMeta, instances, instancesLen, action, credentials);
+    } else {
+        ret = nc_state.D->doMigrateInstance(&nc_state, pMeta, instances, instancesLen, action, credentials);
+    }
+
+    return ret;
+}
+
+//!
 //! Finds an instance in the global instance list
 //!
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
@@ -2770,4 +2874,34 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
 ncInstance *find_global_instance(const char *instanceId)
 {
     return NULL;
+}
+
+//!
+//! Predicate determining whether the instance is a migration destination
+//!
+//! @param[in] instance pointer to the instance struct
+//! 
+//! @return true or false
+//!
+int is_migration_dst(const ncInstance * instance)
+{
+    if (instance->migration_state != NOT_MIGRATING &&
+        !strcmp (instance->migration_dst, nc_state.ip))
+        return TRUE;
+    return FALSE;
+}
+
+//!
+//! Predicate determining whether the instance is a migration source
+//!
+//! @param[in] instance pointer to the instance struct
+//! 
+//! @return true or false
+//!
+int is_migration_src(const ncInstance * instance)
+{
+    if (instance->migration_state != NOT_MIGRATING &&
+        !strcmp (instance->migration_src, nc_state.ip))
+        return TRUE;
+    return FALSE;
 }

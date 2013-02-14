@@ -31,7 +31,6 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloud.CloudMetadata;
-import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.tags.Tag;
@@ -106,12 +105,17 @@ public class ImageInfoTag extends Tag<ImageInfoTag> {
 
   public static final class ImageInfoTagSupport extends TagSupport {
     public ImageInfoTagSupport() {
-      super( ImageMetadata.class, Sets.newHashSet( "emi", "eri", "eki" ) );
+      super( ImageInfo.class, Sets.newHashSet( "emi", "eri", "eki" ), "displayName", "image" );
     } 
     
     @Override
     public Tag createOrUpdate( final CloudMetadata metadata, final OwnerFullName ownerFullName, final String key, final String value ) {
       return Tags.createOrUpdate(  new ImageInfoTag( (ImageInfo) metadata, ownerFullName, key, value ) );
+    }
+
+    @Override
+    public Tag example( @Nonnull final OwnerFullName ownerFullName ) {
+      return example( new ImageInfoTag(), ownerFullName );
     }
 
     @Override

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0" xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+      xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
+       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
+       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
+
+    <euca:endpoint name="LoadBalancingControllerWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/services/LoadBalancing"/>
+    <euca:endpoint name="LoadBalancingInternalWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/internal/LoadBalancingInternal"
+                   synchronous="true"/>
+
+    <endpoint name="LoadBalancingWS" address="vm://LoadBalancing" synchronous="false"/>
+    <endpoint name="LoadBalancingInternalVM" address="vm://LoadBalancingInternal" synchronous="true"/>
+    <endpoint name="LoadBalancingErrorQueueWS" address="vm://LoadBalancingErrorQueue" synchronous="false"/>
+    <model name="loadbalancing">
+
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="LoadBalancingErrorQueueWS" />
+        </default-service-exception-strategy>
+
+        <service name="LoadBalancingRequestQueue">
+            <inbound>
+                <vm:inbound-endpoint ref="LoadBalancingRequestQueueEndpoint" />
+            </inbound>
+            <bridge-component />
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="LoadBalancingWS" />
+                    <payload-type-filter expectedType="com.eucalyptus.loadbalancing.LoadBalancingMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="LoadBalancing">
+            <inbound>
+                <inbound-endpoint ref="LoadBalancingWS" />
+            </inbound>
+            <component class="com.eucalyptus.loadbalancing.LoadBalancingService" />
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint" />
+                    <payload-type-filter expectedType="com.eucalyptus.loadbalancing.LoadBalancingMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="LoadBalancingErrorQueue">
+            <inbound>
+                <inbound-endpoint ref="LoadBalancingErrorQueueWS" />
+            </inbound>
+            <component class="com.eucalyptus.loadbalancing.ws.LoadBalancingErrorHandler" />
+        </service>
+
+    </model>
+    <model name="loadbalancing-internal">
+        <service name="LoadBalancingInternal">
+            <inbound>
+                <inbound-endpoint ref="LoadBalancingInternalWS" />
+                <inbound-endpoint ref="LoadBalancingInternalVM" />
+            </inbound>
+            <component class="com.eucalyptus.loadbalancing.LoadBalancingService" />
+        </service>
+    </model>
+
+</mule>

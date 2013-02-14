@@ -93,6 +93,7 @@ if ((@paths < 1) || ((@paths % 3) != 0)) {
   print STDERR "Target paths are not complete:$dev_string\n";
   do_exit(1);
 }
+my $first_store = $paths[2];
 $multipath = 0;
 $multipath = 1 if @paths > 3;
 if (($multipath == 1) && ((!-x $MULTIPATH) || (!-x $DMSETUP))) {
@@ -107,6 +108,7 @@ if (is_null_or_empty($lun)) {
 if ($multipath == 1) {
   $mpath = get_mpath_device_by_paths(@paths);
 }
+unwrap_device($first_store);
 
 while (@paths > 0) {
   $conf_iface = shift(@paths);

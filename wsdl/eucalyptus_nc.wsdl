@@ -81,7 +81,7 @@
 	<xs:sequence>
 	  <xs:element minOccurs="0" name="resourceLocation" type="xs:string"/>
 	  <xs:element minOccurs="0" name="guestDeviceName" type="xs:string"/>
-	  <xs:element minOccurs="0" name="size" type="xs:int"/>
+	  <xs:element minOccurs="0" name="size" type="xs:long"/>
 	  <xs:element minOccurs="0" name="format" type="xs:string"/>
 	  <xs:element minOccurs="0" name="id" type="xs:string"/>
 	  <xs:element minOccurs="0" name="type" type="xs:string"/>
@@ -118,7 +118,7 @@
        <xs:complexType abstract="true" name="metricCounterType">
         <xs:sequence>
 	  <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1" />
-	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>>
+	  <xs:element name="collectionIntervalMs" type="xs:long" maxOccurs="1" minOccurs="1"/>
 	  <xs:element name="sequenceNum" type="xs:long" minOccurs="1" maxOccurs="1" />
 	  <xs:element name="dimensions" type="tns:metricDimensionsType" maxOccurs="unbounded" minOccurs="1"/>
         </xs:sequence>
@@ -159,7 +159,7 @@
           <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="disabledServices" type="tns:serviceInfoType"/>
           <xs:element maxOccurs="unbounded" minOccurs="0" name="notreadyServices" type="tns:serviceInfoType"/>
-    <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
+	  <xs:element nillable="true" minOccurs="0" maxOccurs="1" name="nodeName" type="xs:string"/>
 	</xs:sequence>
       </xs:complexType>
     
@@ -517,6 +517,9 @@
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	    <xs:element minOccurs="0" name="migrationStateName" type="xs:string" />
+	    <xs:element minOccurs="0" name="migrationSource" type="xs:string" />
+	    <xs:element minOccurs="0" name="migrationDestination" type="xs:string" />
 
         <!-- passed into RunInstances for safekeeping by NC -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
@@ -573,30 +576,70 @@
 	</xs:extension>
       </xs:complexContent>
     </xs:complexType>
-
- <xs:complexType name="ncDescribeSensorsType">
-	<xs:complexContent>
-	  <xs:extension base="tns:eucalyptusMessage">
-	    <xs:sequence>
-              <xs:element maxOccurs="1" minOccurs="0" name="historySize" type="xs:int" />
-              <xs:element maxOccurs="1" minOccurs="0" name="collectionIntervalTimeMs" type="xs:int" />
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string" />
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorIds" type="xs:string" />
-	    </xs:sequence>
-	  </xs:extension>
-	</xs:complexContent>
-      </xs:complexType>
-
-  <xs:complexType name="ncDescribeSensorsResponseType">
-	<xs:complexContent>
-	  <xs:extension base="tns:eucalyptusMessage">
-	    <xs:sequence>
-              <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsResources" type="tns:sensorsResourceType" />
-	    </xs:sequence>
-	  </xs:extension>
-	</xs:complexContent>
-      </xs:complexType>
-
+    
+    <xs:complexType name="ncDescribeSensorsType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+            <xs:element maxOccurs="1" minOccurs="0" name="historySize" type="xs:int" />
+            <xs:element maxOccurs="1" minOccurs="0" name="collectionIntervalTimeMs" type="xs:int" />
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="instanceIds" type="xs:string" />
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorIds" type="xs:string" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncDescribeSensorsResponseType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+            <xs:element maxOccurs="unbounded" minOccurs="0" name="sensorsResources" type="tns:sensorsResourceType" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncModifyNodeType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+            <xs:element maxOccurs="1" minOccurs="0" name="stateName" type="xs:string" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncModifyNodeResponseType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncMigrateInstanceType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	    <xs:element maxOccurs="unbounded" minOccurs="1" name="instance" type="tns:instanceType"/>
+            <xs:element maxOccurs="1" minOccurs="1" name="action" type="xs:string" />
+            <xs:element maxOccurs="1" minOccurs="0" name="credentials" type="xs:string" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="ncMigrateInstanceResponseType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+    
     <xs:complexType name="ncAssignAddressType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -664,6 +707,12 @@
     
     <xs:element name="ncDescribeSensors" nillable="true" type="tns:ncDescribeSensorsType"/>
     <xs:element name="ncDescribeSensorsResponse" nillable="true" type="tns:ncDescribeSensorsResponseType"/>
+
+    <xs:element name="ncModifyNode" nillable="true" type="tns:ncModifyNodeType"/>
+    <xs:element name="ncModifyNodeResponse" nillable="true" type="tns:ncModifyNodeResponseType"/>
+
+    <xs:element name="ncMigrateInstance" nillable="true" type="tns:ncMigrateInstanceType"/>
+    <xs:element name="ncMigrateInstanceResponse" nillable="true" type="tns:ncMigrateInstanceResponseType"/>
 
     <xs:element name="ncRunInstance" nillable="true" type="tns:ncRunInstanceType"/>
     <xs:element name="ncRunInstanceResponse" nillable="true" type="tns:ncRunInstanceResponseType"/>
@@ -756,6 +805,16 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncModifyNodeResponse">
+  <wsdl:part element="tns:ncModifyNodeResponse" name="ncModifyNodeResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncMigrateInstanceResponse">
+  <wsdl:part element="tns:ncMigrateInstanceResponse" name="ncMigrateInstanceResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncStartNetwork">
   <wsdl:part element="tns:ncStartNetwork" name="ncStartNetwork">
   </wsdl:part>
@@ -838,6 +897,16 @@
 
 <wsdl:message name="ncDescribeSensors">
   <wsdl:part element="tns:ncDescribeSensors" name="ncDescribeSensors">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncModifyNode">
+  <wsdl:part element="tns:ncModifyNode" name="ncModifyNode">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncMigrateInstance">
+  <wsdl:part element="tns:ncMigrateInstance" name="ncMigrateInstance">
   </wsdl:part>
 </wsdl:message>
 
@@ -954,10 +1023,25 @@
     <wsdl:output message="tns:ncDescribeResourceResponse" name="ncDescribeResourceResponse">
     </wsdl:output>
   </wsdl:operation>
+
   <wsdl:operation name="ncDescribeSensors">
     <wsdl:input message="tns:ncDescribeSensors" name="ncDescribeSensors">
     </wsdl:input>
     <wsdl:output message="tns:ncDescribeSensorsResponse" name="ncDescribeSensorsResponse">
+    </wsdl:output>
+  </wsdl:operation> 
+
+  <wsdl:operation name="ncModifyNode">
+    <wsdl:input message="tns:ncModifyNode" name="ncModifyNode">
+    </wsdl:input>
+    <wsdl:output message="tns:ncModifyNodeResponse" name="ncModifyNodeResponse">
+    </wsdl:output>
+  </wsdl:operation> 
+
+  <wsdl:operation name="ncMigrateInstance">
+    <wsdl:input message="tns:ncMigrateInstance" name="ncMigrateInstance">
+    </wsdl:input>
+    <wsdl:output message="tns:ncMigrateInstanceResponse" name="ncMigrateInstanceResponse">
     </wsdl:output>
   </wsdl:operation> 
     
@@ -1126,7 +1210,7 @@
     </wsdl:output>
   </wsdl:operation>
 
-<wsdl:operation name="ncDescribeSensors">
+  <wsdl:operation name="ncDescribeSensors">
     <soap:operation soapAction="EucalyptusNC#ncDescribeSensors" style="document"/>
     <wsdl:input name="ncDescribeSensors">
       <soap:body use="literal"/>
@@ -1135,6 +1219,27 @@
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
+
+  <wsdl:operation name="ncModifyNode">
+    <soap:operation soapAction="EucalyptusNC#ncModifyNode" style="document"/>
+    <wsdl:input name="ncModifyNode">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncModifyNodeResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+  
+  <wsdl:operation name="ncMigrateInstance">
+    <soap:operation soapAction="EucalyptusNC#ncMigrateInstance" style="document"/>
+    <wsdl:input name="ncMigrateInstance">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncMigrateInstanceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
 </wsdl:binding>
 
 <wsdl:service name="EucalyptusNC">

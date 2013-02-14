@@ -234,6 +234,7 @@ public class ImageDetails extends EucalyptusData {
   String hypervisor;
   ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   ArrayList<String> productCodes = new ArrayList<String>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   
   boolean equals(final Object o) {
     if ( !o == null || !(o instanceof ImageDetails) ) return false;

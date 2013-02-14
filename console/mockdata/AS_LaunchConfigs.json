@@ -1,0 +1,52 @@
+[
+  {
+    "kernel_id": "", 
+    "key_name": "", 
+    "ramdisk_id": "", 
+    "user_data": "", 
+    "image_id": "ami-1624987f", 
+    "EbsOptimized": "false", 
+    "created_time": "2013-01-30T02:54:35.591000", 
+    "instance_monitoring": {
+      "connection": null, 
+      "__obj_name__": "InstanceMonitoring", 
+      "enabled": "true"
+    }, 
+    "security_groups": [
+      "default"
+    ], 
+    "block_device_mappings": [], 
+    "__obj_name__": "LaunchConfiguration", 
+    "spot_price": null, 
+    "name": "mylaunchconfig", 
+    "instance_profile_name": null, 
+    "member": "\n      ", 
+    "instance_type": "t1.micro", 
+    "connection": [], 
+    "launch_configuration_arn": "arn:aws:autoscaling:us-east-1:017179026131:launchConfiguration:6615d446-1f12-4775-86ce-cfb416542989:launchConfigurationName/mylaunchconfig"
+  }, 
+  {
+    "kernel_id": "", 
+    "key_name": "", 
+    "ramdisk_id": "", 
+    "user_data": "", 
+    "image_id": "ami-1624987f", 
+    "EbsOptimized": "false", 
+    "created_time": "2013-01-31T18:43:31.858000", 
+    "instance_monitoring": {
+      "connection": null, 
+      "__obj_name__": "InstanceMonitoring", 
+      "enabled": "false"
+    }, 
+    "security_groups": [], 
+    "block_device_mappings": [], 
+    "__obj_name__": "LaunchConfiguration", 
+    "spot_price": null, 
+    "name": "testlaunchconfig", 
+    "instance_profile_name": null, 
+    "member": "\n      ", 
+    "instance_type": "t1.micro", 
+    "connection": [], 
+    "launch_configuration_arn": "arn:aws:autoscaling:us-east-1:017179026131:launchConfiguration:1ce335ef-daa5-4e6d-ae0b-5f62cd45c427:launchConfigurationName/testlaunchconfig"
+  }
+]

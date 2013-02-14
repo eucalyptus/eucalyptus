@@ -37,9 +37,8 @@ class NetworkGroupFilterSupportTest extends FilterSupportTest.InstanceTest<Netwo
     assertMatch( true, "description", "test", new NetworkGroup( description: "test" ) )
     assertMatch( false, "description", "test", new NetworkGroup( description: "not test" ) )
 
-    //TODO:STEVE: uncomment when security group IDs implemented
-    // assertMatch( true, "group-id", "sg-00000000", new NetworkGroup( displayName: "sg-00000000" ) )
-    assertMatch( false, "group-id", "sg-00000000", new NetworkGroup( displayName: "sg-00000001" ) )
+    assertMatch( true, "group-id", "sg-00000000", new NetworkGroup( groupId: "sg-00000000" ) )
+    assertMatch( false, "group-id", "sg-00000000", new NetworkGroup( groupId: "sg-00000001" ) )
 
     assertMatch( true, "group-name", "test", NetworkGroup.named( null, "test" ) )
     assertMatch( false, "group-name", "test", NetworkGroup.named( null, "not test" ) )

@@ -205,6 +205,7 @@ public class Volume extends EucalyptusData {
   String status;
   Date createTime = new Date();
   ArrayList<AttachedVolume> attachmentSet = new ArrayList<AttachedVolume>();
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
   
   public Volume() {
   }
@@ -268,6 +269,7 @@ public class Snapshot extends EucalyptusData {
   String ownerId;
   String volumeSize = "n/a";
   String description;
+  ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 }
 //TODO:ADDED
 public class ModifySnapshotAttributeType extends BlockSnapshotMessage {

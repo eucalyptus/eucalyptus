@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import javax.annotation.Nullable;
 import com.google.common.base.Function;
 
 /**
@@ -26,6 +27,28 @@ import com.google.common.base.Function;
  */
 public class Strings {
 
+  /**
+   * Null safe string conversion
+   *
+   * @param object The object to convert to a String
+   * @return The object as a String or null if null                    
+   */
+  public static String toString( @Nullable final Object object ) {
+    return toString( object, null );
+  }
+
+  /**
+   * Null safe string conversion
+   * 
+   * @param object The object to convert to a String
+   * @param defaultValue The default value to use
+   * @return The object as a String or the default value if null                    
+   */
+  public static String toString( @Nullable final Object object,
+                                 @Nullable final String defaultValue ) {
+    return object == null ? defaultValue : object.toString();     
+  }
+  
   /**
    * Get a Function for trimming a String.
    *
@@ -62,6 +85,18 @@ public class Strings {
     return StringFunctions.LOWER;
   }
 
+  /**
+   * Convert an object to a string.
+   *
+   * <P>The returned function will pass through null values.</P>
+   * 
+   * @return The toString function
+   * @see #toString(Object)
+   */
+  public static Function<Object,String> toStringFunction() {
+    return StringerFunctions.TOSTRING;
+  }
+  
   private enum StringFunctions implements Function<String,String> {
     LOWER {
       @Override
@@ -79,6 +114,15 @@ public class Strings {
       @Override
       public String apply( final String text ) {
         return text == null ? null : text.toUpperCase();
+      }
+    }    
+  }
+  
+  private enum StringerFunctions implements Function<Object,String> {
+    TOSTRING {
+      @Override
+      public String apply( final Object object ) {
+        return Strings.toString( object );
       }
     }
   }

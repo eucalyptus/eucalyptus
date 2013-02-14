@@ -64,17 +64,17 @@
 <binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2010-08-31/" name="ec2_amazonaws_com_doc_2010_08_31">
   <namespace uri="http://ec2.amazonaws.com/doc/2010-08-31/" default="elements" />
   <include path="classpath:aws-base.xml" />
-  <include path="classpath:aws-instances-09-10-31.xml" />
+  <include path="classpath:aws-instances-10-08-31.xml" />
   <include path="classpath:aws-bundling.xml" />
-  <include path="classpath:aws-images-09-10-31.xml" />
+  <include path="classpath:aws-images-10-08-31.xml" />
   <include path="classpath:aws-image-attr.xml" />
   <include path="classpath:aws-ips.xml" />
   <include path="classpath:aws-keypairs.xml" />
-  <include path="classpath:aws-security.xml" />
+  <include path="classpath:aws-security-10-08-31.xml" />
   <include path="classpath:aws-zones-09-07-15.xml" />
   <include path="classpath:aws-regions.xml" />
-  <include path="classpath:aws-ebs-volumes.xml" />
-  <include path="classpath:aws-ebs-snapshots-09-08-15.xml" />
+  <include path="classpath:aws-ebs-volumes-10-08-31.xml" />
+  <include path="classpath:aws-ebs-snapshots-10-08-31.xml" />
   <include path="classpath:aws-filters-tags-10-06-15.xml" />
   <include path="classpath:aws-placement-10-06-15.xml" />
   <include path="classpath:aws-vpc.xml" />
