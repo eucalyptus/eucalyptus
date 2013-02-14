@@ -139,7 +139,7 @@
       }));
       $instObj.find('#dashboard-scaling-groups').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-            thisObj._trigger('select', evt, {selected:'scaling', filter:'stopped'});
+            thisObj._trigger('select', evt, {selected:'scaling'});
             $('html body').trigger('click', 'navigator:scaling');
             return false;
       }));
@@ -211,8 +211,8 @@
       });
       $netsecObj.find('#dashboard-netsec-load-balancer').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
-          thisObj._trigger('select', evt, {selected:'balancer'});
-          $('html body').trigger('click', 'navigator:balancer');
+          thisObj._trigger('select', evt, {selected:'balancing'});
+          $('html body').trigger('click', 'navigator:balancing');
           return false;
       }));
       $('html body').eucadata('refresh', 'balancer'); 

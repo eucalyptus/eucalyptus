@@ -98,8 +98,14 @@
 	      "mDataProp": "image_id"
 	    },
             { 
-	      // Display the availiability zone of the instance in the main table
-	      "mDataProp": "placement"
+              // Display the availiability zone of the instance in the main table
+              "fnRender": function(oObj) { 
+                var zone = oObj.aData.placement;
+                if (zone == undefined) {
+                    zone = oObj.aData._placement.zone;
+                }
+                return zone;
+              }
 	    }, 
             {
 	      // Display the public dns name of the instance in the main table

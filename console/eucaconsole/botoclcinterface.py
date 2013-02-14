@@ -254,7 +254,7 @@ class BotoClcInterface(ClcInterface):
         return self.conn.detach_volume(volume_id, None, None, force)
 
     def get_all_snapshots(self, filters, callback=None):
-        obj = self.conn.get_all_snapshots(filters)
+        obj = self.conn.get_all_snapshots(owner='self', filters=filters)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/Snapshots.json")
         return obj

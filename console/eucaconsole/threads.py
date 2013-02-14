@@ -59,3 +59,11 @@ class Threads(object):
     # response to the client
     def invokeCallback(self, callback, response):
         IOLoop.instance().add_callback(functools.partial(callback, response))
+
+    def killEmAll(self):
+        for t in threading.enumerate():
+            if t.isAlive():
+                try:
+                    t._Thread__stop()
+                except:
+                    pass
