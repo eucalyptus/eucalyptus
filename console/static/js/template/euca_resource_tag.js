@@ -4,20 +4,88 @@
 
   $.widget( "eucalyptus.euca_resource_tag", {
  
-    // These options will be used as defaults
     options: { 
       resource: null,
       resource_id: null,
       tag_data: null,
     },
+    baseTable: null,
+    tableWrapper: null,
  
     // Set up the widget
     _create: function() {
       var thisObj = this;
-      var mainDiv = $('<div>').addClass('resource_tag_main_div_class').attr('id', 'resource_tag_main_div_id')
-      mainDiv.text('RESOURCE TAG PLACE HOLDER ::: RESOURCE: ' + this.options.resource + " RESOURCE_ID: " + this.options.resource_id);
-      thisObj.element.append(mainDiv);
-      thisObj._getAllResourceTags();
+      var mainDiv = $('<div>').addClass('resource_tag_main_div_class').attr('id', 'resource_tag_main_div_id-' + thisObj.options.resource_id);
+//      mainDiv.text('RESOURCE TAG PLACE HOLDER ::: RESOURCE: ' + this.options.resource + " RESOURCE_ID: " + this.options.resource_id);
+//      thisObj.element.append(mainDiv);
+//      thisObj._getAllResourceTags();
+      var demo = $('<table>').addClass('resource_tag_datatable_class').attr('id', 'resource_tag_datatable_id-' + thisObj.options.resource_id);
+      mainDiv.append(demo);
+      demo.dataTable({
+          "bProcessing": true,
+          "sAjaxSource": "../ec2?Action=DescribeTags",
+          "fnServerData": function (sSource, aoData, fnCallback) {
+                $.ajax( {
+                    "dataType": 'json',
+                    "type": "POST",
+                    "url": sSource,
+                    "data": "_xsrf="+$.cookie('_xsrf')+"&Filter.1.Name=resource-id&Filter.1.Value.1="+thisObj.options.resource_id,
+                    "success": fnCallback
+                });
+
+          },
+          "sAjaxDataProp": "results",
+          "bAutoWidth" : false,
+          "bPaginate": false, 
+          "bFilter": false ,
+          "aoColumns": [
+            {
+              "sTitle": "Key",
+              "fnRender": function(oObj) {
+                if( oObj.aData.type === "html" )
+                  return asHTML(oObj.aData.name);
+                else
+		  return DefaultEncoder().encodeForHTML(oObj.aData.name);
+	       },
+            },
+            {
+              "sTitle": "Value",
+              "fnRender": function(oObj) {
+                if( oObj.aData.type === "html" )
+                  return asHTML(oObj.aData.value);
+                else
+		  return DefaultEncoder().encodeForHTML(oObj.aData.value);
+	       },
+            },
+            {
+               "sTitle": "Button",
+               "fnRender": function(oObj) {
+                return "button";
+               },
+            },
+          ],
+          "fnDrawCallback" : function() { 
+             tdResourceTag = $('<td>').html('<input name="tag_key" type="text" id="tag_key" size="128">');
+             tdResourceTag.append($('<td>').html('<input name="tag_value" type="text" id="tag_value" size="128">'));
+             tdResourceTag.append($('<td>').text("button"));
+             var trResourceTag = $('<tr>').addClass('resource-tag-input-row-tr').html( tdResourceTag.html() );
+             thisObj.element.find('table').find('tr').append(trResourceTag);
+             alert("hello " + thisObj.options.resource_id);
+          },
+     });
+/*     demo.fnAddData([
+       {
+         "name": '<input name="tag_key" type="text" id="tag_key" size="128">',
+         "value": '<input name="tag_value" type="text" id="tag_value" size="256">',
+         "type": "html"
+      }
+     ]);
+*/
+     var resource_tag_table = mainDiv.find('table');
+
+     thisObj.element.append(resource_tag_table);
+
+//     alert("hello! ");
     },
 
     // Use the _setOption method to respond to changes to options
