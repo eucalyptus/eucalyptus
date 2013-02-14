@@ -190,14 +190,14 @@ void usage(void)
             "\t\tbundleRestartInstance\t[-i]\n"
             "\t\tdescribeSensors\n"
             "\t\tmodifyNode\t\t[-s]\n"
-            "\t\tmigrateInstance\t\t[-i -M]\n"
+            "\t\tmigrateInstances\t\t[-i -M]\n"
             "\toptions:\n"
             "\t\t-d \t\t- print debug output\n"
             "\t\t-l \t\t- local invocation => do not use WSSEC\n"
             "\t\t-h \t\t- this help information\n"
             "\t\t-w [host:port] \t- Walrus endpoint\n"
             "\t\t-n [host:port] \t- NC endpoint\n"
-            "\t\t-B -n host \t- VB endpoint\n"
+            "\t\t-B -n node-ip \t- one of nodes controled by VB\n"
             "\t\t-i [str] \t- instance ID\n"
             "\t\t-e [str] \t- reservation ID\n"
             "\t\t-v [type:id:size:format:guestDeviceName:resourceLocation]\n"
@@ -219,8 +219,8 @@ void usage(void)
             "\t\t-U [string] \t- user data to store with instance\n" "\t\t-I [string] \t- launch index to store with instance\n"
             "\t\t-G [str:str: ] \t- group names to store with instance\n"
             "\t\t-s [stateName] \t- name of state\n"
-            "\t\t\t\tUse {Enabled|Disabled} for modifyNode operation\n"
-            "\t\t\t\tUse {Prepare|Commit|Rollback} for migrateInstance opration\n"
+            "\t\t\t\tUse {ENABLED|DISABLED} for modifyNode operation\n"
+            "\t\t\t\tUse {Prepare|Commit|Rollback} for migrateInstances opration\n"
             "\t\t-M [src:dst:cr]\t- migration request source and destination IPs + credentials\n");
 
     exit(1);
