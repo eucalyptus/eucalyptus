@@ -121,6 +121,12 @@
         case 'instance':
           this.element.instance({'state_filter': filter});
           break;
+        case 'scaling':
+          this.element.scaling();
+          break;
+        case 'balancing':
+          this.element.balancing();
+          break;
         case 'keypair':
           this.element.keypair();
           break;
@@ -132,6 +138,9 @@
           break;
         case 'snapshot':
           this.element.snapshot();
+          break;
+        case 'bucket':
+          this.element.bucket();
           break;
         case 'eip':
           this.element.eip();

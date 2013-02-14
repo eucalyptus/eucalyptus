@@ -30,7 +30,11 @@
                   {name:'eip', url: '/ec2?Action=DescribeAddresses'},
                   {name:'keypair', url: '/ec2?Action=DescribeKeyPairs'},
                   {name:'sgroup', url: '/ec2?Action=DescribeSecurityGroups'},
-                  {name:'zone', url: '/ec2?Action=DescribeAvailabilityZones'}
+                  {name:'zone', url: '/ec2?Action=DescribeAvailabilityZones'},
+                  {name:'bucket', url: '/s3?Action=DescribeBuckets'},
+                  {name:'balancer', url: '/elb?Action=DescribeLoadBalancers'},
+                  {name:'scalinggrp', url: '/autoscaling?Action=DescribeAutoScalingGroups'},
+                  {name:'scalinginst', url: '/autoscaling?Action=DescribeAutoScalingInstances'}
       ], 
     },
     _data : {instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null},

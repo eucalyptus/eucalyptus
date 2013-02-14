@@ -117,6 +117,14 @@
       }); 
       $('html body').eucadata('refresh','instance');
 
+      $('html body').eucadata('addCallback', 'scalinginst', 'dashboard-summary', function(){
+        var results = describe('scalinginst');
+        var numScaling = results ? results.length : 0;
+        $instObj.find('#dashboard-scaling-groups div img').remove();
+        $instObj.find('#dashboard-scaling-groups span').text(numScaling);
+      });
+      $('html body').eucadata('refresh','scalinginst');
+
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           thisObj._trigger('select', evt, {selected:'instance', filter:'running'});
@@ -127,6 +135,12 @@
         $('<a>').attr('href','#').click( function(evt){
             thisObj._trigger('select', evt, {selected:'instance', filter:'stopped'});
             $('html body').trigger('click', 'navigator:instance');
+            return false;
+      }));
+      $instObj.find('#dashboard-scaling-groups').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+            thisObj._trigger('select', evt, {selected:'scaling'});
+            $('html body').trigger('click', 'navigator:scaling');
             return false;
       }));
     },
@@ -164,15 +178,45 @@
           return false;
       }));
 
+      $('html body').eucadata('addCallback', 'bucket', 'dashboard-summary', function(){
+        var results = describe('bucket');
+        var numBuckets = results ? results.length : 0;
+        $storageObj.find('#dashboard-storage-buckets img').remove();
+        $storageObj.find('#dashboard-storage-buckets span').text(numBuckets);
+      }); 
+      $('html body').eucadata('refresh', 'bucket');
+      $storageObj.find('#dashboard-storage-buckets').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+          thisObj._trigger('select', evt, {selected:'bucket'});
+          $('html body').trigger('click', 'navigator:bucket');
+          return false;
+      }));
+
       //az = $instObj.find('#dashboard-instance-dropbox').value();
       $storageObj.find('#dashboard-storage-volume').prepend(
         $('<img>').attr('src','images/dots32.gif'));
       $storageObj.find('#dashboard-storage-snapshot').prepend(
         $('<img>').attr('src','images/dots32.gif'));
+      $storageObj.find('#dashboard-storage-buckets').prepend(
+        $('<img>').attr('src','images/dots32.gif'));
     },
   
     _setNetSecSummary : function($netsecObj) {
       var thisObj = this;
+      $('html body').eucadata('addCallback', 'balancer', 'dashboard-summary', function(){
+        var results = describe('balancer');
+        var numBalancers = results ? results.length : 0;
+        $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
+        $netsecObj.find('#dashboard-netsec-load-balancer span').text(numBalancers);
+      });
+      $netsecObj.find('#dashboard-netsec-load-balancer').wrapAll(
+        $('<a>').attr('href','#').click( function(evt){
+          thisObj._trigger('select', evt, {selected:'balancing'});
+          $('html body').trigger('click', 'navigator:balancing');
+          return false;
+      }));
+      $('html body').eucadata('refresh', 'balancer'); 
+
       $('html body').eucadata('addCallback', 'sgroup', 'dashboard-summary', function(){
         var results = describe('sgroup');
         var numGroups = results ? results.length : 0;

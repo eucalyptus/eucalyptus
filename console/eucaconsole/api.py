@@ -56,6 +56,7 @@ from .botojsonencoder import BotoJsonEncoder
 from .botojsonencoder import BotoJsonBalanceEncoder
 from .botojsonencoder import BotoJsonWatchEncoder
 from .botojsonencoder import BotoJsonScaleEncoder
+from .botojsonencoder import BotoJsonStorageEncoder
 from .cachingclcinterface import CachingClcInterface
 from .cachingbalanceinterface import CachingBalanceInterface
 from .cachingwalrusinterface import CachingWalrusInterface
@@ -283,8 +284,8 @@ class BalanceHandler(BaseAPIHandler):
             if not(balancer_port):
                 done = True
                 break
-            ret.append(Listener(load_balancer_port=balancer_port, instance_port=instance_port,
-                                protocol=protocol, ssl_certificate_id=ssl_cert_id))
+            l = balancer_port, instance_port, protocol, ssl_cert_id
+            ret.append(l)
             index += 1
 
         return ret
@@ -298,7 +299,7 @@ class BalanceHandler(BaseAPIHandler):
     def post(self):
         if not self.authorized():
             raise tornado.web.HTTPError(401, "not authorized")
-        if not(self.user_session.scaling):
+        if not(self.user_session.elb):
             if self.should_use_mock():
                 self.user_session.elb = MockBalanceInterface()
             else:
@@ -384,7 +385,7 @@ class WatchHandler(BaseAPIHandler):
             raise tornado.web.HTTPError(401, "not authorized")
         if not(self.user_session.cw):
             if self.should_use_mock():
-                self.user_session.walrus = MockWatchInterface()
+                self.user_session.cw = MockWatchInterface()
             else:
                 host = eucaconsole.config.get('server', 'clchost')
                 if self.user_session.host_override:
@@ -431,8 +432,7 @@ class WatchHandler(BaseAPIHandler):
             logging.exception(ex)
 
 class StorageHandler(BaseAPIHandler):
-#    def __init__(self):
-#        self.json_encoder = JsonBotoStorageEncoder
+    json_encoder = BotoJsonStorageEncoder
 
     ##
     # This is the main entry point for API calls for S3(Walrus) from the browser
@@ -845,7 +845,6 @@ class ComputeHandler(BaseAPIHandler):
     def __get_password_cb__(self, kwargs, callback):
         try:
             passwd_data = self.user_session.clc.get_password_data(kwargs['instanceid'])
-            print "got password data"+passwd_data
             priv_key_file = self.request.files['priv_key']
             user_priv_key = RSA.load_key_string(priv_key_file[0].body)
             string_to_decrypt = base64.b64decode(passwd_data)

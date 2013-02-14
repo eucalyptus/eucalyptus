@@ -38,19 +38,20 @@ class BotoWalrusInterface(WalrusInterface):
     saveclcdata = False
 
     def __init__(self, clc_host, access_id, secret_key, token):
-        boto.set_stream_logger('foo')
+        #boto.set_stream_logger('foo')
         path='/services/Walrus'
         port=8773
-        try:
-            # this call is just here to check if the ec2 feature is config-ed
-            host = eucaconsole.config.get('test', 'ec2.endpoint')
+        if clc_host[len(clc_host)-13:] == 'amazonaws.com':
+            clc_host = clc_host.replace('ec2', 's3', 1)
+            # this works because the us-east region doesn't use the standard naming
+            # to support other regions, we'll need something better here
+            clc_host = 's3.amazonaws.com'
             path = '/'
-            port=443
-        except ConfigParser.Error:
-            pass
+            port=None
+            token=None
         self.conn = S3Connection(access_id, secret_key, host=clc_host,
                                   port=port, path=path,
-                                  is_secure=True, security_token=token, debug=2)
+                                  is_secure=True, security_token=token, debug=0)
         self.conn.http_connection_kwargs['timeout'] = 30
 
     def __save_json__(self, obj, name):
