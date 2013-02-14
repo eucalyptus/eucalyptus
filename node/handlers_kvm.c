@@ -587,7 +587,7 @@ static void *migrating_thread(void *arg)
     }
     
     char duri [1024];
-    snprintf (duri, sizeof(duri), "qemu+ssh://%s/system", instance->migration_dst);
+    snprintf (duri, sizeof(duri), "qemu+tls://%s/system", instance->migration_dst);
     virConnectPtr dconn = NULL;
     dconn = virConnectOpen(duri);
     if (dconn==NULL) {
